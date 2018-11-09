@@ -102,6 +102,20 @@ return [
     'SqlTimeFormatLiteral'     => "'%H:%i'",
     'TimeZone'                 => env('RANGER_CLUBHOUSE_TIMEZONE', 'America/Los_Angeles'),
 
+    // if true all email broadcasts will log the email but not actually send it
+    'BroadcastMailSandbox'     => env('RANGER_CLUBHOUSE_BROADCAST_MAIL_SANDBOX', false),
+
+    // if true all clubhouse message broadcasts will the log message but not send it.
+    'BroadcastClubhouseSandbox'=> env('RANGER_CLUBHOUSE_BROADCAST_CLUBHOUSE_SANDBOX', false),
+
+    // if true any Clubhouse message created will be notified thru the RBS
+    'BroadcastClubhouseNotify' => env('RANGER_CLUBHOUSE_MESSAGE_NOTIFY', false),
+
+    // Twilio Configuration
+    'TwilioAccountSID' => env('RANGER_CLUBHOUSE_TWILIO_ACCOUNT_SID', ''),
+    'TwilioAuthToken'  => env('RANGER_CLUBHOUSE_TWILIO_AUTH_TOKEN', ''),
+    'TwilioServiceId'  => env('RANGER_CLUBHOUSE_TWILIO_SERVICE_ID', ''),
+
     // Optional ticket credit warning messages.
     // If any are not set, no message will be displayed
     'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price

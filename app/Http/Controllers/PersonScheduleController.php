@@ -52,11 +52,9 @@ class PersonScheduleController extends ApiController
 
     public function store(Person $person)
     {
-        $data = request()->validate(
-            [
+        $data = request()->validate([
             'slot_id'  => 'required|integer',
-             ]
-        );
+        ]);
 
         $this->authorize('create', [ Schedule::class, $person ]);
 

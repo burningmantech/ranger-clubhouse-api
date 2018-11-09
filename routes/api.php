@@ -91,6 +91,11 @@ Route::group([
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
     Route::resource('slot', 'SlotController');
 
+    Route::get('sms', 'SmsController@getNumbers');
+    Route::post('sms', 'SmsController@updateNumbers');
+    Route::post('sms/send-code', 'SmsController@sendNewCode');
+    Route::post('sms/confirm-code', 'SmsController@confirmCode');
+
     Route::get('training/{id}/multiple-enrollments', 'TrainingController@multipleEnrollmentsReport');
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');
     Route::get('training/{id}', 'TrainingController@show');
