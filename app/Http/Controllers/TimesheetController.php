@@ -9,11 +9,13 @@ use App\Models\PositionCredit;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
+use App\Helpers\SqlHelper;
+
 
 class TimesheetController extends ApiController
 {
-    /**
-     * Display a listing of the resource.
+    /*
+     * Retrieve a list of timesheets for a person and year.
      */
     public function index(Request $request)
     {
@@ -26,17 +28,15 @@ class TimesheetController extends ApiController
 
         $rows = Timesheet::findForQuery($params);
 
-        if ($rows->isEmpty()) {
-            return $this->restError('No timesheets found', 404);
+        if (!$rows->isEmpty()) {
+            PositionCredit::warmYearCache($params['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        PositionCredit::warmYearCache($params['year'], array_unique($rows->pluck('position_id')->toArray()));
-
-        return $this->success($rows);
+        return $this->success($rows, null, 'timesheet');
     }
 
-    /**
-     * Store a newly created resource in storage.
+    /*
+     * Create a new timesheet
      */
     public function store(Request $request)
     {
@@ -46,17 +46,18 @@ class TimesheetController extends ApiController
         $this->authorize('store', $timesheet);
 
         if ($timesheet->save()) {
+            $this->loadRelationships();
             return $this->success($timesheet);
         }
 
         return $this->restError($timesheet);
     }
 
-    /**
-     * Update the specified resource in storage.
+    /*
+     * Update an existing timesheet
      */
 
-    public function update(Request $request, Timesheet $timesheet)
+    public function update(Timesheet $timesheet)
     {
         $this->authorize('update', $timesheet);
 
@@ -67,6 +68,7 @@ class TimesheetController extends ApiController
         $logInfo = [];
         $markedUnconfirmed = false;
 
+        // Need to track changes in the record for auditing purposes
         if ($timesheet->isDirty('verified')) {
             if ($timesheet->verified) {
                 $timesheet->setVerifiedAtToNow();
@@ -95,8 +97,7 @@ class TimesheetController extends ApiController
         if ($markedUnconfirmed) {
             $person->timesheet_confirmed = false;
             $person->saveWithoutValidation();
-
-            TimesheetLog::record('confirmed', $person->id, $this->user->id, $timesheet->id, 'unconfirmed - entry marked incorrect');
+            TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - entry marked incorrect');
         }
 
         // Load up position title, reviewer callsigns in case of change.
@@ -105,17 +106,22 @@ class TimesheetController extends ApiController
         return $this->success($timesheet);
     }
 
-    /**
-     * Remove the specified resource from storage.
+    /*
+     *
      */
     public function destroy(Timesheet $timesheet)
     {
         $this->authorize('delete', $timesheet);
         $timesheet->delete();
+
+        $positionTitle = Position::retrieveTitle($timesheet->position_id);
+        TimesheetLog::record('delete',
+                $timesheet->person_id, $this->user->id, $timesheetId,
+                "{$positionTitle} {$timesheet['on_duty']} - {$timesheet['off_duty']}");
     }
 
     /*
-     * Start a shift
+     * Start a shift for a person
      */
 
     public function signin(Request $request)
@@ -134,10 +140,12 @@ class TimesheetController extends ApiController
         // confirm person exists
         $person = $this->findPerson($personId);
 
+        // Confirm the person is allowed to sign into the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
             throw new \InvalidArgumentException('Person does not hold the position.');
         }
 
+        // they cannot be already on duty.
         if (Timesheet::isPersonOnDuty($personId)) {
             throw new \InvalidArgumentException('Person is already on duty.');
         }
@@ -145,6 +153,7 @@ class TimesheetController extends ApiController
         $signonForced = false;
         $required = null;
 
+        // Are they trained for this position?
         if (!Training::isPersonTrained($personId, $positionId, $required)) {
             if ($isAdmin) {
                 $signonForced = true;
@@ -154,9 +163,9 @@ class TimesheetController extends ApiController
             }
         }
 
-        $timesheet = new \App\Models\Timesheet;
-        $timesheet->fill($params);
+        $timesheet = new Timesheet($params);
         $timesheet->setOnDutyToNow();
+
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
 
@@ -173,8 +182,8 @@ class TimesheetController extends ApiController
     }
 
     /*
-     * Return information regarding this person if timesheet corrections are
-     * enabled, and IF and when they confirmed all their timesheets.
+     * Return information on timesheet corrections AND the current timesheet
+     * confirmation status for a person.
      */
 
      public function info()
@@ -187,11 +196,50 @@ class TimesheetController extends ApiController
 
          return response()->json([
              'info' => [
-                 'correction_year'      => config('clubhouse.TimesheetCorrectionYear'),
-                 'correction_enabled' => config('clubhouse.TimesheetCorrectionEnable'),
-                 'timesheet_confirmed'    => $person->timesheet_confirmed,
+                 'correction_year'     => config('clubhouse.TimesheetCorrectionYear'),
+                 'correction_enabled'  => config('clubhouse.TimesheetCorrectionEnable'),
+                 'timesheet_confirmed' => (int) $person->timesheet_confirmed,
                  'timesheet_confirmed_at' => ($person->timesheet_confirmed ? (string) $person->timesheet_confirmed_at : null),
              ]
          ]);
      }
+
+     /*
+      * Final confirmation for timesheet.
+      */
+
+      public function confirm()
+      {
+          $params = request()->validate([
+              'person_id' => 'required|integer',
+              'confirmed' => 'required|boolean',
+          ]);
+
+          $person = $this->findPerson($params['person_id']);
+          $this->authorize('confirm', [Timesheet::class, $person->id]);
+
+          $person->timesheet_confirmed = $params['confirmed'];
+
+          // Only log the confirm/unconfirm if the flag changed.
+          if ($person->isDirty('timesheet_confirmed')) {
+              if ($person->timesheet_confirmed) {
+                  $person->timesheet_confirmed_at = SqlHelper::now();
+              } else {
+                  $person->timesheet_confirmed_at = null;
+              }
+
+              $person->saveWithoutValidation();
+              TimesheetLog::record('confirmed',
+                    $person->id, $this->user->id, null,
+                    ($person->timesheet_confirmed ? 'confirmed' : 'unconfirmed'));
+          }
+
+          return response()->json([
+              'confirm_info' => [
+                  'timesheet_confirmed' => (int) $person->timesheet_confirmed,
+                  'timesheet_confirmed_at' => ($person->timesheet_confirmed ? (string) $person->timesheet_confirmed_at : null),
+              ]
+          ]);
+      }
+
 }

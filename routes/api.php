@@ -100,6 +100,7 @@ Route::group([
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');
     Route::get('training/{id}', 'TrainingController@show');
 
+    Route::post('timesheet/confirm', 'TimesheetController@confirm');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
 

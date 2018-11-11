@@ -27,12 +27,7 @@ class AssetController extends ApiController
         ]);
 
         $assets = Asset::findForQuery($query);
-
-        if ($assets->isEmpty()) {
-            return $this->restError('No records found.', 404);
-        }
-
-        return $this->success($assets);
+        return $this->success($assets, null 'asset');
     }
 
     /*

@@ -29,13 +29,11 @@ class SlotController extends ApiController
         $rows = Slot::findForQuery($query);
 
         if ($rows->isEmpty()) {
-            return $this->restError('Not found', 404);
+            // Warm the position credit cache
+            PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        // Warm the position credit cache
-        PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
-
-        return $this->success($rows);
+        return $this->success($rows, null, 'slot');
     }
 
     /**

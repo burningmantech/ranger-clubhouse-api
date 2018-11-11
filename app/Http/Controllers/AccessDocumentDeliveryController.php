@@ -26,11 +26,7 @@ class AccessDocumentDeliveryController extends ApiController
 
         $rows = AccessDocumentDelivery::findForQuery($query);
 
-        if ($rows->isEmpty()) {
-            return $this->restError('No records found', 404);
-        }
-
-        return $this->success($rows);
+        return $this->success($rows, null, 'access_document_delivery');
     }
 
     /**

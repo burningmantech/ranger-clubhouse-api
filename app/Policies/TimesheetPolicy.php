@@ -17,12 +17,8 @@ class TimesheetPolicy
         }
     }
 
-    /**
+    /*
      * Determine whether the user can view the timesheet.
-     *
-     * @param  \App\Models\Person  $user
-     * @param  \App\Timesheet  $timesheet
-     * @return mixed
      */
     public function index(Person $user, $personId)
     {
@@ -34,6 +30,15 @@ class TimesheetPolicy
      */
 
     public function update(Person $user, $personId)
+    {
+        return ($user->id == $personId);
+    }
+
+    /*
+     * Can a user confirm the timesheet?
+     */
+
+    public function confirm(Person $user, $personId)
     {
         return ($user->id == $personId);
     }

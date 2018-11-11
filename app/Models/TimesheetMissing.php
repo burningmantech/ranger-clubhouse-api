@@ -87,4 +87,9 @@ class TimesheetMissing extends ApiModel
                 $this->getOriginal('on_duty'),
                 $this->getOriginal('off_duty'));
     }
+
+    public function setPartnerAttribute($value)
+    {
+        $this->attributes['partner'] = empty($value) ? '' : $value;
+    }
 }

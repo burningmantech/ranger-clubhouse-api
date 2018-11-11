@@ -40,14 +40,12 @@ class PersonController extends ApiController
 
         $results = Person::findForQuery($query);
 
+        $meta = [ 'limit' => $results['limit'], 'total' => $results['total'] ];
         if ($results['people']->isEmpty()) {
-            return $this->restError('No records found.', 404);
+            return $this->success([], $meta, 'person');
         }
 
-        return $this->toRestFiltered(
-            $results['people'],
-            [ 'limit' => $results['limit'], 'total' => $results['total'] ]
-        );
+        return $this->toRestFiltered($results['people'], $meta);
     }
 
     /*

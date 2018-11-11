@@ -36,14 +36,13 @@ class PersonScheduleController extends ApiController
 
         $rows = Schedule::findForQuery($query);
 
-        if ($rows->isEmpty()) {
-            return $this->restError('No records found', 404);
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        // Warm the position credit cache.
-        PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
 
-        return $this->success($rows);
+        return $this->success($rows, null, 'schedules');
     }
 
     /*
