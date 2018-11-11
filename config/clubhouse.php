@@ -21,6 +21,7 @@ return [
     'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'http://tanis.com/brclam/jumpin_ranger.cfm'),
 
     'TimesheetCorrectionEnable'  => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_ENABLE', true),
+    'TimesheetCorrectionYear'    => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_YEAR', 2018),
 
     // Suggestion responses spreadsheet is in the Ranger Teams > Ranger Tech > 2015 Event folder in the burningman.org Google Drive
     'ClubhouseSuggestionUrlTemplate' => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_TEMPLATE_URL', 'https://docs.google.com/forms/d/1Rox154ty2thJThS5KE-zapNKi4Rcsjgg094YyoTqeWQ/viewform?entry.561095571={callsign}&entry.1642048126={email}'),

@@ -12,10 +12,11 @@ class TimesheetPolicy
     use HandlesAuthorization;
 
     public function before(Person $user) {
-        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN])) {
+        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::MANAGE, Role::ADMIN])) {
             return true;
         }
     }
+
     /**
      * Determine whether the user can view the timesheet.
      *
@@ -28,38 +29,12 @@ class TimesheetPolicy
         return ($user->id == $personId);
     }
 
-    /**
-     * Determine whether the user can create timesheets.
-     *
-     * @param  \App\Models\Person  $user
-     * @return mixed
+    /*
+     * Can the user mark the sheet as verified?
      */
-    public function create(Person $user)
-    {
-        //
-    }
 
-    /**
-     * Determine whether the user can update the timesheet.
-     *
-     * @param  \App\Models\Person  $user
-     * @param  \App\Timesheet  $timesheet
-     * @return mixed
-     */
-    public function update(Person $user, Timesheet $timesheet)
+    public function update(Person $user, $personId)
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can delete the timesheet.
-     *
-     * @param  \App\Models\Person  $user
-     * @param  \App\Timesheet  $timesheet
-     * @return mixed
-     */
-    public function delete(Person $user, Timesheet $timesheet)
-    {
-        //
+        return ($user->id == $personId);
     }
 }

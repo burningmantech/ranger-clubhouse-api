@@ -116,4 +116,15 @@ class Position extends ApiModel
 
         return $sql->get()->toArray();
     }
+
+    public static function retrieveTitle($id)
+    {
+        $row = self::find($id);
+
+        if ($row == null) {
+            return "Position #{$id}";
+        } else {
+            return $row->title;
+        }
+    }
 }

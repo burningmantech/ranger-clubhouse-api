@@ -100,5 +100,8 @@ Route::group([
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');
     Route::get('training/{id}', 'TrainingController@show');
 
+    Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
+
+    Route::resource('timesheet-missing', 'TimesheetMissingController');
 });

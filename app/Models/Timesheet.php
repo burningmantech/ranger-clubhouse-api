@@ -9,9 +9,14 @@ use App\Helpers\SqlHelper;
 use App\Models\ApiModel;
 use App\Helpers\DateHelper;
 use App\Models\Position;
+use App\Models\Person;
 
 class Timesheet extends ApiModel
 {
+    const STATUS_PENDING = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
+
     const EXCLUDE_POSITIONS_FOR_YEARS = [
       Position::ALPHA,
       Position::TRAINING,
@@ -20,59 +25,75 @@ class Timesheet extends ApiModel
     protected $table = 'timesheet';
 
     protected $fillable = [
+        'notes',
+        'off_duty',
+        'on_duty',
         'person_id',
         'position_id',
-        'on_duty',
-        'off_duty',
+        'review_status',
+        'reviewed_at',
+        'reviewer_notes',
+        'reviewer_person_id',
+        'timesheet_confirmed_at',
         'timesheet_confirmed',
-        'timesheet_confirmed_at'
+        'verified',
     ];
 
     protected $appends = [
-        'position_title',
         'duration',
         'credits',
     ];
 
+    protected $dates = [
+        'off_duty',
+        'on_duty',
+        'reviewed_at',
+        'timesheet_confirmed_at',
+        'verified_at',
+    ];
+
     protected $casts = [
-        'on_duty'   => 'datetime',
-        'off_duty'  => 'datetime',
-        'timesheet_confirmed_at' => 'datetime'
+        'verified' => 'boolean',
     ];
 
     public $credits;
 
+    const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title' ];
+
+    public function reviewer_person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function verified_person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function loadRelationships() {
+        return $this->load(self::RELATIONSHIPS);
+    }
+
     public static function findForQuery($query)
     {
         $year = 0;
-        $sql = self::select('timesheet.*', 'position.title as position_title');
+        $sql = self::with(self::RELATIONSHIPS);
 
         if (isset($query['year'])) {
             $year = $query['year'];
-            $sql = $sql->whereRaw('YEAR(on_duty)=?', $year);
+            $sql = $sql->whereYear('on_duty', $year);
         }
 
         if (isset($query['person_id'])) {
             $sql = $sql->where('person_id', $query['person_id']);
         }
 
-        $rows =  $sql->join('position', 'position.id', '=', 'timesheet.position_id')
-                ->orderBy('on_duty', 'asc', 'off_duty', 'asc')
-                ->get();
-
-
-        foreach ($rows as $row) {
-            if ($row->off_duty) {
-                $row->credits = PositionCredit::computeCredits(
-                        $row->position_id,
-                        $row->getOriginal('on_duty'),
-                        $row->getOriginal('off_duty'));
-            } else {
-                $row->credits = 0;
-            }
-        }
-
-        return $rows;
+        return $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
     }
 
     public static function isPersonOnDuty($personId)
@@ -125,32 +146,19 @@ class Timesheet extends ApiModel
         }
     }
 
-    public function getOnDutyAttribute()
-    {
-        $on_duty = $this->getOriginal('on_duty');
-        if ($on_duty) {
-            return DateHelper::formatShift($on_duty);
-        } else {
-            return "N/A";
-        }
-    }
-
-    public function getOffDutyAttribute()
-    {
-        $off_duty = $this->getOriginal('off_duty');
-        if ($off_duty) {
-            return DateHelper::formatShift($off_duty);
-        } else {
-            return "On Duty";
-        }
-    }
-
     public function getPositionTitleAttribute() {
         return $this->attributes['position_title'];
     }
 
     public function getCreditsAttribute() {
-        return $this->credits;
+        if ($this->off_duty) {
+            return PositionCredit::computeCredits(
+                    $this->position_id,
+                    $this->getOriginal('on_duty'),
+                    $this->getOriginal('off_duty'));
+        } else {
+            return 0.0;
+        }
     }
 
     public function setOnDutyToNow()
@@ -161,5 +169,9 @@ class Timesheet extends ApiModel
     public function setOffDutyToNow()
     {
         $this->off_duty = SqlHelper::now();
+    }
+
+    public function setVerifiedAtToNow() {
+        $this->verified_at = SqlHelper::now();
     }
 }

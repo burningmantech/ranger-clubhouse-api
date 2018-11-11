@@ -122,6 +122,11 @@ class PersonFilter
         'sms_off_playa_code',
     ];
 
+    const TIMESHEET_FIELDS = [
+        'timesheet_confirmed',
+        'timesheet_confirmed_at'
+    ];
+
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
@@ -143,6 +148,7 @@ class PersonFilter
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
+        [ self::TIMESHEET_FIELDS ]
     ];
 
     const FIELDS_DESERIALIZE = [
@@ -158,6 +164,7 @@ class PersonFilter
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
+        [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
     ];
 
     public function buildFields(array $fieldGroups, $authorizedUser): array

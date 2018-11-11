@@ -16,7 +16,11 @@ class DeserializeRecord
         $this->attributes = $request->input($table);
 
         if (empty($this->attributes)) {
-            throw new \InvalidArgumentException("Missing resource identifier '$table' field in request");
+            if (is_null($this->attributes)) {
+                throw new \InvalidArgumentException("Missing resource identifier '$table' field in request");
+            } else {
+                $this->attributes = [];
+            }
         }
     }
 

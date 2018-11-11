@@ -70,11 +70,13 @@ class ApiController extends Controller
         $table = $record->getTable();
         $fields = request()->input($table);
 
-        if (empty($fields)) {
+        if (!is_null($fields) && empty($fields)) {
             throw new \InvalidArgumentException("Missing '$table' root name");
         }
 
-        $record->fill($fields);
+        if ($fields != null) {
+            $record->fill($fields);
+        }
     }
 
     public function toRestFiltered($resource, $meta = null)
@@ -99,23 +101,27 @@ class ApiController extends Controller
         return response()->json($json);
     }
 
-    public function success($resource=null, $meta=null)
+    public function success($resource=null, $meta=null, $tableName = null)
     {
         if (!$resource) {
             return response()->json([ 'message' => 'success' ]);
         }
 
         if (is_iterable($resource)) {
-            $table = $resource->first()->getTable();
+            if ($tableName == '') {
+                $tableName = $resource->first()->getTable();
+            }
             $rows = [];
             foreach ($resource as $row) {
                 $rows[] = $row->toArray();
             }
 
-            $result = [ $table => $rows ];
+            $result = [ $tableName => $rows ];
         } else {
-            $table = $resource->getTable();
-            $result = [ $table => $resource ];
+            if ($tableName == '') {
+                $tableName = $resource->getTable();
+            }
+            $result = [ $tableName => $resource ];
         }
 
         if ($meta) {
