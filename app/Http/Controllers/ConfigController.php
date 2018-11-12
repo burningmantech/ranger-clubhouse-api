@@ -9,6 +9,6 @@ require_once base_path('config/clubhouse.php');
 class ConfigController extends Controller
 {
     public function show() {
-        return response()->json(config('clubhouse'));
+        return response()->json(config('client'));
     }
 }
