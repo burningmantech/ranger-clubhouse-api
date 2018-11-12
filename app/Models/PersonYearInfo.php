@@ -9,6 +9,7 @@ use App\Models\RadioEligible;
 use App\Models\Bmid;
 
 use App\Helpers\DateHelper;
+use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
 
@@ -56,6 +57,7 @@ class PersonYearInfo extends ApihouseResult
         }
 
         $yearInfo->trainings = [];
+        $now = SqlHelper::now();
         foreach($requireTraining as $need) {
             $status = new TrainingStatus;
             $status->position_title = $need->title;
@@ -72,7 +74,7 @@ class PersonYearInfo extends ApihouseResult
                 $status->location = $training->description;
 
                 $status->date = DateHelper::formatDate($training->begins);
-                if (Carbon::parse($training->begins)->gt(Carbon::now())) {
+                if (Carbon::parse($training->begins)->gt($now)) {
                     $status->status = 'pending';
                 } else {
                     $status->status = ($training->passed ? 'pass' : 'fail');

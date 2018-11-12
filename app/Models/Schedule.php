@@ -36,8 +36,6 @@ class Schedule extends ApiModel
 
     // And the rest are calculated
     protected $appends = [
-        'has_started',
-        'has_ended',
         'slot_begins_time',
         'slot_ends_time',
         'slot_duration',
@@ -74,6 +72,8 @@ class Schedule extends ApiModel
             'slot.url AS slot_url',
             'slot.active as slot_active',
             'trainer_slot.signed_up AS trainer_count',
+            DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
+            DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended')
         ];
 
         // Is this a simple schedule find for a person?
@@ -103,7 +103,7 @@ class Schedule extends ApiModel
         }
 
         $rows = $sql->select($selectColumns)
-            ->whereRaw('YEAR(slot.begins)=?', $year)
+            ->whereYear('slot.begins', $year)
             ->join('position', 'position.id', '=', 'slot.position_id')
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->orderBy('slot.begins', 'asc', 'position.title', 'asc', 'slot.description', 'asc')
@@ -216,16 +216,6 @@ class Schedule extends ApiModel
         }
 
         return [ 'status' => 'success', 'signed_up' => $slot->signed_up ];
-    }
-
-    public function getHasStartedAttribute()
-    {
-        return Carbon::parse($this->slot_begins)->lt(Carbon::now());
-    }
-
-    public function getHasEndedAttribute()
-    {
-        return ($this->slot_ends_time && Carbon::parse($this->slot_ends)->lt(Carbon::now()));
     }
 
     public function getSlotBeginsTimeAttribute()

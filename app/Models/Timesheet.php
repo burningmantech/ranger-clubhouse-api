@@ -126,7 +126,12 @@ class Timesheet extends ApiModel
 
     public static function earnedCreditsForYear($personId, $year)
     {
-        return Timesheet::findForQuery([ 'person_id' => $personId, 'year' => $year])->pluck('credits')->sum();
+        $rows = Timesheet::findForQuery([ 'person_id' => $personId, 'year' => $year]);
+        if (!$rows->isEmpty()) {
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        return $rows->pluck('credits')->sum();
     }
 
 
@@ -140,7 +145,7 @@ class Timesheet extends ApiModel
                 return Carbon::parse($off_duty)->diffInSeconds(Carbon::parse($on_duty));
             }
 
-            return Carbon::now()->diffInSeconds(Carbon::parse($on_duty));
+            return Carbon::parse(SqlHelper::now())->diffInSeconds(Carbon::parse($on_duty));
         } else {
             return 0;
         }

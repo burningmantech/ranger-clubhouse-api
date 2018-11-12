@@ -27,7 +27,7 @@ class AssetController extends ApiController
         ]);
 
         $assets = Asset::findForQuery($query);
-        return $this->success($assets, null 'asset');
+        return $this->success($assets, null, 'asset');
     }
 
     /*
