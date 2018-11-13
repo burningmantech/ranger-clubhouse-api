@@ -3,6 +3,8 @@
 namespace app\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Collection;
+
 use App\Http\Controllers\Controller;
 
 use App\Models\Person;
@@ -79,15 +81,32 @@ class ApiController extends Controller
         }
     }
 
-    public function toRestFiltered($resource, $meta = null)
+    /*
+     * Filter an Eloquent row or collection to send back.
+     *
+     * $table should be provided for a collection in case the set is empty
+     *
+     * @param Collection|ApiModel $resource a row or collection to filter
+     * @param array $meta Meta information to return
+     * @param string $table name of the table or model.
+     * @return array associative array built from $resource & $meat
+     */
+
+
+    public function toRestFiltered($resource, $meta = null, $table = null)
     {
         $user = $this->user;
-        if (is_iterable($resource)) {
-            $results = [];
-            foreach ($resource as $row) {
-                $results[] = (new SerializeRecord($row))->toRest($user);
+        if ($resource instanceof \Illuminate\Database\Eloquent\Collection) {
+            if ($resource->isEmpty()) {
+                $model = $table;
+                $results = [];
+            } else {
+                $results = [];
+                foreach ($resource as $row) {
+                    $results[] = (new SerializeRecord($row))->toRest($user);
+                }
+                $model = $resource->first()->getTable();
             }
-            $model = $resource->first()->getTable();
         } else {
             $results = (new SerializeRecord($resource))->toRest($user);
             $model = $resource->getTable();
