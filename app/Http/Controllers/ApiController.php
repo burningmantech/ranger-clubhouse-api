@@ -13,12 +13,16 @@ use App\Models\ActionLog;
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
 
+use DB;
+
 class ApiController extends Controller
 {
     protected $user;
 
     public function __construct()
     {
+        DB::select("SET time_zone = '-7:00'");
+
         $this->user = Auth::guard('api')->user();
         if ($this->user) {
             if (!$this->user->user_authorized) {

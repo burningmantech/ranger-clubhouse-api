@@ -58,12 +58,9 @@ class PersonPolicy
         return $user->hasRole([Role::TRAINER, Role::MENTOR, Role::VC]);
     }
 
-    /**
+    /*
      * Determine whether the user can delete the person.
      *
-     * @param  \App\Models\Person $user
-     * @param  \App\Person        $person
-     * @return mixed
      */
     public function delete(Person $user, Person $person)
     {
@@ -73,7 +70,6 @@ class PersonPolicy
     /*
      * Determine if the user can change the password
      *
-     * @param \App\Person $person
      */
 
     public function password(Person $user, Person $person)
@@ -82,22 +78,22 @@ class PersonPolicy
         return ($user->id == $person->id);
     }
 
-     /*
-      * Determine if the user can update the person's positions
-      */
+    /*
+     * Determine if the user can update the person's positions
+     */
 
     public function updatePositions(Person $user, Person $person)
     {
-        return $user->hasRole(Role::GRANT_POSITION);
+        return $user->hasRole(Role::GRANT_POSITION) && $user->hasRole(Role::MANAGE);
     }
 
-      /*
-       * Determine if the user can update the person's roles
-       */
+    /*
+     * Determine if the user can update the person's roles
+     */
 
     public function updateRoles(Person $user, Person $person)
     {
-         // admin check is done in the before() function
+        // admin check is done in the before() function
         return false;
     }
 
@@ -105,5 +101,4 @@ class PersonPolicy
     {
         return ($user->id == $person->id || $user->hasRole(Role::MENTOR));
     }
-
 }
