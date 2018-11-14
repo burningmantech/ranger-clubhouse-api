@@ -1,5 +1,4 @@
 FROM composer:1.7.3 as composer
-RUN docker-php-ext-install pdo pdo_mysql
 WORKDIR /var/www/application
 COPY . .
 RUN composer install --optimize-autoloader --no-dev
