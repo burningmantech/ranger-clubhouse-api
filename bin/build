@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Build the Docker container for this app
+#
+
+set -eu
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+image_repo="ranger-clubhouse-api";
+ image_tag="dev";
+image_name="${image_repo}:${image_tag}";
+
+label="$(cd "${wd}" && git describe --all --long)";
+
+docker build --tag="${image_name}" --label="${label}" "${wd}";
