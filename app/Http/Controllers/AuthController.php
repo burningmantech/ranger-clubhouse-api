@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\ActionLog;
 use App\Http\RestApi;
 use App\Mail\ResetPassword;
+use DB;
 
 class AuthController extends Controller
 {
@@ -21,6 +22,7 @@ class AuthController extends Controller
      */
     public function __construct()
     {
+        DB::select("SET time_zone = '-7:00'");
         $this->middleware('auth:api', ['except' => ['login', 'resetPassword']]);
     }
 

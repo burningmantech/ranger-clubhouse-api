@@ -37,8 +37,6 @@ class AppServiceProvider extends ServiceProvider
                 error_log("SQL [$query->time ms] $sql");
             });
         }
-
-        DB::select("SET time_zone = '-7:00'");
     }
 
     /**
