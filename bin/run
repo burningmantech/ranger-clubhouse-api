@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#
+# Build the Docker container
+#
+
+. "$(dirname "$0")/.common.sh";
+
+exec docker run                 \
+    --rm                        \
+    --name "${container_name}"  \
+    --publish 8000:80           \
+    "${image_name}"             \
+    ;
