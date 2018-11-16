@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
+use App\Helpers\SqlHelper;
+
+use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
-use App\Helpers\SqlHelper;
 
 
 class TimesheetController extends ApiController
@@ -65,17 +67,33 @@ class TimesheetController extends ApiController
 
         $this->fromRestFiltered($timesheet);
 
-        $logInfo = [];
+        $reviewInfo = [];
+        $updateInfo = [];
+        $verifyInfo = [];
+
         $markedUnconfirmed = false;
 
-        // Need to track changes in the record for auditing purposes
+        if ($timesheet->isDirty('off_duty')) {
+            $updateInfo[] .= 'off duty old '.$timesheet->getOriginal('off_duty').' new '.$timesheet->off_duty;
+        }
+
+        if ($timesheet->isDirty('on_duty')) {
+            $updateInfo[] .= 'on duty old '.$timesheet->getOriginal('on_duty').' new '.$timesheet->on_duty;
+        }
+
+        if ($timesheet->isDirty('position_id')) {
+            $updateInfo[] = 'position old '.Position::retrieveTitle($timesheet->getOriginal('position_id'))
+                            .' new '.Position::retrieveTitle($timesheet->position_id);
+
+        }
+
         if ($timesheet->isDirty('verified')) {
             if ($timesheet->verified) {
                 $timesheet->setVerifiedAtToNow();
                 $timesheet->verified_person_id = $this->user->id;
-                $logInfo[] = 'verified';
+                $verifyInfo[] = 'verified';
             } else {
-                $logInfo[] = 'unverified';
+                $verifyInfo[] = 'unverified';
                 if ($person->timesheet_confirmed) {
                     $markedUnconfirmed = true;
                 }
@@ -83,15 +101,31 @@ class TimesheetController extends ApiController
         }
 
         if ($timesheet->isDirty('notes')) {
-                $logInfo[] = 'note updated';
+            $verifyInfo[] = 'note updated';
+        }
+
+        if ($timesheet->isDirty('review_status')) {
+            $reviewInfo[] = 'status '.$timesheet->review_status;
+        }
+
+        // Update reviewer person if the review status or review notes changed
+        if ($timesheet->isDirty('review_status') || $timesheet->isDirty('reviewer_notes')) {
+            $timesheet->reviewer_person_id = $this->user->id;
         }
 
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
 
-        if (!empty($logInfo)) {
-            TimesheetLog::record('review', $person->id, $this->user->id, $timesheet->id, implode(', ', $logInfo));
+        if (!empty($reviewInfo)) {
+            TimesheetLog::record('review', $person->id, $this->user->id, $timesheet->id, implode(', ', $reviewInfo));
+        }
+
+        if (!empty($updateInfo)) {
+            TimesheetLog::record('update', $person->id, $this->user->id, $timesheet->id, implode(', ', $updateInfo));
+        }
+        if (!empty($verifyInfo)) {
+            TimesheetLog::record('verify', $person->id, $this->user->id, $timesheet->id, implode(', ', $verifyInfo));
         }
 
         if ($markedUnconfirmed) {
@@ -111,13 +145,15 @@ class TimesheetController extends ApiController
      */
     public function destroy(Timesheet $timesheet)
     {
-        $this->authorize('delete', $timesheet);
+        $this->authorize('destroy', $timesheet);
         $timesheet->delete();
 
         $positionTitle = Position::retrieveTitle($timesheet->position_id);
         TimesheetLog::record('delete',
-                $timesheet->person_id, $this->user->id, $timesheetId,
-                "{$positionTitle} {$timesheet['on_duty']} - {$timesheet['off_duty']}");
+                $timesheet->person_id, $this->user->id, $timesheet->id,
+                "{$positionTitle} {$timesheet->on_duty} - {$timesheet->off_duty}");
+
+        return $this->restDeleteSuccess();
     }
 
     /*
@@ -180,6 +216,24 @@ class TimesheetController extends ApiController
 
         return $this->restError($timesheet);
     }
+
+    /*
+     * Start a shift for a person
+     */
+
+    public function signoff(Timesheet $timesheet)
+    {
+        $this->authorize('signoff', $timesheet);
+
+        $timesheet->setOffDutyToNow();
+        $timesheet->save();
+        $timesheet->loadRelationships();
+        TimesheetLog::record('signoff',
+                $timesheet->person_id, $this->user->id, $timesheet->id,
+                $timesheet->position->title." ".(string) $timesheet->off_duty);
+        return $this->success($timesheet);
+    }
+
 
     /*
      * Return information on timesheet corrections AND the current timesheet

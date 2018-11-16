@@ -42,4 +42,28 @@ class TimesheetPolicy
     {
         return ($user->id == $personId);
     }
+
+    /*
+     * Can a user delete a timesheet?
+     */
+
+     public function destroy(Person $user, Timesheet $timesheet) {
+         return $user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN]);
+     }
+
+     /*
+      * Can user signin the person?
+      */
+
+     public function signin(Person $user) {
+         return false;
+     }
+
+     /*
+      * Can user signoff the timesheet?
+      */
+
+     public function signoff(Person $user, Timesheet $timesheet) {
+         return false;
+     }
 }

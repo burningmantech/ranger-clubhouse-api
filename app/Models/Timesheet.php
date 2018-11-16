@@ -10,6 +10,7 @@ use App\Models\ApiModel;
 use App\Helpers\DateHelper;
 use App\Models\Position;
 use App\Models\Person;
+use DB;
 
 class Timesheet extends ApiModel
 {
@@ -100,6 +101,17 @@ class Timesheet extends ApiModel
     {
         return self::where('person_id', $personId)->whereNull('off_duty')->exists();
     }
+
+    public static function findShiftWithinMinutes($personId, $startTime, $withinMinutes)
+    {
+
+        return self::with([ 'position:id,title' ])
+            ->where('person_id', $personId)
+            ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
+                [ $startTime, $withinMinutes, $startTime, $withinMinutes]
+            )->first();
+    }
+
 
     /*
      * Find the years a person was on working

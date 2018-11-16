@@ -101,6 +101,8 @@ Route::group([
     Route::get('training/{id}', 'TrainingController@show');
 
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
+    Route::post('timesheet/signon', 'TimesheetController@signon');
+    Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
 
