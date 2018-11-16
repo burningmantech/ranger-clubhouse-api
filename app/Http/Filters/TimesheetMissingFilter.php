@@ -27,7 +27,11 @@ class TimesheetMissingFilter
 
     const MANAGE_FIELDS = [
         'review_status',
-        'reviewer_notes'
+        'reviewer_notes',
+        'create_entry',
+        'new_off_duty',
+        'new_on_duty',
+        'new_position_id',
     ];
 
     public function deserialize(Person $user = null): array

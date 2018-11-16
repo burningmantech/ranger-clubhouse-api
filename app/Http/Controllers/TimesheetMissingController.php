@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ApiController;
 
 use App\Helpers\SqlHelper;
+use App\Models\PersonPosition;
 use App\Models\PositionCredit;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
+
+use DB;
 
 class TimesheetMissingController extends ApiController
 {
@@ -70,17 +73,54 @@ class TimesheetMissingController extends ApiController
 
         $this->fromRestFiltered($timesheetMissing);
 
-        if ($timesheetMissing->isDirty('reviewer_status')
+        if ($timesheetMissing->isDirty('review_status')
         || $timesheetMissing->isDirty('reviewer_notes')) {
             $timesheetMissing->reviewed_at = SqlHelper::now();
         }
 
-        if (!$timesheetMissing->save()) {
-            return $this->restError($timesheetMissing);
+        $createNew = ($timesheetMissing->review_status == 'approved' && $timesheetMissing->create_entry);
+
+
+        if ($createNew) {
+            // Verify the person may hold the position
+            if (!PersonPosition::havePosition($person->id, $timesheetMissing->new_position_id)) {
+                throw new \InvalidArgumentException('Person does not hold the position.');
+            }
         }
 
-        // Load up position title, reviewer callsigns in case of change.
-        $timesheetMissing->loadRelationships();
+        try {
+            DB::beginTransaction();
+            if (!$timesheetMissing->save()) {
+                DB::rollback();
+                return $this->restError($timesheetMissing);
+            }
+
+            // Load up position title, reviewer callsigns in case of change.
+            $timesheetMissing->loadRelationships();
+
+            if ($createNew) {
+                $timesheet = new Timesheet([
+                    'person_id'   => $person->id,
+                    'on_duty'     => $timesheetMissing->new_on_duty,
+                    'off_duty'    => $timesheetMissing->new_off_duty,
+                    'position_id' => $timesheetMissing->new_position_id,
+                ]);
+
+                if (!$timesheet->save()) {
+                    DB::rollback();
+                    throw new \InvalidArgumentException('Failed to create new entry.');
+                }
+
+                TimesheetLog::record('created',
+                        $person->id, $this->user->id, $timesheet->id,
+                         "missing entry ".$timesheet->position->title." ".(string) $timesheet->on_duty);
+
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
 
         return $this->success($timesheetMissing);
     }

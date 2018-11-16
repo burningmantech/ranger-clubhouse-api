@@ -20,14 +20,26 @@ class TimesheetMissing extends ApiModel
         'person_id',
         'position_id',
         'review_status',
-        'reviewer_notes'
+        'reviewer_notes',
+
+        // Used for creating new entries when review_status == 'approved'
+        'create_entry',
+        'new_on_duty',
+        'new_off_duty',
+        'new_position_id'
+    ];
+
+    protected $casts = [
+        'create_entry' => 'boolean'
     ];
 
     protected $dates = [
         'created_at',
         'reviewed_at',
         'on_duty',
-        'off_duty'
+        'off_duty',
+        'new_on_duty',
+        'new_off_duty',
     ];
 
     protected $appends = [
@@ -40,8 +52,19 @@ class TimesheetMissing extends ApiModel
         'notes'     => 'required|string',
         'on_duty'   => 'required|date',
         'off_duty'  => 'required|date|after:on_duty',
-        'person_id' => 'required|integer'
+        'person_id' => 'required|integer',
+
+        'create_entry' => 'boolean',
+
+        'new_on_duty'     => 'date|nullable|required_if:create_entry,true',
+        'new_off_duty'    => 'date|nullable|after:new_on_duty|required_if:create_entry,true',
+        'new_position_id' => 'integer|nullable|required_if:create_entry,true'
     ];
+
+    public $create_new;
+    public $new_off_duty;
+    public $new_on_duty;
+    public $new_position_id;
 
     const PARTNER_SHIFT_STARTS_WITHIN = 30;
 
@@ -118,7 +141,7 @@ class TimesheetMissing extends ApiModel
             return null;
         }
 
-        $people = preg_split("/(\band\b|\s*(&|,)\s*)/i", $this->partner);
+        $people = preg_split("/(\band\b|\s*[&\+\|]\s*)/i", $this->partner);
 
         $partners = [];
 
@@ -161,4 +184,21 @@ class TimesheetMissing extends ApiModel
         }
         return $partners;
     }
+
+    public function setCreateEntryAttribute($value) {
+        $this->create_entry = $value;
+    }
+
+    public function setNewOnDutyAttribute($value) {
+        $this->new_on_duty = $value;
+    }
+
+    public function setNewOffDutyAttribute($value) {
+        $this->new_off_duty = $value;
+    }
+
+    public function setNewPositionIdAttribute($value) {
+        $this->new_position_id = $value;
+    }
+
 }
