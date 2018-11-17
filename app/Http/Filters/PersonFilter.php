@@ -93,12 +93,15 @@ class PersonFilter
         'vehicle_blacklisted',
         'vehicle_paperwork',
         'vehicle_insurance_paperwork',
+        'active_next_event',
+        'on_site'
+    ];
 
+    const LAM_FIELDS = [
         'lam_status',
         'bpguid',
         'sfuid',
 
-        'active_next_event',
     ];
 
     const MENTOR_FIELDS = [
@@ -143,7 +146,8 @@ class PersonFilter
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
-        [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::EDIT_BMIDS ] ],
+        [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
+        [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
         // Note: self is not allowed to see mentor notes
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
@@ -160,7 +164,8 @@ class PersonFilter
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VC ]],
-        [ self::EVENT_FIELDS, true, [ Role::VC ]],
+        [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
+        [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],

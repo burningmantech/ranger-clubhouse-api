@@ -11,35 +11,28 @@ class PersonPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user, $ability)
-    {
-        if ($user->hasRole(Role::ADMIN) && $ability != 'contact') {
-            return true;
-        }
-    }
+    private $authorizedRoles = [
+        Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER
+    ];
 
-    /**
+    /*
      * Determine whether the user can view the person.
      *
-     * @param  \App\Models\Person $user
-     * @param  \App\Person        $person
-     * @return mixed
      */
-    public function view(Person $person)
+    public function view(Person $user, Person $person)
     {
-        return true;
+        return (
+            $person->id == $user->id ||
+            $user->hasRole($this->authorizedRoles)
+        );
     }
 
-    /**
+    /*
      * Determine whether the user can create people.
-     *
-     * @param  \App\Models\Person $user
-     * @return mixed
      */
     public function create(Person $user)
     {
-        return false;
-        //
+        return $user->isAdmin();
     }
 
     /**
@@ -55,7 +48,7 @@ class PersonPolicy
             return true;
         }
 
-        return $user->hasRole([Role::TRAINER, Role::MENTOR, Role::VC]);
+        return $user->hasRole($this->authorizedRoles);
     }
 
     /*
@@ -64,7 +57,7 @@ class PersonPolicy
      */
     public function delete(Person $user, Person $person)
     {
-        return false;
+        return $user->isAdmin();
     }
 
     /*
@@ -75,7 +68,7 @@ class PersonPolicy
     public function password(Person $user, Person $person)
     {
         // check for admin is done above.
-        return ($user->id == $person->id);
+        return ($user->id == $person->id) || $user->isAdmin();
     }
 
     /*
@@ -93,8 +86,7 @@ class PersonPolicy
 
     public function updateRoles(Person $user, Person $person)
     {
-        // admin check is done in the before() function
-        return false;
+        return $user->isAdmin();
     }
 
     public function mentees(Person $user, Person $person)

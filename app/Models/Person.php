@@ -7,17 +7,20 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Foundation\Auth\Access\Authorizable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Auth\Authenticatable;
-use Illuminate\Foundation\Auth\Access\Authorizable;
-use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
-use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 
+use App\Models\Alert;
 use App\Models\ApiModel;
 use App\Models\PersonRole;
-use App\Models\Alert;
+use App\Models\Role;
+
+use Carbon\Carbon;
 
 class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
 {
@@ -41,21 +44,26 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $casts = [
-        'active_next_event'           => 'bool',
-        'asset_authorized'            => 'bool',
-        'callsign_approved'           => 'bool',
-        'has_note_on_file'            => 'bool',
-        'on_site'                     => 'bool',
-        'user_authorized'             => 'bool',
-        'vehicle_blacklisted'         => 'bool',
-        'vehicle_insurance_paperwork' => 'bool',
-        'vehicle_paperwork'           => 'bool',
+        'active_next_event'           => 'boolean',
+        'asset_authorized'            => 'boolean',
+        'callsign_approved'           => 'boolean',
+        'has_note_on_file'            => 'boolean',
+        'on_site'                     => 'boolean',
+        'user_authorized'             => 'boolean',
+        'vehicle_blacklisted'         => 'boolean',
+        'vehicle_insurance_paperwork' => 'boolean',
+        'vehicle_paperwork'           => 'boolean',
+
 
         'create_date'                 => 'datetime',
         'date_verified'               => 'date',
         'status_date'                 => 'date',
         'timestamp'                   => 'timestamp',
     ];
+
+    /*
+     * Do not forget to add the column name to PersonFilter as well.
+     */
 
     protected $fillable = [
         'first_name',
@@ -300,7 +308,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         ];
     }
 
-    /*
+    /**
      * Search for matching callsigns
      *
      *
@@ -427,6 +435,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return false;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(Role::ADMIN);
+    }
+
     /*
      * Normalize the country
      */
@@ -485,5 +498,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function setLanguagesAttribute($value) {
         $this->languages = $value;
+    }
+
+    /*
+     * Account created prior to 2010 have a 0000-00-00 date. Return null if that's
+     * the case
+     */
+
+    public function getCreateDateAttribute() {
+        $date = Carbon::parse($this->attributes['create_date']);
+
+        if ($date->year <= 0) {
+            return null;
+        }
+
+        return $date;
     }
 }
