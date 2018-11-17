@@ -20,6 +20,7 @@ use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Timesheet;
+use App\Models\Training;
 
 class PersonController extends ApiController
 {
@@ -276,9 +277,20 @@ class PersonController extends ApiController
 
     public function positions(Request $request, Person $person)
     {
+        $params = request()->validate([
+            'include_training'   => 'sometimes|boolean',
+            'year'               => 'required_if:include_training,true|integer'
+        ]);
+
         $this->authorize('view', $person);
 
-        return response()->json([ 'positions' => PersonPosition::findForPerson($person->id) ]);
+        if (@$params['include_training']) {
+            $positions = Training::findPositionsWithTraining($person->id, $params['year']);
+        } else {
+            $positions = PersonPosition::findForPerson($person->id);
+        }
+
+        return response()->json([ 'positions' =>  $positions]);
     }
       /*
        * Update the positions held

@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
 use App\Helpers\DateHelper;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use App\Models\Position;
+
+use App\Models\ApiModel;
 use App\Models\PersonPosition;
+use App\Models\Position;
 use App\Models\TraineeStatus;
+
+use Carbon\Carbon;
+
+use Illuminate\Support\Facades\DB;
 
 /*
  * Composite Model
@@ -54,10 +57,54 @@ class Training extends ApiModel
 
         // "Computer says no..."
         // return the training position title
-        $trainingPosition = Position::find($trainingId);
-        $required = $trainingPosition->title;
+        $required = Position::retrieveTitle($trainingId);
 
         return false;
+    }
+
+    /*
+     * Find the positions for a person and include training status
+     */
+
+    public static function findPositionsWithTraining($personId, $year) {
+        $positions = PersonPosition::findForPerson($personId);
+
+        $personPositions = [];
+        foreach ($positions as $position) {
+            $info = [
+                'id'    => $position->id,
+                'title' => $position->title,
+            ];
+
+            if ($position->id == Position::DIRT) {
+                $info['training_required'] = true;
+                if (!TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
+                    $info['is_trained'] = false;
+                    $info['training_position_id'] = Position::DIRT_TRAINING;
+                    $info['training_title'] = 'Training';
+                } else {
+                    $info['is_trained'] = true;
+                }
+            } else {
+                $trainingId = $position->training_position_id;
+                if ($trainingId) {
+                    $info['training_required'] = true;
+                    if (TraineeStatus::didPersonPassForYear($personId, $trainingId, $year)) {
+                        $info['is_trained'] = true;
+                    } else {
+                        $info['is_trained'] = false;
+                        $info['training_position_id'] = $trainingId;
+                        $info['training_title'] =  Position::retrieveTitle($trainingId);
+                    }
+                } else {
+                    $info['training_required'] = false;
+                }
+            }
+
+            $personPositions[] = $info;
+        }
+
+        return $personPositions;
     }
 
     public static function findOrFail($id)

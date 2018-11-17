@@ -8,7 +8,9 @@ use App\Http\Controllers\ApiController;
 use App\Helpers\SqlHelper;
 
 use App\Models\Position;
+use App\Models\PersonPosition;
 use App\Models\PositionCredit;
+use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
@@ -190,7 +192,7 @@ class TimesheetController extends ApiController
         $required = null;
 
         // Are they trained for this position?
-        if (!Training::isPersonTrained($personId, $positionId, $required)) {
+        if (!Training::isPersonTrained($personId, $positionId, date('Y'), $required)) {
             if ($isAdmin) {
                 $signonForced = true;
                 $trainingTitle = Position::retrieveTitle($required);

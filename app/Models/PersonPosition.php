@@ -39,7 +39,7 @@ class PersonPosition extends ApiModel
 
      public static function findForPerson($personId)
      {
-         return self::select('position.id', 'position.title')
+         return self::select('position.id', 'position.title', 'position.training_position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('person_id', $personId)
                 ->orderBy('position.title')
