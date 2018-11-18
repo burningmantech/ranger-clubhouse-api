@@ -1,0 +1,48 @@
+#!/bin/sh
+
+#
+# Wrapper for PHP composer.
+# If Docker is installed, run composer from the docker image we use to build
+# the Docker container for the app.
+# Otherwise, try to run composer directly.
+#
+
+set -eu
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+# Get composer image name from Dockerfile
+composer_image="$(
+    sed -n -e 's/^FROM \(composer:[^ ]*\).*$/\1/p' < "${wd}/Dockerfile"
+)";
+
+_composer() {
+    if type docker > /dev/null 2>&1; then
+        # Run docker pull first if needed and suppress its output so that we
+        # only output what composer would emit normally.
+        if !                                  \
+            docker image ls composer:1.7.3 |  \
+            grep '^composer ' > /dev/null;
+        then
+            docker image pull "${composer_image}" > /dev/null;
+        fi;
+
+        # Run composer within Docker
+        exec docker run                           \
+            --rm                                  \
+            --volume="${wd}:/app" --workdir=/app  \
+            "${composer_image}"                   \
+            composer "$@";
+
+    elif type composer > /dev/null 2>&1; then
+        # Run composer natively
+        exec composer "$@";
+
+    else
+        # No dice
+        echo "composer: command not found";
+        exit 127;
+    fi;
+}
+
+_composer "$@";
