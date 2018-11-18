@@ -26,7 +26,7 @@ class PersonMessageController extends ApiController
 
         $this->authorize('index', [PersonMessage::class, $personId ]);
 
-        return $this->success(PersonMessage::findForPerson($personId), false);
+        return $this->success(PersonMessage::findForPerson($personId), null, 'person_message');
     }
 
     /**
