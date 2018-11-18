@@ -464,9 +464,9 @@ class PersonController extends ApiController
         return response()->json(['teacher' => $data]);
     }
 
-      /*
-       * Calculate how many earned credits for a given year
-       */
+    /*
+     * Calculate how many earned credits for a given year
+     */
 
     public function credits(Person $person)
     {
@@ -481,9 +481,9 @@ class PersonController extends ApiController
         ]);
     }
 
-       /*
-        * Find the person's mentees
-        */
+    /*
+     * Find the person's mentees
+     */
 
     public function mentees(Person $person)
     {
@@ -491,4 +491,14 @@ class PersonController extends ApiController
         return response()->json(['mentees' => PersonMentor::retrieveAllForPerson($person->id) ]);
     }
 
+    /*
+     * Retrieve a person's mentors
+     */
+
+    public function mentors(Person $person)
+    {
+        $this->authorize('mentors', $person);
+
+        return response()->json([ 'mentors' => PersonMentor::findMentorsForPerson($person->id) ]);
+    }
 }

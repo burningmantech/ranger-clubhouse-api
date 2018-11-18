@@ -93,4 +93,9 @@ class PersonPolicy
     {
         return ($user->id == $person->id || $user->hasRole(Role::MENTOR));
     }
+
+    public function mentors(Person $user, Person $person)
+    {
+        return ($user->id == $person->id || $user->hasRole([ Role::ADMIN, Role::VC, Role::MENTOR ]));
+    }
 }

@@ -131,4 +131,18 @@ class PersonMentor extends ApiModel
 
         return $result;
     }
+
+    /*
+     * Find the mentors for a person
+     */
+
+     public static function findMentorsForPerson($personId)
+     {
+         return PersonMentor::select('person_mentor.status', 'mentor_year as year', 'mentor_id as person_id', 'mentor.callsign as callsign')
+                    ->leftJoin('person as mentor', 'mentor.id', '=', 'person_mentor.mentor_id')
+                    ->where('person_id', '=', $personId)
+                    ->orderBy('mentor_year')
+                    ->orderBy('mentor.callsign')
+                    ->get();
+     }
 }
