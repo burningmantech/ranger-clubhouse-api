@@ -40,6 +40,8 @@ return [
 
     // Manual review Google sheet
     'ManualReviewLinkEnable'            => env('RANGER_CLUBHOUSE_REVIEW_ENABLE', false),
+    // If true, allow shift signups even if manual review is disabled
+    'ManualReviewDisabledAllowSignups'  => env('RANGER_CLUBHOUSE_REVIEW_ALLOW_SIGNUPS', true),
     'ManualReviewProspectiveAlphaLimit' => env('RANGER_CLUBHOUSE_REVIEW_MAX_ALPHAS', 177),
     'ManualReviewGoogleFormBaseUrl'     => env('RANGER_CLUBHOUSE_REVIEW_FORM_URL', 'https://docs.google.com/forms/d/e/1FAIpQLScNcr1xZ9YHULag7rdS5-LUU_e1G1XS5kfDI85T10RVTAeZXA/viewform?entry.960989731='),
     'ManualReviewGoogleSheetId'         => env('RANGER_CLUBHOUSE_REVIEW_SHEET_ID', '1T6ZoSHoQhjlcqOs0J-CQ7HoMDQd_RGs4y_SQSvOb15M'),
