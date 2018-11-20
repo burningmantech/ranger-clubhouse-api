@@ -70,10 +70,9 @@ class PersonScheduleController extends ApiController
                 [ 'slot_id' => $slotId],
                 $person->id
             );
-            return response()->json($result);
-        } else {
-            return response()->json($result, 422);
         }
+
+        return response()->json($result);
     }
 
     /**
