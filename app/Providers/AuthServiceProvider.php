@@ -10,6 +10,8 @@ use App\Models\AccessDocumentDelivery;
 use App\Models\Alert;
 use App\Models\AlertPerson;
 use App\Models\Asset;
+use App\Models\AssetAttachment;
+use App\Models\AssetPerson;
 use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonMessage;
@@ -22,9 +24,11 @@ use App\Models\TimesheetMissing;
 
 use App\Policies\AccessDocumentDeliveryPolicy;
 use App\Policies\AccessDocumentPolicy;
-use App\Policies\AlertPolicy;
 use App\Policies\AlertPersonPolicy;
+use App\Policies\AlertPolicy;
+use App\Policies\AssetPersonPolicy;
 use App\Policies\AssetPolicy;
+use App\Policies\AssetAttachmentPolicy;
 use App\Policies\ManualReviewPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonPolicy;
@@ -32,8 +36,8 @@ use App\Policies\PositionPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SchedulePolicy;
 use App\Policies\SlotPolicy;
-use App\Policies\TimesheetPolicy;
 use App\Policies\TimesheetMissingPolicy;
+use App\Policies\TimesheetPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -48,6 +52,8 @@ class AuthServiceProvider extends ServiceProvider
         Alert::class => AlertPolicy::class,
         AlertPerson::class => AlertPersonPolicy::class,
         Asset::class  => AssetPolicy::class,
+        AssetAttachment::class  => AssetAttachmentPolicy::class,
+        AssetPerson::class => AssetPersonPolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,

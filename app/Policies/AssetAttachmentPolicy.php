@@ -3,11 +3,11 @@
 namespace App\Policies;
 
 use App\Models\Person;
-use App\Models\Asset;
+use App\Models\AssetAttachment;
 use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class AssetPolicy
+class AssetAttachmentPolicy
 {
     use HandlesAuthorization;
 
@@ -19,11 +19,11 @@ class AssetPolicy
     }
 
     /**
-     * Determine whether the user can view the asset.
+     * Determine whether the user can view the asset attachment.
      */
-    public function view(Person $user, Asset $asset)
+    public function show(Person $user, Asset $asset_attachment)
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /**
@@ -39,7 +39,7 @@ class AssetPolicy
      * Determine whether the user can update the asset.
      *
      */
-    public function update(Person $user, Asset $asset)
+    public function update(Person $user, AssetAttachment $asset_attachment)
     {
         return false;
     }
@@ -48,7 +48,7 @@ class AssetPolicy
      * Determine whether the user can delete the asset.
      *
      */
-    public function delete(Person $user, Asset $asset)
+    public function delete(Person $user, AssetAttachment $asset_attachment)
     {
         return false;
     }

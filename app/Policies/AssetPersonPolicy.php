@@ -2,18 +2,19 @@
 
 namespace App\Policies;
 
+use App\Models\AssetPerson;
 use App\Models\Person;
-use App\Models\Asset;
 use App\Models\Role;
+
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class AssetPolicy
+class AssetPersonPolicy
 {
     use HandlesAuthorization;
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([ Role::ADMIN, Role::MANAGE ])) {
             return true;
         }
     }
@@ -21,7 +22,7 @@ class AssetPolicy
     /**
      * Determine whether the user can view the asset.
      */
-    public function view(Person $user, Asset $asset)
+    public function view(Person $user, AssetPerson $asset_person)
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -39,7 +40,7 @@ class AssetPolicy
      * Determine whether the user can update the asset.
      *
      */
-    public function update(Person $user, Asset $asset)
+    public function update(Person $user, AssetPerson $asset_person)
     {
         return false;
     }
@@ -48,9 +49,25 @@ class AssetPolicy
      * Determine whether the user can delete the asset.
      *
      */
-    public function delete(Person $user, Asset $asset)
+    public function destroy(Person $user, AssetPerson $asset_person)
     {
         return false;
     }
+
+    /**
+     * Can the user checkout the asset?
+     */
+
+     public function checkout(Person $user) {
+         return false;
+     }
+
+     /**
+      * Can the user checkin the asset?
+      */
+
+      public function checkin(Person $user, AssetPerson $asset_person) {
+          return false;
+      }
 
 }

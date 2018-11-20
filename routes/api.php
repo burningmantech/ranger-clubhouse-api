@@ -46,7 +46,14 @@ Route::group([
 
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
+
     Route::resource('asset', 'AssetController');
+    Route::resource('asset-attachment', 'AssetAttachmentController');
+
+    Route::post('asset-person/checkout', 'AssetPersonController@checkout');
+    Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
+    Route::resource('asset-person', 'AssetPersonController');
+
 
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
@@ -63,6 +70,7 @@ Route::group([
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
+
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/credits', 'PersonController@credits');

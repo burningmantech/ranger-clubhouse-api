@@ -24,10 +24,10 @@ class Asset extends ApiModel
     ];
 
     protected $casts = [
-        'perm_assign'       => 'bool',
-        'new_user_eligible' => 'bool',
-        'on_sl_report'      => 'bool',
-        'create_date'       => 'timestamp'
+        'perm_assign'       => 'boolean',
+        'new_user_eligible' => 'boolean',
+        'on_sl_report'      => 'boolean',
+        'create_date'       => 'datetime'
     ];
 
     protected $rules = [
@@ -58,5 +58,11 @@ class Asset extends ApiModel
         }
 
         return $sql->get();
+    }
+
+    public static function findByBarcodeYear($barcode, $year) {
+        return self::where('barcode', $barcode)
+                ->whereYear('create_date', $year)
+                ->first();
     }
 }

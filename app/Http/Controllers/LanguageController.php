@@ -13,7 +13,7 @@ class LanguageController extends ApiController
     {
         $query = request()->validate([
             'language'  => 'required|string',
-            'off_site'  => 'sometimes|bool'
+            'off_site'  => 'sometimes|boolean'
         ]);
 
         $language = $query['language'];

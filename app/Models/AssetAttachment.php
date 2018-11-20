@@ -20,4 +20,9 @@ class AssetAttachment extends ApiModel
         'parent_type' => 'required|string',
         'description'  => 'required|string',
     ];
+
+    public static function findAll()
+    {
+        return self::orderBy('description')->get();
+    }
 }

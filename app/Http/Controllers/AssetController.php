@@ -20,7 +20,7 @@ class AssetController extends ApiController
 
         $query = request()->validate([
             'barcode'         => 'sometimes|string',
-            'include_history' => 'sometimes|bool',
+            'include_history' => 'sometimes|boolean',
             'year'            => 'sometimes|integer',
             'limit'           => 'sometimes|integer',
             'offset'          => 'sometimes|integer',
