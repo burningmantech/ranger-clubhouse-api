@@ -66,4 +66,13 @@ class TimesheetPolicy
      public function signoff(Person $user, Timesheet $timesheet) {
          return false;
      }
+
+     /*
+      * Can user see a timesheet log?
+      */
+
+     public function log(Person $user, $id) {
+         return false;
+     }
+
 }

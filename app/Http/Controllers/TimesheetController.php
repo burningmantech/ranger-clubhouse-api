@@ -40,6 +40,65 @@ class TimesheetController extends ApiController
     }
 
     /*
+     * Retrieve a timesheet log for a person & year
+     */
+    public function showLog(Request $request)
+    {
+        $params = request()->validate([
+            'year'      => 'required|digits:4',
+            'person_id' => 'required|numeric'
+        ]);
+
+        $this->authorize('log', [ Timesheet::class, $params['person_id'] ]);
+
+        list ($logs, $other) = TimesheetLog::findForPersonYear($params['person_id'], $params['year']);
+
+        $tsLogs = [];
+        foreach ($logs as $ts) {
+            $id = $ts->timesheet_id;
+            if (!@$tsLogs[$id]) {
+                $entry = $ts->timesheet;
+
+                $tsLogs[$id] = [
+                    'timesheet_id'  => $id,
+                    'logs' => []
+                ];
+
+                if ($entry) {
+                    $tsLogs[$id]['timesheet'] = [
+                        'on_duty'        => (string) $entry->on_duty,
+                        'off_duty'       => (string) $entry->off_duty,
+                        'position_id'    => $entry->position_id,
+                        'position_title' => $entry->position->title,
+                    ];
+                }
+            }
+            $tsLogs[$id]['logs'][] = [
+                'timesheet_id'      => $ts->timesheet_id,
+                'creator_person_id' => $ts->create_person_id,
+                'creator_callsign'  => $ts->creator ? $ts->creator->callsign : "-",
+                'created_at'        => (string) $ts->created_at,
+                'action'            => $ts->action,
+                'message'           => $ts->message,
+            ];
+        }
+
+        $otherLogs = [];
+
+        foreach ($other as $ts) {
+            $otherLogs[] = [
+                'creator_person_id' => $ts->create_person_id,
+                'creator_callsign'  => $ts->creator ? $ts->creator->callsign : "-",
+                'created_at'        => (string) $ts->created_at,
+                'action'            => $ts->action,
+                'message'           => $ts->message,
+            ];
+        }
+
+        return response()->json([ 'logs' => array_values($tsLogs), 'other_logs' => $otherLogs]);
+    }
+
+    /*
      * Create a new timesheet
      */
     public function store(Request $request)
