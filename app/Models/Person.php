@@ -12,13 +12,17 @@ use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
+
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 use App\Models\Alert;
 use App\Models\ApiModel;
 use App\Models\PersonRole;
 use App\Models\Role;
+use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
 
@@ -27,6 +31,26 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     use Authenticatable, Authorizable, Notifiable;
 
     const RESET_PASSWORD_EXPIRE = (3600 * 48);
+
+    // For resetting and adding roles & positions for new users
+    const REMOVE_ALL = 0;
+    const ADD_NEW_USER = 1;
+
+    const PROSPECTIVE = 'prospective';
+    const PASTPROSPECTIVE = 'past prospective';
+    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
+    const ALPHA = 'alpha';
+    const BONKED = 'bonked';
+    const ACTIVE = 'active';
+    const INACTIVE = 'inactive';
+    const INACTIVE_EXTENSION = 'inactive extension';
+    const RETIRED = 'retired';
+    const UBERBONKED = 'uberbonked';
+    const DISMISSED = 'dismissed';
+    const DECEASED = 'deceased';
+    const AUDITOR = 'auditor';
+    const RESIGNED = 'resigned';
+    const NON_RANGER = 'non ranger';
 
     /**
      * The database table name.
@@ -513,5 +537,84 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         return $date;
+    }
+
+    /**
+     * Change the status.
+     * TODO figure out a better way to do this.
+     *
+     */
+    public function changeStatus($newStatus, $oldStatus, $reason) {
+        if ($newStatus == $oldStatus) {
+            return;
+        }
+
+        $personId = $this->id;
+        $this->status_date = SqlHelper::now();
+
+        ActionLog::record(Auth::user(), 'status-change', $reason, [ 'old_status' => $oldStatus, 'new_status' => $newStatus ], $personId);
+
+        $changeReason = $reason . " new status $newStatus";
+
+        switch($newStatus) {
+        case Person::ACTIVE:
+            // grant the new ranger all the basic positions
+            $addIds = Position::where('all_rangers', true)->pluck('id');
+            PersonPosition::addIdsToPerson($personId, $addIds, $changeReason);
+
+            // Add login role
+            $addIds = Role::where('new_user_eligible', true)->pluck('id');
+            PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
+            break;
+
+        case Person::ALPHA:
+            // grant the alpha the alpha position
+            PersonPosition::addIdsToPerson($personId, [ Position::ALPHA ], $changeReason);
+            break;
+
+        case Person::UBERBONKED:
+        case Person::DECEASED:
+        case Person::DISMISSED:
+        case Person::RESIGNED:
+            // Remove all positions
+            PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+
+            // Remove all roles
+            PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
+
+            // Remove asset authorization and lock user out of system
+            $this->asset_authorized = 0;
+            $this->user_authorized = 0;
+            break;
+
+        case Person::BONKED:
+            // Remove all positions
+            PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+            break;
+
+        // Note that it used to be that changing status to INACTIVE
+        // removed all of your positions other than "Training."  We decided
+        // in 2015 not to do this anymore because we lose too much historical
+        // information.
+
+        // If you are one of the below, the only role you get is login
+        // and position is Training
+        case Person::RETIRED:
+        case Person::AUDITOR:
+        case Person::PROSPECTIVE:
+        case Person::PROSPECTIVE_WAITLIST:
+        case Person::PASTPROSPECTIVE:
+            // Remove all roles, and reset back to the default roles
+            PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
+
+            // Remove all positions, and reset back to the default positions
+            PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
+            break;
+        }
+
+        if ($oldStatus == Person::ALPHA) {
+            // if you're no longer an alpha, you can't sign up for alpha shifts
+            PersonPosition::removeIdsFromPerson($personId, [ Position::ALPHA ], $reason . ' no longer alpha');
+        }
     }
 }

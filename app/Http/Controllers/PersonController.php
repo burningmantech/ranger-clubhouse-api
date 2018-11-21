@@ -89,6 +89,13 @@ class PersonController extends ApiController
             throw new \InvalidArgumentException('callsign_approved can not be unset once approved and status is not prospecitve, past prospecitve, or alpha.');
         }
 
+        $statusChanged = false;
+        if ($person->isDirty('status')) {
+            $statusChanged = true;
+            $newStatus = $person->status;
+            $oldStatus = $person->getOriginal('status');
+        }
+
         if (!$person->save()) {
             return $this->restError($person);
         }
@@ -97,7 +104,12 @@ class PersonController extends ApiController
             PersonLanguage::updateForPerson($person->id, $person->languages);
         }
 
-        $this->log('person-update', 'Person updated', null, $person->id);
+        $this->log('person-update', 'person update', null, $person->id);
+
+        if ($statusChanged) {
+            $person->changeStatus($newStatus, $oldStatus, 'person update');
+            $person->save();
+        }
 
         return $this->toRestFiltered($person);
     }
@@ -116,9 +128,20 @@ class PersonController extends ApiController
                 DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [ $personId ]);
 
                 $tables = [
+                    'access_document_change',
+                    'access_document_delivery',
+                    'access_document',
+                    'action_logs',
+                    'alert_person',
                     'asset_person',
+                    'bmid',
+                    'broadcast_message',
+                    'contact_log',
+                    'manual_review',
+                    'mentee_status',
                     'person_language',
                     'person_mentor',
+                    'person_message',
                     'person_position',
                     'person_role',
                     'person_slot',
@@ -501,4 +524,5 @@ class PersonController extends ApiController
 
         return response()->json([ 'mentors' => PersonMentor::findMentorsForPerson($person->id) ]);
     }
+
 }
