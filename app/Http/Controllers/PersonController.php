@@ -30,20 +30,45 @@ class PersonController extends ApiController
 
     public function index()
     {
-        $query = request()->validate([
+        $params = request()->validate([
             'query'            => 'sometimes|string',
             'search_fields'    => 'sometimes|string',
             'statuses'         => 'sometimes|string',
             'exclude_statuses' => 'sometimes|string',
             'limit'            => 'sometimes|integer',
             'offset'           => 'sometimes|integer',
+            'basic'            => 'sometimes|boolean',
         ]);
 
-        $results = Person::findForQuery($query);
-
+        $results = Person::findForQuery($params);
+        $people = $results['people'];
         $meta = [ 'limit' => $results['limit'], 'total' => $results['total'] ];
-        return $this->toRestFiltered($results['people'], $meta, 'person');
+
+        if (@$params['basic']) {
+            if (!$this->userHasRole([ Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER ])) {
+                throw new \InvalidArgumentException("Not authorized for basic search.");
+            }
+
+            $rows = [];
+            foreach ($results['people'] as $person) {
+                $rows[] = [
+                    'id'              => $person->id,
+                    'callsign'        => $person->callsign,
+                    'status'          => $person->status,
+                    'first_name'      => $person->first_name,
+                    'last_name'       => $person->last_name,
+                    'user_authorized' => $person->user_authorized,
+                ];
+            }
+
+            return response()->json([ 'person' => $rows, 'meta' => $meta ]);
+        } else {
+            return $this->toRestFiltered($people, $meta, 'person');
+        }
     }
+
+    /*
+     * Search
 
     /*
      * Create a person
