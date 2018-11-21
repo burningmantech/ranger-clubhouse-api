@@ -150,17 +150,12 @@ class Timesheet extends ApiModel
     public function getDurationAttribute()
     {
         $on_duty = $this->getOriginal('on_duty');
-        $off_duty = $this->getOriginal('off_duty');
 
-        if ($on_duty) {
-            if ($off_duty) {
-                return Carbon::parse($off_duty)->diffInSeconds(Carbon::parse($on_duty));
-            }
-
-            return Carbon::parse(SqlHelper::now())->diffInSeconds(Carbon::parse($on_duty));
-        } else {
-            return 0;
+        if ($this->off_duty) {
+            return $this->off_duty->diffInSeconds($this->on_duty);
         }
+
+        return Carbon::parse(SqlHelper::now())->diffInSeconds($this->on_duty);
     }
 
     public function getPositionTitleAttribute() {
@@ -171,8 +166,10 @@ class Timesheet extends ApiModel
         if ($this->off_duty) {
             return PositionCredit::computeCredits(
                     $this->position_id,
-                    $this->getOriginal('on_duty'),
-                    $this->getOriginal('off_duty'));
+                    $this->on_duty->timestamp,
+                    $this->off_duty->timestamp,
+                    $this->on_duty->year
+            );
         } else {
             return 0.0;
         }

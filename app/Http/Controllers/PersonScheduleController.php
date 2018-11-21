@@ -41,7 +41,6 @@ class PersonScheduleController extends ApiController
             PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-
         return $this->success($rows, null, 'schedules');
     }
 

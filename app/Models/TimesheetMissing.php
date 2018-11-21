@@ -110,8 +110,9 @@ class TimesheetMissing extends ApiModel
     public function getCreditsAttribute() {
         return PositionCredit::computeCredits(
                 $this->position_id,
-                $this->getOriginal('on_duty'),
-                $this->getOriginal('off_duty'));
+                $this->on_duty->timestamp,
+                $this->off_duty->timestamp,
+                $this->on_duty->year);
     }
 
     public function setPartnerAttribute($value)

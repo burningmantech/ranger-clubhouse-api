@@ -95,7 +95,7 @@ class Slot extends ApiModel
     }
 
     public function getPositionTitleAttribute() {
-        return $this->position ? $this->position->title : "Postiion #{$this->position_id}";
+        return $this->position ? $this->position->title : "Position #{$this->position_id}";
     }
 
     public function loadRelationships() {
@@ -104,6 +104,6 @@ class Slot extends ApiModel
 
     public function getCreditsAttribute()
     {
-        return PositionCredit::computeCredits($this->position_id, $this->begins, $this->ends);
+        return PositionCredit::computeCredits($this->position_id, $this->begins, $this->ends, Carbon::parse($this->begins)->year);
     }
 }

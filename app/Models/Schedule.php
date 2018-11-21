@@ -7,6 +7,8 @@ use App\Helpers\DateHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
+use App\Models\Slot;
+
 //
 // Meta Model
 // This will combined slot & position and maybe person_slot.
@@ -32,12 +34,12 @@ class Schedule extends ApiModel
         'slot_url',
         'person_assigned',
         'trainers',
+        'slot_begins_time',
+        'slot_ends_time',
     ];
 
     // And the rest are calculated
     protected $appends = [
-        'slot_begins_time',
-        'slot_ends_time',
         'slot_duration',
         'year',
         'credits'
@@ -52,9 +54,9 @@ class Schedule extends ApiModel
     {
         if (empty($query['year'])) {
             throw new \InvalidArgumentException('Missing year parameter');
-        } else {
-            $year = $query['year'];
         }
+
+        $year = $query['year'];
 
         $personId = !empty($query['person_id']) ? $query['person_id'] : null;
         $signups = !empty($query['signups']);
@@ -72,6 +74,8 @@ class Schedule extends ApiModel
             'slot.url AS slot_url',
             'slot.active as slot_active',
             'trainer_slot.signed_up AS trainer_count',
+            DB::raw('UNIX_TIMESTAMP(slot.begins) as slot_begins_time'),
+            DB::raw('UNIX_TIMESTAMP(slot.ends) as slot_ends_time'),
             DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
             DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended')
         ];
@@ -200,7 +204,7 @@ class Schedule extends ApiModel
                     [ 'slot_id', $personSlotId]
                 ])->firstOrFail();
 
-        $slot = $personSlot->belongsTo('App\Models\Slot', 'slot_id')
+        $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
                             ->lockForUpdate()->firstOrFail();
 
         try {
@@ -218,19 +222,9 @@ class Schedule extends ApiModel
         return [ 'status' => 'success', 'signed_up' => $slot->signed_up ];
     }
 
-    public function getSlotBeginsTimeAttribute()
-    {
-        return Carbon::parse($this->slot_begins)->timestamp;
-    }
-
-    public function getSlotEndsTimeAttribute()
-    {
-        return Carbon::parse($this->slot_ends)->timestamp;
-    }
-
     public function getSlotDurationAttribute()
     {
-        return Carbon::parse($this->slot_ends)->diffInSeconds(Carbon::parse($this->slot_begins));
+        return $this->slot_ends_time - $this->slot_begins_time;
     }
 
     public function getYearAttribute()
@@ -240,6 +234,6 @@ class Schedule extends ApiModel
 
     public function getCreditsAttribute()
     {
-        return PositionCredit::computeCredits($this->position_id, $this->slot_begins, $this->slot_ends);
+        return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
     }
 }
