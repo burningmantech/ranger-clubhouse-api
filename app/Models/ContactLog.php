@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\ApiModel;
+use App\Models\Person;
 
 class ContactLog extends ApiModel
 {
@@ -17,6 +18,30 @@ class ContactLog extends ApiModel
         'subject',
         'message'
     ];
+
+    public function recipient_person() {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function sender_person() {
+        return $this->belongsTo(Person::class);
+    }
+
+    public static function findForSenderYear($personId, $year)
+    {
+         return self::with([ 'recipient_person:id,callsign' ])
+                ->where('sender_person_id', $personId)
+                ->whereYear('sent_at', $year)
+                ->orderBy('sent_at')->get();
+    }
+    public static function findForRecipientYear($personId, $year)
+    {
+         return self::with([ 'sender_person:id,callsign' ])
+                ->where('recipient_person_id', $personId)
+                ->whereYear('sent_at', $year)
+                ->orderBy('sent_at')->get();
+    }
+
 
     public static function record($senderId, $recipientId, $action, $email, $subject, $message)
     {

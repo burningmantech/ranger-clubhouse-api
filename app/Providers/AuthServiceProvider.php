@@ -12,6 +12,7 @@ use App\Models\AlertPerson;
 use App\Models\Asset;
 use App\Models\AssetAttachment;
 use App\Models\AssetPerson;
+use App\Models\Broadcast;
 use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonMessage;
@@ -29,6 +30,7 @@ use App\Policies\AlertPolicy;
 use App\Policies\AssetPersonPolicy;
 use App\Policies\AssetPolicy;
 use App\Policies\AssetAttachmentPolicy;
+use App\Policies\BroadcastPolicy;
 use App\Policies\ManualReviewPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonPolicy;
@@ -54,6 +56,7 @@ class AuthServiceProvider extends ServiceProvider
         Asset::class  => AssetPolicy::class,
         AssetAttachment::class  => AssetAttachmentPolicy::class,
         AssetPerson::class => AssetPersonPolicy::class,
+        Broadcast::class => BroadcastPolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,

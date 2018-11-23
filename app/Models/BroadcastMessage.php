@@ -9,8 +9,16 @@ class BroadcastMessage extends ApiModel
 {
     protected $table = "broadcast_message";
 
-    // Allow mass assignment
+    // Allow mass assignment - the table is not exposed directly through an API
     protected $guarded = [];
+
+    public static function findForPersonYear($personId, $year)
+    {
+        return self::where('person_id', $personId)
+                ->whereYear('created_at', $year)
+                ->orderBy('created_at')
+                ->get();
+    }
 
     /*
      * Record an inbound or outbound message which might be associated

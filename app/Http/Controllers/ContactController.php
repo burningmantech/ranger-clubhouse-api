@@ -6,9 +6,11 @@ use Illuminate\Support\Facades\Mail;
 
 use App\Http\Controllers\ApiController;
 use App\Mail\ContactMail;
-use App\Models\ContactLog;
+
 use App\Models\Alert;
 use App\Models\AlertPerson;
+use App\Models\ContactLog;
+use App\Models\Role;
 
 class ContactController extends ApiController
 {
@@ -63,4 +65,28 @@ class ContactController extends ApiController
 
          return $this->success();
      }
+
+     /*
+      * Retrieve a contact log
+      */
+
+      public function showLog() {
+          $params = request()->validate([
+              'person_id'   => 'required|integer',
+              'year'        => 'required|integer',
+          ]);
+
+          if (!$this->userHasRole( Role::ADMIN)) {
+              $this->notPermitted('User is not an admin.');
+          }
+
+          $personId = $params['person_id'];
+          $year = $params['year'];
+
+
+          return response()->json([
+                'sent_logs' => ContactLog::findForSenderYear($personId, $year),
+                'received_logs' =>  ContactLog::findForRecipientYear($personId, $year)
+          ]);
+      }
 }

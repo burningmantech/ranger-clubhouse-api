@@ -54,10 +54,12 @@ Route::group([
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
 
+    Route::get('broadcast/messages', 'BroadcastController@messages');
 
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
 
+    Route::get('contact/log', 'ContactController@showLog');
     Route::post('contact/send', 'ContactController@send');
 
     Route::get('language/speakers', 'LanguageController@speakers');
