@@ -12,16 +12,18 @@ class Slot extends ApiModel
     protected $table = 'slot';
 
     protected $fillable = [
+        'active',
         'begins',
-        'ends',
-        'position_id',
         'description',
-        'signed_up',
+        'ends',
         'max',
-        'url',
-        'trainer_slot_id',
         'min',
-        'active'
+        'position_id',
+        'signed_up',
+        'trainer_slot_id',
+        'url',
+        'begins_time',
+        'ends_time'
     ];
 
     protected $appends = [
@@ -29,39 +31,39 @@ class Slot extends ApiModel
     ];
 
     protected $rules = [
-        'position_id' => 'required|integer',
-        'description' => 'required|string',
         'begins'      => 'required|date|before:ends',
+        'description' => 'required|string',
         'ends'        => 'required|date|after:begins',
         'max'         => 'required|integer',
+        'position_id' => 'required|integer',
         'trainer_slot_id' => 'nullable|integer'
     ];
 
     // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
         'position:id,title',
-        'trainer_slot:id,position_id,description,begins',
+        'trainer_slot:id,position_id,description,begins,ends',
         'trainer_slot.position:id,title'
     ];
 
-    protected $casts = [
-        'begins'    => 'datetime',
-        'ends'      => 'datetime'
+    protected $dates = [
+        'ends',
+        'begins',
     ];
 
     public function position() {
-        return $this->belongsTo('App\Models\Position');
+        return $this->belongsTo(Position::class, 'position_id');
     }
 
     public function trainer_slot() {
-        return $this->belongsTo('\App\Models\Slot');
+        return $this->belongsTo(Slot::class, 'trainer_slot_id');
     }
 
     public static function findForQuery($query) {
         $sql = self::with(self::WITH_POSITION_TRAINER);
 
         if (isset($query['year'])) {
-            $sql = $sql->whereRaw('YEAR(begins)=?', $query['year']);
+            $sql = $sql->whereYear('begins', $query['year']);
         }
 
         if (isset($query['type'])) {
@@ -104,6 +106,6 @@ class Slot extends ApiModel
 
     public function getCreditsAttribute()
     {
-        return PositionCredit::computeCredits($this->position_id, $this->begins, $this->ends, Carbon::parse($this->begins)->year);
+        return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
     }
 }

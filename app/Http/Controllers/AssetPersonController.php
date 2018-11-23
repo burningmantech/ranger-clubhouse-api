@@ -121,7 +121,6 @@ class AssetPersonController extends ApiController
          ]);
 
          if (!$row->save()) {
-             error_log("Got here");
              throw new \InvalidArgumentException("Unknown error trying to create checkout record. ".$row->getErrors());
          }
 

@@ -108,7 +108,7 @@ class PositionCredit extends ApiModel
             $minutes = self::minutesOverlap($startTime, $endTime, $credit->start_timestamp, $credit->end_timestamp);
 
             if ($minutes > 0) {
-                $total += $minutes * $credit->credits / 60.0;
+                $total += $minutes * $credit->credits_per_hour / 60.0;
             }
         }
 

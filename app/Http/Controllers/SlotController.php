@@ -28,7 +28,7 @@ class SlotController extends ApiController
 
         $rows = Slot::findForQuery($query);
 
-        if ($rows->isEmpty()) {
+        if (!$rows->isEmpty()) {
             // Warm the position credit cache
             PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }

@@ -46,7 +46,6 @@ class PersonMessagePolicy
 
     public function store(Person $user)
     {
-        error_log("GOT TO STORE");
         return false;
     }
 
