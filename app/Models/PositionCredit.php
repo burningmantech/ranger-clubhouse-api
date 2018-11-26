@@ -5,6 +5,8 @@ namespace App\Models;
 use Carbon\Carbon;
 
 use App\Models\ApiModel;
+use App\Models\Position;
+
 use DB;
 
 class PositionCredit extends ApiModel
@@ -28,19 +30,46 @@ class PositionCredit extends ApiModel
         'end_time'
     ];
 
+    protected $rules = [
+        'start_time'    => 'required|date',
+        'end_time'      => 'required|date|after:start_time',
+        'position_id'   => 'required|exists:position,id',
+        'description'   => 'required|string',
+        'credits_per_hour' => 'required|numeric',
+    ];
+
+    const RELATIONS = [ 'position:id,title' ];
+
     static public $yearCache = [];
 
     public $start_timestamp;
     public $end_timestamp;
 
+    public function position() {
+        return $this->belongsTo(Position::class);
+    }
+
     /*
-     * Find all the credits for a given year
+     * Find all credits for a given year
+     */
+
+    public static function findForYear($year) {
+        return self::with(self::RELATIONS)
+                ->whereYear('start_time', $year)
+                ->orderBy('start_time')->get();
+    }
+
+    public function loadRelations() {
+        $this->load(self::RELATIONS);
+    }
+    /*
+     * Find all the credits for a given year and position, cache the results.
      *
      * @param integer $year The year to search
      * @return array PositionCredits
      */
 
-    public static function findForYear($year, $positionId) {
+    public static function findForYearPosition($year, $positionId) {
         $year = intval($year);
         $positionId = intval($positionId);
 
@@ -96,7 +125,7 @@ class PositionCredit extends ApiModel
      * @return float the earn credits
      */
     public static function computeCredits(int $positionId, int $startTime, int $endTime, int $year): float {
-        $credits = PositionCredit::findForYear($year, $positionId);
+        $credits = PositionCredit::findForYearPosition($year, $positionId);
 
         if (empty($credits)) {
             return 0.0;

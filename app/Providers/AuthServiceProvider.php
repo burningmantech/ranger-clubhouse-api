@@ -17,6 +17,7 @@ use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
+use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
@@ -35,6 +36,7 @@ use App\Policies\ManualReviewPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PositionPolicy;
+use App\Policies\PositionCreditPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SchedulePolicy;
 use App\Policies\SlotPolicy;
@@ -61,6 +63,7 @@ class AuthServiceProvider extends ServiceProvider
         Person::class => PersonPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
         Position::class => PositionPolicy::class,
+        PositionCredit::class => PositionCreditPolicy::class,
         Role::class => RolePolicy::class,
         Schedule::class => SchedulePolicy::class,
         Slot::class => SlotPolicy::class,

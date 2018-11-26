@@ -93,6 +93,7 @@ Route::group([
 
     Route::resource('person', 'PersonController', [ 'only' => [ 'index','show','store','update','destroy' ]]);
 
+    Route::resource('position-credit', 'PositionCreditController');
     Route::resource('position', 'PositionController');
 
     Route::resource('role', 'RoleController');
