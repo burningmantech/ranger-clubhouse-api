@@ -14,13 +14,13 @@ You will need the following things properly installed on your computer.
 * `git clone https://github.com/burningmantech/ranger-clubhouse-api` this repository
 * `cd ranger-clubhouse-api`
 * `composer install`
-* Copy .env.clubhouse to .env and set the configuration appropriately
+* Copy `.env.clubhouse` to `.env` and set the configuration appropriately
 * `php artisan migrate` (needed to have database auditing)
 
 ## Running / Development
 
 * `php -S localhost:8000 -t public`
-* See the ranger-clubhouse-web README for instructions on how to start the frontend
+* See the [ranger-clubhouse-web](https://github.com/burningmantech/ranger-clubhouse-web) `README` for instructions on how to start the frontend
 
 ## Random Notes
 
@@ -30,8 +30,7 @@ You will need the following things properly installed on your computer.
 
 ## What happened to the Classic Clubhouse config() function?
 
-Laravel also uses config() for configuration variables, however, the values
-are in namespaces. In Classic Clubhouse, to read PhotoSource the call would
-be `config("PhotoSource")` in ApiHouse the call is config('clubhouse.PhotoSource')
+Laravel also uses `config()` for configuration variables, however, the values are in namespaces.
+In Classic Clubhouse, to read PhotoSource the call would be `config("PhotoSource")` in ApiHouse the call is `config('clubhouse.PhotoSource')`
 
-The defaults live in config/clubhouse.php
+The defaults live in `config/clubhouse.php`
