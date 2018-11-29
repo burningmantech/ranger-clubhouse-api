@@ -3,10 +3,9 @@
 ## Prerequisites
 
 You will need the following things properly installed on your computer.
-(See the neohouse repository README file for instructions on how to bring up the frontend)
 
 * [Git](https://git-scm.com/)
-* [PHP >= 7.1.3](https://php.net)
+* [PHP >= 7.1.3](https://php.net/)
 * [MySQL >= 5.6](https://www.mysql.com/downloads/)
 
 ## Installation
