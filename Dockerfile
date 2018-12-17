@@ -29,7 +29,7 @@ RUN composer install --optimize-autoloader --no-dev
 FROM burningman/php-nginx:7.2-alpine3.8
 
 # Copy the install script, run it, delete it
-COPY ./bin/_docker_install /docker_install/install
+COPY ./docker/install /docker_install/install
 RUN /docker_install/install && rm -rf /docker_install
 
 # Copy the application with dependencies from the composer container
