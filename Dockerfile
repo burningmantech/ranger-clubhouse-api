@@ -41,3 +41,6 @@ WORKDIR /var/www/application
 # Optimize configuration loading
 RUN php artisan config:cache;
 RUN php artisan route:cache;
+
+# Replace Nginx default site config
+COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
