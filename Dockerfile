@@ -2,8 +2,24 @@
 # This stage runs composer to build the PHP package dependencies
 #
 FROM composer:1.7.3 as composer
+
+# Run composer in app directory to get dependencies
 WORKDIR /var/www/application
-COPY . .
+COPY ./tests/         ./tests/
+COPY ./routes/        ./routes/
+COPY ./resources/     ./resources/
+COPY ./public/        ./public/
+COPY ./database/      ./database/
+COPY ./config/        ./config/
+COPY ./bootstrap/     ./bootstrap/
+COPY ./app/           ./app/
+COPY ./artisan        ./
+COPY ./composer.*     ./
+COPY ./package.json   ./
+COPY ./phpunit.xml    ./
+COPY ./server.php     ./
+COPY ./webpack.mix.js ./
+COPY ./yarn.lock      ./
 RUN composer install --optimize-autoloader --no-dev
 
 
