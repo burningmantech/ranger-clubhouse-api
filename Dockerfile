@@ -20,6 +20,8 @@ COPY ./phpunit.xml    ./
 COPY ./server.php     ./
 COPY ./webpack.mix.js ./
 COPY ./yarn.lock      ./
+RUN mkdir -p ./storage
+RUN chmod -R 777 ./storage
 RUN composer install --optimize-autoloader --no-dev
 
 
