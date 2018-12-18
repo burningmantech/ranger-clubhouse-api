@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
 use App\Models\Person;
+use App\Models\Role;
 
 class CallsignsController extends ApiController
 {
@@ -16,7 +17,7 @@ class CallsignsController extends ApiController
 
         $type = $params['type'];
 
-        if (!in_array($type, [ 'message', 'contact', 'training' ])) {
+        if (!in_array($type, [ 'message', 'contact' ])) {
             throw new \InvalidArgumentException('type parameter is invalid');
         }
 

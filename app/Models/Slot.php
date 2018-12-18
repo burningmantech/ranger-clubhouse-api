@@ -41,7 +41,7 @@ class Slot extends ApiModel
 
     // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
-        'position:id,title',
+        'position:id,title,type',
         'trainer_slot:id,position_id,description,begins,ends',
         'trainer_slot.position:id,title'
     ];
@@ -78,6 +78,10 @@ class Slot extends ApiModel
     }
 
     public static function find($slotId) {
+        return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER)->first();
+    }
+
+    public static function findOrFail($slotId) {
         return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER)->firstOrFail();
     }
 
@@ -108,4 +112,26 @@ class Slot extends ApiModel
     {
         return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
     }
+
+    public function isTraining() {
+        $position = $this->position;
+        if ($position == null) {
+            return false;
+        }
+
+        return $position->type == "Training" && stripos($position->title, "trainer") === false;
+    }
+
+    /*
+     * Humanized datetime formats - for sending emails
+     */
+
+     public function getBeginsHumanFormatAttribute() {
+         return $this->begins->format('l M d Y @ H:i');
+     }
+
+     public function getEndsHumanFormatAttribute() {
+         return $this->ends->format('l M d Y @ H:i');
+     }
+
 }

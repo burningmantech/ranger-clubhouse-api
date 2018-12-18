@@ -1,8 +1,12 @@
 <?php
 
 /*
- * NOTE: When adding any new columns to the person table, be sure to add
- * it here to $fillable AND add it to PersonFilter.php
+ * NOTE: when adding new columns to the person table, there are three
+ * places the column should be added to:
+ *
+ * - The $fillable array in this file
+ * - in app/Http/Filters/PersonFilter.php
+ * - on the frontend app/models/person.js
  */
 
 namespace App\Models;
@@ -22,6 +26,7 @@ use App\Models\Alert;
 use App\Models\ApiModel;
 use App\Models\PersonRole;
 use App\Models\Role;
+use App\Models\PersonPosition;
 use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
@@ -224,6 +229,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return [];
     }
 
+    public function person_position() {
+        return $this->hasMany(PersonPosition::class);
+    }
+
     public static function findEmailOrFail(string $email)
     {
         return self::where('email', $email)->firstOrFail();
@@ -343,9 +352,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function searchCallsigns($query, $type, $limit)
     {
+        $like = '%'.$query.'%';
         $sql = DB::table('person')
-                ->where(function ($q) use ($query) {
-                    $q->where('callsign', 'like', '%'.$query.'%');
+                ->where(function ($q) use ($query, $like) {
+                    $q->where('callsign', 'like', $like);
                     $q->orWhereRaw('SOUNDEX(callsign)=soundex(?)', [ $query ]);
                 })->limit($limit);
 
@@ -363,13 +373,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             case 'message':
                 return $sql->whereIn('status', [ 'active', 'inactive', 'alpha' ])->get(['id', 'callsign']);
                 break;
-
-            case 'training':
-                return $sql->whereNotIn('status', [ 'deceased', 'dismissed', 'bonked', 'retired' ])->get(['id', 'callsign', 'first_name', 'last_name']);
-                break;
         }
 
-        throw new \InvalidArgumentException('Unknown type');
+        throw new \InvalidArgumentException("Unknown type [$type]");
     }
 
     public function isValidPassword(string $password): bool

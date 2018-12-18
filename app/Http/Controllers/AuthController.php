@@ -111,8 +111,7 @@ class AuthController extends Controller
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
-        // TODO - load admin email from configuration
-        Mail::to($person->email)->send(new ResetPassword($resetPassword, 'rangers@burningman.org'));
+        Mail::to($person->email)->send(new ResetPassword($resetPassword, config('clubhouse.GeneralSupportEmail')));
 
         return response()->json([ 'status' => 'success' ]);
     }

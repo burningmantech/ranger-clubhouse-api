@@ -12,7 +12,7 @@ class SchedulePolicy
     use HandlesAuthorization;
 
     public function before(Person $user) {
-        if ($user->hasRole([Role::MANAGE, Role::ADMIN])) {
+        if ($user->hasRole([Role::MANAGE, Role::ADMIN, Role::VC, Role::TRAINER, Role::MENTOR])) {
             return true;
         }
     }

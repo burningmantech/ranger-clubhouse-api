@@ -8,14 +8,17 @@ class TraineeStatus extends ApiModel
 {
     protected $table = 'trainee_status';
 
-    protected $casts = [
-        'passed'    => 'bool',
-        'begins'    => 'datetime',
-        'ends'      => 'datetime',
+    protected $fillable = [
+        'person_id',
+        'slot_id',
+        'notes',
+        'rank',
+        'passed',
     ];
 
-    protected $training_location;
-    protected $training_date;
+    protected $casts = [
+        'passed'    => 'boolean',
+    ];
 
     /*
      * Find trainee_status records with joined slot for a person & year.
@@ -38,5 +41,9 @@ class TraineeStatus extends ApiModel
                 ->whereYear('slot.begins', $year)
                 ->where('passed', 1)
                 ->exists();
+    }
+
+    public static function firstOrCreateForSession($personId, $sessionId) {
+        return self::firstOrCreate([ 'person_id' => $personId, 'slot_id' => $sessionId]);
     }
 }

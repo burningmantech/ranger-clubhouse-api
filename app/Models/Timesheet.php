@@ -115,7 +115,6 @@ class Timesheet extends ApiModel
 
     /*
      * Find the years a person was on working
-     * @var integer $id person to lookup
      */
 
     public static function yearsRangered($personId, $everything=false)
@@ -131,6 +130,42 @@ class Timesheet extends ApiModel
 
         return $query->pluck('year')->toArray();
     }
+
+    /*
+     * Find out how many years list of people have rangered.
+     *
+     * If the person has never rangered for whatever reason that person
+     * will not be included in the return list of person/years.
+     *
+     * @param array $personIds  list of person ids
+     * @return array years rangered keyed by person id.
+     *   [ 'person1_id' => 'years', 'person2_id' => 'years' ]
+     */
+
+    public static function yearsRangeredCountForIds($personIds)
+    {
+        $ids = [];
+        foreach ($personIds as $id) {
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        $rows = DB::select("SELECT person_id, COUNT(year) as years FROM (SELECT YEAR(on_duty) as year, person_id FROM timesheet WHERE person_id in (".implode(',', $ids).") AND  position_id not in (1, 13, 29, 30) GROUP BY person_id,year ORDER BY year) as rangers group by person_id");
+
+
+        $people = [];
+        foreach ($rows as $row) {
+            $people[$row->person_id] = $row->years;
+        }
+
+        return $people;
+    }
+
 
     /*
      * Calcuate how many credits earned for a year

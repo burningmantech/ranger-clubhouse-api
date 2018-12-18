@@ -57,6 +57,7 @@ class PersonController extends ApiController
                     'status'          => $person->status,
                     'first_name'      => $person->first_name,
                     'last_name'       => $person->last_name,
+                    'email'           => $person->email,
                     'user_authorized' => $person->user_authorized,
                 ];
             }

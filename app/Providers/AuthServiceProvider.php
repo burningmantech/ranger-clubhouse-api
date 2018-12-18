@@ -23,6 +23,8 @@ use App\Models\Schedule;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TimesheetMissing;
+use App\Models\Training;
+use App\Models\TrainingSession;
 
 use App\Policies\AccessDocumentDeliveryPolicy;
 use App\Policies\AccessDocumentPolicy;
@@ -42,6 +44,8 @@ use App\Policies\SchedulePolicy;
 use App\Policies\SlotPolicy;
 use App\Policies\TimesheetMissingPolicy;
 use App\Policies\TimesheetPolicy;
+use App\Policies\TrainingPolicy;
+use App\Policies\TrainingSessionPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -69,6 +73,8 @@ class AuthServiceProvider extends ServiceProvider
         Slot::class => SlotPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,
+        TrainingSession::class => TrainingSessionPolicy::class,
+        Training::class => TrainingPolicy::class,
 
         'App\Model' => 'App\Policies\ModelPolicy',
     ];

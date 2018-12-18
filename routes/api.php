@@ -108,8 +108,14 @@ Route::group([
     Route::post('sms/send-code', 'SmsController@sendNewCode');
     Route::post('sms/confirm-code', 'SmsController@confirmCode');
 
+    Route::get('training-session/sessions', 'TrainingSessionController@sessions');
+    Route::get('training-session/{id}', 'TrainingSessionController@show');
+    Route::post('training-session/{id}/score', 'TrainingSessionController@score');
+
     Route::get('training/{id}/multiple-enrollments', 'TrainingController@multipleEnrollmentsReport');
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');
+    Route::get('training/{id}/people-training-completed', 'TrainingController@peopleTrainingCompleted');
+    Route::get('training/{id}/untrained-people', 'TrainingController@untrainedPeopleReport');
     Route::get('training/{id}', 'TrainingController@show');
 
     Route::post('timesheet/confirm', 'TimesheetController@confirm');

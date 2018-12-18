@@ -14,6 +14,10 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
 
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TrainingSignup;
+use App\Mail\SlotSignup;
+
 class PersonScheduleController extends ApiController
 {
     /**
@@ -57,9 +61,21 @@ class PersonScheduleController extends ApiController
         $this->authorize('create', [ Schedule::class, $person ]);
 
         $slotId = $data['slot_id'];
-        $slot = Slot::find($slotId);
+        $slot = Slot::findOrFail($slotId);
 
-        $force = $this->userHasRole([Role::ADMIN, Role::MANAGE]);
+        // A signup may be forced if
+        // - The user is an Admin
+        // OR
+        // - The slot is a training session, and the user is a trainer, mentor or VC.
+
+        if ($slot->isTraining()) {
+            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
+        } else {
+            $rolesCanForce = Role::ADMIN;
+        }
+
+        $force = $this->userHasRole($rolesCanForce);
+
         $result = Schedule::addToSchedule($person->id, $slotId, $force);
 
         if ($result['status'] == 'success') {
@@ -69,6 +85,17 @@ class PersonScheduleController extends ApiController
                 [ 'slot_id' => $slotId],
                 $person->id
             );
+
+            $vcMail = config('clubhouse.VCEmail');
+
+            // Notify the person about signing up
+            if ($slot->isTraining()) {
+                $message = new TrainingSignup($slot, $vcMail);
+            } else {
+                $message = new SlotSignup($slot, $vcMail);
+            }
+
+            Mail::to($person->email)->send($message);
         }
 
         return response()->json($result);
@@ -88,7 +115,7 @@ class PersonScheduleController extends ApiController
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
-            $slot = Slot::find($slotId);
+            $slot = Slot::findOrFail($slotId);
             $this->log(
                 'person-slot-remove',
                 "Slot removed from schedule {$slot->begins}: {$slot->description}",

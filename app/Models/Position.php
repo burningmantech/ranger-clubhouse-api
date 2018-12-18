@@ -37,7 +37,7 @@ class Position extends ApiModel
     // Trainer positions for Dirt
     const TRAINING = 13;
     const TRAINER = 23;
-    const TRAINER_IN_TRAINING = 88;
+    const ASSOCIATE_TRAINER = 88;
     const TRAINER_UBER = 95;
 
     const BURN_PERIMETER = 19;
@@ -54,13 +54,13 @@ class Position extends ApiModel
 
     //
     // List of training positions with their associated trainers
-    // TODO: change the position table schema to encapsulate this info.
+    // TODO: create a join table to enclapse this so this is not hard coded.
     //
 
     const TRAINERS = [
         Position::DIRT_TRAINING => [
              Position::TRAINER,
-             Position::TRAINER_IN_TRAINING,
+             Position::ASSOCIATE_TRAINER,
              Position::TRAINER_UBER
         ],
         Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],
@@ -98,10 +98,20 @@ class Position extends ApiModel
         'training_position_id'  => 'nullable|exists:position,id',
     ];
 
+    /*
+     * Find all positions
+     */
+
     public static function findAll()
     {
         return self::orderBy('title')->get();
     }
+
+    /*
+     * Find all training positions that are not trainer's training positions.
+     * Optionally exclude Dirt Training (for ART module support)
+     * Return only the id & title.
+     */
 
     public static function findAllTrainings($excludeDirt = false)
     {
@@ -117,6 +127,11 @@ class Position extends ApiModel
         return $sql->get()->toArray();
     }
 
+    /*
+     * Retrieve the title for a position. Return a position id if the
+     * position was not found.
+     */
+
     public static function retrieveTitle($id)
     {
         $row = self::find($id);
@@ -126,5 +141,17 @@ class Position extends ApiModel
         } else {
             return $row->title;
         }
+    }
+
+    /*
+     * Find all positions which reference the given training position
+     *
+     * @param int $positionId training position
+     * @return array positions which reference the training position.
+     */
+
+    public static function findTrainedPositions($positionId)
+    {
+        return self::select('id', 'title')->where('training_position_id', $positionId)->get();
     }
 }

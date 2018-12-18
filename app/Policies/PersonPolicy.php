@@ -77,7 +77,7 @@ class PersonPolicy
 
     public function updatePositions(Person $user, Person $person)
     {
-        return $user->hasRole(Role::GRANT_POSITION) && $user->hasRole(Role::MANAGE);
+        return $user->isAdmin() || ($user->hasRole(Role::GRANT_POSITION) && $user->hasRole(Role::MANAGE));
     }
 
     /*
