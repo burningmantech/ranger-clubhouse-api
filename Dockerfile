@@ -20,8 +20,6 @@ COPY ./phpunit.xml    ./
 COPY ./server.php     ./
 COPY ./webpack.mix.js ./
 COPY ./yarn.lock      ./
-RUN mkdir -p ./storage
-RUN chmod -R 777 ./storage
 RUN composer install --optimize-autoloader --no-dev
 
 
@@ -39,6 +37,9 @@ COPY --from=composer /var/www/application /var/www/application
 
 # Set working directory to application directory
 WORKDIR /var/www/application
+
+# Make storage directory
+RUN install -d -o www-data -g www-data -m 775 ./storage
 
 # Optimize configuration loading
 RUN php artisan config:cache;
