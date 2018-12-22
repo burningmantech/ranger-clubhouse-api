@@ -261,6 +261,8 @@ class PersonController extends ApiController
         $isLambase = config('clubhouse.PhotoSource') == 'Lambase';
 
         if ($isLambase) {
+            $storeLocal = config('clubhouse.PhotoStoreLocally') == true;
+
             $lambase = new LambasePhoto($person);
             $status = $lambase->getStatus();
 
@@ -270,18 +272,24 @@ class PersonController extends ApiController
             if (!$status['error']) {
                 $imageStatus = LambasePhoto::statusToCode($status['status'], $status['data']);
 
-                if ($status['data']) {
-                    // should the photo be downloaded?
-                    if ($lambase->downloadNeeded($status['image_hash'])) {
-                        if (!$lambase->downloadImage($status['image'])) {
-                            $imageStatus = 'error';
-                            $imageUrl = null;
-                            $errorMessage = 'Failed to download image';
+                if ($storeLocal) {
+                    if ($status['data']) {
+                        // should the photo be downloaded?
+                        if ($lambase->downloadNeeded($status['image_hash'])) {
+                            if (!$lambase->downloadImage($status['image'])) {
+                                $imageStatus = 'error';
+                                $imageUrl = null;
+                                $errorMessage = 'Failed to download image';
+                            } else {
+                                $imageUrl = Photo::imageUrlForPerson($person->id);
+                            }
+                        } else {
+                            $imageUrl = Photo::imageUrlForPerson($person->id);
                         }
+                    } else {
+                        // Missing file, delete local copy
+                        $lambase->deleteLocal();
                     }
-                } else {
-                    // Missing file, delete local copy
-                    $lambase->deleteLocal();
                 }
             } else {
                 // Something went horribly wrong.
@@ -289,7 +297,7 @@ class PersonController extends ApiController
                 $errorMessage = $status['message'];
             }
 
-            if ($imageStatus != 'error' && $imageStatus != 'missing') {
+            if ($imageStatus != 'error' && $imageStatus != 'missing' && $imageUrl == null) {
                 $imageUrl = $lambase->getImageUrl($status['image']);
             }
 

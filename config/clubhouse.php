@@ -15,6 +15,8 @@ return [
 
     'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'Lambase'),
     'PhotoUploadEnable' => env('RANGER_CLUBHOUSE_PHOTO_ENABLE_UPLOAD', true),
+    // Should photos be stored locally if using PhotoSource is lambase?
+    'PhotoStoreLocally' => env('RANGER_CLUBHOUSE_PHOTO_STORE_LOCALLY', false),
     'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'http://www.tanis.com/brclam/webservice.cfc'),
     'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'http://www.tanis.com/brclam/webservice_rpt.cfc'),
     'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'http://www.lambase.com/lam_photos/rangers'),
