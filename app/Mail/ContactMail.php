@@ -41,6 +41,6 @@ class ContactMail extends Mailable
     {
         return $this->from('do-not-reply@burningman.org')
                 ->subject($this->messageSubject)
-                ->text('emails.contact');
+                ->view('emails.contact');
     }
 }

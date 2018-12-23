@@ -8,7 +8,9 @@ use App\Http\Controllers\ApiController;
 
 use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonPosition;
 use App\Models\Photo;
+use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
@@ -17,6 +19,7 @@ use App\Models\Slot;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TrainingSignup;
 use App\Mail\SlotSignup;
+use App\Mail\TrainingSessionFullMail;
 
 class PersonScheduleController extends ApiController
 {
@@ -54,51 +57,114 @@ class PersonScheduleController extends ApiController
 
     public function store(Person $person)
     {
-        $data = request()->validate([
+        $params = request()->validate([
             'slot_id'  => 'required|integer',
         ]);
 
         $this->authorize('create', [ Schedule::class, $person ]);
 
-        $slotId = $data['slot_id'];
+        $slotId = $params['slot_id'];
+
         $slot = Slot::findOrFail($slotId);
 
-        // A signup may be forced if
-        // - The user is an Admin
-        // OR
-        // - The slot is a training session, and the user is a trainer, mentor or VC.
+        /* A signup may be forced if
+         * - The user is an Admin
+         * OR
+         * - The slot is a training session, and the user is a trainer, mentor, or VC.
+         *   ART Trainers can force force ART modules.
+         */
 
         if ($slot->isTraining()) {
             $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
+            if ($slot->isArt()) {
+                $rolesCanForce[] = Role::ART_TRAINER;
+            }
         } else {
             $rolesCanForce = Role::ADMIN;
         }
 
         $force = $this->userHasRole($rolesCanForce);
 
-        $result = Schedule::addToSchedule($person->id, $slotId, $force);
+        /*
+         * Enrollment in multiple training sessions is not allowed unless the person
+         * is a trainer.
+         * e.g., Trainers/Assoc. Trainer/Ubers are allowed multiple Dirt Trainings,
+         *       GD Trainers are allowe GD Training, etc.
+         */
 
-        if ($result['status'] == 'success') {
+        $trainerForced = false;
+        $enrollments = null;
+        $multipleForced = false;
+        if ($slot->isTraining() && Schedule::haveMultipleEnrollments($person->id, $slot->position_id, $slot->begins->year, $enrollments)) {
+            $trainers = @Position::TRAINERS[$slot->position_id];
+
+            if ($trainers && PersonPosition::havePosition($person->id, $trainers)) {
+                // Person is a trainer.. allow mulitple training signups.
+                $trainerForced = true;
+            } else if ($force) {
+                $multipleForced = true;
+            } else {
+                // Not a trainer, nor has sufficent roles.. your jedi mind tricks will not work here.
+                return response()->json([
+                    'status' => 'multiple-enrollment',
+                    'slots'  => $enrollments
+                ]);
+            }
+        }
+
+        // Go try to add the person to the slot/session
+        $result = Schedule::addToSchedule($person->id, $slot, $force);
+
+        $status = $result['status'];
+        if ($status == 'success') {
             $person->update(['active_next_event' => 1]);
+
             $this->log(
                 'person-slot-add', "Slot added to schedule {$slot->begins}: {$slot->description}",
                 [ 'slot_id' => $slotId],
                 $person->id
             );
 
-            $vcMail = config('clubhouse.VCEmail');
-
             // Notify the person about signing up
             if ($slot->isTraining()) {
-                $message = new TrainingSignup($slot, $vcMail);
+                $message = new TrainingSignup($slot, config('clubhouse.TrainingSignupFromEmail'));
             } else {
-                $message = new SlotSignup($slot, $vcMail);
+                $message = new SlotSignup($slot, config('clubhouse.VCEmail'));
             }
 
             Mail::to($person->email)->send($message);
+
+            $signedUp = $result['signed_up'];
+
+            // Is the training slot at capacity?
+            if ($slot->isTraining() && $signedUp >= $slot->max) {
+                // fire off an email letting the Training Acamedy know
+                Mail::to(config('clubhouse.TrainingFullEmail'))->send(new TrainingSessionFullMail($slot, $signedUp));
+            }
+
+            $response = [
+                'status' => 'success',
+                'signed_up' => $signedUp,
+            ];
+
+            if ($result['forced']) {
+                $response['full_forced'] = true;
+            }
+
+            if ($trainerForced || $multipleForced) {
+                $response['slots'] = $enrollments;
+
+                if ($trainerForced) {
+                    $response['trainer_forced'] = true;
+                } else if ($multipleForced) {
+                    $response['multiple_forced'] = true;
+                }
+            }
+
+            return response()->json($response);
         }
 
-        return response()->json($result);
+        return response()->json([ 'status' => $status ]);
     }
 
     /**

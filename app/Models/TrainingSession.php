@@ -61,7 +61,7 @@ class TrainingSession extends Slot
             ->where('slot_id', $this->id)->get();
 
         $personIds = $people->pluck('person_id');
-        $people = $people->sortBy(function ($p) { return $p->person->callsign; })->values();
+        $people = $people->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
 
         $isDirtTraining = ($this->position_id == Position::DIRT_TRAINING);
 

@@ -77,12 +77,16 @@ class Slot extends ApiModel
         return $sql->get();
     }
 
+    public static function findBase($slotId) {
+        return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER);
+    }
+
     public static function find($slotId) {
-        return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER)->first();
+        return self::findBase($slotId)->first();
     }
 
     public static function findOrFail($slotId) {
-        return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER)->firstOrFail();
+        return self::findBase($slotId)->firstOrFail();
     }
 
     public static function findSignUps($slotId) {
@@ -120,6 +124,10 @@ class Slot extends ApiModel
         }
 
         return $position->type == "Training" && stripos($position->title, "trainer") === false;
+    }
+
+    public function isArt() {
+        return ($this->position_id != Position::DIRT_TRAINING);
     }
 
     /*

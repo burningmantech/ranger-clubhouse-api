@@ -19,8 +19,14 @@ class PersonPosition extends ApiModel
     ];
 
     public static function havePosition($personId, $positionId) {
-        return self::where('person_id', $personId)
-                   ->where('position_id', $positionId)->exists();
+        $sql = self::where('person_id', $personId);
+        if (is_array($positionId)) {
+            $sql = $sql->whereIn('position_id', $positionId);
+        } else {
+            $sql = $sql->where('position_id', $positionId);
+        }
+
+        return $sql->exists();
     }
 
     /*

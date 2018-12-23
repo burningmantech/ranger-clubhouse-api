@@ -2,11 +2,12 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use Blade;
 use DB;
 use Event;
-use Log;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\ServiceProvider;
+use Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
                 error_log("SQL [$query->time ms] $sql");
             });
         }
+
+        Blade::directive('hyperlinktext', function($text) {
+            return '<?php echo \App\Helpers\HyperLinkHelper::text('.$text.'); ?>';
+        });
     }
 
     /**

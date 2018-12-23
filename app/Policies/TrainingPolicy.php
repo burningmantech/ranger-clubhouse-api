@@ -2,8 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Training;
+use App\Models\Person;
 use App\Models\Role;
+use App\Models\Training;
+
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TrainingPolicy
@@ -21,8 +23,14 @@ class TrainingPolicy
      * Can a user see the training and associated reports?
      */
 
-    public function show(Person $user)
+    public function show(Person $user, Training $training)
     {
+        if ($training->is_art) {
+            error_log("TRAINING IS ART ". $user->hasRole(Role::ART_TRAINER));
+            return $user->hasRole(Role::ART_TRAINER);
+        } else {
+            error_log("TRAINIG IS NOT ART?");
+        }
         return false;
     }
 }

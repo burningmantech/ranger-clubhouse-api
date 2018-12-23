@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\TrainingSession;
 use App\Models\Role;
+use App\Models\Person;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TrainingSessionPolicy
@@ -21,18 +22,18 @@ class TrainingSessionPolicy
      * Can a user see the training session(s)?
      */
 
-    public function show(Person $user)
+    public function show(Person $user, TrainingSession $training_session)
     {
-        return false;
+        return $this->checkForArt($user, $training_session);
     }
 
     /**
      *  Can the user score (mark passed, add notes, etc.) to a session?
      */
 
-    public function score(Person $user)
+    public function score(Person $user, TrainingSession $training_session)
     {
-        return false;
+        return $this->checkForArt($user, $training_session);
     }
 
     /**
@@ -40,8 +41,12 @@ class TrainingSessionPolicy
      *
      */
 
-    public function admissions(Person $user)
+    public function admissions(Person $user, TrainingSession $training_session)
     {
-        return false;
+        return $this->checkForArt($user, $training_session);
+    }
+
+    private function checkForArt(Person $user, TrainingSession $training_session) {
+        return ($training_session->isArt() && $user->hasRole(Role::ART_TRAINER));
     }
 }

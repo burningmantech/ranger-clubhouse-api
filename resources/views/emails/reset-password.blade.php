@@ -1,14 +1,29 @@
-Dear Ranger,
+@component('html-email')
+<p>
+    Dear Ranger,
+</p>
 
-You have been issued a temporary password to the Ranger Secret Clubhouse:
+<p>
+    You have been issued a temporary password to the Ranger Secret Clubhouse:
+</p>
 
-{{ $password }}
+<p>
+<b>{{ $password }}</b>
+</p>
 
-Please use it log in and change it to a password of your choice.
+<p>
+    Please use it log in and change it to a password of your choice.
+</p>
 
-If you are still unable to log in, or if you were not expecting this
-message, please contact us at {{ $adminEmail }}.
+<p>
+    If you are still unable to log in, or if you were not expecting this
+    message, please contact us at <a href="mailto:{{$adminEmail}}">{{$adminEmail}}</a>.
+</p>
 
-Sincerely,
-
-The Black Rock Ranger Tech Team
+<p>
+    Sincerely,
+</p>
+<p>
+    The Black Rock Ranger Tech Team
+</p>
+@endcomponent

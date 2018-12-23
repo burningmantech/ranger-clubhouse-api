@@ -14,10 +14,9 @@ class TrainingController extends ApiController
 
     public function show($id)
     {
-        $this->authorize('show', [ Training::class ]);
-
         $training = Training::findOrFail($id);
 
+        $this->authorize('show', $training);
         return response()->json($training);
     }
 
@@ -78,13 +77,13 @@ class TrainingController extends ApiController
      */
 
     private function getTrainingAndYear($id) {
-        $this->authorize('show', [ Training::class ]);
 
         $params = request()->validate([
             'year'  => 'required|integer'
         ]);
 
         $training = Training::findOrFail($id);
+        $this->authorize('show', $training);
 
         return [ $training, $params['year'] ];
     }

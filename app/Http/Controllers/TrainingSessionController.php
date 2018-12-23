@@ -21,9 +21,8 @@ class TrainingSessionController extends ApiController
 
     public function show($id)
     {
-        $this->authorize('show', [ TrainingSession::class ]);
-
         $session = TrainingSession::findOrFail($id);
+        $this->authorize('show', $session);
 
         return response()->json(
             [
@@ -39,14 +38,16 @@ class TrainingSessionController extends ApiController
 
     public function sessions()
     {
-        $this->authorize('show', [ TrainingSession::class ]);
-
         $params = request()->validate([
             'training_id'   => 'required|integer',
             'year'          => 'required|integer',
         ]);
 
+        $training = Training::findOrFail($params['training_id']);
+        $this->authorize('show', $training);
+
         $sessions = TrainingSession::findAllForTrainingYear($params['training_id'], $params['year']);
+
 
         $info = $sessions->map(
             function ($session) {
@@ -66,9 +67,9 @@ class TrainingSessionController extends ApiController
 
     public function score($id)
     {
-        $this->authorize('score', [ TrainingSession::class ]);
-
         $session = TrainingSession::findOrFail($id);
+        $this->authorize('score', $session);
+
         $params = request()->validate([
             'students.*.id'     => 'required|integer',
             'students.*.rank'   => 'nullable|integer',

@@ -17,7 +17,7 @@ class TrainingSignup extends Mailable
     use Queueable, SerializesModels;
 
     public $slot;
-    public $vcEmail;
+    public $fromEmail;
 
      /**
       * Create a new message instance.
@@ -25,10 +25,10 @@ class TrainingSignup extends Mailable
       * @param
       * @return void
       */
-     public function __construct($slot, $vcEmail)
+     public function __construct($slot, $fromEmail)
      {
          $this->slot = $slot;
-         $this->vcEmail = $vcEmail;
+         $this->fromEmail = $fromEmail;
      }
 
     /**
@@ -38,6 +38,9 @@ class TrainingSignup extends Mailable
      */
     public function build()
     {
-        return $this->subject('Ranger Training Signup')->view('emails.training-signup');
+        return $this
+            ->from($this->fromEmail)
+            ->subject('Ranger Training Signup')
+            ->view('emails.training-signup');
     }
 }

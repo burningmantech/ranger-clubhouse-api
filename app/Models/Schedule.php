@@ -139,34 +139,38 @@ class Schedule extends ApiModel
     // @return array
     //
 
-    public static function addToSchedule($personId, $slotId, $force=false): array
+    public static function addToSchedule($personId, $slot, $force=false): array
     {
-        if (PersonSlot::haveSlot($personId, $slotId)) {
+        if (PersonSlot::haveSlot($personId, $slot->id)) {
             return [ 'status' => 'exists' ];
         }
 
         $addForced = false;
+        $signedUp = 0;
+        $max = 0;
 
         try {
             DB::beginTransaction();
 
-            $slot = Slot::where('id', $slotId)->lockForUpdate()->first();
-            if (!$slot) {
+            // Re-read the slot for update.
+            $updateSlot = Slot::where('id', $slot->id)->lockForUpdate()->first();
+            if (!$updateSlot) {
+                // shouldn't happen but ya never know...
                 throw new ScheduleException('no-slot');
             }
 
             // Slot must be activated in order to allow signups
-            if (!$slot->active) {
+            if (!$updateSlot->active) {
                 throw new ScheduleException('not-active');
             }
 
             // You must hold the position
-            if (!PersonPosition::havePosition($personId, $slot->position_id)) {
+            if (!PersonPosition::havePosition($personId, $updateSlot->position_id)) {
                 throw new ScheduleException('no-position');
             }
 
             // Cannot exceed sign up limit unless it is forced.
-            if ($slot->signed_up >= $slot->max) {
+            if ($updateSlot->signed_up >= $updateSlot->max) {
                 if (!$force) {
                     throw new ScheduleException('full');
                 }
@@ -174,22 +178,26 @@ class Schedule extends ApiModel
                 $addForced = true;
             }
 
+            // looks up! sign up the person
             $ps = new PersonSlot([
                 'person_id' => $personId,
-                'slot_id'   => $slot->id
+                'slot_id'   => $updateSlot->id
             ]);
             $ps->save();
 
-            $slot->signed_up += 1;
-            $slot->save();
-
+            $updateSlot->signed_up += 1;
+            $updateSlot->save();
             DB::commit();
+
+            return [
+                'status'    => 'success',
+                'signed_up' => $updateSlot->signed_up,
+                'forced'    => $addForced,
+            ];
         } catch (ScheduleException $e) {
             DB::rollback();
             return [ 'status' => $e->getMessage() ];
         }
-
-        return [ 'status' => 'success', 'signed_up' => $slot->signed_up, 'forced' => $addForced ];
     }
 
     //
@@ -220,6 +228,28 @@ class Schedule extends ApiModel
         }
 
         return [ 'status' => 'success', 'signed_up' => $slot->signed_up ];
+    }
+
+    /*
+     * Does a person have multiple enrollments for the same position (aka Training)
+     * and if so what are the enrollments?
+     */
+
+    public static function haveMultipleEnrollments($personId, $positionId, $year, & $enrollments) {
+        $slotIds = PersonSlot::where('person_slot.person_id', $personId)
+                    ->join('slot', function($query) use ($positionId, $year) {
+                        $query->whereRaw('slot.id=person_slot.slot_id');
+                        $query->where('slot.position_id', $positionId);
+                        $query->whereYear('slot.begins', $year);
+                    })->get()->pluck('slot_id');
+
+        if ($slotIds->isEmpty()) {
+            $enrollments = null;
+            return false;
+        }
+
+        $enrollments = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
+        return true;
     }
 
     public function getSlotDurationAttribute()
