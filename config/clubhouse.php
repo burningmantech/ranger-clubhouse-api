@@ -100,6 +100,10 @@ return [
     'AdminEmail'               => env('RANGER_CLUBHOUSE_EMAIL_ADMIN', 'ranger-tech-ninjas@burningman.org'),
     'GeneralSupportEmail'      => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
     'VCEmail'                  => env('RANGER_CLUBHOUSE_EMAIL_VC', 'ranger-vc-list@burningman.org'),
+    // From address for sending training signed up emails
+    'TrainingSignupFromEmail'      => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_SIGNUP', 'ranger-trainingacademy-list@burningman.org'),
+    // alert email address when a training session is full.
+    'TrainingFullEmail'        => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_FULL', 'ranger-trainingacademy-list@burningman.org'),
     'SignupUrl'                => 'http://jousting-at-windmills.org/clubhouse/',
     'SendWelcomeEmail'         => env('RANGER_CLUBHOUSE_SEND_WELCOME_EMAIL', false),
     'SqlDateFormatLiteral'     => "'%Y-%m-%d'",
@@ -129,5 +133,4 @@ return [
 
     // Development flags
     'DevShowSql' => false,  // if true - Show all SQL requests on the developr console or web log.
-    'DevLogSql'  => false,    // if true log all SQL statements to the log table
 ];
