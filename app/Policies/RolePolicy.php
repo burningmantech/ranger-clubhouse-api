@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Person;
 use App\Models\Role;
-use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class RolePolicy

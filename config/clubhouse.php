@@ -19,7 +19,7 @@ return [
     'PhotoStoreLocally' => env('RANGER_CLUBHOUSE_PHOTO_STORE_LOCALLY', false),
     'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'http://www.tanis.com/brclam/webservice.cfc'),
     'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'http://www.tanis.com/brclam/webservice_rpt.cfc'),
-    'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'http://www.lambase.com/lam_photos/rangers'),
+    'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'https://www.lambase.com/lam_photos/rangers'),
     'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'http://tanis.com/brclam/jumpin_ranger.cfm'),
 
     'TimesheetCorrectionEnable'  => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_ENABLE', true),

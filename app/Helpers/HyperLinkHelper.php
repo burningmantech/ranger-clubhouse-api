@@ -13,7 +13,6 @@ class HyperLinkHelper
 
         // convert email addresses to mailto links
         $text = preg_replace('/\b([a-z0-9\._%+-]+@[a-z0-9\.-]+\.[a-z]{2,})\b/i', '<a href="mailto:\1">\1</a>', $text);
-        error_log("RENDERING TEXT ".$text);
         return $text;
     }
 }
