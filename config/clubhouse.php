@@ -17,10 +17,10 @@ return [
     'PhotoUploadEnable' => env('RANGER_CLUBHOUSE_PHOTO_ENABLE_UPLOAD', true),
     // Should photos be stored locally if using PhotoSource is lambase?
     'PhotoStoreLocally' => env('RANGER_CLUBHOUSE_PHOTO_STORE_LOCALLY', false),
-    'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'http://www.tanis.com/brclam/webservice.cfc'),
-    'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'http://www.tanis.com/brclam/webservice_rpt.cfc'),
+    'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'https://www.lambase.com/webservice/photo_status_rangers.cfc'),
+    'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'https://www.lambase.com/webservice/photo_status_rpt_rangers.cfc'),
     'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'https://www.lambase.com/lam_photos/rangers'),
-    'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'http://tanis.com/brclam/jumpin_ranger.cfm'),
+    'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'https://www.lambase.com/jumpin/rangers.cfm'),
 
     'TimesheetCorrectionEnable'  => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_ENABLE', true),
     'TimesheetCorrectionYear'    => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_YEAR', 2018),
