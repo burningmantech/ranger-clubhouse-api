@@ -82,4 +82,12 @@ class TimesheetPolicy
       public function correctionRequests(Person $user) {
           return false;
       }
+
+      /*
+       * Can the user see the timesheet unconfirmed people?
+       */
+
+       public function unconfirmedPeople(Person $user) {
+           return false;
+       }
 }

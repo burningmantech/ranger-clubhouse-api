@@ -377,5 +377,20 @@ class TimesheetController extends ApiController
                'missing_requests'   => TimesheetMissing::retrieveForPersonOrAllForYear(null, $year)
            ]);
        }
+     /*
+      * Timesheet Unconfirmed Report
+      */
 
+      public function unconfirmedPeople()
+      {
+          $params = request()->validate([
+              'year' => 'required|integer'
+          ]);
+
+          $this->authorize('unconfirmedPeople', [ Timesheet::class ]);
+
+          return response()->json([
+              'unconfirmed_people' => Timesheet::retrieveUnconfirmedPeopleForYear($params['year'])
+          ]);
+      }
 }

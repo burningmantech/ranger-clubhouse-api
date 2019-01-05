@@ -193,6 +193,25 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Retrieve all people who has not indicated their timesheet entries are correct.
+     */
+
+     public static function retrieveUnconfirmedPeopleForYear($year)
+     {
+         return DB::select(
+                "SELECT
+                    person.id, callsign,
+                    first_name, last_name,
+                    email, home_phone,
+                    (SELECT count(*) FROM timesheet WHERE person.id=timesheet.person_id AND YEAR(timesheet.on_duty)=? AND timesheet.verified IS FALSE AND (timesheet.notes is null OR timesheet.notes='') AND timesheet.review_status='pending') as unverified_count
+               FROM person
+               WHERE status='active'
+                 AND timesheet_confirmed IS FALSE
+                 AND EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(timesheet.on_duty)=?)
+               ORDER BY callsign", [ $year, $year ]);
+     }
+
+    /*
      * Calcuate how many credits earned for a year
      */
 

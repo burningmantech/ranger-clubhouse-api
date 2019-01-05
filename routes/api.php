@@ -122,6 +122,7 @@ Route::group([
     Route::post('timesheet/signin', 'TimesheetController@signin');
     Route::get('timesheet/log', 'TimesheetController@showLog');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
+    Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
