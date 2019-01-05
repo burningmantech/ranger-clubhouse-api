@@ -75,4 +75,11 @@ class TimesheetPolicy
          return false;
      }
 
+     /*
+      * Can the user see the timesheet correction requests?
+      */
+
+      public function correctionRequests(Person $user) {
+          return false;
+      }
 }

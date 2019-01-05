@@ -7,12 +7,13 @@ use App\Http\Controllers\ApiController;
 
 use App\Helpers\SqlHelper;
 
-use App\Models\Position;
 use App\Models\PersonPosition;
+use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
+use App\Models\TimesheetMissing;
 use App\Models\Training;
 
 
@@ -356,5 +357,25 @@ class TimesheetController extends ApiController
               ]
           ]);
       }
+
+      /*
+       * Timesheet Correction Requests Report
+       */
+
+       public function correctionRequests()
+       {
+           $params = request()->validate([
+               'year'   => 'required|integer'
+           ]);
+
+           $year = $params['year'];
+
+           $this->authorize('correctionRequests', [ Timesheet::class ]);
+
+           return response()->json([
+               'corrections'    => Timesheet::retrieveCorrectionRequestsForYear($year),
+               'missing_requests'   => TimesheetMissing::retrieveForPersonOrAllForYear(null, $year)
+           ]);
+       }
 
 }

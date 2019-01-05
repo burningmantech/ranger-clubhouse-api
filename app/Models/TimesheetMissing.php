@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use App\Models\ApiModel;
 use App\Models\Position;
 use App\Models\Person;
+use App\Models\Timesheet;
 
 class TimesheetMissing extends ApiModel
 {
@@ -75,9 +76,24 @@ class TimesheetMissing extends ApiModel
         return $this->belongsTo(Position::class);
     }
 
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
     public function reviewer_person()
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function create_person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function partner_person()
+    {
+        return $this->belongsTo(Person::class, 'partner', 'callsign');
     }
 
     public static function findForQuery($query)
@@ -184,6 +200,39 @@ class TimesheetMissing extends ApiModel
             $partners[] = $info;
         }
         return $partners;
+    }
+
+    /*
+     * Find the missing timesheet requests for a person OR all outstanding requests for a given year.
+     *
+     * Credits are calculated and the partner shift searched for.
+     *
+     * @param int $personId if null, find all request, otherwise find for person
+     * @param int $year year to search
+     * @return array found missing requests
+     */
+
+    public static function retrieveForPersonOrAllForYear($personId, $year)
+    {
+        $sql = self::
+            with([
+                'position:id,title',
+                'person:id,callsign',
+                'create_person:id,callsign',
+                'reviewer_person:id,callsign',
+                'partner_person:id,callsign'
+            ])
+            ->whereYear('on_duty', $year)
+            ->orderBy('on_duty');
+
+        // Find for a person
+        if ($personId !== null) {
+            $sql = $sql->where('person_id', $personId);
+        } else {
+            $sql = $sql->where('review_status', 'pending');
+        }
+
+        return $sql->get();
     }
 
     public function setCreateEntryAttribute($value) {

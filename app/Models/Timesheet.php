@@ -61,6 +61,11 @@ class Timesheet extends ApiModel
 
     const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title' ];
 
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
     public function reviewer_person()
     {
         return $this->belongsTo(Person::class);
@@ -166,6 +171,26 @@ class Timesheet extends ApiModel
         return $people;
     }
 
+    /*
+     * Retrieve all corrections requests for a given year
+     */
+
+    public static function retrieveCorrectionRequestsForYear($year)
+    {
+        // Find all the unverified timesheets
+        $rows = self::with([ 'person:id,callsign', 'position:id,title'])
+            ->whereYear('on_duty', $year)
+            ->where('verified', false)
+            ->where('review_status', 'pending')
+            ->whereNotNull('off_duty')
+            ->orderBy('on_duty')
+            ->get();
+
+        // Warm up the position credit cache so the database is not being slammed.
+        PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+
+        return $rows->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+    }
 
     /*
      * Calcuate how many credits earned for a year
