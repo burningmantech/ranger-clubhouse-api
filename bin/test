@@ -1,0 +1,257 @@
+#!/bin/sh
+
+# Run sh within a new container
+
+. "$(dirname "$0")/.common.sh";
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+host_port="$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')";
+
+container_name="";
+
+
+##
+# HTTP
+##
+
+http_status() {
+    head -1 | cut -d " " -f 2;
+}
+
+
+http_header() {
+    name="$1"; shift;
+
+    # FIXME: We're matching the ending carriage return with '.' here because
+    # '\r ' doesn't seem to work.
+    sed -n -e 's|^'"${name}"': \(.*\).$|\1|p';
+}
+
+
+http_body() {
+    sed -n -e '/^.$/,$p' | tail -n +2;
+}
+
+
+##
+# Init
+##
+
+start_container() {
+    container_name="ranger-clubhouse-api-test_${host_port}";
+
+    cleanup() {
+        echo "Terminating test container: ${container_name}...";
+
+        docker kill "${container_name}" > /dev/null;
+    }
+    trap cleanup EXIT;
+
+    echo "Starting test container: ${container_name}...";
+
+    docker run                       \
+        --rm --detach                \
+        --name "${container_name}"   \
+        --publish "${host_port}:80"  \
+        "${image_name}"              \
+        > /dev/null;
+}
+
+
+http_get() {
+    local path="$1"; shift;
+
+    local e;
+
+    curl                                        \
+        --include --fail --silent --show-error  \
+        "http://localhost:${host_port}${path}"  \
+        && e=0 || e=$?;
+
+    return ${e};
+}
+
+
+http_get_error() {
+    local path="$1"; shift;
+
+    local e;
+
+    curl                                        \
+        --include --silent --show-error         \
+        "http://localhost:${host_port}${path}"  \
+        && e=0 || e=$?;
+
+    return ${e};
+}
+
+
+wait_for_server() {
+    echo "Waiting on server to start up...";
+
+    local response="$(mktemp)";
+    local    error="$(mktemp)";
+
+    local count=0;
+    local e;
+
+    check_timeout() {
+        local timeout=60;
+
+        if [ ${count} -gt ${timeout} ]; then
+            echo "ERROR: Timed out";
+            echo "Logs:";
+            docker logs "${container_name}";
+            return 1;
+        fi;
+    }
+
+    while true; do
+        http_get / > "${response}" 2> "${error}" && e=0 || e=$?;
+
+        count=$((${count} + 1));
+
+        if [ ${e} -eq 7 ]; then
+            check_timeout || return 1;
+            echo "Connection refused from server; waiting on server to start...";
+            sleep 1;
+            continue;
+        fi;
+
+        if [ ${e} -eq 52 ]; then
+            check_timeout || return 1;
+            echo "Empty reply from server; waiting on server to start...";
+            sleep 1;
+            continue;
+        fi;
+
+        if [ ${e} -eq 56 ]; then
+            check_timeout || return 1;
+            echo "Connection to server reset; waiting on server to start...";
+            sleep 1;
+            continue;
+        fi;
+
+        if [ ${e} -ne 0 ]; then
+            fail "Error HTTP status from server.";
+            echo "Error from curl:"; cat "${error}";
+            echo "Response:"; cat "${response}";
+            return 1;
+        fi;
+
+        break;
+    done;
+
+    rm "${response}" "${error}";
+}
+
+
+##
+# Tests
+##
+
+fail() {
+    echo "FAIL:" "$@";
+}
+
+
+diff_body() {
+    local expected="$1"; shift;
+    local received="$1"; shift;
+
+    if ! diff --brief "${expected}" "${received}" > /dev/null; then
+        fail "Received body does not match expected output.";
+        diff -ud "${expected}" "${received}";
+        return 1;
+    fi;
+}
+
+
+test_root_resource() {
+    echo "Testing root resource...";
+
+    local response="$(mktemp)";
+    local    error="$(mktemp)";
+
+    local e;
+
+    http_get / > "${response}" 2> "${error}" && e=0 || e=$?;
+
+    if [ ${e} -eq 22 ]; then
+        fail "Root resource not found.  Expected redirect.";
+        return 1;
+    fi;
+
+    if [ ${e} -ne 0 ]; then
+        fail "Error HTTP status from server.";
+        echo "Error from curl:"; cat "${error}";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    local status="$(http_status < "${response}")";
+
+    if [ ${status} -ne 200 ]; then
+        fail "Expected HTTP status 200 (OK) for root resource.";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    local body="$(http_body < "${response}")";
+
+    if [ "${body}" != "Ranger Clubhouse API Server" ]; then
+        fail "Unexpected body for root resource.";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    rm "${response}" "${error}";
+}
+
+
+test_config() {
+    echo "Testing config resource...";
+
+    local response="$(mktemp)";
+    local     body="$(mktemp)";
+    local    error="$(mktemp)";
+
+    if ! http_get /api/config > "${response}" 2> "${error}"; then
+        fail "Error HTTP status from server.";
+        echo "Error from curl:"; cat "${error}";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    local content_type="$(http_header Content-Type < "${response}")";
+
+    if [ "${content_type}" != "application/json" ]; then
+        fail "Expected application/json content type.";
+        echo "Content-Type: ${content_type}";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    http_body < "${response}" > "${body}";
+
+    # Received JSON payload should have a "VCSRevision" key.
+    if ! grep '"VCSRevision":' "${body}" > /dev/null; then
+        fail "Configuration payload lacks VCSRevision.";
+        echo "Content-Type: ${content_type}";
+        echo "Response:"; cat "${response}";
+        return 1;
+    fi;
+
+    rm "${response}" "${body}" "${error}";
+}
+
+
+echo "Testing service...";
+
+start_container    || exit 1;
+wait_for_server    || exit 2;
+test_root_resource || exit 100;
+test_config        || exit 101;
+
+echo "Tests passed."
