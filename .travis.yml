@@ -1,0 +1,20 @@
+# language: php
+
+
+services:
+  - docker
+
+
+branches:
+  only:
+    - master
+
+
+matrix:
+  include:
+    - env: TESTENV=lint
+    - env: TESTENV=docker
+
+
+script:
+  - ./bin/travis
