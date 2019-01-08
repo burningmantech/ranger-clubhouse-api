@@ -8,6 +8,9 @@ set -u
 
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
+echo "Environment:";
+env;
+
 case "${TESTENV:=}" in
     "lint")
         exec "${wd}/bin/test_lint" .;
