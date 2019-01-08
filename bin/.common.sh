@@ -1,5 +1,4 @@
 set -eu
-set -o pipefail
 
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
