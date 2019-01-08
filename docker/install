@@ -1,0 +1,24 @@
+#!/bin/sh
+
+#
+# Install script for building the Docker container.
+# This is not intended to be run directly.
+#
+
+set -eu
+
+# Needed to build PHP extensions
+apk add --no-cache libxml2-dev
+
+docker-php-ext-install             \
+    ctype                          \
+    json                           \
+    mbstring                       \
+    pdo                            \
+    pdo_mysql                      \
+    tokenizer                      \
+    xml                            \
+
+# Clean up requirements for building PHP extensions
+apk del libxml2-dev
+apk add --no-cache libxml2;

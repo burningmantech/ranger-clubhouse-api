@@ -8,7 +8,7 @@
 
 exec docker run                 \
     --rm                        \
-    --name "${container_name}"  \
-    --publish 8000:80           \
+    --name="${container_name}"  \
+    --publish=8000:80           \
     "${image_name}"             \
     ;
