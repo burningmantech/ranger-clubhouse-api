@@ -1,4 +1,6 @@
-# ApiHouse - Black Rock Ranger Secret Clubhouse API Backend
+# Black Rock Ranger Secret Clubhouse API Service
+
+[![Travis CI](https://travis-ci.com/burningmantech/ranger-clubhouse-api.svg?branch=master)](https://travis-ci.com/burningmantech/ranger-clubhouse-api)
 
 ## Prerequisites
 
