@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Run checkphpsyntax from the PHP Docker image.
+#
+
+set -eu
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+       app="/var/www/application";
+image_name="burningman/php-nginx:7.2-alpine3.8";
+
+docker run                    \
+    --volume="${PWD}:${app}"  \
+    --workdir="${app}"        \
+    "${image_name}"           \
+    checkphpsyntax "$@";

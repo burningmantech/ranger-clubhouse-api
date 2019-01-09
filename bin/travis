@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Dispatcher for Travis CI
+#
+
+set -e
+set -u
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+echo "Environment:";
+env;
+
+case "${TESTENV:=}" in
+    "lint")
+        exec "${wd}/bin/test_lint" .;
+        ;;
+    "docker")
+        exec "${wd}/bin/build";
+        exec "${wd}/bin/test_docker";
+        ;;
+    *)
+        echo "Unknown test environment: ${TESTENV}";
+        exit 1;
+        ;;
+esac;

@@ -1,6 +1,7 @@
 #!/bin/sh
-
-# Run sh within a new container
+#
+# Start the app in a Docker container and test it
+#
 
 . "$(dirname "$0")/.common.sh";
 
