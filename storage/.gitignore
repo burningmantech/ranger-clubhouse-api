@@ -2,5 +2,4 @@
 *
 # Except  these files
 !.gitignore
-!.keep
 !framework

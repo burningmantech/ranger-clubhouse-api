@@ -2,6 +2,6 @@
 *
 # Except this file
 !.gitignore
-!.keep
 !cache
+!sessions
 !views
