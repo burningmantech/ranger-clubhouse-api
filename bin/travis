@@ -16,6 +16,7 @@ case "${TESTENV:=}" in
         exec "${wd}/bin/test_lint" .;
         ;;
     "docker")
+        exec "${wd}/bin/build";
         exec "${wd}/bin/test_docker";
         ;;
     *)
