@@ -2,17 +2,38 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+
 use App\Models\ApiModel;
+use App\Models\Person;
+use App\Models\AccessDocumentDelivery;
 
 class AccessDocument extends ApiModel
 {
     protected $table = 'access_document';
 
+    const ACTIVE_STATUSES = [
+        'qualified',
+        'claimed',
+        'banked'
+    ];
+
     const INVALID_STATUSES = [
         'used',
         'cancelled',
         'expired'
+    ];
+
+    const INACTIVE_STATUS = [
+        'used',
+        'cancelled',
+        'expired'
+    ];
+
+    const TICKET_TYPES = [
+        'staff_credential',
+        'reduced_price_ticket',
+        'gift_ticket'
     ];
 
     protected $fillable = [
@@ -27,16 +48,42 @@ class AccessDocument extends ApiModel
         'expiry_date',
         'create_date',
         'modified_date',
+        'additional_comments',
     ];
 
     protected $casts = [
-        'access_date' => 'datetime',
-        'expiry_date' => 'date',
-        'create_date' => 'datetime',
-        'modified_date' => 'timestamp',
+        'access_date'   => 'datetime',
+        'expiry_date'   => 'datetime:Y-m-d',
+        'create_date'   => 'datetime',
+        'modified_date' => 'datetime',
+        'past_expire_date' => 'boolean',
     ];
 
-    public static function findForQuery($query) {
+    protected $hidden = [
+        'person',
+        'additional_comments'   // pseudo-column, write-only. used to append to comments.
+    ];
+
+    protected $appends = [
+        'past_expire_date'
+    ];
+
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    /*
+     * Find records matching a given criteria.
+     *
+     * Query parameters are:
+     *  all: find all current documents otherwise only current documents (not expired, used, invalid)
+     *  person_id: find for a specific person
+     *  year: for a specific year
+     */
+
+    public static function findForQuery($query)
+    {
         $sql = self::orderBy('source_year', 'type');
 
         if (empty($query['all'])) {
@@ -54,27 +101,283 @@ class AccessDocument extends ApiModel
         return $sql->orderBy('type', 'asc')->get();
     }
 
-    public static function findSOWAPsForPerson($personId, $year) {
+    /*
+     * Retrieve all access documents that are claimed, qualified, or banked
+     * group by people.
+     *
+     * Return an array. Each element is an associative array:
+     *
+     * person info: id,callsign,status,first_name,last_name,email
+     *     if $includeDelivery is true include - street1,city,state,zip,country
+     * documents: array of access documents
+     */
+
+    public static function retrieveCurrentByPerson($forDelivery)
+    {
+        $currentYear = date('Y');
+
+        if ($forDelivery) {
+            $sql = self::where('status', 'claimed');
+        } else {
+            $sql = self::whereIn('status', self::ACTIVE_STATUSES);
+        }
+
+        $personIds = $sql->distinct('person_id')->pluck('person_id');
+
+        $personWith = 'person:id,callsign,status,first_name,last_name,email';
+
+        if ($forDelivery) {
+            $personWith .= ",street1,city,state,zip,country";
+        }
+
+        $rows = self::whereNotIn('status', self::INACTIVE_STATUS)
+            ->whereIn('person_id', $personIds)
+            ->with([ $personWith ])
+            ->get();
+
+        $people = [];
+
+        if ($forDelivery) {
+            $deliveries = AccessDocumentDelivery::whereIn('person_id', $personIds)
+                ->where('year', $currentYear)
+                ->get()
+                ->keyBy('person_id');
+
+        }
+
+        $dateRange = config('clubhouse.TAS_WAPDateRange');
+        if ($dateRange) {
+            list($low, $high) = explode("-", $dateRange);
+        } else {
+            $low = 5;
+            $high = 26;
+        }
+
+
+        foreach ($rows as $row) {
+            // skip deleted person records
+            if (!$row->person) {
+                continue;
+            }
+
+            $personId = $row->person_id;
+
+            if ($forDelivery) {
+                $delivery = $deliveries->has($personId) ? $deliveries[$personId] : null;
+                $deliveryMethod = $delivery ? $delivery->method : 'will_call';
+            }
+
+            if (!isset($people[$personId])) {
+                $people[$personId] = (object) [
+                    'person'    => $row->person,
+                    'documents' => []
+                ];
+
+                if ($forDelivery) {
+                    $people[$personId]->delivery_method = $deliveryMethod;
+                }
+            }
+
+
+            switch ($row->type) {
+            case 'work_access_pass':
+            case 'work_access_pass_so':
+            case 'staff_credential':
+                if (!$row->access_any_time) {
+                    $accessDate = $row->access_date;
+                    if (!$accessDate) {
+                        $row->has_error = true;
+                        $row->error =  "missing access date";
+                    } else if ($accessDate->year < $currentYear) {
+                        $row->has_error = true;
+                        $row->error =  "access date [$accessDate] is less than current year [$currentYear]";
+                    } else {
+                        $day = $accessDate->day;
+                        if ($day < $low || $day > $high) {
+                            $row->has_error = true;
+                            $row->error = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
+                        }
+                    }
+                }
+                break;
+            }
+
+            $person = $people[$personId];
+            $person->documents[] = $row;
+
+            if ($forDelivery) {
+
+                $deliveryType = "UNKNOWN";
+                switch ($row->type) {
+                case 'staff_credential':
+                    $deliveryType = 'WILL_CALL';
+                    break;
+
+                case 'work_access_pass':
+                case 'work_access_pass_so':
+                    $deliveryType = 'PRINT_AT_HOME';
+                    break;
+
+                case 'vehicle_pass':
+                case 'gift_ticket':
+                case 'reduced_price_ticket':
+                    if ($deliveryMethod == 'mail') {
+                        $address = [];
+                        if ($delivery->country == "United States") {
+                            $country = 'US';
+                            $deliveryType = "USPS";
+                        } elseif ($delivery->country == "Canada") {
+                            $country = 'CA';
+                            $deliveryType = "CANADA_UPS";
+                        } else {
+                            $country = $delivery->country;
+                        }
+                        $row->delivery_address = [
+                            'street'    => $delivery->street,
+                            'city'      => $delivery->city,
+                            'state'     => substr(strtoupper($delivery->state), 0, 2),
+                            'postal_code' => $delivery->postal_code,
+                            'country'   => $country,
+                        ];
+                    } else {
+                        $deliveryType = "WILL_CALL";
+                    }
+                    break;
+                }
+
+                $row->delivery_type = $deliveryType;
+
+                /*
+                 * Lulu wants us to include Clubhouse addresses for everyone,
+                 * even those not getting something shipped, for some reason.
+                 * But, we cannot include EU countries because of GDPR.
+                 */
+
+                if ($deliveryType == "WILL_CALL" || $deliveryType == "PRINT_AT_HOME") {
+                    $info = $row->person;
+                    if (!self::isEUCountry($info->country)) {
+                        $row->delivery_address = [
+                            'street'    => $info->street1,
+                            'city'      => $info->city,
+                            'state'     => substr(strtoupper($info->state), 0, 2),
+                            'postal_code'   => $info->zip,
+                            'country'   => $info->country
+                        ];
+                    }
+                }
+
+            }
+        }
+
+        usort(
+            $people, function ($a, $b) {
+                return strcmp($a->person->callsign, $b->person->callsign);
+            }
+        );
+
+        return [
+            'people'   => $people,
+            'day_high' => $high,
+            'day_low'  => $low,
+        ];
+    }
+
+    /*
+     * Retrieve all people with expiring tickets for a given year.
+     */
+
+    public static function retrieveExpiringTicketsByPerson($year)
+    {
+        $rows = self::whereIn('type', self::TICKET_TYPES)
+            ->whereIn('status', [ 'qualified', 'banked' ])
+            ->whereYear('expiry_date', $year)
+            ->with([ 'person:id,callsign,email,status'])
+            ->get();
+
+        $peopleByIds = [];
+        foreach ($rows as $row) {
+            if (!$row->person) {
+                continue;
+            }
+
+            $personId = $row->person->id;
+            if (!isset($peopleByIds[$personId])) {
+                $peopleByIds[$personId] = [
+                    'person'    => $row->person,
+                    'tickets'   => []
+                ];
+            }
+
+            $peopleByIds[$personId]['tickets'][] = [
+                'id'          => $row->id,
+                'type'        => $row->type,
+                'status'      => $row->status,
+                'expiry_date' => (string) $row->expiry_date,
+            ];
+        }
+
+        $people = array_values($peopleByIds);
+        usort(
+            $people, function ($a, $b) {
+                return strcmp($a['person']->callsign, $b['person']->callsign);
+            }
+        );
+
+        return $people;
+    }
+
+    /**
+     *
+     * Find all the Significant Other WAPs for a person and year
+     *
+     * @param integer $personId person to find
+     * @param integer $year year to search
+     */
+
+    public static function findSOWAPsForPerson($personId, $year)
+    {
         return self::where('type', 'work_access_pass_so')
-                        ->where('person_id', $personId)
-                        ->whereNotIn('status', self::INVALID_STATUSES)
-                        ->get();
+            ->where('person_id', $personId)
+            ->whereNotIn('status', self::INVALID_STATUSES)
+            ->get();
     }
 
-    public static function SOWAPCount($personId, $year) {
+    /**
+     * Count how many (current) Significant Other WAP's for a person & year
+     *
+     * @param integer $personId person to find
+     * @param integer $year year to search
+     */
+
+    public static function SOWAPCount($personId, $year)
+    {
         return self::where('person_id', $personId)
-                ->where('type', 'work_access_pass_so')
-                ->whereNotIn('status', self::INVALID_STATUSES)
-                ->count();
+            ->where('type', 'work_access_pass_so')
+            ->whereNotIn('status', self::INVALID_STATUSES)
+            ->count();
     }
 
-    public static function findForPerson($personId, $id) {
+    /*
+     * Find a record belonging to a person.
+     */
+
+    public static function findForPerson($personId, $id)
+    {
         return self::where('person_id', $personId)
-                    ->where('id', $id)
-                    ->firstOrFail();
+            ->where('id', $id)
+            ->firstOrFail();
     }
 
-    public static function createSOWAP($personId, $year, $name) {
+    /**
+     * Create a Significant Others Work Access Pass and claim it.
+     *
+     * @param integer $personId person to create for
+     * @param integer $year year to create for
+     * @param string $name the SO's name.
+     */
+
+    public static function createSOWAP($personId, $year, $name)
+    {
         $wap = new AccessDocument;
         $wap->person_id = $personId;
         $wap->name = $name;
@@ -89,11 +392,56 @@ class AccessDocument extends ApiModel
         return $wap;
     }
 
-    public function setExpiryDateAttribute($date) {
+    /*
+     * Setter for expiry_date. Fixup the date if its only a year.
+     */
+
+    public function setExpiryDateAttribute($date)
+    {
         if (gettype($date) == 'string' && strlen($date) == 4) {
             $date .= "-09-15 00:00:00";
         }
 
         $this->attributes['expiry_date'] = $date;
+    }
+
+    /*
+     * Return true if the document expired
+     */
+
+    public function getPastExpireDateAttribute()
+    {
+        return ($this->expiry_date && $this->expiry_date->year < date('Y'));
+    }
+
+    /*
+     * Is the country code a EU country?
+     */
+
+    public static function isEUCountry($country)
+    {
+        return in_array($country, [
+            "BE", "BG", "CZ", "DK", "DE", "EE", "IE",
+            "EL", "ES", "FR", "HR", "IT", "CY", "LV", "LT", "LU",
+            "HU", "MT", "NL", "AT", "PL", "PT", "RO", "SI", "SK",
+            "FI", "SE", "UK", "GB"
+        ]);
+    }
+
+    /*
+     * additional_comments, when set, pre-appends to the comments column with
+     * a timestamp and current user's callsign.
+     */
+
+    public function setAdditionalCommentsAttribute($value)
+    {
+        if (empty($value)) {
+            return;
+        }
+
+        $date = date('n/j/y G:i:s');
+        $user = \Auth::user();
+        $callsign = $user ? $user->callsign : "(unknown)";
+        $this->comments = "$date $callsign: $value\n".$this->comments;
     }
 }

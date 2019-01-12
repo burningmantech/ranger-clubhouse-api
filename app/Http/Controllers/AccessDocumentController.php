@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Http\Controllers\ApiController;
+
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
-use App\Http\Controllers\ApiController;
+use App\Models\Role;
+
+use App\Helpers\SqlHelper;
 
 class AccessDocumentController extends ApiController
 {
@@ -23,7 +27,40 @@ class AccessDocumentController extends ApiController
 
         $this->authorize('index', [ AccessDocument::class, $personId ]);
 
-        return $this->success(AccessDocument::findForQuery($query));
+        return $this->success(AccessDocument::findForQuery($query), null, 'access_document');
+    }
+
+    /*
+     * Retrieve all current/active access documents by person
+     */
+
+     public function current()
+     {
+         $this->authorize('current', AccessDocument::class);
+         $params = request()->validate([
+             'for_delivery'  => 'sometimes|boolean',
+         ]);
+
+         $forDelivery = isset($params['for_delivery']);
+
+         return response()->json([
+             'documents'   => AccessDocument::retrieveCurrentByPerson($forDelivery)
+         ]);
+     }
+
+    /*
+     * Retrieve all expiring tickets for the current year
+     */
+
+    public function expiring()
+    {
+        $this->authorize('expiring', AccessDocument::class);
+
+        $year = date('Y');
+
+        return response()->json([
+            'expiring' => AccessDocument::retrieveExpiringTicketsByPerson($year)
+        ]);
     }
 
     /*
@@ -41,7 +78,8 @@ class AccessDocumentController extends ApiController
             $accessDocument->person_id = $this->user->id;
         }
 
-        if (!$person->save()) {
+        $accessDocument->create_date = $accessDocument->modified_date = SqlHelper::now();
+        if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
         }
 
@@ -58,7 +96,7 @@ class AccessDocumentController extends ApiController
 
         $changes = $accessDocument->getDirty();
 
-        if (!$this->save()) {
+        if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
         }
 
@@ -75,7 +113,11 @@ class AccessDocumentController extends ApiController
      */
     public function destroy(AccessDocument $accessDocument)
     {
-        //
+        $this->authorize('destroy', $accessDocument);
+
+        $accessDocument->delete();
+
+        return $this->restDeleteSuccess();
     }
 
     /*
@@ -240,10 +282,11 @@ class AccessDocumentController extends ApiController
                 'wap_so_max'             => config('clubhouse.TAS_WAPSOMax'),
                 'box_office_open_date'   => config('clubhouse.TAS_BoxOfficeOpenDate'),
                 'wap_default_date'       => config('clubhouse.TAS_DefaultWAPDate'),
+                'wap_date_range'         => config('clubhouse.TAS_WAPDateRange'),
                 'wap_alpha_default_date' => config('clubhouse.TAS_DefaultAlphaWAPDate'),
                 'wap_so_default_date'    => config('clubhouse.TAS_DefaultSOWAPDate'),
 
-                'ticketfly_email'        => 'memberservices@ticketfly.com',
+                'ticket_vendor_email'    => config('clubhouse.TicketVendorEmail'),
                 'ranger_ticketing_email' => config('clubhouse.TAS_Email'),
 
                 'faqs'                   => [

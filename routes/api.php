@@ -37,9 +37,11 @@ Route::group([
 
     Route::resource('alert', 'AlertController');
 
-    Route::get('access-document/ticketing-info', 'AccessDocumentController@ticketingInfo');
+    Route::get('access-document/current', 'AccessDocumentController@current');
+    Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::get('access-document/sowap', 'AccessDocumentController@retrieveSOWAP');
     Route::patch('access-document/sowap', 'AccessDocumentController@storeSOWAP');
+    Route::get('access-document/ticketing-info', 'AccessDocumentController@ticketingInfo');
 
     Route::patch('access-document/{access_document}/status', 'AccessDocumentController@status');
     Route::resource('access-document', 'AccessDocumentController');

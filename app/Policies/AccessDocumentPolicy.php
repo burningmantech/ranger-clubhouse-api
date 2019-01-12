@@ -25,6 +25,23 @@ class AccessDocumentPolicy
     }
 
     /**
+     * Determine whether the user can see the current access document summary.
+     */
+    public function current(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can see the expiring tickets.
+     */
+    public function expiring(Person $user)
+    {
+        return false;
+    }
+
+
+    /**
      * A normal user may not create access doucments
      */
     public function create(Person $user)
@@ -54,7 +71,7 @@ class AccessDocumentPolicy
      * Determine whether the user can delete the AccessDocument.
      *
      */
-    public function delete(Person $user, AccessDocument $accessDocument)
+    public function destroy(Person $user, AccessDocument $accessDocument)
     {
         return ($user->id == $accessDocument->person_id);
     }

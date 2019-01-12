@@ -87,6 +87,7 @@ return [
     'TAS_WAP_FAQ'              => env('RANGER_CLUBHOUSE_TAS_WAP_FAQ_URL', 'https://docs.google.com/document/d/1wuucvq017bQHP7-0uH2KlSWSaYW7CSvNN7siU11Ah7k/edit'),
     'TAS_VP_FAQ'               => env('RANGER_CLUBHOUSE_TAS_WAP_VP_URL', 'https://docs.google.com/document/d/1KPBD_qdyBkdDnlaVBTAVX8-U3WWcSXa-4_Kf48PbOCM/edit'),
     'TAS_Alpha_FAQ'            => env('RANGER_CLUBHOUSE_TAS_ALPHA_FAQ_URL', 'https://docs.google.com/document/d/1yyIAUqP4OdjGTZeOqy1PxE_1Hynhkh0cFzALQkTM-ds/edit'),
+    'TicketVendorEmail'        => env('RANGER_CLUBHOUSE_TICKET_VENDOR_EMAIL', 'memberservices@ticketfly.com'),
 
     // Meal date info (needs to change every year)
     'MealInfoAvailable'       => env('RANGER_CLUBHOUSE_MEAL_INFO_AVAILABLE', false),
