@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#
+# Start Nginx web server... but first warm up Laravel
+#
+
+set -eu
+
+# Send stdio to supervisor's stdio
+if [ ! -t 0 ]; then
+    exec 1> /proc/1/fd/1 2> /proc/1/fd/2;
+fi;
+
+# Cache Laravel configuration and routes
+
+cd /var/www/application;
+
+echo "Caching Laravel configuration and routes...";
+php artisan config:cache;
+php artisan route:cache;
+
+# Start Nginx
+exec nginx "$@";

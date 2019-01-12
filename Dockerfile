@@ -41,15 +41,15 @@ FROM burningman/php-nginx:7.2-alpine3.8
 COPY ./docker/install /docker_install/install
 RUN /docker_install/install && rm -rf /docker_install;
 
+# Copy start-nginx script and override supervisor config to use it
+COPY ./docker/start-nginx /usr/bin/start-nginx
+COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
+
 # Copy the application with dependencies from the composer container
 COPY --from=composer /var/www/application /var/www/application
 
-# Set working directory to application directory
-WORKDIR /var/www/application
-
-# Optimize configuration loading
-RUN php artisan config:cache;
-RUN php artisan route:cache;
-
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
+
+# Set working directory to application directory
+WORKDIR /var/www/application
