@@ -233,9 +233,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->hasMany(PersonPosition::class);
     }
 
-    public static function findEmailOrFail(string $email)
+    public static function findByEmail(string $email)
     {
-        return self::where('email', $email)->firstOrFail();
+        return self::where('email', $email)->first();
     }
 
     public static function findByCallsign(string $callsign)
@@ -251,6 +251,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         return null;
+    }
+
+    public static function emailExists($email)
+    {
+        return self::where('email', $email)->exists();
     }
 
     public static function findForQuery($query)
@@ -623,4 +628,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             PersonPosition::removeIdsFromPerson($personId, [ Position::ALPHA ], $reason . ' no longer alpha');
         }
     }
+
+    /**
+     * Make an Auditor callsign out the last name, the first letter of the first name,
+     * current year, and adding '(NR)'.
+     */
+
+     public function makeAuditorCallsign() {
+         $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . date('y') . '(NR)';
+     }
 }

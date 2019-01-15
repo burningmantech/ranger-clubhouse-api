@@ -13,7 +13,7 @@ return [
     'OnPlaya'  => env('RANGER_CLUBHOUSE_ON_PLAYA', false),
     'ReadOnly' => env('RANGER_CLUBHOUSE_READ_ONLY', false),
 
-    'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'Lambase'),
+    'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'local'),
     'PhotoUploadEnable' => env('RANGER_CLUBHOUSE_PHOTO_ENABLE_UPLOAD', true),
     // Should photos be stored locally if using PhotoSource is lambase?
     'PhotoStoreLocally' => env('RANGER_CLUBHOUSE_PHOTO_STORE_LOCALLY', false),
@@ -105,11 +105,9 @@ return [
     'TrainingSignupFromEmail'      => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_SIGNUP', 'ranger-trainingacademy-list@burningman.org'),
     // alert email address when a training session is full.
     'TrainingFullEmail'        => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_FULL', 'ranger-trainingacademy-list@burningman.org'),
-    'SignupUrl'                => 'http://jousting-at-windmills.org/clubhouse/',
+    'AccountCreationEmail'     => env('RANGER_CLUBHOUSE_EMAIL_ACCOUNT_CREATION', 'safetyphil@burningman.org'),
     'SendWelcomeEmail'         => env('RANGER_CLUBHOUSE_SEND_WELCOME_EMAIL', false),
-    'SqlDateFormatLiteral'     => "'%Y-%m-%d'",
-    'SqlDateTimeFormatLiteral' => "'%a %b %d @ %H:%i'",
-    'SqlTimeFormatLiteral'     => "'%H:%i'",
+
     'TimeZone'                 => env('RANGER_CLUBHOUSE_TIMEZONE', 'America/Los_Angeles'),
 
     // if true all email broadcasts will log the email but not actually send it
@@ -132,6 +130,4 @@ return [
     'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
     'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2018),  // Ticket threshold year
 
-    // Development flags
-    'DevShowSql' => false,  // if true - Show all SQL requests on the developr console or web log.
 ];

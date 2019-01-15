@@ -66,19 +66,28 @@ class Handler extends ExceptionHandler
     		return response()->json(['token_invalid'], $e->getStatusCode());
     	}
 
+        // Record not found
         if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
             $className = last(explode('\\', $e->getModel()));
             return response()->json([ 'error' => "$className was not found" ], 400);
         }
 
+        // Required parameters no present and/or do not pass validation.
         if ($e instanceof \Illuminate\Validation\ValidationException) {
             return RestApi::error(response(), 422, $e->errors());
         }
 
+        // Parameters given to a method are not valid.
         if ($e instanceof \InvalidArgumentException) {
             return RestApi::error(response(), 422, $e->getMessage());
         }
 
+        // No authorization token based / not logged in
+        if ($e instanceOf \Illuminate\Auth\AuthenticationException) {
+            return response()->json([ 'error' => 'Not authenticated.'], 401);
+        }
+
+        // User do not have the appropriate roles.
         if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
             $message = $e->getMessage();
             if ($message == '') {
@@ -86,7 +95,6 @@ class Handler extends ExceptionHandler
             }
             return response()->json([ 'error' => $message ], 403);
         }
-
 
         if ($this->isHttpException($e)) {
             $statusCode = $e->getStatusCode();

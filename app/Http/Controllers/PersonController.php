@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 use App\Http\Controllers\ApiController;
+
+use App\Helpers\SqlHelper;
 
 use App\Models\LambasePhoto;
 use App\Models\Person;
@@ -21,6 +24,9 @@ use App\Models\Position;
 use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\Training;
+
+use App\Mail\AccountCreationMail;
+use App\Mail\WelcomeMail;
 
 class PersonController extends ApiController
 {
@@ -258,9 +264,8 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
-        $isLambase = config('clubhouse.PhotoSource') == 'Lambase';
-
-        if ($isLambase) {
+        $source = config('clubhouse.PhotoSource');
+        if ($source == 'Lambase') {
             $storeLocal = config('clubhouse.PhotoStoreLocally') == true;
 
             $lambase = new LambasePhoto($person);
@@ -313,6 +318,13 @@ class PersonController extends ApiController
                'upload_url'   => $uploadUrl,
                'source'       => 'lambase',
                'message'      => $errorMessage,
+            ];
+        } else if ($source == 'test') {
+            $results = [
+                'source'       => 'local',
+                'photo_status' => 'approved',
+                'photo_url'    => 'images/test-mugshot.jpg',
+                'upload_url'   => null,
             ];
         } else {
             // Local photo source
@@ -559,4 +571,77 @@ class PersonController extends ApiController
         return response()->json([ 'mentors' => PersonMentor::findMentorsForPerson($person->id) ]);
     }
 
+    /**
+     * Register a new account, only supporting auditors right now.
+     *
+     * Note: method does not require authorization/login. see routes/api.php
+     */
+
+    public function register() {
+        $params = request()->validate([
+            'intent'            => 'required|string',
+            'person.email'      => 'required|email',
+            'person.password'   => 'required|string',
+            'person.first_name' => 'required|string',
+            'person.mi'         => 'required|string',
+            'person.last_name'  => 'required|string',
+            'person.street1'    => 'required|string',
+            'person.street2'    => 'sometimes|string',
+            'person.apt'        => 'sometimes|string',
+            'person.city'       => 'required|string',
+            'person.state'      => 'required|string',
+            'person.country'    => 'required|string',
+            'person.status'     => 'required|string',
+        ]);
+
+        $accountCreateEmail = config('clubhouse.AccountCreationEmail');
+
+        $intent = $params['intent'];
+
+        $person = new Person;
+        $person->fill($params['person']);
+
+        if ($person->status != 'auditor') {
+            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+        }
+
+        if (Person::emailExists($person->email)) {
+            // An account already exists with the same email..
+            Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'duplicate email', $person, $intent));
+            $this->log('person-register-fail', 'duplicate email', [ 'person' => $params['person'] ]);
+            return response()->json([ 'status' => 'email-exists' ]);
+        }
+
+        // make the callsign for an auditor.
+        if ($person->status == 'auditor') {
+            $person->makeAuditorCallsign();
+        }
+
+        $person->create_date = SqlHelper::now();
+
+        if (!$person->save()) {
+            // Ah, crapola. Something nasty happened that shouldn't have.
+            Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'database creation error', $person, $intent));
+            $this->log('person-register-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
+            return $this->restError($person);
+        }
+
+        // Log account creation
+        Mail::to($accountCreateEmail)->send(new AccountCreationMail('success', 'account created', $person, $intent));
+        $this->log('person-register', 'account registration', null, $person->id);
+
+        // Set the password
+        $person->changePassword($params['person']['password']);
+
+        // Setup the default roles & positions
+        PersonRole::resetRoles($person->id, 'account registration', Person::ADD_NEW_USER);
+        PersonPosition::resetPositions($person->id, 'account registration', Person::ADD_NEW_USER);
+
+        // Send a welcome email to the person if not an auditor
+        if ($person->status != 'auditor' && config('clubhouse.SendWelcomeEmail')) {
+            Mail::to($person->email)->send(new WelcomeMail($person));
+        }
+
+        return response()->json([ 'status' => 'success' ]);
+    }
 }

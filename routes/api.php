@@ -19,21 +19,34 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 */
 
-Route::get('config', 'ConfigController@show');
+
+/*
+ * API which do not require an authorized user
+ */
+
 
 Route::group([
     'middleware' => 'api',
-    'prefix' => 'auth'
-], function ($router) {
-    Route::post('login', 'AuthController@login');
-    Route::post('logout', 'AuthController@logout');
-    Route::post('refresh', 'AuthController@refresh');
-    Route::post('reset-password', 'AuthController@resetPassword');
+], function($router) {
+    Route::get('config', 'ConfigController@show');
+
+    Route::post('auth/login', 'AuthController@login');
+    Route::post('auth/reset-password', 'AuthController@resetPassword');
+
+    Route::post('person/register', 'PersonController@register');
 });
 
+
+/*
+ * API which require an authorized user
+ */
+
 Route::group([
-    'middleware' => 'api',
+    'middleware' => [ 'api', 'auth' ],
 ], function ($router) {
+
+    Route::post('auth/logout', 'AuthController@logout');
+    Route::post('auth/refresh', 'AuthController@refresh');
 
     Route::resource('alert', 'AlertController');
 

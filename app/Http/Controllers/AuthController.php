@@ -22,8 +22,8 @@ class AuthController extends Controller
      */
     public function __construct()
     {
+        // Normally ApiController::__construct would handle this
         DB::select("SET time_zone = '-7:00'");
-        $this->middleware('auth:api', ['except' => ['login', 'resetPassword']]);
     }
 
     /**
@@ -31,6 +31,7 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
+
     public function login()
     {
         $credentials = request()->validate([
@@ -85,8 +86,13 @@ class AuthController extends Controller
      */
     public function refresh()
     {
+        // TODO - test this
         return $this->respondWithToken(auth()->refresh());
     }
+
+    /**
+     * Reset an account password by emailing a new temporary password.
+     */
 
     public function resetPassword()
     {
@@ -100,11 +106,16 @@ class AuthController extends Controller
             'email'         => $data['identification']
         ];
 
-        try {
-            $person = Person::findEmailOrFail($data['identification']);
-        } catch (\Exception $e) {
+        $person = Person::findByEmail($data['identification']);
+
+        if (!$person) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Password reset failed', $action);
-            throw $e;
+            return response()->json([ 'error' => 'not-found' ], 400);
+        }
+
+        if (!$person->user_authorized) {
+            ActionLog::record(null, 'auth-password-reset-fail', 'Account disabled', $action);
+            return response()->json([ 'error' => 'account-disabled' ], 403);
         }
 
         $resetPassword = $person->createResetPassword();
@@ -115,17 +126,19 @@ class AuthController extends Controller
 
         return response()->json([ 'status' => 'success' ]);
     }
+
     /**
      * Get the JWT token array structure.
      *
-     * @param  string $token
+     * @param string $token
      *
      * @return \Illuminate\Http\JsonResponse
      */
+
     protected function respondWithToken($token, $person)
     {
         // TODO does a 'refresh_token' need to be provided?
-        return response()->json([
+        return response()->json( [
             'token'      => $token,
             'person_id'  => $person->id,
             'token_type' => 'bearer',

@@ -39,8 +39,6 @@ class Kernel extends HttpKernel
 //        ],
 
         'api' => [
-// Uncomment if requests should be rate limited
-//            'throttle:60,1',
             'bindings',
         ],
     ];

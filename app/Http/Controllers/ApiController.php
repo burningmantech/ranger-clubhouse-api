@@ -23,8 +23,8 @@ class ApiController extends Controller
     {
         DB::select("SET time_zone = '-7:00'");
 
-        $this->user = Auth::guard('api')->user();
-        if ($this->user) {
+        if (Auth::check()) {
+            $this->user = Auth::user();
             if (!$this->user->user_authorized) {
                 // A user should not be able to login when not authorized.
                 // However, a user could be logged in when their account is disabled.
