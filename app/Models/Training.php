@@ -434,7 +434,11 @@ class Training extends Position
         $trainingSlotIds = Slot::where('position_id', $this->id)->whereYear('begins', $year)->pluck('id');
 
         if ($trainingSlotIds->isEmpty()) {
-            throw new \InvalidArgumentException('Position has no slots associated with for the year.');
+            return [
+                'not_signed_up' => [],
+                'not_passed' => [],
+            ];
+            //throw new \InvalidArgumentException('Position has no slots associated with for the year.');
         }
 
         /*
