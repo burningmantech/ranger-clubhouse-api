@@ -37,6 +37,7 @@ class AuthController extends Controller
         $credentials = request()->validate([
             'identification' => 'required',
             'password'       => 'required',
+            'screen_size'    => 'sometimes',
         ]);
 
         $actionData = [
@@ -44,6 +45,11 @@ class AuthController extends Controller
             'user_agent' => request()->userAgent(),
             'email'      => $credentials['identification']
         ];
+
+        // Analytics to help figure out how our users interact with the site.
+        if (isset($credentials['screen_size'])) {
+            $actionData['screen_size'] = $credentials['screen_size'];
+        }
 
         $person = Person::findForAuthentication($credentials);
 
@@ -97,7 +103,7 @@ class AuthController extends Controller
     public function resetPassword()
     {
         $data = request()->validate([
-            'identification' => 'required|email'
+            'identification' => 'required|email',
         ]);
 
         $action = [

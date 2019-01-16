@@ -37,7 +37,6 @@ return [
     'GeneralSupportEmail'  => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
     'PersonnelEmail'       => env('RANGER_CLUBHOUSE_EMAIL_PERSONNEL', 'ranger-personnel@burningman.org'),
     'VCEmail'              => env('RANGER_CLUBHOUSE_EMAIL_VC', 'ranger-vc-list@burningman.org'),
-    'SignupUrl'            => 'http://jousting-at-windmills.org/clubhouse/',
 
     // Optional ticket credit warning messages.
     // If any are not set, no message will be displayed
