@@ -136,7 +136,11 @@ class PersonController extends ApiController
             PersonLanguage::updateForPerson($person->id, $person->languages);
         }
 
-        $this->log('person-update', 'person update', null, $person->id);
+        // Track changes
+        $changes = $person->getChanges();
+        if (!empty($changes)) {
+            $this->log('person-update', 'person update', $changes, $person->id);
+        }
 
         if ($statusChanged) {
             $person->changeStatus($newStatus, $oldStatus, 'person update');
