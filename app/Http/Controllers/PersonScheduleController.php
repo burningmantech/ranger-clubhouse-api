@@ -221,7 +221,9 @@ class PersonScheduleController extends ApiController
             $photoStatus = Photo::retrieveStatus($person);
         }
 
-        if (config('clubhouse.ManualReviewDisabledAllowSignups')) {
+        $mrDisabledAllowSignups = config('clubhouse.ManualReviewDisabledAllowSignups');
+
+        if ($mrDisabledAllowSignups) {
             // Manual review is not need at the moment
             $manualReviewPassed = true;
         } else {
@@ -246,8 +248,13 @@ class PersonScheduleController extends ApiController
                 $manualReviewMyRank = 100000;       // Hack to make life easier below
             }
             $manualReviewCount = ManualReview::countPassedProspectivesAndAlphasForYear($year);
+
             if ($manualReviewPassed && $manualReviewMyRank > $manualReviewCap) {
-                $missedManualReviewWindow = true;
+                // Don't mark the person has missed the manual review window if
+                // manual review is disabled AND signups are allowed
+                if (!$mrDisabledAllowSignups) {
+                    $missedManualReviewWindow = true;
+                }
                 $canSignUpForShifts = false;
             }
         }
@@ -258,7 +265,7 @@ class PersonScheduleController extends ApiController
             // Per Roslyn and Threepio 2/23/2017, we require people to have
             // a lam photo before they can take the Manual Review
             if ($isPotentialRanger || $status == "prospective waitlist") {
-                if ($photoApproved && !$manualReviewPassed
+                if (($photoStatus == 'not-required' || $photoStatus == 'approved') && !$manualReviewPassed
                         && ($manualReviewCap == 0 ||
                             $manualReviewCount < $manualReviewCap)) {
                     $showManualReviewLink = true;
