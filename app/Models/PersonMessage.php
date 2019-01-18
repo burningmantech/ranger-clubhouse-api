@@ -33,11 +33,7 @@ class PersonMessage extends ApiModel
     ];
 
     protected $appends = [
-        'creator_person_id',
-        'creator_callsign',
-        'message_from',
-        'delivered',
-        'sent_at'
+        'sent_at',
     ];
 
     public $recipient_callsign;
@@ -58,8 +54,9 @@ class PersonMessage extends ApiModel
     public static function findForPerson($personId) {
         return self::where('person_id', $personId)
             ->leftJoin('person as creator', 'creator.id', '=', 'person_message.creator_person_id')
+            ->leftJoin('person as sender', 'sender.callsign', '=', 'person_message.message_from')
             ->orderBy('person_message.timestamp', 'desc')
-            ->get(['person_message.*', 'creator.callsign as creator_callsign']);
+            ->get(['person_message.*', 'creator.callsign as creator_callsign', 'sender.id as sender_person_id']);
     }
 
     public static function countUnread($personId)
@@ -117,27 +114,15 @@ class PersonMessage extends ApiModel
           return $this->timestamp ? $this->timestamp->toIso8601String() : '';
       }
 
-      public function getCreatorPersonIdAttribute() {
-          return isset($this->attributes['creator_person_id']) ? $this->attributes['creator_person_id'] : null;
-      }
-
-      public function getCreatorCallsignAttribute() {
-          return isset($this->attributes['creator_callsign']) ? $this->attributes['creator_callsign'] : null;
-      }
-
-      public function getSenderPersonIdAttribute() {
+/*      public function getSenderPersonIdAttribute() {
           return isset($this->attributes['sender_person_id']) ? $this->attributes['sender_person_id'] : null;
       }
 
-      public function getMessageFromAttribute() {
-          return isset($this->attributes['message_from']) ? $this->attributes['message_from'] : null;
-      }
-
-      public function getDeliveredAttribute() {
-          return isset($this->attributes['delivered']) ? $this->attributes['delivered'] : null;
+      public function getSenderPersonIdAttribute() {
+          return isset($this->attributes['']) ? $this->attributes['sender_person_id'] : null;
       }
 
       public function getRecipientCallsign() {
           return $this->recipient_callsign;
-      }
+      }*/
 }
