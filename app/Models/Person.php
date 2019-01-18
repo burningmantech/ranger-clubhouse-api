@@ -366,7 +366,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         switch ($type) {
             case 'contact':
-                return $sql->select('person.id', 'callsign', DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
+                return $sql->select('person.id', 'callsign', DB::raw('IF(person.status="inactive", true,false) as is_inactive'), DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
                         ->whereIn('status', [ 'active', 'inactive' ])
                         ->where('user_authorized', true)
                         ->leftJoin('alert_person', function ($join) {
