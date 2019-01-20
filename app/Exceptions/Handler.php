@@ -3,9 +3,14 @@
 namespace App\Exceptions;
 
 use Exception;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+
 use App\Http\RestApi;
+use App\Models\ErrorLog;
+
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class Handler extends ExceptionHandler
 {
@@ -19,7 +24,9 @@ class Handler extends ExceptionHandler
         \Illuminate\Auth\Access\AuthorizationException::class,
         \Symfony\Component\HttpKernel\Exception\HttpException::class,
         \Illuminate\Database\Eloquent\ModelNotFoundException::class,
-//        \Illuminate\Validation\ValidationException::class,
+        \Illuminate\Validation\ValidationException::class,
+        Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
+        \InvalidArgumentException::class,
     ];
 
     /**
@@ -54,7 +61,10 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $e)
     {
-        error_log("Exception [".get_class($e)."]: ". $e->getMessage() ." file ".$e->getFile().":".$e->getLine());
+        if (app()->isLocal()) {
+            // For debugging purposes.
+            error_log("Exception [".get_class($e)."]: ". $e->getMessage() ." file ".$e->getFile().":".$e->getLine());
+        }
 
         /*
          * Handle JWT exceptions.
@@ -107,6 +117,38 @@ class Handler extends ExceptionHandler
                 default:
                     return RestApi::error(response(), $statusCode, 'Unknown status.');
 
+            }
+        }
+
+        if (!app()->isLocal()) {
+            // Fatal server error.. record what happened.
+
+            try {
+                $log = new ErrorLog([
+                    'error_type'    => 'server-exception',
+                    'ip'            => $request->ip(),
+                    'user_agent'    => $request->userAgent(),
+                    'url'           => $request->fullUrl(),
+                    'data'          => [
+                        'exception' => [
+                            'class'   => class_basename($e),
+                            'message' => $e->getMessage(),
+                            'file'    => $e->getFile(),
+                            'line'    => $e->getLine(),
+                            'backtrace'  => $e->getTrace(),
+                        ],
+                        'method'     => $request->method(),
+                        'parameters' => $request->all(),
+                    ]
+                ]);
+
+                if (Auth::check()) {
+                    $log->person_id = Auth::user()->id;
+                }
+
+                $log->save();
+            } catch (\Exception $e) {
+                // ignore exception.
             }
         }
 

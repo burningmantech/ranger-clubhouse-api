@@ -17,11 +17,14 @@ class ErrorLogController extends ApiController
     public function record()
     {
         $data = request()->input('data');
+        $url = request()->input('url');
         $personId = request()->input('person_id');
+        $errorType = request()->input('error_type');
 
         $record = [
-            'component'  => 'client',
+            'error_type' => $errorType,
             'ip'         => request()->ip(),
+            'url'        => $url,
             'user_agent' => request()->userAgent(),
             'data'       => $data,
         ];
@@ -51,7 +54,7 @@ class ErrorLogController extends ApiController
              'starts_at'    => 'sometimes|datetime',
              'ends_at'   => 'sometimes|datetime',
 
-             'component' => 'sometimes|string',
+             'error_type' => 'sometimes|string',
 
              'page'      => 'sometimes|integer',
              'page_size' => 'sometimes|integer',

@@ -28,8 +28,8 @@ class ErrorLog extends ApiModel
         }
 
         // Component to find
-        if (isset($query['component'])) {
-            $sql = $sql->where('component', $query['component']);
+        if (isset($query['error_type'])) {
+            $sql = $sql->where('error_type', $query['error_type']);
         }
 
         // logged on or after a specific datetime
@@ -77,5 +77,9 @@ class ErrorLog extends ApiModel
             'page_size'   => $pageSize,
             'page'        => $page + 1,
          ];
+    }
+
+    public function setDataAttribute($value) {
+        $this->attributes['data'] = is_array($value) ? json_encode($value) : $value;
     }
 }
