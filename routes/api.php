@@ -34,6 +34,8 @@ Route::group([
     Route::post('auth/reset-password', 'AuthController@resetPassword');
 
     Route::post('person/register', 'PersonController@register');
+
+    Route::post('error-log/record', 'ErrorLogController@record');
 });
 
 
@@ -79,6 +81,8 @@ Route::group([
 
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
+
+    Route::resource('error-log', 'ErrorLogController', [ 'only' => 'index' ]);
 
     Route::resource('manual-review', 'ManualReviewController@passed');
 

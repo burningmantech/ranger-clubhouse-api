@@ -8,6 +8,11 @@ class ActionLog extends Model
 {
     protected $table = 'action_logs';
 
+    protected $guarded = [ ];
+
+    // created_at is handled by the database itself
+    public $timestamps = false;
+
     public static function record($person, $event, $message, $data=null, $targetPersonId=null) {
         $log = new ActionLog;
         $log->event = $event;

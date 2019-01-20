@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class ActionLog extends Migration
+class CreateErrorLogsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,17 +13,15 @@ class ActionLog extends Migration
      */
     public function up()
     {
-        Schema::create('action_logs', function (Blueprint $table) {
+        Schema::create('error_logs', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('component');
             $table->unsignedInteger('person_id')->nullable();
-            $table->unsignedInteger('target_person_id')->nullable();
-            $table->string('event');
-            $table->text('message');
+            $table->string('ip')->nullable();
+            $table->string('user_agent')->nullable();
             $table->text('data')->nullable();
             $table->timestamp('created_at')->useCurrent();
-            $table->index([ 'person_id', 'created_at']);
-            $table->index([ 'target_person_id', 'created_at' ]);
-            $table->index([ 'person_id', 'event', 'created_at' ]);
+            $table->index([ 'person_id', 'created_at' ]);
         });
     }
 
@@ -34,6 +32,6 @@ class ActionLog extends Migration
      */
     public function down()
     {
-        Schema::drop('action_logs');
+        Schema::dropIfExists('error_logs');
     }
 }
