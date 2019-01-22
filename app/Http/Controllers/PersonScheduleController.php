@@ -329,9 +329,9 @@ class PersonScheduleController extends ApiController
 
 
         $results = [
-            'signup_allowed'              =>true,// $canSignUpForShifts,
+            'signup_allowed'              => $canSignUpForShifts,
             'callsign_approved'           => $callsignApproved,
-            'photo_status'                => 'approved',// $photoStatus,
+            'photo_status'                => $photoStatus,
             // is the manual review link allowed to be shown (if link is enabled)
             'manual_review_allowed'       => $showManualReviewLink,
             // was manual review taken/passed?
