@@ -13,16 +13,22 @@ return [
     'OnPlaya'  => env('RANGER_CLUBHOUSE_ON_PLAYA', false),
     'ReadOnly' => env('RANGER_CLUBHOUSE_READ_ONLY', false),
 
-    'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'local'),
+    // Where should the photo come from? 'Lambase', 'local' or 'test'
+
+    'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'Lambase'),
+    // Are photo uploads enabled?
     'PhotoUploadEnable' => env('RANGER_CLUBHOUSE_PHOTO_ENABLE_UPLOAD', true),
     // Should photos be stored locally if using PhotoSource is lambase?
     'PhotoStoreLocally' => env('RANGER_CLUBHOUSE_PHOTO_STORE_LOCALLY', false),
+
     'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'https://www.lambase.com/webservice/photo_status_rangers.cfc'),
     'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'https://www.lambase.com/webservice/photo_status_rpt_rangers.cfc'),
     'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'https://www.lambase.com/lam_photos/rangers'),
     'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'https://www.lambase.com/jumpin/rangers.cfm'),
 
+    // Are timesheet corrections enabled?
     'TimesheetCorrectionEnable'  => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_ENABLE', true),
+    // Which year are corrections allowed for?
     'TimesheetCorrectionYear'    => env('RANGER_CLUBHOUSE_TIMESHEET_CORRECTION_YEAR', 2018),
 
     // Suggestion responses spreadsheet is in the Ranger Teams > Ranger Tech > 2015 Event folder in the burningman.org Google Drive
@@ -37,11 +43,9 @@ return [
     // How to join Ranger special teams
     'JoiningRangerSpecialTeamsUrl' => env('RANGER_CLUBHOUSE_SPECIAL_TEAMS_URL', 'https://docs.google.com/document/d/1xEVnm1SdcyvLnsUYwL5v_WxO1zy3yhMkAmbXIU_0yqc'),
 
-    // Motorpool policy form
-    'MotorpoolPolicyUrl' => env('RANGER_CLUBHOUSE_MOTORPOOL_POLICY_URL', "https://docs.google.com/forms/d/1wEn544ZcpdWuvSxCYpoX5uAS_CeXitEsJJGwaPCpl-I/viewform"),
-
     // Manual review Google sheet
     'ManualReviewLinkEnable'            => env('RANGER_CLUBHOUSE_REVIEW_ENABLE', false),
+
     // If true, allow shift signups even if manual review is disabled
     'ManualReviewDisabledAllowSignups'  => env('RANGER_CLUBHOUSE_REVIEW_ALLOW_SIGNUPS', true),
     'ManualReviewProspectiveAlphaLimit' => env('RANGER_CLUBHOUSE_REVIEW_MAX_ALPHAS', 177),
@@ -50,7 +54,6 @@ return [
 
     // Google Sheets Credentials
     'ManualReviewAuthConfig' => env('RANGER_CLUBHOUSE_REVIEW_AUTH_CONFIG', ''),
-
 
     // Salesforce sandbox (sbx) parameters
     // Note you must set SFsbxPassword in local.config.php!
@@ -98,11 +101,10 @@ return [
     'SiteNotice'               => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
 
     'SiteTitle'                => 'Black Rock Rangers Secret Clubhouse',
-    'AdminEmail'               => env('RANGER_CLUBHOUSE_EMAIL_ADMIN', 'ranger-tech-ninjas@burningman.org'),
-    'GeneralSupportEmail'      => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
-    'VCEmail'                  => env('RANGER_CLUBHOUSE_EMAIL_VC', 'ranger-vc-list@burningman.org'),
+
     // From address for sending training signed up emails
     'TrainingSignupFromEmail'      => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_SIGNUP', 'ranger-trainingacademy-list@burningman.org'),
+
     // alert email address when a training session is full.
     'TrainingFullEmail'        => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_FULL', 'ranger-trainingacademy-list@burningman.org'),
     'AccountCreationEmail'     => env('RANGER_CLUBHOUSE_EMAIL_ACCOUNT_CREATION', 'safetyphil@burningman.org'),
@@ -129,5 +131,4 @@ return [
     'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
     'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
     'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2018),  // Ticket threshold year
-
 ];

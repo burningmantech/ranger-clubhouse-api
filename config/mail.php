@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'driver' => env('MAIL_DRIVER', 'smtp'),
+    'driver' => env('RANGER_CLUBHOUSE_MAIL_DRIVER', 'smtp'),
 
     /*
     |--------------------------------------------------------------------------
@@ -29,7 +29,7 @@ return [
     |
     */
 
-    'host' => env('MAIL_HOST', 'localhost'),
+    'host' => env('RANGER_CLUBHOUSE_SMTP_SERVER', 'localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -42,7 +42,7 @@ return [
     |
     */
 
-    'port' => env('MAIL_PORT', 1025),
+    'port' => env('RANGER_CLUBHOUSE_SMTP_PORT', 1025),
 
     /*
     |--------------------------------------------------------------------------
@@ -56,8 +56,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'rangers@burningman.org'),
-        'name' => env('MAIL_FROM_NAME', 'The Black Rock Rangers'),
+        'address' => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
+        'name' => env('RANGER_CLUBHOUSE_NAME_SUPPORT', 'The Black Rock Rangers'),
     ],
 
     /*

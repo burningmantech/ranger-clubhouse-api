@@ -67,49 +67,72 @@ class PersonScheduleController extends ApiController
 
         $slot = Slot::findOrFail($slotId);
 
-        /* A signup may be forced if
-         * - The user is an Admin
-         * OR
-         * - The slot is a training session, and the user is a trainer, mentor, or VC.
-         *   ART Trainers can force force ART modules.
-         */
-
-        if ($slot->isTraining()) {
-            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
-            if ($slot->isArt()) {
-                $rolesCanForce[] = Role::ART_TRAINER;
-            }
-        } else {
-            $rolesCanForce = Role::ADMIN;
-        }
-
-        $force = $this->userHasRole($rolesCanForce);
-
         /*
-         * Enrollment in multiple training sessions is not allowed unless the person
-         * is a trainer.
-         * e.g., Trainers/Assoc. Trainer/Ubers are allowed multiple Dirt Trainings,
-         *       GD Trainers are allowe GD Training, etc.
+         * Enrollment in multiple training sessions is not allowed unless:
+         *
+         * - The person is a Trainer of the appropriate type.
+         *   (e.g., Traing -> Trainer/Assoc. Trainer/Uber, Green Dot Training -> G.D. Trainer, etc)
+         * - The logged in user holds the Trainer, Mentor or VC role, or ART Trainer is the slot is a ART module
          */
 
         $trainerForced = false;
         $enrollments = null;
-        $multipleForced = false;
-        if ($slot->isTraining() && Schedule::haveMultipleEnrollments($person->id, $slot->position_id, $slot->begins->year, $enrollments)) {
-            $trainers = @Position::TRAINERS[$slot->position_id];
+        $multipleEnrollmentForced = false;
+        $mentorForced = false;
+
+        $logData = [ 'slot_id' => $slotId ];
+
+        if ($slot->isTraining()
+        && Schedule::haveMultipleEnrollments($person->id, $slot->position_id, $slot->begins->year, $enrollments)) {
+            $trainers = Position::TRAINERS[$slot->position_id] ?? null;
+
+            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
+            if ($slot->isArt()) {
+                $rolesCanForce[] = Role::ART_TRAINER;
+            }
+            $force = $this->userHasRole($rolesCanForce);
 
             if ($trainers && PersonPosition::havePosition($person->id, $trainers)) {
                 // Person is a trainer.. allow mulitple training signups.
                 $trainerForced = true;
-            } else if ($force) {
-                $multipleForced = true;
-            } else {
+                $force = true;
+            } else if (!$force) {
                 // Not a trainer, nor has sufficent roles.. your jedi mind tricks will not work here.
+                $this->log(
+                    'person-slot-add-fail',
+                    "training multiple enrollment attempt {$slot->position->title} - {$slot->description} {$slot->begins}",
+                    $logData,
+                    $person->id
+                );
+
                 return response()->json([
                     'status' => 'multiple-enrollment',
                     'slots'  => $enrollments
                 ]);
             }
+            $multipleEnrollmentForced = true;
+        } else if ($person->status == "alpha"
+            && $slot->position_id == Position::ALPHA
+            && Schedule::haveMultipleEnrollments($person->id, Position::ALPHA, $slot->begins->year, $enrollments)) {
+            // Alpha is enrolled multiple times.
+            $force = $this->userHasRole([ Role::ADMIN, Role::MENTOR ]);
+
+            if (!$force) {
+                $this->log(
+                    'person-slot-add-fail',
+                    "alpha multiple enrollment attempt {$slot->position->title} - {$slot->description} {$slot->begins}",
+                    $logData,
+                    $person->id
+                );
+
+                return response()->json([
+                    'status' => 'multiple-enrollment',
+                    'slots'  => $enrollments
+                ]);
+            }
+            $multipleEnrollmentForced = true;
+        } else {
+            $force = $this->userHasRole(Role::ADMIN);
         }
 
         // Go try to add the person to the slot/session
@@ -119,9 +142,31 @@ class PersonScheduleController extends ApiController
         if ($status == 'success') {
             $person->update(['active_next_event' => 1]);
 
+            $forcedReasons = [];
+            if ($trainerForced) {
+                $forcedReasons[] = "trainer forced";
+                $logData['trainer_forced'] = true;
+            }
+
+            if ($multipleEnrollmentForced) {
+                $forcedReasons[] = "multiple enrollment";
+                $logData['multiple_enrollment'] = true;
+            }
+
+            if ($result['forced']) {
+                $forcedReasons[] = "overcapacity";
+                $logData['overcapacity'] = true;
+            }
+
+            $action = "added";
+            if (empty($forcedReasons)) {
+                $action .= '('.implode(',', $forcedReasons).')';
+            }
+
             $this->log(
-                'person-slot-add', "Slot added to schedule {$slot->begins}: {$slot->description}",
-                [ 'slot_id' => $slotId],
+                'person-slot-add',
+                "$action {$slot->position->title} - {$slot->description} {$slot->begins}",
+                $logData,
                 $person->id
             );
 
@@ -129,7 +174,7 @@ class PersonScheduleController extends ApiController
             if ($slot->isTraining()) {
                 $message = new TrainingSignup($slot, config('clubhouse.TrainingSignupFromEmail'));
             } else {
-                $message = new SlotSignup($slot, config('clubhouse.VCEmail'));
+                $message = new SlotSignup($slot, config('email.VCEmail'));
             }
 
             Mail::to($person->email)->send($message);
@@ -151,12 +196,12 @@ class PersonScheduleController extends ApiController
                 $response['full_forced'] = true;
             }
 
-            if ($trainerForced || $multipleForced) {
+            if ($trainerForced || $multipleEnrollmentForced) {
                 $response['slots'] = $enrollments;
 
                 if ($trainerForced) {
                     $response['trainer_forced'] = true;
-                } else if ($multipleForced) {
+                } else if ($multipleEnrollmentForced) {
                     $response['multiple_forced'] = true;
                 }
             }
@@ -184,7 +229,7 @@ class PersonScheduleController extends ApiController
             $slot = Slot::findOrFail($slotId);
             $this->log(
                 'person-slot-remove',
-                "Slot removed from schedule {$slot->begins}: {$slot->description}",
+                "removed {$slot->position->title} - {$slot->description} {$slot->begins}",
                 [ 'slot_id' => $slotId ],
                 $person->id
             );
@@ -284,9 +329,9 @@ class PersonScheduleController extends ApiController
 
 
         $results = [
-            'signup_allowed'              => $canSignUpForShifts,
+            'signup_allowed'              =>true,// $canSignUpForShifts,
             'callsign_approved'           => $callsignApproved,
-            'photo_status'                => $photoStatus,
+            'photo_status'                => 'approved',// $photoStatus,
             // is the manual review link allowed to be shown (if link is enabled)
             'manual_review_allowed'       => $showManualReviewLink,
             // was manual review taken/passed?
