@@ -16,17 +16,6 @@ use DB;
 class AuthController extends Controller
 {
     /**
-     * Create a new AuthController instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        // Normally ApiController::__construct would handle this
-        DB::select("SET time_zone = '-7:00'");
-    }
-
-    /**
      * Get a JWT via given credentials.
      *
      * @return \Illuminate\Http\JsonResponse

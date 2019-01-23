@@ -21,8 +21,6 @@ class ApiController extends Controller
 
     public function __construct()
     {
-        DB::select("SET time_zone = '-7:00'");
-
         if (Auth::check()) {
             $this->user = Auth::user();
             if (!$this->user->user_authorized) {
