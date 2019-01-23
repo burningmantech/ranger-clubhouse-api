@@ -29,9 +29,9 @@ class TimesheetMissingPolicy
      * Can the user create this timesheet missing request?
      */
 
-    public function store(Person $user, $personId)
+    public function store(Person $user, TimesheetMissing $timesheetMissing)
     {
-        return ($user->id == $$personId);
+        return ($user->id == $timesheetMissing->person_id);
     }
 
     /*

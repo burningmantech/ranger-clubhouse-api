@@ -39,10 +39,6 @@ class TimesheetMissingFilter
         if ($user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]))
             return array_merge(self::USER_FIELDS, self::MANAGE_FIELDS);
 
-        if ($timesheet->pesron_id == $user->id || $user->hasRole(Role::MANAGE)) {
-            return self::USER_FIELDS;
-        }
-
-        return []; // Should never be hit.
+        return self::USER_FIELDS;
     }
 }

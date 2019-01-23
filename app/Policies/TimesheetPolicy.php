@@ -29,9 +29,9 @@ class TimesheetPolicy
      * Can the user mark the sheet as verified?
      */
 
-    public function update(Person $user, $personId)
+    public function update(Person $user, Timesheet $timesheet)
     {
-        return ($user->id == $personId);
+        return ($user->id == $timesheet->person_id);
     }
 
     /*
@@ -44,11 +44,12 @@ class TimesheetPolicy
     }
 
     /*
-     * Can a user delete a timesheet?
+     * Can a user delete a timesheet? Only timesheet manager,
+     * login manage, or admin, covered in before()
      */
 
      public function destroy(Person $user, Timesheet $timesheet) {
-         return $user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN]);
+         return false;
      }
 
      /*

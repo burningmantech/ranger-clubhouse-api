@@ -55,7 +55,7 @@ class TimesheetMissing extends ApiModel
         'off_duty'  => 'required|date|after:on_duty',
         'person_id' => 'required|integer',
 
-        'create_entry' => 'boolean',
+        'create_entry' => 'sometimes|boolean|nullable',
 
         'new_on_duty'     => 'date|nullable|required_if:create_entry,true',
         'new_off_duty'    => 'date|nullable|after:new_on_duty|required_if:create_entry,true',

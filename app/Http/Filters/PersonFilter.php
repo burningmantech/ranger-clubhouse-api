@@ -87,14 +87,16 @@ class PersonFilter
         'em_camp_location',
     ];
 
-    const EVENT_FIELDS = [
-        'asset_authorized',
-
-        'vehicle_blacklisted',
+    const AGREEMENT_FIELDS = [
         'vehicle_paperwork',
-        'vehicle_insurance_paperwork',
+    ];
+
+    const EVENT_FIELDS = [
         'active_next_event',
-        'on_site'
+        'asset_authorized',
+        'on_site',
+        'vehicle_blacklisted',
+        'vehicle_insurance_paperwork',
     ];
 
     const LAM_FIELDS = [
@@ -146,6 +148,7 @@ class PersonFilter
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
+        [ self::AGREEMENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
         // Note: self is not allowed to see mentor notes
@@ -164,6 +167,7 @@ class PersonFilter
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VC ]],
+        [ self::AGREEMENT_FIELDS, true, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
@@ -202,8 +206,9 @@ class PersonFilter
             }
 
             if ($allow        // anyone can use this
-            || $isAdmin                 // the admin can do anything
-            || ($authorizedUser && $roles && $authorizedUser->hasRole($roles))) {
+                || $isAdmin                 // the admin can do anything
+                || ($authorizedUser && $roles && $authorizedUser->hasRole($roles))
+            ) {
                 $fields = array_merge($fields, $group[0]);
             }
         }

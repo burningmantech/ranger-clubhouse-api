@@ -26,10 +26,7 @@ class TrainingPolicy
     public function show(Person $user, Training $training)
     {
         if ($training->is_art) {
-            error_log("TRAINING IS ART ". $user->hasRole(Role::ART_TRAINER));
             return $user->hasRole(Role::ART_TRAINER);
-        } else {
-            error_log("TRAINIG IS NOT ART?");
         }
         return false;
     }
