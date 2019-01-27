@@ -7,22 +7,22 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-class TrainingSessionFullMail extends Mailable
+class NotifyVCEmailChangeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $slot;
-    public $signedUp;
+    public $person;
+    public $oldEmail;
 
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($slot, $signedUp)
+    public function __construct($person, $oldEmail)
     {
-        $this->slot = $slot;
-        $this->signedUp = $signedUp;
+        $this->person = $person;
+        $this->oldEmail = $oldEmail;
     }
 
     /**
@@ -32,8 +32,6 @@ class TrainingSessionFullMail extends Mailable
      */
     public function build()
     {
-        return $this
-            ->subject('[clubhouse notification] Training Session Full')
-            ->view('emails.training-session-full');
+        return $this->subject('[clubhouse notification] Prospective email change')->view('emails.notify-vc-email-change');
     }
 }

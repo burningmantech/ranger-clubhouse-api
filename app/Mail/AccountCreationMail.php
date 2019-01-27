@@ -41,6 +41,6 @@ class AccountCreationMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Secret Clubhouse account creation '.$this->status)->view('emails.account-creation');
+        return $this->subject('[clubhouse notification] account creation '.$this->status)->view('emails.account-creation');
     }
 }

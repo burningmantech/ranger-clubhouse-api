@@ -26,6 +26,7 @@ use App\Models\Timesheet;
 use App\Models\Training;
 
 use App\Mail\AccountCreationMail;
+use App\Mail\NotifyVCEmailChangeMail;
 use App\Mail\WelcomeMail;
 
 class PersonController extends ApiController
@@ -128,6 +129,12 @@ class PersonController extends ApiController
             $oldStatus = $person->getOriginal('status');
         }
 
+        $emailChanged = false;
+        if ($person->isDirty('email')) {
+            $emailChanged = true;
+            $oldEmail = $person->getOriginal('email');
+        }
+
         if (!$person->save()) {
             return $this->restError($person);
         }
@@ -140,11 +147,18 @@ class PersonController extends ApiController
         $changes = $person->getChanges();
         if (!empty($changes)) {
             $this->log('person-update', 'person update', $changes, $person->id);
-        }
 
-        if ($statusChanged) {
-            $person->changeStatus($newStatus, $oldStatus, 'person update');
-            $person->save();
+            // Alert VCs when the email address changes for a prospective.
+            if ($emailChanged
+            && $person->status == Person::PROSPECTIVE
+            && $person->id == $this->user->id) {
+                Mail::to(config('email.VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
+            }
+
+            if ($statusChanged) {
+                $person->changeStatus($newStatus, $oldStatus, 'person update');
+                $person->save();
+            }
         }
 
         return $this->toRestFiltered($person);
