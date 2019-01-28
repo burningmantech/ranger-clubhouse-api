@@ -44,17 +44,17 @@ class AuthController extends Controller
 
         if (!$person) {
             ActionLog::record(null, 'auth-failed', 'Credentials incorrect', $actionData);
-            return response()->json([ 'error' => 'The email and/or password is incorrect.'], 401);
+            return response()->json([ 'status' => 'invalid-credentials'], 401);
         }
 
         if ($person->user_authorized == false) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
-            return response()->json([ 'error' => 'The account has been disabled.'], 401);
+            return response()->json([ 'status' => 'account-disabled'], 401);
         }
 
         if (!$person->hasRole(Role::LOGIN)) {
             ActionLog::record($person, 'auth-failed', 'Login disabled', $actionData);
-            return response()->json([ 'error' => 'The account has been temporarily disabled from logging.'], 401);
+            return response()->json([ 'status' => 'login-disabled' ], 401);
         }
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
