@@ -34,6 +34,8 @@ return [
 
     'SiteTitle'            => 'Black Rock Rangers Secret Clubhouse',
 
+    'MotorpoolPolicyEnable' => env('RANGER_CLUBHOUSE_MOTORPOOL_POLICY_ENABLE', false),
+
     // Optional ticket credit warning messages.
     // If any are not set, no message will be displayed
     'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
