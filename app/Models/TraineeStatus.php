@@ -18,6 +18,7 @@ class TraineeStatus extends ApiModel
 
     protected $casts = [
         'passed'    => 'boolean',
+        'begins'    => 'date'
     ];
 
     /*
@@ -30,7 +31,9 @@ class TraineeStatus extends ApiModel
 
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
                 ->where('person_id', $personId)
-                ->whereYear('slot.begins', $year)->get();
+                ->whereYear('slot.begins', $year)
+                ->orderBy('slot.begins')
+                ->get();
 
     }
 

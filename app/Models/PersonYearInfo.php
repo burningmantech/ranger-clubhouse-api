@@ -69,18 +69,57 @@ class PersonYearInfo extends ApihouseResult
                 $need->training_position_id = Position::DIRT_TRAINING;
             }
 
-            if (isset($trained[$need->training_position_id])) {
-                $training = $trained[$need->training_position_id];
-                $status->location = $training->description;
+            $training = $trained[$need->training_position_id] ?? null;
 
-                $status->date = DateHelper::formatDate($training->begins);
-                if (Carbon::parse($training->begins)->gt($now)) {
+            if (!$training || !$training->passed) {
+                $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                        ->where('position_id', $need->training_position_id)
+                        ->whereYear('begins', $year)
+                        ->where('person_slot.person_id', $personId)
+                        ->orderBy('begins', 'desc')
+                        ->first();
+            } else {
+                $slot = null;
+            }
+
+            if ($training) {
+                // If the person did not pass, BUT there is a later sign up
+                // use the later sign up.
+                if (!$training->passed && $slot && $slot->begins->gt($training->begins)) {
+                    $status->location = $slot->description;
+                    $status->date = $slot->begins;
+                    if ($status->date->gt($now)) {
+                        $status->status = 'pending';
+                    } else {
+                        $status->status = 'fail';
+                    }
+                } else {
+                    $status->location = $training->description;
+
+                    $status->date = $training->begins;
+                    if ($training->begins->gt($now)) {
+                        $status->status = 'pending';
+                    } else {
+                        $status->status = ($training->passed ? 'pass' : 'fail');
+                    }
+                }
+            } else if ($slot) {
+                $status->location = $slot->description;
+                $status->date = $slot->begins;
+                if (Carbon::parse($status->date)->gt($now)) {
                     $status->status = 'pending';
                 } else {
-                    $status->status = ($training->passed ? 'pass' : 'fail');
+                    // Session has passed, fail it.
+                    $status->status = 'fail';
                 }
+
             } else {
+                // Nothing found.
                 $status->status = 'no-shift';
+            }
+
+            if ($status->date) {
+                $status->date = (string) $status->date;
             }
         }
 
