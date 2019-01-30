@@ -73,8 +73,8 @@ return [
     'SFEnableWritebacks' => env('RANGER_CLUBHOUSE_SALESFORCE_ENABLE_WRITEBACKS', false),
 
     // Tickets, Vehicle Passes, Work Access Passes
-    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', true),  // Menu item
-    'TicketsAndStuffEnablePNV' => env('RANGER_CLUBHOUSE_TAS_ENABLE_PNV', true),  // Menu item for prospectives and alphas
+    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', false),  // Menu item
+    'TicketsAndStuffEnablePNV' => env('RANGER_CLUBHOUSE_TAS_ENABLE_PNV', false),  // Menu item for prospectives and alphas
     'TAS_SubmitDate'           => env('RANGER_CLUBHOUSE_TAS_SUBMIT_DATE', '2018-07-16 23:59:00'),
     'TAS_Tickets'              => env('RANGER_CLUBHOUSE_TAS_TICKETS', 'accept'),  // Or 'accept' or 'frozen' or 'none'
     'TAS_VP'                   => env('RANGER_CLUBHOUSE_TAS_VP', 'accept'),  // Or 'accept' or 'frozen' or 'none'
@@ -130,5 +130,5 @@ return [
     // If any are not set, no message will be displayed
     'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
     'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
-    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2018),  // Ticket threshold year
+    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2019),  // Ticket threshold year
 ];
