@@ -39,6 +39,12 @@ return [
             'prefix' => '',
         ],
 
+        'sqlite_testing' => [
+            'driver' => 'sqlite',
+            'database' => database_path('testdb.sqlite'),
+            'prefix' => '',
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'host' => env('RANGER_DB_HOST_NAME', 'localhost'),
