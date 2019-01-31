@@ -105,12 +105,12 @@ class AuthController extends Controller
 
         if (!$person) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Password reset failed', $action);
-            return response()->json([ 'error' => 'not-found' ], 400);
+            return response()->json([ 'status' => 'not-found' ], 400);
         }
 
         if (!$person->user_authorized) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Account disabled', $action);
-            return response()->json([ 'error' => 'account-disabled' ], 403);
+            return response()->json([ 'status' => 'account-disabled' ], 403);
         }
 
         $resetPassword = $person->createResetPassword();
