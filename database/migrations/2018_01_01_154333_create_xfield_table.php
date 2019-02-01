@@ -16,7 +16,7 @@ class CreateXfieldTable extends Migration
         if (Schema::hasTable('xfield')) {
             return;
         }
-        Schema::create(
+/*        Schema::create(
             'xfield', function (Blueprint $table) {
                 $table->bigInteger('id', true)->unsigned();
                 $table->smallInteger('seq')->unsigned()->default(550)->comment('loc of field on screen (xgroup.seq takes precedence)');
@@ -25,7 +25,7 @@ class CreateXfieldTable extends Migration
                 $table->bigInteger('role_id_edit')->unsigned()->nullable()->comment('if required to edit');
                 $table->bigInteger('role_id_view')->unsigned()->nullable()->comment('if required to view');
             }
-        );
+        );*/
     }
 
 

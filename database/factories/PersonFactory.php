@@ -7,6 +7,7 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
     $salt = "0123467890123456789";
     return [
         'callsign'      => 'callsign '.str_random(5),
+        'callsign_approved' => true,
         'email'         => $faker->unique()->safeEmail,
         'first_name'    => $faker->firstName,
         'last_name'     => $faker->lastName,

@@ -37,6 +37,8 @@ class PersonController extends ApiController
 
     public function index()
     {
+        $this->authorize('index', Person::class);
+
         $params = request()->validate([
             'query'            => 'sometimes|string',
             'search_fields'    => 'sometimes|string',
@@ -76,12 +78,10 @@ class PersonController extends ApiController
     }
 
     /*
-     * Search
-
-    /*
      * Create a person
      * TODO
      */
+
     public function store(Request $request)
     {
         $this->authorize('store');
@@ -90,6 +90,7 @@ class PersonController extends ApiController
     /*
      * Show a specific person - include roles, and languages.
      */
+
     public function show(Person $person)
     {
         $this->authorize('view', $person);
@@ -178,7 +179,7 @@ class PersonController extends ApiController
                 DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [ $personId ]);
 
                 $tables = [
-                    'access_document_change',
+                    //'access_document_changes',
                     'access_document_delivery',
                     'access_document',
                     'action_logs',
@@ -186,7 +187,7 @@ class PersonController extends ApiController
                     'asset_person',
                     'bmid',
                     'broadcast_message',
-                    'contact_log',
+                    //'contact_log',
                     'manual_review',
                     'mentee_status',
                     'person_language',
@@ -233,7 +234,7 @@ class PersonController extends ApiController
             return response()->json(['year_info' => $yearInfo]);
         }
 
-        return $this->restError('The person or year could not be found.', 404);
+        return $this->restError('The year could not be found.', 404);
     }
 
     /*

@@ -41,7 +41,7 @@ return [
 
         'sqlite_testing' => [
             'driver' => 'sqlite',
-            'database' => database_path('testdb.sqlite'),
+            'database' => env('RANGER_DB_DATABASE_NAME', database_path('testdb.sqlite')),
             'prefix' => '',
         ],
 
@@ -50,6 +50,22 @@ return [
             'host' => env('RANGER_DB_HOST_NAME', 'localhost'),
             'port' => env('RANGER_DB_PORT', '3306'),
             'database' => env('RANGER_DB_DATABASE_NAME', 'rangers'),
+            'username' => env('RANGER_DB_USER_NAME', 'rangers'),
+            'password' => env('RANGER_DB_PASSWORD', 'donothing'),
+            'unix_socket' => env('RANGER_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+            'timezone' => '-07:00'
+        ],
+
+        'mysql_testing' => [
+            'driver' => 'mysql',
+            'host' => env('RANGER_DB_HOST_NAME', 'localhost'),
+            'port' => env('RANGER_DB_PORT', '3306'),
+            'database' => env('RANGER_DB_DATABASE_NAME', 'rangers-test'),
             'username' => env('RANGER_DB_USER_NAME', 'rangers'),
             'password' => env('RANGER_DB_PASSWORD', 'donothing'),
             'unix_socket' => env('RANGER_DB_SOCKET', ''),

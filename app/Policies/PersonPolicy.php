@@ -11,10 +11,18 @@ class PersonPolicy
 {
     use HandlesAuthorization;
 
-    private $authorizedRoles = [
+    const AUTHORIZED_ROLES = [
         Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER
     ];
 
+    /*
+     * Can the user view a bunch of people?
+     */
+
+    public function index(Person $user)
+    {
+        return $user->hasRole(self::AUTHORIZED_ROLES);
+    }
     /*
      * Determine whether the user can view the person.
      *
@@ -23,7 +31,7 @@ class PersonPolicy
     {
         return (
             $person->id == $user->id ||
-            $user->hasRole($this->authorizedRoles)
+            $user->hasRole(self::AUTHORIZED_ROLES)
         );
     }
 
@@ -48,7 +56,7 @@ class PersonPolicy
             return true;
         }
 
-        return $user->hasRole($this->authorizedRoles);
+        return $user->hasRole(self::AUTHORIZED_ROLES);
     }
 
     /*

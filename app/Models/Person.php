@@ -314,7 +314,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 }
             }
         } else {
-            $sql = DB::table('person');
+            $sql = self::query();
         }
 
         if (isset($query['statuses'])) {

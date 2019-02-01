@@ -16,7 +16,7 @@ class CreateXoptionTable extends Migration
         if (Schema::hasTable('xoption')) {
             return;
         }
-        Schema::create(
+/*        Schema::create(
             'xoption', function (Blueprint $table) {
                 $table->bigInteger('id', true)->unsigned();
                 $table->bigInteger('xfield_id')->unsigned()->index('xoption_idx_xfield_id');
@@ -24,7 +24,7 @@ class CreateXoptionTable extends Migration
                 $table->text('val', 65535);
                 $table->unique(['xfield_id','val'], 'xfield_id_and_val');
             }
-        );
+        );*/
     }
 
 
