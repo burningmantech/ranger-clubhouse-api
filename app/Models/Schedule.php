@@ -58,8 +58,8 @@ class Schedule extends ApiModel
 
         $year = $query['year'];
 
-        $personId = !empty($query['person_id']) ? $query['person_id'] : null;
-        $signups = !empty($query['signups']);
+        $personId = $query['person_id'] ?? null;
+        $shiftsAvailable = $query['shifts_available'] ?? false;
 
         $selectColumns = [
             'slot.id as id',
@@ -81,7 +81,7 @@ class Schedule extends ApiModel
         ];
 
         // Is this a simple schedule find for a person?
-        if ($personId && !$signups) {
+        if ($personId && !$shiftsAvailable) {
             $sql = DB::table('person_slot')
                     ->where('person_slot.person_id', $personId)
                     ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
@@ -90,7 +90,7 @@ class Schedule extends ApiModel
             $sql = DB::table('slot');
 
             // .. and find out which slots a person has signed up for
-            if ($signups) {
+            if ($shiftsAvailable) {
                 $selectColumns[] = DB::raw('IF(person_slot.person_id IS NULL,FALSE,TRUE) AS person_assigned');
                 $sql = $sql->leftJoin('person_slot', function ($join) use ($personId) {
                     $join->where('person_slot.person_id', $personId)

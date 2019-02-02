@@ -24,10 +24,9 @@ use App\Mail\TrainingSessionFullMail;
 class PersonScheduleController extends ApiController
 {
     /**
-     * Return an array of PesronSchedule for a given person & year
-     *
-     * @return \Illuminate\Http\Response
+     * Find the possible schedule and signups for a person & year
      */
+
     public function index(Person $person)
     {
         $this->authorize('view', [ Schedule::class, $person]);
@@ -35,7 +34,7 @@ class PersonScheduleController extends ApiController
         $query = request()->validate(
             [
             'year'    => 'required|digits:4',
-            'signups' => 'boolean',
+            'shifts_available' => 'sometimes|boolean',
             ]
         );
 
