@@ -103,6 +103,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'callsign',
         'callsign_approved',
         'formerly_known_as',
+        'vintage',
 
         'barcode',
         'status',
