@@ -106,7 +106,8 @@ class PersonScheduleController extends ApiController
 
                 return response()->json([
                     'status' => 'multiple-enrollment',
-                    'slots'  => $enrollments
+                    'slots'  => $enrollments,
+                    'signed_up' => $slot->signed_up,
                 ]);
             }
             $multipleEnrollmentForced = true;
@@ -126,7 +127,8 @@ class PersonScheduleController extends ApiController
 
                 return response()->json([
                     'status' => 'multiple-enrollment',
-                    'slots'  => $enrollments
+                    'slots'  => $enrollments,
+                    'signed_up' => $slot->signed_up,
                 ]);
             }
             $multipleEnrollmentForced = true;
@@ -208,7 +210,7 @@ class PersonScheduleController extends ApiController
             return response()->json($response);
         }
 
-        return response()->json([ 'status' => $status ]);
+        return response()->json([ 'status' => $status, 'signed_up' => $result['signed_up'] ]);
     }
 
     /**

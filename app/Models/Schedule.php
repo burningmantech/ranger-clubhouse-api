@@ -142,7 +142,7 @@ class Schedule extends ApiModel
     public static function addToSchedule($personId, $slot, $force=false): array
     {
         if (PersonSlot::haveSlot($personId, $slot->id)) {
-            return [ 'status' => 'exists' ];
+            return [ 'status' => 'exists', 'signed_up' => $slot->signed_up ];
         }
 
         $addForced = false;
@@ -196,7 +196,7 @@ class Schedule extends ApiModel
             ];
         } catch (ScheduleException $e) {
             DB::rollback();
-            return [ 'status' => $e->getMessage() ];
+            return [ 'status' => $e->getMessage(), 'signed_up' => $updateSlot->signed_up ];
         }
     }
 
