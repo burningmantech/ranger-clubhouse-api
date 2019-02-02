@@ -289,6 +289,28 @@ class PersonControllerTest extends TestCase
 
     }
 
+    /**
+     * Test updating formerly_known_as when callsign is changed
+     */
+
+     public function testUpdateFormerlyKnownAsWhenCallsignChanges()
+     {
+         $this->addRole(Role::ADMIN);
+         $person = factory(Person::class)->create();
+
+         $oldCallsign = $person->callsign;
+         $response = $this->putPerson($person, [ 'callsign' => 'Irregular Apocalypse']);
+         $response->assertStatus(200);
+         $person->refresh();
+         $this->assertEquals($oldCallsign, $person->formerly_known_as);
+
+         // change one more time to verify a comma was added..
+         $response = $this->putPerson($person, [ 'callsign' => 'Zero Gravitas']);
+         $response->assertStatus(200);
+         $person->refresh();
+         $this->assertEquals("$oldCallsign,Irregular Apocalypse", $person->formerly_known_as);
+     }
+
 
     /**
      * Test emailing VCs when a prospective email addres change

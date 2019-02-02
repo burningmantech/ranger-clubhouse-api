@@ -142,7 +142,7 @@ class PersonScheduleControllerTest extends TestCase
             );
         }
 
-    }//end setUp()
+    }
 
 
     /*
@@ -172,7 +172,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->assertCount(1, $response->json()['schedules']);
         $this->assertEquals($slotId, $response->json()['schedules'][0]['id']);
 
-    }//end testIndexOnlySignupsSuccess()
+    }
 
 
     /*
@@ -201,7 +201,7 @@ class PersonScheduleControllerTest extends TestCase
         // Should match 6 shifts - 3 trainings and 3 dirt shift
         $this->assertCount(6, $response->json()['schedules']);
 
-    }//end testIndexAvailableShiftsAndSignupsSuccess()
+    }
 
 
     /*
@@ -214,7 +214,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([ 'schedules' => []]);
 
-    }//end testIndexNothingFoundFailure()
+    }
 
 
     /*
@@ -254,7 +254,7 @@ class PersonScheduleControllerTest extends TestCase
             }
         );
 
-    }//end testDirtSignupSuccess()
+    }
 
 
     /*
@@ -297,7 +297,7 @@ class PersonScheduleControllerTest extends TestCase
             }
         );
 
-    }//end testTrainingSignupSuccess()
+    }
 
 
     /*
@@ -322,7 +322,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson([ 'status' => 'success' ]);
         Mail::assertSent(TrainingSessionFullMail::class);
 
-    }//end testTrainingSignupFullNotificationSuccess()
+    }
 
 
     /*
@@ -352,7 +352,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testShiftSignupNoPositionFailure()
+    }
 
 
     /*
@@ -384,7 +384,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testFullShiftSignupFailure()
+    }
 
 
     /*
@@ -419,7 +419,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testFullShiftSignupByAdminSuccess()
+    }
 
 
     /*
@@ -461,7 +461,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testMultipleEnrollmentTrainingFailure()
+    }
 
 
     /*
@@ -506,7 +506,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testMultipleEnrollmentTrainingSignupByAdminSuccess()
+    }
 
 
     /*
@@ -547,7 +547,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-    }//end testMultipleEnrollmentTrainingSignupForTrainerSuccess()
+    }
 
 
     /*
@@ -569,7 +569,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseMissing('person_slot', $personSlot);
 
-    }//end testDeleteSignupSuccess()
+    }
 
 
     /*
@@ -584,7 +584,7 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(400);
 
-    }//end testDeleteNonExistentSignupFailure()
+    }
 
     private function mockPhotoStatus($result)
     {
@@ -730,4 +730,4 @@ class PersonScheduleControllerTest extends TestCase
        }
 
 
-}//end class
+}

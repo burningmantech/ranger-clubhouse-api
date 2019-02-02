@@ -136,6 +136,18 @@ class PersonController extends ApiController
             $oldEmail = $person->getOriginal('email');
         }
 
+        if ($person->isDirty('callsign')) {
+            $oldCallsign = $person->getOriginal('callsign');
+            $fka = $person->formerly_known_as;
+            if (empty($fka)) {
+                $person->formerly_known_as = $oldCallsign;
+            } else {
+                if (strpos($fka, $oldCallsign) === false) {
+                    $person->formerly_known_as = $fka.','.$oldCallsign;
+                }
+            }
+        }
+
         if (!$person->save()) {
             return $this->restError($person);
         }
