@@ -288,7 +288,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        if ($manualReviewCap > 0 && $isPotentialRanger) {
+        if (!$mrDisabledAllowSignups && $manualReviewCap > 0 && $isPotentialRanger) {
             $manualReviewMyRank = ManualReview::prospectiveOrAlphaRankForYear($personId, $year);
             if ($manualReviewMyRank == -1) {
                 $manualReviewMyRank = 100000;       // Hack to make life easier below

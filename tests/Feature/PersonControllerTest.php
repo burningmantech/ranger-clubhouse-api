@@ -245,6 +245,9 @@ class PersonControllerTest extends TestCase
      * Test failure for trying to disapprove the callsign
      */
 
+/*
+    Feb 2019 - Allowing callsign_approval to be changed at anytime.
+
     public function testChangeCallsignApprovalFailure()
     {
         $this->addRole(Role::ADMIN);
@@ -263,7 +266,7 @@ class PersonControllerTest extends TestCase
         );
 
     }
-
+*/
 
     /**
      * Test success on approving the callsign
