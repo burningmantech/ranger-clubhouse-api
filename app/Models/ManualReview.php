@@ -80,11 +80,13 @@ class ManualReview extends ApiModel
 
         $markAsPassed = [];
         $errors = [];
+        $graduated = [];
 
         foreach ($rows as $row) {
             $alreadyPassed[$row->callsign] = $row;
         }
 
+        $peopleMissing = [];
         foreach ($sheetResults as $entry) {
             if (count($entry) != 2) {
                 $errors[] = 'Row in Google sheet missing some data: '.json_encode($entry);
@@ -94,14 +96,33 @@ class ManualReview extends ApiModel
             list ($passdate, $callsign) = $entry;
 
             if (!isset($alreadyPassed[$callsign])) {
-                $personId = Person::findIdByCallsign($callsign);
-                if (!$personId) {
-                    $errors[] = "'$callsign' passdate $passdate could not be found";
-                    continue;
+                $time = strtotime($passdate);
+                if ($year == date('Y', $time)) {
+                    $peopleMissing[$callsign] = date('Y-m-d H:i:s', $time);
                 }
+            }
+        }
 
-                self::markPersonAsPassed($personId, $passdate, $year);
-                $graduated[$callsign] = $passdate;
+        if (!empty($peopleMissing)) {
+            $people = Person::select('id', 'callsign')
+                    ->whereIn('callsign', array_keys($peopleMissing))
+                    ->get()
+                    ->keyBy('callsign');
+
+            $bulkInsert = [];
+            foreach ($peopleMissing as $callsign => $passdate) {
+                if (isset($people[$callsign])) {
+                    $bulkInsert[] = [ $people[$callsign]->id, $passdate ];
+                    $graduated[] = $callsign;
+                } else {
+                    $errors[] = "Callsign [$callsign] is missing.";
+                }
+            }
+
+            // Add everyone at one go..
+            if (!empty($bulkInsert)) {
+                $sql = 'INSERT IGNORE INTO manual_review (person_id, passdate) VALUES (?,?)'.str_repeat(',(?,?)', count($bulkInsert)-1);
+                DB::insert($sql, array_flatten($bulkInsert));
             }
         }
 
@@ -121,7 +142,7 @@ class ManualReview extends ApiModel
 
         $sqlDate = date('Y-m-d H:i:s', $graduation);
         DB::insert(
-            "INSERT INTO manual_review (person_id, passdate)
+            "INSERT IGNORE INTO manual_review (person_id, passdate)
                 SELECT ?,? FROM DUAL WHERE NOT EXISTS
                    (SELECT 1 FROM manual_review WHERE person_id=? AND YEAR(passdate)=? LIMIT 1)",
             [ $personId, $sqlDate, $personId, $year]
