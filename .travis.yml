@@ -12,9 +12,16 @@ branches:
 
 matrix:
   include:
-    - env: TESTENV=lint
-    - env: TESTENV=docker
+    - env: TRAVIS_ACTION=lint
+    - env: TRAVIS_ACTION=docker
 
 
 script:
   - ./bin/travis
+
+
+deploy:
+  provider: script
+  script: env TRAVIS_ACTION=deploy ./bin/travis
+#  on:
+#    branch: master

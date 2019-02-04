@@ -11,16 +11,19 @@ wd="$(cd "$(dirname "$0")/.." && pwd)";
 echo "Environment:";
 env;
 
-case "${TESTENV:=}" in
+case "${TRAVIS_ACTION:=}" in
     "lint")
-        exec "${wd}/bin/test_lint" .;
+        "${wd}/bin/test_lint" .;
         ;;
     "docker")
-        exec "${wd}/bin/build";
-        exec "${wd}/bin/test_docker";
+        "${wd}/bin/build";
+        "${wd}/bin/test_docker";
+        ;;
+    "deploy")
+        "${wd}/bin/deploy";
         ;;
     *)
-        echo "Unknown test environment: ${TESTENV}";
+        echo "Unknown Travis action: ${TRAVIS_ACTION}";
         exit 1;
         ;;
 esac;
