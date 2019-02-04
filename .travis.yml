@@ -24,4 +24,4 @@ deploy:
   provider: script
   script: env TRAVIS_ACTION=deploy ./bin/travis
   on:
-    branch: aws
+    branch: master
