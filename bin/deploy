@@ -27,5 +27,5 @@ $(aws ecr get-login --region="${AWS_REGION}");
 echo "Tagging image for AWS ECR...";
 docker tag "${image_name}" "${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
 
-#echo "Pushing image to AWS ECR...";
-#docker push "${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
+echo "Pushing image to AWS ECR...";
+docker push "${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
