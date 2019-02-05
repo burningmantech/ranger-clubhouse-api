@@ -5,6 +5,8 @@
 
 . "$(dirname "$0")/.common.sh";
 
+set -x
+
 # Provided by the CI environment:
 # * AWS_DEFAULT_REGION
 # * AWS_ACCESS_KEY_ID
