@@ -5,6 +5,12 @@
 
 . "$(dirname "$0")/.common.sh";
 
+# Provided by the CI environment:
+# * AWS_DEFAULT_REGION
+# * AWS_ACCESS_KEY_ID
+# * AWS_SECRET_ACCESS_KEY
+# * AWS_ECR_IMAGE_REPOSITORY
+
 export AWS_IMAGE_TAG="master";
 export AWS_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
 
@@ -22,7 +28,7 @@ echo "Installing AWS tools...";
 pip install --user awscli;
 
 echo "Logging into AWS...";
-$(aws ecr get-login --region="${AWS_REGION}");
+$(aws ecr get-login);
 
 echo "Tagging image for AWS ECR...";
 docker tag "${image_name}" "${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
