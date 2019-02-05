@@ -25,7 +25,7 @@ echo "Docker version:";
 docker --version;
 
 echo "Installing AWS tools...";
-pip install --user awscli;
+pip install awscli;
 
 echo "Logging into AWS...";
 $(aws ecr get-login);
