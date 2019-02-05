@@ -1,6 +1,3 @@
-# language: php
-
-
 services:
   - docker
 
@@ -10,18 +7,22 @@ branches:
     - master
 
 
-matrix:
+stages:
+  - Lint
+  - Test
+  - Deploy
+
+
+jobs:
   include:
-    - env: TRAVIS_ACTION=lint
-    - env: TRAVIS_ACTION=docker
+    - stage: Lint
+      env: TRAVIS_ACTION=lint
+    - stage: Test
+      env: TRAVIS_ACTION=docker
+    - stage: Deploy
+      env: TRAVIS_ACTION=deploy
+      if: branch = master
 
 
 script:
   - ./bin/travis
-
-
-deploy:
-  provider: script
-  script: env TRAVIS_ACTION=deploy ./bin/travis
-  on:
-    branch: master
