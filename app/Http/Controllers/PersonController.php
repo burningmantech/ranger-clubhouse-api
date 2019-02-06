@@ -152,10 +152,7 @@ class PersonController extends ApiController
             }
         }
 
-        $changes = [];
-        foreach ($person->getDirty() as $field => $newData) {
-            $changes[$field] = [ $person->getOriginal($field), $newData ];
-        }
+        $changes = $person->getChangedValues();
 
         if (!$person->save()) {
             return $this->restError($person);

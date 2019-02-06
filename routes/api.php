@@ -73,6 +73,8 @@ Route::group([
 
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
+    Route::post('bulk-upload', 'BulkUploadController@update');
+
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
 

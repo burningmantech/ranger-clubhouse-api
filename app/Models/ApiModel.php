@@ -123,4 +123,16 @@ abstract class ApiModel extends Model //implements AuditableContract
     {
         return $this->appends;
     }
+
+    // Get the changed columns
+
+    public function getChangedValues()
+    {
+        $changes = [];
+        foreach ($this->getDirty() as $field => $newData) {
+            $changes[$field] = [ $this->getOriginal($field), $newData ];
+        }
+
+        return $changes;
+    }
 }

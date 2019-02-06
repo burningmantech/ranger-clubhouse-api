@@ -8,6 +8,8 @@ use App\Models\ApiModel;
 use App\Models\Person;
 use App\Models\AccessDocumentDelivery;
 
+use App\Helpers\SqlHelper;
+
 class AccessDocument extends ApiModel
 {
     protected $table = 'access_document';
@@ -46,7 +48,7 @@ class AccessDocument extends ApiModel
         'name',
         'comments',
         'expiry_date',
-        'create_date',
+//        'create_date', set by model
         'modified_date',
         'additional_comments',
     ];
@@ -67,6 +69,18 @@ class AccessDocument extends ApiModel
     protected $appends = [
         'past_expire_date'
     ];
+
+    public static function boot()
+    {
+        parent::boot();
+
+        self::creating(function($model) {
+            // TODO - adjust access_document schema to default to current timestamp
+            if ($model->create_date == null) {
+                $model->create_date = SqlHelper::now();
+            }
+        });
+    }
 
     public function person()
     {
@@ -326,6 +340,29 @@ class AccessDocument extends ApiModel
         return $people;
     }
 
+    /*
+     * Find the work access pass for a person
+     */
+
+    public static function findWAPForPerson($personId)
+    {
+        $rows = self::where('person_id', $personId)
+            ->whereIn('type', [ 'staff_credential', 'work_access_pass' ])
+            ->whereIn('status', [ 'qualified', 'claimed', 'banked', 'submitted' ])
+            ->get();
+        $wap = null;
+
+        foreach ($rows as $row) {
+            if ($wap == null || $row->access_date == null) {
+                $wap = $row;
+            } else if ($wap->access_date->gt($row->access_date)) {
+                $wap = $row;
+            }
+        }
+
+        return $wap;
+    }
+
     /**
      *
      * Find all the Significant Other WAPs for a person and year
@@ -386,7 +423,6 @@ class AccessDocument extends ApiModel
         $wap->access_date = config('clubhouse.TAS_DefaultSOWAPDate');
         $wap->source_year = $year;
         $wap->expiry_date = $year;
-        $wap->create_date = $wap->freshTimestamp();
         $wap->save();
 
         return $wap;
@@ -398,7 +434,8 @@ class AccessDocument extends ApiModel
 
     public function setExpiryDateAttribute($date)
     {
-        if (gettype($date) == 'string' && strlen($date) == 4) {
+        if (is_string($date) && strlen($date) == 4
+        || is_numeric($date)) {
             $date .= "-09-15 00:00:00";
         }
 

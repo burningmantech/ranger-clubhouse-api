@@ -16,8 +16,8 @@ abstract class TestCase extends BaseTestCase
 
     public $user;
 
-
-    public function setUp() {
+    public function setUp()
+    {
         parent::setUp();
         // force garbage collection before each test
         // Faker triggers a memory allocation bug.
@@ -28,19 +28,17 @@ abstract class TestCase extends BaseTestCase
     {
         $this->user = factory(Person::class)->create();
         $this->addRole(Role::LOGIN);
-
-    }//end createUser()
+    }
 
 
     public function signInUser()
     {
         $this->createUser();
         $this->actingAs($this->user);
+    }
 
-    }//end signInUser()
 
-
-    public function addRole($roles, $user=null)
+    public function addRole($roles, $user = null)
     {
         if (!$user) {
             $user = $this->user;
@@ -59,11 +57,10 @@ abstract class TestCase extends BaseTestCase
         }
 
         PersonRole::insert($rows);
+    }
 
-    }//end addRole()
 
-
-    public function addPosition($positions, $user=null)
+    public function addPosition($positions, $user = null)
     {
         if (!$user) {
             $user = $this->user;
@@ -81,18 +78,10 @@ abstract class TestCase extends BaseTestCase
                 ]
             );
         }
+    }
 
-    }//end addPosition()
-
-/*
-    public function mock($class)
+    public function addAdminRole($user = null)
     {
-        $mock = \Mockery::mock($class);
-        App::instance($class, $mock);
-
-        return $mock;
-
-    }//end mock()
-*/
-
-}//end class
+        $this->addRole(Role::ADMIN, $user);
+    }
+}

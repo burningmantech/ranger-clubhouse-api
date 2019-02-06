@@ -254,6 +254,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return null;
     }
 
+    /*
+     * Bulk lookup by callsigns
+     * return an associatve array index by callsign
+     */
+
+    public static function findAllByCallsigns(array $callsigns)
+    {
+        return self::whereIn('callsign', $callsigns)->get()->keyBy('callsign');
+    }
+
     public static function emailExists($email)
     {
         return self::where('email', $email)->exists();
@@ -564,7 +574,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $personId = $this->id;
         $this->status_date = SqlHelper::now();
 
-        ActionLog::record(Auth::user(), 'status-change', $reason, [ 'old_status' => $oldStatus, 'new_status' => $newStatus ], $personId);
+        ActionLog::record(Auth::user(), 'person-status-change', $reason, [ 'status' => [ $oldStatus, $newStatus ] ], $personId);
 
         $changeReason = $reason . " new status $newStatus";
 
