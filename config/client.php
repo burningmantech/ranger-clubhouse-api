@@ -40,5 +40,5 @@ return [
     // If any are not set, no message will be displayed
     'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
     'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
-    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2018),  // Ticket threshold year
+    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2019),  // Ticket threshold year
 ];

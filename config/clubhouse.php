@@ -73,13 +73,13 @@ return [
     'SFEnableWritebacks' => env('RANGER_CLUBHOUSE_SALESFORCE_ENABLE_WRITEBACKS', false),
 
     // Tickets, Vehicle Passes, Work Access Passes
-    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', false),  // Menu item
+    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', true),  // Menu item
     'TicketsAndStuffEnablePNV' => env('RANGER_CLUBHOUSE_TAS_ENABLE_PNV', false),  // Menu item for prospectives and alphas
     'TAS_SubmitDate'           => env('RANGER_CLUBHOUSE_TAS_SUBMIT_DATE', '2018-07-16 23:59:00'),
-    'TAS_Tickets'              => env('RANGER_CLUBHOUSE_TAS_TICKETS', 'accept'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_VP'                   => env('RANGER_CLUBHOUSE_TAS_VP', 'accept'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_WAP'                  => env('RANGER_CLUBHOUSE_TAS_WAP', 'accept'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_WAPSO'                => env('RANGER_CLUBHOUSE_TAS_WAP_SO', 'frozen'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_Tickets'              => env('RANGER_CLUBHOUSE_TAS_TICKETS', 'view'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_VP'                   => env('RANGER_CLUBHOUSE_TAS_VP', 'none'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_WAP'                  => env('RANGER_CLUBHOUSE_TAS_WAP', 'none'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_WAPSO'                => env('RANGER_CLUBHOUSE_TAS_WAP_SO', 'none'),  // Or 'accept' or 'frozen' or 'none'
     'TAS_WAPSOMax'             => env('RANGER_CLUBHOUSE_TAS_WAP_SO_MAX', 3),  // Max # of SO WAPs
     'TAS_BoxOfficeOpenDate'    => env('RANGER_CLUBHOUSE_TAS_WAP_BOXOFFICE_OPEN_DATE', '2017-08-22 12:00:00'),
     'TAS_DefaultWAPDate'       => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_DATE', '2017-08-24'),
@@ -125,10 +125,4 @@ return [
     'TwilioAccountSID' => env('RANGER_CLUBHOUSE_TWILIO_ACCOUNT_SID', ''),
     'TwilioAuthToken'  => env('RANGER_CLUBHOUSE_TWILIO_AUTH_TOKEN', ''),
     'TwilioServiceId'  => env('RANGER_CLUBHOUSE_TWILIO_SERVICE_ID', ''),
-
-    // Optional ticket credit warning messages.
-    // If any are not set, no message will be displayed
-    'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
-    'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
-    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2019),  // Ticket threshold year
 ];
