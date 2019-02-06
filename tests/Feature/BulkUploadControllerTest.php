@@ -39,7 +39,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => 'unknown-callsign',
                 'status'    => 'callsign-not-found',
@@ -78,7 +78,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $person->callsign,
                 'status'    => 'success'
@@ -106,41 +106,16 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $person->callsign,
                 'status'    => 'success',
-                'change'    => [ 'prospective', 'alpha' ]
+                'changes'    => [ 'prospective', 'alpha' ]
             ]
         ]]);
 
         $person->refresh();
         $this->assertEquals('alpha', $person->status);
-    }
-
-    /*
-     * Test marking a callsign's existing status is the same as the desired one.
-     */
-
-    public function testUpdatePersonStatusWithSameValue()
-    {
-        $person = factory(Person::class)->create([
-            'status'    => 'prospective'
-        ]);
-
-        $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'prospective',
-            'records'   => $person->callsign,
-            'commit'    => true,
-        ]);
-
-        $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
-            [
-                'callsign'  => $person->callsign,
-                'status'    => 'same',
-            ]
-        ]]);
     }
 
     /*
@@ -159,7 +134,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $person->callsign,
                 'status'    => 'success',
@@ -187,11 +162,11 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $person->callsign,
                 'status'    => 'success',
-                'change'    => [ 0, 1]
+                'changes'    => [ 0, 1]
             ]
         ]]);
 
@@ -216,7 +191,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $callsign,
                 'status'    => 'success',
@@ -243,7 +218,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $callsign,
                 'status'    => 'success',
@@ -277,7 +252,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $callsign,
                 'status'    => 'success',
@@ -304,7 +279,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign'  => $callsign,
                 'status'    => 'success',
@@ -333,7 +308,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success'
@@ -368,7 +343,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success'
@@ -403,7 +378,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success'
@@ -432,7 +407,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',
@@ -465,7 +440,7 @@ class BulkUploadControllerTest extends TestCase
             ]);
 
             $response->assertStatus(200);
-            $response->assertJson([ 'records' => [
+            $response->assertJson([ 'results' => [
                 [
                     'callsign' => $callsign,
                     'status'   => 'success',
@@ -499,7 +474,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',
@@ -539,7 +514,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',
@@ -563,7 +538,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',
@@ -598,7 +573,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'failed',
@@ -633,7 +608,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',
@@ -654,7 +629,7 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'records' => [
+        $response->assertJson([ 'results' => [
             [
                 'callsign' => $callsign,
                 'status'   => 'success',

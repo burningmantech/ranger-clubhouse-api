@@ -25,7 +25,6 @@ class BulkUploadController extends ApiController
     const STATUS_UPDATE_ACTIONS = [
         "active",
         "alpha",
-        "alpha",
         "inactive",
         "prospective waitlist",
         "prospective",
@@ -48,36 +47,36 @@ class BulkUploadController extends ApiController
     ];
 
     const MAP_PRE_MEALS = [
-        "" => "pre",
-        "pre" => "pre",
-        "post" => "pre+post",
-        "event" => "pre+event",
-        "pre+event" => "pre+event",
-        "event+post" => "all",
-        "pre+post" => "pre+post",
-        "all" => "all"
+        '' => 'pre',
+        'pre' => 'pre',
+        'post' => 'pre+post',
+        'event' => 'pre+event',
+        'pre+event' => 'pre+event',
+        'event+post' => 'all',
+        'pre+post' => 'pre+post',
+        'all' => 'all'
     ];
 
     const MAP_EVENT_MEALS = [
-        "" => "event",
-        "pre" => "pre+event",
-        "post" => "event+post",
-        "event" => "event",
-        "pre+event" => "pre+event",
-        "event+post" => "event+post",
-        "pre+post" => "all",
-        "all" => "all"
+        '' => 'event',
+        'pre' => 'pre+event',
+        'post' => 'event+post',
+        'event' => 'event',
+        'pre+event' => 'pre+event',
+        'event+post' => 'event+post',
+        'pre+post' => 'all',
+        'all' => 'all'
     ];
 
     const MAP_POST_MEALS = [
-        "" => "post",
-        "pre" => "pre+post",
-        "post" => "post",
-        "event" => "event+post",
-        "pre+event" => "all",
-        "event+post" => "event+post",
-        "pre+post" => "pre+post",
-        "all" => "all"
+        '' => 'post',
+        'pre' => 'pre+post',
+        'post' => 'post',
+        'event' => 'event+post',
+        'pre+event' => 'all',
+        'event+post' => 'event+post',
+        'pre+post' => 'pre+post',
+        'all' => 'all'
     ];
 
     public function update()
@@ -115,7 +114,7 @@ class BulkUploadController extends ApiController
                 'person'    => null,
                 'status'    => null,
                 'details'   => null,
-                'change'    => null,
+                'changes'    => null,
             ];
 
             $callsigns[] = $callsign;
@@ -125,10 +124,10 @@ class BulkUploadController extends ApiController
             throw new \InvalidArgumentException('records parameter is empty');
         }
 
-        $callsigns = Person::findAllByCallsigns($callsigns);
+        $callsigns = Person::findAllByCallsigns($callsigns, true);
 
         foreach ($records as $record) {
-            $record->person = @$callsigns[$record->callsign];
+            $record->person = @$callsigns[strtolower($record->callsign)];
         }
 
         if (in_array($action, self::SET_COLUMN_UPDATE_ACTIONS)) {
@@ -154,13 +153,13 @@ class BulkUploadController extends ApiController
             }
 
             $result = [
-                'id'        => $record->id,
+                'id'        => $record->person->id,
                 'callsign'  => $record->person->callsign,
                 'status'    => $record->status,
             ];
 
-            if ($record->change) {
-                $result['change'] = $record->change;
+            if ($record->changes) {
+                $result['changes'] = $record->changes;
             }
 
             if ($record->details) {
@@ -169,7 +168,7 @@ class BulkUploadController extends ApiController
             return $result;
         }, $records);
 
-        return response()->json([ 'records' => $results ]);
+        return response()->json([ 'results' => $results, 'commit' => $commit ? true : false ]);
     }
 
     private function changePersonStatus($records, $action, $commit)
@@ -180,23 +179,17 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
-            $oldStatus = $person->status;
-            if ($oldStatus == $action) {
-                $record->status = 'same';
-                continue;
-            }
-
+            $oldValue = $person->status;
+            $newValue = $person->status = $action;
             $record->status = 'success';
             if ($commit) {
-                $person->status = $action;
-                if ($person->saveWithoutValidation()) {
+                if ($this->saveModel($person, $record)) {
                     $person->changeStatus($person->status, $action, 'bulk update');
-                    $record->change = [ $oldStatus, $action ];
                 } else {
-                    $record->status = 'failed';
-                    $record->details = $person->getErrors();
+                    continue;
                 }
             }
+            $record->changes = [ $oldValue, $newValue ];
         }
     }
 
@@ -209,23 +202,18 @@ class BulkUploadController extends ApiController
             }
 
             $oldValue = $person->$action;
-            if ($oldValue == 1) {
-                $record->status = 'same';
-                continue;
-            }
-
+            $newValue = $person->$action = 1;
             $record->status = 'success';
+
             if ($commit) {
                 $changes = $person->getChangedValues();
-                $person->$action = 1;
-                if ($person->saveWithoutValidation()) {
+                if ($this->saveModel($person, $record)) {
                     $this->log('person-update', 'bulk update', $changes, $person->id);
-                    $record->change = [ $oldValue, 1 ];
                 } else {
-                    $record->status = 'failed';
-                    $record->details = $person->getErrors();
+                    continue;
                 }
             }
+            $record->changes = [ $oldValue, 1 ];
         }
     }
 
@@ -243,7 +231,7 @@ class BulkUploadController extends ApiController
 
             $data = $record->data;
             if ($action != 'bmidsubmitted' && !count($data)) {
-                $record->status = 'missing-column';
+                $record->status = 'failed';
                 $record->details = ($action == 'showers') ? 'missing showers value (y,1,n,0)' : 'missing meal column';
                 continue;
             }
@@ -275,7 +263,7 @@ class BulkUploadController extends ApiController
                 case 'bmidsubmitted':
                     if ($bmid->status != "on_hold" && $bmid->status != "ready_to_print") {
                         $record->status = 'invalid-status';
-                        $record->details = "BMID has status {$bmid->status} and cannot be submitted";
+                        $record->details = "BMID has status [{$bmid->status}] and cannot be submitted";
                         continue 2;
                     }
 
@@ -291,7 +279,7 @@ class BulkUploadController extends ApiController
 
             $record->status = 'success';
             if ($commit) {
-                $bmid->saveWithoutValidation();
+                $this->saveModel($bmid, $record);
             }
 
             $record->changes = [ $oldValue, $newValue ];
@@ -310,8 +298,9 @@ class BulkUploadController extends ApiController
 
             $data = $record->data;
             if (empty($data)) {
-                $record->status = 'missing-column';
-                $record->detail = 'missing ticket type';
+                $record->status = 'failed';
+                $record->details = 'missing ticket type';
+                continue;
             }
 
             $type = trim($data[0]);
@@ -363,7 +352,7 @@ class BulkUploadController extends ApiController
                     break;
 
                 default:
-                    $record->status = 'fail';
+                    $record->status = 'failed';
                     $record->details = "Unknown ticket type [$type]";
                     continue 2;
             }
@@ -403,7 +392,7 @@ class BulkUploadController extends ApiController
 
             $record->status = 'success';
             if ($commit) {
-                $ad->save();
+                $this->saveModel($ad, $record);
             }
         }
     }
@@ -473,7 +462,7 @@ class BulkUploadController extends ApiController
                 }
                 $oldValue = (string) $wap->access_date;
                 if ($commit) {
-                    $wap->saveWithoutValidation();
+                    $this->saveModel($wap, $record);
                 }
             }
         }
@@ -499,12 +488,25 @@ class BulkUploadController extends ApiController
             $oldValue = $radio->max_radios;
             $newValue = $radio->max_radios = $maxRadios;
 
-            if ($commit) {
-                $radio->save();
-            }
-
             $record->status = 'success';
             $record->changes = [ $oldValue, $newValue ];
+
+            if ($commit) {
+                $this->saveModel($radio, $record);
+            }
+
+        }
+    }
+
+    private function saveModel($model, $record)
+    {
+        try {
+            $model->saveWithoutValidation();
+            return true;
+        } catch (\Illuminate\Database\QueryException $e) {
+            $record->status = 'failed';
+            $record->details = 'SQL Failure '.$e->getMessage();
+            return false;
         }
     }
 }

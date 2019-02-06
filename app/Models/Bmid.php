@@ -46,6 +46,10 @@ class Bmid extends ApiModel
             if ($model->create_datetime == null) {
                 $model->create_datetime = SqlHelper::now();
             }
+
+            if (empty($model->status)) {
+                $model->status = 'in_prep';
+            }
         });
     }
 

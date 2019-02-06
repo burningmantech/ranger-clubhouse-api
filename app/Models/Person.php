@@ -259,9 +259,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * return an associatve array index by callsign
      */
 
-    public static function findAllByCallsigns(array $callsigns)
+    public static function findAllByCallsigns(array $callsigns, $toLowerCase = false)
     {
-        return self::whereIn('callsign', $callsigns)->get()->keyBy('callsign');
+        $rows = self::whereIn('callsign', $callsigns)->get();
+
+        if (!$toLowerCase) {
+            return $rows->keyBy('callsign');
+        }
+
+        return $rows->reduce(function ($keys, $row) {
+            $keys[strtolower($row->callsign)] = $row;
+            return $keys;
+        }, []);
     }
 
     public static function emailExists($email)
