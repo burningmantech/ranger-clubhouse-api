@@ -5,18 +5,30 @@
 
 . "$(dirname "$0")/.common.sh";
 
+# Provided by the CI environment:
+# * AWS_DEFAULT_REGION
+# * AWS_ACCESS_KEY_ID
+# * AWS_SECRET_ACCESS_KEY
+# * AWS_ECR_IMAGE_REPOSITORY
+
 export AWS_IMAGE_TAG="master";
 export AWS_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";
+
+
+if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
+    echo "No deployments allowed from non-master branches.";
+    exit 1;
+fi;
 
 
 echo "Docker version:";
 docker --version;
 
 echo "Installing AWS tools...";
-pip install --user awscli;
+pip install awscli;
 
 echo "Logging into AWS...";
-$(aws ecr get-login --region="${AWS_REGION}");
+$(aws ecr get-login --no-include-email);
 
 echo "Tagging image for AWS ECR...";
 docker tag "${image_name}" "${AWS_ECR_IMAGE_REPOSITORY}:${AWS_IMAGE_TAG}";

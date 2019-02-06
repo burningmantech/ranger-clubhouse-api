@@ -20,6 +20,7 @@ case "${TRAVIS_ACTION:=}" in
         "${wd}/bin/test_docker";
         ;;
     "deploy")
+        "${wd}/bin/build";
         "${wd}/bin/deploy";
         ;;
     *)
