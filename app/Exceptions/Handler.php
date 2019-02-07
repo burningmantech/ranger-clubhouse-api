@@ -82,7 +82,7 @@ class Handler extends ExceptionHandler
             return response()->json([ 'error' => "$className was not found" ], 400);
         }
 
-        // Required parameters no present and/or do not pass validation.
+        // Required parameters not present and/or do not pass validation.
         if ($e instanceof \Illuminate\Validation\ValidationException) {
             return RestApi::error(response(), 422, $e->errors());
         }
@@ -92,12 +92,12 @@ class Handler extends ExceptionHandler
             return RestApi::error(response(), 422, $e->getMessage());
         }
 
-        // No authorization token based / not logged in
+        // No authorization token / not logged in
         if ($e instanceOf \Illuminate\Auth\AuthenticationException) {
             return response()->json([ 'error' => 'Not authenticated.'], 401);
         }
 
-        // User do not have the appropriate roles.
+        // User does not have the appropriate roles.
         if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
             $message = $e->getMessage();
             if ($message == '') {
@@ -122,7 +122,6 @@ class Handler extends ExceptionHandler
 
         if (!app()->isLocal()) {
             // Fatal server error.. record what happened.
-
             try {
                 $log = new ErrorLog([
                     'error_type'    => 'server-exception',
@@ -152,8 +151,22 @@ class Handler extends ExceptionHandler
             }
         }
 
-        return RestApi::error(response(), 500, "Server Exception [".class_basename($e)."]: " .$e->getMessage()." file ".$e->getFile().":".$e->getLine());
+        $className = class_basename($e);
+        $file = $e->getFile();
+        $line = $e->getLine();
+        $message = $e->getMessage();
 
-        return parent::render($request, $e);
+        // Bad SQL statement, no biscuit!
+        if ($e instanceof \Illuminate\Database\QueryException) {
+            if (app()->isLocal()) {
+                // For development return the full SQL statement
+                return RestApi::error(response(), 500, "SQL Exception $file:$line - $message");
+            } else {
+                // Otherwise say where it happened and don't leak potentially harmful data
+                return RestApi::error(response(), 500, "An unrecoverable database failure occured at $file:$line");
+            }
+        }
+
+        return RestApi::error(response(), 500, "An unrecoverable server error occured. Exception $className at $file:$line - ".$e->getMessage());
     }
 }
