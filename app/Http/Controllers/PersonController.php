@@ -406,7 +406,7 @@ class PersonController extends ApiController
         $this->authorize('updatePositions', $person);
         $params = request()->validate(
             [
-            'position_ids'  => 'required|array',
+            'position_ids'  => 'present|array',
             'position_ids.*' => 'sometimes|integer'
             ]
         );
@@ -477,7 +477,7 @@ class PersonController extends ApiController
         $this->authorize('updateRoles', $person);
         $params = request()->validate(
             [
-            'role_ids'  => 'required|array',
+            'role_ids'  => 'present|array',
             'role_ids.*' => 'sometimes|integer'
             ]
         );
