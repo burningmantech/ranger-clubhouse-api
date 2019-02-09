@@ -58,6 +58,24 @@ class AuthControllerTest extends TestCase
     }
 
     /**
+     * test for suspended account
+     */
+
+    public function testSuspendedPerson()
+    {
+        $user = factory(\App\Models\Person::class)->create([ 'status' => 'suspended']);
+
+        $response = $this->json(
+            'POST', 'auth/login',
+            [ 'identification' => $user->email, 'password'   => 'ineedashower!' ]
+        );
+
+        $response->assertStatus(401);
+        $response->assertJson([ 'status' => 'account-suspended' ]);
+    }
+
+
+    /**
      * test for a wrong password.
      */
 

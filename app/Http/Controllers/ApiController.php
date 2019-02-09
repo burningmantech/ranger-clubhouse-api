@@ -23,7 +23,7 @@ class ApiController extends Controller
     {
         if (Auth::check()) {
             $this->user = Auth::user();
-            if (!$this->user->user_authorized) {
+            if (!$this->user->user_authorized || $this->user->status == Person::SUSPENDED) {
                 // A user should not be able to login when not authorized.
                 // However, a user could be logged in when their account is disabled.
                 throw new \Illuminate\Auth\Access\AuthorizationException('Account is disabled.');

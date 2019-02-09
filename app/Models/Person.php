@@ -41,21 +41,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const REMOVE_ALL = 0;
     const ADD_NEW_USER = 1;
 
-    const PROSPECTIVE = 'prospective';
-    const PASTPROSPECTIVE = 'past prospective';
-    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
-    const ALPHA = 'alpha';
-    const BONKED = 'bonked';
     const ACTIVE = 'active';
+    const ALPHA = 'alpha';
+    const AUDITOR = 'auditor';
+    const BONKED = 'bonked';
+    const DECEASED = 'deceased';
+    const DISMISSED = 'dismissed';
     const INACTIVE = 'inactive';
     const INACTIVE_EXTENSION = 'inactive extension';
-    const RETIRED = 'retired';
-    const UBERBONKED = 'uberbonked';
-    const DISMISSED = 'dismissed';
-    const DECEASED = 'deceased';
-    const AUDITOR = 'auditor';
-    const RESIGNED = 'resigned';
     const NON_RANGER = 'non ranger';
+    const PASTPROSPECTIVE = 'past prospective';
+    const PROSPECTIVE = 'prospective';
+    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
+    const RESIGNED = 'resigned';
+    const RETIRED = 'retired';
+    const SUSPENDED = 'suspended';
+    const UBERBONKED = 'uberbonked';
 
     /**
      * The database table name.
