@@ -56,7 +56,7 @@ class CreatePersonTable extends Migration
                 $table->boolean('has_note_on_file')->default(0);
                 $table->boolean('callsign_approved')->default(0);
                 $table->string('shirt_size', 10)->nullable();
-                $table->enum('status', array('prospective','prospective waitlist','past prospective','alpha','bonked','active','inactive','inactive extension','retired','uberbonked','dismissed','resigned','deceased','auditor','non ranger'))->default('prospective');
+                $table->enum('status', array('prospective','prospective waitlist','past prospective','alpha','bonked','active','inactive','inactive extension','retired','uberbonked','dismissed','resigned','deceased','auditor','non ranger', 'suspended'))->default('prospective');
                 $table->date('status_date')->nullable();
                 $table->string('tpassword', 64)->nullable();
                 $table->integer('tpassword_expire')->nullable();
