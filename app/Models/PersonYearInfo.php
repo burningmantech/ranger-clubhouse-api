@@ -31,6 +31,7 @@ class PersonYearInfo extends ApihouseResult
     public $radio_max;
     public $meals;
     public $showers;
+    public $radio_info_available;
 
     /*
      * Gather all information related to a given year for a person
@@ -125,6 +126,7 @@ class PersonYearInfo extends ApihouseResult
 
 
         $radio = RadioEligible::findForPersonYear($personId, $year);
+        $yearInfo->radio_info_available = config('clubhouse.RadioInfoAvailable');
         $yearInfo->radio_max = $radio ? $radio->max_radios : 0;
         $yearInfo->radio_eligible = $yearInfo->radio_max > 0 ? true : false;
 

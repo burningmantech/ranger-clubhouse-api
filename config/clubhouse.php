@@ -23,6 +23,7 @@ return [
 
     'LambaseStatusUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_STATUS_URL', 'https://www.lambase.com/webservice/photo_status_rangers.cfc'),
     'LambaseReportUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_REPORT_URL', 'https://www.lambase.com/webservice/photo_status_rpt_rangers.cfc'),
+    'LambasePrintStatusUpdateUrl' => env('RANGER_CLUBHOUSE_LAMBASE_PRINT_STATUS_UPDATE_URL', 'http://www.lambase.com/webservice/print_status_rangers.cfc'),
     'LambaseImageUrl'   => env('RANGER_CLUBHOUSE_LAMBASE_IMAGE_URL', 'https://www.lambase.com/lam_photos/rangers'),
     'LambaseJumpinUrl'  => env('RANGER_CLUBHOUSE_LAMBASE_JUMP_URL', 'https://www.lambase.com/jumpin/rangers.cfm'),
 
@@ -42,6 +43,9 @@ return [
 
     // How to join Ranger special teams
     'JoiningRangerSpecialTeamsUrl' => env('RANGER_CLUBHOUSE_SPECIAL_TEAMS_URL', 'https://docs.google.com/document/d/1xEVnm1SdcyvLnsUYwL5v_WxO1zy3yhMkAmbXIU_0yqc'),
+
+    // Are we waitling PNVs?
+    'PNVWaitList'       => env('RANGER_PNV_WAITLIST', false),
 
     // Manual review Google sheet
     'ManualReviewLinkEnable'            => env('RANGER_CLUBHOUSE_REVIEW_ENABLE', false),
@@ -96,6 +100,8 @@ return [
     'MealInfoAvailable'       => env('RANGER_CLUBHOUSE_MEAL_INFO_AVAILABLE', false),
     'MealDates'               => env('RANGER_CLUBHOUSE_MEAL_DATES', 'Pre Event is Tue 8/8 (dinner) - Sun 8/27; During Event is Mon 8/28 - Mon 9/4; Post Event is Tue 9/5 - Sat 9/9 (lunch)'),
 
+    // Radio info uploaded?
+    'RadioInfoAvailable'      => env('RANGER_CLUBHOUSE_RADIO_INFO_AVAILABLE', false),
     'RadioCheckoutFormUrl'    => env('RANGER_CLUBHOUSE_CHECKOUT_FORM_URL', 'https://drive.google.com/open?id=1p4EerIDN6ZRxcWkI7tDFGuMf6SgL1LTQ'),
 
     'SiteNotice'               => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
@@ -112,6 +118,9 @@ return [
 
     'TimeZone'                 => env('RANGER_CLUBHOUSE_TIMEZONE', 'America/Los_Angeles'),
 
+    // Available options - twilio, sandbox
+    'BroadcastSMSService'      => env('RANGER_CLUBHOUSE_SMS_SERVICE', 'twilio'),
+
     // if true all email broadcasts will log the email but not actually send it
     'BroadcastMailSandbox'     => env('RANGER_CLUBHOUSE_BROADCAST_MAIL_SANDBOX', false),
 
@@ -125,4 +134,10 @@ return [
     'TwilioAccountSID' => env('RANGER_CLUBHOUSE_TWILIO_ACCOUNT_SID', ''),
     'TwilioAuthToken'  => env('RANGER_CLUBHOUSE_TWILIO_AUTH_TOKEN', ''),
     'TwilioServiceId'  => env('RANGER_CLUBHOUSE_TWILIO_SERVICE_ID', ''),
+
+    // Twilio can provide status callback for each message. Unknown if the
+    // playa Internet link is reliable enough, or if the clubhouse can handle
+    // a rapid stream of status updates.
+    // https://ranger-clubhouse.burningman.org/?DMSc=broadcast&DMSm=smsStatusCallback
+    'TwilioStatusCallbackUrl'  => env('RANGER_CLUBHOUSE_TWILIO_STATUS_URL', ''),
 ];

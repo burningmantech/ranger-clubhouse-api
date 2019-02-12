@@ -84,9 +84,9 @@ return [
     |
     */
 
-    'username' => env('MAIL_USERNAME', ''),
+    'username' => env('RANGER_CLUBHOUSE_SMTP_USERNAME', ''),
 
-    'password' => env('MAIL_PASSWORD', ''),
+    'password' => env('RANGER_CLUBHOUSE_SMTP_PASSWORD', ''),
 
     /*
     |--------------------------------------------------------------------------
