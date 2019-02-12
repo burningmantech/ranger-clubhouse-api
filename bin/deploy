@@ -26,6 +26,7 @@ docker --version;
 
 echo "Installing AWS tools...";
 pip install awscli;
+pip install boto3;
 
 echo "Logging into AWS...";
 $(aws ecr get-login --no-include-email);

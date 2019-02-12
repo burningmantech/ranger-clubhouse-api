@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from boto3 import client as Boto3Client
 
 
+
 class JSONEncoder(BaseJSONEncoder):
     """
     JSON encoder that attempts to convert :class:`Mapping` to :class:`dict`,
