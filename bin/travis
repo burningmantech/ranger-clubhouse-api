@@ -29,6 +29,8 @@ case "${TRAVIS_ACTION:=}" in
             docker load < "${cached_image}";
         else
             echo "No cached docker image; building...";
+            echo "Caches:";
+            ls -l docker || true;
             "${wd}/bin/build";
         fi;
         "${wd}/bin/deploy";
