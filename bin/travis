@@ -3,6 +3,8 @@
 # Dispatcher for Travis CI
 #
 
+set -x
+
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
 echo "Environment:";
@@ -19,7 +21,6 @@ case "${TRAVIS_ACTION:=}" in
         "${wd}/bin/test_docker";
         # Cache docker image for later use
         echo "Caching docker image...";
-        set -x
         mkdir -p docker;
         docker save "${image_name}" | gzip -9 > "${cached_image}";
         ;;
