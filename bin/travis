@@ -11,19 +11,25 @@ env;
 cached_image="docker/${TRAVIS_COMMIT}.tgz";
 
 case "${TRAVIS_ACTION:=}" in
-    "lint")
+    "test")
+        # Lint doesn't require a build and is a relatively quick check
         "${wd}/bin/test_lint" .;
-        ;;
-    "docker")
+        # Build and run tests
         "${wd}/bin/build";
         "${wd}/bin/test_docker";
+        # Cache docker image for later use
+        echo "Caching docker image...";
+        set -x
         mkdir -p docker;
         docker save "${image_name}" | gzip -9 > "${cached_image}";
         ;;
     "deploy")
+        # Use cached docker image (if available) or build, then deploy
         if [ -f "${cached_image}" ]; then
+            echo "Loading cached docker image...";
             docker load < "${cached_image}";
         else
+            echo "No cached docker image; building...";
             "${wd}/bin/build";
         fi;
         "${wd}/bin/deploy";

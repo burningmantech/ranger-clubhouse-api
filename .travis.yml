@@ -12,17 +12,14 @@ branches:
 
 
 stages:
-  - Lint
   - Test
   - Deploy
 
 
 jobs:
   include:
-    - stage: Lint
-      env: TRAVIS_ACTION=lint
     - stage: Test
-      env: TRAVIS_ACTION=docker
+      env: TRAVIS_ACTION=test
     - stage: Deploy
       env: TRAVIS_ACTION=deploy
       if: branch = master
