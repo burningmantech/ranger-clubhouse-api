@@ -5,13 +5,15 @@
 
 . "$(dirname "$0")/.common.sh";
 
+travis_action="$1"; shift;
+
 echo "Environment:";
 env;
 
 docker_cache="${HOME}/docker_images";
-cached_image="${docker_cache}/${TRAVIS_COMMIT}.image";
+cached_image="${docker_cache}/${TRAVIS_COMMIT}.tgz";
 
-case "${TRAVIS_ACTION:=}" in
+case "${travis_action}" in
     "test")
         # Lint doesn't require a build and is a relatively quick check
         "${wd}/bin/test_lint" .;
@@ -37,7 +39,7 @@ case "${TRAVIS_ACTION:=}" in
         "${wd}/bin/deploy";
         ;;
     *)
-        echo "Unknown Travis action: ${TRAVIS_ACTION}";
+        echo "Unknown Travis action: ${travis_action}";
         exit 1;
         ;;
 esac;

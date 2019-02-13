@@ -19,14 +19,18 @@ stages:
 jobs:
   include:
     - stage: Test
-      env: TRAVIS_ACTION=test
+      script: ./bin/travis test
     - stage: Deploy
-      env: TRAVIS_ACTION=deploy
+      script: ./bin/travis deploy
       if: branch = master
 
 
+install:
+  - true
+
+
 script:
-  - ./bin/travis
+  - true
 
 
 cache:
