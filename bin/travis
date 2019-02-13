@@ -3,9 +3,7 @@
 # Dispatcher for Travis CI
 #
 
-set -x
-
-wd="$(cd "$(dirname "$0")/.." && pwd)";
+. "$(dirname "$0")/.common.sh";
 
 echo "Environment:";
 env;
@@ -22,13 +20,13 @@ case "${TRAVIS_ACTION:=}" in
         # Cache docker image for later use
         echo "Caching docker image...";
         mkdir -p docker;
-        docker save "${image_name}" --output="${cached_image}";
+        docker save "${image_name}" | gzip > "${cached_image}";
         ;;
     "deploy")
         # Use cached docker image (if available) or build, then deploy
         if [ -f "${cached_image}" ]; then
             echo "Loading cached docker image...";
-            docker load --input="${cached_image}";
+            docker load < "${cached_image}";
         else
             echo "No cached docker image; building...";
             "${wd}/bin/build";
