@@ -35,4 +35,4 @@ script:
 
 cache:
   directories:
-    - ~/docker
+    - ~/docker_images
