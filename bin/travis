@@ -8,7 +8,8 @@
 echo "Environment:";
 env;
 
-cached_image="docker/${TRAVIS_COMMIT}.image";
+docker_cache="${HOME}/docker_images";
+cached_image="${docker_cache}/${TRAVIS_COMMIT}.image";
 
 case "${TRAVIS_ACTION:=}" in
     "test")
@@ -19,7 +20,7 @@ case "${TRAVIS_ACTION:=}" in
         "${wd}/bin/test_docker";
         # Cache docker image for later use
         echo "Caching docker image...";
-        mkdir -p docker;
+        mkdir -p "${docker_cache}";
         docker save "${image_name}" | gzip > "${cached_image}";
         ;;
     "deploy")
@@ -30,7 +31,7 @@ case "${TRAVIS_ACTION:=}" in
         else
             echo "No cached docker image; building...";
             echo "Caches:";
-            ls -l docker || true;
+            ls -l "${docker_cache}" || true;
             "${wd}/bin/build";
         fi;
         "${wd}/bin/deploy";

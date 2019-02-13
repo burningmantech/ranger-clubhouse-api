@@ -31,4 +31,4 @@ script:
 
 cache:
   directories:
-    - docker
+    - ~/docker
