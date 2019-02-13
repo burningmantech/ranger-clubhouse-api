@@ -3,13 +3,12 @@
 # Dispatcher for Travis CI
 #
 
-set -e
-set -u
-
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
 echo "Environment:";
 env;
+
+cached_image="docker/${TRAVIS_COMMIT}.tgz";
 
 case "${TRAVIS_ACTION:=}" in
     "lint")
@@ -18,9 +17,15 @@ case "${TRAVIS_ACTION:=}" in
     "docker")
         "${wd}/bin/build";
         "${wd}/bin/test_docker";
+        mkdir -p docker;
+        docker save "${image_name}" | gzip -9 > "${cached_image}";
         ;;
     "deploy")
-        "${wd}/bin/build";
+        if [ -f "${cached_image}" ]; then
+            docker load < "${cached_image}";
+        else
+            "${wd}/bin/build";
+        fi;
         "${wd}/bin/deploy";
         ;;
     *)

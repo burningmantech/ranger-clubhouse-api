@@ -30,3 +30,8 @@ jobs:
 
 script:
   - ./bin/travis
+
+
+cache:
+  directories:
+    - docker
