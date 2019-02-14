@@ -3,28 +3,43 @@
 # Dispatcher for Travis CI
 #
 
-set -e
-set -u
+. "$(dirname "$0")/.common.sh";
 
-wd="$(cd "$(dirname "$0")/.." && pwd)";
+travis_action="$1"; shift;
 
 echo "Environment:";
 env;
 
-case "${TRAVIS_ACTION:=}" in
-    "lint")
+docker_cache="${HOME}/docker_images";
+cached_image="${docker_cache}/${TRAVIS_COMMIT}.tgz";
+
+case "${travis_action}" in
+    "test")
+        # Lint doesn't require a build and is a relatively quick check
         "${wd}/bin/test_lint" .;
-        ;;
-    "docker")
+        # Build and run tests
         "${wd}/bin/build";
         "${wd}/bin/test_docker";
+        # Cache docker image for later use
+        echo "Caching docker image...";
+        mkdir -p "${docker_cache}";
+        docker save "${image_name}" | gzip > "${cached_image}";
         ;;
     "deploy")
-        "${wd}/bin/build";
+        # Use cached docker image (if available) or build, then deploy
+        if [ -f "${cached_image}" ]; then
+            echo "Loading cached docker image...";
+            docker load < "${cached_image}";
+        else
+            echo "No cached docker image; building...";
+            echo "Caches:";
+            ls -l "${docker_cache}" || true;
+            "${wd}/bin/build";
+        fi;
         "${wd}/bin/deploy";
         ;;
     *)
-        echo "Unknown Travis action: ${TRAVIS_ACTION}";
+        echo "Unknown Travis action: ${travis_action}";
         exit 1;
         ;;
 esac;

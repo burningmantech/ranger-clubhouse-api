@@ -1,0 +1,236 @@
+#!/usr/bin/env python
+
+from copy import deepcopy
+from datetime import datetime as DateTime
+from json import JSONEncoder as BaseJSONEncoder, dumps
+from typing import Any, Dict, Optional
+
+from boto3 import client as Boto3Client
+
+
+
+class JSONEncoder(BaseJSONEncoder):
+    """
+    JSON encoder that attempts to convert :class:`Mapping` to :class:`dict`,
+    and other types of :class:`Iterable` to :class:`list`.
+    """
+
+    def default(self, obj: Any) -> Any:
+        iterate = getattr(obj, "__iter__", None)
+        if iterate is not None:
+            # We have an Iterable
+            if hasattr(obj, "__getitem__"):
+                # We have a Mapping
+                return dict(obj)
+            return list(iterate())
+        if isinstance(obj, DateTime):
+            return obj.isoformat()
+
+        return BaseJSONEncoder.default(self, obj)
+
+
+
+def jsonTextFromObject(obj: Any, pretty: bool = False) -> str:
+    """
+    Convert an object into JSON text.
+    :param obj: An object that is serializable to JSON.
+    :param pretty: Whether to format for easier human consumption.
+    """
+    if pretty:
+        separators = (",", ": ")
+        indent: Optional[int] = 2
+        sortKeys = True
+    else:
+        separators = (",", ":")
+        indent = None
+        sortKeys = False
+
+    return dumps(
+        obj,
+        ensure_ascii=False,
+        separators=separators,
+        indent=indent,
+        sort_keys=sortKeys,
+        cls=JSONEncoder,
+    )
+
+
+TaskDefinition = Dict[str, Any]
+
+
+
+class NoChangesError(Exception):
+    pass
+
+
+
+class ECSClient(object):
+    def __init__(self, cluster: str, service: str) -> None:
+        self.cluster = cluster
+        self.service = service
+
+        self._currentTask: Dict[str, Any] = {}
+
+
+    @property
+    def _client(self) -> Boto3Client:
+        if not hasattr(self, "_botoClient"):
+            self._botoClient = Boto3Client("ecs")
+
+        return self._botoClient
+
+
+    def currentTaskARN(self) -> str:
+        if "arn" not in self._currentTask:
+            print(
+                "Fetching current task ARN for service "
+                f"{self.cluster}:{self.service}..."
+            )
+            serviceDescription = self._client.describe_services(
+                cluster=self.cluster, services=[self.service]
+            )
+            self._currentTask["arn"] = (
+                serviceDescription["services"][0]["taskDefinition"]
+            )
+
+        return self._currentTask["arn"]
+
+
+    def currentTaskDefinition(self) -> TaskDefinition:
+        if "definition" not in self._currentTask:
+            currentTaskARN = self.currentTaskARN()
+
+            print(f"Fetching task definition {currentTaskARN}...")
+            currentTaskDescription = self._client.describe_task_definition(
+                taskDefinition=currentTaskARN
+            )
+            self._currentTask["definition"] = (
+                currentTaskDescription["taskDefinition"]
+            )
+
+        return self._currentTask["definition"]
+
+
+    def updateTaskDefinition(self, imageName: str) -> TaskDefinition:
+        currentTaskDefinition = self.currentTaskDefinition()
+
+        # print("Current task definition:")
+        # print(jsonTextFromObject(currentTaskDefinition, pretty=True))
+
+        # We don't handle tasks with multiple containers for now.
+        assert len(currentTaskDefinition["containerDefinitions"]) == 1
+
+        # Copy, then remove keys that may not be re-submitted.
+        currentTaskDefinition = currentTaskDefinition.copy()
+        del currentTaskDefinition["revision"]
+        del currentTaskDefinition["status"]
+        del currentTaskDefinition["taskDefinitionArn"]
+        if "FARGATE" in currentTaskDefinition["compatibilities"]:
+            del currentTaskDefinition["compatibilities"]
+            del currentTaskDefinition["requiresAttributes"]
+
+        # Deep copy the current task definition for editing.
+        newTaskDefinition = deepcopy(currentTaskDefinition)
+
+        # Edit the image to our new one.
+        newTaskDefinition["containerDefinitions"][0]["image"] = imageName
+
+        # If no changes are being applied, there's nothing to do.
+        if newTaskDefinition == currentTaskDefinition:
+            print("No changes made to task definition. Nothing to deploy.")
+            raise NoChangesError()
+
+        # print("New task definition:")
+        # print(jsonTextFromObject(newTaskDefinition, pretty=True))
+
+        return newTaskDefinition
+
+
+    def registerTaskDefinition(self, taskDefinition: TaskDefinition) -> str:
+        print("Registering new task definition...")
+        response = self._client.register_task_definition(**taskDefinition)
+        # print("Response:")
+        # print(jsonTextFromObject(response, pretty=True))
+        newTaskARN = (response["taskDefinition"]["taskDefinitionArn"])
+        print("Registered", newTaskARN)
+
+        return newTaskARN
+
+
+    def updateService(self, arn: str) -> None:
+        print(
+            f"Updating service {self.cluster}:{self.service} to ARN {arn}..."
+        )
+        self._currentTask = {}
+        self._client.update_service(
+            cluster=self.cluster, service=self.service, taskDefinition=arn
+        )
+
+
+    def deploy(self, imageName: str) -> None:
+        try:
+            newTaskDefinition = self.updateTaskDefinition(imageName)
+        except NoChangesError:
+            return
+
+        newTaskARN = self.registerTaskDefinition(newTaskDefinition)
+
+        self.updateService(newTaskARN)
+
+        print(f"Deployed service {self.cluster}:{self.service}.")
+
+
+    def rollback(self) -> None:
+        currentTaskDefinition = self.currentTaskDefinition()
+
+        family = currentTaskDefinition["family"]
+
+        print(f"Fetching task definitions for family {family}...")
+        response = self._client.list_task_definitions(familyPrefix=family)
+
+        # Deploy second-to-last ARN
+        taskARN = response["taskDefinitionArns"][-2]
+
+        self.updateService(taskARN)
+
+        print("Rolled back to prior task ARN:", taskARN)
+
+
+
+if __name__ == "__main__":
+    from os import environ
+    from sys import argv, exit, stderr
+
+    argv = argv[1:]
+
+    if len(argv) < 1:
+        print("No action specified", file=stderr)
+        exit(64)  # EX_USAGE
+
+    action = argv[0]
+
+    if len(argv) > 1:
+        print("Too many arguments:", argv, file=stderr)
+        exit(64)  # EX_USAGE
+
+    def env(name: str) -> str:
+        try:
+            return environ[name]
+        except KeyError:
+            print(f"{name} unset", file=stderr)
+            exit(64)  # EX_USAGE
+
+    client = ECSClient(
+        cluster=env("AWS_ECS_CLUSTER"),
+        service=env("AWS_ECS_SERVICE"),
+    )
+
+    if action == "deploy":
+        client.deploy(env("AWS_ECR_IMAGE_NAME"))
+
+    elif action == "rollback":
+        client.rollback()
+
+    else:
+        print("Unknown action:", action, file=stderr)
+        exit(64)  # EX_USAGE

@@ -12,21 +12,27 @@ branches:
 
 
 stages:
-  - Lint
   - Test
   - Deploy
 
 
 jobs:
   include:
-    - stage: Lint
-      env: TRAVIS_ACTION=lint
     - stage: Test
-      env: TRAVIS_ACTION=docker
+      script: ./bin/travis test
     - stage: Deploy
-      env: TRAVIS_ACTION=deploy
+      script: ./bin/travis deploy
       if: branch = master
 
 
+install:
+  - true
+
+
 script:
-  - ./bin/travis
+  - true
+
+
+cache:
+  directories:
+    - ~/docker_images
