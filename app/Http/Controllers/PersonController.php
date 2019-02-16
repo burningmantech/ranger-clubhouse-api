@@ -170,7 +170,7 @@ class PersonController extends ApiController
             if ($emailChanged
             && $person->status == Person::PROSPECTIVE
             && $person->id == $this->user->id) {
-                Mail::to(config('email.VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
+                Mail::to(config('clubhouse.VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
             }
 
             if ($statusChanged) {
