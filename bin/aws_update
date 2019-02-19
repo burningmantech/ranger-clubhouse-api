@@ -56,7 +56,8 @@ def jsonTextFromObject(obj: Any, pretty: bool = False) -> str:
 
 
 TaskDefinition = Dict[str, Any]
-
+TaskEnvironment = Dict[str, str]
+TaskEnvironmentUpdates = Dict[str, Optional[str]]
 
 
 class NoChangesError(Exception):
@@ -64,7 +65,7 @@ class NoChangesError(Exception):
 
 
 
-class ECSClient(object):
+class ECSServiceClient(object):
     def __init__(self, cluster: str, service: str) -> None:
         self.cluster = cluster
         self.service = service
@@ -111,7 +112,11 @@ class ECSClient(object):
         return self._currentTask["definition"]
 
 
-    def updateTaskDefinition(self, imageName: str) -> TaskDefinition:
+    def updateTaskDefinition(
+        self,
+        imageName: Optional[str] = None,
+        environment: Optional[TaskEnvironment] = None,
+    ) -> TaskDefinition:
         currentTaskDefinition = self.currentTaskDefinition()
 
         # print("Current task definition:")
@@ -132,8 +137,16 @@ class ECSClient(object):
         # Deep copy the current task definition for editing.
         newTaskDefinition = deepcopy(currentTaskDefinition)
 
-        # Edit the image to our new one.
-        newTaskDefinition["containerDefinitions"][0]["image"] = imageName
+        if imageName is not None:
+            # Edit the container image to the new one.
+            newTaskDefinition["containerDefinitions"][0]["image"] = imageName
+
+        if environment is not None:
+            # Edit the container environment to the new one.
+            newTaskDefinition["containerDefinitions"][0]["environment"] = [
+                {"name": key, "value": value}
+                for key, value in environment.items()
+            ]
 
         # If no changes are being applied, there's nothing to do.
         if newTaskDefinition == currentTaskDefinition:
@@ -157,6 +170,44 @@ class ECSClient(object):
         return newTaskARN
 
 
+    def currentTaskEnvironment(self) -> TaskEnvironment:
+        currentTaskDefinition = self.currentTaskDefinition()
+
+        # We don't handle tasks with multiple containers for now.
+        assert len(currentTaskDefinition["containerDefinitions"]) == 1
+
+        return {
+            e["name"]: e["value"] for e in
+            self.currentTaskDefinition()
+            ["containerDefinitions"][0]["environment"]
+        }
+
+
+    def updateTaskEnvironment(
+        self, updates: TaskEnvironmentUpdates
+    ) -> TaskEnvironment:
+        currentTaskDefinition = self.currentTaskDefinition()
+
+        # We don't handle tasks with multiple containers for now.
+        assert len(currentTaskDefinition["containerDefinitions"]) == 1
+
+        environment = {
+            e["name"]: e["value"] for e in
+            currentTaskDefinition["containerDefinitions"][0]["environment"]
+        }
+
+        for key, value in updates.items():
+            if value is None:
+                try:
+                    del environment[key]
+                except KeyError:
+                    pass
+            else:
+                environment[key] = value
+
+        return environment
+
+
     def updateService(self, arn: str) -> None:
         print(
             f"Updating service {self.cluster}:{self.service} to ARN {arn}..."
@@ -167,17 +218,36 @@ class ECSClient(object):
         )
 
 
-    def deploy(self, imageName: str) -> None:
+    def deployNewTaskDefinition(self, taskDefinition: TaskDefinition):
+        self.updateService(self.registerTaskDefinition(taskDefinition))
+
+
+    def deployNewImage(self, imageName: str) -> None:
         try:
             newTaskDefinition = self.updateTaskDefinition(imageName)
         except NoChangesError:
             return
 
-        newTaskARN = self.registerTaskDefinition(newTaskDefinition)
+        self.deployNewTaskDefinition(newTaskDefinition)
 
-        self.updateService(newTaskARN)
+        print(
+            f"Deployed new image {imageName} "
+            f"to service {self.cluster}:{self.service}."
+        )
 
-        print(f"Deployed service {self.cluster}:{self.service}.")
+
+    def deployTaskEnvironment(self, updates: TaskEnvironmentUpdates) -> None:
+        try:
+            newTaskDefinition = self.updateTaskEnvironment(updates)
+        except NoChangesError:
+            return
+
+        self.deployNewTaskDefinition(newTaskDefinition)
+
+        print(
+            f"Deployed new task environment "
+            f"to service {self.cluster}:{self.service}."
+        )
 
 
     def rollback(self) -> None:
@@ -208,10 +278,7 @@ if __name__ == "__main__":
         exit(64)  # EX_USAGE
 
     action = argv[0]
-
-    if len(argv) > 1:
-        print("Too many arguments:", argv, file=stderr)
-        exit(64)  # EX_USAGE
+    arguments = argv[1:]
 
     def env(name: str) -> str:
         try:
@@ -220,16 +287,38 @@ if __name__ == "__main__":
             print(f"{name} unset", file=stderr)
             exit(64)  # EX_USAGE
 
-    client = ECSClient(
+    def maxArguments(count: int) -> None:
+        if len(arguments) > count:
+            print("Too many arguments:", argv, file=stderr)
+            exit(64)  # EX_USAGE
+
+    client = ECSServiceClient(
         cluster=env("AWS_ECS_CLUSTER"),
         service=env("AWS_ECS_SERVICE"),
     )
 
     if action == "deploy":
-        client.deploy(env("AWS_ECR_IMAGE_NAME"))
+        maxArguments(0)
+        client.deployNewImage(env("AWS_ECR_IMAGE_NAME"))
 
     elif action == "rollback":
+        maxArguments(0)
         client.rollback()
+
+    elif action == "env" or action == "environment":
+        if arguments:
+            updates: TaskEnvironmentUpdates = {}
+            for argument in arguments:
+                if "=" in argument:
+                    key, value = argument.split("=", 1)
+                    updates[key] = value
+                else:
+                    updates[argument] = None
+
+            client.deployTaskEnvironment(updates)
+        else:
+            for key, value in client.currentTaskEnvironment().items():
+                print(f"{key}={value}")
 
     else:
         print("Unknown action:", action, file=stderr)
