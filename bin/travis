@@ -26,7 +26,7 @@ case "${travis_action}" in
         docker save "${image_name}" | gzip > "${cached_image}";
         ;;
     "deploy")
-        # Use cached docker image (if available) or build, then deploy
+        # Use cached docker image or rebuild it
         if [ -f "${cached_image}" ]; then
             echo "Loading cached docker image...";
             docker load < "${cached_image}";
@@ -36,6 +36,7 @@ case "${travis_action}" in
             ls -l "${docker_cache}" || true;
             "${wd}/bin/build";
         fi;
+        # Deploy
         "${wd}/bin/deploy";
         ;;
     *)
