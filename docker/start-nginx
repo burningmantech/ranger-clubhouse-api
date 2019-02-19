@@ -19,5 +19,8 @@ echo "Caching Laravel configuration and routes...";
 php artisan config:cache;
 php artisan route:cache;
 
-# Start Nginx
+echo "Performing database migrations...";
+php artisan migrate --force;
+
+echo "Starting Nginx...";
 exec nginx "$@";
