@@ -23,9 +23,9 @@ case "${travis_action}" in
         "${wd}/bin/build";
 
         # Set up test database
-        export DB_USERNAME="travis";
-        export DB_PASSWORD="";
-        mysql -e "create database rangers-test;";
+        export RANGER_DB_USER_NAME="travis";
+        export RANGER_DB_PASSWORD="";
+        mysql -e "create database rangers;";
 
         # Run tests in Docker container
         "${wd}/bin/test_docker";
