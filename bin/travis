@@ -25,15 +25,18 @@ case "${travis_action}" in
         # Set up test database
         export RANGER_DB_USER_NAME="travis";
         export RANGER_DB_PASSWORD="";
+        echo "Creating database...";
         mysql -e "create database rangers;";
+        echo "Applying database schema...";
         docker run --rm "${image_name}" \
             php artisan migrate:fresh --seed --force;
 
         # Run tests in Docker container
+        echo "Testing Docker image...";
         "${wd}/bin/test_docker";
 
         # Cache docker image for later use
-        echo "Caching docker image...";
+        echo "Caching Docker image...";
         mkdir -p "${docker_cache}";
         docker save "${image_name}" | gzip > "${cached_image}";
         ;;
@@ -41,10 +44,10 @@ case "${travis_action}" in
     "deploy")
         # Use cached docker image or rebuild it
         if [ -f "${cached_image}" ]; then
-            echo "Loading cached docker image...";
+            echo "Loading cached Docker image...";
             docker load < "${cached_image}";
         else
-            echo "No cached docker image; building...";
+            echo "No cached Docker image; building...";
             echo "Caches:";
             ls -l "${docker_cache}" || true;
             "${wd}/bin/build";
