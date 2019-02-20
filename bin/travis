@@ -26,7 +26,8 @@ case "${travis_action}" in
         export RANGER_DB_USER_NAME="travis";
         export RANGER_DB_PASSWORD="";
         mysql -e "create database rangers;";
-        docker run --rm "${image_name}" php artisan migrate:fresh --seed;
+        docker run --rm "${image_name}" \
+            php artisan migrate:fresh --seed --force;
 
         # Run tests in Docker container
         "${wd}/bin/test_docker";
