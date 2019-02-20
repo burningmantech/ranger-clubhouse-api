@@ -6,12 +6,19 @@
 
 return [
     'VCSRevision' => 'DEVELOPMENT',
+    'DeploymentEnvironment' => env('RANGER_CLUBHOUSE_ENVIRONMENT', ''),
 
     // when the system is taken on-site, set OnPlaya = TRUE on the server that will
     // be in Black Rock City and set ReadOnly = TRUE on the system that remains
     // available to the internet so folks can check their schedules
     'OnPlaya'  => env('RANGER_CLUBHOUSE_ON_PLAYA', false),
     'ReadOnly' => env('RANGER_CLUBHOUSE_READ_ONLY', false),
+
+    'SiteNotice'           => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
+    'SiteTitle'            => 'Black Rock Rangers Secret Clubhouse',
+
+    'DualClubhouse'       => env('RANGER_CLUBHOUSE_DUAL_CLUBHOUSE', false),
+    'ClassicClubhouseUrl' => env('RANGER_CLUBHOUSE_CLASSIC_URL', ''),
 
     // Where should the photo come from? 'Lambase', 'local' or 'test'
 
@@ -96,6 +103,11 @@ return [
     'TAS_Alpha_FAQ'            => env('RANGER_CLUBHOUSE_TAS_ALPHA_FAQ_URL', 'https://docs.google.com/document/d/1yyIAUqP4OdjGTZeOqy1PxE_1Hynhkh0cFzALQkTM-ds/edit'),
     'TicketVendorEmail'        => env('RANGER_CLUBHOUSE_TICKET_VENDOR_EMAIL', 'memberservices@ticketfly.com'),
 
+    // If any are not set, no message will be displayed
+    'RpTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_RPT', 19),  // Ticket threshold for reduced price
+    'ScTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_CRED', 38),  // Ticket threshold for staff credential
+    'YrTicketThreshold' => env('RANGER_CLUBHOUSE_THRESHOLD_YEAR', 2019),  // Ticket threshold year
+
     // Meal date info (needs to change every year)
     'MealInfoAvailable'       => env('RANGER_CLUBHOUSE_MEAL_INFO_AVAILABLE', false),
     'MealDates'               => env('RANGER_CLUBHOUSE_MEAL_DATES', 'Pre Event is Tue 8/8 (dinner) - Sun 8/27; During Event is Mon 8/28 - Mon 9/4; Post Event is Tue 9/5 - Sat 9/9 (lunch)'),
@@ -104,9 +116,7 @@ return [
     'RadioInfoAvailable'      => env('RANGER_CLUBHOUSE_RADIO_INFO_AVAILABLE', false),
     'RadioCheckoutFormUrl'    => env('RANGER_CLUBHOUSE_CHECKOUT_FORM_URL', 'https://drive.google.com/open?id=1p4EerIDN6ZRxcWkI7tDFGuMf6SgL1LTQ'),
 
-    'SiteNotice'               => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
-
-    'SiteTitle'                => 'Black Rock Rangers Secret Clubhouse',
+    'MotorpoolPolicyEnable' => env('RANGER_CLUBHOUSE_MOTORPOOL_POLICY_ENABLE', false),
 
     // From address for sending training signed up emails
     'TrainingSignupFromEmail'      => env('RANGER_CLUBHOUSE_EMAIL_TRAINING_SIGNUP', 'ranger-trainingacademy-list@burningman.org'),
@@ -140,4 +150,10 @@ return [
     // a rapid stream of status updates.
     // https://ranger-clubhouse.burningman.org/?DMSc=broadcast&DMSm=smsStatusCallback
     'TwilioStatusCallbackUrl'  => env('RANGER_CLUBHOUSE_TWILIO_STATUS_URL', ''),
+
+    // Email Addresses
+    'AdminEmail'           => env('RANGER_CLUBHOUSE_EMAIL_ADMIN', 'ranger-tech-ninjas@burningman.org'),
+    'GeneralSupportEmail'  => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
+    'PersonnelEmail'       => env('RANGER_CLUBHOUSE_EMAIL_PERSONNEL', 'ranger-personnel@burningman.org'),
+    'VCEmail'              => env('RANGER_CLUBHOUSE_EMAIL_VC', 'ranger-vc-list@burningman.org'),
 ];

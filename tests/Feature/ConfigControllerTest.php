@@ -15,13 +15,9 @@ class ConfigControllerTest extends TestCase
      */
     public function testConfigResults()
     {
-        config([ 'client.sendToClient' => 'the value' ]);
-        config([ 'clubhouse.dontSendToClient' => 'a secret' ]);
-
         $response = $this->json('GET', 'config');
 
         $response->assertStatus(200);
-        $response->assertJson([ 'sendToClient' => 'the value' ]);
-        $response->assertJsonMissing([ 'dontSendToClient' => 'a secret' ]);
+        $response->assertJson([ 'VCSRevision' => config('clubhouse.VCSRevision') ]);
     }
 }

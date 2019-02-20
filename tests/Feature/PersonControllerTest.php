@@ -334,7 +334,7 @@ class PersonControllerTest extends TestCase
         Mail::assertSent(
             NotifyVCEmailChangeMail::class,
             function ($mail) {
-                return $mail->hasTo(config('email.VCEmail'));
+                return $mail->hasTo(config('clubhouse.VCEmail'));
             }
         );
 
