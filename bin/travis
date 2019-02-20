@@ -14,17 +14,28 @@ docker_cache="${HOME}/docker_images";
 cached_image="${docker_cache}/${TRAVIS_COMMIT}.tgz";
 
 case "${travis_action}" in
+
     "test")
         # Lint doesn't require a build and is a relatively quick check
         "${wd}/bin/test_lint" .;
-        # Build and run tests
+
+        # Build
         "${wd}/bin/build";
+
+        # Set up test database
+        export DB_USERNAME="travis";
+        export DB_PASSWORD="";
+        mysql -e "create database rangers-test;";
+
+        # Run tests in Docker container
         "${wd}/bin/test_docker";
+
         # Cache docker image for later use
         echo "Caching docker image...";
         mkdir -p "${docker_cache}";
         docker save "${image_name}" | gzip > "${cached_image}";
         ;;
+
     "deploy")
         # Use cached docker image or rebuild it
         if [ -f "${cached_image}" ]; then
@@ -39,8 +50,10 @@ case "${travis_action}" in
         # Deploy
         "${wd}/bin/deploy";
         ;;
+
     *)
         echo "Unknown Travis action: ${travis_action}";
         exit 1;
         ;;
+
 esac;
