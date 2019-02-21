@@ -29,6 +29,9 @@ case "${travis_action}" in
         )";
         echo "Docker host IP: ${docker_host_ip}";
 
+        docker run --rm "${image_name}" ip addr show docker0;
+        docker run --rm "${image_name}" ping -t 5 "${docker_host_ip};
+
         # Set up test database
         export RANGER_DB_USER_NAME="travis";
         export RANGER_DB_PASSWORD="";
