@@ -28,7 +28,7 @@ case "${travis_action}" in
         echo "Creating database...";
         mysql -e "create database rangers;";
         echo "Applying database schema...";
-        docker run --rm "${image_name}" \
+        docker run --rm --network="host" "${image_name}" \
             php artisan migrate:fresh --seed --force;
 
         # Run tests in Docker container
