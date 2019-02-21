@@ -39,7 +39,37 @@ http_body() {
 # Init
 ##
 
+generate_docker_environment () {
+    # Set container environment variables from script variables.
+    local name;
+    local value;
+    for name in                         \
+        "RANGER_DB_CONNECTION"          \
+        "RANGER_DB_HOST_NAME"           \
+        "RANGER_DB_PORT"                \
+        "RANGER_DB_DATABASE_NAME"       \
+        "RANGER_DB_USER_NAME"           \
+        "RANGER_DB_PASSWORD"            \
+        "RANGER_CLUBHOUSE_MAIL_DRIVER"  \
+        "RANGER_CLUBHOUSE_SMTP_SERVER"  \
+        "RANGER_CLUBHOUSE_SMTP_PORT"    \
+    ; do
+        eval value="\$${name}";
+        echo "${name}=${value}";
+    done;
+
+    if [ "${RANGER_DB_HOST_NAME}" = "__DOCKER__" ]; then
+        echo "RANGER_DB_HOST_NAME=${RANGER_DB_CONTAINER_NAME}";
+    else
+        echo "RANGER_DB_HOST_NAME=${RANGER_DB_HOST_NAME}";
+    fi;
+}
+
+
 start_container() {
+    local env_file="$(mktemp "${TMPDIR:=/tmp}/env.XXXXX")";
+    generate_docker_environment > "${env_file}";
+
     container_name="ranger-clubhouse-api-test_${host_port}";
 
     cleanup() {
@@ -54,9 +84,12 @@ start_container() {
     docker run                       \
         --rm --detach                \
         --name "${container_name}"   \
+        --env-file "${env_file}"     \
         --publish "${host_port}:80"  \
         "${image_name}"              \
         > /dev/null;
+
+    rm "${env_file}";
 }
 
 
