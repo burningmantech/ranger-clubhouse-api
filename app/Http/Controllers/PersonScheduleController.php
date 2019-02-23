@@ -261,6 +261,8 @@ class PersonScheduleController extends ApiController
         $manualReviewCount = 1;
         $missedManualReviewWindow = false;
 
+        $missingBpguid = false;
+
         if ($status == "auditor") {
             $photoStatus = 'not-required';
         } else {
@@ -285,6 +287,14 @@ class PersonScheduleController extends ApiController
         } else if ($status != "past prospective") {
             if ($callsignApproved && ($photoStatus == 'approved') && $manualReviewPassed) {
                 $canSignUpForShifts = true;
+            }
+
+            // Everyone except Auditors and non rangers need to have BPGUID on file.
+            if ($status != "non ranger") {
+                if (empty($person->bpguid)) {
+                    $missingBpguid = true;
+                    $canSignUpForShifts = false;
+                }
             }
         }
 
@@ -343,6 +353,9 @@ class PersonScheduleController extends ApiController
             'manual_review_cap'           => $manualReviewCap,
             // Manual Review page link - if enabled
             'manual_review_url'           => $manualReviewUrl,
+
+            // Everyone except Auditors & Non Rangers should have a BPGUID (aka Burner Profile ID)
+            'missing_bpguid'              => $missingBpguid,
         ];
 
         return response()->json([ 'permission' => $results ]);
