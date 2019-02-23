@@ -78,7 +78,6 @@ class AccessDocument extends ApiModel
         });
 
         self::saving(function ($model) {
-            error_log("GOT HERE");
             // Certain things always expire this year
             if (in_array($model->type, [ "work_access_pass", "work_access_pass_so", "vehicle_pass"])) {
                 $model->expiry_date = date('Y');
