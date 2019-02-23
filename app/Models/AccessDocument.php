@@ -10,6 +10,8 @@ use App\Models\AccessDocumentDelivery;
 
 use App\Helpers\SqlHelper;
 
+use Carbon\Carbon;
+
 class AccessDocument extends ApiModel
 {
     protected $table = 'access_document';
@@ -21,12 +23,6 @@ class AccessDocument extends ApiModel
     ];
 
     const INVALID_STATUSES = [
-        'used',
-        'cancelled',
-        'expired'
-    ];
-
-    const INACTIVE_STATUS = [
         'used',
         'cancelled',
         'expired'
@@ -74,10 +70,30 @@ class AccessDocument extends ApiModel
     {
         parent::boot();
 
-        self::creating(function($model) {
+        self::creating(function ($model) {
             // TODO - adjust access_document schema to default to current timestamp
             if ($model->create_date == null) {
                 $model->create_date = SqlHelper::now();
+            }
+        });
+
+        self::saving(function ($model) {
+            // Certain things always expire this year
+            if (in_array($model->type, [ "work_access_pass", "work_access_pass_so", "vehicle_pass"])) {
+                $model->expiry_date = date('Y');
+            }
+
+            // Only SO WAPs can have names
+            if ($model->type != "work_access_pass_so") {
+                $model->name = null;
+            }
+
+            // Only SCs and WAPs have access dates
+            if ($model->type != "staff_credential" &&
+                $model->type != "work_access_pass" &&
+                $model->type != "work_access_pass_so") {
+                $model->access_date = null;
+                $model->access_any_time = false;
             }
         });
     }
@@ -98,7 +114,7 @@ class AccessDocument extends ApiModel
 
     public static function findForQuery($query)
     {
-        $sql = self::orderBy('source_year', 'type');
+        $sql = self::orderBy('source_year')->orderBy('type');
 
         if (empty($query['all'])) {
             $sql = $sql->whereNotIn('status', self::INVALID_STATUSES);
@@ -112,7 +128,7 @@ class AccessDocument extends ApiModel
             $sql = $sql->where('source_year', $query['year']);
         }
 
-        return $sql->orderBy('type', 'asc')->get();
+        return $sql->get();
     }
 
     /*
@@ -144,7 +160,7 @@ class AccessDocument extends ApiModel
             $personWith .= ",street1,city,state,zip,country";
         }
 
-        $rows = self::whereNotIn('status', self::INACTIVE_STATUS)
+        $rows = self::whereNotIn('status', self::INVALID_STATUSES)
             ->whereIn('person_id', $personIds)
             ->with([ $personWith ])
             ->get();
@@ -156,7 +172,6 @@ class AccessDocument extends ApiModel
                 ->where('year', $currentYear)
                 ->get()
                 ->keyBy('person_id');
-
         }
 
         $dateRange = config('clubhouse.TAS_WAPDateRange');
@@ -194,69 +209,68 @@ class AccessDocument extends ApiModel
 
 
             switch ($row->type) {
-            case 'work_access_pass':
-            case 'work_access_pass_so':
-            case 'staff_credential':
-                if (!$row->access_any_time) {
-                    $accessDate = $row->access_date;
-                    if (!$accessDate) {
-                        $row->has_error = true;
-                        $row->error =  "missing access date";
-                    } else if ($accessDate->year < $currentYear) {
-                        $row->has_error = true;
-                        $row->error =  "access date [$accessDate] is less than current year [$currentYear]";
-                    } else {
-                        $day = $accessDate->day;
-                        if ($day < $low || $day > $high) {
+                case 'work_access_pass':
+                case 'work_access_pass_so':
+                case 'staff_credential':
+                    if (!$row->access_any_time) {
+                        $accessDate = $row->access_date;
+                        if (!$accessDate) {
                             $row->has_error = true;
-                            $row->error = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
+                            $row->error =  "missing access date";
+                        } elseif ($accessDate->year < $currentYear) {
+                            $row->has_error = true;
+                            $row->error =  "access date [$accessDate] is less than current year [$currentYear]";
+                        } else {
+                            $day = $accessDate->day;
+                            if ($day < $low || $day > $high) {
+                                $row->has_error = true;
+                                $row->error = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
+                            }
                         }
                     }
-                }
-                break;
+                    break;
             }
 
             $person = $people[$personId];
             $person->documents[] = $row;
 
             if ($forDelivery) {
-
                 $deliveryType = "UNKNOWN";
                 switch ($row->type) {
-                case 'staff_credential':
-                    $deliveryType = 'WILL_CALL';
-                    break;
+                    case 'staff_credential':
+                        $deliveryType = 'WILL_CALL';
+                        break;
 
-                case 'work_access_pass':
-                case 'work_access_pass_so':
-                    $deliveryType = 'PRINT_AT_HOME';
-                    break;
+                    case 'work_access_pass':
+                    case 'work_access_pass_so':
+                        $deliveryType = 'PRINT_AT_HOME';
+                        break;
 
-                case 'vehicle_pass':
-                case 'gift_ticket':
-                case 'reduced_price_ticket':
-                    if ($deliveryMethod == 'mail') {
-                        $address = [];
-                        if ($delivery->country == "United States") {
-                            $country = 'US';
-                            $deliveryType = "USPS";
-                        } elseif ($delivery->country == "Canada") {
-                            $country = 'CA';
-                            $deliveryType = "CANADA_UPS";
-                        } else {
-                            $country = $delivery->country;
-                        }
-                        $row->delivery_address = [
+                    case 'vehicle_pass':
+                    case 'gift_ticket':
+                    case 'reduced_price_ticket':
+                        if ($deliveryMethod == 'mail') {
+                            $address = [];
+                            if ($delivery->country == "United States") {
+                                $country = 'US';
+                                $deliveryType = "USPS";
+                            } elseif ($delivery->country == "Canada") {
+                                $country = 'CA';
+                                $deliveryType = "CANADA_UPS";
+                            } else {
+                                $country = $delivery->country;
+                            }
+                            $row->delivery_address = [
                             'street'    => $delivery->street,
                             'city'      => $delivery->city,
                             'state'     => substr(strtoupper($delivery->state), 0, 2),
                             'postal_code' => $delivery->postal_code,
                             'country'   => $country,
-                        ];
-                    } else {
-                        $deliveryType = "WILL_CALL";
-                    }
-                    break;
+                            ];
+                        } else {
+                            $deliveryType = "WILL_CALL";
+                        }
+                        break;
                 }
 
                 $row->delivery_type = $deliveryType;
@@ -279,12 +293,12 @@ class AccessDocument extends ApiModel
                         ];
                     }
                 }
-
             }
         }
 
         usort(
-            $people, function ($a, $b) {
+            $people,
+            function ($a, $b) {
                 return strcmp($a->person->callsign, $b->person->callsign);
             }
         );
@@ -332,7 +346,8 @@ class AccessDocument extends ApiModel
 
         $people = array_values($peopleByIds);
         usort(
-            $people, function ($a, $b) {
+            $people,
+            function ($a, $b) {
                 return strcmp($a['person']->callsign, $b['person']->callsign);
             }
         );
@@ -355,7 +370,7 @@ class AccessDocument extends ApiModel
         foreach ($rows as $row) {
             if ($wap == null || $row->access_date == null) {
                 $wap = $row;
-            } else if ($wap->access_date->gt($row->access_date)) {
+            } elseif ($wap->access_date->gt($row->access_date)) {
                 $wap = $row;
             }
         }

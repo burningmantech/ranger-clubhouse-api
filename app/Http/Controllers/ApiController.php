@@ -74,11 +74,7 @@ class ApiController extends Controller
         $table = $record->getTable();
         $fields = request()->input($table);
 
-        if (!is_null($fields) && empty($fields)) {
-            throw new \InvalidArgumentException("Missing '$table' root name");
-        }
-
-        if ($fields != null) {
+        if (!is_null($fields) && !empty($fields)) {
             $record->fill($fields);
         }
     }
