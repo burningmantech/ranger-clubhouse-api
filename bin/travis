@@ -39,7 +39,7 @@ case "${travis_action}" in
         export RANGER_DB_PORT="3306";
 
         echo "Testing database host lookup:"
-        docker run --rm "${image_name}" host "${RANGER_DB_HOST_NAME}";
+        docker run --rm "${image_name}" getent hosts "${RANGER_DB_HOST_NAME}";
         docker run --rm "${image_name}" ping "${RANGER_DB_HOST_NAME}";
 
         # Set up test database
