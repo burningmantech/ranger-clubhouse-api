@@ -28,13 +28,9 @@ jobs:
 
 
 before_install:
-  - echo "Adding to MySQL configuration:"
+  - echo "Altering MySQL configuration to bind to all interfaces:"
   - printf "[server]\nbind-address = ::\n" | sudo tee -a /etc/mysql/my.cnf
-  - echo "MySQL configuration:"
-  - cat /etc/mysql/my.cnf
   - sudo service mysql restart
-  # - sudo apt update -y
-  # - sudo apt install --only-upgrade docker-ce -y
 
 
 install:

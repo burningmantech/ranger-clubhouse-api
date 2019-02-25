@@ -37,10 +37,12 @@ case "${travis_action}" in
         export RANGER_DB_HOST_NAME="${docker_host_ip}";
         export RANGER_DB_PORT="3306";
 
-        echo "Testing database host lookup:"
+        echo "Testing database host lookup:";
         docker run --rm "${image_name}" getent hosts "${RANGER_DB_HOST_NAME}";
 
         # Set up test database
+        echo "MySQL server version:";
+        mysql -e "select version()";
         echo "Creating database...";
         mysql -e "create database rangers;";
         echo "Applying database schema...";
