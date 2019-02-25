@@ -54,17 +54,11 @@ generate_docker_environment () {
         "RANGER_CLUBHOUSE_SMTP_SERVER"  \
         "RANGER_CLUBHOUSE_SMTP_PORT"    \
     ; do
-        if [ -n "${name+x}" ]; then
+        if [ -z "${name+x}" ]; then
             eval value="\$${name}";
             echo "${name}=${value}";
         fi;
     done;
-
-    if [ "${RANGER_DB_HOST_NAME}" = "__DOCKER__" ]; then
-        echo "RANGER_DB_HOST_NAME=${RANGER_DB_CONTAINER_NAME}";
-    else
-        echo "RANGER_DB_HOST_NAME=${RANGER_DB_HOST_NAME}";
-    fi;
 }
 
 
