@@ -57,4 +57,13 @@ class AccessDocumentDeliveryPolicy
     {
         return ($user->id == $accessDocument->person_id);
     }
+
+    /**
+     * Determine if a user can create and/or update an ADD
+     */
+
+     public function delivery(Person $user, $personId)
+     {
+         return ($user->id == $personId);
+     }
 }

@@ -84,23 +84,32 @@ return [
     'SFEnableWritebacks' => env('RANGER_CLUBHOUSE_SALESFORCE_ENABLE_WRITEBACKS', false),
 
     // Tickets, Vehicle Passes, Work Access Passes
-    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', true),  // Menu item
+//    'TicketsAndStuffEnable'    => env('RANGER_CLUBHOUSE_TAS_ENABLE', true),  // Menu item
+    // 'offseason' = past event but before ticket awards
+    // 'announce' = tickets have been awarded but ticketing window is not open
+    // 'open' = tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play.
+    // 'closed' = ticketing is closed changes are not directly allowed
+    'TicketingPeriod'          => env('RANGER_CLUBHOUSE_TAS_PERIOD', 'offseason'),  // Menu item
     'TicketsAndStuffEnablePNV' => env('RANGER_CLUBHOUSE_TAS_ENABLE_PNV', false),  // Menu item for prospectives and alphas
-    'TAS_SubmitDate'           => env('RANGER_CLUBHOUSE_TAS_SUBMIT_DATE', '2018-07-16 23:59:00'),
-    'TAS_Tickets'              => env('RANGER_CLUBHOUSE_TAS_TICKETS', 'view'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_VP'                   => env('RANGER_CLUBHOUSE_TAS_VP', 'none'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_WAP'                  => env('RANGER_CLUBHOUSE_TAS_WAP', 'none'),  // Or 'accept' or 'frozen' or 'none'
-    'TAS_WAPSO'                => env('RANGER_CLUBHOUSE_TAS_WAP_SO', 'none'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_SubmitDate'           => env('RANGER_CLUBHOUSE_TAS_SUBMIT_DATE', '2019-07-16 23:59:00'),
+
+    'TAS_Tickets'              => env('RANGER_CLUBHOUSE_TAS_TICKETS', 'accept'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_VP'                   => env('RANGER_CLUBHOUSE_TAS_VP', 'accept'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_WAP'                  => env('RANGER_CLUBHOUSE_TAS_WAP', 'accept'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_WAPSO'                => env('RANGER_CLUBHOUSE_TAS_WAP_SO', 'accept'),  // Or 'accept' or 'frozen' or 'none'
+    'TAS_Delivery'             => env('RANGER_CLUBHOUSE_TAS_DELIVERY', 'accept'), // 'none', 'accept' or 'frozen'
+
     'TAS_WAPSOMax'             => env('RANGER_CLUBHOUSE_TAS_WAP_SO_MAX', 3),  // Max # of SO WAPs
-    'TAS_BoxOfficeOpenDate'    => env('RANGER_CLUBHOUSE_TAS_WAP_BOXOFFICE_OPEN_DATE', '2017-08-22 12:00:00'),
-    'TAS_DefaultWAPDate'       => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_DATE', '2017-08-24'),
-    'TAS_DefaultAlphaWAPDate'  => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_ALPHA_DATE', '2017-08-25'),
-    'TAS_DefaultSOWAPDate'     => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_SO_DATE', '2017-08-24'),
+    'TAS_BoxOfficeOpenDate'    => env('RANGER_CLUBHOUSE_TAS_WAP_BOXOFFICE_OPEN_DATE', '2019-08-22 12:00:00'),
+    'TAS_DefaultWAPDate'       => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_DATE', '2019-08-23'),
+    'TAS_DefaultAlphaWAPDate'  => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_ALPHA_DATE', '2019-08-26'),
+    'TAS_DefaultSOWAPDate'     => env('RANGER_CLUBHOUSE_TAS_WAP_DEFAULT_SO_DATE', '2019-08-26'),
     'TAS_Email'                => env('RANGER_CLUBHOUSE_TAS_EMAIL', 'ranger-ticketing-stuff@burningman.org'),
     'TAS_Ticket_FAQ'           => env('RANGER_CLUBHOUSE_TAS_FAQ_URL', 'https://docs.google.com/document/d/1TILtNyPUygjVk9T0B7FEobwAwKOBTub-YewyMtJaIFs/edit'),
     'TAS_WAP_FAQ'              => env('RANGER_CLUBHOUSE_TAS_WAP_FAQ_URL', 'https://docs.google.com/document/d/1wuucvq017bQHP7-0uH2KlSWSaYW7CSvNN7siU11Ah7k/edit'),
     'TAS_VP_FAQ'               => env('RANGER_CLUBHOUSE_TAS_WAP_VP_URL', 'https://docs.google.com/document/d/1KPBD_qdyBkdDnlaVBTAVX8-U3WWcSXa-4_Kf48PbOCM/edit'),
     'TAS_Alpha_FAQ'            => env('RANGER_CLUBHOUSE_TAS_ALPHA_FAQ_URL', 'https://docs.google.com/document/d/1yyIAUqP4OdjGTZeOqy1PxE_1Hynhkh0cFzALQkTM-ds/edit'),
+    'TicketVendorName'         => env('RANGER_CLUBHOUSE_TICKET_VENDOR_NAME', 'Ticketfly'),
     'TicketVendorEmail'        => env('RANGER_CLUBHOUSE_TICKET_VENDOR_EMAIL', 'memberservices@ticketfly.com'),
 
     // If any are not set, no message will be displayed
