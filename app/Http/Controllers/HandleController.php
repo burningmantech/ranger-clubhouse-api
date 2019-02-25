@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 /** HTTP controller for handles (person callsigns and reserved words), used by the handle checker. */
 class HandleController extends ApiController
 {
-    const EXCLUDE_STATUSES = ['past prospective', 'auditor', 'resigned', 'deceased', 'uberbonked', 'dismissed'];
+    const EXCLUDE_STATUSES = ['past prospective', 'auditor'];
     /**
      * List all handles.
      * @return \Illuminate\Http\Response

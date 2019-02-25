@@ -5,9 +5,15 @@ namespace App\Models;
 use App\Models\ApiModel;
 use Illuminate\Database\Eloquent\Builder;
 
+use App\Traits\HasCompositePrimaryKey;
+
 class AccessDocumentDelivery extends ApiModel
 {
+    use HasCompositePrimaryKey;
+
     protected $table = 'access_document_delivery';
+
+    protected $primaryKey = [ 'person_id', 'year' ];
 
     // Indicate there is no ID column.
     //public $incrementing = false;
@@ -45,34 +51,6 @@ class AccessDocumentDelivery extends ApiModel
         'country'     => 'required'
     ];
 
-    /*
-     * Eloquent does not handle composite keys by default.
-     * However, this method may be overriden to do it.
-     */
-
-    protected function setKeysForSaveQuery(Builder $query)
-    {
-        return $query->where('person_id', $this->person_id)
-                    ->where('year', $this->year);
-    }
-
-    public function getIdAttribute() {
-        return "{$this->year}{$this->person_id}";
-    }
-
-    public function getKey() {
-        return $this->getIdAttribute();
-    }
-
-    /* Used by router to inject the model into the controller method */
-    public static function findById($id) {
-        $year = substr($id, 0, 4);
-        $person = substr($id, 4);
-
-        return self::where('person_id', $person)->where('year', $year)->first();
-    }
-
-
     public static function findForQuery($query)
     {
         $sql = self::orderBy('year', 'person_id');
@@ -86,6 +64,21 @@ class AccessDocumentDelivery extends ApiModel
         }
 
         return $sql->get();
+    }
+
+    public static function findForPersonYear($personId, $year)
+    {
+        return self::where('person_id', $personId)
+                ->where('year', $year)
+                ->first();
+    }
+
+    public static function findOrCreateForPersonYear($personId, $year)
+    {
+        return self::firstOrCreate([
+                    'person_id' => $personId,
+                    'year'      => $year,
+                ]);
     }
 
     public function save($options = [])

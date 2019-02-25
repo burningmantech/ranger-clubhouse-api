@@ -21,5 +21,6 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
         'password'      => $salt.":".sha1($salt."ineedashower!"),
         'user_authorized' => true,
         'create_date'   => Carbon::now()->format('Y-m-d H:i:s'),
+        'bpguid'        => $faker->uuid,
     ];
 });

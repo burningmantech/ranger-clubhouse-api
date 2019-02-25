@@ -54,10 +54,6 @@ Route::group([
 
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
-    Route::get('access-document/sowap', 'AccessDocumentController@retrieveSOWAP');
-    Route::patch('access-document/sowap', 'AccessDocumentController@storeSOWAP');
-    Route::get('access-document/ticketing-info', 'AccessDocumentController@ticketingInfo');
-
     Route::patch('access-document/{access_document}/status', 'AccessDocumentController@status');
     Route::resource('access-document', 'AccessDocumentController');
 
@@ -138,6 +134,11 @@ Route::group([
     Route::get('training/{id}/people-training-completed', 'TrainingController@peopleTrainingCompleted');
     Route::get('training/{id}/untrained-people', 'TrainingController@untrainedPeopleReport');
     Route::get('training/{id}', 'TrainingController@show');
+
+    Route::get('ticketing/info', 'TicketingController@ticketingInfo');
+    Route::get('ticketing/{person}/package', 'TicketingController@package');
+    Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
+    Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
     Route::post('timesheet/signin', 'TimesheetController@signin');
