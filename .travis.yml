@@ -28,8 +28,13 @@ jobs:
 
 
 before_install:
-  - sudo apt update -y
-  - sudo apt install --only-upgrade docker-ce -y
+  - echo "Adding to MySQL configuration:"
+  - printf "[server]\nbind-address = ::\n" | tee -a /etc/mysql/my.cnf
+  - echo "MySQL configuration:"
+  - cat /etc/mysql/my.cnf
+  - sudo service mysql restart
+  # - sudo apt update -y
+  # - sudo apt install --only-upgrade docker-ce -y
 
 
 install:

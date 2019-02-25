@@ -39,7 +39,6 @@ case "${travis_action}" in
 
         echo "Testing database host lookup:"
         docker run --rm "${image_name}" getent hosts "${RANGER_DB_HOST_NAME}";
-        docker run --rm "${image_name}" ping "${RANGER_DB_HOST_NAME}";
 
         # Set up test database
         echo "Creating database...";
