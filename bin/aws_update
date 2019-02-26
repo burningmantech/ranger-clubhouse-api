@@ -143,21 +143,22 @@ class ECSServiceClient(object):
             newTaskDefinition["containerDefinitions"][0]["image"] = imageName
 
         if environment is None:
-            environment = {}
+            environment = self.updateTaskEnvironment({})
 
         environment["TASK_UPDATED"] = str(DateTime.utcnow())
 
-        # If we're in Travis, capture some information about the build.
-        for key in (
-            "TRAVIS_COMMIT",
-            "TRAVIS_COMMIT_MESSAGE",
-            "TRAVIS_JOB_WEB_URL",
-            "TRAVIS_PULL_REQUEST_BRANCH",
-            "TRAVIS_TAG",
-        ):
-            value = environ.get(key, None)
-            if value is not None:
-                environment[key] = value
+        if environ.get("TRAVIS", "false") == "true":
+            # If we're in Travis, capture some information about the build.
+            for key in (
+                "TRAVIS_COMMIT",
+                "TRAVIS_COMMIT_MESSAGE",
+                "TRAVIS_JOB_WEB_URL",
+                "TRAVIS_PULL_REQUEST_BRANCH",
+                "TRAVIS_TAG",
+            ):
+                value = environ.get(key, None)
+                if value is not None:
+                    environment[key] = value
 
         # Edit the container environment to the new one.
         newTaskDefinition["containerDefinitions"][0]["environment"] = [
