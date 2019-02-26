@@ -3,6 +3,7 @@
 from copy import deepcopy
 from datetime import datetime as DateTime
 from json import JSONEncoder as BaseJSONEncoder, dumps
+from os import environ
 from typing import Any, Dict, Optional
 
 from boto3 import client as Boto3Client
@@ -146,6 +147,18 @@ class ECSServiceClient(object):
 
         environment["TASK_UPDATED"] = str(DateTime.utcnow())
 
+        # If we're in Travis, capture some information about the build.
+        for key in (
+            "TRAVIS_COMMIT",
+            "TRAVIS_COMMIT_MESSAGE",
+            "TRAVIS_JOB_WEB_URL",
+            "TRAVIS_PULL_REQUEST_BRANCH",
+            "TRAVIS_TAG",
+        ):
+            value = environ.get(key, None)
+            if value is not None:
+                environment[key] = value
+
         # Edit the container environment to the new one.
         newTaskDefinition["containerDefinitions"][0]["environment"] = [
             {"name": key, "value": value}
@@ -282,7 +295,6 @@ class ECSServiceClient(object):
 
 
 if __name__ == "__main__":
-    from os import environ
     from sys import argv, exit, stderr
 
     argv = argv[1:]
