@@ -30,6 +30,17 @@ class AccessDocumentDeliveryController extends ApiController
     }
 
     /**
+     * Show a single Access Document Delivery
+     */
+
+   public function show(AccessDocumentDelivery $add)
+   {
+       $this->authorize('show', $add);
+
+       return $this->success($add);
+   }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request

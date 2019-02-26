@@ -36,7 +36,7 @@ class AccessDocumentDeliveryPolicy
      * Determine whether the user can view the AccessDocumentDelivery.
      *
      */
-    public function view(Person $user, AccessDocumentDelivery $accessDocument)
+    public function show(Person $user, AccessDocumentDelivery $accessDocument)
     {
         return ($user->id == $accessDocument->person_id);
     }
