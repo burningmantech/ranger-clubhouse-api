@@ -23,6 +23,7 @@ jobs:
     - stage: Deploy
       script: ./bin/travis deploy
       if: branch = master
+      if: type = push
 
 
 install:
