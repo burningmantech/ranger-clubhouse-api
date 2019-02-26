@@ -36,7 +36,7 @@ case "${travis_action}" in
         ;;
 
     "deploy")
-        if [ "${TRAVIS_PULL_REQUEST}:-" != "false" ]; then
+        if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
             echo "No deploy from a pull request branch.";
             exit 0;
         fi;
