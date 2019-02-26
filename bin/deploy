@@ -13,7 +13,7 @@
 # * AWS_ECS_CLUSTER
 # * AWS_ECS_SERVICE
 
-if [ -n "${TRAVIS_PULL_REQUEST}:-" ]; then
+if [ "${TRAVIS_PULL_REQUEST}:-" != "false" ]; then
     echo "No deployments allowed from a pull request.";
     exit 1;
 fi;
