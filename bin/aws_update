@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime as DateTime
 from json import JSONEncoder as BaseJSONEncoder, dumps
 from os import environ
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from boto3 import client as Boto3Client
 
@@ -56,9 +56,9 @@ def jsonTextFromObject(obj: Any, pretty: bool = False) -> str:
     )
 
 
-TaskDefinition = Dict[str, Any]
-TaskEnvironment = Dict[str, str]
-TaskEnvironmentUpdates = Dict[str, Optional[str]]
+TaskDefinition = Mapping[str, Any]
+TaskEnvironment = Mapping[str, str]
+TaskEnvironmentUpdates = Mapping[str, Optional[str]]
 
 
 class NoChangesError(Exception):
@@ -127,7 +127,7 @@ class ECSServiceClient(object):
         assert len(currentTaskDefinition["containerDefinitions"]) == 1
 
         # Copy, then remove keys that may not be re-submitted.
-        currentTaskDefinition = currentTaskDefinition.copy()
+        currentTaskDefinition = dict(currentTaskDefinition)
         del currentTaskDefinition["revision"]
         del currentTaskDefinition["status"]
         del currentTaskDefinition["taskDefinitionArn"]
@@ -143,7 +143,10 @@ class ECSServiceClient(object):
             newTaskDefinition["containerDefinitions"][0]["image"] = imageName
 
         if environment is None:
-            environment = self.updateTaskEnvironment({})
+            # Start with current environment
+            environment = self.currentTaskEnvironment()
+
+        environment = dict(environment)
 
         environment["TASK_UPDATED"] = str(DateTime.utcnow())
 
@@ -171,9 +174,6 @@ class ECSServiceClient(object):
             print("No changes made to task definition. Nothing to deploy.")
             raise NoChangesError()
 
-        # print("New task definition:")
-        # print(jsonTextFromObject(newTaskDefinition, pretty=True))
-
         return newTaskDefinition
 
 
@@ -196,23 +196,14 @@ class ECSServiceClient(object):
 
         return {
             e["name"]: e["value"] for e in
-            self.currentTaskDefinition()
-            ["containerDefinitions"][0]["environment"]
+            currentTaskDefinition["containerDefinitions"][0]["environment"]
         }
 
 
     def updateTaskEnvironment(
         self, updates: TaskEnvironmentUpdates
     ) -> TaskEnvironment:
-        currentTaskDefinition = self.currentTaskDefinition()
-
-        # We don't handle tasks with multiple containers for now.
-        assert len(currentTaskDefinition["containerDefinitions"]) == 1
-
-        environment = {
-            e["name"]: e["value"] for e in
-            currentTaskDefinition["containerDefinitions"][0]["environment"]
-        }
+        environment = dict(self.currentTaskEnvironment())
 
         for key, value in updates.items():
             if value is None:
@@ -334,7 +325,7 @@ if __name__ == "__main__":
 
     elif action == "env" or action == "environment":
         if arguments:
-            updates: TaskEnvironmentUpdates = {}
+            updates: Dict[str, Optional[str]] = {}
             for argument in arguments:
                 if "=" in argument:
                     key, value = argument.split("=", 1)
