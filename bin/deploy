@@ -13,6 +13,10 @@
 # * AWS_ECS_CLUSTER
 # * AWS_ECS_SERVICE
 
+if [ -n "${TRAVIS_PULL_REQUEST_BRANCH}:-" ]; then
+    echo "No deployments allowed from a pull request branch.";
+    exit 1;
+fi;
 if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
     echo "No deployments allowed from non-master branches.";
     exit 1;

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Blade;
 use DB;
 use Event;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\ServiceProvider;
 use Log;
@@ -18,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // For MySQL older than 5.7.7 and MariaDB older than 10.2.2
+        // See https://laravel.com/docs/master/migrations#indexes
+        Schema::defaultStringLength(191);
+
         if (app()->isLocal()) {
             Event::listen('Illuminate\Database\Events\QueryExecuted', function ($query) {
                 $placeholder = preg_quote('?', '/');
