@@ -1,11 +1,9 @@
-sudo: required
 language: python
 python: 3.6
 
 
 services:
   - docker
-  - mysql
 
 
 branches:
@@ -25,12 +23,6 @@ jobs:
     - stage: Deploy
       script: ./bin/travis deploy
       if: branch = master
-
-
-before_install:
-  - echo "Altering MySQL configuration to bind to all interfaces:"
-  - printf "[server]\nbind-address = ::\n" | sudo tee -a /etc/mysql/my.cnf
-  - sudo service mysql restart
 
 
 install:
