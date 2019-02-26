@@ -36,6 +36,15 @@ case "${travis_action}" in
         ;;
 
     "deploy")
+        if [ -n "${TRAVIS_PULL_REQUEST_BRANCH}:-" ]; then
+            echo "No deploy from a pull request branch.";
+            exit 0;
+        fi;
+        if [ "${TRAVIS_BRANCH}" != "master" ]; then
+            echo "No deploy from non-master branch branch. Aborting.";
+            exit 1;
+        fi;
+
         # Use cached docker image or rebuild it
         if [ -f "${cached_image}" ]; then
             echo "Loading cached Docker image...";
