@@ -112,7 +112,22 @@ wait_for_db() {
 }
 
 
+db_sql() {
+    docker exec "${db_container_name}"                       \
+        mysql                                                \
+            --user="${db_user}" --password="${db_password}"  \
+            --database="${db_database}"                      \
+            "$@"                                             \
+            ;
+}
+
+
 db_init() {
+    if [ -n "${RANGER_TEST_DB_DUMP:-}" ]; then
+        echo "Importing test database dump...";
+        gunzip < "${RANGER_TEST_DB_DUMP}" | db_sql;
+    fi;
+
     echo "Applying database schema...";
     docker run                                            \
         --rm                                              \
