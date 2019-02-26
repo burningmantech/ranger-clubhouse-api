@@ -141,12 +141,16 @@ class ECSServiceClient(object):
             # Edit the container image to the new one.
             newTaskDefinition["containerDefinitions"][0]["image"] = imageName
 
-        if environment is not None:
-            # Edit the container environment to the new one.
-            newTaskDefinition["containerDefinitions"][0]["environment"] = [
-                {"name": key, "value": value}
-                for key, value in environment.items()
-            ]
+        if environment is None:
+            environment = {}
+
+        environment["TASK_UPDATED"] = str(DateTime.utcnow())
+
+        # Edit the container environment to the new one.
+        newTaskDefinition["containerDefinitions"][0]["environment"] = [
+            {"name": key, "value": value}
+            for key, value in environment.items()
+        ]
 
         # If no changes are being applied, there's nothing to do.
         if newTaskDefinition == currentTaskDefinition:
@@ -219,12 +223,13 @@ class ECSServiceClient(object):
 
 
     def deployNewTaskDefinition(self, taskDefinition: TaskDefinition):
-        self.updateService(self.registerTaskDefinition(taskDefinition))
+        arn = self.registerTaskDefinition(taskDefinition)
+        self.updateService(arn)
 
 
     def deployNewImage(self, imageName: str) -> None:
         try:
-            newTaskDefinition = self.updateTaskDefinition(imageName)
+            newTaskDefinition = self.updateTaskDefinition(imageName=imageName)
         except NoChangesError:
             return
 
@@ -237,10 +242,19 @@ class ECSServiceClient(object):
 
 
     def deployTaskEnvironment(self, updates: TaskEnvironmentUpdates) -> None:
+        if not updates:
+            return
+
+        newTaskEnvironment = self.updateTaskEnvironment(updates)
+
         try:
-            newTaskDefinition = self.updateTaskEnvironment(updates)
+            newTaskDefinition = self.updateTaskDefinition(
+                environment=newTaskEnvironment
+            )
         except NoChangesError:
             return
+
+        print(newTaskDefinition)
 
         self.deployNewTaskDefinition(newTaskDefinition)
 
