@@ -9,7 +9,6 @@ db_database="rangers";
     db_user="rangers";
 db_password="$(uuidgen)";
 
- host_db_port="$("${wd}/bin/find_port")";
 host_app_port="$("${wd}/bin/find_port")";
 
  db_container_name="";
@@ -77,7 +76,7 @@ http_get_error() {
 start_db_container() {
     trap cleanup_app_container EXIT;
 
-    db_container_name="ranger-clubhouse-db-test_${host_db_port}";
+    db_container_name="ranger-clubhouse-db-test_${$}";
 
     echo "Starting database container: ${db_container_name}...";
 
@@ -89,7 +88,6 @@ start_db_container() {
         --env="MYSQL_USER=${db_user}"           \
         --env="MYSQL_PASSWORD=${db_password}"   \
         --env="MYSQL_ROOT_HOST=%"               \
-        --publish="${host_db_port}:80"          \
         "${db_image_name}"                      \
         > /dev/null;
 }
@@ -123,7 +121,6 @@ db_init() {
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
-        --publish="${host_app_port}:80"                   \
         "${app_image_name}"                               \
         php artisan migrate:fresh --seed --force;
 }
@@ -143,7 +140,7 @@ cleanup_db_container() {
 ##
 
 start_app_container() {
-    app_container_name="ranger-clubhouse-api-test_${host_app_port}";
+    app_container_name="ranger-clubhouse-api-test_${$}";
 
     trap cleanup_app_container EXIT;
 
