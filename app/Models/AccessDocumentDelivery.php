@@ -51,6 +51,16 @@ class AccessDocumentDelivery extends ApiModel
         'country'     => 'required'
     ];
 
+    public static function findForRoute($id) {
+        list ($personId, $year) = explode(':', $id);
+
+        return self::where('person_id', $personId)->where('year', $year)->first();
+    }
+
+    public function getIdAttribute() {
+        return $this->person_id . ":" . $this->year;
+    }
+
     public static function findForQuery($query)
     {
         $sql = self::orderBy('year', 'person_id');

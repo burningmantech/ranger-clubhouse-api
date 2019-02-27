@@ -29,7 +29,7 @@ class RouteServiceProvider extends ServiceProvider
         parent::boot();
 
         Route::bind('access-document-delivery', function($id) {
-            return AccessDocumentDelivery::findById($id) ?? abort(404);
+            return AccessDocumentDelivery::findForRoute($id) ?? abort(404);
         });
     }
 
