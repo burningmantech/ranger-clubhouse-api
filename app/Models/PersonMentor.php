@@ -13,9 +13,19 @@ class PersonMentor extends ApiModel
         'person_id',
         'mentor_id',
         'mentor_year',
-        'mentor_status',
+        'status',
         'notes'
     ];
+
+    public function mentor()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
 
     public static function haveMentees($personId)
     {
@@ -33,7 +43,8 @@ class PersonMentor extends ApiModel
             return [];
         }
 
-        $rows = DB::select('SELECT
+        $rows = DB::select(
+            'SELECT
             person_mentor.person_id,
             person.callsign,
             person.status,
@@ -59,7 +70,8 @@ class PersonMentor extends ApiModel
                 'person_id' => $personId,
                 'alert_id'  => Alert::MENTOR_CONTACT,
                 'type'      => 'mentee-contact',
-            ]);
+            ]
+        );
 
         $years = [];
         foreach ($rows as $row) {
@@ -136,13 +148,71 @@ class PersonMentor extends ApiModel
      * Find the mentors for a person
      */
 
-     public static function findMentorsForPerson($personId)
-     {
-         return PersonMentor::select('person_mentor.status', 'mentor_year as year', 'mentor_id as person_id', 'mentor.callsign as callsign')
-                    ->leftJoin('person as mentor', 'mentor.id', '=', 'person_mentor.mentor_id')
-                    ->where('person_id', '=', $personId)
-                    ->orderBy('mentor_year')
-                    ->orderBy('mentor.callsign')
-                    ->get();
-     }
+    public static function findMentorsForPerson($personId)
+    {
+        $mentors =  PersonMentor::with([ 'mentor:id,callsign' ])
+                   ->where('person_id', $personId)
+                   ->orderBy('mentor_year')
+                   ->get();
+
+        return $mentors->map(function($row) {
+            return [
+                'status'    => $row->status,
+                'year'      => $row->mentor_year,
+                'person_id' => $row->mentor_id,
+                'callsign'  => $row->mentor->callsign,
+            ];
+        })->sortBy('callsign')->values();
+    }
+
+     /*
+      * Find all mentees for year
+      */
+
+    public static function findMenteesForYear($year)
+    {
+        $personGroups = PersonMentor::where('mentor_year', $year)
+                ->with([ 'person:id,callsign,first_name,last_name,status', 'mentor:id,callsign' ])
+                ->get()
+                ->groupBy('person_id');
+
+        $people = [];
+        foreach ($personGroups as $personId => $group) {
+            $first = $group[0];
+            $mentors = $group->map(function ($row) {
+                return [
+                    'id'       => $row->mentor->id,
+                    'callsign' => $row->mentor->callsign,
+                ];
+            })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+
+            $people[] = [
+                'id'            => $first->person_id,
+                'callsign'      => $first->person->callsign,
+                'first_name'    => $first->person->first_name,
+                'last_name'     => $first->person->last_name,
+                'status'        => $first->person->status,
+                'mentor_status' => $first->status,
+                'mentors'       => $mentors
+            ];
+        }
+
+        usort($people, function ($a, $b) {
+            return strcasecmp($a['callsign'], $b['callsign']);
+        });
+
+        return $people;
+    }
+
+    /*
+     * TODO FIX the naming. ARGH!
+     */
+
+    public function getStatusAttribute() {
+        return @$this->attributes['STATUS'];
+    }
+
+    public function setStatusAttribute($status) {
+        $this->attributes['STATUS'] = $status;
+    }
 }
