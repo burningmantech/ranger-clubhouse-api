@@ -26,6 +26,7 @@ RUN install -d -o www-data -g www-data -m 775 \
     ./storage/framework/cache    \
     ./storage/framework/sessions \
     ./storage/framework/views    \
+    ./storage/logs               \
     ;
 
 # Run composer in app directory to get dependencies
@@ -50,6 +51,9 @@ COPY --from=composer /var/www/application /var/www/application
 
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
+
+# somewhere the permissions get reset.
+RUN chown -R www-data:www-data /var/www/application/storage;
 
 # Set working directory to application directory
 WORKDIR /var/www/application
