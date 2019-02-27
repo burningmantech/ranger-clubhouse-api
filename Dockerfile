@@ -52,8 +52,5 @@ COPY --from=composer /var/www/application /var/www/application
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 
-# somewhere the permissions get reset.
-RUN chown -R www-data:www-data /var/www/application/storage;
-
 # Set working directory to application directory
 WORKDIR /var/www/application
