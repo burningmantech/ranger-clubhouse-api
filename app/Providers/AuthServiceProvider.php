@@ -16,6 +16,7 @@ use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\Position;
 use App\Models\PositionCredit;
@@ -37,6 +38,7 @@ use App\Policies\AssetAttachmentPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\ManualReviewPolicy;
+use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PositionPolicy;
@@ -68,6 +70,7 @@ class AuthServiceProvider extends ServiceProvider
         ErrorLog::class => ErrorLogPolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
         Person::class => PersonPolicy::class,
+        PersonMentor::class => PersonMentorPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
         Position::class => PositionPolicy::class,
         PositionCredit::class => PositionCreditPolicy::class,
