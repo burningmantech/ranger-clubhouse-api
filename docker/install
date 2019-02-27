@@ -22,3 +22,6 @@ docker-php-ext-install             \
 # Clean up requirements for building PHP extensions
 apk del libxml2-dev
 apk add --no-cache libxml2;
+
+# Fix permissions
+chown -R www-data:www-data /var/www/application/storage;

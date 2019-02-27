@@ -38,6 +38,9 @@ RUN composer install --optimize-autoloader --no-dev;
 #
 FROM burningman/php-nginx:7.2-alpine3.8
 
+# Copy the application with dependencies from the composer container
+COPY --from=composer /var/www/application /var/www/application
+
 # Copy the install script, run it, delete it
 COPY ./docker/install /docker_install/install
 RUN /docker_install/install && rm -rf /docker_install;
@@ -46,14 +49,8 @@ RUN /docker_install/install && rm -rf /docker_install;
 COPY ./docker/start-nginx /usr/bin/start-nginx
 COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 
-# Copy the application with dependencies from the composer container
-COPY --from=composer /var/www/application /var/www/application
-
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
-
-# somewhere the permissions get reset.
-RUN chown -R www-data:www-data /var/www/application/storage;
 
 # Set working directory to application directory
 WORKDIR /var/www/application
