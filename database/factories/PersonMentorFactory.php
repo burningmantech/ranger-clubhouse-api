@@ -5,6 +5,7 @@ use App\Models\PersonMentor;
 
 $factory->define(PersonMentor::class, function (Faker $faker) {
     return [
-        'status' => 'pending',
+        // TODO FIX THE CASE ON THIS DAMN COLUMN!!!
+        'STATUS' => 'pending',
     ];
 });
