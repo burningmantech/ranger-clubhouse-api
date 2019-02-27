@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Start the app in a Docker container and test it
+# Start the API application in a Docker container and test it
 #
 
 . "$(dirname "$0")/.common.sh";
@@ -9,13 +9,13 @@ db_database="rangers";
     db_user="rangers";
 db_password="$(uuidgen)";
 
-host_app_port="$("${wd}/bin/find_port")";
+host_api_port="$("${wd}/bin/find_port")";
 
  db_container_name="";
-app_container_name="";
+api_container_name="";
 
  db_image_name="mysql/mysql-server:5.6";
-app_image_name="${image_name}";
+api_image_name="${image_name}";
 
 
 ##
@@ -42,13 +42,14 @@ http_body() {
 
 
 http_get() {
+    local port="$1"; shift;
     local path="$1"; shift;
 
     local e;
 
-    curl                                            \
-        --include --fail --silent --show-error      \
-        "http://localhost:${host_app_port}${path}"  \
+    curl                                        \
+        --include --fail --silent --show-error  \
+        "http://localhost:${port}${path}"       \
         && e=0 || e=$?;
 
     return ${e};
@@ -56,13 +57,14 @@ http_get() {
 
 
 http_get_error() {
+    local port="$1"; shift;
     local path="$1"; shift;
 
     local e;
 
-    curl                                            \
-        --include --silent --show-error             \
-        "http://localhost:${host_app_port}${path}"  \
+    curl                                   \
+        --include --silent --show-error    \
+        "http://localhost:${port}${path}"  \
         && e=0 || e=$?;
 
     return ${e};
@@ -74,7 +76,7 @@ http_get_error() {
 ##
 
 start_db_container() {
-    trap cleanup_app_container EXIT;
+    trap cleanup_db_container EXIT;
 
     db_container_name="ranger-clubhouse-db-test_${$}";
 
@@ -101,13 +103,14 @@ wait_for_db() {
     }
 
     while true; do
-        echo "Waiting on database to start...";
+        printf "Waiting on database to start... ";
 
         if [ -n "$(started)" ]; then
             echo "Database started.";
             break;
         fi;
         sleep 1;
+        echo "";
     done;
 }
 
@@ -136,7 +139,7 @@ db_init() {
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
-        "${app_image_name}"                               \
+        "${api_image_name}"                               \
         php artisan migrate:fresh --seed --force;
 }
 
@@ -151,31 +154,31 @@ cleanup_db_container() {
 
 
 ##
-# App Container
+# API Container
 ##
 
-start_app_container() {
-    app_container_name="ranger-clubhouse-api-test_${$}";
+start_api_container() {
+    api_container_name="ranger-clubhouse-api-test_${$}";
 
-    trap cleanup_app_container EXIT;
+    trap cleanup_api_container EXIT;
 
-    echo "Starting application container: ${app_container_name}...";
+    echo "Starting API application container: ${api_container_name}...";
 
     docker run                                            \
         --rm --detach                                     \
-        --name="${app_container_name}"                    \
+        --name="${api_container_name}"                    \
         --env="RANGER_DB_HOST_NAME=${db_container_name}"  \
         --env="RANGER_DB_DATABASE_NAME=${db_database}"    \
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
-        --publish="${host_app_port}:80"                   \
-        "${app_image_name}"                               \
+        --publish="${host_api_port}:80"                   \
+        "${api_image_name}"                               \
         > /dev/null;
 }
 
 
-wait_for_app() {
+wait_for_api() {
     local response="$(mktemp)";
     local    error="$(mktemp)";
 
@@ -188,34 +191,35 @@ wait_for_app() {
         if [ ${count} -gt ${timeout} ]; then
             echo "ERROR: Timed out";
             echo "Logs:";
-            docker logs "${app_container_name}";
+            docker logs "${api_container_name}";
             return 1;
         fi;
     }
 
     while true; do
-        echo "Waiting on application to start...";
+        printf "Waiting on API application to start... ";
 
-        http_get / > "${response}" 2> "${error}" && e=0 || e=$?;
+        http_get "${host_api_port}" / > "${response}" 2> "${error}" \
+            && e=0 || e=$?;
 
         count=$((${count} + 1));
 
         check_timeout || return 1;
 
         if [ ${e} -eq 7 ]; then
-            printf "Connection refused from server. ";
+            echo "Connection refused from server. ";
             sleep 1;
             continue;
         fi;
 
         if [ ${e} -eq 52 ]; then
-            printf "Empty reply from server. ";
+            echo "Empty reply from server. ";
             sleep 1;
             continue;
         fi;
 
         if [ ${e} -eq 56 ]; then
-            printf "Connection to server reset. ";
+            echo "Connection to server reset. ";
             sleep 1;
             continue;
         fi;
@@ -227,7 +231,7 @@ wait_for_app() {
             return 1;
         fi;
 
-        echo "Application is responding.";
+        echo "API application is responding.";
         break;
     done;
 
@@ -235,11 +239,11 @@ wait_for_app() {
 }
 
 
-cleanup_app_container() {
-    if [ -n "${app_container_name}" ]; then
-        echo "Terminating application container: ${app_container_name}...";
+cleanup_api_container() {
+    if [ -n "${api_container_name}" ]; then
+        echo "Terminating API application container: ${api_container_name}...";
 
-        docker kill "${app_container_name}" > /dev/null;
+        docker kill "${api_container_name}" > /dev/null;
     fi;
 
     cleanup_db_container;
@@ -275,7 +279,7 @@ test_root_resource() {
 
     local e;
 
-    http_get / > "${response}" 2> "${error}" && e=0 || e=$?;
+    http_get "${host_api_port}" / > "${response}" 2> "${error}" && e=0 || e=$?;
 
     if [ ${e} -eq 22 ]; then
         fail "Root resource not found.  Expected redirect.";
@@ -299,7 +303,7 @@ test_root_resource() {
 
     local body="$(http_body < "${response}")";
 
-    if [ "${body}" != "Ranger Clubhouse API Server" ]; then
+    if [ "${body}" != "Ranger Clubhouse API Service" ]; then
         fail "Unexpected body for root resource.";
         echo "Response:"; cat "${response}";
         return 1;
@@ -316,7 +320,8 @@ test_config() {
     local     body="$(mktemp)";
     local    error="$(mktemp)";
 
-    if ! http_get /api/config > "${response}" 2> "${error}"; then
+    if ! http_get "${host_api_port}" /api/config > "${response}" 2> "${error}";
+    then
         fail "Error HTTP status from server.";
         echo "Error from curl:"; cat "${error}";
         echo "Response:"; cat "${response}";
@@ -351,9 +356,9 @@ echo "Testing service...";
 start_db_container  || exit 10;
 wait_for_db         || exit 11;
 db_init             || exit 12;
-start_app_container || exit 20;
-wait_for_app        || exit 21;
+start_api_container || exit 20;
+wait_for_api        || exit 21;
 test_root_resource  || exit 100;
 test_config         || exit 101;
 
-echo "Tests passed."
+echo "Tests passed.";
