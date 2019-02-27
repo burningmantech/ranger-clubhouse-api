@@ -13,7 +13,7 @@ class PersonMentor extends ApiModel
         'person_id',
         'mentor_id',
         'mentor_year',
-        'mentor_status',
+        'status',
         'notes'
     ];
 
@@ -150,12 +150,19 @@ class PersonMentor extends ApiModel
 
     public static function findMentorsForPerson($personId)
     {
-        return PersonMentor::select('person_mentor.status', 'mentor_year as year', 'mentor_id as person_id', 'mentor.callsign as callsign')
-                   ->leftJoin('person as mentor', 'mentor.id', '=', 'person_mentor.mentor_id')
-                   ->where('person_id', '=', $personId)
+        $mentors =  PersonMentor::with([ 'mentor:id,callsign' ])
+                   ->where('person_id', $personId)
                    ->orderBy('mentor_year')
-                   ->orderBy('mentor.callsign')
                    ->get();
+
+        return $mentors->map(function($row) {
+            return [
+                'status'    => $row->status,
+                'year'      => $row->mentor_year,
+                'person_id' => $row->mentor_id,
+                'callsign'  => $row->mentor->callsign,
+            ];
+        })->sortBy('callsign')->values();
     }
 
      /*
@@ -202,7 +209,7 @@ class PersonMentor extends ApiModel
      */
 
     public function getStatusAttribute() {
-        return $this->attributes['STATUS'];
+        return @$this->attributes['STATUS'];
     }
 
     public function setStatusAttribute($status) {
