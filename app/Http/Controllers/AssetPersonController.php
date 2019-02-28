@@ -143,4 +143,23 @@ class AssetPersonController extends ApiController
 
          return $this->success();
      }
+
+     /*
+      * Report on checked out radios and/or event summary
+      *
+      */
+
+     public function radioCheckoutReport()
+     {
+         $this->authorize('radioCheckoutReport', AssetPerson::class);
+
+         $params = request()->validate([
+             'include_qualified' => 'sometimes|boolean',
+             'event_summary'     => 'sometimes|boolean',
+             'hour_limit'        => 'sometimes|integer',
+             'year'              => 'sometimes|integer',
+         ]);
+
+         return response()->json([ 'radios' => AssetPerson::findRadiosCheckedOutForQuery($params)]);
+     }
 }

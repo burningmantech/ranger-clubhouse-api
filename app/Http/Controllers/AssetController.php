@@ -19,11 +19,12 @@ class AssetController extends ApiController
         $this->authorize('view', [Asset::class]);
 
         $query = request()->validate([
-            'barcode'         => 'sometimes|string',
-            'include_history' => 'sometimes|boolean',
-            'year'            => 'sometimes|integer',
-            'limit'           => 'sometimes|integer',
-            'offset'          => 'sometimes|integer',
+            'barcode'         => 'sometimes|string',    // specific barcode to find
+            'include_history' => 'sometimes|boolean',   // include checkout history
+            'checked_out'     => 'sometimes|boolean',   // find only outstanding assets
+            'type'            => 'sometimes|string',    // find for a type (aka description)
+            'exclude'         => 'sometimes|string',    // exclude a type (aka description)
+            'year'            => 'sometimes|integer',   // year to go searching in
         ]);
 
         $assets = Asset::findForQuery($query);
@@ -82,4 +83,5 @@ class AssetController extends ApiController
         $this->log('asset-delete', 'Asset Deleted', [ 'id' => $asset->id]);
         return $this->restDeleteSuccess();
     }
+
 }
