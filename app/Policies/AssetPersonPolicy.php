@@ -70,4 +70,12 @@ class AssetPersonPolicy
           return false;
       }
 
+      /**
+       * Can the user run the radio checkout report?
+       */
+
+       public function radioCheckoutReport(Person $user, AssetPerson $asset_person) {
+           return false;
+       }
+
 }
