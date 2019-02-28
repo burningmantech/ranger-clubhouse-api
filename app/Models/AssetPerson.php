@@ -8,6 +8,8 @@ use App\Models\Person;
 use App\Models\AssetAttachment;
 use App\Models\Asset;
 
+use DB;
+
 class AssetPerson extends ApiModel
 {
     protected $table = 'asset_person';
@@ -86,4 +88,55 @@ class AssetPerson extends ApiModel
                 ->whereNull('checked_in')
                 ->first();
      }
+
+     /**
+      * Find all raidios that were checked out with duration.
+      *
+      * query types are:
+      * year: the year to find radios, defaults to current year if not present
+      * include_qualified: include people who qualified for event radios, otherwise find only shift qualified individuals
+      * event_summary: report on all radios still checked out or was checked out over the hour limit.
+      * hour_limit: rpeort on radios checked out for more than X hours. defaults to 14
+      */
+
+     public static function findRadiosCheckedOutForQuery($query) {
+         $year = $query['year'] ?? date('Y');
+         $sql = self::select(
+                     'asset_person.person_id',
+                     'person.callsign',
+                     'asset_person.checked_out',
+                     'asset_person.checked_in',
+                     'asset.barcode',
+                     'asset.perm_assign',
+                     DB::raw('(UNIX_TIMESTAMP(IFNULL(asset_person.checked_in, NOW())) - UNIX_TIMESTAMP(asset_person.checked_out)) AS duration'),
+                     DB::raw('IF(radio_eligible.max_radios > 0, true,false) AS eligible')
+                 )
+                 ->join('person', 'person.id', 'asset_person.person_id')
+                 ->join('asset', 'asset.id', 'asset_person.asset_id')
+                 ->whereYear('checked_out', $year)
+                 ->where('description', 'radio');
+
+         $sql->leftJoin('radio_eligible', function ($query) use ($year) {
+                 $query->whereRaw('radio_eligible.person_id=asset_person.person_id');
+                 $query->where('year', $year);
+         });
+
+         $seconds = ($query['hour_limit'] ?? 14) * 3600;
+
+         if (isset($query['event_summary'])) {
+             $sql->where(function($q) use ($seconds) {
+                 $q->whereNull('checked_in');
+                 $q->orWhereRaw("(UNIX_TIMESTAMP(asset_person.checked_in) - UNIX_TIMESTAMP(asset_person.checked_out)) > $seconds");
+             });
+         } else {
+             $sql->whereRaw("(UNIX_TIMESTAMP() - UNIX_TIMESTAMP(asset_person.checked_out)) > $seconds")->whereNull('checked_in');
+         }
+
+         if (empty($query['include_qualified'])) {
+             $sql->whereNull('radio_eligible.max_radios');
+         }
+
+         return $sql->orderBy('person.callsign')->orderBy('asset_person.checked_out')->get();
+     }
+
 }

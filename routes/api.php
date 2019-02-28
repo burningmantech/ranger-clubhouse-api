@@ -63,6 +63,7 @@ Route::group([
     Route::resource('asset', 'AssetController');
     Route::resource('asset-attachment', 'AssetAttachmentController');
 
+    Route::get('asset-person/radio-checkout-report', 'AssetPersonController@radioCheckoutReport');
     Route::post('asset-person/checkout', 'AssetPersonController@checkout');
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
