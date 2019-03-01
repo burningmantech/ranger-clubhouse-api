@@ -1,7 +1,7 @@
 #
 # This stage runs composer to build the PHP package dependencies
 #
-FROM composer:1.7.3 as composer
+FROM composer:1.8.4 as composer
 
 # Copy the application over
 WORKDIR /var/www/application
@@ -51,6 +51,9 @@ COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
+
+# PHP tuning
+COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
 
 # Set working directory to application directory
 WORKDIR /var/www/application
