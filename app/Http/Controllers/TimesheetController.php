@@ -312,8 +312,8 @@ class TimesheetController extends ApiController
 
          return response()->json([
              'info' => [
-                 'correction_year'     => config('clubhouse.TimesheetCorrectionYear'),
-                 'correction_enabled'  => config('clubhouse.TimesheetCorrectionEnable'),
+                 'correction_year'     => setting('TimesheetCorrectionYear'),
+                 'correction_enabled'  => setting('TimesheetCorrectionEnable'),
                  'timesheet_confirmed' => (int) $person->timesheet_confirmed,
                  'timesheet_confirmed_at' => ($person->timesheet_confirmed ? (string) $person->timesheet_confirmed_at : null),
              ]

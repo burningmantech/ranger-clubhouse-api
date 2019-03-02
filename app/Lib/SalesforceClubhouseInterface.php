@@ -136,16 +136,16 @@ class SalesforceClubhouseInterface
         if ($where == "production") {
             $d = "prd";
         }
-        if (config("clubhouse.SF".$d."Password") == "") {
+        if (setting("SF".$d."Password") == "") {
             $this->sf->errorMessage = "sfch->auth: no password for $d";
             return false;
         }
 
-        $this->sf->setClientID(config("clubhouse.SF".$d."ClientId"));
-        $this->sf->setClientSecret(config("clubhouse.SF".$d."ClientSecret"));
-        $this->sf->setUsername(config("clubhouse.SF".$d."Username"));
-        $this->sf->setPassword(config("clubhouse.SF".$d."Password"));
-        $this->sf->setAuthURL(config("clubhouse.SF".$d."AuthUrl"));
+        $this->sf->setClientID(setting("SF".$d."ClientId"));
+        $this->sf->setClientSecret(setting("SF".$d."ClientSecret"));
+        $this->sf->setUsername(setting("SF".$d."Username"));
+        $this->sf->setPassword(setting("SF".$d."Password"));
+        $this->sf->setAuthURL(setting("SF".$d."AuthUrl"));
         return $this->sf->auth();
     }
 
@@ -255,7 +255,7 @@ class SalesforceClubhouseInterface
 	 */
     private function updateSalesforceField($id, $field, $value)
     {
-        if (config("clubhouse.SFEnableWritebacks")) {
+        if (setting('SFEnableWritebacks')) {
             $js = json_encode([ $field => $value ]);
             $this->sf->objUpdate("Ranger__c", $id, $js);
             if ($this->debug) {

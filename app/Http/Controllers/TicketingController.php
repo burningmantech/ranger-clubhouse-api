@@ -27,37 +27,37 @@ class TicketingController extends ApiController
     {
         return response()->json([
             'ticketing_info' => [
-                'period'                 => config('clubhouse.TicketingPeriod'),
-                'is_enabled_for_pnv'     => config('clubhouse.TicketsAndStuffEnablePNV'),
+                'period'                 => setting('TicketingPeriod'),
+                'is_enabled_for_pnv'     => setting('TicketsAndStuffEnablePNV'),
 
-                'ticket_status'          => config('clubhouse.TAS_Tickets'),
-                'vp_status'              => config('clubhouse.TAS_VP'),
-                'wap_status'             => config('clubhouse.TAS_WAP'),
-                'wap_so_status'          => config('clubhouse.TAS_WAPSO'),
-                'delivery_status'        => config('clubhouse.TAS_Delivery'),
-                'wap_so_max'             => config('clubhouse.TAS_WAPSOMax'),
-                'box_office_open_date'   => config('clubhouse.TAS_BoxOfficeOpenDate'),
-                'wap_default_date'       => config('clubhouse.TAS_DefaultWAPDate'),
-                'wap_date_range'         => config('clubhouse.TAS_WAPDateRange'),
-                'wap_alpha_default_date' => config('clubhouse.TAS_DefaultAlphaWAPDate'),
-                'wap_so_default_date'    => config('clubhouse.TAS_DefaultSOWAPDate'),
+                'ticket_status'          => setting('TAS_Tickets'),
+                'vp_status'              => setting('TAS_VP'),
+                'wap_status'             => setting('TAS_WAP'),
+                'wap_so_status'          => setting('TAS_WAPSO'),
+                'delivery_status'        => setting('TAS_Delivery'),
+                'wap_so_max'             => setting('TAS_WAPSOMax'),
+                'box_office_open_date'   => setting('TAS_BoxOfficeOpenDate'),
+                'wap_default_date'       => setting('TAS_DefaultWAPDate'),
+                'wap_date_range'         => setting('TAS_WAPDateRange'),
+                'wap_alpha_default_date' => setting('TAS_DefaultAlphaWAPDate'),
+                'wap_so_default_date'    => setting('TAS_DefaultSOWAPDate'),
 
-                'submit_date'            => config('clubhouse.TAS_SubmitDate'),
+                'submit_date'            => setting('TAS_SubmitDate'),
 
-                'ticket_vendor_email'    => config('clubhouse.TicketVendorEmail'),
-                'ticket_vendor_name'     => config('clubhouse.TicketVendorName'),
-                'ranger_ticketing_email' => config('clubhouse.TAS_Email'),
+                'ticket_vendor_email'    => setting('TicketVendorEmail'),
+                'ticket_vendor_name'     => setting('TicketVendorName'),
+                'ranger_ticketing_email' => setting('TAS_Email'),
 
-                'rpt_credits'            => config('clubhouse.RpTicketThreshold'),
-                'sc_credits'             => config('clubhouse.ScTicketThreshold'),
-                'earned_year'            => config('clubhouse.YrTicketThreshold') - 1,
-                'upcoming_year'          => config('clubhouse.YrTicketThreshold'),
+                'rpt_credits'            => setting('RpTicketThreshold'),
+                'sc_credits'             => setting('ScTicketThreshold'),
+                'earned_year'            => setting('YrTicketThreshold') - 1,
+                'upcoming_year'          => setting('YrTicketThreshold'),
 
                 'faqs'                   => [
-                    'ticketing'          => config('clubhouse.TAS_Ticket_FAQ'),
-                    'wap'                => config('clubhouse.TAS_WAP_FAQ'),
-                    'vp'                 => config('clubhouse.TAS_VP_FAQ'),
-                    'alpha'              => config('clubhouse.TAS_Alpha_FAQ'),
+                    'ticketing'          => setting('TAS_Ticket_FAQ'),
+                    'wap'                => setting('TAS_WAP_FAQ'),
+                    'vp'                 => setting('TAS_VP_FAQ'),
+                    'alpha'              => setting('TAS_Alpha_FAQ'),
                 ]
             ]
         ]);
@@ -69,7 +69,7 @@ class TicketingController extends ApiController
 
     public function package(Person $person)
     {
-        $period  = config('clubhouse.TicketingPeriod');
+        $period  = setting('TicketingPeriod');
 
         $this->authorize('index', [ AccessDocument::class, $person->id ]);
 
@@ -135,7 +135,7 @@ class TicketingController extends ApiController
             return $this->buildSOWAPEntry($so);
         })->values()->all();
 
-        $year = config('clubhouse.YrTicketThreshold') - 1;
+        $year = setting('YrTicketThreshold') - 1;
         $credits = Timesheet::earnedCreditsForYear($person->id, $year);
 
         $package = [
@@ -182,7 +182,7 @@ class TicketingController extends ApiController
            'names.*.name' => 'sometimes|nullable',
         ]);
 
-        $maxSO = config('clubhouse.TAS_WAPSOMax');
+        $maxSO = setting('TAS_WAPSOMax');
 
         $documents = [];
         $year = date('Y');

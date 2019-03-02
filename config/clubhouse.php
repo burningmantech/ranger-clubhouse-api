@@ -1,8 +1,15 @@
 <?php
 
-// NOTE: Entries in .env (if any) will overwrite settings here.
-// .env is to be customized on each machine, and should not be
-// checked in to the source repository.
+/*
+ * NOTE:
+ *
+ * Do not call config() for the variables listed here. Use setting() instead. 
+ *
+ * This file may go away. The configuration variables listed here are stored within
+ * the database.
+ *
+ * (e.g., config('clubhouse.blah') -> setting('blah'), notice the lack of 'clubhouse' for setting())
+ */
 
 return [
     'VCSRevision' => 'DEVELOPMENT',
@@ -14,11 +21,11 @@ return [
     'OnPlaya'  => env('RANGER_CLUBHOUSE_ON_PLAYA', false),
     'ReadOnly' => env('RANGER_CLUBHOUSE_READ_ONLY', false),
 
-    'SiteNotice'           => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
-    'SiteTitle'            => 'Black Rock Rangers Secret Clubhouse',
+    'SiteNotice' => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
+    'SiteTitle'  => 'Black Rock Rangers Secret Clubhouse',
 
+    // Not used by C2
     'DualClubhouse'       => env('RANGER_CLUBHOUSE_DUAL_CLUBHOUSE', false),
-    'ClassicClubhouseUrl' => env('RANGER_CLUBHOUSE_CLASSIC_URL', ''),
 
     // Where should the photo come from? 'Lambase', 'local' or 'test'
 
@@ -58,6 +65,7 @@ return [
     'ManualReviewLinkEnable'            => env('RANGER_CLUBHOUSE_REVIEW_ENABLE', false),
 
     // If true, allow shift signups even if manual review is disabled
+    'AllowSignupsWithoutPhoto'  => env('RANGER_CLUBHOUSE_ALLOW_SIGNUPS_WITHOUT_PHOTO', false),
     'ManualReviewDisabledAllowSignups'  => env('RANGER_CLUBHOUSE_REVIEW_ALLOW_SIGNUPS', true),
     'ManualReviewProspectiveAlphaLimit' => env('RANGER_CLUBHOUSE_REVIEW_MAX_ALPHAS', 177),
     'ManualReviewGoogleFormBaseUrl'     => env('RANGER_CLUBHOUSE_REVIEW_FORM_URL', 'https://docs.google.com/forms/d/e/1FAIpQLScNcr1xZ9YHULag7rdS5-LUU_e1G1XS5kfDI85T10RVTAeZXA/viewform?entry.960989731='),

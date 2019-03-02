@@ -28,7 +28,7 @@ class ManualReviewGoogle
      */
     function getGoogleClient()
     {
-        $authConfig = config('clubhouse.ManualReviewAuthConfig');
+        $authConfig = setting('ManualReviewAuthConfig');
 
         if (empty($authConfig)) {
             throw new \Exception("ManualReviewAuthConfig is not set.");
@@ -63,7 +63,7 @@ class ManualReviewGoogle
 
     function getResults()
     {
-        $spreadsheetId = config('clubhouse.ManualReviewGoogleSheetId');
+        $spreadsheetId = setting('ManualReviewGoogleSheetId');
         $range = 'Form Responses 1!A1:B';
         $values = $this->getRange($spreadsheetId, $range);
         return $values;

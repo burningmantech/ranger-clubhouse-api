@@ -170,7 +170,7 @@ class PersonController extends ApiController
             if ($emailChanged
             && $person->status == Person::PROSPECTIVE
             && $person->id == $this->user->id) {
-                Mail::to(config('clubhouse.VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
+                Mail::to(setting('VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
             }
 
             if ($statusChanged) {
@@ -300,9 +300,9 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
-        $source = config('clubhouse.PhotoSource');
+        $source = setting('PhotoSource');
         if ($source == 'Lambase') {
-            $storeLocal = config('clubhouse.PhotoStoreLocally') == true;
+            $storeLocal = setting('PhotoStoreLocally') == true;
 
             $lambase = new LambasePhoto($person);
             $status = $lambase->getStatus();
@@ -342,7 +342,7 @@ class PersonController extends ApiController
                 $imageUrl = $lambase->getImageUrl($status['image']);
             }
 
-            if (config('clubhouse.PhotoUploadEnable')) {
+            if (setting('PhotoUploadEnable')) {
                 $uploadUrl = $lambase->getUploadUrl();
             } else {
                 $uploadUrl = null;
@@ -630,7 +630,7 @@ class PersonController extends ApiController
             'person.status'     => 'required|string',
         ]);
 
-        $accountCreateEmail = config('clubhouse.AccountCreationEmail');
+        $accountCreateEmail = setting('AccountCreationEmail');
 
         $intent = $params['intent'];
 
@@ -674,7 +674,7 @@ class PersonController extends ApiController
         PersonPosition::resetPositions($person->id, 'account registration', Person::ADD_NEW_USER);
 
         // Send a welcome email to the person if not an auditor
-        if ($person->status != 'auditor' && config('clubhouse.SendWelcomeEmail')) {
+        if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
             Mail::to($person->email)->send(new WelcomeMail($person));
         }
 

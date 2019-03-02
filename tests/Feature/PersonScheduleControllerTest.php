@@ -36,7 +36,8 @@ class PersonScheduleControllerTest extends TestCase
     {
         parent::setUp();
 
-        config([ 'clubhouse.ManualReviewDisabledAllowSignups' => false ]);
+        $this->setting('ManualReviewDisabledAllowSignups', false);
+
         $this->signInUser();
 
         Mail::fake();
@@ -712,7 +713,7 @@ class PersonScheduleControllerTest extends TestCase
            $mrMock->shouldReceive('prospectiveOrAlphaRankForYear')->andReturn(99);
            $mrMock->shouldReceive('countPassedProspectivesAndAlphasForYear')->andReturn(100);
 
-           config([ 'clubhouse.ManualReviewProspectiveAlphaLimit' => 50 ]);
+           $this->setting('ManualReviewProspectiveAlphaLimit', 50);
 
            $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                'year' => $this->year

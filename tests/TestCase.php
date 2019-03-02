@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\Role;
 use App\Models\PersonRole;
 use App\Models\PersonPosition;
+use App\Models\Setting;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -83,5 +84,23 @@ abstract class TestCase extends BaseTestCase
     public function addAdminRole($user = null)
     {
         $this->addRole(Role::ADMIN, $user);
+    }
+
+    public function setting($name, $value)
+    {
+        if (is_numeric($value)) {
+            $type = 'integer';
+        } else if (is_bool($value)) {
+            $type = 'bool';
+        } else {
+            $type = 'string';
+        }
+
+        Setting::where('name', $name)->delete();
+        Setting::insert([
+            'name'  => $name,
+            'type'  => $type,
+            'value' => $value,
+        ]);
     }
 }

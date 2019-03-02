@@ -33,12 +33,12 @@ class SMSService
 
     public static function getTokens()
     {
-        $sid = config('clubhouse.TwilioAccountSID');
+        $sid = setting('TwilioAccountSID');
         if (empty($sid)) {
             throw new \RuntimeException('TwilioAccountSID is not configured');
         }
 
-        $authToken = config('clubhouse.TwilioAuthToken');
+        $authToken = setting('TwilioAuthToken');
         if (empty($authToken)) {
             throw new \RuntimeException('TwilioAuthToken is not configured');
         }
@@ -58,7 +58,7 @@ class SMSService
     {
         list ($accountSid, $authToken) = SMSService::getTokens();
 
-        $serviceIds = config('clubhouse.TwilioServiceId');
+        $serviceIds = setting('TwilioServiceId');
         if (empty($serviceIds)) {
             throw new \RuntimeException('TwilioServiceId is not configured');
         }

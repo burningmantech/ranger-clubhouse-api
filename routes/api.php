@@ -128,6 +128,8 @@ Route::group([
     Route::post('sms/send-code', 'SmsController@sendNewCode');
     Route::post('sms/confirm-code', 'SmsController@confirmCode');
 
+    Route::resource('setting', 'SettingController');
+
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
     Route::get('training-session/{id}', 'TrainingSessionController@show');
     Route::post('training-session/{id}/score', 'TrainingSessionController@score');

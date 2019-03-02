@@ -126,7 +126,7 @@ class PersonYearInfo extends ApihouseResult
 
 
         $radio = RadioEligible::findForPersonYear($personId, $year);
-        $yearInfo->radio_info_available = config('clubhouse.RadioInfoAvailable');
+        $yearInfo->radio_info_available = setting('RadioInfoAvailable');
         $yearInfo->radio_max = $radio ? $radio->max_radios : 0;
         $yearInfo->radio_eligible = $yearInfo->radio_max > 0 ? true : false;
 
@@ -139,7 +139,7 @@ class PersonYearInfo extends ApihouseResult
             $yearInfo->showers = $bmid->showers;
         }
 
-        if (date('Y') == $year && !config('clubhouse.MealInfoAvailable')) {
+        if (date('Y') == $year && !setting('MealInfoAvailable')) {
             $yearInfo->meals = 'no-info';
         }
 
