@@ -39,7 +39,7 @@ class Photo {
      */
 
     public static function retrieveStatus($person) {
-        $isLambase = config('clubhouse.PhotoSource') == 'Lambase';
+        $isLambase = setting('PhotoSource') == 'Lambase';
 
         if ($isLambase) {
             $lambase = new LambasePhoto($person);

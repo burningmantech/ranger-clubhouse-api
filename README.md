@@ -110,7 +110,10 @@ If you are changing code and want to see that reflected in the running applicati
 
 ## What happened to the Classic Clubhouse config() function?
 
-Laravel also uses `config()` for configuration variables, however, the values are in namespaces.
-In Classic Clubhouse, to read PhotoSource the call would be `config("PhotoSource")` in ApiHouse the call is `config('clubhouse.PhotoSource')`
+Use the global setting() function instead. With Clubhouse 2, most existing configuration variables
+are stored within the database.
 
-The defaults live in `config/clubhouse.php`
+In Classic Clubhouse, to read PhotoSource the call would be `config("PhotoSource"),
+the Clubhouse 2 wayis `setting('PhotoSource')`
+
+While config/clubhouse.php does exist, this file may go away.

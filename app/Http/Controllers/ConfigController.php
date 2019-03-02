@@ -36,9 +36,8 @@ class ConfigController extends Controller
     ];
 
     public function show() {
-
         $configs = array_reduce(self::CLIENT_CONFIGS, function ($configs, $name) {
-            $configs[$name] = config('clubhouse.'.$name);
+            $configs[$name] = setting($name);
             return $configs;
         }, []);
 

@@ -106,7 +106,7 @@ class LambasePhoto
         $mail = urlencode($person->email);
         $handle = urlencode($person->callsign);
 
-        $url = config('clubhouse.LambaseStatusUrl') .
+        $url = setting('LambaseStatusUrl') .
          "?method=photostatus&wsid=$wsid&wshash=$wshash&barcode=$barcode&mail=$mail&handle=$handle";
         return $url;
     }
@@ -171,7 +171,7 @@ class LambasePhoto
 
     public function getImageUrl($lambaseImage)
     {
-        return config('clubhouse.LambaseImageUrl')."/".urlencode($this->person->id)."/".$lambaseImage;
+        return setting('LambaseImageUrl')."/".urlencode($this->person->id)."/".$lambaseImage;
     }
 
     /*
@@ -278,7 +278,7 @@ class LambasePhoto
         $handle = urlencode($person->callsign);
         $mail = urlencode($person->email);
         $hash = urlencode(md5("fuckoff$userid"));
-        $url = config('clubhouse.LambaseJumpinUrl') . "?user=$userid&handle=$handle&mail=$mail&barcode=$barcode&hash=$hash";
+        $url = setting('LambaseJumpinUrl') . "?user=$userid&handle=$handle&mail=$mail&barcode=$barcode&hash=$hash";
 
         return $url;
     }

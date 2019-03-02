@@ -52,7 +52,7 @@ class AccessDocumentDelivery extends ApiModel
     ];
 
     public static function findForRoute($id) {
-        list ($personId, $year) = explode(':', $id);
+        list ($personId, $year) = explode(':', urldecode($id));
 
         return self::where('person_id', $personId)->where('year', $year)->first();
     }

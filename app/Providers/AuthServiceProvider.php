@@ -23,6 +23,7 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
+use App\Models\Setting;
 use App\Models\Timesheet;
 use App\Models\TimesheetMissing;
 use App\Models\Training;
@@ -45,6 +46,7 @@ use App\Policies\PositionPolicy;
 use App\Policies\PositionCreditPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SchedulePolicy;
+use App\Policies\SettingPolicy;
 use App\Policies\SlotPolicy;
 use App\Policies\TimesheetMissingPolicy;
 use App\Policies\TimesheetPolicy;
@@ -76,6 +78,7 @@ class AuthServiceProvider extends ServiceProvider
         PositionCredit::class => PositionCreditPolicy::class,
         Role::class => RolePolicy::class,
         Schedule::class => SchedulePolicy::class,
+        Setting::class => SettingPolicy::class,
         Slot::class => SlotPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,

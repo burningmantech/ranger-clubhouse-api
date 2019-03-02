@@ -334,7 +334,7 @@ class PersonControllerTest extends TestCase
         Mail::assertSent(
             NotifyVCEmailChangeMail::class,
             function ($mail) {
-                return $mail->hasTo(config('clubhouse.VCEmail'));
+                return $mail->hasTo(setting('VCEmail'));
             }
         );
 
@@ -908,7 +908,7 @@ class PersonControllerTest extends TestCase
         Mail::assertSent(
             AccountCreationMail::class,
             function ($mail) {
-                return $mail->hasTo(config('clubhouse.AccountCreationEmail'));
+                return $mail->hasTo(setting('AccountCreationEmail'));
             }
         );
 
@@ -961,7 +961,7 @@ class PersonControllerTest extends TestCase
         Mail::assertSent(
             AccountCreationMail::class,
             function ($mail) {
-                return $mail->hasTo(config('clubhouse.AccountCreationEmail'));
+                return $mail->hasTo(setting('AccountCreationEmail'));
             }
         );
 

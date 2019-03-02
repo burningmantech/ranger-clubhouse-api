@@ -18,6 +18,6 @@ class ConfigControllerTest extends TestCase
         $response = $this->json('GET', 'config');
 
         $response->assertStatus(200);
-        $response->assertJson([ 'VCSRevision' => config('clubhouse.VCSRevision') ]);
+        $response->assertJson([ 'VCSRevision' => setting('VCSRevision') ]);
     }
 }

@@ -174,7 +174,7 @@ class AccessDocument extends ApiModel
                 ->keyBy('person_id');
         }
 
-        $dateRange = config('clubhouse.TAS_WAPDateRange');
+        $dateRange = setting('TAS_WAPDateRange');
         if ($dateRange) {
             list($low, $high) = explode("-", $dateRange);
         } else {
@@ -435,7 +435,7 @@ class AccessDocument extends ApiModel
         $wap->name = $name;
         $wap->type = 'work_access_pass_so';
         $wap->status = 'claimed';
-        $wap->access_date = config('clubhouse.TAS_DefaultSOWAPDate');
+        $wap->access_date = setting('TAS_DefaultSOWAPDate');
         $wap->source_year = $year;
         $wap->expiry_date = $year;
         $wap->save();

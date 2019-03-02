@@ -173,9 +173,9 @@ class PersonScheduleController extends ApiController
 
             // Notify the person about signing up
             if ($slot->isTraining()) {
-                $message = new TrainingSignup($slot, config('clubhouse.TrainingSignupFromEmail'));
+                $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
             } else {
-                $message = new SlotSignup($slot, config('clubhouse.VCEmail'));
+                $message = new SlotSignup($slot, setting('VCEmail'));
             }
 
             Mail::to($person->email)->send($message);
@@ -185,7 +185,7 @@ class PersonScheduleController extends ApiController
             // Is the training slot at capacity?
             if ($slot->isTraining() && $signedUp >= $slot->max) {
                 // fire off an email letting the Training Acamedy know
-                Mail::to(config('clubhouse.TrainingFullEmail'))->send(new TrainingSessionFullMail($slot, $signedUp));
+                Mail::to(setting('TrainingFullEmail'))->send(new TrainingSessionFullMail($slot, $signedUp));
             }
 
             $response = [
@@ -256,20 +256,20 @@ class PersonScheduleController extends ApiController
         $canSignUpForShifts = false;
         $isPotentialRanger = ($status == "prospective" || $status == "alpha");
 
-        $manualReviewCap = config('clubhouse.ManualReviewProspectiveAlphaLimit');
+        $manualReviewCap = setting('ManualReviewProspectiveAlphaLimit');
         $manualReviewMyRank = 1;
         $manualReviewCount = 1;
         $missedManualReviewWindow = false;
 
         $missingBpguid = false;
 
-        if ($status == "auditor") {
+        if ($status == "auditor" || setting('AllowSignupsWithoutPhoto')) {
             $photoStatus = 'not-required';
         } else {
             $photoStatus = Photo::retrieveStatus($person);
         }
 
-        $mrDisabledAllowSignups = config('clubhouse.ManualReviewDisabledAllowSignups');
+        $mrDisabledAllowSignups = setting('ManualReviewDisabledAllowSignups');
 
         if ($mrDisabledAllowSignups) {
             // Manual review is not need at the moment
@@ -331,8 +331,8 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        if (config('clubhouse.ManualReviewLinkEnable')) {
-            $manualReviewUrl = config('clubhouse.ManualReviewGoogleFormBaseUrl').urlencode($person->callsign);
+        if (setting('ManualReviewLinkEnable')) {
+            $manualReviewUrl = setting('ManualReviewGoogleFormBaseUrl').urlencode($person->callsign);
         } else {
             $manualReviewUrl = '';
         }
