@@ -60,20 +60,6 @@ class CreateSettingsTable extends Migration
         \DB::table('setting')->insert([ 'name' => 'SiteTitle', 'type' => 'string', 'value' => 'Black Rock Rangers Secret Clubhouse' ]);
 
         \DB::table('setting')->insert([
-            'name' => 'DualClubhouse',
-            'type' => 'bool',
-            'value' => 'false',
-            'description' => "Enable Dual Clubhouse mode (for Classic Clubhouse)"
-        ]);
-
-        \DB::table('setting')->insert([
-            'name' => 'Clubhouse2Url',
-            'type' => 'string',
-            'value' => '/client',
-            'description'   => "Clubhouse 2 URL (for Classic Clubhouse)",
-        ]);
-
-        \DB::table('setting')->insert([
             'name' => 'PhotoSource', 'type' => 'string', 'value' => 'Lambase',
             'options' => "Lambase\nlocal\ntest\n",
             'description' => "Mugshot image location\nLambase = from the Lambase server\nlocal = from the local server\ntest = serve a dummy file\n"
@@ -262,7 +248,16 @@ class CreateSettingsTable extends Migration
 
         \DB::table('setting')->insert([ 'name' => 'MotorpoolPolicyEnable', 'type' => 'bool', 'value' => 'false', 'description' => "Enable Motorpool Policy Page"]);
 
-        \DB::table('setting')->insert([ 'name' => 'TrainingSignupFromEmail', 'type' => 'string', 'value' => 'ranger-trainingacademy-list@burningman.org', 'description' => "Training Acamedy From Email address" ]);
+        \DB::table('setting')->insert([ 'name' => 'TrainingSignupFromEmail',
+            'type' => 'string',
+            'value' => 'do-no-reply@burningman.org',
+            'description' => 'From email  address for training sign up messages'
+        ]);
+        \DB::table('setting')->insert([ 'name' => 'ShiftSignupFromEmail',
+            'type' => 'string',
+            'value' => 'do-not-reply@burningman.org',
+            'description' => 'From email  address for shift sign up messages'
+        ]);
 
         \DB::table('setting')->insert([ 'name' => 'TrainingFullEmail', 'type' => 'string', 'value' => 'ranger-trainingacademy-list@burningman.org', 'description' => 'Email address to alert when training session is full.' ]);
         \DB::table('setting')->insert([ 'name' => 'AccountCreationEmail', 'type' => 'string', 'value' => 'safetyphil@burningman.org', 'description' => 'Alert email address when accounts register' ]);
