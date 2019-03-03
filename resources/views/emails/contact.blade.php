@@ -28,7 +28,7 @@ Ranger {{$senderPerson->callsign}} has sent you a contact message:
 </p>
 
 <p>
-    If you have receive this message in error, let us know by emailing:<br>
+    If you have received this message in error, let us know by emailing:<br>
     <a href="mailto:rangers@burningman.org">rangers@burningman.org</a>
 </p>
 
