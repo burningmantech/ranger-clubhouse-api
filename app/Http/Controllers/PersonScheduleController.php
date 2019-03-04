@@ -326,7 +326,7 @@ class PersonScheduleController extends ApiController
                             $manualReviewCount < $manualReviewCap)) {
                     $showManualReviewLink = true;
                 }
-            } elseif ($status != "past prospective" && ($photoStatus != 'approved') && !$manualReviewPassed) {
+            } elseif ($status != "past prospective" && ($photoStatus == 'approved') && !$manualReviewPassed) {
                 $showManualReviewLink = true;
             }
         }
@@ -336,7 +336,6 @@ class PersonScheduleController extends ApiController
         } else {
             $manualReviewUrl = '';
         }
-
 
 
         $results = [
