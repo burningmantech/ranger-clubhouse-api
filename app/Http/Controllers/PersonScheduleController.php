@@ -175,7 +175,7 @@ class PersonScheduleController extends ApiController
             if ($slot->isTraining()) {
                 $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
             } else {
-                $message = new SlotSignup($slot, setting('VCEmail'));
+                $message = new SlotSignup($slot, setting('ShiftSignupFromEmail'));
             }
 
             Mail::to($person->email)->send($message);
