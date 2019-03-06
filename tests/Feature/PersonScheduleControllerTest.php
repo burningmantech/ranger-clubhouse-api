@@ -32,7 +32,7 @@ class PersonScheduleControllerTest extends TestCase
      * and a set of positions.
      */
 
-    public function setUp()
+    public function setUp() : void
     {
         parent::setUp();
 
