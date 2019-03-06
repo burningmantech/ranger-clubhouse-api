@@ -30,7 +30,7 @@ class PersonControllerTest extends TestCase
      * have each test have a fresh user that is logged in.
      */
 
-    public function setUp()
+    public function setUp() : void
     {
         parent::setUp();
         $this->signInUser();

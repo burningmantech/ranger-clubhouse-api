@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
 
     public $user;
 
-    public function setUp()
+    public function setUp() : void
     {
         parent::setUp();
         // force garbage collection before each test

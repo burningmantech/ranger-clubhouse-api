@@ -112,6 +112,13 @@ class PersonController extends ApiController
     {
         $this->authorize('update', $person);
 
+        $params = request()->validate([
+            'person.email'  => 'sometimes|email|unique:person,email,'.$person->id.',id'
+        ],
+        [
+            'person.email.unique'   => 'The email address is already used by another account'
+        ]);
+
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
 
