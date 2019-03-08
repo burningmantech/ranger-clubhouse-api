@@ -250,7 +250,7 @@ class PersonController extends ApiController
      * for a given year.
      */
 
-    public function yearInfo(Person $person)
+    public function eventInfo(Person $person)
     {
         $year = $this->getYear();
         $yearInfo = PersonYearInfo::findForPersonYear($person->id, $year);
@@ -527,16 +527,6 @@ class PersonController extends ApiController
         return response()->json([ 'roles' => PersonRole::findRolesForPerson($personId) ]);
     }
 
-    /*
-     * Return the years rangered in array form.
-     */
-
-    public function years(Person $person)
-    {
-        $this->authorize('view', $person);
-        return response()->json([ 'years' => Timesheet::yearsRangered($person->id)]);
-    }
-
      /*
       * Return the count of  unread messages
       */
@@ -548,20 +538,25 @@ class PersonController extends ApiController
         return response()->json(['unread_message_count' => PersonMessage::countUnread($person->id)]);
     }
 
-     /*
-      * Find out if the person is a trainer, and/or has mentored. Used to construct
-      * training info
-      */
+    /*
+     * Retrieve user information needed for user login, or to show/edit a person.
+     */
 
-    public function teacher(Person $person)
+    public function userInfo(Person $person)
     {
         $this->authorize('view', $person);
 
+        $isArtTrainer = $person->hasRole([Role::ART_TRAINER, Role::ADMIN]);
+
         $data = [
-            'is_trainer'     => $this->user->hasRole([Role::ADMIN, Role::TRAINER]),
-            'is_art_trainer' => $this->user->hasRole([Role::ART_TRAINER, Role::ADMIN]),
-            'is_mentor'      => $this->user->hasRole([Role::MENTOR, Role::ADMIN]),
-            'have_mentored'  => PersonMentor::haveMentees($this->user->id),
+            'teacher' => [
+                'is_trainer'     => $person->hasRole([Role::ADMIN, Role::TRAINER]),
+                'is_art_trainer' => $isArtTrainer,
+                'is_mentor'      => $person->hasRole([Role::MENTOR, Role::ADMIN]),
+                'have_mentored'  => PersonMentor::haveMentees($person->id)
+            ],
+            'unread_message_count' => PersonMessage::countUnread($person->id),
+            'years' => Timesheet::yearsRangered($person->id)
         ];
 
         /*
@@ -569,11 +564,11 @@ class PersonController extends ApiController
          * a specific set intead of everything for all ART_TRAINERs.
          */
 
-        if ($data['is_art_trainer']) {
-            $data['arts'] = Position::findAllTrainings(true);
+        if ($isArtTrainer) {
+            $data['teacher']['arts'] = Position::findAllTrainings(true);
         }
 
-        return response()->json(['teacher' => $data]);
+        return response()->json([ 'user_info' => $data ]);
     }
 
     /*
