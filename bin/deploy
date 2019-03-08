@@ -27,9 +27,9 @@ if ! type docker > /dev/null 2>&1; then
     exit 72;  # EX_OSFILE
 fi;
 if [ "${TRAVIS:-}" = "true" ]; then
-    pip_user_flag=""
+    pip_user_flag="";
 else
-    pip_user_flag="--user"
+    pip_user_flag="--user";
 fi;
 if ! type aws > /dev/null 2>&1; then
     echo "No aws command. Installing...";
