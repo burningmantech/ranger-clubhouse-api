@@ -20,6 +20,7 @@ class CreateSettingsTable extends Migration
             $table->enum('type', [ 'bool', 'string', 'integer', 'json' ]);
             $table->text('description', 65535)->nullable();
             $table->text('options', 65535)->nullable();
+            $table->boolean('is_encrypted')->default(0);
             $table->boolean('environment_only')->default(0);
             $table->timestamps();
         });
@@ -39,7 +40,6 @@ class CreateSettingsTable extends Migration
 
     public function seedSettings()
     {
-        \DB::table('setting')->insert([ 'name' => 'DeploymentEnvironment', 'type' => 'string', 'value' => '' ]);
         \DB::table('setting')->insert([
             'name' => 'OnPlaya',
             'type' => 'bool',
@@ -167,6 +167,7 @@ class CreateSettingsTable extends Migration
             'name' => 'ManualReviewAuthConfig',
             'type' => 'json',
             'value' => '',
+            'is_encrypted' => true,
             'description' => 'Manual Review Google Spreadsheet Authentication (usually a massive JSON blob)'
         ]);
 
@@ -180,13 +181,13 @@ class CreateSettingsTable extends Migration
         \DB::table('setting')->insert([ 'name' => 'SFsbxClientSecret', 'type' => 'string', 'value' => '90600550470841821', 'description' => 'Salesforce Sandbox Client Secret' ]);
         \DB::table('setting')->insert([ 'name' => 'SFsbxUsername', 'type' => 'string', 'value' => 'philapi@burningman.com.dev3', 'description' => 'Salesforce Sandbox Username' ]);
         \DB::table('setting')->insert([ 'name' => 'SFsbxAuthUrl', 'type' => 'string', 'value' => 'https://test.salesforce.com/services/oauth2/token', 'description' => 'Salesforce Sandbox Authentication URL' ]);
-        \DB::table('setting')->insert([ 'name' => 'SFsbxPassword', 'type' => 'string', 'value' => '*', 'description' => 'Salesforce Sandbox Password' ]);
+        \DB::table('setting')->insert([ 'name' => 'SFsbxPassword', 'type' => 'string', 'value' => '*', 'description' => 'Salesforce Sandbox Password', 'is_encrypted' => true ]);
 
         \DB::table('setting')->insert([ 'name' => 'SFprdClientId', 'type' => 'string', 'value' => '3MVG9rFJvQRVOvk6W.N0QISwohURI.shVyYx2vyhMlZ_39Wi9wohZYuDbY5Fuhd_0sOCRB1.jn.ijRia1F0Cd', 'description' => 'Salesforce Production Client ID' ]);
         \DB::table('setting')->insert([ 'name' => 'SFprdClientSecret', 'type' => 'string', 'value' => '7358471550048400762', 'description' => 'Salesforce Production Client Secret' ]);
         \DB::table('setting')->insert([ 'name' => 'SFprdUsername', 'type' => 'string', 'value' => 'diverdave@burningman.com', 'description' => 'Salesforce Production Username'  ]);
         \DB::table('setting')->insert([ 'name' => 'SFprdAuthUrl', 'type' => 'string', 'value' => 'https://login.salesforce.com/services/oauth2/token', 'description' => 'Salesforce Production Authentication URL' ]);
-        \DB::table('setting')->insert([ 'name' => 'SFprdPassword', 'type' => 'string', 'value' => '*', 'description' => 'Salesforce Production Password'  ]);
+        \DB::table('setting')->insert([ 'name' => 'SFprdPassword', 'type' => 'string', 'value' => '*', 'description' => 'Salesforce Production Password', 'is_encrypted' => true  ]);
         \DB::table('setting')->insert([ 'name' => 'SFEnableWritebacks', 'type' => 'bool', 'value' => 'false', 'description' => 'Enable Saleforce Object Update' ]);
 
         \DB::table('setting')->insert([ 'name' => 'TicketingPeriod', 'type' => 'string', 'value' => 'offseason', 'options' => "offseason\nannounce\nopen\nclose\n",
@@ -270,7 +271,7 @@ class CreateSettingsTable extends Migration
 
         \DB::table('setting')->insert([ 'name' => 'BroadcastClubhouseNotify', 'type' => 'bool', 'value' => 'false', 'description' => 'Enable RBS notification of new Clubhouse messages' ]);
         \DB::table('setting')->insert([ 'name' => 'TwilioAccountSID', 'type' => 'string', 'value' => '', 'description' => 'Twilio Account SID' ]);
-        \DB::table('setting')->insert([ 'name' => 'TwilioAuthToken', 'type' => 'string', 'value' => '', 'description' => 'Twilio Authenication Token' ]);
+        \DB::table('setting')->insert([ 'name' => 'TwilioAuthToken', 'type' => 'string', 'value' => '', 'description' => 'Twilio Authenication Token', 'is_encrypted' => true ]);
         \DB::table('setting')->insert([ 'name' => 'TwilioServiceId', 'type' => 'string', 'value' => '', 'description' => 'Twilio Service ID of SMS Channel' ]);
 
         \DB::table('setting')->insert([ 'name' => 'TwilioStatusCallbackUrl', 'type' => 'string', 'value' => '',
