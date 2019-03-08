@@ -37,9 +37,9 @@ script:
   - true
 
 
-cache:
-  directories:
-    - ~/docker_images
+#cache:
+#  directories:
+#    - ~/docker_images
 
 
 notifications:
