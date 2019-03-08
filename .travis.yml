@@ -37,3 +37,13 @@ script:
 cache:
   directories:
     - ~/docker_images
+
+
+notifications:
+  email:
+    recipients:
+      - ranger-tech-list@burningman.org
+  slack:
+    on_success: always
+    rooms:
+      - ${SLACK_TOKEN}#ranger-tech
