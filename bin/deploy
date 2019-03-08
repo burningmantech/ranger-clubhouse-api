@@ -26,7 +26,7 @@ if ! type docker > /dev/null 2>&1; then
     echo "Docker is required.";
     exit 72;  # EX_OSFILE
 fi;
-if [ "${TRAVIS:-}" = "true" ]; then
+if [ "${TRAVIS:-}" != "true" ]; then
     pip_user_flag="--user"
 fi;
 if ! type aws > /dev/null 2>&1; then
