@@ -18,7 +18,7 @@ use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-use App\Models\PersonYearInfo;
+use App\Models\PersonEventInfo;
 use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
@@ -253,9 +253,9 @@ class PersonController extends ApiController
     public function eventInfo(Person $person)
     {
         $year = $this->getYear();
-        $yearInfo = PersonYearInfo::findForPersonYear($person->id, $year);
-        if ($yearInfo) {
-            return response()->json(['year_info' => $yearInfo]);
+        $eventInfo = PersonEventInfo::findForPersonYear($person->id, $year);
+        if ($eventInfo) {
+            return response()->json(['event_info' => $eventInfo]);
         }
 
         return $this->restError('The year could not be found.', 404);
