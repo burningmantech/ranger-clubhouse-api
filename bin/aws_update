@@ -317,7 +317,8 @@ if __name__ == "__main__":
         stagingClient.deployNewImage(env("AWS_ECR_IMAGE_NAME"))
 
     elif action == "production":
-        pass
+        stagingImageName = stagingClient.currentImageName()
+        productionClient.deployNewImage(stagingImageName)
 
     elif action == "compare":
         for name, client in (
