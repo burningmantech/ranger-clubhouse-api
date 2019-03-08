@@ -106,10 +106,9 @@ Route::group([
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
 
-    Route::get('person/{person}/teacher', 'PersonController@teacher');
+    Route::get('person/{person}/user-info', 'PersonController@userInfo');
     Route::get('person/{person}/unread-message-count', 'PersonController@UnreadMessageCount');
-    Route::get('person/{person}/yearinfo', 'PersonController@yearInfo');
-    Route::get('person/{person}/years', 'PersonController@years');
+    Route::get('person/{person}/event-info', 'PersonController@eventInfo');
 
     Route::resource('person', 'PersonController', [ 'only' => [ 'index','show','store','update','destroy' ]]);
 
