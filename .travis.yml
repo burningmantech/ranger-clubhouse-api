@@ -48,5 +48,6 @@ notifications:
       - ranger-tech-list@burningman.org
   slack:
     on_success: always
+    on_failure: always
     rooms:
-      - ${SLACK_TOKEN}#ranger-tech
+      - secure: "R7G1ZkAseMuKWFs9hJMyZzRW/k1nEEUxgGoulZZArKXD3wKm8dpxG2wCeXEIdbhY6QpGI98qFPXpZQGFhVO5NiRuQPDMJWJQ9jGct6u4ZjJr1OSUnakcSK/2xusxT/a8MHUMMZYOJWbjuJPvPs7MvNPsAnDbh7s3Tfe9fOjhObRPcR0NUQ0YRcelw5H4/w5hXjbQXh+H56V2oaWHhPx5a84/X5oYmy3y2b5z0cjNKPWFxCL47LuB0LiJkGFiNLoFG9eTB5iyd+T4YiQuCc0mZwIVKnZ2YN46LOhpFc7EOhEt+c6lb1fZ1E0t06nHJR7S/fAweRhDE911EsjVVzNDWc79BxDIGjqQJ+B4kg2/XCaxaV3tHibT4B0WIol8rouRS9ZOkuQQ8GbA/5YyYIIG2iQFDUIMQ0XQnkpphyZQYxdyzxNM4/LEPLdfe2NSEQWhcMMA6qQ2DtjVmUWj6TKENNsy/1OvWPQ3LfxvwfCY9rj2dp/rLY9EindZlCCiRsnsWPgTEnCVqJ5XBiQmhNUQR2r2PLZnRFez7X8jbCBwLGFAoGWfX9OjM4mxft6g15oOUXjv0TCUki3P0Hc13JP8Mwh/781GZ4DPKVi2sO4EqQAFYErUw+BR2dv7S3vmTqXPsVZV4hcejNBjc96QTnteceviOX5tpzPCMe38QITfstA="
