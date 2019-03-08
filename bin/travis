@@ -49,6 +49,7 @@ case "${travis_action}" in
         if [ -f "${cached_image}" ]; then
             echo "Loading cached Docker image...";
             docker load < "${cached_image}";
+            docker image ls;
         else
             echo "No cached Docker image; building...";
             echo "Caches:";
