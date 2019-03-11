@@ -7,6 +7,7 @@ use DB;
 use Event;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Log;
 
@@ -47,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('hyperlinktext', function($text) {
             return '<?php echo \App\Helpers\HyperLinkHelper::text('.$text.'); ?>';
         });
+
+        Validator::extendImplicit('state_for_country', '\App\Validators\StateForCountry@validate', 'A state/province is required');
     }
 
     /**
