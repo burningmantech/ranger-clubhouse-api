@@ -117,6 +117,11 @@ Route::group([
 
     Route::resource('role', 'RoleController');
 
+    Route::get('salesforce/config', 'SalesforceController@config');
+    Route::get('salesforce/import', 'SalesforceController@import');
+
+    Route::resource('setting', 'SettingController');
+
     Route::get('slot/years', 'SlotController@years');
     Route::get('slot/{slot}/people', 'SlotController@people');
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
@@ -127,7 +132,6 @@ Route::group([
     Route::post('sms/send-code', 'SmsController@sendNewCode');
     Route::post('sms/confirm-code', 'SmsController@confirmCode');
 
-    Route::resource('setting', 'SettingController');
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
     Route::get('training-session/{id}', 'TrainingSessionController@show');
