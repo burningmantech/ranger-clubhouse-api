@@ -76,4 +76,4 @@ if [ "${target}" = "staging" ]; then
     docker push "${AWS_ECR_IMAGE_NAME}";
 fi;
 
-"$(dirname "$0")/aws_update" "${target}";
+"$(dirname "$0")/deploy_aws" "${target}";
