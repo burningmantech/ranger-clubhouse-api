@@ -58,7 +58,11 @@ return [
             'prefix' => '',
             'strict' => true,
             'engine' => null,
-            'timezone' => '-07:00'
+            'timezone' => '-07:00',
+            // Turn on persistent connections.
+            'options' => [
+                \PDO::ATTR_PERSISTENT => true
+            ]
         ],
 
         'mysql_testing' => [
