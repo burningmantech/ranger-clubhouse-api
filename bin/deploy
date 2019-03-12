@@ -77,3 +77,7 @@ if [ "${target}" = "staging" ]; then
 fi;
 
 "$(dirname "$0")/deploy_aws" "${target}";
+
+if [ "${target}" = "staging" ]; then
+    "$(dirname "$0")/deploy_notify" "${target}";
+fi;
