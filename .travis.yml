@@ -19,7 +19,9 @@ stages:
 jobs:
   include:
     - stage: Test
-      script: ./bin/travis test
+      script:
+        - ./bin/travis test
+        - ./bin/travis deploy_notify
       if: type = pull_request
     - stage: Deploy
       script:
