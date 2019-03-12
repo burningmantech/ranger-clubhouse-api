@@ -27,9 +27,9 @@ if ! type docker > /dev/null 2>&1; then
     exit 72;  # EX_OSFILE
 fi;
 if [ "${TRAVIS:-}" = "true" ]; then
-    pip_user_flag=""
+    pip_user_flag="";
 else
-    pip_user_flag="--user"
+    pip_user_flag="--user";
 fi;
 if ! type aws > /dev/null 2>&1; then
     echo "No aws command. Installing...";
@@ -76,4 +76,8 @@ if [ "${target}" = "staging" ]; then
     docker push "${AWS_ECR_IMAGE_NAME}";
 fi;
 
-"$(dirname "$0")/aws_update" "${target}";
+"$(dirname "$0")/deploy_aws" "${target}";
+
+if [ "${target}" = "staging" ]; then
+    "$(dirname "$0")/deploy_notify" "${target}";
+fi;
