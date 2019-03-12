@@ -21,7 +21,6 @@ jobs:
     - stage: Test
       script:
         - ./bin/travis test
-        - ./bin/deploy_notify staging
       if: type = pull_request
     - stage: Deploy
       script:
