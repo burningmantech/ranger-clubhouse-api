@@ -79,7 +79,7 @@ class Handler extends ExceptionHandler
         // Record not found
         if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
             $className = last(explode('\\', $e->getModel()));
-            return response()->json([ 'error' => "$className was not found" ], 400);
+            return response()->json([ 'error' => "$className was not found" ], 404);
         }
 
         // Required parameters not present and/or do not pass validation.
