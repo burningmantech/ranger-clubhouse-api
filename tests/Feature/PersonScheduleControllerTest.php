@@ -583,7 +583,7 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $this->user->id;
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
-        $response->assertStatus(400);
+        $response->assertStatus(404);
 
     }
 
