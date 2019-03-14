@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# Run checkphpsyntax from the PHP Docker image.
+#
+
+. "$(dirname "$0")/.common.sh";
+
+wd="$(cd "$(dirname "$0")/.." && pwd)";
+
+docker run                     \
+    --rm                       \
+    "${dev_image_name}"        \
+    ./vendor/bin/phpunit "$@";

@@ -25,7 +25,11 @@ case "${travis_action}" in
         # Build
         "${wd}/bin/build";
 
-        # Run tests in Docker container
+        # Run unit tests
+        echo "Running unit tests...";
+        "${wd}/bin/test_unit";
+
+        # Run basic tests on the Docker container
         echo "Testing Docker image...";
         "${wd}/bin/test_docker";
 
