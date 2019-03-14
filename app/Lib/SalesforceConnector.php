@@ -77,7 +77,6 @@ class SalesforceConnector
             'password' => $this->password,
         ];
 
-        error_log("DEBUG ".json_encode($fields));
         if ($this->debug) {
             Log::debug(
                 "sf->auth:\n"

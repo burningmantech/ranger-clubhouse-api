@@ -108,7 +108,10 @@ class PotentialClubhouseAccountFromSalesforce
         $this->zip = trim(@$sobj->Ranger_Info__r->MailingPostalCode);
         $this->country = trim(@$sobj->Ranger_Info__r->MailingCountry);
         $this->phone = trim(@$sobj->Ranger_Info__r->Phone);
-        $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
+        $this->email = trim(@$sobj->Contact_Email__c);
+        if (empty($this->email)) {
+            $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
+        }
         $this->emergency_contact =
             trim(@$sobj->Ranger_Info__r->Emergency_Contact_Name__c)
             . " ("

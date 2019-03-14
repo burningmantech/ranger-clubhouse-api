@@ -227,11 +227,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $languages;
 
+    /*
+     * setup before methods
+     */
+
+    public static function boot() {
+        parent::boot();
+
+        self::creating(function ($model) {
+            // TODO - adjust person schema to default to current timestamp
+            if ($model->attributes == null || empty($model->attributes['create_date'])) {
+                $model->create_date = SqlHelper::now();
+            }
+        });
+    }
+
     /**
       * Get the identifier that will be stored in the subject claim of the JWT.
       *
       * @return mixed
       */
+
     public function getJWTIdentifier(): string
     {
         return $this->getKey();
@@ -544,8 +560,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public function getCreateDateAttribute() {
-        $date = Carbon::parse($this->attributes['create_date']);
+        if ($this->attributes == null) {
+            return null;
+        }
 
+        $date = $this->attributes['create_date'] ?? null;
+
+        if ($date == null) {
+            return null;
+        }
+
+        $date = Carbon::parse($date);
         if ($date->year <= 0) {
             return null;
         }
