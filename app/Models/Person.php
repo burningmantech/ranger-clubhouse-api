@@ -58,6 +58,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const SUSPENDED = 'suspended';
     const UBERBONKED = 'uberbonked';
 
+    // Statuses consider 'live' or still active account allowed
+    // to login, and do stuff.
+    // Used by App\Validator\StateForCountry
+
+    const LIVE_STATUSES = [
+        'active',
+        'alpha',
+        'inactive',
+        'non ranger',
+        'past prospective',
+        'prospective waitslist',
+        'prospective',
+    ];
+
     /**
      * The database table name.
      * @var string
@@ -195,6 +209,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'last_name'  => 'required|string',
         'email'      => 'required|string',
         'status'     => 'required|string',
+        'state'      => 'state_for_country:live_only',
+        'country'    => 'required|string',
     ];
 
     /*
@@ -211,11 +227,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $languages;
 
+    /*
+     * setup before methods
+     */
+
+    public static function boot() {
+        parent::boot();
+
+        self::creating(function ($model) {
+            // TODO - adjust person schema to default to current timestamp
+            if ($model->attributes == null || empty($model->attributes['create_date'])) {
+                $model->create_date = SqlHelper::now();
+            }
+        });
+    }
+
     /**
       * Get the identifier that will be stored in the subject claim of the JWT.
       *
       * @return mixed
       */
+
     public function getJWTIdentifier(): string
     {
         return $this->getKey();
@@ -497,40 +529,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /*
-     * Normalize the country
-     */
-
-    public function setCountryAttribute($country)
-    {
-        $c = strtoupper($country);
-        $c = str_replace('.', '', $c);
-
-        switch ($c) {
-            case "US":
-            case "USA":
-            case "UNITED STATES":
-            case "UNITED STATES OF AMERICA":
-                $country = "USA";
-                break;
-
-            case "CA":
-                $country = "Canada";
-                break;
-
-            case "FR":
-                $country = "France";
-                break;
-
-            case "GB":
-            case "UK":
-                $country = "United Kingdom";
-                break;
-        }
-
-        $this->attributes['country'] = $country;
-    }
-
-    /*
      * creates a random string by calling random.org, and falls back on a home-rolled.
      * @return the string.
      */
@@ -562,8 +560,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public function getCreateDateAttribute() {
-        $date = Carbon::parse($this->attributes['create_date']);
+        if ($this->attributes == null) {
+            return null;
+        }
 
+        $date = $this->attributes['create_date'] ?? null;
+
+        if ($date == null) {
+            return null;
+        }
+
+        $date = Carbon::parse($date);
         if ($date->year <= 0) {
             return null;
         }

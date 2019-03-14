@@ -4,6 +4,9 @@
 
 namespace App\Lib;
 
+use App\Models\Person;
+use App\Helpers\ReservedCallsigns;
+
 class PotentialClubhouseAccountFromSalesforce
 {
     const STATUS_NULL = "null";
@@ -43,6 +46,7 @@ class PotentialClubhouseAccountFromSalesforce
 
     public $status;     /* "null", "invalid", "ready", "imported", "succeeded" */
     public $message;
+    public $existingPerson; // Person record which matches callsign, email, sfuid, or bpguid.
     public $applicant_type;
     public $salesforce_ranger_object_id;        /* Internal Salesforce ID */
     public $salesforce_ranger_object_name;      /* "R-201" etc. */
@@ -104,7 +108,10 @@ class PotentialClubhouseAccountFromSalesforce
         $this->zip = trim(@$sobj->Ranger_Info__r->MailingPostalCode);
         $this->country = trim(@$sobj->Ranger_Info__r->MailingCountry);
         $this->phone = trim(@$sobj->Ranger_Info__r->Phone);
-        $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
+        $this->email = trim(@$sobj->Contact_Email__c);
+        if (empty($this->email)) {
+            $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
+        }
         $this->emergency_contact =
             trim(@$sobj->Ranger_Info__r->Emergency_Contact_Name__c)
             . " ("
@@ -124,11 +131,11 @@ class PotentialClubhouseAccountFromSalesforce
         if ($this->vc_status == "Released to Upload"
             && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
         ) {
-            $this->status = Person::STATUS_READY;
+            $this->status = self::STATUS_READY;
         }
 
         if ($this->callsign == "") {
-            $this->status = Person::STATUS_INVALID;
+            $this->status = self::STATUS_INVALID;
             $this->message =
                     "VC_Approved_Radio_Call_Sign is blank";
             return false;
@@ -137,7 +144,7 @@ class PotentialClubhouseAccountFromSalesforce
         $ok = true;
         foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
             if (!isset($sobj->Ranger_Info__r->$req)) {
-                $this->status = Person::STATUS_INVALID;
+                $this->status = self::STATUS_INVALID;
                 $this->message =
                     "Missing required field $req";
                 $ok = false;
@@ -169,9 +176,11 @@ class PotentialClubhouseAccountFromSalesforce
             return;
         }
 
-        if ($this->callsignAlreadyExists()) {
+        $person = $this->callsignAlreadyExists();
+        if ($person) {
             $this->status = "already_exists_callsign";
             $this->message = "Clubhouse account with this callsign already exists";
+            $this->existingPerson = $person;
             return;
         }
         if ($this->callsignIsReserved()) {
@@ -179,39 +188,48 @@ class PotentialClubhouseAccountFromSalesforce
             $this->message = "Callsign is on the reserved list";
             return;
         }
-        if ($this->emailAlreadyExists()) {
+
+        $person = $this->emailAlreadyExists();
+        if ($person) {
             $this->status = "already_exists_email";
             $this->message = "Clubhouse account with this email address already exists";
+            $this->existingPerson = $person;
             return;
         }
-        if ($this->bpguidAlreadyExists()) {
+
+        $person = $this->bpguidAlreadyExists();
+        if ($person) {
             $this->status = "already_exists_bpguid";
             $this->message = "Clubhouse account with this BPGUID already exists";
+            $this->existingPerson = $person;
             return;
         }
-        if ($this->sfuidAlreadyExists()) {
+
+        $person = $this->sfuidAlreadyExists();
+        if ($person) {
             $this->status = "already_exists_sfuid";
             $this->message = "Clubhouse account with this SFUID already exists";
+            $this->existingPerson = $person;
             return;
         }
     }
 
     /*
     * See if an account with this exact email exists.
-    * Return TRUE if so, FALSE otherwise.
+    * return account that has the email otherwise null
     */
     public function emailAlreadyExists()
     {
-        return Person::where('email', $this->email)->exists();
+        return Person::where('email', $this->email)->first();
     }
 
     /*
     * See if an account with this exact callsign exists.
-    * Return TRUE if so, FALSE otherwise.
+    * Return account that has the callsign otherwise null;
     */
     public function callsignAlreadyExists()
     {
-        return Person::where('callsign', $this->callsign)->exists();
+        return Person::where('callsign', $this->callsign)->first();
     }
 
     /*
@@ -220,25 +238,31 @@ class PotentialClubhouseAccountFromSalesforce
     */
     public function callsignIsReserved()
     {
-        return Security::checkIfCallsignReserved($this->callsign);
+        $callsign = $this->callsign;
+        $reservedCallsigns = self::getReservedCallsigns("cooked");
+        $cookedCallsign = self::cookCallsign($callsign);
+        if (in_array($cookedCallsign, $reservedCallsigns)) {
+            return true;
+        }
+        return false;
     }
 
     /*
     * See if an account with this exact BPGUID already exists.
-    * Return TRUE if so, FALSE otherwise.
+    * Return person if so, null otherwise.
     */
     public function bpguidAlreadyExists()
     {
-        return Person::where('bpguid', $this->bpguid)->exists();
+        return Person::where('bpguid', $this->bpguid)->first();
     }
 
     /*
     * See if an account with this exact SFUID already exists.
-    * Return TRUE if so, FALSE otherwise.
+    * Return person if so, null otherwise.
     */
     public function sfuidAlreadyExists()
     {
-        return Person::where('sfuid', $this->sfuid)->exists();
+        return Person::where('sfuid', $this->sfuid)->first();
     }
 
     /*
@@ -275,5 +299,37 @@ class PotentialClubhouseAccountFromSalesforce
         $x = mb_ereg_replace("’", '', $s);
         $x = str_replace("\xc2\xa0", ' ', $x);
         return $x;
+    }
+
+    /*
+     * "Cook" a callsign by converting to lower case and removing
+     * spaces and special characters.
+     */
+    public static function cookCallsign($callsign)
+    {
+        $callsign = str_replace([' ', '-', '!', '?', '.' ], '', $callsign);
+        $callsign = strtolower($callsign);
+        return $callsign;
+    }
+
+    /*
+     * Gets an array of reserved callsigns and words which shouldn't be handles.
+     * If style is "raw" (default), you get what's in the file with
+     * minimum processing.  If it's "cooked", spaces and dashes are
+     * eliminated and everything reduced to lower case.
+     */
+    public static function getReservedCallsigns($style = "raw")
+    {
+        $reservedCallsigns = array_merge(
+           ReservedCallsigns::$LOCATIONS,
+           ReservedCallsigns::$RADIO_JARGON,
+           ReservedCallsigns::$RANGER_JARGON,
+           ReservedCallsigns::$VIPS,
+           ReservedCallsigns::$RESERVED
+       );
+        if ($style == 'cooked') {
+            $reservedCallsigns = array_map(function ($callsign) { return self::cookCallsign($callsign); }, $reservedCallsigns);
+        }
+        return $reservedCallsigns;
     }
 }
