@@ -8,6 +8,37 @@
 
 label="$(cd "${wd}" && git describe --all --long)";
 
+# Build the "php" stage and tag it
+docker build                     \
+    --target php               \
+    --tag "${php_image_name}"  \
+    --label="${label}"           \
+    "${wd}";
+
+
+# Build the "composer" stage and tag it
+docker build                     \
+    --target composer               \
+    --tag "${composer_image_name}"  \
+    --label="${label}"           \
+    "${wd}";
+
+# Build the "build" stage and tag it
+docker build                     \
+    --target build               \
+    --tag "${build_image_name}"  \
+    --label="${label}"           \
+    "${wd}";
+
+
+# Build the "development" stage and tag it
+docker build                     \
+    --target development         \
+    --tag "${dev_image_name}"    \
+    --label="${label}"           \
+    "${wd}";
+
+
 exec docker build          \
     --tag="${image_name}"  \
     --label="${label}"     \

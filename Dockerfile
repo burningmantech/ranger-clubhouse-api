@@ -1,7 +1,8 @@
 #
-# This stage runs composer to build the PHP package dependencies
+# This stage contains source files.
+# We use this so we don't have to enumerate the sources to copy more than once.
 #
-FROM composer:1.8.4 as composer
+FROM scratch as source
 
 # Copy the application over
 WORKDIR /var/www/application
@@ -20,30 +21,75 @@ COPY ./phpunit.xml    ./
 COPY ./server.php     ./
 COPY ./webpack.mix.js ./
 COPY ./yarn.lock      ./
-
-# Make storage directory
-RUN install -d -o www-data -g www-data -m 775 \
-    ./storage/framework/cache    \
-    ./storage/framework/sessions \
-    ./storage/framework/views    \
-    ./storage/logs               \
-    ;
-
-# Run composer in app directory to get dependencies
-RUN composer install --optimize-autoloader --no-dev;
-
+COPY ./.env.testing    ./
 
 #
-# This stage builds the application container
+# This stage builds add required extensions to the base PHP image.
 #
-FROM burningman/php-nginx:7.2-alpine3.8
-
-# Copy the application with dependencies from the composer container
-COPY --from=composer /var/www/application /var/www/application
+FROM burningman/php-nginx:7.2-alpine3.8 as php
 
 # Copy the install script, run it, delete it
-COPY ./docker/install /docker_install/install
+COPY ./docker/install_php /docker_install/install
 RUN /docker_install/install && rm -rf /docker_install;
+
+
+#
+# This stage adds composer to the base PHP image
+#
+FROM php as composer
+
+# Copy the install script, run it, delete it
+COPY ./docker/install_composer /docker_install/install
+RUN /docker_install/install && rm -rf /docker_install;
+
+
+#
+# This stage runs composer to build the PHP package dependencies.
+#
+FROM composer as build
+
+# Copy the application source from the source container
+COPY --from=source /var/www/application /var/www/application
+
+# Set working directory to application directory
+WORKDIR /var/www/application
+
+# Set composer cache directory
+ENV COMPOSER_CACHE_DIR=/var/cache/composer
+
+# Run composer to get dependencies.
+# Optimize for production and don't install development dependencies.
+RUN php composer.phar install --optimize-autoloader --no-dev;
+
+
+#
+# This stage builds the development container.
+#
+FROM composer as development
+
+# Copy the application source from the source container
+COPY --from=source /var/www/application /var/www/application
+
+# Set working directory to application directory
+WORKDIR /var/www/application
+
+# Set composer cache directory
+ENV COMPOSER_CACHE_DIR=/var/cache/composer
+
+# Copy the composer cache from the build container
+COPY --from=build /var/cache/composer /var/cache/composer
+
+# Run composer to get dependencies
+RUN php composer.phar install;
+
+
+#
+# This stage builds the application container.
+#
+FROM php
+
+# Copy the application with dependencies from the build container
+COPY --from=build /var/www/application /var/www/application
 
 # Copy start-nginx script and override supervisor config to use it
 COPY ./docker/start-nginx /usr/bin/start-nginx
