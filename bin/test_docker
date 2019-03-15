@@ -14,9 +14,6 @@ host_api_port="$("${wd}/bin/find_port")";
  db_container_name="";
 api_container_name="";
 
- db_image_name="mysql/mysql-server:5.6";
-api_image_name="${image_name}";
-
 
 ##
 # HTTP
@@ -149,6 +146,8 @@ cleanup_db_container() {
         echo "Terminating database container: ${db_container_name}...";
 
         docker kill "${db_container_name}" > /dev/null;
+
+        db_container_name="";
     fi;
 }
 
@@ -158,6 +157,10 @@ cleanup_db_container() {
 ##
 
 start_api_container() {
+    start_db_container;
+    wait_for_db;
+    db_init;
+
     api_container_name="ranger-clubhouse-api-test_${$}";
 
     trap cleanup_api_container EXIT;
@@ -244,6 +247,8 @@ cleanup_api_container() {
         echo "Terminating API application container: ${api_container_name}...";
 
         docker kill "${api_container_name}" > /dev/null;
+
+        api_container_name="";
     fi;
 
     cleanup_db_container;
@@ -351,14 +356,12 @@ test_config() {
 }
 
 
-echo "Testing service...";
-
-start_db_container  || exit 10;
-wait_for_db         || exit 11;
-db_init             || exit 12;
-start_api_container || exit 20;
-wait_for_api        || exit 21;
+start_api_container || exit 10;
+wait_for_api        || exit 11;
 test_root_resource  || exit 100;
 test_config         || exit 101;
 
 echo "Tests passed.";
+
+cleanup_api_container;
+cleanup_db_container;
