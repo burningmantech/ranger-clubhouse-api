@@ -48,18 +48,26 @@ class ErrorLogController extends ApiController
          $this->authorize('index', ErrorLog::class);
 
          $params = request()->validate([
-             'person_id' => 'sometimes|integer',
-             'sort'      => 'sometimes|string',
+             'person_id'  => 'sometimes|integer',
+             'sort'       => 'sometimes|string',
 
-             'starts_at'    => 'sometimes|datetime',
-             'ends_at'   => 'sometimes|datetime',
+             'starts_at'  => 'sometimes|datetime',
+             'ends_at'    => 'sometimes|datetime',
 
              'error_type' => 'sometimes|string',
 
-             'page'      => 'sometimes|integer',
-             'page_size' => 'sometimes|integer',
+             'page'       => 'sometimes|integer',
+             'page_size'  => 'sometimes|integer',
         ]);
 
         return response()->json(ErrorLog::findForQuery($params));
+    }
+
+    public function purge() {
+        $this->authorize('purge', ErrorLog::class);
+
+        ErrorLog::truncate();
+
+        return response()->json([ 'status' => 'success' ]);
     }
 }

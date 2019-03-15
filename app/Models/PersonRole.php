@@ -71,9 +71,7 @@ class PersonRole extends ApiModel
         }
 
         DB::table('person_role')->where('person_id', $personId)->whereIn('role_id', $ids)->delete();
-        foreach ($ids as $id) {
-            PersonRole::log($personId, $id, 'remove', $message);
-        }
+        ActionLog::record(Auth::user(), 'person-role-remove', $message, [ 'role_ids' => $ids ], $personId);
     }
 
      /*
@@ -86,11 +84,16 @@ class PersonRole extends ApiModel
 
     public static function addIdsToPerson($personId, $ids, $message)
     {
+        $addedIds = [];
         foreach ($ids as $id) {
             // Don't worry if there is a duplicate record.
             if (DB::affectingStatement("INSERT IGNORE INTO person_role SET person_id=?,role_id=?", [ $personId, $id ]) == 1) {
-                PersonRole::log($personId, $id, 'add', $message);
+                $addedIds[] = $id;
             }
+        }
+
+        if (!empty($addedIds)) {
+            ActionLog::record(Auth::user(), 'person-role-add', $message, [ 'role_ids' => $ids ], $personId);
         }
     }
 
@@ -106,6 +109,6 @@ class PersonRole extends ApiModel
 
     public static function log($personId, $id, $action, $reason=null)
     {
-        ActionLog::record(Auth::user(), 'role-'.$action, $reason, [ 'role_id' => $id ], $personId);
+        ActionLog::record(Auth::user(), 'person-role-'.$action, $reason, [ 'role_id' => $id ], $personId);
     }
 }

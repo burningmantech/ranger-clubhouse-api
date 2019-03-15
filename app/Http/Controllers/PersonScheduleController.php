@@ -160,13 +160,13 @@ class PersonScheduleController extends ApiController
             }
 
             $action = "added";
-            if (empty($forcedReasons)) {
+            if (!empty($forcedReasons)) {
                 $action .= '('.implode(',', $forcedReasons).')';
             }
 
             $this->log(
                 'person-slot-add',
-                "$action {$slot->position->title} - {$slot->description} {$slot->begins}",
+                $action,
                 $logData,
                 $person->id
             );

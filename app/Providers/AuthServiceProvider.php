@@ -7,6 +7,7 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentDelivery;
+use App\Models\ActionLog;
 use App\Models\Alert;
 use App\Models\AlertPerson;
 use App\Models\Asset;
@@ -31,6 +32,7 @@ use App\Models\TrainingSession;
 
 use App\Policies\AccessDocumentDeliveryPolicy;
 use App\Policies\AccessDocumentPolicy;
+use App\Policies\ActionLogPolicy;
 use App\Policies\AlertPersonPolicy;
 use App\Policies\AlertPolicy;
 use App\Policies\AssetPersonPolicy;
@@ -63,6 +65,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         AccessDocument::class => AccessDocumentPolicy::class,
         AccessDocumentDelivery::class => AccessDocumentDeliveryPolicy::class,
+        ActionLog::class => ActionLogPolicy::class,
         Alert::class => AlertPolicy::class,
         AlertPerson::class => AlertPersonPolicy::class,
         Asset::class  => AssetPolicy::class,

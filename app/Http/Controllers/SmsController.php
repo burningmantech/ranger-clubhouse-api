@@ -334,7 +334,7 @@ class SmsController extends ApiController
         try {
             SMSService::broadcast([ $phone ], $message);
         } catch (SMSException $e) {
-            $this->log('exception', "SMS verification code", [ 'exception' => $e, 'phone' => $phone ], $person->id);
+            $this->log('sms-fail', "SMS verification code", [ 'exception' => $e, 'phone' => $phone ], $person->id);
             return false;
         }
 
