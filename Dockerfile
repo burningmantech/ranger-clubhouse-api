@@ -34,7 +34,7 @@ RUN /docker_install/install && rm -rf /docker_install;
 
 
 #
-# This stage adds composer to the php image
+# This stage adds composer to the base PHP image
 #
 FROM php as composer
 
