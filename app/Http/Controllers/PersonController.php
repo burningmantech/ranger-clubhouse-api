@@ -448,17 +448,12 @@ class PersonController extends ApiController
         }
 
         // Mass delete the old ids
-        if (count($deleteIds) > 0) {
-            PersonPosition::where('person_id', $personId)->whereIn('position_id', $deleteIds)->delete();
+        if (!empty($deleteIds)) {
+            PersonPosition::removeIdsFromPerson($personId, $deleteIds, 'person update');
         }
 
-        // Insert the new ids
-        foreach ($newIds as $id) {
-            PersonPosition::insert([ 'person_id' => $personId, 'position_id' => $id ]);
-        }
-
-        if (count($deleteIds) > 0 || count($newIds) > 0) {
-            $this->log('person-position', 'Positions update', [ 'delete' => $deleteIds, 'add' => $newIds ]);
+        if (!empty($newIds)) {
+            PersonPosition::addIdsToPerson($personId, $newIds, 'person update');
         }
 
         return response()->json([ 'positions' => PersonPosition::findForPerson($personId) ]);
@@ -511,17 +506,12 @@ class PersonController extends ApiController
         }
 
         // Mass delete the old ids
-        if (count($deleteIds) > 0) {
-            PersonRole::where('person_id', $personId)->whereIn('role_id', $deleteIds)->delete();
+        if (!empty($deleteIds)) {
+            PersonRole::removeIdsFromPerson($personId, $deleteIds, 'person update');
         }
 
-        // Insert the new ids
-        foreach ($newIds as $id) {
-            PersonRole::insert([ 'person_id' => $personId, 'role_id' => $id ]);
-        }
-
-        if (count($deleteIds) > 0 || count($newIds) > 0) {
-            $this->log('person-role', 'Roles update', [ 'delete' => $deleteIds, 'add' => $newIds ]);
+        if (!empty($newIds)) {
+            PersonRole::addIdsToPerson($personId, $newIds, 'person update');
         }
 
         return response()->json([ 'roles' => PersonRole::findRolesForPerson($personId) ]);
@@ -646,7 +636,7 @@ class PersonController extends ApiController
         if (Person::emailExists($person->email)) {
             // An account already exists with the same email..
             Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'duplicate email', $person, $intent));
-            $this->log('person-register-fail', 'duplicate email', [ 'person' => $params['person'] ]);
+            $this->log('person-create-fail', 'duplicate email', [ 'person' => $params['person'] ]);
             return response()->json([ 'status' => 'email-exists' ]);
         }
 
@@ -660,20 +650,20 @@ class PersonController extends ApiController
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
             Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'database creation error', $person, $intent));
-            $this->log('person-register-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
+            $this->log('person-create-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
             return $this->restError($person);
         }
 
         // Log account creation
         Mail::to($accountCreateEmail)->send(new AccountCreationMail('success', 'account created', $person, $intent));
-        $this->log('person-register', 'account registration', null, $person->id);
+        $this->log('person-create', 'registration', null, $person->id);
 
         // Set the password
         $person->changePassword($params['person']['password']);
 
         // Setup the default roles & positions
-        PersonRole::resetRoles($person->id, 'account registration', Person::ADD_NEW_USER);
-        PersonPosition::resetPositions($person->id, 'account registration', Person::ADD_NEW_USER);
+        PersonRole::resetRoles($person->id, 'registration', Person::ADD_NEW_USER);
+        PersonPosition::resetPositions($person->id, 'registration', Person::ADD_NEW_USER);
 
         // Send a welcome email to the person if not an auditor
         if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
