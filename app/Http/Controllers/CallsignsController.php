@@ -10,15 +10,19 @@ class CallsignsController extends ApiController
 {
     public function index() {
         $params = request()->validate([
-            'query'    => 'required|string',
+            'query' => 'required|string',
             'type' => 'required|string',
             'limit' => 'required|integer'
         ]);
 
         $type = $params['type'];
 
-        if (!in_array($type, [ 'message', 'contact' ])) {
+        if (!in_array($type, [ 'message', 'contact', 'all' ])) {
             throw new \InvalidArgumentException('type parameter is invalid');
+        }
+
+        if ($type == 'all' && !$this->userHasRole(Role::ADMIN)) {
+            $this->notPermitted('Type all can only be used by an Admin.');
         }
 
         return response()->json([ 'callsigns' => Person::searchCallsigns($params['query'], $type, $params['limit']) ]);

@@ -59,6 +59,7 @@ Route::group([
 
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
+    Route::resource('action-log', 'ActionLogController', [ 'only' => 'index' ]);
 
     Route::resource('asset', 'AssetController');
     Route::resource('asset-attachment', 'AssetAttachmentController');
@@ -81,6 +82,7 @@ Route::group([
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
 
+    Route::delete('error-log/purge', 'ErrorLogController@purge');
     Route::resource('error-log', 'ErrorLogController', [ 'only' => 'index' ]);
 
     Route::resource('manual-review', 'ManualReviewController@passed');

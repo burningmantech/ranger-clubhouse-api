@@ -125,7 +125,7 @@ class SalesforceController extends ApiController
            }
 
             if ($pca->status == "ready" && $createAccounts) {
-                if (!self::createPerson($sfch, $pca, $updateSf)) {
+                if (!$this->createPerson($sfch, $pca, $updateSf)) {
                     $account['message'] = $pca->message;
                 } else {
                     $account['chid'] = $pca->chid;
@@ -156,7 +156,7 @@ class SalesforceController extends ApiController
         ]);
     }
 
-    private static function createPerson($sfch, $pca, $updateSf) {
+    private function createPerson($sfch, $pca, $updateSf) {
         $person = new Person;
 
         $person->callsign          = $pca->callsign;
@@ -187,8 +187,14 @@ class SalesforceController extends ApiController
             }
             $pca->message = "Creation error: ".implode(', ', $messages);
             $pca->status = "failed";
+            $this->log('person-create-fail', 'salesforce import', [ 'person' => $person ]);
             return false;
         }
+
+        $this->log('person-create', 'salesforce import', [
+            'bpguid'    => $pca->bpguid,
+            'sfuid'     => $pca->sfuid
+        ], $person->id);
 
         // Setup the default roles & positions
         PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);

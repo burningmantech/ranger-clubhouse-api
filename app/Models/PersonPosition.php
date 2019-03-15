@@ -95,11 +95,16 @@ class PersonPosition extends ApiModel
 
       public static function addIdsToPerson($personId, $ids, $message)
       {
+          $addIds = [];
           foreach ($ids as $id) {
             // Don't worry if there is a duplicate record.
             if (DB::affectingStatement("INSERT IGNORE INTO person_position SET person_id=?, position_id=?", [ $personId, $id]) == 1) {
-                PersonPosition::log($personId, $id, 'add', $message);
+                $addIds[] = $id;
             }
+          }
+
+          if (!empty($addIds)) {
+              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => $addIds ], $personId);
           }
       }
 
@@ -123,9 +128,8 @@ class PersonPosition extends ApiModel
             ->whereIn('position_id', $ids)
             ->delete();
 
-         foreach ($ids as $id) {
-             PersonPosition::log($personId, $id, 'remove', $message);
-         }
+
+         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => $ids ], $personId);
      }
 
      /**
@@ -139,6 +143,6 @@ class PersonPosition extends ApiModel
 
      public static function log($personId, $id, $action, $reason=null)
      {
-         ActionLog::record(Auth::user(), 'position-'.$action, $reason, [ 'position_id' => $id ], $personId);
+         ActionLog::record(Auth::user(), 'person-position-'.$action, $reason, [ 'position_id' => $id ], $personId);
      }
 }

@@ -2,12 +2,12 @@
 
 namespace App\Policies;
 
-use App\Models\ErrorLog;
+use App\Models\ActionLog;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class ErrorLogPolicy
+class ActionLogPolicy
 {
     use HandlesAuthorization;
 
@@ -19,7 +19,7 @@ class ErrorLogPolicy
     }
 
     /**
-     * Determine whether the user can see error Log
+     * Determine whether the user can see action Log
      */
     public function index(Person $user)
     {

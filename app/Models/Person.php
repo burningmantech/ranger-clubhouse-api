@@ -430,7 +430,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // Trying to send a clubhouse message
             case 'message':
                 return $sql->whereIn('status', [ 'active', 'inactive', 'alpha' ])->get(['id', 'callsign']);
-                break;
+
+            // Search all users
+            case 'all':
+                return $sql->get(['id', 'callsign']);
         }
 
         throw new \InvalidArgumentException("Unknown type [$type]");
