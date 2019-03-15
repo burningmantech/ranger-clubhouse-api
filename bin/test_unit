@@ -5,7 +5,7 @@
 
 . "$(dirname "$0")/.common.sh";
 
-db_database="rangers";
+db_database="rangers-testing";
     db_user="rangers";
 db_password="$(uuidgen)";
 
@@ -81,7 +81,7 @@ db_init() {
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
         "${api_image_name}"                               \
-        php artisan migrate:fresh --seed --force;
+        php artisan migrate:fresh --seed --force --env testing;
 }
 
 

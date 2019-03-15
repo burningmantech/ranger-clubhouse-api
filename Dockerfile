@@ -21,7 +21,7 @@ COPY ./phpunit.xml    ./
 COPY ./server.php     ./
 COPY ./webpack.mix.js ./
 COPY ./yarn.lock      ./
-
+COPY ./.env.testing    ./
 
 #
 # This stage builds add required extensions to the base PHP image.
