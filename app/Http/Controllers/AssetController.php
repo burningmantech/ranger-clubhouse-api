@@ -16,7 +16,7 @@ class AssetController extends ApiController
      */
     public function index()
     {
-        $this->authorize('view', [Asset::class]);
+        $this->authorize('index', Asset::class);
 
         $query = request()->validate([
             'barcode'         => 'sometimes|string',    // specific barcode to find
@@ -38,7 +38,7 @@ class AssetController extends ApiController
     {
         $this->authorize('store', Asset::class);
 
-        $asset = new \App\Models\Asset;
+        $asset = new Asset;
         $this->fromRest($asset);
 
         if ($asset->save()) {
@@ -53,7 +53,7 @@ class AssetController extends ApiController
      */
     public function show(Asset $asset)
     {
-        $this->authorize('view', Asset::class);
+        $this->authorize('show', $asset);
         return $this->success($asset);
     }
 
