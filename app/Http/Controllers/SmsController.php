@@ -139,10 +139,12 @@ class SmsController extends ApiController
 
     public function confirmCode()
     {
+        error_log("PARAMS ".json_encode(request()->all()));
+
         $params = request()->validate([
             'person_id' => 'required|integer',
-            'type'     => 'required|string',
-            'code'      => 'required|integer'
+            'type'      => 'required|string',
+            'code'      => 'required|string'
         ]);
 
         $person = $this->findPerson($params['person_id']);
@@ -185,9 +187,10 @@ class SmsController extends ApiController
 
         $person->saveWithoutValidation();
 
-        $response =  [ 'numbers' => self::buildSMSResponse($person) ];
-        $response['status'] = 'confirmed';
-        return response()->json($response);
+        return response()->json([
+            'status'  => 'confirmed',
+            'numbers' => self::buildSMSResponse($person)
+        ]);
     }
 
     /*
