@@ -101,5 +101,8 @@ COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
 
+# Reset ownership back to the application..(don't remove this.)
+RUN chown -R www-data:www-data /var/www/application/storage;
+
 # Set working directory to application directory
 WORKDIR /var/www/application
