@@ -56,7 +56,7 @@ return [
     */
 
     'from' => [
-        'address' => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
+        'address' => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'do-not-reply@burningman.org'),
         'name' => env('RANGER_CLUBHOUSE_NAME_SUPPORT', 'The Black Rock Rangers'),
     ],
 
