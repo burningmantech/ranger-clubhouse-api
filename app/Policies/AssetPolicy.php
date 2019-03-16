@@ -19,6 +19,14 @@ class AssetPolicy
     }
 
     /**
+     * Determine whether the user see all the assets
+     */
+    public function index(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /**
      * Determine whether the user can view the asset.
      */
     public function view(Person $user, Asset $asset)
@@ -52,5 +60,4 @@ class AssetPolicy
     {
         return false;
     }
-
 }
