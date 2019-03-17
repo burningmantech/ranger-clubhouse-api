@@ -7,7 +7,6 @@
 . "$(dirname "$0")/.common.sh";
 
 label="$(cd "${wd}" && git describe --all --long)";
-stages="";
 
 
 #
@@ -22,8 +21,6 @@ build() {
         --tag="${name}"      \
         --label="${label}"   \
         "${wd}";
-
-    stages="${stages} ${name}";
 }
 
 

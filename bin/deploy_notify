@@ -40,7 +40,8 @@ class Notifier(object):
 
         text = (
             f"Travis build #{buildNumber} for commit {commitID} "
-            f"has been deployed to the staging environment."
+            f"has completed successfully and the resulting image has been "
+            f"deployed to the staging environment."
         )
         text = (
 f"""
@@ -65,7 +66,8 @@ f"""
   <p>
     <a href="{buildURL}">Travis build #{escape(buildNumber)}</a>
     for <a href="{commitURL}">commit {commitID}</a>
-    has been deployed to the staging environment.
+    has completed successfully and the resulting image has been has been
+    deployed to the staging environment.
   </p>
 
   <blockquote>{escape(commitMessage)}</blockquote>
@@ -76,8 +78,6 @@ f"""
 
         message.attach(MIMEText(text, "plain"))
         message.attach(MIMEText(html, "html"))
-
-        print(message)
 
         context = SSLContext()
         with SMTP(self.emailHost, self.emailPort, context=context) as relay:
