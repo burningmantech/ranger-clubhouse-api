@@ -64,7 +64,7 @@ RUN php composer.phar install --optimize-autoloader --no-dev;
 
 
 # -----------------------------------------------------------------------------
-# This stage builds the development container.
+# This stage runs composer to build additional dependencies for development.
 # -----------------------------------------------------------------------------
 FROM composer as development
 

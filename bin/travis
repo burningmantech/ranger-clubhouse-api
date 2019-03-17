@@ -32,6 +32,8 @@ load() {
     if [ -f "${docker_cache}/${name}.tgz" ]; then
         echo "Loading Docker image from cache: ${name}";
         docker load < "${docker_cache}/${name}.tgz";
+    else
+        echo "No cached Docker image available: ${name}";
     fi;
 }
 
