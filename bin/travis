@@ -23,15 +23,19 @@ cache() {
 
     echo "Caching Docker image: ${name}";
     docker save "${name}" | gzip -9 > "${docker_cache}/${name}.tgz";
+    docker image ls;
 }
 
 
 load() {
     local name="${1}"; shift;
 
+    ls -l "${docker_cache}";
+
     if [ -f "${docker_cache}/${name}.tgz" ]; then
         echo "Loading Docker image from cache: ${name}";
         docker load < "${docker_cache}/${name}.tgz";
+        docker image ls;
     else
         echo "No cached Docker image available: ${name}";
     fi;
