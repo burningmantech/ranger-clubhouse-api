@@ -7,6 +7,7 @@
 . "$(dirname "$0")/.common.sh";
 
 label="$(cd "${wd}" && git describe --all --long)";
+stages="";
 
 
 #
@@ -16,11 +17,20 @@ build() {
     local stage="${1}"; shift;
     local  name="${1}"; shift;
 
+    cache_flags() {
+        for stage in ${stages}; do
+            echo "--cache-from=${stage}";
+        done;
+    }
+
     docker build             \
         --target="${stage}"  \
         --tag="${name}"      \
         --label="${label}"   \
+        $(cache_flags)       \
         "${wd}";
+
+    stages="${stages} ${name}";
 }
 
 
