@@ -10,17 +10,17 @@ label="$(cd "${wd}" && git describe --all --long)";
 
 # Build the "php" stage and tag it
 docker build                     \
-    --target php               \
-    --tag "${php_image_name}"  \
+    --target php                 \
+    --tag "${php_image_name}"    \
     --label="${label}"           \
     "${wd}";
 
 
 # Build the "composer" stage and tag it
-docker build                     \
+docker build                        \
     --target composer               \
     --tag "${composer_image_name}"  \
-    --label="${label}"           \
+    --label="${label}"              \
     "${wd}";
 
 # Build the "build" stage and tag it
