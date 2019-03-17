@@ -5,7 +5,7 @@
 
 . "$(dirname "$0")/.common.sh";
 
-travis_action="$1"; shift;
+travis_action="${1}"; shift;
 
 echo "Docker configuration:";
 docker info;
@@ -14,13 +14,37 @@ echo "Environment:";
 env;
 
 docker_cache="${HOME}/docker_images";
-cached_image="${docker_cache}/${TRAVIS_COMMIT}.tgz";
+
+
+cache() {
+    local name="${1}"; shift;
+
+    mkdir -p "${docker_cache}";
+
+    echo "Caching Docker image: ${name}";
+    docker save "${name}" | gzip -9 > "${docker_cache}/${name}.tgz";
+}
+
+
+load() {
+    local name="${1}"; shift;
+
+    if [ -f "${docker_cache}/${name}.tgz" ]; then
+        echo "Loading Docker image from cache: ${name}";
+        docker load < "${docker_cache}/${name}.tgz";
+    fi;
+}
+
 
 case "${travis_action}" in
 
     "test")
         # Lint doesn't require a build and is a relatively quick check
         "${wd}/bin/test_lint" .;
+
+        # Load cached docker images
+        load "${php_image_name}";
+        load "${composer_image_name}";
 
         # Build
         "${wd}/bin/build";
@@ -33,10 +57,9 @@ case "${travis_action}" in
         echo "Testing Docker image...";
         "${wd}/bin/test_docker";
 
-        # Cache docker image for later use
-        echo "Caching Docker image...";
-        mkdir -p "${docker_cache}";
-        docker save "${image_name}" | gzip > "${cached_image}";
+        # Cache stable docker images for later use
+        cache "${php_image_name}";
+        cache "${composer_image_name}";
         ;;
 
     "deploy")
@@ -49,17 +72,12 @@ case "${travis_action}" in
             exit 1;
         fi;
 
-        # Use cached docker image or rebuild it
-        if [ -f "${cached_image}" ]; then
-            echo "Loading cached Docker image...";
-            docker load < "${cached_image}";
-            docker image ls;
-        else
-            echo "No cached Docker image; building...";
-            echo "Caches:";
-            ls -l "${docker_cache}" || true;
-            "${wd}/bin/build";
-        fi;
+        # Load cached docker images
+        load "${php_image_name}";
+        load "${composer_image_name}";
+
+        "${wd}/bin/build";
+
         # Deploy
         "${wd}/bin/deploy" staging;
         ;;

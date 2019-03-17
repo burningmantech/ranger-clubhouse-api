@@ -1,7 +1,27 @@
-#
+# -----------------------------------------------------------------------------
+# This stage builds add required extensions to the base PHP image.
+# -----------------------------------------------------------------------------
+FROM burningman/php-nginx:7.2-alpine3.8 as php
+
+# Copy the install script, run it, delete it
+COPY ./docker/install_php /docker_install/install
+RUN /docker_install/install && rm -rf /docker_install;
+
+
+# -----------------------------------------------------------------------------
+# This stage adds composer to the base PHP image
+# -----------------------------------------------------------------------------
+FROM php as composer
+
+# Copy the install script, run it, delete it
+COPY ./docker/install_composer /docker_install/install
+RUN /docker_install/install && rm -rf /docker_install;
+
+
+# -----------------------------------------------------------------------------
 # This stage contains source files.
 # We use this so we don't have to enumerate the sources to copy more than once.
-#
+# -----------------------------------------------------------------------------
 FROM scratch as source
 
 # Copy the application over
@@ -23,29 +43,10 @@ COPY ./webpack.mix.js ./
 COPY ./yarn.lock      ./
 COPY ./.env.testing    ./
 
-#
-# This stage builds add required extensions to the base PHP image.
-#
-FROM burningman/php-nginx:7.2-alpine3.8 as php
 
-# Copy the install script, run it, delete it
-COPY ./docker/install_php /docker_install/install
-RUN /docker_install/install && rm -rf /docker_install;
-
-
-#
-# This stage adds composer to the base PHP image
-#
-FROM php as composer
-
-# Copy the install script, run it, delete it
-COPY ./docker/install_composer /docker_install/install
-RUN /docker_install/install && rm -rf /docker_install;
-
-
-#
+# -----------------------------------------------------------------------------
 # This stage runs composer to build the PHP package dependencies.
-#
+# -----------------------------------------------------------------------------
 FROM composer as build
 
 # Copy the application source from the source container
@@ -62,9 +63,9 @@ ENV COMPOSER_CACHE_DIR=/var/cache/composer
 RUN php composer.phar install --optimize-autoloader --no-dev;
 
 
-#
+# -----------------------------------------------------------------------------
 # This stage builds the development container.
-#
+# -----------------------------------------------------------------------------
 FROM composer as development
 
 # Copy the application source from the source container
@@ -83,10 +84,10 @@ COPY --from=build /var/cache/composer /var/cache/composer
 RUN php composer.phar install;
 
 
-#
+# -----------------------------------------------------------------------------
 # This stage builds the application container.
-#
-FROM php
+# -----------------------------------------------------------------------------
+FROM php as application
 
 # Copy the application with dependencies from the build container
 COPY --from=build /var/www/application /var/www/application
