@@ -3,8 +3,6 @@
 # Dispatcher for Travis CI
 #
 
-set -x
-
 . "$(dirname "$0")/.common.sh";
 
 travis_action="${1}"; shift;
@@ -39,7 +37,9 @@ cache_images() {
 load_images() {
     if [ -f "${docker_cache_file}" ]; then
         echo "Loading Docker images from cache...";
-        docker load --input "${docker_cache_file}";
+        if ! docker load --input "${docker_cache_file}"; then
+            echo "Cache load failed.";
+        fi;
         docker image ls;
     else
         echo "No cached Docker image available.";
