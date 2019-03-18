@@ -30,7 +30,7 @@ cache_images() {
 
     echo "Caching Docker images: ${images}";
     docker save ${images} | gzip -9 > "${docker_cache_file}";
-    docker image ls;
+    docker image ls -a;
 }
 
 
@@ -40,7 +40,7 @@ load_images() {
         if ! docker load --input "${docker_cache_file}"; then
             echo "Cache load failed.";
         fi;
-        docker image ls;
+        docker image ls -a;
     else
         echo "No cached Docker image available.";
     fi;
