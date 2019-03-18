@@ -3,6 +3,8 @@
 # Dispatcher for Travis CI
 #
 
+set -x
+
 . "$(dirname "$0")/.common.sh";
 
 travis_action="${1}"; shift;
