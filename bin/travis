@@ -17,22 +17,24 @@ docker_cache_dir="${HOME}/docker_images";
 docker_cache_file="${docker_cache_dir}/images.tgz";
 
 
-cache() {
+cache_images() {
     mkdir -p "${docker_cache_dir}";
 
-    images() {
+    find_images() {
         for name in "${@}"; do
             docker history -q "${name}" | grep -v "<missing>";
         done;
     }
 
-    echo "Caching Docker image...";
-    docker save $(images "${@}") | gzip -9 > "${docker_cache_file}";
+    local images="$(images "${@}" | uniq)";
+
+    echo "Caching Docker images: ${images}";
+    docker save ${images} | gzip -9 > "${docker_cache_file}";
     docker image ls;
 }
 
 
-load() {
+load_images() {
     if [ -f "${docker_cache_file}" ]; then
         echo "Loading Docker images from cache...";
         docker load --input "${docker_cache_file}";
@@ -52,8 +54,7 @@ case "${travis_action}" in
         # Load cached docker images
         echo "Cache contents:";
         ls -l "${docker_cache_dir}";
-        load "${php_image_name}";
-        load "${composer_image_name}";
+        load_images;
 
         # Build
         "${wd}/bin/build";
@@ -67,7 +68,7 @@ case "${travis_action}" in
         "${wd}/bin/test_docker";
 
         # Cache stable docker images for later use
-        cache "${php_image_name}" "${composer_image_name}";
+        cache_images "${php_image_name}" "${composer_image_name}";
         ;;
 
     "deploy")
@@ -81,8 +82,7 @@ case "${travis_action}" in
         fi;
 
         # Load cached docker images
-        load "${php_image_name}";
-        load "${composer_image_name}";
+        load_images;
 
         "${wd}/bin/build";
 
