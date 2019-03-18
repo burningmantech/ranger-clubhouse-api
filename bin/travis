@@ -26,7 +26,7 @@ cache_images() {
         done;
     }
 
-    local images="$(images "${@}" | uniq)";
+    local images="$(find_images "${@}" | uniq)";
 
     echo "Caching Docker images: ${images}";
     docker save ${images} | gzip -9 > "${docker_cache_file}";
