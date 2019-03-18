@@ -208,7 +208,6 @@ class ReservedCallsigns
         'Crickets',
         'Cuervo',
         'Cupcake',
-        'DV8', 'Deviate',
         'Danger', 'Danger Ranger',
         'Dave X',
         // DMV in Ranger Jargon
