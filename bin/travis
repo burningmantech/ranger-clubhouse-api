@@ -26,7 +26,7 @@ cache() {
         done;
     }
 
-    echo "Caching Docker image: ${name}";
+    echo "Caching Docker image...";
     docker save $(images "${@}") | gzip -9 > "${docker_cache_file}";
     docker image ls;
 }
