@@ -132,6 +132,8 @@ class PotentialClubhouseAccountFromSalesforce
             && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
         ) {
             $this->status = self::STATUS_READY;
+        } else if ($this->vc_status == "Clubhouse Record Created") {
+            $this->status = self::STATUS_IMPORTED;
         }
 
         if ($this->callsign == "") {
