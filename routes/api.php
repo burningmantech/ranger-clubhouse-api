@@ -99,6 +99,7 @@ Route::group([
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
+    Route::get('person/{person}/schedule/starting', 'PersonScheduleController@starting');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');

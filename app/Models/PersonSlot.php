@@ -5,11 +5,8 @@ namespace App\Models;
 use Carbon\Carbon;
 
 use App\Models\ApiModel;
-use App\Models\PositionCredit;
 use App\Models\Person;
-use App\Helpers\DateHelper;
-
-use Illuminate\Support\Facades\DB;
+use App\Models\Slot;
 
 class PersonSlot extends ApiModel
 {
@@ -26,6 +23,10 @@ class PersonSlot extends ApiModel
 
     public function person() {
         return $this->belongsTo(Person::class);
+    }
+
+    public function slot() {
+        return $this->belongsTo(Slot::class);
     }
 
     /*
