@@ -229,6 +229,9 @@ class SalesforceClubhouseInterface
         } else {
             return;     // Do nothing
         }
+
+        $pca->vc_status = $vcStatus;
+
         $this->updateSalesforceField(
             $pca->salesforce_ranger_object_id,
             "VC_Status__c",
