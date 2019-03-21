@@ -29,9 +29,11 @@ class PotentialClubhouseAccountFromSalesforce
     //                'Birthdate',
             'BPGUID__c',
             'SFUID__c',
-            'Emergency_Contact_Name__c',
-            'Emergency_Contact_Phone__c',
-            'Emergency_Contact_Relationship__c',
+    // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionaire.
+    // *sigh*
+    //        'Emergency_Contact_Name__c',
+    //        'Emergency_Contact_Phone__c',
+    //        'Emergency_Contact_Relationship__c',
     // The following fields exist but are always blank, at least in the
     // sandbox, so we ignore them
     //            'Email',
@@ -112,12 +114,23 @@ class PotentialClubhouseAccountFromSalesforce
         if (empty($this->email)) {
             $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
         }
-        $this->emergency_contact =
-            trim(@$sobj->Ranger_Info__r->Emergency_Contact_Name__c)
-            . " ("
-            . trim(@$sobj->Ranger_Info__r->Emergency_Contact_Relationship__c)
-            . "), phone "
-            . trim(@$sobj->Ranger_Info__r->Emergency_Contact_Phone__c);
+        $ecName = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Name__c);
+        $ecRelation = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Relationship__c);
+        $ecPhone = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Phone__c);
+        $ec = [];
+        if (!empty($ecName)) {
+            $ec[] = $ecName;
+        }
+
+        if (!empty($ecRelation)) {
+            $ec[] = "($ecRelation)";
+        }
+
+        if (!empty($ecPhone)) {
+            $ec[] = "phone $ecPhone";
+        }
+        $this->emergency_contact = implode(" ", $ec);
+
         $this->bpguid = trim(@$sobj->Ranger_Info__r->BPGUID__c);
         $this->sfuid = trim(@$sobj->Ranger_Info__r->SFUID__c);
         $this->chuid = trim(@$sobj->CH_UID__c);
@@ -132,6 +145,8 @@ class PotentialClubhouseAccountFromSalesforce
             && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
         ) {
             $this->status = self::STATUS_READY;
+        } else if ($this->vc_status == "Clubhouse Record Created") {
+            $this->status = self::STATUS_IMPORTED;
         }
 
         if ($this->callsign == "") {

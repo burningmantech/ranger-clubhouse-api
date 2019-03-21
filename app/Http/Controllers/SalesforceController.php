@@ -87,12 +87,32 @@ class SalesforceController extends ApiController
                 continue;
             }
 
+            if ($pca->status == "ready") {
+                $pca->checkIfAlreadyExists();
+            }
+
+            // Only reset accounts if we're not doing anything else.
+            // Some of these checks are redundant w/ the above but we're
+            // being extra careful here 'cause the gun is loaded
+           if ($resetTestAccounts) {
+               $pca->status = "reset";
+               $sfch->updateSalesforceVCStatus($pca);
+           }
+
+            if ($pca->status == "ready" && $createAccounts) {
+                if (!$this->createPerson($sfch, $pca, $updateSf)) {
+                    $account['message'] = $pca->message;
+                }
+            }
+
             $account = [
+                'status'                        => $pca->status,
+                'message'                       => $pca->message,
                 'applicant_type'                => $pca->applicant_type,
                 'salesforce_ranger_object_id'   => $pca->salesforce_ranger_object_id,
                 'salesforce_ranger_object_name' => $pca->salesforce_ranger_object_name,
-                'first_name'                     => $pca->firstname,
-                'last_name'                      => $pca->lastname,
+                'first_name'                    => $pca->firstname,
+                'last_name'                     => $pca->lastname,
                 'street1'                       => $pca->street1,
                 'city'                          => $pca->city,
                 'state'                         => $pca->state,
@@ -111,29 +131,6 @@ class SalesforceController extends ApiController
                 'callsign'                      => $pca->callsign,
                 'vc_status'                     => $pca->vc_status,
             ];
-
-            if ($pca->status == "ready") {
-                $pca->checkIfAlreadyExists();
-            }
-
-            // Only reset accounts if we're not doing anything else.
-            // Some of these checks are redundant w/ the above but we're
-            // being extra careful here 'cause the gun is loaded
-           if ($resetTestAccounts) {
-               $pca->status = "reset";
-               $sfch->updateSalesforceVCStatus($pca);
-           }
-
-            if ($pca->status == "ready" && $createAccounts) {
-                if (!$this->createPerson($sfch, $pca, $updateSf)) {
-                    $account['message'] = $pca->message;
-                } else {
-                    $account['chid'] = $pca->chid;
-                }
-            }
-
-            $account['status'] = $pca->status;
-            $account['message'] = $pca->message;
 
             if ($pca->existingPerson) {
                 $person = $pca->existingPerson;
@@ -205,7 +202,7 @@ class SalesforceController extends ApiController
             Mail::to($person->email)->send(new WelcomeMail($person));
         }
 
-        $pca->chid = $person->id;
+        $pca->chuid = $person->id;
         $pca->status = "succeeded";
 
         if ($updateSf) {

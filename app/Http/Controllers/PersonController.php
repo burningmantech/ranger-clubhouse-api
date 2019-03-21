@@ -546,7 +546,8 @@ class PersonController extends ApiController
                 'have_mentored'  => PersonMentor::haveMentees($person->id)
             ],
             'unread_message_count' => PersonMessage::countUnread($person->id),
-            'years' => Timesheet::yearsRangered($person->id)
+            'years' => Timesheet::yearsRangered($person->id),
+            'all_years' => Timesheet::yearsRangered($person->id, true),
         ];
 
         /*
