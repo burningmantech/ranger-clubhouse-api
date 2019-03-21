@@ -50,6 +50,8 @@ class Schedule extends ApiModel
         'slot_ends'
     ];
 
+    const SHIFT_STARTS_WITHIN = 30; // A shift starts within X minutes
+
     public static function findForQuery($query)
     {
         if (empty($query['year'])) {
@@ -250,6 +252,28 @@ class Schedule extends ApiModel
 
         $enrollments = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
         return true;
+    }
+
+    public static function retrieveStartingSlotsForPerson($personId)
+    {
+        $rows =  PersonSlot::join('slot', function($query) {
+                    $query->whereRaw('slot.id=person_slot.slot_id');
+                    $query->whereRaw('slot.begins BETWEEN DATE_SUB(NOW(), INTERVAL ? MINUTE) AND DATE_ADD(NOW(), INTERVAL ? MINUTE)',
+                        [ self::SHIFT_STARTS_WITHIN, self::SHIFT_STARTS_WITHIN]);
+            })
+            ->where('person_id', $personId)
+            ->with('slot.position:id,title')->get();
+
+            return $rows->map(function($row) {
+                return [
+                    'slot_id'   => $row->slot_id,
+                    'slot_description' => $row->slot->description,
+                    'position_id' => $row->slot->position_id,
+                    'position_title' => $row->slot->position->title,
+                    'slot_begins' => (string) $row->slot->begins,
+                    'slot_ends' => (string) $row->slot->ends,
+                ];
+            });
     }
 
     public function getSlotDurationAttribute()

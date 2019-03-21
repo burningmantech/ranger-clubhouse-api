@@ -25,7 +25,10 @@ class TrainingSession extends Slot
 
     public static function findAllForTrainingYear($trainingId, $year)
     {
-        return self::whereYear('begins', $year)->where('position_id', $trainingId)->get();
+        return self::whereYear('begins', $year)
+                ->where('position_id', $trainingId)
+                ->orderBy('begins')
+                ->get();
     }
 
     /*
