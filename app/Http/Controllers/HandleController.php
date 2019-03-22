@@ -39,7 +39,7 @@ class HandleController extends ApiController
         foreach (ReservedCallsigns::$RANGER_JARGON as $handle) {
             $result[] = $this->jsonHandle($handle, 'jargon');
         }
-        foreach (ReservedCallsigns::$VIPS as $handle) {
+        foreach (ReservedCallsigns::twiiVips() as $handle) {
             $result[] = $this->jsonHandle($handle, 'VIP');
         }
         foreach (ReservedCallsigns::$RESERVED as $handle) {
