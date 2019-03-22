@@ -339,7 +339,7 @@ class PotentialClubhouseAccountFromSalesforce
            ReservedCallsigns::$LOCATIONS,
            ReservedCallsigns::$RADIO_JARGON,
            ReservedCallsigns::$RANGER_JARGON,
-           ReservedCallsigns::$VIPS,
+           ReservedCallsigns::twiiVips(),
            ReservedCallsigns::$RESERVED
        );
         if ($style == 'cooked') {
