@@ -361,10 +361,10 @@ class PersonScheduleController extends ApiController
     }
 
     /*
-     * Find one or more starting shifts - used to suggest starting shift.
+     * Find one or more about to start shifts - used to suggest starting position.
      */
 
-    public function starting(Person $person)
+    public function imminent(Person $person)
     {
         $this->authorize('view', [ Schedule::class, $person ]);
 
