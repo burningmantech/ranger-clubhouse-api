@@ -18,28 +18,6 @@ fi;
 
 target="$1"; shift;
 
-if ! type python3 > /dev/null 2>&1; then
-    echo "Python 3 is required.";
-    exit 72;  # EX_OSFILE
-fi;
-if ! type docker > /dev/null 2>&1; then
-    echo "Docker is required.";
-    exit 72;  # EX_OSFILE
-fi;
-if [ "${TRAVIS:-}" = "true" ]; then
-    pip_user_flag="";
-else
-    pip_user_flag="--user";
-fi;
-if ! type aws > /dev/null 2>&1; then
-    echo "No aws command. Installing...";
-    python3 -m pip install ${pip_user_flag} awscli;
-fi;
-if ! python3 -c 'import boto3' 2> /dev/null; then
-    echo "No boto3 module. Installing...";
-    python3 -m pip install ${pip_user_flag} boto3;
-fi;
-
 if [ "${target}" = "staging" ]; then
     if [ "${TRAVIS:-}" != "true" ]; then
         echo "No deployments to staging outside of Travis CI.";
@@ -55,6 +33,30 @@ if [ "${target}" = "staging" ]; then
     fi;
 fi;
 
+if ! type python3 > /dev/null 2>&1; then
+    echo "Python 3 is required.";
+    exit 72;  # EX_OSFILE
+fi;
+if ! type docker > /dev/null 2>&1; then
+    echo "Docker is required.";
+    exit 72;  # EX_OSFILE
+fi;
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+    # Already in a virtual environment
+    virtualenv="";
+    python="python3";
+else
+    # Make a virtual environment
+    virtualenv="$(mktemp -d)";
+    python3 -m venv "${virtualenv}";
+    python="${virtualenv}/bin/python";
+fi;
+
+echo "Installing dependencies...";
+"${python}" -m pip install --disable-pip-version-check --quiet awscli;
+"${python}" -m pip install --disable-pip-version-check --quiet \
+    "git+https://github.com/burningmantech/ranger-deploy";
+
 export    AWS_ECS_CLUSTER_STAGING="rangers";
 export    AWS_ECS_SERVICE_STAGING="ranger-clubhouse-api-staging-fg";
 export AWS_ECS_CLUSTER_PRODUCTION="rangers";
@@ -63,7 +65,7 @@ export AWS_ECS_SERVICE_PRODUCTION="ranger-clubhouse-api-production-fg";
 docker --version;
 
 echo "Logging into AWS...";
-$(aws ecr get-login --no-include-email);
+$("${python}" -m awscli ecr get-login --no-include-email);
 
 if [ "${target}" = "staging" ]; then
     tag="$(git rev-parse --short "${TRAVIS_COMMIT}")";
@@ -76,8 +78,12 @@ if [ "${target}" = "staging" ]; then
     docker push "${AWS_ECR_IMAGE_NAME}";
 fi;
 
-"$(dirname "$0")/deploy_aws" "${target}";
+"${python}" -m deploy.aws.ecs "${target}";
 
 if [ "${target}" = "staging" ]; then
     "$(dirname "$0")/deploy_notify" "${target}";
+fi;
+
+if [ -n "${virtualenv}" ]; then
+    rm -rf "${virtualenv}";
 fi;
