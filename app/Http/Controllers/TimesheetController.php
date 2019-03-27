@@ -240,12 +240,12 @@ class TimesheetController extends ApiController
 
         // Confirm the person is allowed to sign into the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
-            throw new \InvalidArgumentException('Person does not hold the position.');
+            return response()->json([ 'status' => 'position-not-held' ]);
         }
 
         // they cannot be already on duty.
         if (Timesheet::isPersonOnDuty($personId)) {
-            throw new \InvalidArgumentException('Person is already on duty.');
+            return response()->json([ 'status' => 'already-on-duty' ]);
         }
 
         $signonForced = false;
@@ -255,9 +255,13 @@ class TimesheetController extends ApiController
         if (!Training::isPersonTrained($personId, $positionId, date('Y'), $required)) {
             if ($isAdmin) {
                 $signonForced = true;
-                $trainingTitle = Position::retrieveTitle($required);
+                $positionRequired = Position::find($required);
             } else {
-                throw new \InvalidArgumentException("Person has not completed '$required' so cannot sign in for a shift.");
+                return response()->json([
+                    'status' => 'not-trained',
+                    'position_title' =>  $positionRequired->title,
+                    'position_id' => $positionRequired->id
+                ]);
             }
         }
 
@@ -269,11 +273,15 @@ class TimesheetController extends ApiController
 
             TimesheetLog::record('signon',
                     $person->id, $this->user->id, $timesheet->id,
-                    ($signonForced ? "forced (not trained $trainingTitle) " : '').
+                    ($signonForced ? "forced (not trained {$positionRequired->title}) " : '').
                             $timesheet->position->title." ".(string) $timesheet->on_duty);
 
 
-            return $this->success($timesheet, [ 'forced' => $signonForced ]);
+            return response()->json([
+                'status'       => 'success',
+                'timesheet_id' => $timesheet->id,
+                'forced'       => $signonForced
+            ]);
         }
 
         return $this->restError($timesheet);

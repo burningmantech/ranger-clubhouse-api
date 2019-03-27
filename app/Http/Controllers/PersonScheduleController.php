@@ -359,4 +359,17 @@ class PersonScheduleController extends ApiController
 
         return response()->json([ 'permission' => $results ]);
     }
+
+    /*
+     * Find one or more starting shifts - used to suggest starting shift.
+     */
+
+    public function starting(Person $person)
+    {
+        $this->authorize('view', [ Schedule::class, $person ]);
+
+        return response()->json([
+            'slots'    => Schedule::retrieveStartingSlotsForPerson($person->id)
+        ]);
+    }
 }

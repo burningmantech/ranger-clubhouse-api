@@ -669,10 +669,21 @@ class PersonControllerTest extends TestCase
             );
         }
 
+        $p = factory(Timesheet::class)->create([
+            'person_id' => $personId,
+            'position_id' => 1, // Alpha shift
+            'on_duty'   => date("2009-08-25 16:00:00"),
+            'off_duty'  => date("2009-08-25 18:00:00"),
+        ]);
+
         $response = $this->json('GET', "person/$personId/user-info");
         $response->status(200);
-        $response->assertJson([ 'user_info' => [ 'years' => [ 2010, 2011, 2012 ]]]);
-
+        $response->assertJson([
+            'user_info' => [
+                'years' => [ 2010, 2011, 2012 ],
+                'all_years' => [ 2009, 2010, 2011, 2012 ]
+            ]
+        ]);
     }
 
 
