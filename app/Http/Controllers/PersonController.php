@@ -548,6 +548,7 @@ class PersonController extends ApiController
             'unread_message_count' => PersonMessage::countUnread($person->id),
             'years' => Timesheet::yearsRangered($person->id),
             'all_years' => Timesheet::yearsRangered($person->id, true),
+            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
         ];
 
         /*
