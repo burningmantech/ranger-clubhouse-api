@@ -71,8 +71,8 @@ class ApiController extends Controller
     }
 
     public function fromRest($record) {
-        $table = $record->getTable();
-        $fields = request()->input($table);
+        $resourceName = $record->getResourceSingle();
+        $fields = request()->input($resourceName);
 
         if (!is_null($fields) && !empty($fields)) {
             $record->fill($fields);
@@ -91,26 +91,25 @@ class ApiController extends Controller
      */
 
 
-    public function toRestFiltered($resource, $meta = null, $table = null)
+    public function toRestFiltered($resource, $meta = null, $resourceName = null)
     {
         $user = $this->user;
         if ($resource instanceof \Illuminate\Database\Eloquent\Collection) {
             if ($resource->isEmpty()) {
-                $model = $table;
                 $results = [];
             } else {
                 $results = [];
                 foreach ($resource as $row) {
                     $results[] = (new SerializeRecord($row))->toRest($user);
                 }
-                $model = $resource->first()->getTable();
+                $resourceName = $resource->first()->getResourceCollection();
             }
         } else {
             $results = (new SerializeRecord($resource))->toRest($user);
-            $model = $resource->getTable();
+            $resourceName = $resource->getResourceSingle();
         }
 
-        $json = [ $model => $results ];
+        $json = [ $resourceName => $results ];
         if ($meta) {
             $json['meta'] = $meta;
         }
@@ -118,27 +117,27 @@ class ApiController extends Controller
         return response()->json($json);
     }
 
-    public function success($resource=null, $meta=null, $tableName = null)
+    public function success($resource=null, $meta=null, $resourceName = null)
     {
         if (!$resource) {
             return response()->json([ 'message' => 'success' ]);
         }
 
         if (is_iterable($resource)) {
-            if ($tableName == '') {
-                $tableName = $resource->first()->getTable();
+            if ($resourceName == '') {
+                $resourceName = $resource->first()->getResourceCollection();
             }
             $rows = [];
             foreach ($resource as $row) {
                 $rows[] = $row->toArray();
             }
 
-            $result = [ $tableName => $rows ];
+            $result = [ $resourceName => $rows ];
         } else {
-            if ($tableName == '') {
-                $tableName = $resource->getTable();
+            if ($resourceName == '') {
+                $resourceName = $resource->getResourceSingle();
             }
-            $result = [ $tableName => $resource ];
+            $result = [ $resourceName => $resource ];
         }
 
         if ($meta) {

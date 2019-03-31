@@ -139,8 +139,6 @@ class SmsController extends ApiController
 
     public function confirmCode()
     {
-        error_log("PARAMS ".json_encode(request()->all()));
-
         $params = request()->validate([
             'person_id' => 'required|integer',
             'type'      => 'required|string',

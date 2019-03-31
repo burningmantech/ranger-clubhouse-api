@@ -9,9 +9,6 @@ use Illuminate\Validation\Factory as Validator;
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
 
-use OwenIt\Auditing\Auditable;
-use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
-
 abstract class ApiModel extends Model //implements AuditableContract
 {
     //use Auditable;
@@ -29,6 +26,9 @@ abstract class ApiModel extends Model //implements AuditableContract
     protected $updateRules;
     protected $createRules;
 
+    // Resource name for REST requests
+    protected $resourceSingle;
+    protected $resourceCollection;
 
     public static function recordExists($id) : bool
     {
@@ -104,7 +104,7 @@ abstract class ApiModel extends Model //implements AuditableContract
         return $this->errors ? $this->errors->getMessages() : null;
     }
 
-    public function addError(string $column, string $messsage):void
+    public function addError(string $column, string $message):void
     {
         if (!$this->errors) {
             $this->errors = new MessageBag();
@@ -134,5 +134,23 @@ abstract class ApiModel extends Model //implements AuditableContract
         }
 
         return $changes;
+    }
+
+    /*
+     * Return the name of the root resource for a collection when building a REST response or
+     * filling a record from a REST request.
+     */
+
+    public function getResourceCollection() {
+        return (empty($this->resourceCollection) ?  $this->getTable() : $this->resourceCollection);
+    }
+
+    /*
+     * Return the name of the root resource for a single record when building a REST response or
+     * filling a record from a REST request.
+     */
+
+    public function getResourceSingle() {
+        return (empty($this->resourceSingle) ? $this->getTable() : $this->resourceSingle);
     }
 }
