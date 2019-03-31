@@ -85,6 +85,9 @@ Route::group([
     Route::delete('error-log/purge', 'ErrorLogController@purge');
     Route::resource('error-log', 'ErrorLogController', [ 'only' => 'index' ]);
 
+    Route::get('event-dates/year', 'EventDatesController@showYear');
+    Route::resource('event-dates', 'EventDatesController');
+
     Route::resource('manual-review', 'ManualReviewController@passed');
 
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');

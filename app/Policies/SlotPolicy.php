@@ -19,15 +19,23 @@ class SlotPolicy
     }
 
     /**
-     * Determine whether the user can view the position.
+     * Determine whether the user can view the slots.
      */
-    public function view(Person $user, Slot $slot)
+    public function index(Person $user)
     {
         return true;
     }
 
     /**
-     * Determine whether the user can create positions.
+     * Determine whether the user can view the slots.
+     */
+    public function show(Person $user, Slot $slot)
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can create slots.
      */
     public function store(Person $user)
     {
@@ -35,7 +43,7 @@ class SlotPolicy
     }
 
     /**
-     * Determine whether the user can update the position.
+     * Determine whether the user can update the slot.
      */
     public function update(Person $user, Slot $slot)
     {
@@ -43,7 +51,7 @@ class SlotPolicy
     }
 
     /**
-     * Determine whether the user can delete the position.
+     * Determine whether the user can delete the slot.
      */
     public function delete(Person $user, Slot $slot)
     {

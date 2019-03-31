@@ -12,7 +12,7 @@ class DeserializeRecord
     public function __construct($request, Model $record)
     {
         $this->record = $record;
-        $table = $record->getTable();
+        $table = $record->getResourceSingle();
         $this->attributes = $request->input($table);
 
         if (empty($this->attributes)) {
