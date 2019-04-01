@@ -78,7 +78,7 @@ if [ "${target}" = "staging" ]; then
     docker push "${AWS_ECR_IMAGE_NAME}";
 fi;
 
-"${python}" -m deploy.aws.ecs "${target}" --trial;
+"${python}" -m deploy.aws.ecs "${target}" --trial-run;
 
 if [ "${target}" = "staging" ]; then
     "${python}" -m deploy.notify.smtp staging          \
