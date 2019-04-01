@@ -54,7 +54,7 @@ case "${travis_action}" in
         "${wd}/bin/test_lint" .;
 
         # Load cached docker images
-        echo "Cache contents:";
+        echo "Docker image cache contents:";
         ls -l "${docker_cache_dir}";
         load_images;
 
@@ -76,7 +76,7 @@ case "${travis_action}" in
     "deploy")
         if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
             echo "No deploy from a pull request branch.";
-            exit 0;
+            exit 1;
         fi;
         if [ "${TRAVIS_BRANCH}" != "master" ]; then
             echo "No deploy from non-master branch branch. Aborting.";
