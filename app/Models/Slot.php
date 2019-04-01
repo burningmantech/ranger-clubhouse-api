@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\ApiModel;
 use Illuminate\Support\Facades\DB;
 use App\Models\Position;
+use App\Models\EventDate;
+
 use Carbon\Carbon;
 
 class Slot extends ApiModel
@@ -142,4 +144,27 @@ class Slot extends ApiModel
          return $this->ends->format('l M d Y @ H:i');
      }
 
+     /*
+      * Check to see if the slot begins within the pre-event period and
+      * is not a training slot
+      */
+
+      public function isPreEventRestricted() {
+          if (!$this->begins || !$this->position_id) {
+              return false;
+          }
+
+          $eventDate = EventDate::findForYear($this->begins->year);
+
+          if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {
+              return false;
+          }
+
+          if ($this->begins->lt($eventDate->pre_event_slot_start) || $this->begins->gte($eventDate->pre_event_slot_end)) {
+              // Outside of Pre-Event period
+              return false;
+          }
+
+          return !$this->isTraining();
+      }
 }

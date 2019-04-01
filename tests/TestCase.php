@@ -19,10 +19,11 @@ abstract class TestCase extends BaseTestCase
 
     public function setUp() : void
     {
-        parent::setUp();
         // force garbage collection before each test
         // Faker triggers a memory allocation bug.
         gc_collect_cycles();
+
+        parent::setUp();
     }
 
     public function createUser()
@@ -90,7 +91,7 @@ abstract class TestCase extends BaseTestCase
     {
         if (is_numeric($value)) {
             $type = 'integer';
-        } else if (is_bool($value)) {
+        } elseif (is_bool($value)) {
             $type = 'bool';
         } else {
             $type = 'string';
