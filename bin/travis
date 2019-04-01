@@ -71,6 +71,9 @@ case "${travis_action}" in
 
         # Cache stable docker images for later use
         cache_images "${php_image_name}" "${composer_image_name}";
+
+        # TESTING
+        "${wd}/bin/deploy" staging;
         ;;
 
     "deploy")

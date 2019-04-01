@@ -18,20 +18,20 @@ fi;
 
 target="$1"; shift;
 
-if [ "${target}" = "staging" ]; then
-    if [ "${TRAVIS:-}" != "true" ]; then
-        echo "No deployments to staging outside of Travis CI.";
-        exit 78;  # EX_CONFIG
-    fi;
-    if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
-        echo "No deployments allowed from a pull request.";
-        exit 78;  # EX_CONFIG
-    fi;
-    if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
-        echo "No deployments allowed from non-master branches.";
-        exit 78;  # EX_CONFIG
-    fi;
-fi;
+# if [ "${target}" = "staging" ]; then
+#     if [ "${TRAVIS:-}" != "true" ]; then
+#         echo "No deployments to staging outside of Travis CI.";
+#         exit 78;  # EX_CONFIG
+#     fi;
+#     if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
+#         echo "No deployments allowed from a pull request.";
+#         exit 78;  # EX_CONFIG
+#     fi;
+#     if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
+#         echo "No deployments allowed from non-master branches.";
+#         exit 78;  # EX_CONFIG
+#     fi;
+# fi;
 
 if ! type python3 > /dev/null 2>&1; then
     echo "Python 3 is required.";
@@ -78,11 +78,12 @@ if [ "${target}" = "staging" ]; then
     docker push "${AWS_ECR_IMAGE_NAME}";
 fi;
 
-"${python}" -m deploy.aws.ecs "${target}";
+"${python}" -m deploy.aws.ecs "${target}" --trial;
 
 if [ "${target}" = "staging" ]; then
     "${python}" -m deploy.notify.smtp staging          \
         --project-name="Ranger Clubhouse API Service"  \
+        --project-name="TOOL IS DOING SOME TESTING YO" \
         --repository-id="${TRAVIS_REPO_SLUG}"          \
         --build-number="${TRAVIS_BUILD_NUMBER}"        \
         --build-url="${TRAVIS_BUILD_WEB_URL}"          \
