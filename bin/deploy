@@ -81,7 +81,20 @@ fi;
 "${python}" -m deploy.aws.ecs "${target}";
 
 if [ "${target}" = "staging" ]; then
-    "$(dirname "$0")/deploy_notify" "${target}";
+    "${python}" -m deploy.notify.smtp staging          \
+        --project-name="Ranger Clubhouse API Service"  \
+        --repository-id="${TRAVIS_REPO_SLUG}"          \
+        --build-number="${TRAVIS_BUILD_NUMBER}"        \
+        --build-url="${TRAVIS_BUILD_WEB_URL}"          \
+        --commit-id="${TRAVIS_COMMIT}"                 \
+        --commit-message="${TRAVIS_COMMIT_MESSAGE}"    \
+        --smtp-host="${NOTIFY_SMTP_HOST}"              \
+        --smtp-port="${NOTIFY_SMTP_PORT}"              \
+        --smtp-user="${NOTIFY_SMTP_USER}"              \
+        --smtp-password="${NOTIFY_SMTP_PASSWORD}"      \
+        --sender="${NOTIFY_EMAIL_SENDER}"              \
+        --recipient="${NOTIFY_EMAIL_RECIPIENT}"        \
+        ;
 fi;
 
 if [ -n "${virtualenv}" ]; then
