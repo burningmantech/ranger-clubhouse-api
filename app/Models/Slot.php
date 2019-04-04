@@ -34,7 +34,7 @@ class Slot extends ApiModel
 
     protected $rules = [
         'begins'      => 'required|date|before:ends',
-        'description' => 'required|string',
+        'description' => 'required|string|max:512',
         'ends'        => 'required|date|after:begins',
         'max'         => 'required|integer',
         'position_id' => 'required|integer',
