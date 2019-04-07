@@ -6,16 +6,21 @@
 . "$(dirname "$0")/.common.sh";
 
 # Provided by the CI environment:
-# * AWS_DEFAULT_REGION
 # * AWS_ACCESS_KEY_ID
-# * AWS_SECRET_ACCESS_KEY
+# * AWS_DEFAULT_REGION
 # * AWS_ECR_IMAGE_REPOSITORY
+# * AWS_ECS_CLUSTER_PRODUCTION
+# * AWS_ECS_CLUSTER_STAGING
+# * AWS_ECS_SERVICE_PRODUCTION
+# * AWS_ECS_SERVICE_STAGING
+# * AWS_SECRET_ACCESS_KEY
 # * NOTIFY_EMAIL_RECIPIENT
 # * NOTIFY_EMAIL_SENDER
 # * NOTIFY_SMTP_HOST
 # * NOTIFY_SMTP_PASSWORD
 # * NOTIFY_SMTP_PORT
 # * NOTIFY_SMTP_USER
+# * PROJECT_NAME (optional)
 
 if [ $# -lt 1 ]; then
     echo "No target specified.";
@@ -24,85 +29,72 @@ fi;
 
 target="$1"; shift;
 
-if [ "${target}" = "staging" ]; then
-    if [ "${TRAVIS:-}" != "true" ]; then
-        echo "No deployments to staging outside of Travis CI.";
-        exit 78;  # EX_CONFIG
-    fi;
-    if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
-        echo "No deployments allowed from a pull request.";
-        exit 78;  # EX_CONFIG
-    fi;
-    if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
-        echo "No deployments allowed from non-master branches.";
-        exit 78;  # EX_CONFIG
-    fi;
-fi;
-
 if ! type python3 > /dev/null 2>&1; then
     echo "Python 3 is required.";
     exit 72;  # EX_OSFILE
 fi;
-if ! type docker > /dev/null 2>&1; then
-    echo "Docker is required.";
-    exit 72;  # EX_OSFILE
-fi;
 if [ -n "${VIRTUAL_ENV:-}" ]; then
     # Already in a virtual environment
-    virtualenv="";
     python="python3";
 else
     # Make a virtual environment
     virtualenv="$(mktemp -d)";
     python3 -m venv "${virtualenv}";
     python="${virtualenv}/bin/python";
+
+    cleanup() { rm -rf "${virtualenv}"; }
+    trap cleanup EXIT;
 fi;
 
 echo "Installing dependencies...";
 "${python}" -m pip install --disable-pip-version-check --quiet awscli;
+
+deploy_url=git+https://github.com/burningmantech/ranger-deploy;
+deploy_commit="master";
 "${python}" -m pip install --disable-pip-version-check --quiet \
-    "git+https://github.com/burningmantech/ranger-deploy";
+    "${deploy_url}@${deploy_commit}#egg=ranger-deploy";
 
-export    AWS_ECS_CLUSTER_STAGING="rangers";
-export    AWS_ECS_SERVICE_STAGING="ranger-clubhouse-api-staging-fg";
-export AWS_ECS_CLUSTER_PRODUCTION="rangers";
-export AWS_ECS_SERVICE_PRODUCTION="ranger-clubhouse-api-production-fg";
+case "${target}" in
 
-docker --version;
+    "staging")
 
-echo "Logging into AWS...";
-$("${python}" -m awscli ecr get-login --no-include-email);
+        # Safety checks, since we don't want to allow deployments to staging
+        # outside of CI, and only from master branch builds.
+        if [ "${TRAVIS:-}" != "true" ]; then
+            echo "No deployments to staging outside of Travis CI.";
+            exit 78;  # EX_CONFIG
+        fi;
+        if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
+            echo "No deployments allowed from a pull request.";
+            exit 78;  # EX_CONFIG
+        fi;
+        if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
+            echo "No deployments allowed from non-master branches.";
+            exit 78;  # EX_CONFIG
+        fi;
 
-if [ "${target}" = "staging" ]; then
-    tag="$(git rev-parse --short "${TRAVIS_COMMIT}")";
-    export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}:${tag}";
+        commit_id="$(git rev-parse --short "${TRAVIS_COMMIT}")";
+        export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}:${commit_id}";
 
-    echo "Tagging image for AWS ECR...";
-    docker tag "${image_name}" "${AWS_ECR_IMAGE_NAME}";
+        # Push the built image to ECR
+        "${python}" -m deploy.aws.ecr push \
+            "${image_name}" "${AWS_ECR_IMAGE_NAME}";
 
-    echo "Pushing image to AWS ECR...";
-    docker push "${AWS_ECR_IMAGE_NAME}";
-fi;
+        # Deploy the new image to ECS
+        "${python}" -m deploy.aws.ecs staging;
 
-"${python}" -m deploy.aws.ecs "${target}";
+        "${python}" -m deploy.notify.smtp staging        \
+            --repository-id="${TRAVIS_REPO_SLUG}"        \
+            --build-number="${TRAVIS_BUILD_NUMBER}"      \
+            --build-url="${TRAVIS_BUILD_WEB_URL}"        \
+            --commit-id="${TRAVIS_COMMIT}"               \
+            --commit-message="${TRAVIS_COMMIT_MESSAGE}"  \
+            ;
 
-if [ "${target}" = "staging" ]; then
-    "${python}" -m deploy.notify.smtp staging          \
-        --project-name="Ranger Clubhouse API Service"  \
-        --repository-id="${TRAVIS_REPO_SLUG}"          \
-        --build-number="${TRAVIS_BUILD_NUMBER}"        \
-        --build-url="${TRAVIS_BUILD_WEB_URL}"          \
-        --commit-id="${TRAVIS_COMMIT}"                 \
-        --commit-message="${TRAVIS_COMMIT_MESSAGE}"    \
-        --smtp-host="${NOTIFY_SMTP_HOST}"              \
-        --smtp-port="${NOTIFY_SMTP_PORT}"              \
-        --smtp-user="${NOTIFY_SMTP_USER}"              \
-        --smtp-password="${NOTIFY_SMTP_PASSWORD}"      \
-        --sender="${NOTIFY_EMAIL_SENDER}"              \
-        --recipient="${NOTIFY_EMAIL_RECIPIENT}"        \
-        ;
-fi;
+        ;;
 
-if [ -n "${virtualenv}" ]; then
-    rm -rf "${virtualenv}";
-fi;
+    *)
+        "${python}" -m deploy.aws.ecs "${target}";
+        ;;
+
+esac;
