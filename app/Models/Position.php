@@ -101,7 +101,7 @@ class Position extends ApiModel
 
     protected $rules = [
         'title' => 'required|string|max:40',
-        'short_title' => 'sometimes|string|max:6',
+        'short_title' => 'sometimes|string|max:6|nullable',
         'min'   => 'integer',
         'max'   => 'integer',
         'training_position_id'  => 'nullable|exists:position,id',
