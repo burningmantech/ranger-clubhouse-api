@@ -233,17 +233,12 @@ class Schedule extends ApiModel
     }
 
     /*
-     * Does a person have multiple enrollments for the same position (aka Training)
+     * Does a person have multiple enrollments for the same position (aka Training or Alpha shift)
      * and if so what are the enrollments?
      */
 
     public static function haveMultipleEnrollments($personId, $positionId, $year, & $enrollments) {
-        $slotIds = PersonSlot::where('person_slot.person_id', $personId)
-                    ->join('slot', function($query) use ($positionId, $year) {
-                        $query->whereRaw('slot.id=person_slot.slot_id');
-                        $query->where('slot.position_id', $positionId);
-                        $query->whereYear('slot.begins', $year);
-                    })->get()->pluck('slot_id');
+        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
 
         if ($slotIds->isEmpty()) {
             $enrollments = null;
@@ -252,6 +247,53 @@ class Schedule extends ApiModel
 
         $enrollments = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
         return true;
+    }
+
+    /*
+     * Can the person join the training session?
+     *
+     * When the slot has a session part (a "Part X" in the description) hunt down the other
+     * enrollments and see if the parts match.
+     */
+
+    public static function canJoinTrainingSlot($personId, $slot, & $enrollments) {
+        $enrollments = null;
+
+        $year = $slot->begins->year;
+        $positionId = $slot->position_id;
+
+        $part = $slot->sessionGroupPart();
+
+        if (!$part) {
+            // Not trying to join a mulitple-part session, do a normal lookup
+            return !self::haveMultipleEnrollments($personId, $positionId, $year, $enrollments);
+        }
+
+        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
+        if ($slotIds->isEmpty()) {
+            // Good to go!
+            return true;
+        }
+
+        $slots = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
+
+        foreach ($slots as $row) {
+            if ($row->isPartOfSessionGroup($slot)) {
+                return true;
+            }
+        }
+
+        $enrollments = $slots;
+        return false;
+    }
+
+    public static function findEnrolledSlotIds($positionId, $year, $personId) {
+        return PersonSlot::where('person_slot.person_id', $personId)
+                    ->join('slot', function($query) use ($positionId, $year) {
+                        $query->whereRaw('slot.id=person_slot.slot_id');
+                        $query->where('slot.position_id', $positionId);
+                        $query->whereYear('slot.begins', $year);
+                    })->get()->pluck('slot_id');
     }
 
     public static function retrieveStartingSlotsForPerson($personId)
