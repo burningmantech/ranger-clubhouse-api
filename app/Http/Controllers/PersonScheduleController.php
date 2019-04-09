@@ -82,7 +82,7 @@ class PersonScheduleController extends ApiController
         $logData = [ 'slot_id' => $slotId ];
 
         if ($slot->isTraining()
-        && Schedule::haveMultipleEnrollments($person->id, $slot->position_id, $slot->begins->year, $enrollments)) {
+        && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
             $trainers = Position::TRAINERS[$slot->position_id] ?? null;
 
             $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];

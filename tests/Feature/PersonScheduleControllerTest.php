@@ -464,6 +464,55 @@ class PersonScheduleControllerTest extends TestCase
 
     }
 
+    /*
+     * Alow the user to sign up for multiple part training sessions
+     */
+
+    public function testAllowMultiplePartTrainingSessionsSignup()
+    {
+        $personId = $this->user->id;
+        $this->addPosition(Position::TRAINING);
+
+
+        $part1 = factory(Slot::class)->create([
+            'description' => 'Elysian Fields - Part 1',
+            'position_id' =>  Position::TRAINING,
+            'begins'      => date("Y-08-30 12:00:00"),
+            'ends'        => date("Y-08-30 18:00:00")
+        ]);
+
+        $part2 = factory(Slot::class)->create([
+            'description' => 'Elysian Fields - Part 2',
+            'position_id' =>  Position::TRAINING,
+            'begins'      => date("Y-08-31 12:00:00"),
+            'ends'        => date("Y-08-31 18:00:00")
+        ]);
+
+        factory(PersonSlot::class)->create(
+            [
+                'person_id' => $personId,
+                'slot_id'   => $part1->id,
+            ]
+        );
+
+        $response = $this->json(
+            'POST',
+            "person/{$personId}/schedule",
+            [ 'slot_id' => $part2->id ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success' ]);
+
+        $this->assertDatabaseHas(
+            'person_slot',
+            [
+                'person_id' => $this->user->id,
+                'slot_id'   => $part2->id,
+            ]
+        );
+
+    }
 
     /*
      * Allow person to be signed up to multiple trainings for admin

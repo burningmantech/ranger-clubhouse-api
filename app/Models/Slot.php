@@ -34,7 +34,8 @@ class Slot extends ApiModel
 
     protected $rules = [
         'begins'      => 'required|date|before:ends',
-        'description' => 'required|string|max:512',
+        'description' => 'required|string|max:40',
+        'url'         => 'sometimes|string|max:512',
         'ends'        => 'required|date|after:begins',
         'max'         => 'required|integer',
         'position_id' => 'required|integer',
@@ -167,4 +168,36 @@ class Slot extends ApiModel
 
           return !$this->isTraining();
       }
+
+    /*
+     * Find and return the session part number if it exists.
+     */
+
+    public function sessionGroupPart() {
+        $matched = preg_match('/\bPart (\d)\b/i', $this->description, $matches);
+
+        if (!$matched) {
+            return 0;
+        } else {
+            return (int) $matches[1];
+        }
+    }
+
+    /*
+     * Grab the session name minus any "- Part N" suffix.
+     *
+     * "Pre-Event - Part 1" becomes "Pre-Event"
+     */
+
+    public function sessionGroupName() {
+        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $this->description, $matches);
+        return $matched ? $matches[1] : null;
+    }
+
+    /*
+     * Is the slot part of a session group?
+     */
+    public function isPartOfSessionGroup($slot) {
+        return $slot->sessionGroupName() == $this->sessionGroupName();
+    }
 }
