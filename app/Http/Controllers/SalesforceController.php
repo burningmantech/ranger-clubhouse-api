@@ -11,6 +11,7 @@ use App\Lib\SalesforceClubhouseInterface;
 use App\Models\Person;
 use App\Models\PersonRole;
 use App\Models\PersonPosition;
+use App\Models\ErrorLog;
 
 use App\Helpers\SqlHelper;
 use App\Mail\WelcomeMail;
@@ -57,7 +58,7 @@ class SalesforceController extends ApiController
             $updateSf = false;
             $nonTestAccounts = false;
             $queryOptions = 'showall';
-        } else if ($createAccounts) {
+        } else if ($createAccounts || $nonTestAccounts) {
             $queryOptions = '';
         }
 
@@ -177,14 +178,21 @@ class SalesforceController extends ApiController
         $person->status = Person::PROSPECTIVE;
         $person->password = 'abcdef';
 
-        if (!$person->save()) {
-            $message = [];
-            foreach ($person->getErrors() as $column => $errors) {
-                $message[] = "$column: ".implode(' & ', $errors);
+        try {
+            if (!$person->save()) {
+                $message = [];
+                foreach ($person->getErrors() as $column => $errors) {
+                    $message[] = "$column: ".implode(' & ', $errors);
+                }
+                $pca->message = "Creation error: ".implode(', ', $messages);
+                $pca->status = "failed";
+                ErrorLog::record(request(), 'salesforce-import-fail', [ 'person' => $person, 'validation-errors' => $person->getErrors() ]);
+                return false;
             }
-            $pca->message = "Creation error: ".implode(', ', $messages);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $pca->message = "SQL Error: ".$e->getMessage();
             $pca->status = "failed";
-            $this->log('person-create-fail', 'salesforce import', [ 'person' => $person ]);
+            ErrorLog::record(request(), 'salesforce-import-fail', [ 'person' => $person, 'sql-exception' => $e->getMessage() ]);
             return false;
         }
 
