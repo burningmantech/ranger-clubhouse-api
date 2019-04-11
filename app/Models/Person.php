@@ -454,6 +454,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function passwordMatch($encyptedPw, $password): bool
     {
+        if (strpos($encyptedPw, ':') === false) {
+            return false;
+        }
+
         list($salt, $sha) = explode(':', $encyptedPw);
         $hashedPw = sha1($salt.$password);
 
