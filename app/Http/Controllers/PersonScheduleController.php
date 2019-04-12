@@ -82,7 +82,7 @@ class PersonScheduleController extends ApiController
         $logData = [ 'slot_id' => $slotId ];
 
         if ($slot->isTraining()
-        && Schedule::haveMultipleEnrollments($person->id, $slot->position_id, $slot->begins->year, $enrollments)) {
+        && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
             $trainers = Position::TRAINERS[$slot->position_id] ?? null;
 
             $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
@@ -361,10 +361,10 @@ class PersonScheduleController extends ApiController
     }
 
     /*
-     * Find one or more starting shifts - used to suggest starting shift.
+     * Find one or more about to start shifts - used to suggest starting position.
      */
 
-    public function starting(Person $person)
+    public function imminent(Person $person)
     {
         $this->authorize('view', [ Schedule::class, $person ]);
 

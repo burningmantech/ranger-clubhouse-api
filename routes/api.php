@@ -85,6 +85,9 @@ Route::group([
     Route::delete('error-log/purge', 'ErrorLogController@purge');
     Route::resource('error-log', 'ErrorLogController', [ 'only' => 'index' ]);
 
+    Route::get('event-dates/year', 'EventDatesController@showYear');
+    Route::resource('event-dates', 'EventDatesController');
+
     Route::resource('manual-review', 'ManualReviewController@passed');
 
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
@@ -99,7 +102,7 @@ Route::group([
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
-    Route::get('person/{person}/schedule/starting', 'PersonScheduleController@starting');
+    Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');

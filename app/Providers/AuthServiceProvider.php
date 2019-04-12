@@ -15,6 +15,7 @@ use App\Models\AssetAttachment;
 use App\Models\AssetPerson;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
+use App\Models\EventDate;
 use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonMentor;
@@ -40,6 +41,7 @@ use App\Policies\AssetPolicy;
 use App\Policies\AssetAttachmentPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
+use App\Policies\EventDatePolicy;
 use App\Policies\ManualReviewPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
@@ -73,6 +75,7 @@ class AuthServiceProvider extends ServiceProvider
         AssetPerson::class => AssetPersonPolicy::class,
         Broadcast::class => BroadcastPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
+        EventDate::class => EventDatePolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,
@@ -85,8 +88,8 @@ class AuthServiceProvider extends ServiceProvider
         Slot::class => SlotPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,
-        TrainingSession::class => TrainingSessionPolicy::class,
         Training::class => TrainingPolicy::class,
+        TrainingSession::class => TrainingSessionPolicy::class,
 
         'App\Model' => 'App\Policies\ModelPolicy',
     ];

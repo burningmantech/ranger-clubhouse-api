@@ -18,6 +18,19 @@ class ErrorLog extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
+    public static function record($request, $error_type, $data=[]) {
+        $data['method'] = $request->method();
+        $data['parameters'] = $request->all();
+
+        self::create([
+            'error_type'    => $error_type,
+            'ip'            => $request->ip(),
+            'user_agent'    => $request->userAgent(),
+            'url'           => $request->fullUrl(),
+            'data'          => $data
+        ]);
+    }
+
     public static function findForQuery($query)
     {
         $sql = self::query();

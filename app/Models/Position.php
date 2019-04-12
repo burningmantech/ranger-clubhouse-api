@@ -10,6 +10,7 @@ class Position extends ApiModel
     const ALPHA = 1;
     const DIRT = 2;
     const DIRT_TRAINING = 13;
+    const DIRT_PRE_EVENT = 53;
 
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
@@ -27,10 +28,16 @@ class Position extends ApiModel
 
     const DOUBLE_OH_7 = 21;
 
+    const DPW_RANGER = 105;
+
+    const OOD = 10;
     const SANDMAN_TRAINING = 80;
     const SANDMAN_TRAINER = 108;
 
+    const SITE_SETUP = 59;
+    const SITE_SETUP_LEAD = 96;
     const RSC_SHIFT_LEAD = 12;
+    const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
     const TROUBLESHOOTER = 91;
 
@@ -68,6 +75,7 @@ class Position extends ApiModel
         Position::SANDMAN_TRAINING => [ Position::SANDMAN_TRAINER ],
     ];
 
+
     protected $table = 'position';
 
     protected $fillable = [
@@ -92,7 +100,8 @@ class Position extends ApiModel
     ];
 
     protected $rules = [
-        'title' => 'required',
+        'title' => 'required|string|max:40',
+        'short_title' => 'sometimes|string|max:6|nullable',
         'min'   => 'integer',
         'max'   => 'integer',
         'training_position_id'  => 'nullable|exists:position,id',

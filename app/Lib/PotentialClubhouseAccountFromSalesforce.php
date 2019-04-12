@@ -158,6 +158,11 @@ class PotentialClubhouseAccountFromSalesforce
 
         $ok = true;
         foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
+            if ($req == 'MailingState'
+            && !in_array($sobj->Ranger_Info__r->{'MailingCountry'} ?? '', [ 'US', 'CA', 'AU' ])) {
+                continue;
+            }
+
             if (!isset($sobj->Ranger_Info__r->$req)) {
                 $this->status = self::STATUS_INVALID;
                 $this->message =

@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\ApiModel;
 use Illuminate\Support\Facades\DB;
 use App\Models\Position;
+use App\Models\EventDate;
+
 use Carbon\Carbon;
 
 class Slot extends ApiModel
@@ -32,7 +34,8 @@ class Slot extends ApiModel
 
     protected $rules = [
         'begins'      => 'required|date|before:ends',
-        'description' => 'required|string',
+        'description' => 'required|string|max:40',
+        'url'         => 'sometimes|string|max:512|nullable',
         'ends'        => 'required|date|after:begins',
         'max'         => 'required|integer',
         'position_id' => 'required|integer',
@@ -142,4 +145,59 @@ class Slot extends ApiModel
          return $this->ends->format('l M d Y @ H:i');
      }
 
+     /*
+      * Check to see if the slot begins within the pre-event period and
+      * is not a training slot
+      */
+
+      public function isPreEventRestricted() {
+          if (!$this->begins || !$this->position_id) {
+              return false;
+          }
+
+          $eventDate = EventDate::findForYear($this->begins->year);
+
+          if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {
+              return false;
+          }
+
+          if ($this->begins->lt($eventDate->pre_event_slot_start) || $this->begins->gte($eventDate->pre_event_slot_end)) {
+              // Outside of Pre-Event period
+              return false;
+          }
+
+          return !$this->isTraining();
+      }
+
+    /*
+     * Find and return the session part number if it exists.
+     */
+
+    public function sessionGroupPart() {
+        $matched = preg_match('/\bPart (\d)\b/i', $this->description, $matches);
+
+        if (!$matched) {
+            return 0;
+        } else {
+            return (int) $matches[1];
+        }
+    }
+
+    /*
+     * Grab the session name minus any "- Part N" suffix.
+     *
+     * "Pre-Event - Part 1" becomes "Pre-Event"
+     */
+
+    public function sessionGroupName() {
+        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $this->description, $matches);
+        return $matched ? $matches[1] : null;
+    }
+
+    /*
+     * Is the slot part of a session group?
+     */
+    public function isPartOfSessionGroup($slot) {
+        return $slot->sessionGroupName() == $this->sessionGroupName();
+    }
 }

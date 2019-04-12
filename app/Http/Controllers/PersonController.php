@@ -60,15 +60,24 @@ class PersonController extends ApiController
 
             $rows = [];
             foreach ($results['people'] as $person) {
-                $rows[] = [
+                $row = [
                     'id'              => $person->id,
                     'callsign'        => $person->callsign,
                     'status'          => $person->status,
                     'first_name'      => $person->first_name,
                     'last_name'       => $person->last_name,
-                    'email'           => $person->email,
                     'user_authorized' => $person->user_authorized,
                 ];
+
+                if ($this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ])) {
+                    $row['email'] = $person->email;
+                }
+
+                if (stripos($params['search_fields'] ?? '', 'email') !== false
+                && stripos($person->email, $params['query'] ?? '') !== false) {
+                    $row['email_matched'] = true;
+                }
+                $rows[] = $row;
             }
 
             return response()->json([ 'person' => $rows, 'meta' => $meta ]);
@@ -548,6 +557,7 @@ class PersonController extends ApiController
             'unread_message_count' => PersonMessage::countUnread($person->id),
             'years' => Timesheet::yearsRangered($person->id),
             'all_years' => Timesheet::yearsRangered($person->id, true),
+            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
         ];
 
         /*

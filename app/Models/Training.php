@@ -33,11 +33,11 @@ class Training extends Position
      * @param boolean true if person is trained, otherwise $required will be set.
      */
 
-    public static function isPersonTrained($personId, $positionId, $year, & $required)
+    public static function isPersonTrained($personId, $positionId, $year, & $requiredPositionId)
     {
         // The person has to have passed dirt training
         if (!TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
-            $required = 'Training';
+            $requiredPositionId = Position::DIRT_TRAINING;
             return false;
         }
 
@@ -60,8 +60,7 @@ class Training extends Position
         }
 
         // "Computer says no..."
-        // return the training position title
-        $required = Position::retrieveTitle($trainingId);
+        $requiredPositionId = $trainingId;
 
         return false;
     }

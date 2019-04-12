@@ -56,11 +56,18 @@ COPY --from=source /var/www/application /var/www/application
 WORKDIR /var/www/application
 
 # Set composer cache directory
-ENV COMPOSER_CACHE_DIR=/var/cache/composer
+ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
 
-# Run composer to get dependencies.
-# Optimize for production and don't install development dependencies.
-RUN php composer.phar install --optimize-autoloader --no-dev;
+# Set file ownership to www-data user and group and change to that user
+RUN chown -R www-data:www-data /var/www;
+USER www-data
+
+# Run composer to get dependencies
+# Optimize for production and don't install development dependencies
+RUN php composer.phar install       \
+    --no-plugins --no-scripts       \
+    --optimize-autoloader --no-dev  \
+    ;
 
 
 # -----------------------------------------------------------------------------
@@ -75,13 +82,17 @@ COPY --from=source /var/www/application /var/www/application
 WORKDIR /var/www/application
 
 # Set composer cache directory
-ENV COMPOSER_CACHE_DIR=/var/cache/composer
+ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
+
+# Set file ownership to www-data user and group and change to that user
+RUN chown -R www-data:www-data /var/www;
+USER www-data
 
 # Copy the composer cache from the build container
-COPY --from=build /var/cache/composer /var/cache/composer
+COPY --from=build /var/www/composer_cache /var/www/composer_cache
 
 # Run composer to get dependencies
-RUN php composer.phar install;
+RUN php composer.phar install --no-plugins --no-scripts;
 
 
 # -----------------------------------------------------------------------------
@@ -102,8 +113,8 @@ COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
 
-# Reset ownership back to the application..(don't remove this.)
-RUN chown -R www-data:www-data /var/www/application/storage;
-
 # Set working directory to application directory
 WORKDIR /var/www/application
+
+# Set ownership of storage directory to www-data user and group
+RUN chown -R www-data:www-data storage;

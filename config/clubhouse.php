@@ -3,7 +3,7 @@
 /*
  * NOTE:
  *
- * Do not call config() for the variables listed here. Use setting() instead. 
+ * Do not call config() for the variables listed here. Use setting() instead.
  *
  * This file may go away. The configuration variables listed here are stored within
  * the database.
@@ -21,8 +21,8 @@ return [
     'OnPlaya'  => env('RANGER_CLUBHOUSE_ON_PLAYA', false),
     'ReadOnly' => env('RANGER_CLUBHOUSE_READ_ONLY', false),
 
-    'SiteNotice' => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2018 Black Rock City, LLC. All information contained within this website is strictly confidential.'),
-    'SiteTitle'  => 'Black Rock Rangers Secret Clubhouse',
+    'SiteNotice' => env('RANGER_COPYRIGHT_NOTICE', 'Copyright 2008-2019 Burning Man. All information contained within this website is confidential and proprietary.'),
+    'SiteTitle'  => 'Black Rock Ranger Secret Clubhouse',
 
     // Not used by C2
     'DualClubhouse'       => env('RANGER_CLUBHOUSE_DUAL_CLUBHOUSE', false),

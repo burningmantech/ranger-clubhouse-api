@@ -252,15 +252,15 @@ class TimesheetController extends ApiController
         $required = null;
 
         // Are they trained for this position?
-        if (!Training::isPersonTrained($personId, $positionId, date('Y'), $required)) {
+        if (!Training::isPersonTrained($personId, $positionId, date('Y'), $requiredPositionId)) {
+            $positionRequired = Position::find($requiredPositionId);
             if ($isAdmin) {
                 $signonForced = true;
-                $positionRequired = Position::find($required);
             } else {
                 return response()->json([
-                    'status' => 'not-trained',
-                    'position_title' =>  $positionRequired->title,
-                    'position_id' => $positionRequired->id
+                    'status'         => 'not-trained',
+                    'position_title' => $positionRequired->title,
+                    'position_id'    => $requiredPositionId
                 ]);
             }
         }
