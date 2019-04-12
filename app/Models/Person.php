@@ -231,7 +231,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * setup before methods
      */
 
-    public static function boot() {
+    public static function boot()
+    {
         parent::boot();
 
         self::creating(function ($model) {
@@ -263,7 +264,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return [];
     }
 
-    public function person_position() {
+    public function person_position()
+    {
         return $this->hasMany(PersonPosition::class);
     }
 
@@ -315,9 +317,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     {
         if (isset($query['query'])) {
             // remove duplicate spaces
-            $q = preg_replace('/\s+/', ' ', $query['query']);
+            $q = trim(preg_replace('/\s+/', ' ', $query['query']));
+            $normalized = self::normalizeCallsign($q);
+            $soundex = soundex($normalized);
 
-            if (substr($q, 0,1) == '+') {
+            if (substr($q, 0, 1) == '+') {
                 // Search by number
                 $q = ltrim('+', $q);
                 $person = self::find(intval($q));
@@ -332,50 +336,62 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     'total'    => $total,
                     'limit'    => $limit
                 ];
-            } else {
-                $string = '%'.$q.'%';
+            }
+            $string = '%'.$q.'%';
 
-                if (isset($query['search_fields'])) {
-                    $fields = explode(',', $query['search_fields']);
+            if (isset($query['search_fields'])) {
+                $fields = explode(',', $query['search_fields']);
 
-                    $sql = self::where(function ($cond) use ($fields, $string, $q) {
-                        foreach ($fields as $field) {
-                            if (!in_array($field, self::SEARCH_FIELDS)) {
-                                throw new \InvalidArgumentException("Search field '$field' is not allowed.");
-                            }
+                $sql = self::where(function ($sql) use ($q,$fields,$string,$normalized, $soundex) {
+                    foreach ($fields as $field) {
+                        if (!in_array($field, self::SEARCH_FIELDS)) {
+                            throw new \InvalidArgumentException("Search field '$field' is not allowed.");
+                        }
 
-                            if ($field == 'name') {
-                                $cond = $cond->orWhere('first_name', 'like', $string);
-                                $cond = $cond->orWhere('last_name', 'like', $string);
+                        if ($field == 'name') {
+                            $sql->orWhere('first_name', 'like', $string);
+                            $sql->orWhere('last_name', 'like', $string);
 
-                                if (strpos($q, ' ') !== false) {
-                                    $name = explode(' ',$q);
-                                    $cond = $cond->orWhere(function ($cond) use ($name) {
-                                        $cond->where([
+                            if (strpos($q, ' ') !== false) {
+                                $name = explode(' ', $q);
+                                $sql->orWhere(function ($cond) use ($name) {
+                                    $cond->where([
                                             [ 'first_name', 'like', '%'.$name[0].'%' ],
                                             [ 'last_name', 'like', '%'.$name[1].'%' ]
                                         ]);
-                                    });
-                                }
-                            } else {
-                                $cond = $cond->orWhere($field, 'like', $string);
+                                });
                             }
+                        } else if ($field == 'callsign') {
+                                $sql->orWhere('callsign_normalized', $normalized);
+                                $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
+                                $sql->orWhere('callsign_soundex', $soundex);
+                        } else {
+                            $sql->orWhere($field, 'like', $string);
                         }
-                    });
-                } else {
-                    $sql = self::where('callsign', 'like', $string);
-                }
+                    }
+                });
+            } else {
+                $sql = self::where('callsign', 'like', $string);
             }
+
+            $quoted = DB::getPdo()->quote($normalized);
+            $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
+            $quoted = DB::getPdo()->quote($soundex);
+            $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
+            $orderBy .= " ELSE callsign END";
+
+            $sql->orderBy(DB::raw($orderBy));
         } else {
             $sql = self::query();
+            $sql->orderBy('callsign');
         }
 
         if (isset($query['statuses'])) {
-            $sql = $sql->whereIn('status', explode(',', $query['statuses']));
+            $sql->whereIn('status', explode(',', $query['statuses']));
         }
 
         if (isset($query['exclude_statuses'])) {
-            $sql = $sql->whereNotIn('status', explode(',', $query['exclude_statuses']));
+            $sql->whereNotIn('status', explode(',', $query['exclude_statuses']));
         }
 
 
@@ -390,13 +406,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         $total = $sql->count();
-        $sql = $sql->limit($limit)->orderBy('callsign');
+        $sql->limit($limit);
 
         return [
             'people'   => $sql->get(),
             'total'    => $total,
             'limit'    => $limit
         ];
+    }
+
+    public static function normalizeCallsign($callsign)
+    {
+        return preg_replace('/[^\w]/', '', $callsign);
     }
 
     /**
@@ -411,11 +432,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public static function searchCallsigns($query, $type, $limit)
     {
         $like = '%'.$query.'%';
+
+        $normalized = self::normalizeCallsign($query);
+        $soundex = soundex($normalized);
+        $quoted = DB::getPdo()->quote($normalized);
+        $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
+        $quoted = DB::getPdo()->quote($soundex);
+        $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
+        $orderBy .= " ELSE callsign END";
+
         $sql = DB::table('person')
-                ->where(function ($q) use ($query, $like) {
-                    $q->where('callsign', 'like', $like);
-                    $q->orWhereRaw('SOUNDEX(callsign)=soundex(?)', [ $query ]);
-                })->limit($limit);
+                ->where(function ($q) use ($query, $like, $normalized) {
+                    $q->orWhere('callsign_soundex', $soundex);
+                    $q->orWhere('callsign_normalized', $normalized);
+                    $q->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
+                })->limit($limit)
+                ->orderBy(DB::raw($orderBy));
 
         switch ($type) {
             case 'contact':
@@ -499,7 +531,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return false;
     }
 
-    public function getRolesAttribute() {
+    public function getRolesAttribute()
+    {
         return $this->roles;
     }
 
@@ -553,11 +586,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $token;
     }
 
-    public function getLanguagesAttribute() {
+    public function getLanguagesAttribute()
+    {
         return $this->languages;
     }
 
-    public function setLanguagesAttribute($value) {
+    public function setLanguagesAttribute($value)
+    {
         $this->languages = $value;
     }
 
@@ -566,7 +601,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * the case
      */
 
-    public function getCreateDateAttribute() {
+    public function getCreateDateAttribute()
+    {
         if ($this->attributes == null) {
             return null;
         }
@@ -590,7 +626,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * TODO figure out a better way to do this.
      *
      */
-    public function changeStatus($newStatus, $oldStatus, $reason) {
+    public function changeStatus($newStatus, $oldStatus, $reason)
+    {
         if ($newStatus == $oldStatus) {
             return;
         }
@@ -602,7 +639,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $changeReason = $reason . " new status $newStatus";
 
-        switch($newStatus) {
+        switch ($newStatus) {
         case Person::ACTIVE:
             // grant the new ranger all the basic positions
             $addIds = Position::where('all_rangers', true)->pluck('id');
@@ -669,7 +706,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * current year, and adding '(NR)'.
      */
 
-     public function makeAuditorCallsign() {
-         $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . date('y') . '(NR)';
-     }
+    public function makeAuditorCallsign()
+    {
+        $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . date('y') . '(NR)';
+    }
+
+    /**
+     * Normalize store a normalized and soundex version of the callsign
+     */
+
+    public function setCallsignAttribute($value) {
+        $this->attributes['callsign'] = $value;
+        $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
+        $this->attributes['callsign_soundex'] = soundex($this->attributes['callsign_normalized']);
+    }
 }
