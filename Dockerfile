@@ -60,7 +60,10 @@ ENV COMPOSER_CACHE_DIR=/var/cache/composer
 
 # Run composer to get dependencies.
 # Optimize for production and don't install development dependencies.
-RUN php composer.phar install --optimize-autoloader --no-dev;
+RUN php composer.phar install       \
+    --no-plugins --no-scripts       \
+    --optimize-autoloader --no-dev  \
+    ;
 
 
 # -----------------------------------------------------------------------------
@@ -81,7 +84,7 @@ ENV COMPOSER_CACHE_DIR=/var/cache/composer
 COPY --from=build /var/cache/composer /var/cache/composer
 
 # Run composer to get dependencies
-RUN php composer.phar install;
+RUN php composer.phar install --no-plugins --no-scripts;
 
 
 # -----------------------------------------------------------------------------
