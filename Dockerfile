@@ -84,12 +84,12 @@ WORKDIR /var/www/application
 # Set composer cache directory
 ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
 
-# Copy the composer cache from the build container
-COPY --from=build /var/www/composer_cache /var/www/composer_cache
-
 # Set file ownership to www-data user and group and change to that user
 RUN chown -R www-data:www-data /var/www;
 USER www-data
+
+# Copy the composer cache from the build container
+COPY --from=build /var/www/composer_cache /var/www/composer_cache
 
 # Run composer to get dependencies
 RUN php composer.phar install --no-plugins --no-scripts;
