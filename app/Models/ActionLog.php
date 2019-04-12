@@ -17,16 +17,20 @@ class ActionLog extends Model
 
     const PAGE_SIZE_DEFAULT = 50;
 
-    public function person() {
+    public function person()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public function target_person() {
+    public function target_person()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query) {
+    public static function findForQuery($query)
+    {
         $personId = $query['person_id'] ?? null;
+        $targetId = $query['target_person_id'] ?? null;
         $page = $query['page'] ?? 1;
         $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
         $events = $query['events'] ?? [ ];
@@ -36,9 +40,19 @@ class ActionLog extends Model
 
         $sql = self::query();
 
-        if ($personId) {
-            $sql->where('person_id', $personId)
-                ->orWhere('target_person_id', $personId);
+        if ($personId && !$targetId) {
+            $sql->where(function ($q) use ($personId) {
+                $q->where('person_id', $personId)
+                    ->orWhere('target_person_id', $personId);
+            });
+        } else {
+            if ($personId) {
+                $sql->where('person_id', $personId);
+            }
+
+            if ($targetId) {
+                $sql->where('target_person_id', $targetId);
+            }
         }
 
         if (!empty($events)) {
@@ -53,7 +67,7 @@ class ActionLog extends Model
                 }
             }
 
-            $sql->orWhere(function ($query) use ($exactEvents, $likeEvents) {
+            $sql->where(function ($query) use ($exactEvents, $likeEvents) {
                 if (!empty($exactEvents)) {
                     $query->orWhereIn('event', $exactEvents);
                 }
@@ -126,10 +140,10 @@ class ActionLog extends Model
             'page_size'   => $pageSize,
             'page'        => $page + 1,
          ];
-
     }
 
-    public static function record($person, $event, $message, $data=null, $targetPersonId=null) {
+    public static function record($person, $event, $message, $data=null, $targetPersonId=null)
+    {
         $log = new ActionLog;
         $log->event = $event;
         $log->person_id = $person ? $person->id : null;
