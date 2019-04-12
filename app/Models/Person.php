@@ -442,7 +442,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $orderBy .= " ELSE callsign END";
 
         $sql = DB::table('person')
-                ->where(function ($q) use ($query, $like, $normalized) {
+                ->where(function ($q) use ($query, $like, $normalized, $soundex) {
                     $q->orWhere('callsign_soundex', $soundex);
                     $q->orWhere('callsign_normalized', $normalized);
                     $q->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
