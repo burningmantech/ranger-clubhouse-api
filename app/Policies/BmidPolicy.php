@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Person;
+use App\Models\Bmid;
+use App\Models\Role;
+use Illuminate\Auth\Access\HandlesAuthorization;
+
+class BmidPolicy
+{
+    use HandlesAuthorization;
+
+    public function before($user)
+    {
+        if ($user->hasRole([ Role::ADMIN, Role::EDIT_BMIDS ])) {
+            return true;
+        }
+    }
+
+    /**
+     * Determine whether the user see all the BMIDs
+     */
+    public function index(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can view the BMID.
+     */
+    public function show(Person $user, Bmid $bmid)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user upload to Lambase
+     */
+    public function lambase(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can create assets.
+     *
+     */
+    public function create(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can update the BMID.
+     *
+     */
+    public function update(Person $user, Bmid $bmid)
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can delete the BMID.
+     *
+     */
+    public function delete(Person $user, Bmid $bmid)
+    {
+        return false;
+    }
+}

@@ -13,6 +13,7 @@ use App\Models\AlertPerson;
 use App\Models\Asset;
 use App\Models\AssetAttachment;
 use App\Models\AssetPerson;
+use App\Models\Bmid;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
@@ -39,6 +40,7 @@ use App\Policies\AlertPolicy;
 use App\Policies\AssetPersonPolicy;
 use App\Policies\AssetPolicy;
 use App\Policies\AssetAttachmentPolicy;
+use App\Policies\BmidPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
@@ -73,6 +75,7 @@ class AuthServiceProvider extends ServiceProvider
         Asset::class  => AssetPolicy::class,
         AssetAttachment::class  => AssetAttachmentPolicy::class,
         AssetPerson::class => AssetPersonPolicy::class,
+        Bmid::class => BmidPolicy::class,
         Broadcast::class => BroadcastPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,

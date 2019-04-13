@@ -44,7 +44,7 @@ class Position extends ApiModel
     // Trainer positions for Dirt
     const TRAINING = 13;
     const TRAINER = 23;
-    const ASSOCIATE_TRAINER = 88;
+    const TRAINER_ASSOCIATE = 88;
     const TRAINER_UBER = 95;
 
     const BURN_PERIMETER = 19;
@@ -67,7 +67,7 @@ class Position extends ApiModel
     const TRAINERS = [
         Position::DIRT_TRAINING => [
              Position::TRAINER,
-             Position::ASSOCIATE_TRAINER,
+             Position::TRAINER_ASSOCIATE,
              Position::TRAINER_UBER
         ],
         Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],

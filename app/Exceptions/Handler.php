@@ -84,7 +84,7 @@ class Handler extends ExceptionHandler
 
         // Required parameters not present and/or do not pass validation.
         if ($e instanceof \Illuminate\Validation\ValidationException) {
-            return RestApi::error(response(), 422, $e->errors());
+            return RestApi::error(response(), 422, $e->validator->getMessageBag());
         }
 
         // Parameters given to a method are not valid.

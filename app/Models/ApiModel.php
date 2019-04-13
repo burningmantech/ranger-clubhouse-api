@@ -74,10 +74,6 @@ abstract class ApiModel extends Model //implements AuditableContract
 
     public function save($options = [])
     {
-        if (!$this->isDirty()) {
-            return true;
-        }
-
         if (!$this->validate()) {
             return false;
         }
@@ -87,10 +83,6 @@ abstract class ApiModel extends Model //implements AuditableContract
 
     public function saveWithoutValidation($options = [])
     {
-        if (!$this->isDirty()) {
-            return true;
-        }
-
         return parent::save($options);
     }
 
