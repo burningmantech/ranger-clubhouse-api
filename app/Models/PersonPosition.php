@@ -73,8 +73,9 @@ class PersonPosition extends ApiModel
               $addIds = [];
               $ids = Position::where('new_user_eligible', true)->pluck('id')->toArray();
               foreach ($ids as $positionId) {
-                  if (in_array($positionId, $removeIds)) {
-                      $removeIds = array_diff($removeIds, [ $positionId]);
+                  $key = array_search($positionId, $removeIds);
+                  if ($key !== false) {
+                      unset($removeIds[$key]);
                   } else {
                       $addIds[] = $positionId;
                   }
@@ -104,7 +105,7 @@ class PersonPosition extends ApiModel
           }
 
           if (!empty($addIds)) {
-              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => $addIds ], $personId);
+              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => array_values($addIds) ], $personId);
           }
       }
 
@@ -129,7 +130,7 @@ class PersonPosition extends ApiModel
             ->delete();
 
 
-         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => $ids ], $personId);
+         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => array_values($ids) ], $personId);
      }
 
      /**
