@@ -69,6 +69,12 @@ Route::group([
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
 
+    Route::post('bmid/lambase', 'BmidController@lambase');
+    Route::get('bmid/manage', 'BmidController@manage');
+    Route::get('bmid/manage-person', 'BmidController@managePerson');
+    Route::get('bmid/sanity-check', 'BmidController@sanityCheck');
+    Route::resource('bmid', 'BmidController');
+
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
     Route::post('bulk-upload', 'BulkUploadController@update');
@@ -78,6 +84,9 @@ Route::group([
 
     Route::get('contact/log', 'ContactController@showLog');
     Route::post('contact/send', 'ContactController@send');
+
+    Route::get('debug/sleep-test', 'DebugController@sleepTest');
+    Route::get('debug/db-test', 'DebugController@dbTest');
 
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');

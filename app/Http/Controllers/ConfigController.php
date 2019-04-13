@@ -36,11 +36,6 @@ class ConfigController extends Controller
     ];
 
     public function show() {
-        $configs = array_reduce(self::CLIENT_CONFIGS, function ($configs, $name) {
-            $configs[$name] = setting($name);
-            return $configs;
-        }, []);
-
-        return response()->json($configs);
+        return response()->json(setting(self::CLIENT_CONFIGS));
     }
 }
