@@ -85,6 +85,9 @@ Route::group([
     Route::get('contact/log', 'ContactController@showLog');
     Route::post('contact/send', 'ContactController@send');
 
+    Route::get('debug/sleep-test', 'DebugController@sleepTest');
+    Route::get('debug/db-test', 'DebugController@dbTest');
+
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
 
