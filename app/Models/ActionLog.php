@@ -124,12 +124,12 @@ class ActionLog extends Model
                 $row->slot = Slot::where('id', $data->slot_id)->with('position:id,title')->first();
             }
 
-            if (isset($data->position_ids)) {
+            if (isset($data->position_ids) && is_array($data->position_ids)) {
                 $row->positions = Position::whereIn('id', $data->position_ids)->orderBy('title')->get([ 'id', 'title' ]);
             }
 
-            if (isset($data->role_ids)) {
-                $row->roles = Role::whereIn('id', $data->role_ids)->orderBy('title')->get([ 'id', 'title' ]);
+            if (isset($data->role_ids) && is_array($data->role_ids)) {
+                $row->roles = Role::whereIn('id', array_values($data->role_ids))->orderBy('title')->get([ 'id', 'title' ]);
             }
         }
 
