@@ -227,7 +227,7 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
-            $bmid = Bmid::firstOrNewForPersonYear($person->id, $year);
+            $bmid = Bmid::findForPersonManage($person->id, $year);
 
             $data = $record->data;
             if ($action != 'bmidsubmitted' && !count($data)) {

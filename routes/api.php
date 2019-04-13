@@ -69,6 +69,12 @@ Route::group([
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
 
+    Route::post('bmid/lambase', 'BmidController@lambase');
+    Route::get('bmid/manage', 'BmidController@manage');
+    Route::get('bmid/manage-person', 'BmidController@managePerson');
+    Route::get('bmid/sanity-check', 'BmidController@sanityCheck');
+    Route::resource('bmid', 'BmidController');
+
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
     Route::post('bulk-upload', 'BulkUploadController@update');

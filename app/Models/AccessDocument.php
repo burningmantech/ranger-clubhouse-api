@@ -378,6 +378,36 @@ class AccessDocument extends ApiModel
         return $wap;
     }
 
+    /*
+     * Find the work access pass for folks
+     */
+
+    public static function findWAPForPersonIds($personIds)
+    {
+        $waps = self::whereIn('person_id', $personIds)
+            ->whereIn('type', [ 'staff_credential', 'work_access_pass' ])
+            ->whereIn('status', [ 'qualified', 'claimed', 'banked', 'submitted' ])
+            ->get()
+            ->groupBy('person_id');
+
+        $people = [];
+
+        foreach ($waps as $personId => $rows) {
+            $wap = null;
+            foreach ($rows as $row) {
+                if ($wap == null || $row->access_date == null) {
+                    $wap = $row;
+                } elseif ($wap->access_date->gt($row->access_date)) {
+                    $wap = $row;
+                }
+            }
+
+            $people[$personId] = $wap;
+        }
+
+        return $people;
+    }
+
     /**
      *
      * Find all the Significant Other WAPs for a person and year
