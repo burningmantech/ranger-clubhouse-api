@@ -5,6 +5,10 @@ namespace App\Http\Filters;
 use App\Models\Person;
 use App\Models\Role;
 
+/*
+ * THE COLUMNS LISTED NEED TO BE IN SYNC WITH app/Models/Person.php::$fillable
+ */
+
 class PersonFilter
 {
     protected $record;
@@ -29,6 +33,11 @@ class PersonFilter
 
     const ROLES_FIELDS = [
         'roles',
+    ];
+
+    const CERTIFICATIONS_FIELDS = [
+        'osha10',
+        'osha30'
     ];
 
     const NAME_GENDER_FIELDS = [
@@ -111,7 +120,6 @@ class PersonFilter
     ];
 
     const MENTOR_FIELDS = [
-        'has_note_on_file',
         'mentors_flag',
         'mentors_flag_note',
         'mentors_notes',
@@ -136,6 +144,15 @@ class PersonFilter
         'timesheet_confirmed_at'
     ];
 
+    const MESSAGE_FIELDS = [
+        'message',
+        'message_updated_at'
+    ];
+
+    const PERSONNEL_FIELD = [
+        'has_note_on_file',
+    ];
+
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
@@ -149,6 +166,8 @@ class PersonFilter
         [ self::ROLES_FIELDS ],
         [ self::ACCOUNT_FIELDS ],
         [ self::CALLSIGNS_FIELDS ],
+        [ self::CERTIFICATIONS_FIELDS ],
+        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
@@ -160,12 +179,15 @@ class PersonFilter
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
+        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS ]
     ];
 
     const FIELDS_DESERIALIZE = [
         [ self::NAME_GENDER_FIELDS, true, [ Role::VC ] ],
         [ self::ACCOUNT_FIELDS, false, [ Role::ADMIN ] ],
+        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
+        [ self::CERTIFICATIONS_FIELDS, false, [ Role::VC ]],
         [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
         [ self::ROLES_FIELDS, false, [ Role::MENTOR, Role::VC ] ],
         [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
@@ -179,6 +201,7 @@ class PersonFilter
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
+        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
     ];
 

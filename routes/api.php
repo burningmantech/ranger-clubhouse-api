@@ -104,6 +104,8 @@ Route::group([
 
     Route::get('mentor/mentees', 'MentorController@mentees');
 
+    Route::resource('motd', 'MotdController');
+
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
 
