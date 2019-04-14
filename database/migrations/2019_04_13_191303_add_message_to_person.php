@@ -14,7 +14,7 @@ class AddMessageToPerson extends Migration
     public function up()
     {
         Schema::table('person', function (Blueprint $table) {
-            $table->text('message');
+            $table->text('message')->nullable();
             $table->dateTime('message_updated_at')->nullable();
         });
     }
