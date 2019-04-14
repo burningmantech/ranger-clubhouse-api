@@ -18,6 +18,7 @@ use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
 use App\Models\ManualReview;
+use App\Models\Motd;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
@@ -45,6 +46,7 @@ use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
 use App\Policies\ManualReviewPolicy;
+use App\Policies\MotdPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonPolicy;
@@ -79,6 +81,7 @@ class AuthServiceProvider extends ServiceProvider
         Broadcast::class => BroadcastPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,
+        Motd::class => MotdPolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,

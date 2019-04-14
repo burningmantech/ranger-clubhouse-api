@@ -102,6 +102,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'create_date'                 => 'datetime',
         'date_verified'               => 'date',
         'status_date'                 => 'date',
+        'message_updated_at'             => 'datetime',
         'timestamp'                   => 'timestamp',
     ];
 
@@ -126,6 +127,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'timestamp',
         'user_authorized',
 
+        'message',
 
         'date_verified',
         'create_date',
@@ -239,6 +241,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // TODO - adjust person schema to default to current timestamp
             if ($model->attributes == null || empty($model->attributes['create_date'])) {
                 $model->create_date = SqlHelper::now();
+            }
+        });
+
+        self::saving(function ($model) {
+            if ($model->isDirty('message')) {
+                $model->message_updated_at = SqlHelper::now();
             }
         });
     }
