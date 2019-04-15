@@ -212,6 +212,101 @@ class Timesheet extends ApiModel
      }
 
     /*
+     * Retrieve folks who earned a t-shirt
+     */
+
+
+    public static function retrieveEarnedTShirts($year, $thresholdSS, $thresholdLS)
+    {
+        $hoursEarned = DB::select("SELECT person_id, SUM(TIMESTAMPDIFF(second, on_duty,off_duty)) as seconds FROM timesheet WHERE YEAR(off_duty)=? GROUP BY person_id HAVING (SUM(TIMESTAMPDIFF(second, on_duty,off_duty))/3600) >= ?", [ $year, $thresholdSS ]);
+        if (empty($hoursEarned)) {
+            return [];
+        }
+
+        $hoursEarned = collect($hoursEarned);
+        $personIds = $hoursEarned->pluck('person_id');
+        $hoursByPerson = $hoursEarned->keyBy('person_id');
+
+        $people = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'longsleeveshirt_size_style', 'teeshirt_size_style')
+                ->whereIn('id',  $personIds)
+                ->where('status', 'active')
+                ->where('user_authorized', true)
+                ->orderBy('callsign')
+                ->get();
+
+        return $people->map(function ($person) use ($thresholdSS, $thresholdLS, $hoursByPerson) {
+            $hours  = $hoursByPerson[$person->id]->seconds / 3600.00;
+
+            return [
+                'id'    => $person->id,
+                'callsign'  => $person->callsign,
+                'first_name' => $person->first_name,
+                'last_name' => $person->last_name,
+                'status'    => $person->status,
+                'email'     => $person->email,
+                'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
+                'earned_ls' => ($hours >= $thresholdLS),
+                'teeshirt_size_style' => $person->teeshirt_size_style,
+                'earned_ss' => ($hours >= $thresholdSS ), // gonna be true always, but just in case the selection above changes.
+                'hours'   => round($hours, 2),
+            ];
+        });
+    }
+
+    public static function retrieveFreakingYears($showAll=false, $intendToWorkYear)
+    {
+        $excludePositionIds = implode(',', [ Position::ALPHA, Position::HQ_RUNNER ]);
+        $statusCond = $showAll ? '' : 'person.status="active" AND ';
+
+        $rows = DB::select(
+                'SELECT person_id, sum(year) AS years, '.
+                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=e.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) ASC LIMIT 1) AS first_year, ".
+                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=e.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) DESC LIMIT 1) AS last_year, ".
+                "EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$intendToWorkYear WHERE person_slot.person_id=e.person_id LIMIT 1) AS signed_up ".
+               'FROM (SELECT person.id as person_id, COUNT(DISTINCT(YEAR(on_duty))) AS year FROM ' .
+               "person, timesheet WHERE $statusCond person.id = person_id ".
+               "AND position_id  NOT IN ($excludePositionIds)".
+               'GROUP BY person.id, YEAR(on_duty)) AS E ' .
+               'GROUP BY person_id');
+        if (empty($rows)) {
+            return [];
+        }
+
+        $personIds = array_column($rows, 'person_id');
+        $people = Person::select('id', 'callsign', 'first_name', 'last_name', 'status')
+                ->whereIn('id', $personIds)
+                ->get()
+                ->keyBy('id');
+
+        $freaks = array_map(function ($row) use ($people) {
+            $person = $people[$row->person_id];
+            return [
+                'id'         => $row->person_id,
+                'callsign'   => $person->callsign,
+                'status'     => $person->status,
+                'first_name' => $person->first_name,
+                'last_name'  => $person->last_name,
+                'years'      => (int) $row->years,
+                'first_year' => (int) $row->first_year,
+                'last_year'  => (int) $row->last_year,
+                'signed_up'  => (int) $row->signed_up,
+            ];
+        }, $rows);
+
+        usort($freaks, function ($a, $b) {
+            if ($a['years'] == $b['years']) {
+                return strcmp($a['callsign'], $b['callsign']);
+            } else {
+                return $b['years'] - $a['years'];
+            }
+        });
+
+        return collect($freaks)->groupBy('years')->map(function ($people, $year) {
+            return [ 'years' => $year, 'people' => $people ];
+        })->values();
+    }
+
+    /*
      * Calcuate how many credits earned for a year
      */
 
