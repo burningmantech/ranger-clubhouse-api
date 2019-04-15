@@ -259,15 +259,15 @@ class Timesheet extends ApiModel
         $statusCond = $showAll ? '' : 'person.status="active" AND ';
 
         $rows = DB::select(
-                'SELECT person_id, sum(year) AS years, '.
-                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=e.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) ASC LIMIT 1) AS first_year, ".
-                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=e.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) DESC LIMIT 1) AS last_year, ".
-                "EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$intendToWorkYear WHERE person_slot.person_id=e.person_id LIMIT 1) AS signed_up ".
+                'SELECT E.person_id, sum(year) AS years, '.
+                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=E.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) ASC LIMIT 1) AS first_year, ".
+                "(SELECT YEAR(on_duty) FROM timesheet ts WHERE ts.person_id=E.person_id AND YEAR(ts.on_duty) > 0 GROUP BY YEAR(ts.on_duty) ORDER BY YEAR(ts.on_duty) DESC LIMIT 1) AS last_year, ".
+                "EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$intendToWorkYear WHERE person_slot.person_id=E.person_id LIMIT 1) AS signed_up ".
                'FROM (SELECT person.id as person_id, COUNT(DISTINCT(YEAR(on_duty))) AS year FROM ' .
                "person, timesheet WHERE $statusCond person.id = person_id ".
                "AND position_id  NOT IN ($excludePositionIds)".
                'GROUP BY person.id, YEAR(on_duty)) AS E ' .
-               'GROUP BY person_id');
+               'GROUP BY E.person_id');
         if (empty($rows)) {
             return [];
         }
