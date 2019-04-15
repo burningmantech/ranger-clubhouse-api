@@ -104,7 +104,7 @@ class TimesheetController extends ApiController
      */
     public function store(Request $request)
     {
-        $timesheet = new \App\Models\Timesheet;
+        $timesheet = new Timesheet;
 
         $this->fromRest($timesheet);
         $this->authorize('store', $timesheet);
@@ -203,7 +203,7 @@ class TimesheetController extends ApiController
     }
 
     /*
-     *
+     * Delete a timesheet entry
      */
     public function destroy(Timesheet $timesheet)
     {
@@ -401,4 +401,51 @@ class TimesheetController extends ApiController
               'unconfirmed_people' => Timesheet::retrieveUnconfirmedPeopleForYear($params['year'])
           ]);
       }
+
+      /*
+       * T-Shirts Earned Report
+       */
+
+      public function tshirtsEarnedReport()
+      {
+          $params = request()->validate([
+              'year' => 'required|integer'
+          ]);
+
+          $year = $params['year'];
+          $thresholdLS = setting('TShirtLongSleeveHoursThreshold');
+          $thresholdSS = setting('TShirtShortSleeveHoursThreshold');
+
+          if (!$thresholdSS) {
+              throw new \RuntimeException("TShirtShortSleeveHoursThreshold is not set");
+          }
+
+          if (!$thresholdLS) {
+              throw new \RuntimeException("TShirtLongSleeveHoursThreshold is not set");
+          }
+
+          return response()->json([
+              'people'  => Timesheet::retrieveEarnedTShirts($year, $thresholdSS, $thresholdLS),
+              'threshold_ss'    => $thresholdSS,
+              'threshold_ls'    => $thresholdLS,
+          ]);
+      }
+
+      /*
+       * Freaking years report!
+       */
+
+    public function freakingYearsReport()
+    {
+        $params = request()->validate([
+            'include_all' => 'sometimes|boolean'
+        ]);
+
+        $intendToWorkYear = date('Y');
+
+        return response()->json([
+             'freaking' => Timesheet::retrieveFreakingYears($params['include_all'] ?? false, $intendToWorkYear),
+             'signed_up_year' => $intendToWorkYear
+          ]);
+    }
 }

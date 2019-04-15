@@ -165,13 +165,15 @@ Route::group([
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
-    Route::post('timesheet/confirm', 'TimesheetController@confirm');
-    Route::post('timesheet/signin', 'TimesheetController@signin');
-    Route::get('timesheet/log', 'TimesheetController@showLog');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
+    Route::post('timesheet/confirm', 'TimesheetController@confirm');
+    Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
+    Route::get('timesheet/info', 'TimesheetController@info');
+    Route::get('timesheet/log', 'TimesheetController@showLog');
+    Route::post('timesheet/signin', 'TimesheetController@signin');
+    Route::get('timesheet/tshirts-earned', 'TimesheetController@tshirtsEarnedReport');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
-    Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
 
     Route::resource('timesheet-missing', 'TimesheetMissingController');
