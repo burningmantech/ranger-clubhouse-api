@@ -96,10 +96,12 @@ class PersonScheduleController extends ApiController
                 $trainerForced = true;
                 $force = true;
             } else if (!$force) {
+                $logData['training_multiple_enrollment'] = true;
+                $logData['enrolled_slot_ids'] = $enrollments->pluck('id');
                 // Not a trainer, nor has sufficent roles.. your jedi mind tricks will not work here.
                 $this->log(
                     'person-slot-add-fail',
-                    "training multiple enrollment attempt {$slot->position->title} - {$slot->description} {$slot->begins}",
+                    "training multiple enrollment attempt",
                     $logData,
                     $person->id
                 );
@@ -118,9 +120,11 @@ class PersonScheduleController extends ApiController
             $force = $this->userHasRole([ Role::ADMIN, Role::MENTOR ]);
 
             if (!$force) {
+                $logData['alpha_multiple_enrollment'] = true;
+                $logData['enrolled_slot_ids'] = $enrollments->pluck('id');
                 $this->log(
                     'person-slot-add-fail',
-                    "alpha multiple enrollment attempt {$slot->position->title} - {$slot->description} {$slot->begins}",
+                    "alpha multiple enrollment attempt",
                     $logData,
                     $person->id
                 );
@@ -161,7 +165,7 @@ class PersonScheduleController extends ApiController
 
             $action = "added";
             if (!empty($forcedReasons)) {
-                $action .= '('.implode(',', $forcedReasons).')';
+                $action .= ' ('.implode(',', $forcedReasons).')';
             }
 
             $this->log(
@@ -227,10 +231,9 @@ class PersonScheduleController extends ApiController
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
-            $slot = Slot::findOrFail($slotId);
             $this->log(
                 'person-slot-remove',
-                "removed {$slot->position->title} - {$slot->description} {$slot->begins}",
+                'removed',
                 [ 'slot_id' => $slotId ],
                 $person->id
             );
