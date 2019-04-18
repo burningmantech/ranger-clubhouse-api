@@ -148,7 +148,8 @@ class TrainingSession extends Slot
     {
         $trainerPositions = @Position::TRAINERS[$this->position_id];
         if (!$trainerPositions) {
-            throw new \InvalidArgumentException('No trainer positions are associated.');
+            return [];
+            //throw new \InvalidArgumentException('No trainer positions are associated.');
         }
 
         $trainers = [];
