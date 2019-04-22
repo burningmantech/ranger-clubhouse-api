@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\ApiController;
 
+use App\Helpers\SqlHelper;
+
 use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonPosition;
@@ -340,6 +342,11 @@ class PersonScheduleController extends ApiController
             $manualReviewUrl = '';
         }
 
+        // New for 2019, everyone has to agree to the org's behavioral standards agreement.
+        $missingBehaviorAgreement = !$person->behavioral_agreement;
+        if ($missingBehaviorAgreement) {
+            $canSignUpForShifts = false;
+        }
 
         $results = [
             'signup_allowed'              => $canSignUpForShifts,
@@ -358,6 +365,8 @@ class PersonScheduleController extends ApiController
 
             // Everyone except Auditors & Non Rangers should have a BPGUID (aka Burner Profile ID)
             'missing_bpguid'              => $missingBpguid,
+
+            'missing_behavioral_agreement'  => $missingBehaviorAgreement,
         ];
 
         return response()->json([ 'permission' => $results ]);
@@ -373,6 +382,50 @@ class PersonScheduleController extends ApiController
 
         return response()->json([
             'slots'    => Schedule::retrieveStartingSlotsForPerson($person->id)
+        ]);
+    }
+
+    /*
+     * Provide answers for folks wanting to know how many remaining hours
+     * and credits will be earned based on the schedule.
+     */
+
+    public function expected(Person $person)
+    {
+        $this->authorize('view', [ Schedule::class, $person ]);
+
+        $now = SqlHelper::now();
+        $year = date('Y');
+
+        $rows = Schedule::findForQuery([
+            'person_id' => $person->id,
+            'year'      => $year,
+            'remaining' => true
+        ]);
+
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        $time = 0;
+        $credits = 0.0;
+
+        foreach ($rows as $row) {
+            // Truncate any shifts which have started
+            if ($row->slot_begins->lt($now)) {
+                $row->slot_begins = $now;
+                $row->slot_begins_time = $now->timestamp;
+            }
+
+            $time += $row->slot_duration;
+            $credits += $row->credits;
+        }
+
+        return response()->json([
+            'duration'  => $time,
+            'credits'   => $credits,
+            'slot_count'=> count($rows)
         ]);
     }
 }

@@ -22,5 +22,6 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
         'user_authorized' => true,
         'create_date'   => Carbon::now()->format('Y-m-d H:i:s'),
         'bpguid'        => $faker->uuid,
+        'behavioral_agreement' => true,
     ];
 });

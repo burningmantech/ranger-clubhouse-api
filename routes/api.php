@@ -61,6 +61,9 @@ Route::group([
 
     Route::resource('action-log', 'ActionLogController', [ 'only' => 'index' ]);
 
+    Route::post('asset/checkout', 'AssetController@checkout');
+    Route::get('asset/{asset}/history', 'AssetController@history');
+    Route::post('asset/{asset}/checkin', 'AssetController@checkin');
     Route::resource('asset', 'AssetController');
     Route::resource('asset-attachment', 'AssetAttachmentController');
 
@@ -114,6 +117,7 @@ Route::group([
     Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
+    Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');

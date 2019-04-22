@@ -27,10 +27,9 @@ class ActionLog extends Model
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query)
+    public static function findForQuery($query, $redactData)
     {
         $personId = $query['person_id'] ?? null;
-        $targetId = $query['target_person_id'] ?? null;
         $page = $query['page'] ?? 1;
         $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
         $events = $query['events'] ?? [ ];
@@ -40,19 +39,11 @@ class ActionLog extends Model
 
         $sql = self::query();
 
-        if ($personId && !$targetId) {
+        if ($personId) {
             $sql->where(function ($q) use ($personId) {
                 $q->where('person_id', $personId)
                     ->orWhere('target_person_id', $personId);
             });
-        } else {
-            if ($personId) {
-                $sql->where('person_id', $personId);
-            }
-
-            if ($targetId) {
-                $sql->where('target_person_id', $targetId);
-            }
         }
 
         if (!empty($events)) {
@@ -124,12 +115,20 @@ class ActionLog extends Model
                 $row->slot = Slot::where('id', $data->slot_id)->with('position:id,title')->first();
             }
 
+            if (isset($data->enrolled_slot_ids) && is_array($data->enrolled_slot_ids)) {
+                $row->enrolled_slots = Slot::whereIn('id', $data->enrolled_slot_ids)->with('position:id,title')->first();
+            }
+
             if (isset($data->position_ids) && is_array($data->position_ids)) {
                 $row->positions = Position::whereIn('id', $data->position_ids)->orderBy('title')->get([ 'id', 'title' ]);
             }
 
             if (isset($data->role_ids) && is_array($data->role_ids)) {
                 $row->roles = Role::whereIn('id', array_values($data->role_ids))->orderBy('title')->get([ 'id', 'title' ]);
+            }
+
+            if ($redactData) {
+                $row->data = null;
             }
         }
 
