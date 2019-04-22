@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Models\ActionLog;
 use App\Models\Person;
+use App\Models\Role;
 
 class ActionLogController extends ApiController
 {

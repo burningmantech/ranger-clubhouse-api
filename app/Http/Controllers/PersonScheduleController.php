@@ -180,11 +180,12 @@ class PersonScheduleController extends ApiController
             // Notify the person about signing up
             if ($slot->isTraining()) {
                 $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
-            } else {
+                Mail::to($person->email)->send($message);
+            } 
+            /*else {
                 $message = new SlotSignup($slot, setting('ShiftSignupFromEmail'));
-            }
+            }*/
 
-            Mail::to($person->email)->send($message);
 
             $signedUp = $result['signed_up'];
 
