@@ -49,6 +49,9 @@ class Position extends ApiModel
 
     const BURN_PERIMETER = 19;
 
+    const TOW_TRUCK_TRAINING = 102;
+    const TOW_TRUCK_TRAINER = 121;
+
     const TYPES = [
         'Command',
         'Frontline',
@@ -73,6 +76,7 @@ class Position extends ApiModel
         Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],
         Position::HQ_FULL_TRAINING => [ Position::HQ_TRAINER ],
         Position::SANDMAN_TRAINING => [ Position::SANDMAN_TRAINER ],
+        Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER ],
     ];
 
 
