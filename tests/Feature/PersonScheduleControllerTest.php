@@ -708,6 +708,28 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
+     * Deny an active who did not sign the behavioral standards agreement
+     */
+
+    public function testDenyActiveWhoDidNotSignBehavioralAgreement()
+    {
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(true);
+        $this->user->update([ 'behavioral_agreement' => false ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+               'year' => $this->year
+           ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+               'permission'   => [
+                   'signup_allowed'       => false,
+                   'missing_behavioral_agreement' => true,
+               ]
+           ]);
+    }
+
+    /*
      * Allow an auditor, who passed manual review, and has no photo to sign up.
      */
 

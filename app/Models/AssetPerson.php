@@ -75,17 +75,22 @@ class AssetPerson extends ApiModel
         return $sql->orderBy('checked_out')->get();
     }
 
+    public static function retrieveHistory($assetId)
+    {
+        return self::where('asset_id', $assetId)
+                ->with([ 'person:id,callsign', 'attachment'])
+                ->get();
+    }
+
     /**
      * Find if a person has checked out an asset.
      */
 
-     public static function findCheckedOutPerson($assetId, $year)
+     public static function findCheckedOutPerson($assetId)
      {
-         return self::select('person.id', 'person.callsign')
-                ->join('person', 'person.id', '=', 'asset_person.person_id')
-                ->where('asset_id', $assetId)
-                ->whereYear('checked_out', $year)
+         return self::where('asset_id', $assetId)
                 ->whereNull('checked_in')
+                ->with('person:id,callsign')
                 ->first();
      }
 

@@ -103,6 +103,7 @@ class PersonFilter
 
     const AGREEMENT_FIELDS = [
         'vehicle_paperwork',
+        'behavioral_agreement',
     ];
 
     const EVENT_FIELDS = [

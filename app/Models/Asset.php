@@ -14,7 +14,8 @@ class Asset extends ApiModel
         'barcode',
         'temp_id',
         'perm_assign',
-        'create_date',
+
+        // Vehicle parameters Not used since the 2015 event.
         'subtype',
         'model',
         'color',
@@ -27,12 +28,16 @@ class Asset extends ApiModel
         'perm_assign'       => 'boolean',
         'new_user_eligible' => 'boolean',
         'on_sl_report'      => 'boolean',
-        'create_date'       => 'datetime'
+    ];
+
+    protected $dates = [
+        'create_date'
     ];
 
     protected $rules = [
         'barcode' => 'required',
     ];
+
 
     public function asset_person() {
         return $this->belongsTo(AssetPerson::class);
@@ -80,6 +85,15 @@ class Asset extends ApiModel
         return self::where('barcode', $barcode)
                 ->whereYear('create_date', $year)
                 ->first();
+    }
+
+    public  function isBarcodeUnique() {
+        $sql = self::where('barcode', $this->barcode)->whereYear('create_date',($this->create_date ?  $this->create_date->year : date('Y')));
+        if ($this->id) {
+            $sql->where('id', '!=', $this->id);
+        }
+
+        return !$sql->exists();
     }
 
 }

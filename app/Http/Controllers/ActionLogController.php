@@ -29,8 +29,9 @@ class ActionLogController extends ApiController
              'page_size'  => 'sometimes|integer',
 
              'person'     => 'sometimes|string',
-             'target_person' => 'sometimes|string',
         ]);
+
+        $redactData = !$this->userHasRole([ Role::ADMIN, Role::VC ]);
 
         if (isset($params['person'])) {
             $callsign = $params['person'];
@@ -46,20 +47,6 @@ class ActionLogController extends ApiController
             }
         }
 
-        if (isset($params['target_person'])) {
-            $callsign = $params['target_person'];
-            if (is_numeric($callsign)) {
-                $params['target_person_id'] = (int) $callsign;
-            } else {
-                $person = Person::findByCallsign($callsign);
-                if (!$person) {
-                    return response()->json([ 'error' => "Target Person $callsign was not found."]);
-                }
-
-                $params['target_person_id'] = $person->id;
-            }
-        }
-
-        return response()->json(ActionLog::findForQuery($params));
+        return response()->json(ActionLog::findForQuery($params, $redactData));
     }
 }

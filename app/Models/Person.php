@@ -90,6 +90,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     protected $casts = [
         'active_next_event'           => 'boolean',
         'asset_authorized'            => 'boolean',
+        'behavioral_agreement'         => 'boolean',
         'callsign_approved'           => 'boolean',
         'has_note_on_file'            => 'boolean',
         'on_site'                     => 'boolean',
@@ -122,6 +123,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'vintage',
 
         'barcode',
+        'behavioral_agreement',
         'status',
         'status_date',
         'timestamp',
@@ -528,17 +530,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $resetPassword;
     }
 
-    public static function findForAuthentication(array $credentials)
-    {
-        $person = Person::where('email', $credentials['identification'])->first();
-
-        if ($person && $person->isValidPassword($credentials['password'])) {
-            return $person;
-        }
-
-        return false;
-    }
-
     public function getRolesAttribute()
     {
         return $this->roles;
@@ -583,7 +574,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function generateRandomString(): string
     {
-        $length = 20;
+        $length = 10;
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $max = strlen($characters)-1;
         $token = '';

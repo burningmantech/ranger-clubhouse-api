@@ -62,6 +62,7 @@ class Schedule extends ApiModel
 
         $personId = $query['person_id'] ?? null;
         $shiftsAvailable = $query['shifts_available'] ?? false;
+        $remaining = $query['remaining'] ?? false;
 
         $selectColumns = [
             'slot.id as id',
@@ -88,6 +89,9 @@ class Schedule extends ApiModel
             $sql = DB::table('person_slot')
                     ->where('person_slot.person_id', $personId)
                     ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
+            if ($remaining) {
+                $sql->whereRaw('slot.ends > NOW()');
+            }
         } else {
             // Retrieve all slots
             $sql = DB::table('slot');

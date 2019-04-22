@@ -23,7 +23,7 @@ class ActionLogPolicy
      */
     public function index(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**

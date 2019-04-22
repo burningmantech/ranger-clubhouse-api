@@ -338,15 +338,17 @@ class Timesheet extends ApiModel
 
     public function getCreditsAttribute() {
         if ($this->off_duty) {
-            return PositionCredit::computeCredits(
-                    $this->position_id,
-                    $this->on_duty->timestamp,
-                    $this->off_duty->timestamp,
-                    $this->on_duty->year
-            );
+            $offDuty = $this->off_duty;
         } else {
-            return 0.0;
+            $offDuty = SqlHelper::now();
         }
+
+        return PositionCredit::computeCredits(
+            $this->position_id,
+            $this->on_duty->timestamp,
+            $offDuty->timestamp,
+            $this->on_duty->year
+        );
     }
 
     public function setOnDutyToNow()
