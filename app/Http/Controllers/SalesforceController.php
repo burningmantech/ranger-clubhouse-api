@@ -172,8 +172,8 @@ class SalesforceController extends ApiController
         $person->sfuid             = $pca->sfuid;
         $person->emergency_contact = $pca->emergency_contact;
 
-        $person->longsleeveshirt_size_style = $pca->longsleeveshirt_size_style;
-        $person->teeshirt_size_style        = $pca->teeshirt_size_style;
+        $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
+        $person->teeshirt_size_style        = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
 
         $person->status = Person::PROSPECTIVE;
         $person->password = 'abcdef';
