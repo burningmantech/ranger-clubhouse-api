@@ -106,4 +106,8 @@ class PersonPolicy
     {
         return ($user->id == $person->id || $user->hasRole([ Role::ADMIN, Role::VC, Role::MENTOR ]));
     }
+
+    public function alphaShirts(Person $user) {
+        return $user->hasRole([ Role::ADMIN, Role::VC ]);
+    }
 }

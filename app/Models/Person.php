@@ -250,6 +250,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             if ($model->isDirty('message')) {
                 $model->message_updated_at = SqlHelper::now();
             }
+
+            // Ensure shirts are always set correctly
+            if (empty($model->longsleeveshirt_size_style)) {
+                $model->longsleeveshirt_size_style = 'Unknown';
+            }
+
+            if (empty($model->teeshirt_size_style)) {
+                $model->teeshirt_size_style = 'Unknown';
+            }
         });
     }
 
@@ -719,4 +728,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
         $this->attributes['callsign_soundex'] = soundex($this->attributes['callsign_normalized']);
     }
+
+    /**
+     * Normalize shirt sizes
+     */
+
+     public function getLongsleeveshirtSizeStyleAttribute() {
+         return empty($this->attributes['longsleeveshirt_size_style']) ? 'Unknown' : $this->attributes['longsleeveshirt_size_style'];
+     }
+
+     public function getTeeshirtSizeStyleAttribute() {
+         return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
+     }
+
 }

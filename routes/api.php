@@ -109,6 +109,8 @@ Route::group([
 
     Route::resource('motd', 'MotdController');
 
+    Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
+
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
 
