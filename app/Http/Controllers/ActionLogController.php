@@ -50,4 +50,29 @@ class ActionLogController extends ApiController
 
         return response()->json(ActionLog::findForQuery($params, $redactData));
     }
+
+    /**
+     * Record analytics from the client
+     *
+     * Does not require authorization.
+     */
+
+    public function record()
+    {
+        $data = request()->input('data');
+        $personId = request()->input('person_id');
+        $event = request()->input('event');
+        $message = request()->input('message') ?? '';
+
+        $log = new ActionLog([
+            'event'     => $event,
+            'person_id' => $personId,
+            'data'      => $data,
+            'message'   => $message,
+        ]);
+        $log->save();
+
+        return response('success', 200);
+    }
+
 }
