@@ -36,6 +36,7 @@ Route::group([
     Route::post('person/register', 'PersonController@register');
 
     Route::post('error-log/record', 'ErrorLogController@record');
+    Route::post('action-log/record', 'ActionLogController@record');
 });
 
 
@@ -183,4 +184,6 @@ Route::group([
     Route::resource('timesheet', 'TimesheetController');
 
     Route::resource('timesheet-missing', 'TimesheetMissingController');
+
+    Route::resource('help', 'HelpController');
 });

@@ -208,13 +208,30 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $rules = [
-        'callsign'   => 'required|string',
-        'first_name' => 'required|string',
-        'last_name'  => 'required|string',
-        'email'      => 'required|string',
+        'callsign'   => 'required|string|max:64',
         'status'     => 'required|string',
+        'formerly_known_as' => 'sometimes|string|nullable|max:200',
+
+        'first_name' => 'required|string|max:25',
+        'mi'         => 'sometimes|string|nullable|max:10',
+        'last_name'  => 'required|string|max:25',
+
+        'email'      => 'required|string|max:50',
+
+        'street1'    => 'required|string|nullable|max:128',
+        'street2'    => 'sometimes|string|nullable|max:128',
+        'apt'        => 'sometimes|string|nullable|max:10',
+        'city'       => 'required|string|max:50',
+
         'state'      => 'state_for_country:live_only',
-        'country'    => 'required|string',
+        'country'    => 'required|string|max:25',
+
+        'home_phone' => 'required|string|max:25',
+        'alt_phone'  => 'sometimes|string|nullable|max:25',
+
+        'camp_location' => 'sometimes|string|nullable|max:200',
+        'gender'    => 'sometimes|string|nullable|max:32',
+
     ];
 
     /*

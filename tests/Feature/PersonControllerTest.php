@@ -888,6 +888,7 @@ class PersonControllerTest extends TestCase
             'zip'        => $faker->postcode,
             'country'    => 'USA',
             'status'     => 'auditor',
+            'home_phone' => $faker->phoneNumber,
 
         ];
 

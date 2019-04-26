@@ -631,6 +631,8 @@ class PersonController extends ApiController
             'person.state'      => 'required|string',
             'person.country'    => 'required|string',
             'person.status'     => 'required|string',
+            'person.home_phone' => 'sometimes|string',
+            'person.alt_phone'  => 'sometimes|string',
         ]);
 
         $accountCreateEmail = setting('AccountCreationEmail');
