@@ -81,7 +81,8 @@ class Timesheet extends ApiModel
         return $this->belongsTo(Position::class);
     }
 
-    public function loadRelationships() {
+    public function loadRelationships()
+    {
         return $this->load(self::RELATIONSHIPS);
     }
 
@@ -109,10 +110,10 @@ class Timesheet extends ApiModel
 
     public static function findShiftWithinMinutes($personId, $startTime, $withinMinutes)
     {
-
         return self::with([ 'position:id,title' ])
             ->where('person_id', $personId)
-            ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
+            ->whereRaw(
+                'on_duty BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
                 [ $startTime, $withinMinutes, $startTime, $withinMinutes]
             )->first();
     }
@@ -189,16 +190,18 @@ class Timesheet extends ApiModel
         // Warm up the position credit cache so the database is not being slammed.
         PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
 
-        return $rows->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+        return $rows->sortBy(function ($p) {
+            return $p->person->callsign;
+        }, SORT_NATURAL|SORT_FLAG_CASE)->values();
     }
 
     /*
      * Retrieve all people who has not indicated their timesheet entries are correct.
      */
 
-     public static function retrieveUnconfirmedPeopleForYear($year)
-     {
-         return DB::select(
+    public static function retrieveUnconfirmedPeopleForYear($year)
+    {
+        return DB::select(
                 "SELECT
                     person.id, callsign,
                     first_name, last_name,
@@ -208,15 +211,17 @@ class Timesheet extends ApiModel
                WHERE status='active'
                  AND timesheet_confirmed IS FALSE
                  AND EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(timesheet.on_duty)=?)
-               ORDER BY callsign", [ $year, $year ]);
-     }
+               ORDER BY callsign",
+             [ $year, $year ]
+         );
+    }
 
     /*
      * Retrieve folks who earned a t-shirt
      */
 
 
-    public static function retrieveEarnedTShirts($year, $thresholdSS, $thresholdLS)
+    public static function retrieveEarnedShirts($year, $thresholdSS, $thresholdLS)
     {
         $hoursEarned = DB::select("SELECT person_id, SUM(TIMESTAMPDIFF(second, on_duty,off_duty)) as seconds FROM timesheet WHERE YEAR(off_duty)=? AND position_id != ? GROUP BY person_id HAVING (SUM(TIMESTAMPDIFF(second, on_duty,off_duty))/3600) >= ?", [ $year, Position::ALPHA, $thresholdSS ]);
         if (empty($hoursEarned)) {
@@ -228,7 +233,7 @@ class Timesheet extends ApiModel
         $hoursByPerson = $hoursEarned->keyBy('person_id');
 
         $people = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'longsleeveshirt_size_style', 'teeshirt_size_style')
-                ->whereIn('id',  $personIds)
+                ->whereIn('id', $personIds)
                 ->where('status', 'active')
                 ->where('user_authorized', true)
                 ->orderBy('callsign')
@@ -247,11 +252,16 @@ class Timesheet extends ApiModel
                 'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
                 'earned_ls' => ($hours >= $thresholdLS),
                 'teeshirt_size_style' => $person->teeshirt_size_style,
-                'earned_ss' => ($hours >= $thresholdSS ), // gonna be true always, but just in case the selection above changes.
+                'earned_ss' => ($hours >= $thresholdSS), // gonna be true always, but just in case the selection above changes.
                 'hours'   => round($hours, 2),
             ];
         });
     }
+
+    /*
+     * Build a Freanking Years report - how long a person has rangered, the first year rangered, the last year to ranger,
+     * and if the person intends to ranger in the intended year (usually the current year)
+     */
 
     public static function retrieveFreakingYears($showAll=false, $intendToWorkYear)
     {
@@ -267,7 +277,8 @@ class Timesheet extends ApiModel
                "person, timesheet WHERE $statusCond person.id = person_id ".
                "AND position_id  NOT IN ($excludePositionIds)".
                'GROUP BY person.id, YEAR(on_duty)) AS E ' .
-               'GROUP BY E.person_id');
+               'GROUP BY E.person_id'
+        );
         if (empty($rows)) {
             return [];
         }
@@ -307,6 +318,54 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Radio Eligibility
+     *
+      * Takes the current year, and figures out:
+      * - How many hours worked (excluding Alpha & Training shifts) in the previous two years
+      * - If the person is signed up to work in the current year.
+     */
+    public static function retrieveRadioEligilibity($currentYear)
+    {
+        $lastYear = $currentYear-1;
+        $prevYear = $currentYear-2;
+
+        $people = DB::select("SELECT person.id, person.callsign,
+                (SELECT SUM(TIMESTAMPDIFF(second, on_duty, off_duty))/3600.0 FROM timesheet WHERE person.id=timesheet.person_id AND year(on_duty)=$lastYear AND position_id NOT IN (1,13)) as hours_last_year,
+                (SELECT SUM(TIMESTAMPDIFF(second, on_duty, off_duty))/3600.0 FROM timesheet WHERE person.id=timesheet.person_id AND year(on_duty)=$prevYear AND position_id NOT IN (1,13)) as hours_prev_year,
+                EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id IN (10,12) LIMIT 1) AS shift_lead,
+                EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id AND YEAR(slot.begins)=$currentYear AND slot.begins >= '$currentYear-08-15 00:00:00' AND position_id NOT IN (1,13) WHERE person_slot.person_id=person.id LIMIT 1) as signed_up
+                FROM person WHERE person.status IN ('active', 'inactive', 'inactive extension', 'retired')
+                ORDER by callsign");
+
+        // Person must have worked in one of the previous two years, or is a shift lead
+        $people = array_values(array_filter($people, function($p) {
+            return $p->hours_prev_year || $p->hours_last_year || $p->shift_lead;
+        }));
+
+        foreach ($people as $person) {
+            // Normalized the hours - no timesheets found in a given years will result in null
+            if (!$person->hours_last_year) {
+                $person->hours_last_year = 0.0;
+            }
+            $person->hours_last_year = round($person->hours_last_year);
+
+            if (!$person->hours_prev_year) {
+                $person->hours_prev_year = 0.0;
+            }
+            $person->hours_prev_year = round($person->hours_prev_year);
+
+            // Qualified radio hours is last year, OR the previous year if last year
+            // was less than 10 hours and the previous year was greater than last year.
+            $person->radio_hours = $person->hours_last_year;
+            if ($person->hours_last_year < 10.0 && ($person->hours_prev_year > $person->hours_last_year)) {
+                $person->radio_hours = $person->hours_prev_year;
+            }
+        }
+
+        return $people;
+    }
+
+    /*
      * Calcuate how many credits earned for a year
      */
 
@@ -332,11 +391,13 @@ class Timesheet extends ApiModel
         return Carbon::parse(SqlHelper::now())->diffInSeconds($this->on_duty);
     }
 
-    public function getPositionTitleAttribute() {
+    public function getPositionTitleAttribute()
+    {
         return $this->attributes['position_title'];
     }
 
-    public function getCreditsAttribute() {
+    public function getCreditsAttribute()
+    {
         if ($this->off_duty) {
             $offDuty = $this->off_duty;
         } else {
@@ -361,7 +422,8 @@ class Timesheet extends ApiModel
         $this->off_duty = SqlHelper::now();
     }
 
-    public function setVerifiedAtToNow() {
+    public function setVerifiedAtToNow()
+    {
         $this->verified_at = SqlHelper::now();
     }
 }

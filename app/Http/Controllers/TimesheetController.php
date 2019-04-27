@@ -406,37 +406,41 @@ class TimesheetController extends ApiController
        * T-Shirts Earned Report
        */
 
-      public function tshirtsEarnedReport()
+      public function shirtsEarnedReport()
       {
+          $this->authorize('shirtsEarnedReport', [ Timesheet::class ]);
+
           $params = request()->validate([
               'year' => 'required|integer'
           ]);
 
           $year = $params['year'];
-          $thresholdLS = setting('TShirtLongSleeveHoursThreshold');
-          $thresholdSS = setting('TShirtShortSleeveHoursThreshold');
+          $thresholdLS = setting('ShirtLongSleeveHoursThreshold');
+          $thresholdSS = setting('ShirtShortSleeveHoursThreshold');
 
           if (!$thresholdSS) {
-              throw new \RuntimeException("TShirtShortSleeveHoursThreshold is not set");
+              throw new \RuntimeException("ShirtShortSleeveHoursThreshold is not set");
           }
 
           if (!$thresholdLS) {
-              throw new \RuntimeException("TShirtLongSleeveHoursThreshold is not set");
+              throw new \RuntimeException("ShirtLongSleeveHoursThreshold is not set");
           }
 
           return response()->json([
-              'people'  => Timesheet::retrieveEarnedTShirts($year, $thresholdSS, $thresholdLS),
+              'people'  => Timesheet::retrieveEarnedShirts($year, $thresholdSS, $thresholdLS),
               'threshold_ss'    => $thresholdSS,
               'threshold_ls'    => $thresholdLS,
           ]);
       }
 
-      /*
-       * Freaking years report!
-       */
+    /*
+     * Freaking years report!
+     */
 
     public function freakingYearsReport()
     {
+        $this->authorize('freakingYearsReport', [ Timesheet::class ]);
+
         $params = request()->validate([
             'include_all' => 'sometimes|boolean'
         ]);
@@ -448,4 +452,20 @@ class TimesheetController extends ApiController
              'signed_up_year' => $intendToWorkYear
           ]);
     }
+
+    /*
+     * Radio eligibility report
+     */
+
+    public function radioEligibilityReport()
+    {
+        $this->authorize('radioEligibilityReport', [ Timesheet::class ]);
+
+        $params = request()->validate([
+            'year' => 'required|integer'
+        ]);
+
+        return response()->json([ 'people' => Timesheet::retrieveRadioEligilibity($params['year']) ]);
+    }
+
 }
