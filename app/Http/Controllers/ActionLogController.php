@@ -61,12 +61,16 @@ class ActionLogController extends ApiController
     {
         $data = request()->input('data');
         $personId = request()->input('person_id');
-        $event = request()->input('event');
+        $event = request()->input('event') ?? 'uknown';
         $message = request()->input('message') ?? '';
 
+        if (!is_numeric($personId)) {
+            $personId = null;
+        }
+
         $log = new ActionLog([
-            'event'     => $event,
             'person_id' => $personId,
+            'event'     => $event,
             'data'      => $data,
             'message'   => $message,
         ]);

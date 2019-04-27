@@ -11,7 +11,8 @@ class TimesheetPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user) {
+    public function before(Person $user)
+    {
         if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::MANAGE, Role::ADMIN])) {
             return true;
         }
@@ -48,47 +49,80 @@ class TimesheetPolicy
      * login manage, or admin, covered in before()
      */
 
-     public function destroy(Person $user, Timesheet $timesheet) {
-         return false;
-     }
+    public function destroy(Person $user, Timesheet $timesheet)
+    {
+        return false;
+    }
 
-     /*
-      * Can user signin the person?
-      */
+    /*
+     * Can user signin the person?
+     */
 
-     public function signin(Person $user) {
-         return false;
-     }
+    public function signin(Person $user)
+    {
+        return false;
+    }
 
-     /*
-      * Can user signoff the timesheet?
-      */
+    /*
+     * Can user signoff the timesheet?
+     */
 
-     public function signoff(Person $user, Timesheet $timesheet) {
-         return false;
-     }
+    public function signoff(Person $user, Timesheet $timesheet)
+    {
+        return false;
+    }
 
-     /*
-      * Can user see a timesheet log?
-      */
+    /*
+     * Can user see a timesheet log?
+     */
 
-     public function log(Person $user, $id) {
-         return false;
-     }
+    public function log(Person $user, $id)
+    {
+        return false;
+    }
 
-     /*
-      * Can the user see the timesheet correction requests?
-      */
+    /*
+     * Can the user see the timesheet correction requests?
+     */
 
-      public function correctionRequests(Person $user) {
-          return false;
-      }
+    public function correctionRequests(Person $user)
+    {
+        return false;
+    }
 
-      /*
-       * Can the user see the timesheet unconfirmed people?
-       */
+    /*
+     * Can the user see the timesheet unconfirmed people?
+     */
 
-       public function unconfirmedPeople(Person $user) {
-           return false;
-       }
+    public function unconfirmedPeople(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user run a freaking years report?
+     */
+
+    public function freakingYearsReport(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user run a freaking years report?
+     */
+
+    public function shirtsEarnedReport(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user run a radio eligibility report?
+     */
+
+    public function radioEligibilityReport(Person $user)
+    {
+        return false;
+    }
 }

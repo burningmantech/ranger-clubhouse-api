@@ -29,7 +29,7 @@ class ErrorLogController extends ApiController
             'data'       => $data,
         ];
 
-        if ($personId) {
+        if (is_numeric($personId)) {
             $record['person_id'] = $personId;
         }
 
