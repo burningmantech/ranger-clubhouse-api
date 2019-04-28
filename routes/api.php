@@ -172,6 +172,7 @@ Route::group([
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
+    Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
     Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');

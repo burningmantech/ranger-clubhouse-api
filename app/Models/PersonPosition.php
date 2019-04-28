@@ -34,13 +34,24 @@ class PersonPosition extends ApiModel
      */
 
     public static function findTrainingRequired($personId) {
-        return self::select('position.id as position_id', 'position.title', 'position.training_position_id')
+        $rows = self::select('position.id as position_id', 'position.title', 'position.training_position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('person_id', $personId)
                 ->where(function($query) {
                     $query->whereNotNull('position.training_position_id')
                     ->orWhere('position.id', Position::DIRT);
                 })->get();
+
+        // Always include DIRT
+        if (!$rows->contains('position_id', Position::DIRT)) {
+            $rows->prepend((object) [
+                'position_id'          => Position::DIRT,
+                'title'                => 'Dirt',
+                'training_position_id' => Position::DIRT_TRAINING
+            ]);
+        }
+
+        return $rows;
     }
 
     /*

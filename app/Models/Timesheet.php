@@ -40,6 +40,11 @@ class Timesheet extends ApiModel
         'verified',
     ];
 
+    protected $rules = [
+        'person_id' => 'required|integer',
+        'position_id' => 'required|integer'
+    ];
+
     protected $appends = [
         'duration',
         'credits',
@@ -105,7 +110,19 @@ class Timesheet extends ApiModel
 
     public static function isPersonOnDuty($personId)
     {
-        return self::where('person_id', $personId)->whereNull('off_duty')->exists();
+        return self::where('person_id', $personId)
+                ->whereYear('on_duty', date('Y'))
+                ->whereNull('off_duty')
+                ->exists();
+    }
+
+    public static function findOnDutyForPersonYear($personId, $year)
+    {
+        return self::where('person_id', $personId)
+            ->whereNull('off_duty')
+            ->whereYear('on_duty', $year)
+            ->with('position:id,title')
+            ->first();
     }
 
     public static function findShiftWithinMinutes($personId, $startTime, $withinMinutes)

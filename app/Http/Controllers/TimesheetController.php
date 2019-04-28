@@ -16,6 +16,7 @@ use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
 use App\Models\Training;
 
+use App\Lib\BulkSignInOut;
 
 class TimesheetController extends ApiController
 {
@@ -52,7 +53,7 @@ class TimesheetController extends ApiController
 
         $this->authorize('log', [ Timesheet::class, $params['person_id'] ]);
 
-        list ($logs, $other) = TimesheetLog::findForPersonYear($params['person_id'], $params['year']);
+        list($logs, $other) = TimesheetLog::findForPersonYear($params['person_id'], $params['year']);
 
         $tsLogs = [];
         foreach ($logs as $ts) {
@@ -110,7 +111,7 @@ class TimesheetController extends ApiController
         $this->authorize('store', $timesheet);
 
         if ($timesheet->save()) {
-            $this->loadRelationships();
+            $timesheet->loadRelationships();
             return $this->success($timesheet);
         }
 
@@ -135,18 +136,17 @@ class TimesheetController extends ApiController
 
         $markedUnconfirmed = false;
 
-        if ($timesheet->isDirty('off_duty')) {
-            $updateInfo[] .= 'off duty old '.$timesheet->getOriginal('off_duty').' new '.$timesheet->off_duty;
-        }
-
         if ($timesheet->isDirty('on_duty')) {
             $updateInfo[] .= 'on duty old '.$timesheet->getOriginal('on_duty').' new '.$timesheet->on_duty;
+        }
+
+        if ($timesheet->isDirty('off_duty')) {
+            $updateInfo[] .= 'off duty old '.$timesheet->getOriginal('off_duty').' new '.$timesheet->off_duty;
         }
 
         if ($timesheet->isDirty('position_id')) {
             $updateInfo[] = 'position old '.Position::retrieveTitle($timesheet->getOriginal('position_id'))
                             .' new '.Position::retrieveTitle($timesheet->position_id);
-
         }
 
         if ($timesheet->isDirty('verified')) {
@@ -211,9 +211,13 @@ class TimesheetController extends ApiController
         $timesheet->delete();
 
         $positionTitle = Position::retrieveTitle($timesheet->position_id);
-        TimesheetLog::record('delete',
-                $timesheet->person_id, $this->user->id, $timesheet->id,
-                "{$positionTitle} {$timesheet->on_duty} - {$timesheet->off_duty}");
+        TimesheetLog::record(
+            'delete',
+            $timesheet->person_id,
+            $this->user->id,
+            $timesheet->id,
+            "{$positionTitle} {$timesheet->on_duty} - {$timesheet->off_duty}"
+        );
 
         return $this->restDeleteSuccess();
     }
@@ -229,7 +233,7 @@ class TimesheetController extends ApiController
 
         $params = request()->validate([
             'person_id'    => 'required|integer',
-            'position_id'  => 'required|integer'
+            'position_id'  => 'required|integer|exists:position,id'
         ]);
 
         $personId = $params['person_id'];
@@ -253,13 +257,13 @@ class TimesheetController extends ApiController
 
         // Are they trained for this position?
         if (!Training::isPersonTrained($personId, $positionId, date('Y'), $requiredPositionId)) {
-            $positionRequired = Position::find($requiredPositionId);
+            $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($isAdmin) {
                 $signonForced = true;
             } else {
                 return response()->json([
                     'status'         => 'not-trained',
-                    'position_title' => $positionRequired->title,
+                    'position_title' => $positionRequired,
                     'position_id'    => $requiredPositionId
                 ]);
             }
@@ -271,10 +275,14 @@ class TimesheetController extends ApiController
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
 
-            TimesheetLog::record('signon',
-                    $person->id, $this->user->id, $timesheet->id,
-                    ($signonForced ? "forced (not trained {$positionRequired->title}) " : '').
-                            $timesheet->position->title." ".(string) $timesheet->on_duty);
+            TimesheetLog::record(
+                'signon',
+                $person->id,
+                $this->user->id,
+                $timesheet->id,
+                ($signonForced ? "forced (not trained {$positionRequired}) " : '').
+                $timesheet->position->title." ".(string) $timesheet->on_duty
+            );
 
 
             return response()->json([
@@ -295,12 +303,20 @@ class TimesheetController extends ApiController
     {
         $this->authorize('signoff', $timesheet);
 
+        if ($timesheet->off_duty) {
+            throw new \InvalidArgumentException("Timesheet already signed off");
+        }
+
         $timesheet->setOffDutyToNow();
         $timesheet->save();
         $timesheet->loadRelationships();
-        TimesheetLog::record('signoff',
-                $timesheet->person_id, $this->user->id, $timesheet->id,
-                $timesheet->position->title." ".(string) $timesheet->off_duty);
+        TimesheetLog::record(
+            'signoff',
+            $timesheet->person_id,
+            $this->user->id,
+            $timesheet->id,
+            $timesheet->position->title." ".(string) $timesheet->off_duty
+        );
         return $this->success($timesheet);
     }
 
@@ -310,15 +326,15 @@ class TimesheetController extends ApiController
      * confirmation status for a person.
      */
 
-     public function info()
-     {
-         $params = request()->validate([
+    public function info()
+    {
+        $params = request()->validate([
              'person_id'    => 'required|integer'
          ]);
 
-         $person = $this->findPerson($params['person_id']);
+        $person = $this->findPerson($params['person_id']);
 
-         return response()->json([
+        return response()->json([
              'info' => [
                  'correction_year'     => setting('TimesheetCorrectionYear'),
                  'correction_enabled'  => setting('TimesheetCorrectionEnable'),
@@ -326,112 +342,113 @@ class TimesheetController extends ApiController
                  'timesheet_confirmed_at' => ($person->timesheet_confirmed ? (string) $person->timesheet_confirmed_at : null),
              ]
          ]);
-     }
+    }
 
-     /*
-      * Final confirmation for timesheet.
-      */
+    /*
+     * Final confirmation for timesheet.
+     */
 
-      public function confirm()
-      {
-          $params = request()->validate([
+    public function confirm()
+    {
+        $params = request()->validate([
               'person_id' => 'required|integer',
               'confirmed' => 'required|boolean',
           ]);
 
-          $person = $this->findPerson($params['person_id']);
-          $this->authorize('confirm', [Timesheet::class, $person->id]);
+        $person = $this->findPerson($params['person_id']);
+        $this->authorize('confirm', [Timesheet::class, $person->id]);
 
-          $person->timesheet_confirmed = $params['confirmed'];
+        $person->timesheet_confirmed = $params['confirmed'];
 
-          // Only log the confirm/unconfirm if the flag changed.
-          if ($person->isDirty('timesheet_confirmed')) {
-              if ($person->timesheet_confirmed) {
-                  $person->timesheet_confirmed_at = SqlHelper::now();
-              } else {
-                  $person->timesheet_confirmed_at = null;
-              }
+        // Only log the confirm/unconfirm if the flag changed.
+        if ($person->isDirty('timesheet_confirmed')) {
+            if ($person->timesheet_confirmed) {
+                $person->timesheet_confirmed_at = SqlHelper::now();
+            } else {
+                $person->timesheet_confirmed_at = null;
+            }
 
-              $person->saveWithoutValidation();
-              TimesheetLog::record('confirmed',
-                    $person->id, $this->user->id, null,
-                    ($person->timesheet_confirmed ? 'confirmed' : 'unconfirmed'));
-          }
+            $person->saveWithoutValidation();
+            TimesheetLog::record(
+                'confirmed', $person->id, $this->user->id, null,
+                ($person->timesheet_confirmed ? 'confirmed' : 'unconfirmed')
+             );
+        }
 
-          return response()->json([
+        return response()->json([
               'confirm_info' => [
                   'timesheet_confirmed' => (int) $person->timesheet_confirmed,
                   'timesheet_confirmed_at' => ($person->timesheet_confirmed ? (string) $person->timesheet_confirmed_at : null),
               ]
           ]);
-      }
+    }
 
-      /*
-       * Timesheet Correction Requests Report
-       */
+    /*
+     * Timesheet Correction Requests Report
+     */
 
-       public function correctionRequests()
-       {
-           $params = request()->validate([
+    public function correctionRequests()
+    {
+        $params = request()->validate([
                'year'   => 'required|integer'
            ]);
 
-           $year = $params['year'];
+        $year = $params['year'];
 
-           $this->authorize('correctionRequests', [ Timesheet::class ]);
+        $this->authorize('correctionRequests', [ Timesheet::class ]);
 
-           return response()->json([
+        return response()->json([
                'corrections'    => Timesheet::retrieveCorrectionRequestsForYear($year),
                'missing_requests'   => TimesheetMissing::retrieveForPersonOrAllForYear(null, $year)
            ]);
-       }
-     /*
-      * Timesheet Unconfirmed Report
-      */
+    }
+    /*
+     * Timesheet Unconfirmed Report
+     */
 
-      public function unconfirmedPeople()
-      {
-          $params = request()->validate([
+    public function unconfirmedPeople()
+    {
+        $params = request()->validate([
               'year' => 'required|integer'
           ]);
 
-          $this->authorize('unconfirmedPeople', [ Timesheet::class ]);
+        $this->authorize('unconfirmedPeople', [ Timesheet::class ]);
 
-          return response()->json([
+        return response()->json([
               'unconfirmed_people' => Timesheet::retrieveUnconfirmedPeopleForYear($params['year'])
           ]);
-      }
+    }
 
-      /*
-       * T-Shirts Earned Report
-       */
+    /*
+     * T-Shirts Earned Report
+     */
 
-      public function shirtsEarnedReport()
-      {
-          $this->authorize('shirtsEarnedReport', [ Timesheet::class ]);
+    public function shirtsEarnedReport()
+    {
+        $this->authorize('shirtsEarnedReport', [ Timesheet::class ]);
 
-          $params = request()->validate([
+        $params = request()->validate([
               'year' => 'required|integer'
           ]);
 
-          $year = $params['year'];
-          $thresholdLS = setting('ShirtLongSleeveHoursThreshold');
-          $thresholdSS = setting('ShirtShortSleeveHoursThreshold');
+        $year = $params['year'];
+        $thresholdLS = setting('ShirtLongSleeveHoursThreshold');
+        $thresholdSS = setting('ShirtShortSleeveHoursThreshold');
 
-          if (!$thresholdSS) {
-              throw new \RuntimeException("ShirtShortSleeveHoursThreshold is not set");
-          }
+        if (!$thresholdSS) {
+            throw new \RuntimeException("ShirtShortSleeveHoursThreshold is not set");
+        }
 
-          if (!$thresholdLS) {
-              throw new \RuntimeException("ShirtLongSleeveHoursThreshold is not set");
-          }
+        if (!$thresholdLS) {
+            throw new \RuntimeException("ShirtLongSleeveHoursThreshold is not set");
+        }
 
-          return response()->json([
+        return response()->json([
               'people'  => Timesheet::retrieveEarnedShirts($year, $thresholdSS, $thresholdLS),
               'threshold_ss'    => $thresholdSS,
               'threshold_ls'    => $thresholdLS,
           ]);
-      }
+    }
 
     /*
      * Freaking years report!
@@ -468,4 +485,105 @@ class TimesheetController extends ApiController
         return response()->json([ 'people' => Timesheet::retrieveRadioEligilibity($params['year']) ]);
     }
 
+    /*
+     * Bulk Sign In and/or Out action
+     */
+
+    public function bulkSignInOut()
+    {
+        $this->authorize('bulkSignInOut', [ Timesheet::class ]);
+
+        $params = request()->validate([
+            'lines'  => 'string|required_without:csv',
+            'csv'    => 'file|required_without:lines',
+            'commit' => 'sometimes|boolean'
+        ]);
+
+        $commit = $params['commit'] ?? false;
+
+        if (isset($params['lines'])) {
+            $people = $params['lines'];
+        } else {
+            $people = $params['csv']->get();
+        }
+
+        list($entries, $haveError) = BulkSignInOut::parse($people);
+
+        if ($haveError) {
+            return response()->json([ 'status' => 'error', 'entries' => $entries, 'commit' => false ]);
+        }
+
+        if (!$commit) {
+            return response()->json([ 'status' => 'success', 'entries' => $entries, 'commit' => false ]);
+        }
+
+        $userId = $this->user->id;
+
+        $haveError = false;
+        foreach ($entries as $entry) {
+            $personId      = $entry->person_id;
+            $positionId    = $entry->position_id;
+            $signin        = $entry->signin;
+            $signout       = $entry->signout;
+            $positionTitle = $entry->position;
+            $action        = $entry->action;
+
+            switch ($action) {
+            case 'inout':
+                // Sign in & out - create timesheet
+                $timesheet = new Timesheet([
+                    'person_id'   => $personId,
+                    'position_id' => $positionId,
+                    'on_duty'     => $signin,
+                    'off_duty'    => $signout,
+                ]);
+                $event = 'created';
+                $message = "bulk upload $positionTitle $signin - $signout";
+                break;
+
+            case 'in':
+                // Sign in - create timesheet
+                if (empty($signin)) {
+                    $signin = SqlHelper::now();
+                }
+
+                $timesheet = new Timesheet([
+                    'person_id'   => $personId,
+                    'position_id' => $positionId,
+                    'on_duty'     => $signin,
+                ]);
+                $entry->signin = $signin;
+
+                $event = 'signon';
+                $message = "bulk upload $positionTitle {$signin}";
+                break;
+
+            case 'out':
+                $timesheetId = $entry->timesheet_id;
+                $timesheet = Timesheet::find($timesheetId);
+                if (!$timesheet) {
+                    // Impossible condition?
+                    $entry->errors = [ "cannot find timesheet id=[$timesheetId]? "];
+                    $haveError = true;
+                    continue 2;
+                }
+
+                if (empty($signout)) {
+                    $signout = SqlHelper::now();
+                }
+                $timesheet->off_duty = $signout;
+                $event = 'signoff';
+                $message = "bulk upload $positionTitle $signout";
+                break;
+            }
+
+            if ($timesheet->save()) {
+                TimesheetLog::record($event, $personId, $userId, $timesheet->id, $message);
+            } else {
+                $entry->errors = [ "timesheet entry save failure ".json_encode($timesheet->getErrors()) ];
+                $haveError = true;
+            }
+        }
+        return response()->json([ 'status' => ($haveError ? 'error' : 'success'), 'entries' => $entries, 'commit' => true ]);
+    }
 }

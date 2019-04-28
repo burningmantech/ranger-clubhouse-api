@@ -173,7 +173,8 @@ class TimesheetMissing extends ApiModel
 
             if (!$partner) {
                 // Try soundex lookup
-                $partner = Person::whereRaw('SOUNDEX(callsign)=SOUNDEX(?)', [ $name ])->get(['id', 'callsign'])->first();
+                $soundex = soundex($name);
+                $partner = Person::where('callsign_soundex', $name)->get(['id', 'callsign'])->first();
                 if (!$partner) {
                     $partners[] = [ 'callsign' => $name ];
                     continue;
