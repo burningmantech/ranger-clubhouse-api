@@ -27,6 +27,15 @@ class TimesheetPolicy
     }
 
     /*
+     * can the user create a timesheet
+     */
+
+    public function store(Person $user, Timesheet $timesheet)
+    {
+        return false;
+    }
+
+    /*
      * Can the user mark the sheet as verified?
      */
 
@@ -122,6 +131,15 @@ class TimesheetPolicy
      */
 
     public function radioEligibilityReport(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user bulk sign in and/or out people?
+     */
+
+    public function bulkSignInOut(Person $user)
     {
         return false;
     }

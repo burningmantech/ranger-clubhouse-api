@@ -665,13 +665,14 @@ class PersonControllerTest extends TestCase
                     'person_id' => $personId,
                     'on_duty'   => date("201$i-08-25 16:00:00"),
                     'off_duty'  => date("201$i-08-25 18:00:00"),
+                    'position_id' => Position::DIRT,
                 ]
             );
         }
 
         $p = factory(Timesheet::class)->create([
             'person_id' => $personId,
-            'position_id' => 1, // Alpha shift
+            'position_id' => Position::ALPHA, 
             'on_duty'   => date("2009-08-25 16:00:00"),
             'off_duty'  => date("2009-08-25 18:00:00"),
         ]);
