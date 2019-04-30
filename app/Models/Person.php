@@ -94,6 +94,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'callsign_approved'           => 'boolean',
         'has_note_on_file'            => 'boolean',
         'on_site'                     => 'boolean',
+        'osha10'                      => 'boolean',
+        'osha30'                      => 'boolean',
         'user_authorized'             => 'boolean',
         'vehicle_blacklisted'         => 'boolean',
         'vehicle_insurance_paperwork' => 'boolean',
@@ -191,6 +193,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
        'sms_off_playa_stopped',
        'sms_on_playa_code',
        'sms_off_playa_code',
+
+       // Certifications
+       'osha10',
+       'osha30'
     ];
 
     const SEARCH_FIELDS = [
