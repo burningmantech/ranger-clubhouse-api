@@ -29,6 +29,9 @@ abstract class TestCase extends BaseTestCase
     public function createUser()
     {
         $this->user = factory(Person::class)->create();
+        if (!$this->user->id) {
+            throw new \RuntimeException("Failed to create signed in user.".json_encode($this->user->getErrors()));
+        }
         $this->addRole(Role::LOGIN);
     }
 

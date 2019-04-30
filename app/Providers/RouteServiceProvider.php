@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use App\Models\AccessDocumentDelivery;
+use App\Models\Bmid;
+use App\Models\Help;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,14 @@ class RouteServiceProvider extends ServiceProvider
 
         Route::bind('access-document-delivery', function($id) {
             return AccessDocumentDelivery::findForRoute($id) ?? abort(404);
+        });
+
+        Route::bind('bmid', function($id) {
+            return Bmid::find($id) ?? abort(404);
+        });
+
+        Route::bind('help', function ($id) {
+            return Help::findByIdOrSlug($id) ?? abort(404);
         });
     }
 

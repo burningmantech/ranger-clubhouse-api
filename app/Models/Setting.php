@@ -23,23 +23,43 @@ class Setting extends ApiModel
 
     public static function get($name)
     {
-        $row = self::select('value', 'type')
-                ->where('name', $name)
-                ->first();
+        if (is_array($name)) {
+            $rows = self::select('name', 'value', 'type')->whereIn('name', $name)->get()->keyBy('name');
+            $settings = [];
+            foreach ($name as $setting) {
+                $row = $rows[$setting] ?? null;
+                if (!$row || $row->environment_only) {
+                    // No period means look it up in the clubhouse config tree.
+                    $value = config(self::fullName($setting));
+                } else {
+                    $value = $row->castedValue();
+                }
 
-        if (!$row || $row->environment_only) {
-            // No period means look it up in the clubhouse config tree.
-            return config(self::fullName($name));
+                $settings[$setting] = $value;
+            }
+
+            return $settings;
+        } else {
+            $row = self::select('value', 'type')->where('name', $name)->first();
+
+            if (!$row || $row->environment_only) {
+                // No period means look it up in the clubhouse config tree.
+                return config(self::fullName($name));
+            }
+
+            return $row->castedValue();
         }
+    }
 
+    public function castedValue() {
         // Convert the values
-        switch ($row->type) {
+        switch ($this->type) {
             case 'bool':
-                return filter_var($row->value, FILTER_VALIDATE_BOOLEAN);
+                return filter_var($this->value, FILTER_VALIDATE_BOOLEAN);
             case 'integer':
-                return (int)$row->value;
+                return (int)$this->value;
             default:
-                return $row->value;
+                return $this->value;
         }
     }
 

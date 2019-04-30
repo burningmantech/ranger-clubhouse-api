@@ -14,13 +14,16 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
         'first_name'    => $faker->firstName,
         'last_name'     => $faker->lastName,
         'street1'       => $faker->streetAddress,
+        'city'          => $faker->city,
         'state'         => 'CA',
         'country'       => 'USA',
         'zip'           => $faker->postcode,
         'home_phone'    => $faker->phoneNumber,
+        'alt_phone'     => '',
         'password'      => $salt.":".sha1($salt."ineedashower!"),
         'user_authorized' => true,
         'create_date'   => Carbon::now()->format('Y-m-d H:i:s'),
         'bpguid'        => $faker->uuid,
+        'behavioral_agreement' => true,
     ];
 });

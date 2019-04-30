@@ -7,6 +7,7 @@ use App\Models\TraineeStatus;
 use App\Models\Slot;
 use App\Models\RadioEligible;
 use App\Models\Bmid;
+use App\Models\ManualReview;
 
 use App\Helpers\DateHelper;
 use App\Helpers\SqlHelper;
@@ -32,6 +33,9 @@ class PersonEventInfo extends ApihouseResult
     public $meals;
     public $showers;
     public $radio_info_available;
+
+    public $manual_review_pass;
+    public $manual_review_date;
 
     /*
      * Gather all information related to a given year for a person
@@ -141,6 +145,15 @@ class PersonEventInfo extends ApihouseResult
 
         if (date('Y') == $year && !setting('MealInfoAvailable')) {
             $info->meals = 'no-info';
+        }
+
+        $manualReview = ManualReview::findForPersonYear($personId, $year);
+
+        if ($manualReview) {
+            $info->manual_review_pass = true;
+            $info->manual_review_date = (string) $manualReview->passdate;
+        } else {
+            $info->manual_review_pass = false;
         }
 
         return $info;

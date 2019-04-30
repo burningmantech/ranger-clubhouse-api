@@ -32,7 +32,6 @@ class AuthController extends Controller
         $actionData = [
             'ip'         => request()->ip(),
             'user_agent' => request()->userAgent(),
-            'email'      => $credentials['identification']
         ];
 
         // Analytics to help figure out how our users interact with the site.
@@ -40,10 +39,16 @@ class AuthController extends Controller
             $actionData['screen_size'] = $credentials['screen_size'];
         }
 
-        $person = Person::findForAuthentication($credentials);
 
+        $person = Person::where('email', $credentials['identification'])->first();
         if (!$person) {
-            ActionLog::record(null, 'auth-failed', 'Credentials incorrect', $actionData);
+            $actionData['email'] = $credentials['identification'];
+            ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
+            return response()->json([ 'status' => 'invalid-credentials'], 401);
+        }
+
+        if (!$person->isValidPassword($credentials['password'])) {
+            ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
             return response()->json([ 'status' => 'invalid-credentials'], 401);
         }
 

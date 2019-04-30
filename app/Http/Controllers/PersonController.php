@@ -631,6 +631,8 @@ class PersonController extends ApiController
             'person.state'      => 'required|string',
             'person.country'    => 'required|string',
             'person.status'     => 'required|string',
+            'person.home_phone' => 'sometimes|string',
+            'person.alt_phone'  => 'sometimes|string',
         ]);
 
         $accountCreateEmail = setting('AccountCreationEmail');
@@ -683,4 +685,22 @@ class PersonController extends ApiController
 
         return response()->json([ 'status' => 'success' ]);
     }
+
+    /*
+     * Prospecitve / Alpha estimated shirts report
+     */
+
+    public function alphaShirts()
+    {
+        $this->authorize('alphaShirts', [ Person::class ]);
+
+        $rows = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'email',
+                'longsleeveshirt_size_style', 'teeshirt_size_style')
+                ->whereIn('status', [ 'alpha', 'prospective' ])
+                ->where('user_authorized', true)
+                ->orderBy('callsign')
+                ->get();
+
+        return response()->json([ 'alphas' => $rows ]);
+     }
 }

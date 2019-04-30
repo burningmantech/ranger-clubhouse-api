@@ -60,4 +60,23 @@ class AssetPolicy
     {
         return false;
     }
+
+    /*
+     * Determine whether the user can checkout assets
+     */
+
+    public function checkout(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /*
+     * Determine whether the user can checkin assets
+     */
+
+    public function checkin(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }

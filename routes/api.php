@@ -36,6 +36,7 @@ Route::group([
     Route::post('person/register', 'PersonController@register');
 
     Route::post('error-log/record', 'ErrorLogController@record');
+    Route::post('action-log/record', 'ActionLogController@record');
 });
 
 
@@ -61,6 +62,9 @@ Route::group([
 
     Route::resource('action-log', 'ActionLogController', [ 'only' => 'index' ]);
 
+    Route::post('asset/checkout', 'AssetController@checkout');
+    Route::get('asset/{asset}/history', 'AssetController@history');
+    Route::post('asset/{asset}/checkin', 'AssetController@checkin');
     Route::resource('asset', 'AssetController');
     Route::resource('asset-attachment', 'AssetAttachmentController');
 
@@ -68,6 +72,12 @@ Route::group([
     Route::post('asset-person/checkout', 'AssetPersonController@checkout');
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
+
+    Route::post('bmid/lambase', 'BmidController@lambase');
+    Route::get('bmid/manage', 'BmidController@manage');
+    Route::get('bmid/manage-person', 'BmidController@managePerson');
+    Route::get('bmid/sanity-check', 'BmidController@sanityCheck');
+    Route::resource('bmid', 'BmidController');
 
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
@@ -78,6 +88,9 @@ Route::group([
 
     Route::get('contact/log', 'ContactController@showLog');
     Route::post('contact/send', 'ContactController@send');
+
+    Route::get('debug/sleep-test', 'DebugController@sleepTest');
+    Route::get('debug/db-test', 'DebugController@dbTest');
 
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
@@ -95,6 +108,10 @@ Route::group([
 
     Route::get('mentor/mentees', 'MentorController@mentees');
 
+    Route::resource('motd', 'MotdController');
+
+    Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
+
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
 
@@ -103,6 +120,7 @@ Route::group([
     Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
+    Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');
@@ -154,14 +172,20 @@ Route::group([
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
-    Route::post('timesheet/confirm', 'TimesheetController@confirm');
-    Route::post('timesheet/signin', 'TimesheetController@signin');
-    Route::get('timesheet/log', 'TimesheetController@showLog');
+    Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
+    Route::post('timesheet/confirm', 'TimesheetController@confirm');
+    Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
+    Route::get('timesheet/info', 'TimesheetController@info');
+    Route::get('timesheet/log', 'TimesheetController@showLog');
+    Route::post('timesheet/signin', 'TimesheetController@signin');
+    Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
+    Route::get('timesheet/shirts-earned', 'TimesheetController@shirtsEarnedReport');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
-    Route::get('timesheet/info', 'TimesheetController@info');
     Route::resource('timesheet', 'TimesheetController');
 
     Route::resource('timesheet-missing', 'TimesheetMissingController');
+
+    Route::resource('help', 'HelpController');
 });

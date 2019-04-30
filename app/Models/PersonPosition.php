@@ -34,13 +34,24 @@ class PersonPosition extends ApiModel
      */
 
     public static function findTrainingRequired($personId) {
-        return self::select('position.id as position_id', 'position.title', 'position.training_position_id')
+        $rows = self::select('position.id as position_id', 'position.title', 'position.training_position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('person_id', $personId)
                 ->where(function($query) {
                     $query->whereNotNull('position.training_position_id')
                     ->orWhere('position.id', Position::DIRT);
                 })->get();
+
+        // Always include DIRT
+        if (!$rows->contains('position_id', Position::DIRT)) {
+            $rows->prepend((object) [
+                'position_id'          => Position::DIRT,
+                'title'                => 'Dirt',
+                'training_position_id' => Position::DIRT_TRAINING
+            ]);
+        }
+
+        return $rows;
     }
 
     /*
@@ -73,8 +84,9 @@ class PersonPosition extends ApiModel
               $addIds = [];
               $ids = Position::where('new_user_eligible', true)->pluck('id')->toArray();
               foreach ($ids as $positionId) {
-                  if (in_array($positionId, $removeIds)) {
-                      $removeIds = array_diff($removeIds, [ $positionId]);
+                  $key = array_search($positionId, $removeIds);
+                  if ($key !== false) {
+                      unset($removeIds[$key]);
                   } else {
                       $addIds[] = $positionId;
                   }
@@ -104,7 +116,7 @@ class PersonPosition extends ApiModel
           }
 
           if (!empty($addIds)) {
-              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => $addIds ], $personId);
+              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => array_values($addIds) ], $personId);
           }
       }
 
@@ -129,7 +141,7 @@ class PersonPosition extends ApiModel
             ->delete();
 
 
-         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => $ids ], $personId);
+         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => array_values($ids) ], $personId);
      }
 
      /**

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Models\ActionLog;
 use App\Models\Person;
+use App\Models\Role;
 
 class ActionLogController extends ApiController
 {
@@ -29,8 +30,9 @@ class ActionLogController extends ApiController
              'page_size'  => 'sometimes|integer',
 
              'person'     => 'sometimes|string',
-             'target_person' => 'sometimes|string',
         ]);
+
+        $redactData = !$this->userHasRole([ Role::ADMIN, Role::VC ]);
 
         if (isset($params['person'])) {
             $callsign = $params['person'];
@@ -46,20 +48,35 @@ class ActionLogController extends ApiController
             }
         }
 
-        if (isset($params['target_person'])) {
-            $callsign = $params['target_person'];
-            if (is_numeric($callsign)) {
-                $params['target_person_id'] = (int) $callsign;
-            } else {
-                $person = Person::findByCallsign($callsign);
-                if (!$person) {
-                    return response()->json([ 'error' => "Target Person $callsign was not found."]);
-                }
+        return response()->json(ActionLog::findForQuery($params, $redactData));
+    }
 
-                $params['target_person_id'] = $person->id;
-            }
+    /**
+     * Record analytics from the client
+     *
+     * Does not require authorization.
+     */
+
+    public function record()
+    {
+        $data = request()->input('data');
+        $personId = request()->input('person_id');
+        $event = request()->input('event') ?? 'uknown';
+        $message = request()->input('message') ?? '';
+
+        if (!is_numeric($personId)) {
+            $personId = null;
         }
 
-        return response()->json(ActionLog::findForQuery($params));
+        $log = new ActionLog([
+            'person_id' => $personId,
+            'event'     => $event,
+            'data'      => $data,
+            'message'   => $message,
+        ]);
+        $log->save();
+
+        return response('success', 200);
     }
+
 }

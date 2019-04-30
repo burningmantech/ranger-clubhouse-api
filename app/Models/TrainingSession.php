@@ -100,12 +100,7 @@ class TrainingSession extends Slot
 
             // Does the person need ranking?
             if ($isDirtTraining) {
-                if ($status == Person::ALPHA
-                || $status == Person::PROSPECTIVE
-                || $status == Person::PROSPECTIVE_WAITLIST
-                || $status == Person::BONKED
-                || $status == Person::UBERBONKED
-                || $status == Person::AUDITOR) {
+                if ($status != Person::ACTIVE) {
                     $info['need_ranking'] = true;
                 }
             } else {
@@ -153,7 +148,8 @@ class TrainingSession extends Slot
     {
         $trainerPositions = @Position::TRAINERS[$this->position_id];
         if (!$trainerPositions) {
-            throw new \InvalidArgumentException('No trainer positions are associated.');
+            return [];
+            //throw new \InvalidArgumentException('No trainer positions are associated.');
         }
 
         $trainers = [];

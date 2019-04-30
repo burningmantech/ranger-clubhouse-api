@@ -25,39 +25,49 @@ class TicketingController extends ApiController
 
     public function ticketingInfo()
     {
+        $settings = setting([
+                'TicketingPeriod', 'TicketsAndStuffEnablePNV',
+                'TAS_Tickets', 'TAS_VP', 'TAS_WAP', 'TAS_WAPSO', 'TAS_Delivery', 'TAS_WAPSOMax',
+                'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_WAPDateRange', 'TAS_DefaultAlphaWAPDate',
+                'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
+                'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
+                'RpTicketThreshold', 'ScTicketThreshold', 'YrTicketThreshold', 'YrTicketThreshold',
+                'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ'
+            ]);
+
         return response()->json([
             'ticketing_info' => [
-                'period'                 => setting('TicketingPeriod'),
-                'is_enabled_for_pnv'     => setting('TicketsAndStuffEnablePNV'),
+                'period'                 => $settings['TicketingPeriod'],
+                'is_enabled_for_pnv'     => $settings['TicketsAndStuffEnablePNV'],
 
-                'ticket_status'          => setting('TAS_Tickets'),
-                'vp_status'              => setting('TAS_VP'),
-                'wap_status'             => setting('TAS_WAP'),
-                'wap_so_status'          => setting('TAS_WAPSO'),
-                'delivery_status'        => setting('TAS_Delivery'),
-                'wap_so_max'             => setting('TAS_WAPSOMax'),
-                'box_office_open_date'   => setting('TAS_BoxOfficeOpenDate'),
-                'wap_default_date'       => setting('TAS_DefaultWAPDate'),
-                'wap_date_range'         => setting('TAS_WAPDateRange'),
-                'wap_alpha_default_date' => setting('TAS_DefaultAlphaWAPDate'),
-                'wap_so_default_date'    => setting('TAS_DefaultSOWAPDate'),
+                'ticket_status'          => $settings['TAS_Tickets'],
+                'vp_status'              => $settings['TAS_VP'],
+                'wap_status'             => $settings['TAS_WAP'],
+                'wap_so_status'          => $settings['TAS_WAPSO'],
+                'delivery_status'        => $settings['TAS_Delivery'],
+                'wap_so_max'             => $settings['TAS_WAPSOMax'],
+                'box_office_open_date'   => $settings['TAS_BoxOfficeOpenDate'],
+                'wap_default_date'       => $settings['TAS_DefaultWAPDate'],
+                'wap_date_range'         => $settings['TAS_WAPDateRange'],
+                'wap_alpha_default_date' => $settings['TAS_DefaultAlphaWAPDate'],
+                'wap_so_default_date'    => $settings['TAS_DefaultSOWAPDate'],
 
-                'submit_date'            => setting('TAS_SubmitDate'),
+                'submit_date'            => $settings['TAS_SubmitDate'],
 
-                'ticket_vendor_email'    => setting('TicketVendorEmail'),
-                'ticket_vendor_name'     => setting('TicketVendorName'),
-                'ranger_ticketing_email' => setting('TAS_Email'),
+                'ticket_vendor_email'    => $settings['TicketVendorEmail'],
+                'ticket_vendor_name'     => $settings['TicketVendorName'],
+                'ranger_ticketing_email' => $settings['TAS_Email'],
 
-                'rpt_credits'            => setting('RpTicketThreshold'),
-                'sc_credits'             => setting('ScTicketThreshold'),
-                'earned_year'            => setting('YrTicketThreshold') - 1,
-                'upcoming_year'          => setting('YrTicketThreshold'),
+                'rpt_credits'            => $settings['RpTicketThreshold'],
+                'sc_credits'             => $settings['ScTicketThreshold'],
+                'earned_year'            => $settings['YrTicketThreshold'] - 1,
+                'upcoming_year'          => $settings['YrTicketThreshold'],
 
                 'faqs'                   => [
-                    'ticketing'          => setting('TAS_Ticket_FAQ'),
-                    'wap'                => setting('TAS_WAP_FAQ'),
-                    'vp'                 => setting('TAS_VP_FAQ'),
-                    'alpha'              => setting('TAS_Alpha_FAQ'),
+                    'ticketing'          => $settings['TAS_Ticket_FAQ'],
+                    'wap'                => $settings['TAS_WAP_FAQ'],
+                    'vp'                 => $settings['TAS_VP_FAQ'],
+                    'alpha'              => $settings['TAS_Alpha_FAQ'],
                 ]
             ]
         ]);

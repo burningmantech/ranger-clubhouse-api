@@ -5,6 +5,10 @@ namespace App\Http\Filters;
 use App\Models\Person;
 use App\Models\Role;
 
+/*
+ * THE COLUMNS LISTED NEED TO BE IN SYNC WITH app/Models/Person.php::$fillable
+ */
+
 class PersonFilter
 {
     protected $record;
@@ -17,15 +21,23 @@ class PersonFilter
     const STATUS_FIELDS = [
         'status',
         'status_date',
+    ];
+
+    const ACCOUNT_FIELDS = [
         'vintage',
-        'timestamp',
         'user_authorized',
         'date_verified',
         'create_date',
+        'timestamp',
     ];
 
     const ROLES_FIELDS = [
         'roles',
+    ];
+
+    const CERTIFICATIONS_FIELDS = [
+        'osha10',
+        'osha30'
     ];
 
     const NAME_GENDER_FIELDS = [
@@ -35,6 +47,7 @@ class PersonFilter
         'gender',
     ];
 
+    // TODO remove when CH1 is decomissioned
     const BARCODE_FIELDS = [
         'barcode',
     ];
@@ -76,6 +89,7 @@ class PersonFilter
     const EMERGENCY_CONTACT_FIELDS = [
         'emergency_contact',
 
+        // TODO remove below when CH1 is decomissioned
         'em_first_name',
         'em_mi',
         'em_last_name',
@@ -89,6 +103,7 @@ class PersonFilter
 
     const AGREEMENT_FIELDS = [
         'vehicle_paperwork',
+        'behavioral_agreement',
     ];
 
     const EVENT_FIELDS = [
@@ -99,15 +114,13 @@ class PersonFilter
         'vehicle_insurance_paperwork',
     ];
 
-    const LAM_FIELDS = [
+    const BMID_FIELDS = [
         'lam_status',
         'bpguid',
         'sfuid',
-
     ];
 
     const MENTOR_FIELDS = [
-        'has_note_on_file',
         'mentors_flag',
         'mentors_flag_note',
         'mentors_notes',
@@ -132,6 +145,15 @@ class PersonFilter
         'timesheet_confirmed_at'
     ];
 
+    const MESSAGE_FIELDS = [
+        'message',
+        'message_updated_at'
+    ];
+
+    const PERSONNEL_FIELD = [
+        'has_note_on_file',
+    ];
+
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
@@ -143,24 +165,31 @@ class PersonFilter
         [ self::NAME_GENDER_FIELDS ],
         [ self::STATUS_FIELDS ],
         [ self::ROLES_FIELDS ],
+        [ self::ACCOUNT_FIELDS ],
         [ self::CALLSIGNS_FIELDS ],
+        [ self::CERTIFICATIONS_FIELDS ],
+        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
         [ self::AGREEMENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
-        [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
+        [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
         // Note: self is not allowed to see mentor notes
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
+        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS ]
     ];
 
     const FIELDS_DESERIALIZE = [
         [ self::NAME_GENDER_FIELDS, true, [ Role::VC ] ],
-        [ self::STATUS_FIELDS, false, [  Role::VC ] ],
+        [ self::ACCOUNT_FIELDS, false, [ Role::ADMIN ] ],
+        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
+        [ self::CERTIFICATIONS_FIELDS, false, [ Role::VC ]],
+        [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
         [ self::ROLES_FIELDS, false, [ Role::MENTOR, Role::VC ] ],
         [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
@@ -169,10 +198,11 @@ class PersonFilter
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VC ]],
         [ self::AGREEMENT_FIELDS, true, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
-        [ self::LAM_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
+        [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
+        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
     ];
 

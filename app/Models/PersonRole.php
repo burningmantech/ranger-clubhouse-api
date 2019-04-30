@@ -44,8 +44,9 @@ class PersonRole extends ApiModel
              $addIds = [];
              $ids = Role::where('new_user_eligible', true)->pluck('id')->toArray();
              foreach ($ids as $roleId) {
-                 if (in_array($roleId, $removeIds)) {
-                     $removeIds = array_diff($removeIds, [ $roleId ]);
+                 $key = array_search($roleId, $removeIds);
+                 if ($key !== false) {
+                     unset($removeIds[$key]);
                  } else {
                      $addIds[] = $roleId;
                  }
@@ -71,7 +72,7 @@ class PersonRole extends ApiModel
         }
 
         DB::table('person_role')->where('person_id', $personId)->whereIn('role_id', $ids)->delete();
-        ActionLog::record(Auth::user(), 'person-role-remove', $message, [ 'role_ids' => $ids ], $personId);
+        ActionLog::record(Auth::user(), 'person-role-remove', $message, [ 'role_ids' => array_values($ids) ], $personId);
     }
 
      /*
@@ -93,7 +94,7 @@ class PersonRole extends ApiModel
         }
 
         if (!empty($addedIds)) {
-            ActionLog::record(Auth::user(), 'person-role-add', $message, [ 'role_ids' => $ids ], $personId);
+            ActionLog::record(Auth::user(), 'person-role-add', $message, [ 'role_ids' => array_values($ids) ], $personId);
         }
     }
 

@@ -90,9 +90,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     protected $casts = [
         'active_next_event'           => 'boolean',
         'asset_authorized'            => 'boolean',
+        'behavioral_agreement'         => 'boolean',
         'callsign_approved'           => 'boolean',
         'has_note_on_file'            => 'boolean',
         'on_site'                     => 'boolean',
+        'osha10'                      => 'boolean',
+        'osha30'                      => 'boolean',
         'user_authorized'             => 'boolean',
         'vehicle_blacklisted'         => 'boolean',
         'vehicle_insurance_paperwork' => 'boolean',
@@ -102,6 +105,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'create_date'                 => 'datetime',
         'date_verified'               => 'date',
         'status_date'                 => 'date',
+        'message_updated_at'             => 'datetime',
         'timestamp'                   => 'timestamp',
     ];
 
@@ -121,11 +125,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'vintage',
 
         'barcode',
+        'behavioral_agreement',
         'status',
         'status_date',
         'timestamp',
         'user_authorized',
 
+        'message',
 
         'date_verified',
         'create_date',
@@ -187,6 +193,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
        'sms_off_playa_stopped',
        'sms_on_playa_code',
        'sms_off_playa_code',
+
+       // Certifications
+       'osha10',
+       'osha30'
     ];
 
     const SEARCH_FIELDS = [
@@ -204,13 +214,30 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $rules = [
-        'callsign'   => 'required|string',
-        'first_name' => 'required|string',
-        'last_name'  => 'required|string',
-        'email'      => 'required|string',
+        'callsign'   => 'required|string|max:64',
         'status'     => 'required|string',
+        'formerly_known_as' => 'sometimes|string|nullable|max:200',
+
+        'first_name' => 'required|string|max:25',
+        'mi'         => 'sometimes|string|nullable|max:10',
+        'last_name'  => 'required|string|max:25',
+
+        'email'      => 'required|string|max:50',
+
+        'street1'    => 'required|string|nullable|max:128',
+        'street2'    => 'sometimes|string|nullable|max:128',
+        'apt'        => 'sometimes|string|nullable|max:10',
+        'city'       => 'required|string|max:50',
+
         'state'      => 'state_for_country:live_only',
-        'country'    => 'required|string',
+        'country'    => 'required|string|max:25',
+
+        'home_phone' => 'required|string|max:25',
+        'alt_phone'  => 'sometimes|string|nullable|max:25',
+
+        'camp_location' => 'sometimes|string|nullable|max:200',
+        'gender'    => 'sometimes|string|nullable|max:32',
+
     ];
 
     /*
@@ -239,6 +266,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // TODO - adjust person schema to default to current timestamp
             if ($model->attributes == null || empty($model->attributes['create_date'])) {
                 $model->create_date = SqlHelper::now();
+            }
+        });
+
+        self::saving(function ($model) {
+            if ($model->isDirty('message')) {
+                $model->message_updated_at = SqlHelper::now();
+            }
+
+            // Ensure shirts are always set correctly
+            if (empty($model->longsleeveshirt_size_style)) {
+                $model->longsleeveshirt_size_style = 'Unknown';
+            }
+
+            if (empty($model->teeshirt_size_style)) {
+                $model->teeshirt_size_style = 'Unknown';
             }
         });
     }
@@ -520,17 +562,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $resetPassword;
     }
 
-    public static function findForAuthentication(array $credentials)
-    {
-        $person = Person::where('email', $credentials['identification'])->first();
-
-        if ($person && $person->isValidPassword($credentials['password'])) {
-            return $person;
-        }
-
-        return false;
-    }
-
     public function getRolesAttribute()
     {
         return $this->roles;
@@ -575,7 +606,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function generateRandomString(): string
     {
-        $length = 20;
+        $length = 10;
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $max = strlen($characters)-1;
         $token = '';
@@ -720,4 +751,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
         $this->attributes['callsign_soundex'] = soundex($this->attributes['callsign_normalized']);
     }
+
+    /**
+     * Normalize shirt sizes
+     */
+
+     public function getLongsleeveshirtSizeStyleAttribute() {
+         return empty($this->attributes['longsleeveshirt_size_style']) ? 'Unknown' : $this->attributes['longsleeveshirt_size_style'];
+     }
+
+     public function getTeeshirtSizeStyleAttribute() {
+         return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
+     }
+
 }

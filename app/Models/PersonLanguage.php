@@ -10,6 +10,8 @@ class PersonLanguage extends ApiModel
     const ON_DUTY = 2;
     const HAS_RADIO = 3;
 
+    const LANGUAGE_NAME_LENGTH = 32;
+
     protected $table = 'person_language';
 
     /*
@@ -45,15 +47,16 @@ class PersonLanguage extends ApiModel
     public static function updateForPerson($person_id, $language) {
         self::where('person_id', $person_id)->delete();
 
-        $languages = explode(',', $language);
+        $languages = preg_split('/[,\.]/', $language);
 
         foreach ($languages as $name) {
             $tongue = trim($name);
 
             if (empty($name)) {
-                next;
+                continue;
             }
 
+            $name = substr($name, 0, self::LANGUAGE_NAME_LENGTH);
             self::create([ 'person_id' => $person_id, 'language_name' => $name]);
         }
     }
