@@ -21,6 +21,6 @@ curl --silent "${script_url}" --output "${deploy_cmd}";
 
 env;
 
-sh -x "${script_url}" --profile="clubhouse-api" "${@}";
+sh -x "${deploy_cmd}" --profile="clubhouse-api" "${@}";
 
 rm "${deploy_cmd}";
