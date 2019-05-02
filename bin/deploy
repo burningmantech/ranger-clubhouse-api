@@ -15,4 +15,12 @@ script_url="https://${host}/${repo}/${version}/${path}";
 
 export LOCAL_IMAGE_NAME="${image_name}";
 
-curl --silent "${script_url}" | sh -x -s -- --profile="clubhouse-api" "${@}";
+deploy_cmd="$(mktemp)";
+
+curl --silent "${script_url}" --output "${deploy_cmd}";
+
+env;
+
+sh -x "${script_url}" --profile="clubhouse-api" "${@}";
+
+rm "${deploy_cmd}";
