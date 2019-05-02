@@ -19,7 +19,9 @@ class BulkUploadController extends ApiController
         // Columns to be set to 1/true
         "vehicle_insurance_paperwork",
         "vehicle_paperwork",
-        "vintage"
+        "vintage",
+        "osha10",
+        "osha30"
     ];
 
     const STATUS_UPDATE_ACTIONS = [

@@ -14,6 +14,8 @@ class Position extends ApiModel
 
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
+    const GREEN_DOT_MENTOR = 40;
+    const GREEN_DOT_MENTEE = 50;
     const GREEN_DOT_TRAINING = 101;
     const GREEN_DOT_TRAINER = 100;
 
