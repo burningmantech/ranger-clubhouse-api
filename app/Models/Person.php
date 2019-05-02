@@ -379,20 +379,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     'limit'    => $limit
                 ];
             }
-            $string = '%'.$q.'%';
+            $likeQuery = '%'.$q.'%';
 
             if (isset($query['search_fields'])) {
                 $fields = explode(',', $query['search_fields']);
 
-                $sql = self::where(function ($sql) use ($q,$fields,$string,$normalized, $soundex) {
+                $sql = self::where(function ($sql) use ($q,$fields,$likeQuery,$normalized, $soundex) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
                             throw new \InvalidArgumentException("Search field '$field' is not allowed.");
                         }
 
                         if ($field == 'name') {
-                            $sql->orWhere('first_name', 'like', $string);
-                            $sql->orWhere('last_name', 'like', $string);
+                            $sql->orWhere('first_name', 'like', $likeQuery);
+                            $sql->orWhere('last_name', 'like', $likeQuery);
 
                             if (strpos($q, ' ') !== false) {
                                 $name = explode(' ', $q);
@@ -408,18 +408,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                                 $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
                                 $sql->orWhere('callsign_soundex', $soundex);
                         } else {
-                            $sql->orWhere($field, 'like', $string);
+                            $sql->orWhere($field, 'like', $likeQuery);
                         }
                     }
                 });
             } else {
-                $sql = self::where('callsign', 'like', $string);
+                $sql = self::where('callsign', 'like', $likeQuery);
             }
 
-            $quoted = DB::getPdo()->quote($normalized);
-            $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
-            $quoted = DB::getPdo()->quote($soundex);
-            $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
+            $orderBy = "CASE";
+            if (stripos($q, '@') !== false) {
+                $orderBy .= " WHEN email=".DB::getPdo()->quote($q)." THEN CONCAT('00', callsign)";
+                $orderBy .= " WHEN email like ".DB::getPdo()->quote($likeQuery)." THEN CONCAT('03', callsign)";
+            }
+            $orderBy .= " WHEN callsign_normalized=".DB::getPdo()->quote($normalized)." THEN CONCAT('01', callsign)";
+            $orderBy .= " WHEN callsign_soundex=".DB::getPdo()->quote($soundex)." THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
