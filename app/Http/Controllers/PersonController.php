@@ -73,9 +73,15 @@ class PersonController extends ApiController
                     $row['email'] = $person->email;
                 }
 
-                if (stripos($params['search_fields'] ?? '', 'email') !== false
-                && stripos($person->email, $params['query'] ?? '') !== false) {
-                    $row['email_matched'] = true;
+                if (stripos($params['search_fields'] ?? '', 'email') !== false) {
+                    $query = $params['query'] ?? '';
+                    if (stripos($query, '@') !== false) {
+                        if ($person->email == $query) {
+                            $row['email_match'] = 'full';
+                        } else if (stripos($person->email,$query) !== false) {
+                            $row['email_match'] = 'partial';
+                        }
+                    }
                 }
                 $rows[] = $row;
             }
