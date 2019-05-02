@@ -12,6 +12,8 @@ use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
 
+use Carbon\Carbon;
+
 class SlotController extends ApiController
 {
     /**
@@ -180,5 +182,51 @@ class SlotController extends ApiController
 
         $slot->addError('begins', 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.');
         return false;
+    }
+
+    /*
+     * Report on the Dirt Shifts - used for the shift Lead Report
+     */
+
+    public function dirtShiftTimes()
+    {
+        $params = request()->validate([
+             'year' => 'required|integer'
+         ]);
+
+         return response()->json([ 'shifts' => Slot::retrieveDirtTimes($params['year'])]);
+    }
+
+    /*
+     * Shift Lead report on sign ups
+     */
+
+    public function shiftLeadReport()
+    {
+        $params = request()->validate([
+             'shift_start' => 'required|date',
+             'shift_duration'   => 'required|integer'
+         ]);
+
+         $shiftStart = new Carbon($params['shift_start']);
+         $shiftDuration = $params['shift_duration'];
+         $shiftEnd = $shiftStart->clone()->addSeconds($shiftDuration);
+
+         $info = [
+             // Positions and head counts
+             'incoming_positions' => Slot::retrievePositionsScheduled($shiftStart, $shiftEnd, false),
+             'below_min_positions' => Slot::retrievePositionsScheduled($shiftStart, $shiftEnd, true),
+
+             // People signed up
+             'non_dirt_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'non-dirt'),
+             'command_staff_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'command'),
+             'dirt_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'dirt+green'),
+
+             // Green Dot head counts
+             'green_dot_total'  => Slot::countGreenDotsScheduled($shiftStart, $shiftEnd),
+             'green_dot_females'  => Slot::countGreenDotsScheduled($shiftStart, $shiftEnd, true),
+         ];
+
+         return response()->json($info);
     }
 }

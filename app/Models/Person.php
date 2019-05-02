@@ -764,4 +764,46 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
          return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
      }
 
+     /*
+      * Summarize gender - used by the Shift Lead Report
+      */
+    public static function summarizeGender($gender)
+    {
+        $check = trim(strtolower($gender));
+
+        // Female gender
+        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|fem)\b/', $check) || $check == 'f') {
+            return 'F';
+        }
+
+        // Male gender
+        if (preg_match('/\b(male|dude|fella|man|boy)\b/', $check) || $check == 'm') {
+            return 'M';
+        }
+
+        // Non-Binary
+        if (preg_match('/\bnon[\s\-]?binary\b/', $check)) {
+            return 'NB';
+        }
+
+        // Queer (no gender stated)
+        if (preg_match('/\bqueer\b/', $check)) {
+            return 'Q';
+        }
+
+        // Gender Fluid
+        if (preg_match('/\bfluid\b/', $check)) {
+            return 'GF';
+        }
+
+        // Gender, yes? what does that even mean?
+
+        if ($check == 'yes') {
+            return '';
+        }
+
+        // Can't determine - return the value
+        return $gender;
+    }
+
 }

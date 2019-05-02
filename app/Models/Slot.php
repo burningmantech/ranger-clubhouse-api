@@ -107,6 +107,194 @@ class Slot extends ApiModel
                 ->pluck('year')->toArray();
     }
 
+    public static function retrieveDirtTimes($year)
+    {
+        $rows = DB::table('slot')
+            ->select('position_id','begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
+            ->whereYear('begins', $year)
+            ->whereIn('position_id', [ Position::DIRT, Position::DIRT_PRE_EVENT])
+            ->orderBy('begins')
+            ->get();
+
+        foreach ($rows as $row) {
+            $start = new Carbon($row->begins);
+
+            if ($start->timestamp % 3600) {
+                // If it's not on an hour boundary, bump it by 15 minutes
+                $start->addMinutes(15);
+                $row->duration -= 30*60;
+            }
+
+            $row->shift_start = (string) $start;
+        }
+
+        return $rows;
+    }
+
+    public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin)
+    {
+        $sql = DB::table('slot')
+        ->select(
+            'slot.begins AS slot_begins',
+            'slot.ends AS slot_ends',
+            DB::raw('TIMESTAMPDIFF(second,slot.begins,slot.ends) as slot_duration'),
+            DB::raw('IF(slot.begins < NOW() AND slot.ends > NOW(), TIMESTAMPDIFF(second, NOW(), ends),0) as remaining'),
+            'slot.description AS description',
+            'slot.signed_up AS signed_up',
+            'slot.min AS min',
+            'slot.max AS max',
+            'position.title AS title',
+            'position.type AS position_type'
+        )->join('position', 'position.id', '=', 'slot.position_id')
+        ->orderBy('position.title')
+        ->orderBy('slot.begins');
+
+        self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
+
+        if ($belowMin) {
+            $sql->whereIn('position.type', [ 'Frontline', 'Command' ]);
+            $sql->whereRaw('slot.signed_up < slot.min');
+        } else {
+            $sql->where('position.type', 'Frontline');
+        }
+
+        return $sql->get();
+    }
+
+    public static function retrieveRangersScheduled(Carbon $shiftStart, Carbon $shiftEnd, $type)
+    {
+        $sql = DB::table('slot')
+        ->select(
+            'slot.id AS slot_id',
+            'slot.begins AS slot_begins',
+            'slot.ends AS slot_ends',
+            'slot.description AS description',
+            'slot.signed_up AS signed_up',
+            'person.callsign AS callsign',
+            'person.gender AS gender',
+            'person.id AS person_id',
+            'person.vehicle_blacklisted AS vehicle_blacklisted',
+            'person.vehicle_paperwork AS vehicle_paperwork',
+            'person.vehicle_insurance_paperwork AS vehicle_insurance_paperwork',
+            'position.title AS position_title',
+            'position.short_title AS short_title',
+            'position.type AS position_type',
+            'position.id AS position_id',
+            DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id) AS years')
+        )
+        ->join('person_slot', 'person_slot.slot_id','=','slot.id')
+        ->join('person', 'person.id', '=', 'person_slot.person_id')
+        ->join('position', 'position.id', '=', 'slot.position_id')
+        ->orderBy('slot.begins')
+        ->orderBy('position.title', 'desc');
+
+        self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
+
+        switch ($type) {
+        case 'non-dirt':
+            $sql->whereNotIn('slot.position_id', [
+                Position::DIRT, Position::DIRT_PRE_EVENT,
+                Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
+            ])->where('position.type', '=', 'Frontline');
+            break;
+
+        case 'command':
+            $sql->where('position.type', 'Command');
+            break;
+
+        case 'dirt+green':
+            $sql->whereIn('slot.position_id', [
+                Position::DIRT, Position::DIRT_PRE_EVENT,
+                Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
+            ])->orderBy('years', 'desc');
+            break;
+        }
+
+        $sql->orderBy('callsign');
+
+        $people = $sql->get();
+
+        $personIds = $people->pluck('person_id')->toArray();
+
+        $peoplePositions = DB::table('person_position')
+                ->select('person_position.person_id', 'position.short_title', 'position.id as position_id')
+                ->join('position', 'position.id', '=', 'person_position.position_id')
+                ->where('position.on_sl_report', 1)
+                ->where('position.id', '!=', Position::DIRT)    // Don't need report on dirt
+                ->whereIn('person_position.person_id', $personIds)
+                ->get()
+                ->groupBy('person_id');
+
+        foreach ($people as $person) {
+            $person->gender = Person::summarizeGender($person->gender);
+            $positions = $peoplePositions[$person->person_id] ?? null;
+
+            $positionId = $person->position_id;
+            $person->is_greendot_shift = ($positionId == Position::DIRT_GREEN_DOT
+                                || $positionId == Position::GREEN_DOT_MENTOR
+                                || $positionId == Position::GREEN_DOT_MENTEE);
+
+            $person->slot_begins_day_before = (new Carbon($person->slot_begins))->day != $shiftStart->day;
+            $person->slot_ends_day_after = (new Carbon($person->slot_ends))->day != $shiftStart->day;
+
+            if ($positions) {
+                $person->positions = $positions->pluck('short_title')->toArray();
+                $person->is_troubleshooter = $positions->contains('position_id', Position::TROUBLESHOOTER);
+                $person->is_rsl = $positions->contains('position_id', Position::RSC_SHIFT_LEAD);
+                $person->is_ood = $positions->contains('position_id', Position::OOD);
+                $person->is_greendot = $positions->contains(function ($row) {
+                    $pid = $row->position_id;
+                    return ($pid == Position::DIRT_GREEN_DOT
+                        || $pid == Position::GREEN_DOT_MENTOR
+                        || $pid == Position::GREEN_DOT_MENTEE);
+                });
+            }
+        }
+
+        return $people;
+    }
+
+    public static function countGreenDotsScheduled($shiftStart, $shiftEnd, $femaleOnly=false)
+    {
+        $sql = DB::table('slot')
+        ->join('person_slot', 'person_slot.slot_id','=','slot.id')
+        ->join('person', 'person.id', '=', 'person_slot.person_id')
+        ->whereIn('slot.position_id', [ Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE]);
+
+        self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
+
+        if ($femaleOnly) {
+            $sql->where(function ($q) {
+                $q->whereRaw('lower(LEFT(person.gender,1)) = "f"');
+                $q->orWhereRaw('person.gender REGEXP "[[:<:]](female|girl|femme|lady|she|her|woman|famale|fem)[[:>:]]"');
+            });
+        }
+
+        return $sql->count();
+    }
+
+    public static function buildShiftRange($sql, $shiftStart, $shiftEnd, $minAfterStart)
+    {
+        $sql->where(function ($q) use ($shiftStart, $shiftEnd, $minAfterStart) {
+            // all slots starting before and ending on or start the range
+            $q->where([
+                [ 'begins', '<=', $shiftStart],
+                [ 'ends', '>=', $shiftEnd ]
+            ]);
+            // or starting within 1 hour before
+            $q->orWhere([
+                [ 'begins', '>=', $shiftStart->clone()->addHours(-1) ],
+                [ 'begins', '<', $shiftEnd->clone()->addHours(-1) ]
+            ]);
+
+            // or.. starting within after X minutes
+            $q->orWhere([
+                [ 'ends', '>=', $shiftStart->clone()->addMinutes($minAfterStart) ],
+                [ 'ends', '<=', $shiftEnd ]
+            ]);
+        });
+    }
+
     public function getPositionTitleAttribute() {
         return $this->position ? $this->position->title : "Position #{$this->position_id}";
     }
