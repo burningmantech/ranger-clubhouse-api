@@ -16,12 +16,8 @@ script_url="https://${host}/${repo}/${version}/${path}";
 export LOCAL_IMAGE_NAME="${image_name}";
 export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}";
 
+# Download and run the deploy script.
 deploy_cmd="$(mktemp)";
-
 curl --silent "${script_url}" --output "${deploy_cmd}";
-
-env;
-
-sh -x "${deploy_cmd}" --profile="clubhouse-api" "${@}";
-
+sh "${deploy_cmd}" --profile="clubhouse-api" "${@}";
 rm "${deploy_cmd}";

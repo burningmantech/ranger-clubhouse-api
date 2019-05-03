@@ -7,32 +7,25 @@
 # Otherwise, try to run composer directly.
 #
 
-set -eu
-
-wd="$(cd "$(dirname "$0")/.." && pwd)";
-
-# Get composer image name from Dockerfile
-composer_image="$(
-    sed -n -e 's/^FROM \(composer:[^ ]*\).*$/\1/p' < "${wd}/Dockerfile"
-)";
+. "$(dirname "$0")/.common.sh";
 
 _composer() {
     if type docker > /dev/null 2>&1; then
-        # Run docker pull first if needed and suppress its output so that we
+        # Build first if needed and suppress its output so that we
         # only output what composer would emit normally.
-        if !                                  \
-            docker image ls composer:1.7.3 |  \
-            grep '^composer ' > /dev/null;
+        if !                                            \
+            docker image ls "${composer_image_name}" |  \
+            grep "^${composer_image_name}" > /dev/null;
         then
-            docker image pull "${composer_image}" > /dev/null;
+            "${wd}/bin/build" > /dev/null;
         fi;
 
         # Run composer within Docker
-        exec docker run                           \
-            --rm                                  \
-            --volume="${wd}:/app" --workdir=/app  \
-            "${composer_image}"                   \
-            composer "$@";
+        exec docker run               \
+            --rm                      \
+            --volume="${wd}:/app"     \
+            "${composer_image_name}"  \
+            php /var/www/application/composer.phar --working-dir=/app "$@";
 
     elif type composer > /dev/null 2>&1; then
         # Run composer natively
