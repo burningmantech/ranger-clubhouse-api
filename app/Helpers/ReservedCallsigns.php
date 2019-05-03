@@ -87,6 +87,7 @@ class ReservedCallsigns
         'The Man',
         'The Stick',
         'Tokyo',
+        'V-Spot',
         'Zendo',
     );
 
@@ -133,6 +134,7 @@ class ReservedCallsigns
         'Burn',
         'Captain Hook',
         'Cheetah',
+        'D M V',
         'D P W',
         'Dispatch',
         'D O O D', 'DOOD', 'Dude', 'The Dude',
@@ -156,6 +158,7 @@ class ReservedCallsigns
         'Mentee', 'Minty',
         'Mentor',
         'O O D',
+        'Open Mic',
         'Participant',
         'Perimeter',
         'Pershing',
@@ -173,9 +176,9 @@ class ReservedCallsigns
     );
 
     /**
-     * Callsigns from the 2017 TWII Radio Directory
+     * Callsigns from the 2017 TWII Radio Directory.  Remove when adding 2020 TWII handles.
      */
-    public static $VIPS = array(
+    public static $TWII_2017 = array(
         'Alipato',
         'Alpha1',
         'Athibat',
@@ -320,6 +323,158 @@ class ReservedCallsigns
         'Yvel Q',
         'Ziptie',
     );
+
+    /**
+     * Callsigns from the 2018 TWII Radio Directory.  Remove when adding 2021 TWII handles.
+     */
+    public static $TWII_2018 = array(
+        'Admin 10',
+        'Alipato',
+        'Alpha1',
+        'Anti-M',
+        'Athibat',
+        'Audacity',
+        'Ballyhoo Betty',
+        'Bee',
+        'Bobzilla',
+        'Breedlove',
+        'Brody',
+        'BxAir', 'B X Air',
+        'BxBus', 'B X Bus',
+        'CameraGirl',
+        'Carlos Danger',
+        'Carnitas Queen',
+        'Carry On',
+        'Cat',
+        'Chaos',
+        'Charlie',
+        'Cheap Tequila',
+        'Cherry Cake',
+        'Cherub',
+        'Cobra Commander',
+        'Coyote',
+        'Crickets',
+        'Cuervo',
+        'Cupcake',
+        'Danger', 'Danger Ranger',
+        'Dave X',
+        'D M V',
+        'Dominique',
+        'Double Agent',
+        'Doug E Fresh',
+        'DV8', 'Deviate',
+        'Elecktra',
+        'Emma Weisman',
+        'Fearless Leader',
+        'Figit',
+        'Fireball',
+        'Fireclown',
+        'Flitterkit',
+        'Flying Squirrel',
+        'Free Fall',
+        'Gerbil',
+        'HR Dispatch',
+        'HazMatt',
+        'Heady',
+        'Hella',
+        'HeyHey',
+        'Hollywood',
+        'HotShot',
+        'Hotspot',
+        'J Kanizzle',
+        'Jack Rabbit',
+        'Jedi Master',
+        'Jeremy',
+        'Jocko',
+        'Juno',
+        'Kaalin',
+        'Kai Ocean',
+        'Katie Hazard',
+        'Kato',
+        'Kearce',
+        // Khaki in Ranger Jargon
+        'Kimba',
+        'Koko',
+        'Kristy',
+        'Liptonite',
+        'Lorax',
+        'Louder Charlie',
+        'Lulu',
+        'M3',
+        'M O D', 'Manager On Duty',
+        'Make-Out Queen', 'Makeout Queen',
+        'Manatou',
+        'Mango',
+        'MarklePony',
+        'Megulate',
+        'Mi\'ao',
+        'Miss Kelly',
+        'Mockingbird',
+        'MommaBear',
+        'Mr. Blue', 'Mister Blue',
+        'Mr. Klean', 'Mister Klean',
+        'Mrs. Klean', 'Missus Klean', 'Miss Klean',
+        'Muppet',
+        'Network Support',
+        'Nimbus',
+        // O O D in Ranger Jargon
+        'Oh My God',
+        'Pedro',
+        // Playa Info in Locations
+        'Playground',
+        'Plus One',
+        'President',
+        'Propaniac',
+        'Radio 1',
+        'Raspa',
+        'Rebel',
+        'Retro',
+        'Roadrunner',
+        'RonJon',
+        'Safety 1',
+        'Sauce',
+        'Scorch',
+        'Sergio',
+        'Settle Down',
+        'Showtime',
+        'Skull-lee', 'Scully',
+        'Snotto',
+        'Sonder',
+        'Spanky',
+        'Spark Plug',
+        'Spitfyre',
+        'SweetTea',
+        'Sylkia',
+        'Tabasco',
+        'Tech Support',
+        'The Magpie',
+        'Tinder',
+        'Topless Deb',
+        'Tranquility',
+        'Trippi',
+        // V-Spot in Locations
+        'Valkyrie',
+        'Wanda Power',
+        'Weapons Grade',
+        'Winston',
+        'Wrangler',
+        'Wrench',
+        'Yardsale',
+        'Yvel Q',
+        'Ziptie',
+    );
+
+    /**
+     * VIP handles include the last three years of people mentioned in The Way It Is radio
+     * directory.  When adding a new year's TWII handles, remove the array from three years prior.
+     * Function rather than a constant because PHP constants can't be based on functions like
+     * sort.
+     */
+    public static function twiiVips() {
+        $result = array_merge(ReservedCallsigns::$TWII_2018, ReservedCallsigns::$TWII_2017);
+        sort($result);
+        return array_unique($result);
+    }
 
     /**
      * The following callsigns are Rangers who have either moved on to another

@@ -30,7 +30,6 @@ class Schedule extends ApiModel
         'slot_ends',
         'slot_description',
         'slot_signed_up',
-        'slot_max',
         'slot_url',
         'person_assigned',
         'trainers',
@@ -42,13 +41,16 @@ class Schedule extends ApiModel
     protected $appends = [
         'slot_duration',
         'year',
-        'credits'
+        'credits',
+        'slot_max',
     ];
 
     protected $dates = [
         'slot_begins',
         'slot_ends'
     ];
+
+    const SHIFT_STARTS_WITHIN = 30; // A shift starts within X minutes
 
     public static function findForQuery($query)
     {
@@ -60,6 +62,7 @@ class Schedule extends ApiModel
 
         $personId = $query['person_id'] ?? null;
         $shiftsAvailable = $query['shifts_available'] ?? false;
+        $remaining = $query['remaining'] ?? false;
 
         $selectColumns = [
             'slot.id as id',
@@ -70,9 +73,10 @@ class Schedule extends ApiModel
             'slot.ends AS slot_ends',
             'slot.description AS slot_description',
             'slot.signed_up AS slot_signed_up',
-            'slot.max AS slot_max',
+            'slot.max AS slot_max_potential',    // use to compute sign up limit.
             'slot.url AS slot_url',
             'slot.active as slot_active',
+            'slot.trainer_slot_id',
             'trainer_slot.signed_up AS trainer_count',
             DB::raw('UNIX_TIMESTAMP(slot.begins) as slot_begins_time'),
             DB::raw('UNIX_TIMESTAMP(slot.ends) as slot_ends_time'),
@@ -85,6 +89,9 @@ class Schedule extends ApiModel
             $sql = DB::table('person_slot')
                     ->where('person_slot.person_id', $personId)
                     ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
+            if ($remaining) {
+                $sql->whereRaw('slot.ends > NOW()');
+            }
         } else {
             // Retrieve all slots
             $sql = DB::table('slot');
@@ -149,6 +156,12 @@ class Schedule extends ApiModel
         $signedUp = 0;
         $max = 0;
 
+
+        $max = $slot->max;
+        if ($slot->trainer_slot_id) {
+            $max = $max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
+        }
+
         try {
             DB::beginTransaction();
 
@@ -170,7 +183,7 @@ class Schedule extends ApiModel
             }
 
             // Cannot exceed sign up limit unless it is forced.
-            if ($updateSlot->signed_up >= $updateSlot->max) {
+            if ($updateSlot->signed_up >= $max) {
                 if (!$force) {
                     throw new ScheduleException('full');
                 }
@@ -231,17 +244,12 @@ class Schedule extends ApiModel
     }
 
     /*
-     * Does a person have multiple enrollments for the same position (aka Training)
+     * Does a person have multiple enrollments for the same position (aka Training or Alpha shift)
      * and if so what are the enrollments?
      */
 
     public static function haveMultipleEnrollments($personId, $positionId, $year, & $enrollments) {
-        $slotIds = PersonSlot::where('person_slot.person_id', $personId)
-                    ->join('slot', function($query) use ($positionId, $year) {
-                        $query->whereRaw('slot.id=person_slot.slot_id');
-                        $query->where('slot.position_id', $positionId);
-                        $query->whereYear('slot.begins', $year);
-                    })->get()->pluck('slot_id');
+        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
 
         if ($slotIds->isEmpty()) {
             $enrollments = null;
@@ -250,6 +258,75 @@ class Schedule extends ApiModel
 
         $enrollments = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
         return true;
+    }
+
+    /*
+     * Can the person join the training session?
+     *
+     * When the slot has a session part (a "Part X" in the description) hunt down the other
+     * enrollments and see if the parts match.
+     */
+
+    public static function canJoinTrainingSlot($personId, $slot, & $enrollments) {
+        $enrollments = null;
+
+        $year = $slot->begins->year;
+        $positionId = $slot->position_id;
+
+        $part = $slot->sessionGroupPart();
+
+        if (!$part) {
+            // Not trying to join a mulitple-part session, do a normal lookup
+            return !self::haveMultipleEnrollments($personId, $positionId, $year, $enrollments);
+        }
+
+        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
+        if ($slotIds->isEmpty()) {
+            // Good to go!
+            return true;
+        }
+
+        $slots = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
+
+        foreach ($slots as $row) {
+            if ($row->isPartOfSessionGroup($slot)) {
+                return true;
+            }
+        }
+
+        $enrollments = $slots;
+        return false;
+    }
+
+    public static function findEnrolledSlotIds($positionId, $year, $personId) {
+        return PersonSlot::where('person_slot.person_id', $personId)
+                    ->join('slot', function($query) use ($positionId, $year) {
+                        $query->whereRaw('slot.id=person_slot.slot_id');
+                        $query->where('slot.position_id', $positionId);
+                        $query->whereYear('slot.begins', $year);
+                    })->get()->pluck('slot_id');
+    }
+
+    public static function retrieveStartingSlotsForPerson($personId)
+    {
+        $rows =  PersonSlot::join('slot', function($query) {
+                    $query->whereRaw('slot.id=person_slot.slot_id');
+                    $query->whereRaw('slot.begins BETWEEN DATE_SUB(NOW(), INTERVAL ? MINUTE) AND DATE_ADD(NOW(), INTERVAL ? MINUTE)',
+                        [ self::SHIFT_STARTS_WITHIN, self::SHIFT_STARTS_WITHIN]);
+            })
+            ->where('person_id', $personId)
+            ->with('slot.position:id,title')->get();
+
+            return $rows->map(function($row) {
+                return [
+                    'slot_id'   => $row->slot_id,
+                    'slot_description' => $row->slot->description,
+                    'position_id' => $row->slot->position_id,
+                    'position_title' => $row->slot->position->title,
+                    'slot_begins' => (string) $row->slot->begins,
+                    'slot_ends' => (string) $row->slot->ends,
+                ];
+            });
     }
 
     public function getSlotDurationAttribute()
@@ -265,5 +342,13 @@ class Schedule extends ApiModel
     public function getCreditsAttribute()
     {
         return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
+    }
+
+    /*
+     * Figure out how many signups are allowed.
+     */
+
+    public function getSlotMaxAttribute() {
+        return ($this->trainer_slot_id ? $this->trainer_count * $this->slot_max_potential : $this->slot_max_potential);
     }
 }

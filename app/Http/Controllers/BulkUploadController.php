@@ -19,7 +19,9 @@ class BulkUploadController extends ApiController
         // Columns to be set to 1/true
         "vehicle_insurance_paperwork",
         "vehicle_paperwork",
-        "vintage"
+        "vintage",
+        "osha10",
+        "osha30"
     ];
 
     const STATUS_UPDATE_ACTIONS = [
@@ -227,7 +229,7 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
-            $bmid = Bmid::firstOrNewForPersonYear($person->id, $year);
+            $bmid = Bmid::findForPersonManage($person->id, $year);
 
             $data = $record->data;
             if ($action != 'bmidsubmitted' && !count($data)) {

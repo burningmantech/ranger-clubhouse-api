@@ -36,6 +36,11 @@ class ManualReview extends ApiModel
         return $sql->get();
     }
 
+    public static function findForPersonYear($personId, $year)
+    {
+        return self::whereYear('passdate', $year)->where('person_id', $personId)->orderBy('passdate', 'desc')->first();
+    }
+
     /*
      * Find out if the person passed the manual review for the given year
      *

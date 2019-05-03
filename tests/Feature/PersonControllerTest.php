@@ -30,7 +30,7 @@ class PersonControllerTest extends TestCase
      * have each test have a fresh user that is logged in.
      */
 
-    public function setUp()
+    public function setUp() : void
     {
         parent::setUp();
         $this->signInUser();
@@ -655,7 +655,7 @@ class PersonControllerTest extends TestCase
      * Test how many years a person has rangered
      */
 
-    public function testYearsForActiveSucess()
+    public function testUserInfoYearsForActiveSucess()
     {
         $personId = $this->user->id;
 
@@ -665,14 +665,26 @@ class PersonControllerTest extends TestCase
                     'person_id' => $personId,
                     'on_duty'   => date("201$i-08-25 16:00:00"),
                     'off_duty'  => date("201$i-08-25 18:00:00"),
+                    'position_id' => Position::DIRT,
                 ]
             );
         }
 
-        $response = $this->json('GET', "person/$personId/years");
-        $response->status(200);
-        $response->assertJson([ 'years' => [ 2010, 2011, 2012 ]]);
+        $p = factory(Timesheet::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::ALPHA, 
+            'on_duty'   => date("2009-08-25 16:00:00"),
+            'off_duty'  => date("2009-08-25 18:00:00"),
+        ]);
 
+        $response = $this->json('GET', "person/$personId/user-info");
+        $response->status(200);
+        $response->assertJson([
+            'user_info' => [
+                'years' => [ 2010, 2011, 2012 ],
+                'all_years' => [ 2009, 2010, 2011, 2012 ]
+            ]
+        ]);
     }
 
 
@@ -680,13 +692,12 @@ class PersonControllerTest extends TestCase
      * Test person has no years
      */
 
-    public function testNoYearsForPersonSuccess()
+    public function testUserInfoNoYearsSuccess()
     {
         $personId = $this->user->id;
-        $response = $this->json('GET', "person/$personId/years");
+        $response = $this->json('GET', "person/$personId/user-info");
         $response->status(200);
-        $response->assertJson([ 'years' => []]);
-
+        $response->assertJson([ 'user_info' => [ 'years' => [  ]]]);
     }
 
 
@@ -715,7 +726,7 @@ class PersonControllerTest extends TestCase
      * Test teacher status for teacher
      */
 
-    public function testTeacherStatusForTeacherSuccess()
+    public function testUserInfoForTeacherSuccess()
     {
         $this->addRole([ Role::TRAINER, Role::MENTOR, Role::ART_TRAINER]);
         factory(PersonMentor::class)->create(
@@ -726,16 +737,18 @@ class PersonControllerTest extends TestCase
             ]
         );
 
-        $response = $this->json('GET', "person/{$this->user->id}/teacher");
+        $response = $this->json('GET', "person/{$this->user->id}/user-info");
 
         $response->assertStatus(200);
         $response->assertJson(
             [
-                'teacher' => [
-                    'is_trainer'    => true,
-                    'is_mentor'     => true,
-                    'have_mentored' => true,
-                ],
+                'user_info' => [
+                    'teacher' => [
+                        'is_trainer'    => true,
+                        'is_mentor'     => true,
+                        'have_mentored' => true,
+                    ]
+                ]
             ]
         );
 
@@ -748,16 +761,18 @@ class PersonControllerTest extends TestCase
 
     public function testTeacherStatusForStudentSuccess()
     {
-        $response = $this->json('GET', "person/{$this->user->id}/teacher");
+        $response = $this->json('GET', "person/{$this->user->id}/user-info");
 
         $response->assertStatus(200);
         $response->assertJson(
             [
-                'teacher' => [
-                    'is_trainer'    => false,
-                    'is_mentor'     => false,
-                    'have_mentored' => false,
-                ],
+                'user_info' => [
+                    'teacher' => [
+                        'is_trainer'    => false,
+                        'is_mentor'     => false,
+                        'have_mentored' => false,
+                    ]
+                ]
             ]
         );
 
@@ -874,6 +889,7 @@ class PersonControllerTest extends TestCase
             'zip'        => $faker->postcode,
             'country'    => 'USA',
             'status'     => 'auditor',
+            'home_phone' => $faker->phoneNumber,
 
         ];
 

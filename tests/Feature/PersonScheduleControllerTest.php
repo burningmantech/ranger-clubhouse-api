@@ -32,7 +32,7 @@ class PersonScheduleControllerTest extends TestCase
      * and a set of positions.
      */
 
-    public function setUp()
+    public function setUp() : void
     {
         parent::setUp();
 
@@ -142,7 +142,6 @@ class PersonScheduleControllerTest extends TestCase
                 ]
             );
         }
-
     }
 
 
@@ -172,7 +171,6 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJsonStructure([ 'schedules' => [ [ 'id' ] ] ]);
         $this->assertCount(1, $response->json()['schedules']);
         $this->assertEquals($slotId, $response->json()['schedules'][0]['id']);
-
     }
 
 
@@ -201,7 +199,6 @@ class PersonScheduleControllerTest extends TestCase
 
         // Should match 6 shifts - 3 trainings and 3 dirt shift
         $this->assertCount(6, $response->json()['schedules']);
-
     }
 
 
@@ -214,7 +211,6 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json('GET', "person/{$this->user->id}/schedule", [ 'year' => $this->year, 'shifts_available' => 1 ]);
         $response->assertStatus(200);
         $response->assertJson([ 'schedules' => []]);
-
     }
 
 
@@ -246,6 +242,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
+        /*
         $to = $this->user->email;
 
         Mail::assertSent(
@@ -253,8 +250,7 @@ class PersonScheduleControllerTest extends TestCase
             function ($mail) use ($to) {
                 return $mail->hasTo($to);
             }
-        );
-
+        );*/
     }
 
 
@@ -297,7 +293,6 @@ class PersonScheduleControllerTest extends TestCase
                 return $mail->hasTo($to);
             }
         );
-
     }
 
 
@@ -322,7 +317,6 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([ 'status' => 'success' ]);
         Mail::assertSent(TrainingSessionFullMail::class);
-
     }
 
 
@@ -352,7 +346,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $shift->id,
             ]
         );
-
     }
 
 
@@ -384,7 +377,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $shift->id,
             ]
         );
-
     }
 
 
@@ -419,7 +411,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $shift->id,
             ]
         );
-
     }
 
 
@@ -461,9 +452,56 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $attemptedTraining->id,
             ]
         );
-
     }
 
+    /*
+     * Alow the user to sign up for multiple part training sessions
+     */
+
+    public function testAllowMultiplePartTrainingSessionsSignup()
+    {
+        $personId = $this->user->id;
+        $this->addPosition(Position::TRAINING);
+
+
+        $part1 = factory(Slot::class)->create([
+            'description' => 'Elysian Fields - Part 1',
+            'position_id' =>  Position::TRAINING,
+            'begins'      => date("Y-08-30 12:00:00"),
+            'ends'        => date("Y-08-30 18:00:00")
+        ]);
+
+        $part2 = factory(Slot::class)->create([
+            'description' => 'Elysian Fields - Part 2',
+            'position_id' =>  Position::TRAINING,
+            'begins'      => date("Y-08-31 12:00:00"),
+            'ends'        => date("Y-08-31 18:00:00")
+        ]);
+
+        factory(PersonSlot::class)->create(
+            [
+                'person_id' => $personId,
+                'slot_id'   => $part1->id,
+            ]
+        );
+
+        $response = $this->json(
+            'POST',
+            "person/{$personId}/schedule",
+            [ 'slot_id' => $part2->id ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success' ]);
+
+        $this->assertDatabaseHas(
+            'person_slot',
+            [
+                'person_id' => $this->user->id,
+                'slot_id'   => $part2->id,
+            ]
+        );
+    }
 
     /*
      * Allow person to be signed up to multiple trainings for admin
@@ -506,7 +544,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $attemptedTraining->id,
             ]
         );
-
     }
 
 
@@ -547,7 +584,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id'   => $attemptedTraining->id,
             ]
         );
-
     }
 
 
@@ -569,7 +605,6 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
         $this->assertDatabaseMissing('person_slot', $personSlot);
-
     }
 
 
@@ -583,8 +618,7 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $this->user->id;
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
-        $response->assertStatus(400);
-
+        $response->assertStatus(404);
     }
 
     private function mockPhotoStatus($result)
@@ -607,40 +641,40 @@ class PersonScheduleControllerTest extends TestCase
      * Allow an active, who passed manual review, and has a photo to sign up.
      */
 
-     public function testAllowActiveWhoPassedManualReviewAndHasPhoto()
-     {
-         $photoMock = $this->mockPhotoStatus('approved');
-         $mrMock = $this->mockManualReviewPass(true);
+    public function testAllowActiveWhoPassedManualReviewAndHasPhoto()
+    {
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(true);
 
-         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
              'year' => $this->year
          ]);
 
-         $response->assertStatus(200);
-         $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
              'permission'   => [
                  'signup_allowed'       => true,
                  'callsign_approved'    => true,
                  'manual_review_passed' => true,
              ]
          ]);
-     }
+    }
 
-     /*
-      * Deny an active, who passed manual review, and has no photo.
-      */
+    /*
+     * Deny an active, who passed manual review, and has no photo.
+     */
 
-      public function testDenyActiveWithMissingPhoto()
-      {
-          $photoMock = $this->mockPhotoStatus('missing');
-          $mrMock = $this->mockManualReviewPass(true);
+    public function testDenyActiveWithMissingPhoto()
+    {
+        $photoMock = $this->mockPhotoStatus('missing');
+        $mrMock = $this->mockManualReviewPass(true);
 
-          $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
               'year' => $this->year
           ]);
 
-          $response->assertStatus(200);
-          $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
               'permission'   => [
                   'signup_allowed'       => false,
                   'callsign_approved'    => true,
@@ -648,23 +682,23 @@ class PersonScheduleControllerTest extends TestCase
                   'photo_status'         => 'missing',
               ]
           ]);
-      }
+    }
 
-      /*
-       * Deny an active, who has photo, and did not pass manual review
-       */
+    /*
+     * Deny an active, who has photo, and did not pass manual review
+     */
 
-       public function testDenyActiveWhoDidNotPassManualReview()
-       {
-           $photoMock = $this->mockPhotoStatus('approved');
-           $mrMock = $this->mockManualReviewPass(false);
+    public function testDenyActiveWhoDidNotPassManualReview()
+    {
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(false);
 
-           $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                'year' => $this->year
            ]);
 
-           $response->assertStatus(200);
-           $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
                'permission'   => [
                    'signup_allowed'       => false,
                    'callsign_approved'    => true,
@@ -672,55 +706,77 @@ class PersonScheduleControllerTest extends TestCase
                    'photo_status'         => 'approved',
                ]
            ]);
-       }
+    }
 
-     /*
-      * Allow an auditor, who passed manual review, and has no photo to sign up.
-      */
+    /*
+     * Deny an active who did not sign the behavioral standards agreement
+     */
 
-      public function testAllowAuditorWithNoPhotoAndPassedManualReview()
-      {
-          $this->user->update([ 'status' => 'auditor' ]);
+    public function testDenyActiveWhoDidNotSignBehavioralAgreement()
+    {
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(true);
+        $this->user->update([ 'behavioral_agreement' => false ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+               'year' => $this->year
+           ]);
 
-          $photoMock = $this->mockPhotoStatus('missing');
-          $mrMock = $this->mockManualReviewPass(true);
+        $response->assertStatus(200);
+        $response->assertJson([
+               'permission'   => [
+                   'signup_allowed'       => false,
+                   'missing_behavioral_agreement' => true,
+               ]
+           ]);
+    }
 
-          $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+    /*
+     * Allow an auditor, who passed manual review, and has no photo to sign up.
+     */
+
+    public function testAllowAuditorWithNoPhotoAndPassedManualReview()
+    {
+        $this->user->update([ 'status' => 'auditor' ]);
+
+        $photoMock = $this->mockPhotoStatus('missing');
+        $mrMock = $this->mockManualReviewPass(true);
+
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
               'year' => $this->year
           ]);
 
-          $response->assertStatus(200);
-          $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
               'permission'   => [
                   'signup_allowed'       => true,
                   'callsign_approved'    => true,
                   'manual_review_passed' => true,
               ]
           ]);
-      }
+    }
 
-      /*
-       * Deny an prospective who missed the manual review window
-       */
+    /*
+     * Deny an prospective who missed the manual review window
+     */
 
-       public function testDenyProspectiveWhoMissedManualReviewWindow()
-       {
-           $this->user->update([ 'status' => 'prospective' ]);
+    public function testDenyProspectiveWhoMissedManualReviewWindow()
+    {
+        $this->user->update([ 'status' => 'prospective' ]);
 
-           $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->mockPhotoStatus('approved');
 
-           $mrMock = $this->mockManualReviewPass(true);
-           $mrMock->shouldReceive('prospectiveOrAlphaRankForYear')->andReturn(99);
-           $mrMock->shouldReceive('countPassedProspectivesAndAlphasForYear')->andReturn(100);
+        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock->shouldReceive('prospectiveOrAlphaRankForYear')->andReturn(99);
+        $mrMock->shouldReceive('countPassedProspectivesAndAlphasForYear')->andReturn(100);
 
-           $this->setting('ManualReviewProspectiveAlphaLimit', 50);
+        $this->setting('ManualReviewProspectiveAlphaLimit', 50);
 
-           $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                'year' => $this->year
            ]);
 
-           $response->assertStatus(200);
-           $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
                'permission'   => [
                    'signup_allowed'       => false,
                    'callsign_approved'    => true,
@@ -728,7 +784,53 @@ class PersonScheduleControllerTest extends TestCase
                    'manual_review_window_missed' => true,
                ]
            ]);
-       }
+    }
 
+    /*
+     * Limit how many people can sign up for a shift when a trainer's slot
+     * has been set. max becomes a mulitpler.
+     */
 
+     public function testSignUpLimitWithTrainingSlot() {
+         $this->addPosition(Position::TRAINING);
+
+         $shift = $this->trainingSlots[0];
+         $trainerSlot = factory(Slot::class)->create(
+             [
+                 'begins'      => date($shift->begins),
+                 'ends'        => date($shift->ends),
+                 'position_id' => Position::TRAINER,
+                 'description' => "Trainers",
+                 'signed_up'   => 2,
+                 'max'         => 2,
+                 'min'         => 0,
+             ]
+         );
+
+         $trainer1 = factory(Person::class)->create();
+         factory(PersonSlot::class)->create([ 'person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
+         $trainer2 = factory(Person::class)->create();
+         factory(PersonSlot::class)->create([ 'person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
+
+         $shift->update([ 'signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id ]);
+
+         $response = $this->json(
+             'POST',
+             "person/{$this->user->id}/schedule",
+             [
+                 'slot_id' => $shift->id,
+             ]
+         );
+
+         $response->assertStatus(200);
+         $response->assertJson([ 'status' => 'success' ]);
+
+         $this->assertDatabaseHas(
+             'person_slot',
+             [
+                 'person_id' => $this->user->id,
+                 'slot_id'   => $shift->id,
+             ]
+         );
+     }
 }

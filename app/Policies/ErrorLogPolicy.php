@@ -25,4 +25,13 @@ class ErrorLogPolicy
     {
         return false;
     }
+
+    /**
+     * Determine whether the user can purge the log
+     */
+    public function purge(Person $user)
+    {
+        return false;
+    }
+
 }

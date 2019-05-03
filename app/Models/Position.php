@@ -10,9 +10,12 @@ class Position extends ApiModel
     const ALPHA = 1;
     const DIRT = 2;
     const DIRT_TRAINING = 13;
+    const DIRT_PRE_EVENT = 53;
 
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
+    const GREEN_DOT_MENTOR = 40;
+    const GREEN_DOT_MENTEE = 50;
     const GREEN_DOT_TRAINING = 101;
     const GREEN_DOT_TRAINER = 100;
 
@@ -27,20 +30,29 @@ class Position extends ApiModel
 
     const DOUBLE_OH_7 = 21;
 
+    const DPW_RANGER = 105;
+
+    const OOD = 10;
     const SANDMAN_TRAINING = 80;
     const SANDMAN_TRAINER = 108;
 
+    const SITE_SETUP = 59;
+    const SITE_SETUP_LEAD = 96;
     const RSC_SHIFT_LEAD = 12;
+    const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
     const TROUBLESHOOTER = 91;
 
     // Trainer positions for Dirt
     const TRAINING = 13;
     const TRAINER = 23;
-    const ASSOCIATE_TRAINER = 88;
+    const TRAINER_ASSOCIATE = 88;
     const TRAINER_UBER = 95;
 
     const BURN_PERIMETER = 19;
+
+    const TOW_TRUCK_TRAINING = 102;
+    const TOW_TRUCK_TRAINER = 121;
 
     const TYPES = [
         'Command',
@@ -60,13 +72,15 @@ class Position extends ApiModel
     const TRAINERS = [
         Position::DIRT_TRAINING => [
              Position::TRAINER,
-             Position::ASSOCIATE_TRAINER,
+             Position::TRAINER_ASSOCIATE,
              Position::TRAINER_UBER
         ],
         Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],
         Position::HQ_FULL_TRAINING => [ Position::HQ_TRAINER ],
         Position::SANDMAN_TRAINING => [ Position::SANDMAN_TRAINER ],
+        Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER ],
     ];
+
 
     protected $table = 'position';
 
@@ -92,7 +106,8 @@ class Position extends ApiModel
     ];
 
     protected $rules = [
-        'title' => 'required',
+        'title' => 'required|string|max:40',
+        'short_title' => 'sometimes|string|max:6|nullable',
         'min'   => 'integer',
         'max'   => 'integer',
         'training_position_id'  => 'nullable|exists:position,id',

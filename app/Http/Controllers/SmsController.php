@@ -141,8 +141,8 @@ class SmsController extends ApiController
     {
         $params = request()->validate([
             'person_id' => 'required|integer',
-            'type'     => 'required|string',
-            'code'      => 'required|integer'
+            'type'      => 'required|string',
+            'code'      => 'required|string'
         ]);
 
         $person = $this->findPerson($params['person_id']);
@@ -185,9 +185,10 @@ class SmsController extends ApiController
 
         $person->saveWithoutValidation();
 
-        $response =  [ 'numbers' => self::buildSMSResponse($person) ];
-        $response['status'] = 'confirmed';
-        return response()->json($response);
+        return response()->json([
+            'status'  => 'confirmed',
+            'numbers' => self::buildSMSResponse($person)
+        ]);
     }
 
     /*
@@ -282,12 +283,17 @@ class SmsController extends ApiController
             return '';
         }
 
-        // assume the format is correct.
-        if (substr($phone, 0, 1) != '+') {
+        $len = strlen($phone);
+        if (substr($phone, 0, 1) == '+') {
+            if ($person->country == 'US' && $len == 11 && substr($phone, 1, 1) != '1') {
+                // add +1 to the number
+                $phone = '+1'.substr($phone, 1);
+            }
+        } else {
             // Only area code & number given, add the USA/Canadian +1 country code.
-            if (strlen($phone) == 10) {
+            if ($len == 10) {
                 $phone = '+1'.$phone;
-            } else if (substr($phone, 0, 1) == '1' && strlen($phone) == 11) {
+            } else if (substr($phone, 0, 1) == '1' && $len == 11) {
                 // Assume USA or Canadian number, add the +
                 $phone = '+'.$phone;
             }
@@ -334,7 +340,7 @@ class SmsController extends ApiController
         try {
             SMSService::broadcast([ $phone ], $message);
         } catch (SMSException $e) {
-            $this->log('exception', "SMS verification code", [ 'exception' => $e, 'phone' => $phone ], $person->id);
+            $this->log('sms-fail', "SMS verification code", [ 'exception' => $e, 'phone' => $phone ], $person->id);
             return false;
         }
 

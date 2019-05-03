@@ -18,7 +18,7 @@ use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-use App\Models\PersonYearInfo;
+use App\Models\PersonEventInfo;
 use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
@@ -60,15 +60,30 @@ class PersonController extends ApiController
 
             $rows = [];
             foreach ($results['people'] as $person) {
-                $rows[] = [
+                $row = [
                     'id'              => $person->id,
                     'callsign'        => $person->callsign,
                     'status'          => $person->status,
                     'first_name'      => $person->first_name,
                     'last_name'       => $person->last_name,
-                    'email'           => $person->email,
                     'user_authorized' => $person->user_authorized,
                 ];
+
+                if ($this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ])) {
+                    $row['email'] = $person->email;
+                }
+
+                if (stripos($params['search_fields'] ?? '', 'email') !== false) {
+                    $query = $params['query'] ?? '';
+                    if (stripos($query, '@') !== false) {
+                        if ($person->email == $query) {
+                            $row['email_match'] = 'full';
+                        } else if (stripos($person->email,$query) !== false) {
+                            $row['email_match'] = 'partial';
+                        }
+                    }
+                }
+                $rows[] = $row;
             }
 
             return response()->json([ 'person' => $rows, 'meta' => $meta ]);
@@ -111,6 +126,13 @@ class PersonController extends ApiController
     public function update(Request $request, Person $person)
     {
         $this->authorize('update', $person);
+
+        $params = request()->validate([
+            'person.email'  => 'sometimes|email|unique:person,email,'.$person->id.',id'
+        ],
+        [
+            'person.email.unique'   => 'The email address is already used by another account'
+        ]);
 
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
@@ -243,12 +265,12 @@ class PersonController extends ApiController
      * for a given year.
      */
 
-    public function yearInfo(Person $person)
+    public function eventInfo(Person $person)
     {
         $year = $this->getYear();
-        $yearInfo = PersonYearInfo::findForPersonYear($person->id, $year);
-        if ($yearInfo) {
-            return response()->json(['year_info' => $yearInfo]);
+        $eventInfo = PersonEventInfo::findForPersonYear($person->id, $year);
+        if ($eventInfo) {
+            return response()->json(['event_info' => $eventInfo]);
         }
 
         return $this->restError('The year could not be found.', 404);
@@ -441,17 +463,12 @@ class PersonController extends ApiController
         }
 
         // Mass delete the old ids
-        if (count($deleteIds) > 0) {
-            PersonPosition::where('person_id', $personId)->whereIn('position_id', $deleteIds)->delete();
+        if (!empty($deleteIds)) {
+            PersonPosition::removeIdsFromPerson($personId, $deleteIds, 'person update');
         }
 
-        // Insert the new ids
-        foreach ($newIds as $id) {
-            PersonPosition::insert([ 'person_id' => $personId, 'position_id' => $id ]);
-        }
-
-        if (count($deleteIds) > 0 || count($newIds) > 0) {
-            $this->log('person-position', 'Positions update', [ 'delete' => $deleteIds, 'add' => $newIds ]);
+        if (!empty($newIds)) {
+            PersonPosition::addIdsToPerson($personId, $newIds, 'person update');
         }
 
         return response()->json([ 'positions' => PersonPosition::findForPerson($personId) ]);
@@ -504,30 +521,15 @@ class PersonController extends ApiController
         }
 
         // Mass delete the old ids
-        if (count($deleteIds) > 0) {
-            PersonRole::where('person_id', $personId)->whereIn('role_id', $deleteIds)->delete();
+        if (!empty($deleteIds)) {
+            PersonRole::removeIdsFromPerson($personId, $deleteIds, 'person update');
         }
 
-        // Insert the new ids
-        foreach ($newIds as $id) {
-            PersonRole::insert([ 'person_id' => $personId, 'role_id' => $id ]);
-        }
-
-        if (count($deleteIds) > 0 || count($newIds) > 0) {
-            $this->log('person-role', 'Roles update', [ 'delete' => $deleteIds, 'add' => $newIds ]);
+        if (!empty($newIds)) {
+            PersonRole::addIdsToPerson($personId, $newIds, 'person update');
         }
 
         return response()->json([ 'roles' => PersonRole::findRolesForPerson($personId) ]);
-    }
-
-    /*
-     * Return the years rangered in array form.
-     */
-
-    public function years(Person $person)
-    {
-        $this->authorize('view', $person);
-        return response()->json([ 'years' => Timesheet::yearsRangered($person->id)]);
     }
 
      /*
@@ -541,20 +543,27 @@ class PersonController extends ApiController
         return response()->json(['unread_message_count' => PersonMessage::countUnread($person->id)]);
     }
 
-     /*
-      * Find out if the person is a trainer, and/or has mentored. Used to construct
-      * training info
-      */
+    /*
+     * Retrieve user information needed for user login, or to show/edit a person.
+     */
 
-    public function teacher(Person $person)
+    public function userInfo(Person $person)
     {
         $this->authorize('view', $person);
 
+        $isArtTrainer = $person->hasRole([Role::ART_TRAINER, Role::ADMIN]);
+
         $data = [
-            'is_trainer'     => $this->user->hasRole([Role::ADMIN, Role::TRAINER]),
-            'is_art_trainer' => $this->user->hasRole([Role::ART_TRAINER, Role::ADMIN]),
-            'is_mentor'      => $this->user->hasRole([Role::MENTOR, Role::ADMIN]),
-            'have_mentored'  => PersonMentor::haveMentees($this->user->id),
+            'teacher' => [
+                'is_trainer'     => $person->hasRole([Role::ADMIN, Role::TRAINER]),
+                'is_art_trainer' => $isArtTrainer,
+                'is_mentor'      => $person->hasRole([Role::MENTOR, Role::ADMIN]),
+                'have_mentored'  => PersonMentor::haveMentees($person->id)
+            ],
+            'unread_message_count' => PersonMessage::countUnread($person->id),
+            'years' => Timesheet::yearsRangered($person->id),
+            'all_years' => Timesheet::yearsRangered($person->id, true),
+            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
         ];
 
         /*
@@ -562,11 +571,11 @@ class PersonController extends ApiController
          * a specific set intead of everything for all ART_TRAINERs.
          */
 
-        if ($data['is_art_trainer']) {
-            $data['arts'] = Position::findAllTrainings(true);
+        if ($isArtTrainer) {
+            $data['teacher']['arts'] = Position::findAllTrainings(true);
         }
 
-        return response()->json(['teacher' => $data]);
+        return response()->json([ 'user_info' => $data ]);
     }
 
     /*
@@ -628,6 +637,8 @@ class PersonController extends ApiController
             'person.state'      => 'required|string',
             'person.country'    => 'required|string',
             'person.status'     => 'required|string',
+            'person.home_phone' => 'sometimes|string',
+            'person.alt_phone'  => 'sometimes|string',
         ]);
 
         $accountCreateEmail = setting('AccountCreationEmail');
@@ -644,7 +655,7 @@ class PersonController extends ApiController
         if (Person::emailExists($person->email)) {
             // An account already exists with the same email..
             Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'duplicate email', $person, $intent));
-            $this->log('person-register-fail', 'duplicate email', [ 'person' => $params['person'] ]);
+            $this->log('person-create-fail', 'duplicate email', [ 'person' => $params['person'] ]);
             return response()->json([ 'status' => 'email-exists' ]);
         }
 
@@ -658,20 +669,20 @@ class PersonController extends ApiController
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
             Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'database creation error', $person, $intent));
-            $this->log('person-register-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
+            $this->log('person-create-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
             return $this->restError($person);
         }
 
         // Log account creation
         Mail::to($accountCreateEmail)->send(new AccountCreationMail('success', 'account created', $person, $intent));
-        $this->log('person-register', 'account registration', null, $person->id);
+        $this->log('person-create', 'registration', null, $person->id);
 
         // Set the password
         $person->changePassword($params['person']['password']);
 
         // Setup the default roles & positions
-        PersonRole::resetRoles($person->id, 'account registration', Person::ADD_NEW_USER);
-        PersonPosition::resetPositions($person->id, 'account registration', Person::ADD_NEW_USER);
+        PersonRole::resetRoles($person->id, 'registration', Person::ADD_NEW_USER);
+        PersonPosition::resetPositions($person->id, 'registration', Person::ADD_NEW_USER);
 
         // Send a welcome email to the person if not an auditor
         if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
@@ -680,4 +691,22 @@ class PersonController extends ApiController
 
         return response()->json([ 'status' => 'success' ]);
     }
+
+    /*
+     * Prospecitve / Alpha estimated shirts report
+     */
+
+    public function alphaShirts()
+    {
+        $this->authorize('alphaShirts', [ Person::class ]);
+
+        $rows = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'email',
+                'longsleeveshirt_size_style', 'teeshirt_size_style')
+                ->whereIn('status', [ 'alpha', 'prospective' ])
+                ->where('user_authorized', true)
+                ->orderBy('callsign')
+                ->get();
+
+        return response()->json([ 'alphas' => $rows ]);
+     }
 }

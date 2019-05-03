@@ -17,17 +17,21 @@ abstract class TestCase extends BaseTestCase
 
     public $user;
 
-    public function setUp()
+    public function setUp() : void
     {
-        parent::setUp();
         // force garbage collection before each test
         // Faker triggers a memory allocation bug.
         gc_collect_cycles();
+
+        parent::setUp();
     }
 
     public function createUser()
     {
         $this->user = factory(Person::class)->create();
+        if (!$this->user->id) {
+            throw new \RuntimeException("Failed to create signed in user.".json_encode($this->user->getErrors()));
+        }
         $this->addRole(Role::LOGIN);
     }
 
@@ -90,7 +94,7 @@ abstract class TestCase extends BaseTestCase
     {
         if (is_numeric($value)) {
             $type = 'integer';
-        } else if (is_bool($value)) {
+        } elseif (is_bool($value)) {
             $type = 'bool';
         } else {
             $type = 'string';

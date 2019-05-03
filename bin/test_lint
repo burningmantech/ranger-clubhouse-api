@@ -11,6 +11,7 @@ wd="$(cd "$(dirname "$0")/.." && pwd)";
 image_name="burningman/php-nginx:7.2-alpine3.8";
 
 docker run                    \
+    --rm                      \
     --volume="${PWD}:${app}"  \
     --workdir="${app}"        \
     "${image_name}"           \

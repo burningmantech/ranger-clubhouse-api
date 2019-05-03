@@ -75,7 +75,9 @@ class SalesforceClubhouseInterface
         'Ranger_Info__r.MailingCountry',
         'Ranger_Info__r.MailingPostalCode',
 
+        'Contact_Email__c',
         'Ranger_Info__r.npe01__HomeEmail__c',
+
 
 //		'Ranger_Info__r.Email',
 //		'Ranger_Info__r.npe01__WorkEmail__c',
@@ -186,11 +188,11 @@ class SalesforceClubhouseInterface
                 . $this->sf->errorMessage;
             return false;
         }
-        if ($r->done != 1) {
+/*        if ($r->done != 1) {
             $this->sf->errorMessage =
                         "Salesforce API query returned unfinished";
             return false;
-        }
+        }*/
         return $r;
     }
 
@@ -227,6 +229,9 @@ class SalesforceClubhouseInterface
         } else {
             return;     // Do nothing
         }
+
+        $pca->vc_status = $vcStatus;
+
         $this->updateSalesforceField(
             $pca->salesforce_ranger_object_id,
             "VC_Status__c",

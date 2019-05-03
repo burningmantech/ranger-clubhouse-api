@@ -8,7 +8,7 @@
 set -eu
 
 # Needed to build PHP extensions
-apk add --no-cache libxml2-dev
+apk add --no-cache libxml2-dev;
 
 docker-php-ext-install             \
     ctype                          \
@@ -18,10 +18,16 @@ docker-php-ext-install             \
     pdo_mysql                      \
     tokenizer                      \
     xml                            \
+    ;
 
 # Clean up requirements for building PHP extensions
 apk del libxml2-dev
 apk add --no-cache libxml2;
 
 # Fix permissions
-chown -R www-data:www-data /var/www/application/storage;
+install -d -o www-data -g www-data -m 775  \
+    ./storage/framework/cache              \
+    ./storage/framework/sessions           \
+    ./storage/framework/views              \
+    ./storage/logs                         \
+    ;

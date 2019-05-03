@@ -19,6 +19,14 @@ class AssetPolicy
     }
 
     /**
+     * Determine whether the user see all the assets
+     */
+    public function index(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /**
      * Determine whether the user can view the asset.
      */
     public function view(Person $user, Asset $asset)
@@ -51,6 +59,24 @@ class AssetPolicy
     public function delete(Person $user, Asset $asset)
     {
         return false;
+    }
+
+    /*
+     * Determine whether the user can checkout assets
+     */
+
+    public function checkout(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /*
+     * Determine whether the user can checkin assets
+     */
+
+    public function checkin(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
     }
 
 }

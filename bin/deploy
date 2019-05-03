@@ -5,41 +5,19 @@
 
 . "$(dirname "$0")/.common.sh";
 
-# Provided by the CI environment in custom variables:
-# * AWS_DEFAULT_REGION
-# * AWS_ACCESS_KEY_ID
-# * AWS_SECRET_ACCESS_KEY
-# * AWS_ECR_IMAGE_REPOSITORY
-# * AWS_ECS_CLUSTER
-# * AWS_ECS_SERVICE
+version="master";
 
-if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
-    echo "No deployments allowed from a pull request.";
-    exit 1;
-fi;
-if [ "${TRAVIS_BRANCH:-}" != "master" ]; then
-    echo "No deployments allowed from non-master branches.";
-    exit 1;
-fi;
+host="raw.githubusercontent.com";
+repo="burningmantech/ranger-deploy";
+path="bin/deploy_aws_ecs";
 
-export AWS_ECR_IMAGE_TAG="$(git rev-parse --short "${TRAVIS_COMMIT}")";
-export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}:${AWS_ECR_IMAGE_TAG}";
+script_url="https://${host}/${repo}/${version}/${path}";
 
-echo "Docker version:";
-docker --version;
+export LOCAL_IMAGE_NAME="${image_name}";
+export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}";
 
-echo "Installing AWS tools...";
-pip install awscli;
-pip install boto3;
-
-echo "Logging into AWS...";
-$(aws ecr get-login --no-include-email);
-
-echo "Tagging image for AWS ECR...";
-docker tag "${image_name}" "${AWS_ECR_IMAGE_NAME}";
-
-echo "Pushing image to AWS ECR...";
-docker push "${AWS_ECR_IMAGE_NAME}";
-
-echo "Deploying to AWS...";
-"$(dirname "$0")/aws_update" deploy;
+# Download and run the deploy script.
+deploy_cmd="$(mktemp)";
+curl --silent "${script_url}" --output "${deploy_cmd}";
+sh "${deploy_cmd}" --profile="clubhouse-api" "${@}";
+rm "${deploy_cmd}";

@@ -33,11 +33,11 @@ class Training extends Position
      * @param boolean true if person is trained, otherwise $required will be set.
      */
 
-    public static function isPersonTrained($personId, $positionId, $year, & $required)
+    public static function isPersonTrained($personId, $positionId, $year, & $requiredPositionId)
     {
         // The person has to have passed dirt training
         if (!TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
-            $required = 'Training';
+            $requiredPositionId = Position::DIRT_TRAINING;
             return false;
         }
 
@@ -60,8 +60,7 @@ class Training extends Position
         }
 
         // "Computer says no..."
-        // return the training position title
-        $required = Position::retrieveTitle($trainingId);
+        $requiredPositionId = $trainingId;
 
         return false;
     }
@@ -427,8 +426,12 @@ class Training extends Position
     public function retrieveUntrainedPeople($year) {
         $trainedPositionIds = Position::where('training_position_id', $this->id)->pluck('id');
 
-        if (empty($trainedPositionIds)) {
-            throw new \InvalidArgumentException('No other position references this position for training');
+        if ($trainedPositionIds->isEmpty()) {
+            return [
+                'not_signed_up' => [],
+                'not_passed' => [],
+            ];
+    //        throw new \InvalidArgumentException('No other position references this position for training');
         }
 
         $trainingSlotIds = Slot::where('position_id', $this->id)->whereYear('begins', $year)->pluck('id');

@@ -34,13 +34,24 @@ class PersonPosition extends ApiModel
      */
 
     public static function findTrainingRequired($personId) {
-        return self::select('position.id as position_id', 'position.title', 'position.training_position_id')
+        $rows = self::select('position.id as position_id', 'position.title', 'position.training_position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('person_id', $personId)
                 ->where(function($query) {
                     $query->whereNotNull('position.training_position_id')
                     ->orWhere('position.id', Position::DIRT);
                 })->get();
+
+        // Always include DIRT
+        if (!$rows->contains('position_id', Position::DIRT)) {
+            $rows->prepend((object) [
+                'position_id'          => Position::DIRT,
+                'title'                => 'Dirt',
+                'training_position_id' => Position::DIRT_TRAINING
+            ]);
+        }
+
+        return $rows;
     }
 
     /*
@@ -73,8 +84,9 @@ class PersonPosition extends ApiModel
               $addIds = [];
               $ids = Position::where('new_user_eligible', true)->pluck('id')->toArray();
               foreach ($ids as $positionId) {
-                  if (in_array($positionId, $removeIds)) {
-                      $removeIds = array_diff($removeIds, [ $positionId]);
+                  $key = array_search($positionId, $removeIds);
+                  if ($key !== false) {
+                      unset($removeIds[$key]);
                   } else {
                       $addIds[] = $positionId;
                   }
@@ -95,11 +107,16 @@ class PersonPosition extends ApiModel
 
       public static function addIdsToPerson($personId, $ids, $message)
       {
+          $addIds = [];
           foreach ($ids as $id) {
             // Don't worry if there is a duplicate record.
             if (DB::affectingStatement("INSERT IGNORE INTO person_position SET person_id=?, position_id=?", [ $personId, $id]) == 1) {
-                PersonPosition::log($personId, $id, 'add', $message);
+                $addIds[] = $id;
             }
+          }
+
+          if (!empty($addIds)) {
+              ActionLog::record(Auth::user(), 'person-position-add', $message, [ 'position_ids' => array_values($addIds) ], $personId);
           }
       }
 
@@ -123,9 +140,8 @@ class PersonPosition extends ApiModel
             ->whereIn('position_id', $ids)
             ->delete();
 
-         foreach ($ids as $id) {
-             PersonPosition::log($personId, $id, 'remove', $message);
-         }
+
+         ActionLog::record(Auth::user(), 'person-position-remove', $message, [ 'position_ids' => array_values($ids) ], $personId);
      }
 
      /**
@@ -139,6 +155,6 @@ class PersonPosition extends ApiModel
 
      public static function log($personId, $id, $action, $reason=null)
      {
-         ActionLog::record(Auth::user(), 'position-'.$action, $reason, [ 'position_id' => $id ], $personId);
+         ActionLog::record(Auth::user(), 'person-position-'.$action, $reason, [ 'position_id' => $id ], $personId);
      }
 }

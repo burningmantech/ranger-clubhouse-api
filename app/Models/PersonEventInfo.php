@@ -7,6 +7,7 @@ use App\Models\TraineeStatus;
 use App\Models\Slot;
 use App\Models\RadioEligible;
 use App\Models\Bmid;
+use App\Models\ManualReview;
 
 use App\Helpers\DateHelper;
 use App\Helpers\SqlHelper;
@@ -21,7 +22,7 @@ class TrainingStatus {
     public $date;
 };
 
-class PersonYearInfo extends ApihouseResult
+class PersonEventInfo extends ApihouseResult
 {
     public $person_id;
     public $year;
@@ -33,6 +34,9 @@ class PersonYearInfo extends ApihouseResult
     public $showers;
     public $radio_info_available;
 
+    public $manual_review_pass;
+    public $manual_review_date;
+
     /*
      * Gather all information related to a given year for a person
      * - training status & location (if any)
@@ -40,14 +44,14 @@ class PersonYearInfo extends ApihouseResult
      * - meals & shower privileges
      * @var $personId - person to lookup
      * @var $year -
-     * @return PersonYearInfo
+     * @return PersonEventInfo
      */
 
     static public function findForPersonYear($personId, $year) {
-        $yearInfo = new PersonYearInfo();
+        $info = new PersonEventInfo();
 
-        $yearInfo->person_id = $personId;
-        $yearInfo->year = $year;
+        $info->person_id = $personId;
+        $info->year = $year;
 
         $requireTraining = PersonPosition::findTrainingRequired($personId);
         $trainings = TraineeStatus::findForPersonYear($personId, $year);
@@ -57,14 +61,14 @@ class PersonYearInfo extends ApihouseResult
             $trained[$training->position_id] = $training;
         }
 
-        $yearInfo->trainings = [];
+        $info->trainings = [];
         $now = SqlHelper::now();
         foreach($requireTraining as $need) {
             $status = new TrainingStatus;
             $status->position_title = $need->title;
             $status->position_id = $need->position_id;
 
-            $yearInfo->trainings[] = $status;
+            $info->trainings[] = $status;
             // TODO: Remove this at some point.
             if ($need->position_id == Position::DIRT) {
                 $need->training_position_id = Position::DIRT_TRAINING;
@@ -126,23 +130,32 @@ class PersonYearInfo extends ApihouseResult
 
 
         $radio = RadioEligible::findForPersonYear($personId, $year);
-        $yearInfo->radio_info_available = setting('RadioInfoAvailable');
-        $yearInfo->radio_max = $radio ? $radio->max_radios : 0;
-        $yearInfo->radio_eligible = $yearInfo->radio_max > 0 ? true : false;
+        $info->radio_info_available = setting('RadioInfoAvailable');
+        $info->radio_max = $radio ? $radio->max_radios : 0;
+        $info->radio_eligible = $info->radio_max > 0 ? true : false;
 
-        $yearInfo->meals = '';
-        $yearInfo->showers = false;
+        $info->meals = '';
+        $info->showers = false;
 
         $bmid = Bmid::findForPersonYear($personId, $year);
         if ($bmid) {
-            $yearInfo->meals = $bmid->meals;
-            $yearInfo->showers = $bmid->showers;
+            $info->meals = $bmid->meals;
+            $info->showers = $bmid->showers;
         }
 
         if (date('Y') == $year && !setting('MealInfoAvailable')) {
-            $yearInfo->meals = 'no-info';
+            $info->meals = 'no-info';
         }
 
-        return $yearInfo;
+        $manualReview = ManualReview::findForPersonYear($personId, $year);
+
+        if ($manualReview) {
+            $info->manual_review_pass = true;
+            $info->manual_review_date = (string) $manualReview->passdate;
+        } else {
+            $info->manual_review_pass = false;
+        }
+
+        return $info;
     }
 }
