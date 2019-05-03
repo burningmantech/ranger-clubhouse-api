@@ -73,6 +73,9 @@ case "${travis_action}" in
         cache_images                  \
             "${php_image_name}"       \
             "${composer_image_name}"  \
+            "${source_image_name}"    \
+            "${build_image_name}"     \
+            "${dev_image_name}"       \
             "${api_image_name}"       \
             ;
         ;;
