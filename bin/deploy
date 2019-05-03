@@ -14,6 +14,7 @@ path="bin/deploy_aws_ecs";
 script_url="https://${host}/${repo}/${version}/${path}";
 
 export LOCAL_IMAGE_NAME="${image_name}";
+export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}";
 
 deploy_cmd="$(mktemp)";
 
