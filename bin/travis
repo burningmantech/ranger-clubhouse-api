@@ -78,10 +78,11 @@ case "${travis_action}" in
             "${dev_image_name}"       \
             "${api_image_name}"       \
             ;
-        ;;
 
         # Go through the motions for deployment without actually deploying
         "${wd}/bin/deploy" staging --trial-run;
+
+        ;;
 
     "deploy")
         if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
@@ -100,11 +101,13 @@ case "${travis_action}" in
 
         # Deploy
         "${wd}/bin/deploy" staging;
+
         ;;
 
     *)
         echo "Unknown Travis action: ${travis_action}";
         exit 1;
+
         ;;
 
 esac;
