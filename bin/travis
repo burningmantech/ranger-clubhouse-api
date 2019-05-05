@@ -80,6 +80,9 @@ case "${travis_action}" in
             ;
         ;;
 
+        # Go through the motions for deployment without actually deploying
+        "${wd}/bin/deploy" staging --trial-run;
+
     "deploy")
         if [ "${TRAVIS_PULL_REQUEST:-}" != "false" ]; then
             echo "No deploy from a pull request branch.";
