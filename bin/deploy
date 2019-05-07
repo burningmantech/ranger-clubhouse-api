@@ -31,8 +31,9 @@ path="bin/deploy_aws_ecs";
 
 script_url="https://${host}/${repo}/${version}/${path}";
 
-export LOCAL_IMAGE_NAME="${image_name}";
-export AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}";
+export DEPLOY_TOOLS_VERSION="${version}";
+export     LOCAL_IMAGE_NAME="${image_name}";
+export   AWS_ECR_IMAGE_NAME="${AWS_ECR_IMAGE_REPOSITORY}";
 
 # Download and run the deploy script.
 echo "Running: ${script_url} ${@}";
