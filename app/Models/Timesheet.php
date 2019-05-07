@@ -138,9 +138,11 @@ class Timesheet extends ApiModel
 
     /*
      * Find the years a person was on working
+     *
+     * @param integer $everything if true include all scheduled years as well
      */
 
-    public static function yearsRangered($personId, $everything=false)
+    public static function years($personId, $everything=false)
     {
         $query = self::selectRaw("YEAR(on_duty) as year")
                 ->where('person_id', $personId)
@@ -151,7 +153,26 @@ class Timesheet extends ApiModel
             $query = $query->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS);
         }
 
-        return $query->pluck('year')->toArray();
+        $years = $query->pluck('year')->toArray();
+
+        if (!$everything) {
+            return $years;
+        }
+
+        // Look at the sign up schedule as well
+        $signUpYears = DB::table('person_slot')
+                ->selectRaw("YEAR(begins) as year")
+                ->join('slot', 'slot.id', '=', 'person_slot.slot_id')
+                ->where('person_id', $personId)
+                ->groupBy('year')
+                ->orderBy('year')
+                ->pluck('year')
+                ->toArray();
+
+        $years = array_unique(array_merge($years, $signUpYears));
+        sort($years, SORT_NUMERIC);
+
+        return $years;
     }
 
     /*
