@@ -93,7 +93,7 @@ class PositionCreditController extends ApiController
             'deltaDays' => 'sometimes|integer',
             'deltaHours' => 'sometimes|integer',
             'deltaMinutes' => 'sometimes|integer',
-            'newPositionId' => 'sometimes|exists:position',
+            'newPositionId' => 'sometimes|exists:position,id',
         ]);
         if (empty($params['ids'])) {
             return $this->restError('Must specify credits to copy', 400);
