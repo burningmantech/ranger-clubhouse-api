@@ -81,7 +81,7 @@ class PositionCreditController extends ApiController
 
     /**
      * Copy position credits in bulk.  This supports two main use cases:
-     * #1: Copy with a date delta, e.g. add 366 days (to align with Labor Day) to last year's credits.
+     * #1: Copy with a date delta, e.g. add 364 days (to align with Labor Day) to last year's credits.
      *     Set deltaDays, deltaHours, deltaMinutes as appropriate.
      * #2: Create credit values for a new position based on another position.  Set newPositionId.
      */
@@ -112,7 +112,7 @@ class PositionCreditController extends ApiController
         }
         $sourceCredits = PositionCredit::whereIn('id', $params['ids'])->get();
         $results = array();
-        DB::transaction(function () use ($sourceCredits, $delta) {
+        DB::transaction(function () use ($sourceCredits, $delta, $position, &$results) {
             // TODO add a unique index on (position_id, start_time, end_time) so it's hard to double-copy
             foreach ($sourceCredits as $source) {
                 $target = $source->replicate();
@@ -124,7 +124,7 @@ class PositionCreditController extends ApiController
                     $target->position_id = $position;
                 }
                 $target->save();
-                $results[] = $target;
+                array_push($results, $target);
             }
         });
         return $this->success($results, null, 'position_credit');
