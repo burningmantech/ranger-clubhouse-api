@@ -20,11 +20,14 @@ class AlertPerson extends ApiModel
 
     /*
      * Find all alerts with opt defaults for person
+     *
+     * @param integer $personId user to look up
      */
 
     public static function findAllForPerson($personId)
     {
-        return Alert::select('alert.id',
+        return Alert::select(
+            'alert.id',
             'alert.title',
             'alert.description',
             'alert.on_playa',
@@ -35,6 +38,13 @@ class AlertPerson extends ApiModel
             $join->whereRaw('alert_person.alert_id=alert.id');
         })->orderBy('alert.on_playa', 'desc', 'alert.title', 'asc')->get();
     }
+
+    /*
+     * Find or create an alert for a person
+     *
+     * @param integer $personId user to find alert for
+     * @param integer $alertId id to lookup
+     */
 
     public static function findOrCreateForPerson($personId, $alertId)
     {
@@ -49,6 +59,17 @@ class AlertPerson extends ApiModel
         }
 
         return new AlertPerson($query);
+    }
+
+    /*
+     * Find an alert for a person
+     *
+     * @param integer $alertId alert to find
+     * @param interger $personId user to find
+     */
+
+    public static function findAlertForPerson($alertId, $personId) {
+        return self::where('alert_id', $alertId)->where('person_id', $personId)->first();
     }
 
     /*

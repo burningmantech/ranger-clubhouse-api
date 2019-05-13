@@ -10,17 +10,7 @@ namespace App\Lib;
 
 class SMSException extends \Exception
 {
-    public $status;
-    public function __construct($status)
-    {
-        $this->status = $status;
-    }
-
-    public function __toString()
-    {
-        return "Twilio HTTP request status [{$this->status}]";
-    }
-};
+}
 
 class SMSService
 {
@@ -96,7 +86,7 @@ class SMSService
 
                 $response = $notification->create($params);
             } catch (\Twilio\Exceptions\TwilioException $e) {
-                throw new SMSException($log);
+                throw new SMSException($e->getMessage());
             }
         }
 
@@ -140,12 +130,12 @@ class SMSService
      *
      */
 
-    public static function processIncoming()
+    public static function processIncoming($request)
     {
-        return [
-            'phone'   => Input::get('From'),
-            'message' => Input::get('Body'),
-            'raw'     => json_encode($_POST)
+        return (object) [
+            'phone'   => $request->input('From') ?? '',
+            'message' => $request->input('Body') ?? '',
+            'raw'     => json_encode($request->all())
         ];
     }
 
@@ -202,11 +192,13 @@ class SMSService
 
     public static function replyResponse($reply)
     {
-        header("Content-Type: text/xml");
+        if(empty($reply)) {
+            return response('', 200);
+        }
 
         $response = new \Twilio\Twiml();
         $response->message($reply);
-        echo $response;
+        return response((string) $response, 200)->header('Content-Type', 'text/xml');
     }
 
     /*

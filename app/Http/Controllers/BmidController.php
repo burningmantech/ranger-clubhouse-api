@@ -97,14 +97,9 @@ class BmidController extends ApiController
             }
         } catch (LambaseBMIDException $e) {
             $message = $e->getMessage();
-            ErrorLog::record(
-                request(),
-                'lambase-exception',
-                [
-                    'message' => $message,
-                    'data'    => $e->lambaseResult
-                ]
-            );
+            ErrorLog::recordException($e, 'lambase-bmid-exception', [
+                    'lambase_result'    => $e->lambaseResult
+            ]);
             return RestApi::error(response(), 500, "Lambase upload failed: {$message}");
         }
 

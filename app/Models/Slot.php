@@ -92,6 +92,15 @@ class Slot extends ApiModel
         return self::findBase($slotId)->firstOrFail();
     }
 
+    public static function findWithSignupsForYear($year)
+    {
+        return self::whereYear('begins', $year)
+                ->where('signed_up', '>', 0)
+                ->with('position:id,title')
+                ->orderBy('begins')
+                ->get();
+    }
+
     public static function findSignUps($slotId) {
         return DB::table('person_slot')
             ->select('person.id', 'person.callsign')

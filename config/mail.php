@@ -61,6 +61,13 @@ return [
     ],
 
     /*
+      Primarily used by the RBS to limit how many emails can be sent per
+      connection.
+    */
+
+    'messages_per_connection' => 50,
+
+    /*
     |--------------------------------------------------------------------------
     | E-Mail Encryption Protocol
     |--------------------------------------------------------------------------

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Person;
 use App\Models\ApiModel;
 
+use Illuminate\Support\Facades\Auth;
+
 class ErrorLog extends ApiModel
 {
     const PAGE_SIZE_DEFAULT = 50;
@@ -18,18 +20,95 @@ class ErrorLog extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
-    public static function record($request, $error_type, $data=[]) {
-        $data['method'] = $request->method();
-        $data['parameters'] = $request->all();
+    /*
+     * Record an error
+     */
 
-        self::create([
-            'error_type'    => $error_type,
-            'ip'            => $request->ip(),
-            'user_agent'    => $request->userAgent(),
-            'url'           => $request->fullUrl(),
-            'data'          => $data
-        ]);
+    public static function record($error_type, $data=[])
+    {
+        $error = [
+            'error_type' => $error_type,
+        ];
+
+        $req = request();
+        if ($req) {
+            $data['method']      = $req->method();
+            $data['parameters']  = $req->all();
+
+            $error['ip']         = $req->ip();
+            $error['user_agent'] = $req->userAgent();
+            $error['url']        = $req->fullUrl();
+        }
+
+        $error['data'] = $data;
+
+        self::create($error);
     }
+
+    /*
+     * Record a PHP exception
+     *
+     * @param Exception $e the exception which occured
+     * @param string $error_type the type to record
+     * @param array $extra any additional data to be logged
+     */
+
+    public static function recordException($e, $error_type, $extra=[])
+    {
+        // Inspect the exception for name, message, source location,
+        // and backtrace
+        $data = [
+            'exception' => [
+                'class'   => class_basename($e),
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'backtrace'  => $e->getTrace(),
+            ]
+        ];
+
+        // Record the method and parameters
+        $req = request();
+        if ($req) {
+            $data['method'] = $req->method();
+            $data['parameters'] = $req->all();
+        }
+
+        $data = array_merge($data, $extra);
+
+        $error = [
+            'error_type' => $error_type,
+            'data'       => $data
+        ];
+
+        // Include the IP, user_agent and URL location
+        if ($req) {
+            $error['ip'] = $req->ip();
+            $error['user_agent'] = $req->userAgent();
+            $error['url'] = $req->fullUrl();
+        }
+
+        // Who is the user?
+        if (Auth::check()) {
+            $error['person_id'] = Auth::user()->id;
+        }
+
+        self::create($error);
+    }
+
+    /*
+     * Find error log based on a criteria
+     *
+     * @param array $query
+     *
+     * person_id - person to find
+     * error_type - specific error
+     * start_at - error record on or after datetime
+     * ends_at - error record on or before datetime
+     * sort - 'asc' or 'desc'
+     * page - page offset (1 to n)
+     * page_size - size of page
+     */
 
     public static function findForQuery($query)
     {
@@ -74,6 +153,9 @@ class ErrorLog extends ApiModel
         $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
         if (isset($query['page'])) {
             $page = $query['page'] - 1;
+            if ($page < 0) {
+                $page = 0;
+            }
         } else {
             $page = 0;
         }
@@ -92,7 +174,12 @@ class ErrorLog extends ApiModel
          ];
     }
 
-    public function setDataAttribute($value) {
+    /*
+     * Encode the data column as JSON if its an array.
+     */
+
+    public function setDataAttribute($value)
+    {
         $this->attributes['data'] = is_array($value) ? json_encode($value) : $value;
     }
 }
