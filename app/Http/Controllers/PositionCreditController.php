@@ -6,6 +6,7 @@ use App\Models\PositionCredit;
 use App\Http\Controllers\ApiController;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PositionCreditController extends ApiController
 {
@@ -31,7 +32,7 @@ class PositionCreditController extends ApiController
     {
         $this->authorize('store', PositionCredit::class);
 
-        $position_credit = new \App\Models\PositionCredit;
+        $position_credit = new PositionCredit;
         $this->fromRest($position_credit);
 
         if ($position_credit->save()) {
@@ -70,12 +71,62 @@ class PositionCreditController extends ApiController
 
     /**
      * Remove a position credit
-     *
      */
     public function destroy(PositionCredit $position_credit)
     {
         $this->authorize('delete', PositionCredit::class);
         $position_credit->delete();
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Copy position credits in bulk.  This supports two main use cases:
+     * #1: Copy with a date delta, e.g. add 366 days (to align with Labor Day) to last year's credits.
+     *     Set deltaDays, deltaHours, deltaMinutes as appropriate.
+     * #2: Create credit values for a new position based on another position.  Set newPositionId.
+     */
+    public function copy()
+    {
+        $this->authorize('store', PositionCredit::class);
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'deltaDays' => 'sometimes|integer',
+            'deltaHours' => 'sometimes|integer',
+            'deltaMinutes' => 'sometimes|integer',
+            'newPositionId' => 'sometimes|exists:position',
+        ]);
+        if (empty($params['ids'])) {
+            return $this->restError('Must specify credits to copy', 400);
+        }
+        $deltaDays = $params['deltaDays'] ?? 0;
+        $deltaHours = $params['deltaHours'] ?? 0;
+        $deltaMinutes = $params['deltaMinutes'] ?? 0;
+        if ($deltaDays != 0 || $deltaHours != 0 || $deltaMinutes != 0) {
+            $delta = "$deltaDays day $deltaHours hour $deltaMinutes minute";
+        }
+        if (!empty($params['newPositionId'])) {
+            $position = $params['newPositionId'];
+        }
+        if (!$delta && !$position) {
+            return $this->restError('Must specify new position or a day/time delta');
+        }
+        $sourceCredits = PositionCredit::whereIn('id', $params['ids'])->get();
+        $results = array();
+        DB::transaction(function () use ($sourceCredits, $delta) {
+            // TODO add a unique index on (position_id, start_time, end_time) so it's hard to double-copy
+            foreach ($sourceCredits as $source) {
+                $target = $source->replicate();
+                if ($delta) {
+                    $target->start_time = $source->start_time->modify($delta);
+                    $target->end_time = $source->end_time->modify($delta);
+                }
+                if (!empty($position)) {
+                    $target->position_id = $position;
+                }
+                $target->save();
+                $results[] = $target;
+            }
+        });
+        return $this->success($results, null, 'position_credit');
     }
 }
