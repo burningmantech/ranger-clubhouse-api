@@ -60,7 +60,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     // Statuses consider 'live' or still active account allowed
     // to login, and do stuff.
-    // Used by App\Validator\StateForCountry
+    // Used by App\Validator\StateForCountry & BroadcastController
 
     const LIVE_STATUSES = [
         'active',
@@ -68,8 +68,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'inactive',
         'non ranger',
         'past prospective',
-        'prospective waitslist',
+        'prospective waitlist',
         'prospective',
+        'retired'
     ];
 
     /**
@@ -418,11 +419,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             $orderBy = "CASE";
             if (stripos($q, '@') !== false) {
-                $orderBy .= " WHEN email=".DB::getPdo()->quote($q)." THEN CONCAT('00', callsign)";
-                $orderBy .= " WHEN email like ".DB::getPdo()->quote($likeQuery)." THEN CONCAT('03', callsign)";
+                $orderBy .= " WHEN email=".SqlHelper::quote($q)." THEN CONCAT('00', callsign)";
+                $orderBy .= " WHEN email like ".SqlHelper::quote($likeQuery)." THEN CONCAT('03', callsign)";
             }
-            $orderBy .= " WHEN callsign_normalized=".DB::getPdo()->quote($normalized)." THEN CONCAT('01', callsign)";
-            $orderBy .= " WHEN callsign_soundex=".DB::getPdo()->quote($soundex)." THEN CONCAT('02', callsign)";
+            $orderBy .= " WHEN callsign_normalized=".SqlHelper::quote($normalized)." THEN CONCAT('01', callsign)";
+            $orderBy .= " WHEN callsign_soundex=".SqlHelper::quote($soundex)." THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
@@ -480,9 +481,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $normalized = self::normalizeCallsign($query);
         $soundex = soundex($normalized);
-        $quoted = DB::getPdo()->quote($normalized);
+        $quoted = SqlHelper::quote($normalized);
         $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
-        $quoted = DB::getPdo()->quote($soundex);
+        $quoted = SqlHelper::quote($soundex);
         $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
         $orderBy .= " ELSE callsign END";
 

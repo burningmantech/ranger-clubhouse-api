@@ -19,7 +19,7 @@ class AlertPersonPolicy
     }
 
     /**
-     * Determine whether the user can create positions.
+     * Determine whether the user can view alerts
      */
     public function view(Person $user, Person $person)
     {
@@ -27,7 +27,7 @@ class AlertPersonPolicy
     }
 
     /**
-     * Determine whether the user can update the position.
+     * Determine whether the user can update the alert
      */
     public function update(Person $user, Person $person)
     {
