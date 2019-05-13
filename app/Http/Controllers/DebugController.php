@@ -17,6 +17,10 @@ class DebugController extends ApiController
             throw new \Illuminate\Auth\Access\AuthorizationException('Action only allowed on staging or in development.');
         }
 
+        if (app()->runningInConsole()) {
+            return;
+        }
+
         if (!$this->userHasRole(Role::ADMIN)) {
             $this->notPermitted('Not allowed');
         }

@@ -6,7 +6,6 @@ use App\Models\ApiModel;
 
 class Position extends ApiModel
 {
-
     const ALPHA = 1;
     const DIRT = 2;
     const DIRT_TRAINING = 13;
@@ -130,7 +129,7 @@ class Position extends ApiModel
 
     public static function findAllTrainings($excludeDirt = false)
     {
-        $sql = self::select('id','title')
+        $sql = self::select('id', 'title')
             ->where('type', '=', 'Training')
             ->where('title', 'not like', '%trainer%')
             ->orderBy('title');
@@ -168,5 +167,20 @@ class Position extends ApiModel
     public static function findTrainedPositions($positionId)
     {
         return self::select('id', 'title')->where('training_position_id', $positionId)->get();
+    }
+
+    /*
+     * Find all positions with working (started) slots
+     */
+
+    public static function findAllWithInProgressSlots()
+    {
+        return self::where('type', '!=', 'Training')
+                ->whereRaw("EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
+                AND slot.position_id=position.id
+                AND NOW() >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
+                AND NOW() < slot.ends LIMIT 1)")
+                ->orderBy("title")
+                ->get();
     }
 }

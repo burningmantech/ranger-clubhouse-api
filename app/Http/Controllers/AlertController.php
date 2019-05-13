@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alert;
+use App\Models\AlertPerson;
 use App\Http\Controllers\ApiController;
 
 class AlertController extends ApiController
@@ -20,7 +21,7 @@ class AlertController extends ApiController
      * Create a new alert.
      */
 
-    public function store(Request $request)
+    public function store()
     {
         $this->authorize('store', [ Alert::class ]);
 
@@ -46,7 +47,7 @@ class AlertController extends ApiController
      * Update an alert
      */
 
-    public function update(Request $request, Alert $alert)
+    public function update(Alert $alert)
     {
         $this->authorize('update', $alert);
 
@@ -65,7 +66,8 @@ class AlertController extends ApiController
     public function destroy(Alert $alert)
     {
         $this->authorize('delete', $alert);
-        DB::table('alert_person')->where('alert_id', $alert->id)->delete();
+        $alert->delete();
+        AlertPerson::where('alert_id', $alert->id)->delete();
         return $this->restDeleteSuccess();
     }
 }
