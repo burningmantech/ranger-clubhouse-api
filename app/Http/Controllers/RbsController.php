@@ -71,7 +71,7 @@ class RbsController extends ApiController
                 'sms_on_playa_stopped',
                 'sms_off_playa',
                 'sms_off_playa_verified',
-                'sms_off_playa_stopped',
+                'sms_off_playa_stopped'
             )->whereIn('status', Person::LIVE_STATUSES)
             ->orderBy('callsign');
 
