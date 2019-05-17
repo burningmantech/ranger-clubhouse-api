@@ -62,6 +62,8 @@ class SlotController extends ApiController
             return $this->restError($slot);
         }
 
+        $this->log('slot-create', 'create', [ 'slot' => $slot ]);
+
         // Return the position & trainer_slot info
         $slot->loadRelationships();
 
@@ -94,8 +96,14 @@ class SlotController extends ApiController
             return $this->restError($slot);
         }
 
+        $changes = $slot->getChangedValues();
         if (!$slot->save()) {
             return $this->restError($slot);
+        }
+
+        if (!empty($changes)) {
+            $changes['slot_id'] = $slot->id;
+            $this->log('slot-update', 'update', $changes);
         }
 
         // In case position or trainer_slot changed.
@@ -119,7 +127,12 @@ class SlotController extends ApiController
         DB::transaction(function () use ($slots, $attributes) {
             foreach ($slots as $slot) {
                 $slot->fill($attributes);
+                $changes = $slot->getChangedValues();
                 $slot->save();
+                if (!empty($changes)) {
+                    $changes['slot_id'] = $slot->id;
+                    $this->log('slot-update', 'bulk update', $changes);
+                }
             }
         });
 
@@ -138,6 +151,8 @@ class SlotController extends ApiController
 
         $slot->delete();
         PersonSlot::deleteForSlot($slot->id);
+
+        $this->log('slot-delete', 'delete', [ 'slot' => $slot ]);
 
         return $this->restDeleteSuccess();
     }
