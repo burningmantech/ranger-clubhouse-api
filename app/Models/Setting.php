@@ -16,6 +16,8 @@ class Setting extends ApiModel
         'type' => 'required|string'
     ];
 
+    static $cache = [];
+
     public static function findAll()
     {
         return self::orderBy('name')->get();
@@ -23,6 +25,7 @@ class Setting extends ApiModel
 
     public static function get($name)
     {
+
         if (is_array($name)) {
             $rows = self::select('name', 'value', 'type')->whereIn('name', $name)->get()->keyBy('name');
             $settings = [];
@@ -40,14 +43,20 @@ class Setting extends ApiModel
 
             return $settings;
         } else {
+            if (isset(self::$cache[$name])) {
+                return self::$cache[$name];
+            }
+
             $row = self::select('value', 'type')->where('name', $name)->first();
 
             if (!$row || $row->environment_only) {
                 // No period means look it up in the clubhouse config tree.
-                return config(self::fullName($name));
+                $value = config(self::fullName($name));
+            } else {
+                $value =  $row->castedValue();
             }
-
-            return $row->castedValue();
+            self::$cache[$name] = $value;
+            return $value;
         }
     }
 

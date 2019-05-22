@@ -578,6 +578,32 @@ class Training extends Position
     }
 
     /*
+     * Find all dirt training sign ups with pass status
+     */
+
+     public static function retrieveDirtTrainingsForPersonYear($personId, $year) {
+         return DB::table('person_slot')
+                 ->select('slot.id as slot_id', 'slot.description', 'slot.begins',
+                     DB::raw('IFNULL(trainee_status.passed, FALSE) as passed'),
+                     'trainee_status.notes',
+                     'trainee_status.rank',
+                     DB::raw('(NOW() >= slot.begins) as has_started')
+                )->join('slot', function ($j) use ($year) {
+                     $j->on('slot.id', 'person_slot.slot_id');
+                     $j->whereYear('slot.begins', $year);
+                     $j->where('slot.position_id', Position::DIRT_TRAINING);
+                 })
+                 ->leftJoin('trainee_status', function ($j) use ($personId) {
+                     $j->on('slot.id', 'trainee_status.slot_id');
+                     $j->where('trainee_status.person_id', $personId);
+                 })
+                 ->where('person_slot.person_id', $personId)
+                 ->orderBy('slot.begins')
+                 ->get();
+     }
+
+
+    /*
      * Is this training position an ART module?
      */
 

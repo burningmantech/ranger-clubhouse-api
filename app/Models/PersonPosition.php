@@ -18,6 +18,10 @@ class PersonPosition extends ApiModel
         'position_id'
     ];
 
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
     public static function havePosition($personId, $positionId) {
         $sql = self::where('person_id', $personId);
         if (is_array($positionId)) {
@@ -28,7 +32,6 @@ class PersonPosition extends ApiModel
 
         return $sql->exists();
     }
-
     /*
      * Return a list of positions that need training
      */
