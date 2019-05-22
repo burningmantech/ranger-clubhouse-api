@@ -672,7 +672,7 @@ class PersonControllerTest extends TestCase
 
         $p = factory(Timesheet::class)->create([
             'person_id' => $personId,
-            'position_id' => Position::ALPHA, 
+            'position_id' => Position::ALPHA,
             'on_duty'   => date("2009-08-25 16:00:00"),
             'off_duty'  => date("2009-08-25 18:00:00"),
         ]);
@@ -863,11 +863,13 @@ class PersonControllerTest extends TestCase
             [
                 'mentors' => [
                     [
-                        'status'    => 'pass',
                         'year'      => (int) $year,
-                        'person_id' => $mentor->id,
-                        'callsign'  => $mentor->callsign,
-                    ],
+                        'status'    => 'pass',
+                        'mentors' => [[
+                            'id' => $mentor->id,
+                            'callsign'  => $mentor->callsign,
+                        ]]
+                    ]
                 ],
             ]
         );

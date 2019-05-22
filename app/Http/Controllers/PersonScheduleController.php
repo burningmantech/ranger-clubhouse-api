@@ -115,8 +115,7 @@ class PersonScheduleController extends ApiController
                 ]);
             }
             $multipleEnrollmentForced = true;
-        } else if ($person->status == "alpha"
-            && $slot->position_id == Position::ALPHA
+        } else if ($slot->position_id == Position::ALPHA
             && Schedule::haveMultipleEnrollments($person->id, Position::ALPHA, $slot->begins->year, $enrollments)) {
             // Alpha is enrolled multiple times.
             $force = $this->userHasRole([ Role::ADMIN, Role::MENTOR ]);
@@ -181,7 +180,7 @@ class PersonScheduleController extends ApiController
             if ($slot->isTraining()) {
                 $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
                 Mail::to($person->email)->send($message);
-            } 
+            }
             /*else {
                 $message = new SlotSignup($slot, setting('ShiftSignupFromEmail'));
             }*/
@@ -272,7 +271,8 @@ class PersonScheduleController extends ApiController
         if ($status == "auditor" || setting('AllowSignupsWithoutPhoto')) {
             $photoStatus = 'not-required';
         } else {
-            $photoStatus = Photo::retrieveStatus($person);
+            $result = Photo::retrieveInfo($person);
+            $photoStatus = $result['photo_status'];
         }
 
         $mrDisabledAllowSignups = setting('ManualReviewDisabledAllowSignups');

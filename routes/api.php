@@ -39,6 +39,8 @@ Route::group([
     Route::post('action-log/record', 'ActionLogController@record');
 
     Route::match([ 'GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
+
+    Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
 });
 
 
@@ -110,7 +112,15 @@ Route::group([
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
     Route::resource('messages', 'PersonMessageController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
+    Route::get('mentor/alphas', 'MentorController@alphas');
+    Route::get('mentor/alpha-schedule', 'MentorController@alphaSchedule');
     Route::get('mentor/mentees', 'MentorController@mentees');
+    Route::get('mentor/mentors', 'MentorController@mentors');
+    Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
+    Route::get('mentor/potentials', 'MentorController@potentials');
+    Route::post('mentor/potentials', 'MentorController@updatePotentials');
+    Route::post('mentor/convert', 'MentorController@convert');
+    Route::get('mentor/verdicts', 'MentorController@verdicts');
 
     Route::resource('motd', 'MotdController');
 
@@ -130,6 +140,7 @@ Route::group([
     Route::get('person/{person}/positions', 'PersonController@positions');
     Route::post('person/{person}/positions', 'PersonController@updatePositions');
     Route::get('person/{person}/photo', 'PersonController@photo');
+    Route::post('person/{person}/photo-clear', 'PersonController@photoClear');
     Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');

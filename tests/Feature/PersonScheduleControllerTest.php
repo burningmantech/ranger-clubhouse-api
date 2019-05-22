@@ -621,10 +621,16 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    private function mockPhotoStatus($result)
+    private function mockPhotoStatus($status)
     {
         $mock = $this->mock('alias:\App\Models\Photo');
-        $mock->shouldReceive('retrieveStatus')->andReturn($result);
+        $mock->shouldReceive('retrieveInfo')->andReturn([
+            'photo_url'    => 'http://localhost/photo.png',
+            'photo_status' => $status,
+            'upload_url'   => 'http://localhost/upload',
+            'source'       => 'lambase',
+            'message'      => ''
+        ]);
 
         return $mock;
     }

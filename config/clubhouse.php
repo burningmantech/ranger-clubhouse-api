@@ -173,4 +173,7 @@ return [
     'GeneralSupportEmail'  => env('RANGER_CLUBHOUSE_EMAIL_SUPPORT', 'rangers@burningman.org'),
     'PersonnelEmail'       => env('RANGER_CLUBHOUSE_EMAIL_PERSONNEL', 'ranger-personnel@burningman.org'),
     'VCEmail'              => env('RANGER_CLUBHOUSE_EMAIL_VC', 'ranger-vc-list@burningman.org'),
+
+    'MaintenanceToken' => env('RANGER_CLUBHOUSE_MAINTENANCE_TOKEN', ''),
+
 ];

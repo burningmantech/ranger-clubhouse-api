@@ -589,7 +589,7 @@ class RBS
         }
 
         // Need to select everyone if a Clubhouse message is to be created.
-        if (!$sendClubhouse && ($type != Broadcast::TYPE_EMERGENCY)) {
+        if (!$sendClubhouse && ($broadcastType != Broadcast::TYPE_EMERGENCY)) {
             $prefCond = [];
             if ($sendSms) {
                 // Figure out which number to send to

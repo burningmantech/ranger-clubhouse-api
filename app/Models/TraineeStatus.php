@@ -49,4 +49,5 @@ class TraineeStatus extends ApiModel
     public static function firstOrCreateForSession($personId, $sessionId) {
         return self::firstOrCreate([ 'person_id' => $personId, 'slot_id' => $sessionId]);
     }
+
 }
