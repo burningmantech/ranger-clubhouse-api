@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 use App\Models\Slot;
 
+use App\Helpers\SqlHelper;
+
 //
 // Meta Model
 // This will combined slot & position and maybe person_slot.
@@ -175,6 +177,11 @@ class Schedule extends ApiModel
         $signedUp = 0;
         $max = 0;
 
+        $now = SqlHelper::now();
+
+        if ($now->gt($slot->begins) && !$force) {
+            return [ 'status' => 'has-started', 'signed_up' => $slot->signed_up ];
+        }
 
         $max = $slot->max;
         if ($slot->trainer_slot_id) {
@@ -243,11 +250,10 @@ class Schedule extends ApiModel
                     [ 'slot_id', $personSlotId]
                 ])->firstOrFail();
 
-        $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
-                            ->lockForUpdate()->firstOrFail();
-
         try {
             DB::beginTransaction();
+            $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
+                                ->lockForUpdate()->firstOrFail();
             $personSlot->delete();
             if ($slot->signed_up > 0) {
                 $slot->update(['signed_up' => ($slot->signed_up - 1)]);

@@ -231,6 +231,16 @@ class PersonScheduleController extends ApiController
     {
         $this->authorize('delete', [ Schedule::class, $person ]);
 
+        $slot = Slot::findOrFail($slotId);
+        $now = SqlHelper::now();
+
+        if ($now->gt($slot->begins) && !$this->userHasRole(Role::ADMIN)) {
+            return response()->json([
+                'status' => 'has-started',
+                'signed_up' => $slot->signed_up
+            ]);
+        }
+
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
             $this->log(
