@@ -40,9 +40,11 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->signInUser();
 
-        Mail::fake();
         // scheduling ends up sending lots of emails..
-        $year = $this->year = date('Y');
+        Mail::fake();
+
+        // set the signups in the furture
+        $year = $this->year = date('Y') + 1;
 
         // Setup default (real world) positions
         $this->trainingPosition = factory(Position::class)->create(
@@ -379,6 +381,66 @@ class PersonScheduleControllerTest extends TestCase
         );
     }
 
+    /*
+     * Prevent sign up for a started shift
+     */
+
+    public function testPreventSignupForStartedShift()
+    {
+        $shift = $this->trainingSlots[0];
+        $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
+
+        $response = $this->json(
+            'POST',
+            "person/{$this->user->id}/schedule",
+            [
+                'slot_id' => $shift->id,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'has-started' ]);
+
+        $this->assertDatabaseMissing(
+            'person_slot',
+            [
+                'person_id' => $this->user->id,
+                'slot_id'   => $shift->id,
+            ]
+        );
+    }
+
+    /*
+     * Allow sign up for a started shift when Admin
+     */
+
+    public function testAllowSignupForStartedShiftIfAdmin()
+    {
+        $person = factory(Person::class)->create();
+        $shift = $this->trainingSlots[0];
+        $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
+        $this->addPosition(Position::TRAINING, $person);
+        $this->addRole(Role::ADMIN);
+
+        $response = $this->json(
+            'POST',
+            "person/{$person->id}/schedule",
+            [
+                'slot_id' => $shift->id,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success' ]);
+
+        $this->assertDatabaseHas(
+            'person_slot',
+            [
+                'person_id' => $person->id,
+                'slot_id'   => $shift->id,
+            ]
+        );
+    }
 
     /*
      * Force a full shift signup by admin user
@@ -607,6 +669,51 @@ class PersonScheduleControllerTest extends TestCase
         $this->assertDatabaseMissing('person_slot', $personSlot);
     }
 
+    /*
+     * Prevent a signup removal if the shift already started.
+     */
+
+    public function testPreventDeleteSignup()
+    {
+        $shift      = $this->dirtSlots[0];
+        $shift->update([ 'begins' => date('2000-01-01 12:00:00')]);
+        $personId   = $this->user->id;
+        $personSlot = [
+            'person_id' => $personId,
+            'slot_id'   => $shift->id,
+        ];
+
+        factory(PersonSlot::class)->create($personSlot);
+
+        $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'has-started' ]);
+        $this->assertDatabaseHas('person_slot', $personSlot);
+    }
+
+    /*
+     * Allow a signup removal for past shift when admin
+     */
+
+    public function testAllowDeleteSignupIfAdmin()
+    {
+        $shift      = $this->dirtSlots[0];
+        $shift->update([ 'begins' => date('2000-01-01 12:00:00')]);
+        $personId   = $this->user->id;
+        $personSlot = [
+            'person_id' => $personId,
+            'slot_id'   => $shift->id,
+        ];
+
+        factory(PersonSlot::class)->create($personSlot);
+
+        $this->addRole(Role::ADMIN);
+
+        $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success' ]);
+        $this->assertDatabaseMissing('person_slot', $personSlot);
+    }
 
     /*
      * Fail to delete a non-existent sign up.
