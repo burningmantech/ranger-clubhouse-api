@@ -174,6 +174,7 @@ Route::group([
 
     Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
     Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
+    Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
     Route::get('slot/years', 'SlotController@years');
     Route::get('slot/{slot}/people', 'SlotController@people');
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');

@@ -12,6 +12,8 @@ use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
 
+use App\Lib\HQWindow;
+
 use Carbon\Carbon;
 
 class SlotController extends ApiController
@@ -205,6 +207,8 @@ class SlotController extends ApiController
 
     public function dirtShiftTimes()
     {
+        $this->authorize('report', Slot::class);
+
         $params = request()->validate([
              'year' => 'required|integer'
          ]);
@@ -218,6 +222,8 @@ class SlotController extends ApiController
 
     public function shiftLeadReport()
     {
+        $this->authorize('report', Slot::class);
+
         $params = request()->validate([
              'shift_start' => 'required|date',
              'shift_duration'   => 'required|integer'
@@ -243,5 +249,21 @@ class SlotController extends ApiController
          ];
 
          return response()->json($info);
+    }
+
+    /*
+     * HQ Check In/Out Forecast report
+     */
+
+    public function hqForecastReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $params = request()->validate([
+            'year'  => 'required|integer',
+            'interval'  => 'required|integer',
+        ]);
+
+        return response()->json(HQWindow::retrieveCheckInOutForecast($params['year'], $params['interval']));
     }
 }
