@@ -233,7 +233,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state'      => 'state_for_country:live_only',
         'country'    => 'required|string|max:25',
 
-        'home_phone' => 'required|string|max:25',
+        'home_phone' => 'sometimes|string|max:25',
         'alt_phone'  => 'sometimes|string|nullable|max:25',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
@@ -550,7 +550,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->password = "$salt:$sha";
         $this->tpassword = '';
         $this->tpassword_expire = 1;
-        return $this->save();
+        return $this->saveWithoutValidation();
     }
 
     public function createResetPassword(): string
@@ -561,7 +561,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $this->tpassword = "$salt:$sha";
         $this->tpassword_expire = time() + self::RESET_PASSWORD_EXPIRE;
-        $this->save();
+        $this->saveWithoutValidation();
 
         return $resetPassword;
     }
