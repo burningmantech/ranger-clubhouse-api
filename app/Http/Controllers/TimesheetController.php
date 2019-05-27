@@ -26,16 +26,18 @@ class TimesheetController extends ApiController
     public function index(Request $request)
     {
         $params = $request->validate([
-            'year'      => 'required|digits:4',
-            'person_id' => 'required|numeric'
+            'year'      => 'sometimes|digits:4',
+            'person_id' => 'sometimes|numeric',
+            'on_duty'   => 'sometimes|boolean',
         ]);
 
-        $this->authorize('index', [ Timesheet::class, $params['person_id'] ]);
+        $this->authorize('index', [ Timesheet::class, $params['person_id'] ?? null ]);
 
         $rows = Timesheet::findForQuery($params);
 
         if (!$rows->isEmpty()) {
-            PositionCredit::warmYearCache($params['year'], array_unique($rows->pluck('position_id')->toArray()));
+            $year = $params['year'] ?? date('Y');
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
         return $this->success($rows, null, 'timesheet');
@@ -296,7 +298,7 @@ class TimesheetController extends ApiController
     }
 
     /*
-     * Start a shift for a person
+     * End a shift
      */
 
     public function signoff(Timesheet $timesheet)
@@ -319,7 +321,6 @@ class TimesheetController extends ApiController
         );
         return $this->success($timesheet);
     }
-
 
     /*
      * Return information on timesheet corrections AND the current timesheet

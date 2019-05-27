@@ -96,13 +96,22 @@ class Timesheet extends ApiModel
         $year = 0;
         $sql = self::with(self::RELATIONSHIPS);
 
-        if (isset($query['year'])) {
-            $year = $query['year'];
-            $sql = $sql->whereYear('on_duty', $year);
+        $year = $query['year'] ?? null;
+        $personId = $query['person_id'] ?? null;
+        $onDuty = $query['on_duty'] ?? false;
+
+        if ($year) {
+            $sql->whereYear('on_duty', $year);
         }
 
-        if (isset($query['person_id'])) {
-            $sql = $sql->where('person_id', $query['person_id']);
+        if ($personId) {
+            $sql->where('person_id', $personId);
+        } else {
+            $sql->with('person:id,callsign');
+        }
+
+        if ($onDuty) {
+            $sql->whereNull('off_duty');
         }
 
         return $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
