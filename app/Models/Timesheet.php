@@ -94,11 +94,13 @@ class Timesheet extends ApiModel
     public static function findForQuery($query)
     {
         $year = 0;
-        $sql = self::with(self::RELATIONSHIPS);
+        $sql = self::select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
+            ->with(self::RELATIONSHIPS);
 
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
         $onDuty = $query['on_duty'] ?? false;
+        $overHours = $query['over_hours'] ?? 0;
 
         if ($year) {
             $sql->whereYear('on_duty', $year);
@@ -112,9 +114,18 @@ class Timesheet extends ApiModel
 
         if ($onDuty) {
             $sql->whereNull('off_duty');
+            if ($overHours) {
+                $sql->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, now()) >= ?", [ $overHours ]);
+            }
         }
 
-        return $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
+        $rows = $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
+
+        if (!$personId) {
+            $rows = $rows->sortBy('person.callsign')->values();
+        }
+
+        return $rows;
     }
 
     public static function isPersonOnDuty($personId)
@@ -429,6 +440,11 @@ class Timesheet extends ApiModel
 
     public function getDurationAttribute()
     {
+        // Did a select already compute this?
+        if (isset($this->attributes['duration'])) {
+            return (int)$this->attributes['duration'];
+        }
+
         $on_duty = $this->getOriginal('on_duty');
 
         if ($this->off_duty) {
