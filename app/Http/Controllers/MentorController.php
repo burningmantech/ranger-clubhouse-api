@@ -207,9 +207,9 @@ class MentorController extends ApiController
 
             if ($person->status != $status) {
                 $person->status = $status;
-            //    $person->saveWithoutValidation();
-            //    $this->log('person-update', 'mentor update', [ 'status' => [ 'alpha', $status ]], $person->id);
-            //    $person->changeStatus($status, 'alpha', 'mentor update');
+                $person->saveWithoutValidation();
+                $this->log('person-update', 'mentor update', [ 'status' => [ 'alpha', $status ]], $person->id);
+                $person->changeStatus($status, 'alpha', 'mentor update');
             }
 
             $results[] = [
