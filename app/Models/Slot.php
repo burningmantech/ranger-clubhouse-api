@@ -260,10 +260,11 @@ class Slot extends ApiModel
                 });
 
                 // The check for the mentee shift is a hack to prevent past years from showing
-                // a GD Mentee as a qualified GD. 
-                if ($haveGDPosition && ($positionId != Position::GREEN_DOT_MENTEE)) {
+                // a GD Mentee as a qualified GD.
+                if ($haveGDPosition ) {
                     $person->is_greendot = TraineeStatus::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
-                    if (!$person->is_greendot) {
+                    if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
+                        $person->is_greendot = false; // just in case
                         // Not trained - remove the GD positions
                         $positions = $positions->filter(function ($row) {
                             $pid = $row->position_id;
@@ -285,7 +286,7 @@ class Slot extends ApiModel
         $sql = DB::table('slot')
         ->join('person_slot', 'person_slot.slot_id','=','slot.id')
         ->join('person', 'person.id', '=', 'person_slot.person_id')
-        ->whereIn('slot.position_id', [ Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE]);
+        ->whereIn('slot.position_id', [ Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR ]);
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 
