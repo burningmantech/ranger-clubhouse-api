@@ -151,6 +151,7 @@ Route::group([
     Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
     Route::get('slot/years', 'SlotController@years');
     Route::get('slot/{slot}/people', 'SlotController@people');
+    Route::post('slot/copy', 'SlotController@copy');
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
     Route::resource('slot', 'SlotController');
 
