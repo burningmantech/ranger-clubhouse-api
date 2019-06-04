@@ -243,8 +243,7 @@ class Slot extends ApiModel
             $positionId = $person->position_id;
 
             $person->is_greendot_shift = ($positionId == Position::DIRT_GREEN_DOT
-                                || $positionId == Position::GREEN_DOT_MENTOR
-                                || $positionId == Position::GREEN_DOT_MENTEE);
+                                || $positionId == Position::GREEN_DOT_MENTOR);
 
             $person->slot_begins_day_before = (new Carbon($person->slot_begins))->day != $shiftStart->day;
             $person->slot_ends_day_after = (new Carbon($person->slot_ends))->day != $shiftStart->day;
@@ -257,20 +256,19 @@ class Slot extends ApiModel
                 // Determine if the person is a GD AND if they have been trained this year.
                 $haveGDPosition = $positions->contains(function ($row) {
                     $pid = $row->position_id;
-                    return ($pid == Position::DIRT_GREEN_DOT
-                        || $pid == Position::GREEN_DOT_MENTOR
-                        || $pid == Position::GREEN_DOT_MENTEE);
+                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR);
                 });
 
-                if ($haveGDPosition) {
+                // The check for the mentee shift is a hack to prevent past years from showing
+                // a GD Mentee as a qualified GD. 
+                if ($haveGDPosition && ($positionId != Position::GREEN_DOT_MENTEE)) {
                     $person->is_greendot = TraineeStatus::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
                     if (!$person->is_greendot) {
                         // Not trained - remove the GD positions
                         $positions = $positions->filter(function ($row) {
                             $pid = $row->position_id;
                             return !($pid == Position::DIRT_GREEN_DOT
-                                || $pid == Position::GREEN_DOT_MENTOR
-                                || $pid == Position::GREEN_DOT_MENTEE);
+                                || $pid == Position::GREEN_DOT_MENTOR);
                         });
                     }
                 }
