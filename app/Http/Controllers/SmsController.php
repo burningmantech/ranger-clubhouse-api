@@ -5,10 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\ApiController;
+
+use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
+use App\Models\Role;
+use App\Models\Schedule;
+use Carbon\Carbon;
 
+use App\Lib\RBS;
 use App\Lib\SMSService;
 
 /*
@@ -70,7 +76,7 @@ class SmsController extends ApiController
         if ($offPlayaChanged && !$onPlayaChanged && $onPlaya == $offPlaya) {
             $person->sms_off_playa_verified = $person->sms_on_playa_verified;
             $person->sms_off_playa_stopped = $person->sms_on_playa_stopped;
-        } else if ($onPlayaChanged && !$offPlayaChanged && $onPlaya == $offPlaya) {
+        } elseif ($onPlayaChanged && !$offPlayaChanged && $onPlaya == $offPlaya) {
             $person->sms_on_playa_verified = $person->sms_off_playa_verified;
             $person->sms_on_playa_stopped = $person->sms_off_playa_stopped;
         } else {
@@ -87,6 +93,7 @@ class SmsController extends ApiController
 
         $onPlayaStatus = 'none';
 
+        // Check to see either number is a text capable device.
         if ($onPlayaChanged && $onPlaya != '' && !$person->sms_on_playa_verified) {
             if (SMSService::isSMSCapable($onPlaya) == false) {
                 throw new \InvalidArgumentException("Sorry, $onPlaya does not appear to be a cellphone.");
@@ -177,7 +184,7 @@ class SmsController extends ApiController
         if ($person->sms_off_playa == $person->sms_on_playa) {
             $person->sms_on_playa_verified = true;
             $person->sms_off_playa_verified = true;
-        } else if ($type == 'off-playa') {
+        } elseif ($type == 'off-playa') {
             $person->sms_off_playa_verified = true;
         } else {
             $person->sms_on_playa_verified = true;
@@ -195,47 +202,182 @@ class SmsController extends ApiController
      * Send a new verification code.
      */
 
-     public function sendNewCode()
-     {
-         $params = request()->validate([
+    public function sendNewCode()
+    {
+        $params = request()->validate([
              'person_id' => 'required|integer',
              'type'      => 'required|string',
          ]);
 
-         $person = $this->findPerson($params['person_id']);
+        $person = $this->findPerson($params['person_id']);
 
-         $this->allowedToSMS($person);
+        $this->allowedToSMS($person);
 
-         if ($params['type'] == 'off-playa') {
-             $phone = $person->sms_off_playa;
-             $verified = $person->sms_off_playa_verified;
-             $column = 'off_playa';
-         } else {
-             $phone = $person->sms_on_playa;
-             $verified = $person->sms_on_playa_verified;
-             $column = 'on_playa';
-         }
+        if ($params['type'] == 'off-playa') {
+            $phone = $person->sms_off_playa;
+            $verified = $person->sms_off_playa_verified;
+            $column = 'off_playa';
+        } else {
+            $phone = $person->sms_on_playa;
+            $verified = $person->sms_on_playa_verified;
+            $column = 'on_playa';
+        }
 
-         // Punt if no phone is there
-         if (empty($phone)) {
-             return response()->json(['status' => 'no-number']);
-         }
+        // Punt if no phone is there
+        if (empty($phone)) {
+            return response()->json(['status' => 'no-number']);
+        }
 
-         // Already verified?
-         if ($verified) {
-             return response()->json(['status' => 'already-verified']);
-         }
+        // Already verified?
+        if ($verified) {
+            return response()->json(['status' => 'already-verified']);
+        }
 
-         if ($this->sendVerificationCode($person, $column)) {
-             $status = 'sent';
-         } else {
-             $status = 'sent-fail';
-         }
+        if ($this->sendVerificationCode($person, $column)) {
+            $status = 'sent';
+        } else {
+            $status = 'sent-fail';
+        }
 
-         $person->saveWithoutValidation();
+        $person->saveWithoutValidation();
 
-         return response()->json([ 'status' => $status ]);
-     }
+        return response()->json([ 'status' => $status ]);
+    }
+
+    /*
+     * Process an incoming message
+     */
+
+    public function inbound()
+    {
+        try {
+            $incoming = SMSService::processIncoming(request());
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'sms-inbound-exception');
+            return response()->json([ 'status' => 'error' ], 500);
+        }
+
+        // Try to find who the number belongs to
+        $number = $incoming->phone;
+        $message = $incoming->message;
+
+        if (empty($number)) {
+            ErrorLog::record('sms-inbound-exception', [ 'type' => 'inbound-malformed' ]);
+            return response('Missing phone number?', 422);
+        }
+
+        $person = Person::where('sms_on_playa', $number)->orWhere('sms_off_playa', $number)->first();
+        if (!$person) {
+            // Who are you?
+            $reply = "Hello from the Ranger Clubhouse. Sorry, your phone number cannot be found. Contact rangers@burningman.org for help.";
+            BroadcastMessage::record(null, Broadcast::STATUS_UNKNOWN_PHONE, null, 'sms', $number, 'inbound', $message);
+            return SMSService::replyResponse($reply);
+        }
+
+        $personId = $person->id;
+        $onPlaya = ($person->sms_on_playa == $number);
+        $both = ($person->sms_on_playa == $person->sms_off_playa);
+
+
+        switch (strtolower(trim($message))) {
+        // The industry recongized stop-talking-to-me-damn-you commands.
+        case 'stop':
+        case 'quit':
+        case 'cancel':
+        case 'end':
+        case 'arret':      // Vive La France!
+        case 'unsubscribe':
+        case 'unsub':
+            $status = Broadcast::STATUS_STOP;
+
+            // Flag the sms numbers as stopped
+            self::updateStoppedNumbers($person, true, $both ? 2 : $onPlaya);
+
+            // Some services may respond automatically to a STOP and not
+            // allow a response from the application
+            if (SMSService::NO_STOP_REPLIES) {
+                $reply = '';
+            } else {
+                $reply = 'You will no longer receive alerts. Reply START to resubscribe.';
+            }
+            break;
+
+        // Restart the sms numbers
+        case 'start':
+        case 'unstop':
+        case 'sub':
+        case 'subscribe':
+        case 'yes':
+            $status = Broadcast::STATUS_START;
+            self::updateStoppedNumbers($person, false, $both ? 2 : $onPlaya);
+            $reply = 'You have been re-subscribed to Clubhouse alerts.';
+            break;
+
+        // Some services may not pass this command through (*cough* Twilio *cough*)
+        case 'help':
+            $status = Broadcast::STATUS_HELP;
+            $reply = 'Commands available: STOP, START, HELP. Contact rangers@burningman.org for more help.';
+            break;
+
+        // Status, only ADMIN accounts may use this.
+        case 'stats':
+            $isAdmin = $person->hasRole(Role::ADMIN);
+            if ($isAdmin) {
+                $status = Broadcast::STATUS_STATS;
+                $rows = Broadcast::whereRaw("created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)")->get();
+                $broadcastCount = $rows->count();
+                $smsFails = 0;
+                $emailFails = 0;
+                $totalRecipients = 0;
+                foreach ($rows as $row) {
+                    $totalRecipients += $row->recipient_count;
+                    $smsFails += $row->sms_failed;
+                    $emailFails += $row->email_failed;
+                }
+
+                if ($broadcastCount == 0) {
+                    $reply = "All quiet. No broadcasts sent in the last 24 hours.";
+                } else {
+                    $lastRow = $rows->last();
+                    $lastDate = $lastRow->created_at;
+                    $reply = "Broadcasts $broadcastCount Recipients $totalRecipients SMS fails $smsFails Email fails $emailFails Last broadcast @ $lastDate";
+                }
+
+                $inboundCount = BroadcastMessage::where('direction', 'inbound')->whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)')->count();
+
+                $reply .= " Inbound msgs $inboundCount";
+            } else {
+                $reply = 'Sorry, you are not permitted to use this command.';
+            }
+            break;
+
+        // Show the next shift for the person
+        case 'next':
+            $nextShift = Schedule::findNextShift($personId);
+            if ($nextShift) {
+                $formatted = Carbon::parse($nextShift->begins)->format('l M d Y @ H:i');
+                $reply = "Next shift is {$nextShift->title} - {$nextShift->description} {$formatted}";
+            } else {
+                $reply = "No upcoming shifts were found.";
+            }
+            $status = Broadcast::STATUS_NEXT;
+            break;
+
+        default:
+            $status = Broadcast::STATUS_UNKNOWN_COMMAND;
+            $reply = "The command is not understood. Contact rangers@burningman.org for help.";
+            break;
+        }
+
+        // Record the message
+        BroadcastMessage::record(null, $status, $personId, 'sms', $number, 'inbound', $message);
+        // .. and record the reply
+        if ($reply != '') {
+            BroadcastMessage::record(null, Broadcast::STATUS_REPLY, $personId, 'sms', $number, 'outbound', $reply);
+            return SMSService::replyResponse(RBS::SMS_PREFIX.$reply);
+        }
+        return SMSService::replyResponse('');
+    }
 
     /*
      * Build an API response for both numbers, their verification & stopped statuses
@@ -293,7 +435,7 @@ class SmsController extends ApiController
             // Only area code & number given, add the USA/Canadian +1 country code.
             if ($len == 10) {
                 $phone = '+1'.$phone;
-            } else if (substr($phone, 0, 1) == '1' && $len == 11) {
+            } elseif (substr($phone, 0, 1) == '1' && $len == 11) {
                 // Assume USA or Canadian number, add the +
                 $phone = '+'.$phone;
             }
@@ -318,7 +460,7 @@ class SmsController extends ApiController
         })->exists();
 
         if ($exists) {
-            throw new \InvalidArgumentException("Number is used by another account");
+            throw new \InvalidArgumentException("Phone number is used by another account");
         }
 
         return $phone;
@@ -340,7 +482,11 @@ class SmsController extends ApiController
         try {
             SMSService::broadcast([ $phone ], $message);
         } catch (SMSException $e) {
-            $this->log('sms-fail', "SMS verification code", [ 'exception' => $e, 'phone' => $phone ], $person->id);
+            ErrorLog::recordException($e, 'sms-exception', [
+                    'type'   => 'sms-verify',
+                    'person_id' => $person->id,
+                    'phone'  => $phone
+                ]);
             return false;
         }
 
@@ -350,7 +496,7 @@ class SmsController extends ApiController
             $person['sms_'.$column.'_code'] = $code;
         }
 
-        BroadcastMessage::log(null, Broadcast::STATUS_VERIFY, $person->id, 'sms', $phone, 'outbound', $message);
+        BroadcastMessage::record(null, Broadcast::STATUS_VERIFY, $person->id, 'sms', $phone, 'outbound', $message);
 
         return true;
     }
@@ -364,7 +510,7 @@ class SmsController extends ApiController
     {
         $code = '';
 
-        for($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 4; $i++) {
             $code .= mt_rand(0, 9);
         }
 
@@ -382,4 +528,29 @@ class SmsController extends ApiController
         }
     }
 
+    /*
+     * Update the STOP request for a person
+     *
+     * @param Person $person to update
+     * @param bool $stop flag to set
+     * @param int $which number to update 0: pre-event, 1: on playa, 2: both
+     */
+
+    private static function updateStoppedNumbers($person, $stop, $which)
+    {
+        switch ($which) {
+        case 0:
+            $person->sms_off_playa_stopped = $stop;
+            break;
+        case 1:
+            $person->sms_on_playa_stopped = $stop;
+            break;
+        default:
+            $person->sms_on_playa_stopped = $stop;
+            $person->sms_off_playa_stopped = $stop;
+            break;
+        }
+
+        $person->saveWithoutValidation();
+    }
 }

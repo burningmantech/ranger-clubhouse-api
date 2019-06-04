@@ -13,12 +13,13 @@ use App\Helpers\SqlHelper;
 
 use App\Models\LambasePhoto;
 use App\Models\Person;
+use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
+use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-use App\Models\PersonEventInfo;
 use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
@@ -53,7 +54,7 @@ class PersonController extends ApiController
         $people = $results['people'];
         $meta = [ 'limit' => $results['limit'], 'total' => $results['total'] ];
 
-        if (@$params['basic']) {
+        if ($params['basic'] ?? false) {
             if (!$this->userHasRole([ Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER ])) {
                 throw new \InvalidArgumentException("Not authorized for basic search.");
             }
@@ -78,7 +79,7 @@ class PersonController extends ApiController
                     if (stripos($query, '@') !== false) {
                         if ($person->email == $query) {
                             $row['email_match'] = 'full';
-                        } else if (stripos($person->email,$query) !== false) {
+                        } elseif (stripos($person->email, $query) !== false) {
                             $row['email_match'] = 'partial';
                         }
                     }
@@ -127,12 +128,14 @@ class PersonController extends ApiController
     {
         $this->authorize('update', $person);
 
-        $params = request()->validate([
+        $params = request()->validate(
+            [
             'person.email'  => 'sometimes|email|unique:person,email,'.$person->id.',id'
         ],
         [
             'person.email.unique'   => 'The email address is already used by another account'
-        ]);
+        ]
+        );
 
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
@@ -248,13 +251,15 @@ class PersonController extends ApiController
         );
 
         $this->log(
-            'person-delete', 'Person delete',
+            'person-delete',
+            'Person delete',
             [
                     'callsign' => $person->callsign,
                     'status' => $person->status,
                     'first_name' => $person->first_name,
                     'last_name' => $person->last_name,
-            ], $person->id
+            ],
+            $person->id
         );
 
         return $this->restDeleteSuccess();
@@ -322,85 +327,35 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
-        $source = setting('PhotoSource');
-        if ($source == 'Lambase') {
-            $storeLocal = setting('PhotoStoreLocally') == true;
+        $params = request()->validate([
+            'sync' => 'sometimes|boolean'
+        ]);
 
-            $lambase = new LambasePhoto($person);
-            $status = $lambase->getStatus();
-
-            $errorMessage = null;
-            $imageUrl = null;
-
-            if (!$status['error']) {
-                $imageStatus = LambasePhoto::statusToCode($status['status'], $status['data']);
-
-                if ($storeLocal) {
-                    if ($status['data']) {
-                        // should the photo be downloaded?
-                        if ($lambase->downloadNeeded($status['image_hash'])) {
-                            if (!$lambase->downloadImage($status['image'])) {
-                                $imageStatus = 'error';
-                                $imageUrl = null;
-                                $errorMessage = 'Failed to download image';
-                            } else {
-                                $imageUrl = Photo::imageUrlForPerson($person->id);
-                            }
-                        } else {
-                            $imageUrl = Photo::imageUrlForPerson($person->id);
-                        }
-                    } else {
-                        // Missing file, delete local copy
-                        $lambase->deleteLocal();
-                    }
-                }
-            } else {
-                // Something went horribly wrong.
-                $imageStatus = 'error';
-                $errorMessage = $status['message'];
-            }
-
-            if ($imageStatus != 'error' && $imageStatus != 'missing' && $imageUrl == null) {
-                $imageUrl = $lambase->getImageUrl($status['image']);
-            }
-
-            if (setting('PhotoUploadEnable')) {
-                $uploadUrl = $lambase->getUploadUrl();
-            } else {
-                $uploadUrl = null;
-            }
-
-            $results = [
-               'photo_url'    => $imageUrl,
-               'photo_status' => $imageStatus,
-               'upload_url'   => $uploadUrl,
-               'source'       => 'lambase',
-               'message'      => $errorMessage,
-            ];
-        } else if ($source == 'test') {
-            $results = [
-                'source'       => 'local',
-                'photo_status' => 'approved',
-                'photo_url'    => 'images/test-mugshot.jpg',
-                'upload_url'   => null,
-            ];
-        } else {
-            // Local photo source
-            $imageUrl = Photo::imageUrlForPerson($person->id);
-            $results = [
-                'source'       => 'local',
-                'photo_status' => 'approved',
-                'photo_url'    => $imageUrl,
-                'upload_url'   => null,
-            ];
-        }
-
-        return response()->json([ 'photo' => $results]);
+        return response()->json([ 'photo' => Photo::retrieveInfo($person, $params['sync'] ?? false)]);
     }
 
-     /*
-      * Retrieve the positions held
-      */
+    /*
+     * Clear the cached photo info
+     *
+     * Used by the Upload photo button to let the Clubhouse know the user is heading
+     * off to Lambase, and the cache info should be cleared to pick up the Submitted status.
+     */
+
+    public function photoClear(Person $person)
+    {
+        $this->authorize('update', $person);
+
+        $pm = PersonPhoto::find($person->id);
+        if ($pm) {
+            $pm->delete();
+        }
+
+        return $this->success();
+    }
+
+    /*
+     * Retrieve the positions held
+     */
 
     public function positions(Request $request, Person $person)
     {
@@ -419,9 +374,9 @@ class PersonController extends ApiController
 
         return response()->json([ 'positions' =>  $positions]);
     }
-      /*
-       * Update the positions held
-       */
+    /*
+     * Update the positions held
+     */
 
     public function updatePositions(Request $request, Person $person)
     {
@@ -532,9 +487,9 @@ class PersonController extends ApiController
         return response()->json([ 'roles' => PersonRole::findRolesForPerson($personId) ]);
     }
 
-     /*
-      * Return the count of  unread messages
-      */
+    /*
+     * Return the count of  unread messages
+     */
 
     public function unreadMessageCount(Person $person)
     {
@@ -590,7 +545,7 @@ class PersonController extends ApiController
 
         $this->authorize('view', $person);
 
-        return response()->json( [
+        return response()->json([
             'credits' => Timesheet::earnedCreditsForYear($person->id, $data['year'])
         ]);
     }
@@ -613,7 +568,7 @@ class PersonController extends ApiController
     {
         $this->authorize('mentors', $person);
 
-        return response()->json([ 'mentors' => PersonMentor::findMentorsForPerson($person->id) ]);
+        return response()->json([ 'mentors' => PersonMentor::retrieveMentorHistory($person->id) ]);
     }
 
     /**
@@ -622,7 +577,8 @@ class PersonController extends ApiController
      * Note: method does not require authorization/login. see routes/api.php
      */
 
-    public function register() {
+    public function register()
+    {
         $params = request()->validate([
             'intent'            => 'required|string',
             'person.email'      => 'required|email',
@@ -635,6 +591,7 @@ class PersonController extends ApiController
             'person.apt'        => 'sometimes|string',
             'person.city'       => 'required|string',
             'person.state'      => 'required|string',
+            'person.zip'        => 'required|string',
             'person.country'    => 'required|string',
             'person.status'     => 'required|string',
             'person.home_phone' => 'sometimes|string',
@@ -700,13 +657,21 @@ class PersonController extends ApiController
     {
         $this->authorize('alphaShirts', [ Person::class ]);
 
-        $rows = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'email',
-                'longsleeveshirt_size_style', 'teeshirt_size_style')
+        $rows = Person::select(
+            'id',
+            'callsign',
+            'status',
+            'first_name',
+            'last_name',
+            'email',
+                'longsleeveshirt_size_style',
+            'teeshirt_size_style'
+        )
                 ->whereIn('status', [ 'alpha', 'prospective' ])
                 ->where('user_authorized', true)
                 ->orderBy('callsign')
                 ->get();
 
         return response()->json([ 'alphas' => $rows ]);
-     }
+    }
 }

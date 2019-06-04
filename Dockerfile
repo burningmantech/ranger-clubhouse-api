@@ -36,11 +36,8 @@ COPY ./bootstrap/     ./bootstrap/
 COPY ./app/           ./app/
 COPY ./artisan        ./
 COPY ./composer.*     ./
-COPY ./package.json   ./
 COPY ./phpunit.xml    ./
 COPY ./server.php     ./
-COPY ./webpack.mix.js ./
-COPY ./yarn.lock      ./
 COPY ./.env.testing    ./
 
 

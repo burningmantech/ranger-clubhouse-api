@@ -37,6 +37,10 @@ Route::group([
 
     Route::post('error-log/record', 'ErrorLogController@record');
     Route::post('action-log/record', 'ActionLogController@record');
+
+    Route::match([ 'GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
+
+    Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
 });
 
 
@@ -51,7 +55,6 @@ Route::group([
     Route::post('auth/logout', 'AuthController@logout');
     Route::post('auth/refresh', 'AuthController@refresh');
 
-    Route::resource('alert', 'AlertController');
 
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
@@ -61,6 +64,8 @@ Route::group([
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
     Route::resource('action-log', 'ActionLogController', [ 'only' => 'index' ]);
+
+    Route::resource('alert', 'AlertController');
 
     Route::post('asset/checkout', 'AssetController@checkout');
     Route::get('asset/{asset}/history', 'AssetController@history');
@@ -79,6 +84,7 @@ Route::group([
     Route::get('bmid/sanity-check', 'BmidController@sanityCheck');
     Route::resource('bmid', 'BmidController');
 
+    Route::get('broadcast', 'BroadcastController@index');
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
     Route::post('bulk-upload', 'BulkUploadController@update');
@@ -106,7 +112,15 @@ Route::group([
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
     Route::resource('messages', 'PersonMessageController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
+    Route::get('mentor/alphas', 'MentorController@alphas');
+    Route::get('mentor/alpha-schedule', 'MentorController@alphaSchedule');
     Route::get('mentor/mentees', 'MentorController@mentees');
+    Route::get('mentor/mentors', 'MentorController@mentors');
+    Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
+    Route::get('mentor/potentials', 'MentorController@potentials');
+    Route::post('mentor/potentials', 'MentorController@updatePotentials');
+    Route::post('mentor/convert', 'MentorController@convert');
+    Route::get('mentor/verdicts', 'MentorController@verdicts');
 
     Route::resource('motd', 'MotdController');
 
@@ -126,6 +140,7 @@ Route::group([
     Route::get('person/{person}/positions', 'PersonController@positions');
     Route::post('person/{person}/positions', 'PersonController@updatePositions');
     Route::get('person/{person}/photo', 'PersonController@photo');
+    Route::post('person/{person}/photo-clear', 'PersonController@photoClear');
     Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
@@ -140,6 +155,16 @@ Route::group([
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position', 'PositionController');
 
+    Route::get('rbs/config', 'RbsController@config');
+    Route::get('rbs/details', 'RbsController@details');
+    Route::get('rbs/receivers', 'RbsController@receivers');
+    Route::get('rbs/recipients', 'RbsController@recipients');
+    Route::get('rbs/unknown-phones', 'RbsController@unknownPhones');
+    Route::get('rbs/stats', 'RbsController@stats');
+    Route::get('rbs/unverified-stopped', 'RbsController@unverifiedStopped');
+    Route::post('rbs/retry', 'RbsController@retry');
+    Route::post('rbs/transmit', 'RbsController@transmit');
+
     Route::resource('role', 'RoleController');
 
     Route::get('salesforce/config', 'SalesforceController@config');
@@ -149,6 +174,7 @@ Route::group([
 
     Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
     Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
+    Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
     Route::get('slot/years', 'SlotController@years');
     Route::get('slot/{slot}/people', 'SlotController@people');
     Route::post('slot/copy', 'SlotController@copy');

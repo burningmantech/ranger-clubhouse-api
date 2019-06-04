@@ -92,6 +92,15 @@ class Slot extends ApiModel
         return self::findBase($slotId)->firstOrFail();
     }
 
+    public static function findWithSignupsForYear($year)
+    {
+        return self::whereYear('begins', $year)
+                ->where('signed_up', '>', 0)
+                ->with('position:id,title')
+                ->orderBy('begins')
+                ->get();
+    }
+
     public static function findSignUps($slotId) {
         return DB::table('person_slot')
             ->select('person.id', 'person.callsign')
@@ -163,6 +172,8 @@ class Slot extends ApiModel
 
     public static function retrieveRangersScheduled(Carbon $shiftStart, Carbon $shiftEnd, $type)
     {
+        $year = $shiftStart->year;
+
         $sql = DB::table('slot')
         ->select(
             'slot.id AS slot_id',
@@ -230,6 +241,7 @@ class Slot extends ApiModel
             $positions = $peoplePositions[$person->person_id] ?? null;
 
             $positionId = $person->position_id;
+
             $person->is_greendot_shift = ($positionId == Position::DIRT_GREEN_DOT
                                 || $positionId == Position::GREEN_DOT_MENTOR
                                 || $positionId == Position::GREEN_DOT_MENTEE);
@@ -238,16 +250,32 @@ class Slot extends ApiModel
             $person->slot_ends_day_after = (new Carbon($person->slot_ends))->day != $shiftStart->day;
 
             if ($positions) {
-                $person->positions = $positions->pluck('short_title')->toArray();
                 $person->is_troubleshooter = $positions->contains('position_id', Position::TROUBLESHOOTER);
                 $person->is_rsl = $positions->contains('position_id', Position::RSC_SHIFT_LEAD);
                 $person->is_ood = $positions->contains('position_id', Position::OOD);
-                $person->is_greendot = $positions->contains(function ($row) {
+
+                // Determine if the person is a GD AND if they have been trained this year.
+                $haveGDPosition = $positions->contains(function ($row) {
                     $pid = $row->position_id;
                     return ($pid == Position::DIRT_GREEN_DOT
                         || $pid == Position::GREEN_DOT_MENTOR
                         || $pid == Position::GREEN_DOT_MENTEE);
                 });
+
+                if ($haveGDPosition) {
+                    $person->is_greendot = TraineeStatus::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
+                    if (!$person->is_greendot) {
+                        // Not trained - remove the GD positions
+                        $positions = $positions->filter(function ($row) {
+                            $pid = $row->position_id;
+                            return !($pid == Position::DIRT_GREEN_DOT
+                                || $pid == Position::GREEN_DOT_MENTOR
+                                || $pid == Position::GREEN_DOT_MENTEE);
+                        });
+                    }
+                }
+
+                $person->positions = $positions->pluck('short_title')->toArray();
             }
         }
 

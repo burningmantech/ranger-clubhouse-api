@@ -8,12 +8,47 @@ namespace App\Models;
 
 class LambasePhoto
 {
-
     public $person;
 
     public function __construct($person)
     {
         $this->person = $person;
+    }
+
+    public static function retrieveAllStatuses()
+    {
+        $contents = self::fetchUrl(setting('LambaseReportUrl') . "?method=photostatus_rpt", 60);
+        /*
+         * The above URL doesn't really return proper JSON so we
+         * do some unspeakable things to it.
+         */
+
+        // strip out the quotes
+        $contents = substr($contents, 1);
+        $contents = substr($contents, 0, strlen($contents) - 1);
+        // remove the backslashes because the quotes above
+        $contents = str_replace('\\', '', $contents);
+        // and split the records. (seriously?!?)
+        $records = explode(";", $contents);
+
+        $rows = [];
+        $errors = [];
+        foreach ($records as $data) {
+            $row = json_decode($data);
+            if ($row == null) {
+                $errors[] = (object) [
+                    'error'     => 'invalid json',
+                    'data'      => $data,
+                ];
+            } else {
+                $rows[] = (object) [
+                     'person_id'    => $row->wsid,
+                     'status'       => self::statusToCode($row->status, true),
+                     'date'         => $row->date,
+                ];
+            }
+        }
+        return [ $rows, $errors ];
     }
 
     /*
@@ -99,16 +134,17 @@ class LambasePhoto
     public function buildStatusUrl()
     {
         $person = $this->person;
-        $wsid = urlencode($person->id);
-        $wshash = urlencode(md5("fuckoff$wsid"));
 
-        $barcode = urlencode($person->barcode);
-        $mail = urlencode($person->email);
-        $handle = urlencode($person->callsign);
+        $query = http_build_query([
+            'method' => 'photostatus',
+            'wsid'   => $person->id,
+            'wshash' => md5("fuckoff".$person->id),
+            'mail'   => $person->email,
+            'handle' => $person->callsign,
+            'barcode' => ''
+        ]);
 
-        $url = setting('LambaseStatusUrl') .
-         "?method=photostatus&wsid=$wsid&wshash=$wshash&barcode=$barcode&mail=$mail&handle=$handle";
-        return $url;
+        return setting('LambaseStatusUrl')."?$query";
     }
 
     /*
@@ -171,7 +207,12 @@ class LambasePhoto
 
     public function getImageUrl($lambaseImage)
     {
-        return setting('LambaseImageUrl')."/".urlencode($this->person->id)."/".$lambaseImage;
+        return setting('LambaseImageUrl')."/".$this->getPathname($lambaseImage);
+    }
+
+    public function getPathname($lambaseImage)
+    {
+        return $this->person->id."/".$lambaseImage;
     }
 
     /*
@@ -262,7 +303,7 @@ class LambasePhoto
         $status = intval($status);
         if ($status < 0) {
             return 'rejected';
-        } else if ($status == 0) {
+        } elseif ($status == 0) {
             return 'submitted';
         } else {
             return 'approved';
@@ -273,14 +314,14 @@ class LambasePhoto
     {
         $person = $this->person;
 
-        $userid = urlencode($person->id);
-        $barcode = urlencode($person->barcode);
-        $handle = urlencode($person->callsign);
-        $mail = urlencode($person->email);
-        $hash = urlencode(md5("fuckoff$userid"));
-        $url = setting('LambaseJumpinUrl') . "?user=$userid&handle=$handle&mail=$mail&barcode=$barcode&hash=$hash";
-
-        return $url;
+        $query = http_build_query([
+            'user'   => $person->id,
+            'handle' => $person->callsign,
+            'mail'   => $person->email,
+            'hash'   => md5("fuckoff".$person->id),
+            'barcode' => '',
+        ]);
+        return setting('LambaseJumpinUrl') . "?$query";
     }
 
     /*
