@@ -279,4 +279,153 @@ class SlotControllerTest extends TestCase
             ]
         ]);
     }
+
+    /*
+     * Verify HQ Check In/Out Forecast Report
+     */
+
+    public function testHQForestcastReport()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $year = $this->year;
+
+        for ($i = 0; $i < 3; $i++) {
+            $hourStart = $i*2;
+            $hourEnd = $hourStart + 1;
+
+            $begins = date("$year-08-25 0$hourStart:00:00");
+            $ends = date("$year-08-25 0$hourEnd:45:00");
+
+            // No workers on the first day
+            if ($i == 0) {
+                $shift = factory(Slot::class)->create(
+                    [
+                        'begins'      => $begins,
+                        'ends'        => $ends,
+                        'position_id' => Position::HQ_WINDOW,
+                        'description' => "Worker #$i",
+                        'signed_up'   => 1,
+                        'max'         => 4,
+                        'min'         => 0,
+                    ]
+                );
+            }
+
+
+            // No short on the second day
+            if ($i != 1) {
+                $shift = factory(Slot::class)->create(
+                    [
+                        'begins'      => $begins,
+                        'ends'        => $ends,
+                        'position_id' => Position::HQ_SHORT,
+                        'description' => "HQ Short #$i",
+                        'signed_up'   => 1,
+                        'max'         => 1,
+                        'min'         => 1,
+                    ]
+                );
+            }
+
+            // No lead on the third day
+            if ($i != 2) {
+                $shift = factory(Slot::class)->create(
+                    [
+                        'begins'      => $begins,
+                        'ends'        => $ends,
+                        'position_id' => Position::HQ_LEAD,
+                        'description' => "HQ Lead #$i",
+                        'signed_up'   => 1,
+                        'max'         => 1,
+                        'min'         => 1,
+                    ]
+                );
+            }
+
+            // Add some sign ups
+            $people = ($i + 1) * 4;
+
+            $dirt = factory(Slot::class)->create(
+                [
+                    'begins'      => $begins,
+                    'ends'        => $ends,
+                    'position_id' => Position::DIRT,
+                    'description' => "Dirt #$i",
+                    'signed_up'   => $people,
+                    'max'         => 10,
+                    'min'         => 1
+                ]
+            );
+
+            $visits[] = [
+                'period'     => $begins,
+                'checkin'    => $people,
+                'windows'   => ($i ? 1 : 0),
+                'shorts'    => ($i != 1 ? 1 : 0),
+                'leads'     => ($i != 2 ? 1 : 0),
+            ];
+        }
+
+        $response = $this->json('GET', 'slot/hq-forecast-report', [ 'year' => $year, 'interval' => 60 ]);
+
+        $response->assertJson([
+            'visits' => [
+                [
+                    'checkin' => 4,
+                    'checkout' => 0,
+                    'windows' => 1,
+                    'runners' => 0,
+                    'shorts' => 1,
+                    'leads' => 1,
+                    'period' => "$year-08-25 00:00:00"
+                ],
+                [
+                    'checkin' => 0,
+                    'checkout' => 4,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 0,
+                    'period' => "$year-08-25 01:00:00"
+                ],
+                [
+                    'checkin' => 8,
+                    'checkout' => 0,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 1,
+                    'period' => "$year-08-25 02:00:00"
+                ],
+                [
+                    'checkin' => 0,
+                    'checkout' => 8,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 0,
+                    'period' => "$year-08-25 03:00:00"
+                ],
+                [
+                    'checkin' => 12,
+                    'checkout' => 0,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 1,
+                    'leads' => 0,
+                    'period' => "$year-08-25 04:00:00"
+                ],
+                [
+                    'checkin' => 0,
+                    'checkout' => 12,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 0,
+                    'period' => "$year-08-25 05:00:00"
+                ]
+            ]
+        ]);
+    }
 }

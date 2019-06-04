@@ -36,6 +36,8 @@ class AlertPersonController extends ApiController
             'alerts.*.use_sms'   => 'required|boolean'
         ]);
 
+        $alertChanges = [];
+
         foreach ($data['alerts'] as $pref) {
             $alert = Alert::find($pref['id']);
             if (!$alert) {
@@ -45,7 +47,26 @@ class AlertPersonController extends ApiController
             $alertPerson = AlertPerson::findOrCreateForPerson($person->id, $alert->id);
             $alertPerson->use_email = $pref['use_email'];
             $alertPerson->use_sms = $pref['use_sms'];
+
+            $changes = [];
+            if ($alertPerson->isDirty('use_email')) {
+                $changes['use_email'] = [ $alertPerson->getOriginal('use_email'), $alertPerson->use_email ];
+            }
+
+            if ($alertPerson->isDirty('use_sms')) {
+                $changes['use_sms'] = [ $alertPerson->getOriginal('use_sms'), $alertPerson->use_sms ];
+            }
+
             $alertPerson->save();
+
+            if (!empty($changes)) {
+                $changes['alert_id'] = $alert->id;
+                $alertChanges[] = $changes;
+            }
+        }
+
+        if (!empty($alertChanges)) {
+            $this->log('person-alerts-update', 'alerts update', [ 'alerts' => $alertChanges ], $person->id);
         }
 
         return $this->success();

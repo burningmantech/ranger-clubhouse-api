@@ -23,6 +23,8 @@ abstract class TestCase extends BaseTestCase
         // Faker triggers a memory allocation bug.
         gc_collect_cycles();
 
+        Setting::$cache = [];
+
         parent::setUp();
     }
 

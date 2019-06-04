@@ -60,7 +60,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     // Statuses consider 'live' or still active account allowed
     // to login, and do stuff.
-    // Used by App\Validator\StateForCountry
+    // Used by App\Validator\StateForCountry & BroadcastController
 
     const LIVE_STATUSES = [
         'active',
@@ -68,8 +68,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'inactive',
         'non ranger',
         'past prospective',
-        'prospective waitslist',
+        'prospective waitlist',
         'prospective',
+        'retired'
     ];
 
     /**
@@ -232,7 +233,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state'      => 'state_for_country:live_only',
         'country'    => 'required|string|max:25',
 
-        'home_phone' => 'required|string|max:25',
+        'home_phone' => 'sometimes|string|max:25',
         'alt_phone'  => 'sometimes|string|nullable|max:25',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
@@ -418,11 +419,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             $orderBy = "CASE";
             if (stripos($q, '@') !== false) {
-                $orderBy .= " WHEN email=".DB::getPdo()->quote($q)." THEN CONCAT('00', callsign)";
-                $orderBy .= " WHEN email like ".DB::getPdo()->quote($likeQuery)." THEN CONCAT('03', callsign)";
+                $orderBy .= " WHEN email=".SqlHelper::quote($q)." THEN CONCAT('00', callsign)";
+                $orderBy .= " WHEN email like ".SqlHelper::quote($likeQuery)." THEN CONCAT('03', callsign)";
             }
-            $orderBy .= " WHEN callsign_normalized=".DB::getPdo()->quote($normalized)." THEN CONCAT('01', callsign)";
-            $orderBy .= " WHEN callsign_soundex=".DB::getPdo()->quote($soundex)." THEN CONCAT('02', callsign)";
+            $orderBy .= " WHEN callsign_normalized=".SqlHelper::quote($normalized)." THEN CONCAT('01', callsign)";
+            $orderBy .= " WHEN callsign_soundex=".SqlHelper::quote($soundex)." THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
@@ -480,9 +481,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $normalized = self::normalizeCallsign($query);
         $soundex = soundex($normalized);
-        $quoted = DB::getPdo()->quote($normalized);
+        $quoted = SqlHelper::quote($normalized);
         $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
-        $quoted = DB::getPdo()->quote($soundex);
+        $quoted = SqlHelper::quote($soundex);
         $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
         $orderBy .= " ELSE callsign END";
 
@@ -549,7 +550,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->password = "$salt:$sha";
         $this->tpassword = '';
         $this->tpassword_expire = 1;
-        return $this->save();
+        return $this->saveWithoutValidation();
     }
 
     public function createResetPassword(): string
@@ -560,7 +561,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $this->tpassword = "$salt:$sha";
         $this->tpassword_expire = time() + self::RESET_PASSWORD_EXPIRE;
-        $this->save();
+        $this->saveWithoutValidation();
 
         return $resetPassword;
     }
@@ -775,7 +776,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $check = trim(strtolower($gender));
 
         // Female gender
-        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|fem)\b/', $check) || $check == 'f') {
+        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|femal|fem)\b/', $check) || $check == 'f') {
             return 'F';
         }
 

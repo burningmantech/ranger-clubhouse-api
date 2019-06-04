@@ -57,4 +57,12 @@ class SlotPolicy
     {
         return false;
     }
+
+    /**
+     * Determine if user can run various slot based reports
+     */
+    public function report(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
 }

@@ -186,13 +186,13 @@ class SalesforceController extends ApiController
                 }
                 $pca->message = "Creation error: ".implode(', ', $messages);
                 $pca->status = "failed";
-                ErrorLog::record(request(), 'salesforce-import-fail', [ 'person' => $person, 'validation-errors' => $person->getErrors() ]);
+                ErrorLog::record('salesforce-import-fail', [ 'person' => $person, 'validation-errors' => $person->getErrors() ]);
                 return false;
             }
         } catch (\Illuminate\Database\QueryException $e) {
             $pca->message = "SQL Error: ".$e->getMessage();
             $pca->status = "failed";
-            ErrorLog::record(request(), 'salesforce-import-fail', [ 'person' => $person, 'sql-exception' => $e->getMessage() ]);
+            ErrorLog::recordException($e, 'salesforce-import-fail', [ 'person' => $person ]);
             return false;
         }
 

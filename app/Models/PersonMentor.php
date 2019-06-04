@@ -148,26 +148,39 @@ class PersonMentor extends ApiModel
      * Find the mentors for a person
      */
 
-    public static function findMentorsForPerson($personId)
+    public static function retrieveMentorHistory($personId)
     {
-        $mentors =  PersonMentor::with([ 'mentor:id,callsign' ])
+        $history =  PersonMentor::with([ 'mentor:id,callsign' ])
                    ->where('person_id', $personId)
-                   ->orderBy('mentor_year')
-                   ->get();
+                   ->get()
+                   ->sortBy('mentor.callsign')
+                   ->groupBy('mentor_year');
 
-        return $mentors->map(function($row) {
-            return [
-                'status'    => $row->status,
-                'year'      => $row->mentor_year,
-                'person_id' => $row->mentor_id,
-                'callsign'  => $row->mentor->callsign,
-            ];
-        })->sortBy('callsign')->values();
+
+        $summary = [];
+        foreach ($history as $year => $mentors) {
+            $people = [];
+            foreach ($mentors as $mentor) {
+                $people[] = [
+                   'id'    => $mentor->mentor_id,
+                   'callsign' => $mentor->mentor->callsign,
+                   'person_mentor_id' => $mentor->id
+               ];
+            }
+
+            $summary[] = [
+               'year'    => $year,
+               'status' => $mentors[0]->status,
+               'mentors' => $people
+           ];
+        }
+
+        return $summary;
     }
 
-     /*
-      * Find all mentees for year
-      */
+    /*
+     * Find all mentees for year
+     */
 
     public static function findMenteesForYear($year)
     {
@@ -179,12 +192,22 @@ class PersonMentor extends ApiModel
         $people = [];
         foreach ($personGroups as $personId => $group) {
             $first = $group[0];
+            if ($first->person == null) {
+                $first->person = (object) [
+                    'callsign'   => "!Deleted #{$first->person_id}",
+                    'first_name' => 'n/a',
+                    'last_name'  => 'n/a',
+                    'status'     => 'deleted',
+                ];
+            }
+
             $mentors = $group->map(function ($row) {
                 return [
                     'id'       => $row->mentor->id,
                     'callsign' => $row->mentor->callsign,
                 ];
             })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+
 
             $people[] = [
                 'id'            => $first->person_id,
@@ -202,17 +225,5 @@ class PersonMentor extends ApiModel
         });
 
         return $people;
-    }
-
-    /*
-     * TODO FIX the naming. ARGH!
-     */
-
-    public function getStatusAttribute() {
-        return @$this->attributes['STATUS'];
-    }
-
-    public function setStatusAttribute($status) {
-        $this->attributes['STATUS'] = $status;
     }
 }

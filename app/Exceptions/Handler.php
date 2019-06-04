@@ -123,30 +123,8 @@ class Handler extends ExceptionHandler
         if (!app()->isLocal()) {
             // Fatal server error.. record what happened.
             try {
-                $log = new ErrorLog([
-                    'error_type'    => 'server-exception',
-                    'ip'            => $request->ip(),
-                    'user_agent'    => $request->userAgent(),
-                    'url'           => $request->fullUrl(),
-                    'data'          => [
-                        'exception' => [
-                            'class'   => class_basename($e),
-                            'message' => $e->getMessage(),
-                            'file'    => $e->getFile(),
-                            'line'    => $e->getLine(),
-                            'backtrace'  => $e->getTrace(),
-                        ],
-                        'method'     => $request->method(),
-                        'parameters' => $request->all(),
-                    ]
-                ]);
-
-                if (Auth::check()) {
-                    $log->person_id = Auth::user()->id;
-                }
-
-                $log->save();
-            } catch (\Exception $e) {
+                ErrorLog::recordException($e, 'server-exception');
+            } catch (\Exception $ignore) {
                 // ignore exception.
             }
         }
