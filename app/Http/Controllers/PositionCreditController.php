@@ -103,10 +103,10 @@ class PositionCreditController extends ApiController
         $deltaMinutes = $params['deltaMinutes'] ?? 0;
         if ($deltaDays != 0 || $deltaHours != 0 || $deltaMinutes != 0) {
             $delta = "$deltaDays day $deltaHours hour $deltaMinutes minute";
+        } else {
+            $delta = NULL;
         }
-        if (!empty($params['newPositionId'])) {
-            $position = $params['newPositionId'];
-        }
+        $position = $params['newPositionId'] ?? NULL;
         if (!$delta && !$position) {
             return $this->restError('Must specify new position or a day/time delta');
         }
