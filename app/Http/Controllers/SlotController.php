@@ -142,6 +142,76 @@ class SlotController extends ApiController
     }
 
     /**
+     * Copy slots in bulk.  This supports two main use cases:
+     * #1: Copy with a date delta, e.g. add 364 days (to align with Labor Day) to several positions in last year's schedule.
+     *     Set `deltaDays`, `deltaHours`, `deltaMinutes` as appropriate.
+     * #2: Create a schedule for a new position based on the schedule for another position.
+     *     Set `newPositionId` and optionally `attributes` to override specific properties,
+     *     e.g. set `attributes.max` to 1 for all new slots.
+     * In both cases, the source slot IDs must be set in the `ids` parameter.
+     * The slots will be created as inactive unless the `activate` parameter is true.
+     */
+    public function copy()
+    {
+        $this->authorize('store', Slot::class);
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'deltaDays' => 'sometimes|integer',
+            'deltaHours' => 'sometimes|integer',
+            'deltaMinutes' => 'sometimes|integer',
+            'newPositionId' => 'sometimes|exists:position,id',
+            'activate' => 'sometimes|boolean',
+            'attributes' => 'sometimes|array',
+        ]);
+        if (empty($params['ids'])) {
+            return $this->restError('Must specify credits to copy', 400);
+        }
+        $activate = $params['activate'] ?? false;
+        $attributes = $params['attributes'] ?? array();
+        $deltaDays = $params['deltaDays'] ?? 0;
+        $deltaHours = $params['deltaHours'] ?? 0;
+        $deltaMinutes = $params['deltaMinutes'] ?? 0;
+        if ($deltaDays != 0 || $deltaHours != 0 || $deltaMinutes != 0) {
+            $delta = "$deltaDays day $deltaHours hour $deltaMinutes minute";
+        } else {
+            $delta = NULL;
+        }
+        $position = $params['newPositionId'] ?? NULL;
+        if (!$delta && !$position) {
+            return $this->restError('Must specify new position or a day/time delta');
+        }
+        $sourceSlots = Slot::whereIn('id', $params['ids'])->get();
+        $results = array();
+        try {
+            DB::transaction(function () use ($sourceSlots, $delta, $position, $activate, $attributes, &$results) {
+                foreach ($sourceSlots as $source) {
+                    if ($source->training_id || $source->trainer_slot_id || $source->trainee_slot_id) {
+                        throw new \UnexpectedValueException(
+                            "Clubhouse server doesn't yet know how to bulk-copy training or mentor/mentee shift pairs:"
+                            . " ${$source->position()->title}: {$source->description}: {$source->begins}");
+                    }
+                    $target = $source->replicate();
+                    $target->fill($attributes);
+                    if ($delta) {
+                        $target->begins = $source->begins->modify($delta);
+                        $target->ends = $source->ends->modify($delta);
+                    }
+                    if (!empty($position)) {
+                        $target->position_id = $position;
+                    }
+                    $target->signed_up = 0;
+                    $target->active = $activate;
+                    $target->save();
+                    array_push($results, $target);
+                }
+            });
+        } catch (\UnexpectedValueException $e) {
+            return $this->restError($e->getMessage(), 400);
+        }
+        return $this->success($results, null, 'slot');
+    }
+
+    /**
      * Remove the specified resource from storage.
      *
      * @param  \App\Slot  $slot

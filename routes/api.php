@@ -177,6 +177,7 @@ Route::group([
     Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
     Route::get('slot/years', 'SlotController@years');
     Route::get('slot/{slot}/people', 'SlotController@people');
+    Route::post('slot/copy', 'SlotController@copy');
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
     Route::resource('slot', 'SlotController');
 
