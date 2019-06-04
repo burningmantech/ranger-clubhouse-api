@@ -81,7 +81,7 @@ class PositionCreditController extends ApiController
 
     /**
      * Copy position credits in bulk.  This supports two main use cases:
-     * #1: Copy with a date delta, e.g. add 366 days (to align with Labor Day) to last year's credits.
+     * #1: Copy with a date delta, e.g. add 364 days (to align with Labor Day) to last year's credits.
      *     Set deltaDays, deltaHours, deltaMinutes as appropriate.
      * #2: Create credit values for a new position based on another position.  Set newPositionId.
      */
@@ -93,7 +93,7 @@ class PositionCreditController extends ApiController
             'deltaDays' => 'sometimes|integer',
             'deltaHours' => 'sometimes|integer',
             'deltaMinutes' => 'sometimes|integer',
-            'newPositionId' => 'sometimes|exists:position',
+            'newPositionId' => 'sometimes|exists:position,id',
         ]);
         if (empty($params['ids'])) {
             return $this->restError('Must specify credits to copy', 400);
@@ -103,16 +103,16 @@ class PositionCreditController extends ApiController
         $deltaMinutes = $params['deltaMinutes'] ?? 0;
         if ($deltaDays != 0 || $deltaHours != 0 || $deltaMinutes != 0) {
             $delta = "$deltaDays day $deltaHours hour $deltaMinutes minute";
+        } else {
+            $delta = NULL;
         }
-        if (!empty($params['newPositionId'])) {
-            $position = $params['newPositionId'];
-        }
+        $position = $params['newPositionId'] ?? NULL;
         if (!$delta && !$position) {
             return $this->restError('Must specify new position or a day/time delta');
         }
         $sourceCredits = PositionCredit::whereIn('id', $params['ids'])->get();
         $results = array();
-        DB::transaction(function () use ($sourceCredits, $delta) {
+        DB::transaction(function () use ($sourceCredits, $delta, $position, &$results) {
             // TODO add a unique index on (position_id, start_time, end_time) so it's hard to double-copy
             foreach ($sourceCredits as $source) {
                 $target = $source->replicate();
@@ -124,7 +124,7 @@ class PositionCreditController extends ApiController
                     $target->position_id = $position;
                 }
                 $target->save();
-                $results[] = $target;
+                array_push($results, $target);
             }
         });
         return $this->success($results, null, 'position_credit');
