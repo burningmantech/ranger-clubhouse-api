@@ -519,6 +519,7 @@ class PersonController extends ApiController
             'years' => Timesheet::years($person->id),
             'all_years' => Timesheet::years($person->id, true),
             'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
+            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [ Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD ])
         ];
 
         /*
