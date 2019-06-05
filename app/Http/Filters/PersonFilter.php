@@ -106,12 +106,15 @@ class PersonFilter
         'behavioral_agreement',
     ];
 
+    const VEHICLE_ADMIN_FIELDS = [
+        'vehicle_insurance_paperwork',
+        'vehicle_blacklisted'
+    ];
+
     const EVENT_FIELDS = [
         'active_next_event',
         'asset_authorized',
         'on_site',
-        'vehicle_blacklisted',
-        'vehicle_insurance_paperwork',
     ];
 
     const BMID_FIELDS = [
@@ -150,7 +153,7 @@ class PersonFilter
         'message_updated_at'
     ];
 
-    const PERSONNEL_FIELD = [
+    const PERSONNEL_FIELDS = [
         'has_note_on_file',
     ];
 
@@ -171,16 +174,17 @@ class PersonFilter
         [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
-        [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
-        [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII,  Role::VC ] ],
-        [ self::AGREEMENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
+        [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
+        [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
+        [ self::AGREEMENT_FIELDS ],
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
         // Note: self is not allowed to see mentor notes
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
-        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
+        [ self::VEHICLE_ADMIN_FIELDS ],
+        [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS ]
     ];
 
@@ -196,13 +200,14 @@ class PersonFilter
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
         [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VC ]],
-        [ self::AGREEMENT_FIELDS, true, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
+        [ self::AGREEMENT_FIELDS, true, [ Role::ADMIN ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
-        [ self::PERSONNEL_FIELD, false, [ Role::ADMIN ]],
+        [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
+        [ self::VEHICLE_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
     ];
 

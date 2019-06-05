@@ -136,6 +136,22 @@ class Timesheet extends ApiModel
                 ->exists();
     }
 
+    /*
+     * Check to see if a person is signed into a position(s)
+     */
+
+    public static function isPersonSignIn($personId, $positionIds)
+    {
+        $sql = self::where('person_id', $personId)->whereNull('off_duty');
+        if (is_array($positionIds)) {
+            $sql->whereIn('position_id', $positionIds);
+        } else {
+            $sql->where('position_id', $positionIds);
+        }
+
+        return $sql->exists();
+    }
+
     public static function findOnDutyForPersonYear($personId, $year)
     {
         return self::where('person_id', $personId)
