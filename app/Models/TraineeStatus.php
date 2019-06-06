@@ -28,7 +28,6 @@ class TraineeStatus extends ApiModel
 
     public static function findForPersonYear($personId, $year)
     {
-
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
                 ->where('person_id', $personId)
                 ->whereYear('slot.begins', $year)
@@ -50,4 +49,7 @@ class TraineeStatus extends ApiModel
         return self::firstOrCreate([ 'person_id' => $personId, 'slot_id' => $sessionId]);
     }
 
+    public function setRankAttribute($value) {
+        $this->attributes['rank'] = empty($value) ? null : $value;
+    }
 }

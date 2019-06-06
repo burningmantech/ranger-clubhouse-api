@@ -443,6 +443,37 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
+     * Allow a trainer to add a person to past shift
+     */
+
+    public function testAllowSignupForPastShiftForTrainer()
+    {
+        $this->addPosition([ Position::TRAINING, Position::TRAINER ]);
+        $personId = $this->user->id;
+
+        $training = $this->trainingSlots[0];
+        $training->update([ 'begins' => date('2010-08-25 10:00:00')]);
+
+        $response = $this->json(
+            'POST',
+            "person/{$personId}/schedule",
+            [ 'slot_id' => $training->id ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success', 'started_forced' => true ]);
+
+        $this->assertDatabaseHas(
+            'person_slot',
+            [
+                'person_id' => $personId,
+                'slot_id'   => $training->id,
+            ]
+        );
+    }
+
+
+    /*
      * Force a full shift signup by admin user
      */
 
