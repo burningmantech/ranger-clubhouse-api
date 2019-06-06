@@ -25,7 +25,9 @@ class Slot extends ApiModel
         'trainer_slot_id',
         'url',
         'begins_time',
-        'ends_time'
+        'ends_time',
+        'has_started',
+        'has_ended'
     ];
 
     protected $appends = [
@@ -81,7 +83,12 @@ class Slot extends ApiModel
     }
 
     public static function findBase($slotId) {
-        return self::where('id', $slotId)->with(self::WITH_POSITION_TRAINER);
+        return self::select(
+                'slot.*',
+                DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
+                DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended')
+            )
+            ->where('id', $slotId)->with(self::WITH_POSITION_TRAINER);
     }
 
     public static function find($slotId) {

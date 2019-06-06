@@ -174,7 +174,8 @@ class SalesforceClubhouseInterface
             $q .= " WHERE Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger'";
             $q .= " AND VC_Approved_Radio_Call_Sign__c LIKE 'Testing%'";
         } elseif ($options != "showall") {
-            $q .= " WHERE VC_Status__c = 'Released to Upload' AND Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger'";
+            $q .= " WHERE VC_Status__c = 'Released to Upload' AND ";
+            $q .= "(Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger' OR Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger Redux')";
         }
 
         $r = $this->sf->soqlQuery($q);
