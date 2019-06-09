@@ -198,16 +198,6 @@ class Schedule extends ApiModel
                 throw new ScheduleException('no-slot');
             }
 
-            // Slot must be activated in order to allow signups
-            if (!$updateSlot->active) {
-                throw new ScheduleException('not-active');
-            }
-
-            // You must hold the position
-            if (!PersonPosition::havePosition($personId, $updateSlot->position_id)) {
-                throw new ScheduleException('no-position');
-            }
-
             // Cannot exceed sign up limit unless it is forced.
             if ($updateSlot->signed_up >= $max) {
                 if (!$force) {

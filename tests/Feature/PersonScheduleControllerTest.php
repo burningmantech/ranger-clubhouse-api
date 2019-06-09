@@ -389,6 +389,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $shift = $this->trainingSlots[0];
         $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
+        $this->addPosition(Position::TRAINING);
 
         $response = $this->json(
             'POST',
@@ -416,18 +417,17 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowSignupForStartedShiftIfAdmin()
     {
-        $person = factory(Person::class)->create();
-        $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
-        $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
+
+        $person = factory(Person::class)->create();
+        $this->addPosition(Position::DIRT, $person);
+        $shift = $this->dirtSlots[0];
+        $err = $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
 
         $response = $this->json(
             'POST',
             "person/{$person->id}/schedule",
-            [
-                'slot_id' => $shift->id,
-            ]
+            [ 'slot_id' => $shift->id, 'force' => 1 ]
         );
 
         $response->assertStatus(200);
@@ -443,7 +443,7 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
-     * Allow a trainer to add a person to past shift
+     * Allow a trainer to add a person to past training shift
      */
 
     public function testAllowSignupForPastShiftForTrainer()
@@ -457,7 +457,7 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json(
             'POST',
             "person/{$personId}/schedule",
-            [ 'slot_id' => $training->id ]
+            [ 'slot_id' => $training->id, 'force' => true ]
         );
 
         $response->assertStatus(200);
@@ -472,6 +472,38 @@ class PersonScheduleControllerTest extends TestCase
         );
     }
 
+    /*
+     * Force a full shift signup by admin user
+     */
+
+    public function testMayForceSignupForFullShiftIfAdmin()
+    {
+        $person = factory(Person::class)->create();
+        $this->addPosition(Position::TRAINING, $person);
+        $this->addRole(Role::ADMIN);
+
+        $shift = $this->trainingSlots[0];
+        $shift->update([ 'signed_up' => 1, 'max' => 1, ]);
+
+        $response = $this->json(
+            'POST',
+            "person/{$person->id}/schedule",
+            [
+                'slot_id' => $shift->id,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'full', 'may_force' => true ]);
+
+        $this->assertDatabaseMissing(
+            'person_slot',
+            [
+                'person_id' => $person->id,
+                'slot_id'   => $shift->id,
+            ]
+        );
+    }
 
     /*
      * Force a full shift signup by admin user
@@ -484,13 +516,14 @@ class PersonScheduleControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1 ]);
+        $shift->update([ 'signed_up' => 1, 'max' => 1, ]);
 
         $response = $this->json(
             'POST',
             "person/{$person->id}/schedule",
             [
                 'slot_id' => $shift->id,
+                'force' => 1,
             ]
         );
 

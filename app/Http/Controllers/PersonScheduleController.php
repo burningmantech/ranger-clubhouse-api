@@ -60,6 +60,7 @@ class PersonScheduleController extends ApiController
     {
         $params = request()->validate([
             'slot_id'  => 'required|integer',
+            'force'    => 'sometimes|boolean'
         ]);
 
         $this->authorize('create', [ Schedule::class, $person ]);
@@ -67,6 +68,25 @@ class PersonScheduleController extends ApiController
         $slotId = $params['slot_id'];
 
         $slot = Slot::findOrFail($slotId);
+
+        // Slot must be activated in order to allow signups
+        if (!$slot->active) {
+            return response()->json([
+                'status'    => 'not-active',
+                'signed_up' => $slot->signed_up,
+            ]);
+        }
+
+        // You must hold the position
+        if (!PersonPosition::havePosition($person->id, $slot->position_id)) {
+            return response()->json([
+                'status'        => 'no-position',
+                'signed_up'     => $slot->signed_up,
+                'position_title' => Position::retrieveTitle($slot->position_id)
+            ]);
+        }
+
+        $confirmForce = $params['force'] ?? false;
 
         /*
          * Enrollment in multiple training sessions is not allowed unless:
@@ -76,46 +96,25 @@ class PersonScheduleController extends ApiController
          * - The logged in user holds the Trainer, Mentor or VC role, or ART Trainer is the slot is a ART module
          */
 
-        $rolesCanForce = null;
         $trainerForced = false;
+
         $enrollments = null;
         $multipleEnrollmentForced = false;
-        $mentorForced = false;
         $hasStartedForced = false;
-        $canForce = false;
+
         $forced = false;
 
+        $mayForce = false;  // let the user know they may force the add or not
         $logData = [ 'slot_id' => $slotId ];
-        $isTrainer = false;
 
-        // Check for people who might be able force the add
-        if ($slot->isTraining()) {
-            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ];
-            if ($slot->isArt()) {
-                $rolesCanForce[] = Role::ART_TRAINER;
-            }
-            $trainers = Position::TRAINERS[$slot->position_id] ?? null;
-            if ($trainers && PersonPosition::havePosition($person->id, $trainers)) {
-                // Person is a trainer.. allowed to force sign up to trainings
-                $isTrainer = true;
-                $canForce = true;
-            }
-        } else if ($slot->position_id == Position::ALPHA) {
-            $rolesCanForce = [ Role::ADMIN, Role::MENTOR ];
-        } else {
-            $rolesCanForce = [ Role::ADMIN ];
-        }
-
-        if (!$canForce) {
-            $canForce = $rolesCanForce ? $this->userHasRole($rolesCanForce) : false;
-        }
+        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot);
 
         if ($slot->isTraining()
         && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
             if ($isTrainer) {
                 $trainerForced = true;
                 $canForce = true;
-            } else if (!$canForce) {
+            } elseif (!$canForce) {
                 $logData['training_multiple_enrollment'] = true;
                 $logData['enrolled_slot_ids'] = $enrollments->pluck('id');
                 // Not a trainer, nor has sufficent roles.. your jedi mind tricks will not work here.
@@ -133,7 +132,7 @@ class PersonScheduleController extends ApiController
                 ]);
             }
             $multipleEnrollmentForced = true;
-        } else if ($slot->position_id == Position::ALPHA
+        } elseif ($slot->position_id == Position::ALPHA
             && Schedule::haveMultipleEnrollments($person->id, Position::ALPHA, $slot->begins->year, $enrollments)) {
             // Alpha is enrolled multiple times.
             if (!$canForce) {
@@ -156,7 +155,7 @@ class PersonScheduleController extends ApiController
         }
 
         // Go try to add the person to the slot/session
-        $result = Schedule::addToSchedule($person->id, $slot, $canForce);
+        $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
 
         $status = $result['status'];
         if ($status == 'success') {
@@ -231,15 +230,24 @@ class PersonScheduleController extends ApiController
 
                 if ($trainerForced) {
                     $response['trainer_forced'] = true;
-                } else if ($multipleEnrollmentForced) {
+                } elseif ($multipleEnrollmentForced) {
                     $response['multiple_forced'] = true;
                 }
             }
 
             return response()->json($response);
+        } elseif (($status == 'has-started' || $status == 'full') && $canForce) {
+            // Let the user know they may force the add after confirmation.
+            $mayForce = true;
         }
 
-        return response()->json([ 'status' => $status, 'signed_up' => $result['signed_up'] ]);
+
+        $response = [ 'status' => $status, 'signed_up' => $result['signed_up'] ];
+        if ($mayForce) {
+            $response['may_force'] = true;
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -257,21 +265,29 @@ class PersonScheduleController extends ApiController
         $slot = Slot::findOrFail($slotId);
         $now = SqlHelper::now();
 
-        if ($now->gt($slot->begins) && !$this->userHasRole(Role::ADMIN)) {
-            return response()->json([
-                'status' => 'has-started',
-                'signed_up' => $slot->signed_up
-            ]);
+        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot);
+
+        $forced = false;
+        if ($now->gt($slot->begins)) {
+            // Not allowed to delete anything from the schedule unless you have permission to do so.
+            if (!$canForce) {
+                return response()->json([
+                    'status' => 'has-started',
+                    'signed_up' => $slot->signed_up
+                ]);
+            } else {
+                $forced = true;
+            }
         }
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
-            $this->log(
-                'person-slot-remove',
-                'removed',
-                [ 'slot_id' => $slotId ],
-                $person->id
-            );
+            $data = [ 'slot_id' => $slotId ];
+            if ($forced) {
+                $data['forced'] = true;
+            }
+
+            $this->log('person-slot-remove', 'removed', $data, $person->id);
         }
         return response()->json($result);
     }
@@ -323,7 +339,7 @@ class PersonScheduleController extends ApiController
                 $canSignUpForShifts = true;
             }
             $callsignApproved = true;
-        } else if ($status != "past prospective") {
+        } elseif ($status != "past prospective") {
             if ($callsignApproved && ($photoStatus == 'approved') && $manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
@@ -461,5 +477,36 @@ class PersonScheduleController extends ApiController
             'credits'   => $credits,
             'slot_count'=> count($rows)
         ]);
+    }
+
+    private function canForceScheduleChange($slot)
+    {
+        $rolesCanForce = null;
+        $canForce = false;
+        $isTrainer = false;
+
+        if ($slot->isTraining()) {
+            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR ];
+            if ($slot->isArt()) {
+                $rolesCanForce[] = Role::ART_TRAINER;
+            }
+            $trainers = Position::TRAINERS[$slot->position_id] ?? null;
+            if ($trainers && PersonPosition::havePosition($this->user->id, $trainers)) {
+                // Person is a trainer.. allowed to force sign up to trainings
+                $isTrainer = true;
+                $canForce = true;
+            }
+        } elseif ($slot->position_id == Position::ALPHA) {
+            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR ];
+        } else {
+            // Not a training or alpha slot. need confirmation from admin on forcing add
+            $rolesCanForce = [ Role::ADMIN ];
+        }
+
+        if (!$canForce) {
+            $canForce = $rolesCanForce ? $this->userHasRole($rolesCanForce) : false;
+        }
+
+        return [ $canForce, $isTrainer ];
     }
 }
