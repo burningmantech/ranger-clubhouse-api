@@ -143,7 +143,7 @@ class PersonEventInfo extends ApihouseResult
             $info->showers = $bmid->showers;
         }
 
-        if (date('Y') == $year && !setting('MealInfoAvailable')) {
+        if (current_year() == $year && !setting('MealInfoAvailable')) {
             $info->meals = 'no-info';
         }
 

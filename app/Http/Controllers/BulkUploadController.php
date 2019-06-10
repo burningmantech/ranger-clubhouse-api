@@ -221,7 +221,7 @@ class BulkUploadController extends ApiController
 
     private function processBmid($records, $action, $commit)
     {
-        $year = date('Y');
+        $year = current_year();
 
         foreach ($records as $record) {
             $person = $record->person;
@@ -290,7 +290,7 @@ class BulkUploadController extends ApiController
 
     private function processTickets($records, $action, $commit)
     {
-        $year = date('Y');
+        $year = current_year();
 
         foreach ($records as $record) {
             $person = $record->person;
@@ -401,7 +401,7 @@ class BulkUploadController extends ApiController
 
     private function processWAPs($records, $action, $commit)
     {
-        $year = date('Y');
+        $year = current_year();
         $low = 5;
         $high = 26;
         $wapDate = config('TAS_WAPDateRange');
@@ -472,7 +472,7 @@ class BulkUploadController extends ApiController
 
     private function processEventRadio($records, $action, $commit)
     {
-        $year = date('Y');
+        $year = current_year();
 
         foreach ($records as $record) {
             $person = $record->person;

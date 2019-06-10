@@ -743,7 +743,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function makeAuditorCallsign()
     {
-        $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . date('y') . '(NR)';
+        $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . current_year() . '(NR)';
     }
 
     /**

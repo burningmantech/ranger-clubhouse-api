@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Helpers\SqlHelper;
 
 class ConfigController extends Controller
 {
@@ -37,6 +38,12 @@ class ConfigController extends Controller
     ];
 
     public function show() {
-        return response()->json(setting(self::CLIENT_CONFIGS));
+        $configs = setting(self::CLIENT_CONFIGS);
+
+        if (config('clubhouse.GroundhogDayServer')) {
+            $configs['GroundhogDayTime'] = (string) SqlHelper::now();
+        }
+
+        return response()->json($configs);
     }
 }

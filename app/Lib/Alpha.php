@@ -18,7 +18,7 @@ class Alpha
 {
     public static function retrieveMentors()
     {
-        $year = date('Y');
+        $year = current_year();
         $positionId = Position::MENTOR;
 
         $rows = DB::table('person')
@@ -36,7 +36,7 @@ class Alpha
 
     public static function retrievePotentials($noBonks = false, $excludePhotos=false)
     {
-        $year = date('Y');
+        $year = current_year();
 
         // Find potential alphas who signed up for training this year.
         $statuses = $noBonks ? [ 'alpha', 'prospective' ] : [ 'alpha', 'prospective', 'bonked' ];
@@ -50,7 +50,7 @@ class Alpha
 
         $rows = $sql->get();
 
-        return self::buildAlphaInformation($rows, date('Y'), $excludePhotos);
+        return self::buildAlphaInformation($rows, current_year(), $excludePhotos);
     }
 
     public static function buildAlphaInformation($people, $year, $excludePhotos = false)
@@ -107,7 +107,7 @@ class Alpha
                 ->pluck('person')
                 ->values();
 
-        return self::buildAlphaInformation($rows, date('Y'));
+        return self::buildAlphaInformation($rows, current_year());
     }
 
     public static function retrieveAlphaScheduleForYear($year)
@@ -201,7 +201,7 @@ class Alpha
 
     public static function retrieveVerdicts()
     {
-        $year = date('Y');
+        $year = current_year();
 
         $people = DB::table('person')
                 ->select('person.id', 'callsign', 'person.status', 'first_name', 'last_name',

@@ -154,7 +154,7 @@ class MentorController extends ApiController
                          'person_id'   => $person->id,
                          'mentor_id'   => $mentor['mentor_id'],
                          'status'      => $status,
-                         'mentor_year' => date('Y')
+                         'mentor_year' => current_year()
                      ]);
                 }
 

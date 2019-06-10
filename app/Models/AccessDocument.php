@@ -80,7 +80,7 @@ class AccessDocument extends ApiModel
         self::saving(function ($model) {
             // Certain things always expire this year
             if (in_array($model->type, [ "work_access_pass", "work_access_pass_so", "vehicle_pass"])) {
-                $model->expiry_date = date('Y');
+                $model->expiry_date = current_year();
             }
 
             // Only SO WAPs can have names
@@ -144,7 +144,7 @@ class AccessDocument extends ApiModel
 
     public static function retrieveCurrentByPerson($forDelivery)
     {
-        $currentYear = date('Y');
+        $currentYear = current_year();
 
         if ($forDelivery) {
             $sql = self::where('status', 'claimed');
@@ -493,7 +493,7 @@ class AccessDocument extends ApiModel
 
     public function getPastExpireDateAttribute()
     {
-        return ($this->expiry_date && $this->expiry_date->year < date('Y'));
+        return ($this->expiry_date && $this->expiry_date->year < current_year());
     }
 
     /*

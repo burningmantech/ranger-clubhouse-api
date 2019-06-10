@@ -122,7 +122,7 @@ class AssetController extends ApiController
              'attachment_id' => 'sometimes|integer|nullable|exists:asset_attachment,id',
          ]);
 
-         $year = $params['year'] ?? date('Y');
+         $year = $params['year'] ?? current_year();
 
          $asset = Asset::findByBarcodeYear($params['barcode'], $year);
 

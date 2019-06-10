@@ -30,7 +30,7 @@ class BmidControllerTest extends TestCase
         $this->signInUser();
         $this->addRole(Role::EDIT_BMIDS);
 
-        $this->year = date('Y');
+        $this->year = current_year();
 
         $this->setting('TAS_BoxOfficeOpenDate', "{$this->year}-08-25 00:00");
     }
@@ -126,7 +126,7 @@ class BmidControllerTest extends TestCase
     public function testBmidIndex()
     {
         $person = factory(Person::class)->create();
-        $year = date('Y');
+        $year = current_year();
 
         $bmid = factory(Bmid::class)->create([
             'person_id' => $person->id,

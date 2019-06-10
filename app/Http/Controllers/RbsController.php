@@ -168,7 +168,7 @@ class RbsController extends ApiController
 
         // Return all sign ups
         if (isset($attrs['has_slot'])) {
-            $groups = Slot::findWithSignupsForYear(date('Y'))->groupBy('position.title');
+            $groups = Slot::findWithSignupsForYear(current_year())->groupBy('position.title');
 
             $positionSlots = [];
             foreach ($groups as $title => $slots) {

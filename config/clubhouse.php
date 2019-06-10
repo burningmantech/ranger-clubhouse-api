@@ -27,6 +27,9 @@ return [
     // Not used by C2
     'DualClubhouse'       => env('RANGER_CLUBHOUSE_DUAL_CLUBHOUSE', false),
 
+    // Groundhog Day Server support - if true use the database year
+    'GroundhogDayServer'    => env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_SERVER', false),
+
     // Where should the photo come from? 'Lambase', 'local' or 'test'
 
     'PhotoSource'       => env('RANGER_CLUBHOUSE_PHOTO_SOURCE', 'Lambase'),

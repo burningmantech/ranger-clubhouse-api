@@ -468,7 +468,7 @@ class RBS
     {
         $attrs = self::ATTRIBUTES[$broadcastType];
 
-        $year = date('Y');
+        $year = current_year();
 
         $alertId = $attrs['alert_id'] ?? $params['alert_id'];
         $alert = Alert::findOrFail($alertId);
@@ -497,7 +497,7 @@ class RBS
         case Broadcast::TYPE_ONSHIFT:
             $sql = DB::table('timesheet')
                     ->join('person', 'person.id', '=', 'timesheet.person_id')
-                    ->whereYear('timesheet.on_duty', date('Y'))
+                    ->whereYear('timesheet.on_duty', current_year())
                     ->whereNull('timesheet.off_duty')
                     ->whereRaw('IFNULL(alert_person.use_sms, TRUE) IS TRUE')
                     ->where('person.sms_on_playa_verified', true)
@@ -694,7 +694,7 @@ class RBS
 
     public static function eventDates()
     {
-        $year = date('Y');
+        $year = current_year();
         $laborDay = date('Y-m-d', strtotime("September $year first monday"));
 
         return [strtotime($laborDay." - 14 days"), strtotime($laborDay." + 5 days")];
@@ -733,7 +733,7 @@ class RBS
 
     public static function addNotOnDutyJoin($sql)
     {
-        $year = date('Y');
+        $year = current_year();
         $sql->whereRaw("NOT EXISTS (SELECT 1 FROM timesheet WHERE person.id=timesheet.person_id AND YEAR(timesheet.on_duty)=$year AND timesheet.off_duty IS NULL)");
     }
 

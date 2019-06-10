@@ -445,7 +445,7 @@ class PersonScheduleController extends ApiController
         $this->authorize('view', [ Schedule::class, $person ]);
 
         $now = SqlHelper::now();
-        $year = date('Y');
+        $year = current_year();
 
         $rows = Schedule::findForQuery([
             'person_id' => $person->id,
