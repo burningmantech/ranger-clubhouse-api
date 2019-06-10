@@ -37,7 +37,7 @@ class TimesheetController extends ApiController
         $rows = Timesheet::findForQuery($params);
 
         if (!$rows->isEmpty()) {
-            $year = $params['year'] ?? date('Y');
+            $year = $params['year'] ?? current_year();
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
@@ -259,7 +259,7 @@ class TimesheetController extends ApiController
         $required = null;
 
         // Are they trained for this position?
-        if (!Training::isPersonTrained($personId, $positionId, date('Y'), $requiredPositionId)) {
+        if (!Training::isPersonTrained($personId, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($isAdmin) {
                 $signonForced = true;
@@ -464,7 +464,7 @@ class TimesheetController extends ApiController
             'include_all' => 'sometimes|boolean'
         ]);
 
-        $intendToWorkYear = date('Y');
+        $intendToWorkYear = current_year();
 
         return response()->json([
              'freaking' => Timesheet::retrieveFreakingYears($params['include_all'] ?? false, $intendToWorkYear),

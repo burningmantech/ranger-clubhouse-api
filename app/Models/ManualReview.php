@@ -59,7 +59,7 @@ class ManualReview extends ApiModel
             return false;
         }
 
-        if ($year != date('Y')) {
+        if ($year != current_year()) {
             // Don't bother running the import for a previous year
             return false;
         }

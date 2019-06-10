@@ -158,7 +158,7 @@ class TicketingController extends ApiController
         ];
 
         if ($period == 'open' || $period == 'closed') {
-            $row = AccessDocumentDelivery::findForPersonYear($person->id, date('Y'));
+            $row = AccessDocumentDelivery::findForPersonYear($person->id, current_year());
 
             if ($row) {
                 $package['delivery'] = [
@@ -195,7 +195,7 @@ class TicketingController extends ApiController
         $maxSO = setting('TAS_WAPSOMax');
 
         $documents = [];
-        $year = date('Y');
+        $year = current_year();
 
         foreach ($params['names'] as $row) {
             $soName = $row['name'];
@@ -263,7 +263,7 @@ class TicketingController extends ApiController
             'country'     => 'string|required_if:method,mail',
         ]);
 
-        $add = AccessDocumentDelivery::findOrCreateForPersonYear($person->id, date('Y'));
+        $add = AccessDocumentDelivery::findOrCreateForPersonYear($person->id, current_year());
         $add->fill($params);
 
         if (!$add->save()) {

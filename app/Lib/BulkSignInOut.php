@@ -95,7 +95,7 @@ class BulkSignInOut
 
         $callsign = $columns[0];
         $field = $columns[1] ?? '';
-        $year = date('Y');
+        $year = current_year();
 
         switch ($count) {
         case 1:
@@ -289,7 +289,7 @@ class BulkSignInOut
                 $year = '20'.$year;
             }
         } else {
-            $year = date('Y');
+            $year = current_year();
         }
 
         $date = "$year/$match[1]/$match[2]";

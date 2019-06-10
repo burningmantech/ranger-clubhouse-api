@@ -52,7 +52,7 @@ class Asset extends ApiModel
     }
 
     public static function findForQuery($query) {
-        $year = $query['year'] ?? date('Y');
+        $year = $query['year'] ?? current_year();
         $sql = self::whereYear('create_date', $year);
 
         if (isset($query['barcode'])) {
@@ -88,7 +88,7 @@ class Asset extends ApiModel
     }
 
     public  function isBarcodeUnique() {
-        $sql = self::where('barcode', $this->barcode)->whereYear('create_date',($this->create_date ?  $this->create_date->year : date('Y')));
+        $sql = self::where('barcode', $this->barcode)->whereYear('create_date',($this->create_date ?  $this->create_date->year : current_year()));
         if ($this->id) {
             $sql->where('id', '!=', $this->id);
         }

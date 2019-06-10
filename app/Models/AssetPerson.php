@@ -105,7 +105,7 @@ class AssetPerson extends ApiModel
       */
 
      public static function findRadiosCheckedOutForQuery($query) {
-         $year = $query['year'] ?? date('Y');
+         $year = $query['year'] ?? current_year();
          $sql = self::select(
                      'asset_person.person_id',
                      'person.callsign',

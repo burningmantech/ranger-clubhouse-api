@@ -131,7 +131,7 @@ class Timesheet extends ApiModel
     public static function isPersonOnDuty($personId)
     {
         return self::where('person_id', $personId)
-                ->whereYear('on_duty', date('Y'))
+                ->whereYear('on_duty', current_year())
                 ->whereNull('off_duty')
                 ->exists();
     }

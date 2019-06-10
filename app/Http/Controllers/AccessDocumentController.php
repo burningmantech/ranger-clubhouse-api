@@ -56,7 +56,7 @@ class AccessDocumentController extends ApiController
     {
         $this->authorize('expiring', AccessDocument::class);
 
-        $year = date('Y');
+        $year = current_year();
 
         return response()->json([
             'expiring' => AccessDocument::retrieveExpiringTicketsByPerson($year)
