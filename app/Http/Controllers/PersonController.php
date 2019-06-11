@@ -540,14 +540,31 @@ class PersonController extends ApiController
 
     public function credits(Person $person)
     {
-        $data = request()->validate([
+        $params = request()->validate([
             'year' => 'integer|required'
         ]);
 
         $this->authorize('view', $person);
 
         return response()->json([
-            'credits' => Timesheet::earnedCreditsForYear($person->id, $data['year'])
+            'credits' => Timesheet::earnedCreditsForYear($person->id, $params['year'])
+        ]);
+    }
+
+    /*
+     * Provide summary for a person
+     */
+
+    public function timesheetSummary(Person $person)
+    {
+        $params = request()->validate([
+            'year' => 'integer|required'
+        ]);
+
+        $this->authorize('view', $person);
+
+        return response()->json([
+            'summary' => Timesheet::workSummaryForPersonYear($person->id, $params['year'])
         ]);
     }
 

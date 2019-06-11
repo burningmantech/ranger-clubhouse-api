@@ -97,6 +97,8 @@ Route::group([
 
     Route::get('debug/sleep-test', 'DebugController@sleepTest');
     Route::get('debug/db-test', 'DebugController@dbTest');
+    Route::get('debug/phpinfo', 'DebugController@phpInfo');
+    Route::get('debug/cpuinfo', 'DebugController@cpuInfo');
 
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
@@ -132,9 +134,11 @@ Route::group([
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/credits', 'PersonController@credits');
+    Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
     Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
+    Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', [ 'only' => [ 'index', 'store', 'destroy' ]]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');
