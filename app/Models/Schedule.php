@@ -388,8 +388,9 @@ class Schedule extends ApiModel
         foreach ($rows as $row) {
             if ($row->position_type == 'Training') {
                 $otherDuration += $row->slot_duration;
+            } else {
+                $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time);
             }
-            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time);
         }
 
         return [
