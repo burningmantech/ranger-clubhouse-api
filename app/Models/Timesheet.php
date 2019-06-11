@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use App\Helpers\SqlHelper;
 
+use App\Lib\WorkSummary;
+
 use App\Models\ApiModel;
 use App\Helpers\DateHelper;
 use App\Models\Position;
+use App\Models\PositionCredits;
 use App\Models\Person;
+
 use DB;
 
 class Timesheet extends ApiModel
@@ -412,7 +416,7 @@ class Timesheet extends ApiModel
                 ORDER by callsign");
 
         // Person must have worked in one of the previous two years, or is a shift lead
-        $people = array_values(array_filter($people, function($p) {
+        $people = array_values(array_filter($people, function ($p) {
             return $p->hours_prev_year || $p->hours_last_year || $p->shift_lead;
         }));
 
@@ -453,6 +457,53 @@ class Timesheet extends ApiModel
         return $rows->pluck('credits')->sum();
     }
 
+    public static function workSummaryForPersonYear($personId, $year)
+    {
+        $rows = Timesheet::findForQuery([ 'person_id' => $personId, 'year' => $year]);
+
+        $eventDates = EventDate::findForYear($year);
+
+        if ($rows->isEmpty()) {
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        if (!$eventDates) {
+            // No event dates - return everything as happening during the event
+            $time = $rows->pluck('duration')->sum();
+            $credits = $rows->pluck('credits')->sum();
+
+            return [
+                'pre_event_duration'  => 0,
+                'pre_event_credits'   => 0,
+                'event_duration'      => $time,
+                'event_credits'       => $credits,
+                'post_event_duration' => 0,
+                'post_event_credits'  => 0,
+                'total_duration'      => $time,
+                'total_credits'       => $credits,
+                'no_event_dates'      => true,
+            ];
+        }
+
+        $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
+
+        foreach ($rows as $row) {
+            $summary->computeTotals($row->position_id, $row->on_duty->timestamp, ($row->off_duty ?? SqlHelper::now())->timestamp);
+        }
+
+        return [
+            'pre_event_duration'  => $summary->pre_event_duration,
+            'pre_event_credits'   => $summary->pre_event_credits,
+            'event_duration'      => $summary->event_duration,
+            'event_credits'       => $summary->event_credits,
+            'post_event_duration' => $summary->post_event_duration,
+            'post_event_credits'  => $summary->post_event_credits,
+            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+            'event_start'         => (string) $eventDates->event_start,
+            'event_end'           => (string) $eventDates->event_end,
+        ];
+    }
 
     public function getDurationAttribute()
     {
@@ -477,16 +528,10 @@ class Timesheet extends ApiModel
 
     public function getCreditsAttribute()
     {
-        if ($this->off_duty) {
-            $offDuty = $this->off_duty;
-        } else {
-            $offDuty = SqlHelper::now();
-        }
-
         return PositionCredit::computeCredits(
             $this->position_id,
             $this->on_duty->timestamp,
-            $offDuty->timestamp,
+            ($this->off_duty ?? SqlHelper::now())->timestamp,
             $this->on_duty->year
         );
     }

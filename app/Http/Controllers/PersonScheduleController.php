@@ -479,6 +479,15 @@ class PersonScheduleController extends ApiController
         ]);
     }
 
+    public function scheduleSummary(Person $person)
+    {
+        $this->authorize('view', [ Schedule::class, $person ]);
+
+        $year = $this->getYear();
+
+        return response()->json([ 'summary' => Schedule::scheduleSummaryForPersonYear($person->id, $year) ]);
+    }
+
     private function canForceScheduleChange($slot)
     {
         $rolesCanForce = null;

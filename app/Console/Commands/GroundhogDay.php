@@ -66,6 +66,11 @@ class GroundhogDay extends Command
         // Remove all future training info
         DB::table('trainee_status')->whereIn('slot_id', $slotIds)->delete();
 
+        // Kill all assets
+        DB::table('asset')->whereYear('created_at', '>', $year);
+        DB::table('asset_person')->whereYear('checked_out', '>=', self::GROUNDHOG_DATETIME)->delete();
+        DB::table('asset_person')->where('checked_in', '>=', self::GROUNDHOG_DATETIME)->update([ 'checked_in' => null ]);
+
         // And redact the database
         $tables = [
             'action_logs',
@@ -100,6 +105,8 @@ class GroundhogDay extends Command
             'birthdate' => '1969-12-31',
             'home_phone' => '123-456-7890',
             'alt_phone' => '123-456-7890',
+            'sms_on_playa' => '',
+            'sms_off_playa' => '',
             'street1' => '123 Any St.',
             'street2' => '',
             'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),

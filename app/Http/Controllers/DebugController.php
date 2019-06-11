@@ -13,10 +13,6 @@ class DebugController extends ApiController
     {
         parent::__construct();
 
-        if (strtolower(config('clubhouse.DeploymentEnvironment') ?? '') == 'production') {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Action only allowed on staging or in development.');
-        }
-
         if (app()->runningInConsole()) {
             return;
         }
@@ -56,4 +52,17 @@ class DebugController extends ApiController
          // return time in milliseconds
          return response()->json([ 'time' => (int)($timeTotal * 1000)]);
      }
+
+     /*
+      * Show PHP ini values
+      */
+
+      public function phpInfo() {
+          phpinfo();
+          die();
+      }
+
+      public function cpuInfo() {
+          return response()->json([ 'cpuinfo' => file('/proc/cpuinfo') ]);
+      }
 }

@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
 use App\Helpers\DateHelper;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use App\Helpers\SqlHelper;
 
+use App\Lib\WorkSummary;
+
+use App\Models\ApiModel;
 use App\Models\Slot;
 
-use App\Helpers\SqlHelper;
+use Carbon\Carbon;
+
+use Illuminate\Support\Facades\DB;
 
 //
 // Meta Model
@@ -348,6 +351,62 @@ class Schedule extends ApiModel
         });
     }
 
+    /*
+     * build a schedule summary (credit / hour break down into pre-event, event, post-event, other)
+     */
+
+    public static function scheduleSummaryForPersonYear($personId, $year)
+    {
+        $rows = self::findForQuery([ 'person_id' => $personId, 'year' => $year]);
+
+        $eventDates = EventDate::findForYear($year);
+
+        if ($rows->isEmpty()) {
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        if (!$eventDates) {
+            // No event dates - return everything as happening during the event
+            $time = $rows->pluck('duration')->sum();
+            $credits = $rows->pluck('credits')->sum();
+
+            return [
+                'pre_event_duration'  => 0,
+                'pre_event_credits'   => 0,
+                'event_duration'      => $time,
+                'event_credits'       => $credits,
+                'post_event_duration' => 0,
+                'post_event_credits'  => 0,
+                'total_duration'      => $time,
+                'total_credits'       => $credits,
+            ];
+        }
+
+        $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
+
+        $otherDuration = 0;
+        foreach ($rows as $row) {
+            if ($row->position_type == 'Training') {
+                $otherDuration += $row->slot_duration;
+            }
+            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time);
+        }
+
+        return [
+            'pre_event_duration'  => $summary->pre_event_duration,
+            'pre_event_credits'   => $summary->pre_event_credits,
+            'event_duration'      => $summary->event_duration,
+            'event_credits'       => $summary->event_credits,
+            'post_event_duration' => $summary->post_event_duration,
+            'post_event_credits'  => $summary->post_event_credits,
+            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+            'other_duration'      => $otherDuration,
+            'event_start'         => (string) $eventDates->event_start,
+            'event_end'           => (string) $eventDates->event_end,
+        ];
+    }
+
     public function getSlotDurationAttribute()
     {
         return $this->slot_ends_time - $this->slot_begins_time;
@@ -355,7 +414,7 @@ class Schedule extends ApiModel
 
     public function getYearAttribute()
     {
-        return Carbon::parse($this->slot_begins)->year;
+        return $this->slot_begins->year;
     }
 
     public function getCreditsAttribute()
