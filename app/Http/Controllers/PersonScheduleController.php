@@ -33,23 +33,27 @@ class PersonScheduleController extends ApiController
     {
         $this->authorize('view', [ Schedule::class, $person]);
 
-        $query = request()->validate(
-            [
+        $query = request()->validate( [
             'year'    => 'required|digits:4',
             'shifts_available' => 'sometimes|boolean',
-            ]
-        );
+        ]);
 
         $query['person_id'] = $person->id;
 
+        $start = microtime(true);
         $rows = Schedule::findForQuery($query);
+        $queryTime = (microtime(true) - $start) * 1000;
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.
             PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        return $this->success($rows, null, 'schedules');
+        $start = microtime(true);
+        $response =  $this->success($rows, null, 'schedules');
+        $responseTime = (microtime(true) - $start) * 1000;
+        error_log("SHIFT TIME sql=[$queryTime] response=[$responseTime]");
+        return $response;
     }
 
     /*
