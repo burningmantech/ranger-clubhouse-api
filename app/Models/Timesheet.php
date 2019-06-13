@@ -301,7 +301,7 @@ class Timesheet extends ApiModel
 
     public static function retrieveEarnedShirts($year, $thresholdSS, $thresholdLS)
     {
-        $hoursEarned = DB::select("SELECT person_id, SUM(TIMESTAMPDIFF(second, on_duty,off_duty)) as seconds FROM timesheet WHERE YEAR(off_duty)=? AND position_id != ? GROUP BY person_id HAVING (SUM(TIMESTAMPDIFF(second, on_duty,off_duty))/3600) >= ?", [ $year, Position::ALPHA, $thresholdSS ]);
+        $hoursEarned = DB::select("SELECT person_id, SUM(TIMESTAMPDIFF(second, on_duty,off_duty)) as seconds FROM timesheet JOIN position ON position.id=timesheet.position_id WHERE YEAR(off_duty)=? AND position.count_hours IS TRUE AND position_id != ? GROUP BY person_id HAVING (SUM(TIMESTAMPDIFF(second, on_duty,off_duty))/3600) >= ?", [ $year, Position::ALPHA, $thresholdSS ]);
         if (empty($hoursEarned)) {
             return [];
         }
