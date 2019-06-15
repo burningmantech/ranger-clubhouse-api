@@ -93,9 +93,9 @@ class AccessDocumentDelivery extends ApiModel
 
     public function save($options = [])
     {
-        if ($this->method == 'mail' && !$this->validate($this->mailRules)) {
+        /*if ($this->method == 'mail' && !$this->validate($this->mailRules)) {
             return false;
-        }
+        }*/
 
         return parent::save($options);
     }
