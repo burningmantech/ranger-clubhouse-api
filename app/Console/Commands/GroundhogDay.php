@@ -135,9 +135,12 @@ class GroundhogDay extends Command
 
         $settings = [
             'BroadcastClubhouseSandbox' => true,
+            'BroadcastClubhouseNotify'  => false,
             'TwilioAuthToken'           => 'deadbeef',
             'LambaseJumpinUrl'          => 'https://example.com',
             'TwilioAccountSID'          => 'deadbeef',
+            'TimesheetCorrectionEnable' => true,
+            'TimesheetCorrectionYear'   => $year,
         ];
 
         foreach ($settings as $name => $value) {
@@ -163,6 +166,7 @@ class GroundhogDay extends Command
             'behavioral_agreement' => true,
             'asset_authorized' => false,
             'vehicle_paperwork' => false,
+            'timesheet_confirmed' => false,
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
         ]);
 
