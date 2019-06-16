@@ -135,9 +135,12 @@ class GroundhogDay extends Command
 
         $settings = [
             'BroadcastClubhouseSandbox' => true,
+            'BroadcastClubhouseNotify'  => false,
             'TwilioAuthToken'           => 'deadbeef',
             'LambaseJumpinUrl'          => 'https://example.com',
             'TwilioAccountSID'          => 'deadbeef',
+            'TimesheetCorrectionEnable' => true,
+            'TimesheetCorrectionYear'   => $year,
         ];
 
         foreach ($settings as $name => $value) {
@@ -160,9 +163,11 @@ class GroundhogDay extends Command
             'em_email' => '',
             'mentors_flag_note' => '',
             'mentors_notes' => '',
-            'behavioral_agreement' => true,
             'asset_authorized' => false,
             'vehicle_paperwork' => false,
+            'timesheet_confirmed' => false,
+            'behavioral_agreement' => false,
+
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
         ]);
 
@@ -175,7 +180,12 @@ class GroundhogDay extends Command
                 $end = date('Y-09-04', $ghdTime);
                 $q->whereRaw("EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE (slot.begins >= '$start' AND slot.ends <= '$end') AND person_slot.person_id=person.id LIMIT 1)");
                 $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
-            })->update([ 'on_site' => true, 'asset_authorized' => true, 'vehicle_paperwork' => true ]);
+            })->update([
+                'on_site' => true,
+                'asset_authorized' => true,
+                'vehicle_paperwork' => true,
+                'behavioral_agreement' => true,
+              ]);
 
         $this->info("Creating mysql dump of groundhog database");
         $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-".date('Y-m-d').".sql";
