@@ -160,6 +160,7 @@ class GroundhogDay extends Command
             'em_email' => '',
             'mentors_flag_note' => '',
             'mentors_notes' => '',
+            'behavioral_agreement' => true,
             'asset_authorized' => false,
             'vehicle_paperwork' => false,
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
