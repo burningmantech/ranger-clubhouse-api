@@ -32,7 +32,8 @@ class TicketingController extends ApiController
                 'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
                 'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
                 'RpTicketThreshold', 'ScTicketThreshold', 'YrTicketThreshold', 'YrTicketThreshold',
-                'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ'
+                'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
+                'TAS_Pickup_Locations'
             ]);
 
         return response()->json([
@@ -62,6 +63,8 @@ class TicketingController extends ApiController
                 'sc_credits'             => $settings['ScTicketThreshold'],
                 'earned_year'            => $settings['YrTicketThreshold'] - 1,
                 'upcoming_year'          => $settings['YrTicketThreshold'],
+
+                'pickup_locations'       => $settings['TAS_Pickup_Locations'],
 
                 'faqs'                   => [
                     'ticketing'          => $settings['TAS_Ticket_FAQ'],
@@ -256,11 +259,11 @@ class TicketingController extends ApiController
 
         $params = request()->validate([
             'method'      => 'required|string',
-            'street'      => 'string|required_if:method,mail',
-            'city'        => 'string|required_if:method,mail',
-            'state'       => 'string|required_if:method,mail',
-            'postal_code' => 'string|required_if:method,mail',
-            'country'     => 'string|required_if:method,mail',
+            'street'      => 'sometimes|string',
+            'city'        => 'sometimes|string',
+            'state'       => 'sometimes|string',
+            'postal_code' => 'sometimes|string',
+            'country'     => 'sometimes|string',
         ]);
 
         $add = AccessDocumentDelivery::findOrCreateForPersonYear($person->id, current_year());

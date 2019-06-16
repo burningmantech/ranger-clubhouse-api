@@ -68,7 +68,7 @@ class Timesheet extends ApiModel
 
     public $credits;
 
-    const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title' ];
+    const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title,count_hours' ];
 
     public function person()
     {
@@ -463,7 +463,7 @@ class Timesheet extends ApiModel
 
         $eventDates = EventDate::findForYear($year);
 
-        if ($rows->isEmpty()) {
+        if (!$rows->isEmpty()) {
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
@@ -479,6 +479,8 @@ class Timesheet extends ApiModel
                 'event_credits'       => $credits,
                 'post_event_duration' => 0,
                 'post_event_credits'  => 0,
+                'other_duration'      => 0,
+                'counted_duration'    => 0,
                 'total_duration'      => $time,
                 'total_credits'       => $credits,
                 'no_event_dates'      => true,
@@ -488,7 +490,12 @@ class Timesheet extends ApiModel
         $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
 
         foreach ($rows as $row) {
-            $summary->computeTotals($row->position_id, $row->on_duty->timestamp, ($row->off_duty ?? SqlHelper::now())->timestamp);
+            $summary->computeTotals(
+                    $row->position_id,
+                    $row->on_duty->timestamp,
+                    ($row->off_duty ?? SqlHelper::now())->timestamp,
+                    $row->position->count_hours
+                );
         }
 
         return [
@@ -498,8 +505,10 @@ class Timesheet extends ApiModel
             'event_credits'       => $summary->event_credits,
             'post_event_duration' => $summary->post_event_duration,
             'post_event_credits'  => $summary->post_event_credits,
-            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
             'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+            'other_duration'      => $summary->other_duration,
+            'counted_duration'    => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
             'event_start'         => (string) $eventDates->event_start,
             'event_end'           => (string) $eventDates->event_end,
         ];

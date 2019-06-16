@@ -177,7 +177,7 @@ class AccessDocumentController extends ApiController
         AccessDocumentChanges::log($accessDocument, $this->user->id, [ 'status' => $status]);
 
         $attrs['id'] = $accessDocument->id;
-        $this->log('access-document-staus', 'Updated status', $attrs, $accessDocument->person_id);
+        $this->log('access-document-status', 'Updated status', $attrs, $accessDocument->person_id);
 
         return $this->success();
     }

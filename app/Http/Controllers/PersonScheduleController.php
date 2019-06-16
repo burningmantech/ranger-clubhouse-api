@@ -460,13 +460,15 @@ class PersonScheduleController extends ApiController
         $credits = 0.0;
 
         foreach ($rows as $row) {
-            // Truncate any shifts which have started
-            if ($row->slot_begins->lt($now)) {
-                $row->slot_begins = $now;
-                $row->slot_begins_time = $now->timestamp;
-            }
+            if ($row->position_count_hours) {
+                // Truncate any shifts which have started
+                if ($row->slot_begins->lt($now)) {
+                    $row->slot_begins = $now;
+                    $row->slot_begins_time = $now->timestamp;
+                }
 
-            $time += $row->slot_duration;
+                $time += $row->slot_duration;
+            }
             $credits += $row->credits;
         }
 

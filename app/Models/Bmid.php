@@ -41,8 +41,11 @@ class Bmid extends ApiModel
 
     const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid,vehicle_insurance_paperwork';
 
-    // Allow mass assignment - BMIDs are an exclusive Admin function.
-    protected $guarded = [ ];
+    // Allow (mostly) mass assignment - BMIDs are an exclusive Admin function.
+    protected $guarded = [
+        'create_datetime',
+        'modified_datetime'
+    ];
 
     protected $attributes = [
         'showers'   => false,

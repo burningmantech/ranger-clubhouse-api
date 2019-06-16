@@ -31,6 +31,7 @@ class Schedule extends ApiModel
         'position_id',
         'position_title',
         'position_type',
+        'position_count_hours',
         'slot_id',
         'slot_active',
         'slot_begins',
@@ -76,6 +77,7 @@ class Schedule extends ApiModel
             'position.id as position_id',
             'position.title AS position_title',
             'position.type AS position_type',
+            'position.count_hours as position_count_hours',
             'slot.begins AS slot_begins',
             'slot.ends AS slot_ends',
             'slot.description AS slot_description',
@@ -357,11 +359,11 @@ class Schedule extends ApiModel
 
     public static function scheduleSummaryForPersonYear($personId, $year)
     {
-        $rows = self::findForQuery([ 'person_id' => $personId, 'year' => $year]);
+        $rows = self::findForQuery([ 'person_id' => $personId, 'year' => $year ]);
 
         $eventDates = EventDate::findForYear($year);
 
-        if ($rows->isEmpty()) {
+        if (!$rows->isEmpty()) {
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
@@ -379,18 +381,15 @@ class Schedule extends ApiModel
                 'post_event_credits'  => 0,
                 'total_duration'      => $time,
                 'total_credits'       => $credits,
+                'other_duration'      => 0,
+                'counted_duration'    => 0,
             ];
         }
 
         $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
 
-        $otherDuration = 0;
         foreach ($rows as $row) {
-            if ($row->position_type == 'Training') {
-                $otherDuration += $row->slot_duration;
-            } else {
-                $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time);
-            }
+            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $row->position_count_hours);
         }
 
         return [
@@ -400,9 +399,10 @@ class Schedule extends ApiModel
             'event_credits'       => $summary->event_credits,
             'post_event_duration' => $summary->post_event_duration,
             'post_event_credits'  => $summary->post_event_credits,
-            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
             'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
-            'other_duration'      => $otherDuration,
+            'other_duration'      => $summary->other_duration,
+            'counted_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
             'event_start'         => (string) $eventDates->event_start,
             'event_end'           => (string) $eventDates->event_end,
         ];
