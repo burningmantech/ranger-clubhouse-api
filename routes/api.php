@@ -127,6 +127,7 @@ Route::group([
     Route::resource('motd', 'MotdController');
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
+    Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
@@ -155,8 +156,10 @@ Route::group([
 
     Route::resource('person', 'PersonController', [ 'only' => [ 'index','show','store','update','destroy' ]]);
 
-    Route::resource('position-credit', 'PositionCreditController');
     Route::post('position-credit/copy', 'PositionCreditController@copy');
+    Route::resource('position-credit', 'PositionCreditController');
+
+    Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
     Route::resource('position', 'PositionController');
 
     Route::get('rbs/config', 'RbsController@config');

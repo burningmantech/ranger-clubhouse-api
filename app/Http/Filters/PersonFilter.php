@@ -37,7 +37,7 @@ class PersonFilter
 
     const CERTIFICATIONS_FIELDS = [
         'osha10',
-        'osha30'
+        'osha30',
     ];
 
     const NAME_GENDER_FIELDS = [
@@ -106,9 +106,11 @@ class PersonFilter
         'behavioral_agreement',
     ];
 
-    const VEHICLE_ADMIN_FIELDS = [
+    const RANGER_ADMIN_FIELDS = [
         'vehicle_insurance_paperwork',
-        'vehicle_blacklisted'
+        'vehicle_blacklisted',
+        'sandman_affidavit'
+
     ];
 
     const EVENT_FIELDS = [
@@ -183,7 +185,7 @@ class PersonFilter
         [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
-        [ self::VEHICLE_ADMIN_FIELDS ],
+        [ self::RANGER_ADMIN_FIELDS ],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS ]
     ];
@@ -207,7 +209,7 @@ class PersonFilter
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
-        [ self::VEHICLE_ADMIN_FIELDS, false, [ Role::ADMIN ]],
+        [ self::RANGER_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
     ];
 

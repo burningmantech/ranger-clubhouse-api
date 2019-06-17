@@ -110,4 +110,8 @@ class PersonPolicy
     public function alphaShirts(Person $user) {
         return $user->hasRole([ Role::ADMIN, Role::VC ]);
     }
+
+    public function vehiclePaperwork(Person $user) {
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
+    }
 }

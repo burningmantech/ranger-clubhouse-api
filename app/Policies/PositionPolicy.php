@@ -64,4 +64,13 @@ class PositionPolicy
     {
         return false;
     }
+
+    /**
+     * Determine if the person can run the qualified sandman report
+     */
+
+    public function sandmanQualified(Person $user)
+    {
+        return $this->hasRole(Role::MANAGE);
+    }
 }
