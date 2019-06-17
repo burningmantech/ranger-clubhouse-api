@@ -257,6 +257,8 @@ class TimesheetController extends ApiController
 
         $signonForced = false;
         $required = null;
+        $positionRequired = false;
+        $unqualifiedReason = null;
 
         // Are they trained for this position?
         if (!Training::isPersonTrained($personId, $positionId, current_year(), $requiredPositionId)) {
@@ -272,27 +274,52 @@ class TimesheetController extends ApiController
             }
         }
 
+        // Sandman blocker - must be qualified
+        if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
+            if ($isAdmin) {
+                $signonForced = true;
+            } else {
+                return response()->json([
+                    'status'         => 'not-qualified',
+                    'unqualified_reason' => $unqualifiedReason,
+                ]);
+            }
+        }
+
         $timesheet = new Timesheet($params);
         $timesheet->setOnDutyToNow();
 
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
 
+            $message = '';
+            $response = [
+                    'status'       => 'success',
+                    'timesheet_id' => $timesheet->id,
+                    'forced'       => $signonForced
+                ];
+
+            if ($signonForced) {
+                $response['forced'] = true;
+                if ($unqualifiedReason) {
+                    $message = "forced (unqualified {$unqualifiedReason}) ";
+                    $response['unqualified_reason'] = $unqualifiedReason;
+                } else {
+                    $message = "forced (not trained {$positionRequired}) ";
+                    $response['required_training'] = $positionRequired;
+                }
+            }
+
             TimesheetLog::record(
                 'signon',
                 $person->id,
                 $this->user->id,
                 $timesheet->id,
-                ($signonForced ? "forced (not trained {$positionRequired}) " : '').
+                $message.
                 $timesheet->position->title." ".(string) $timesheet->on_duty
             );
 
-
-            return response()->json([
-                'status'       => 'success',
-                'timesheet_id' => $timesheet->id,
-                'forced'       => $signonForced
-            ]);
+            return response()->json($response);
         }
 
         return $this->restError($timesheet);

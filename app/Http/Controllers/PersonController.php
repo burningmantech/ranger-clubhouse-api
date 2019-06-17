@@ -367,7 +367,7 @@ class PersonController extends ApiController
         $this->authorize('view', $person);
 
         if (@$params['include_training']) {
-            $positions = Training::findPositionsWithTraining($person->id, $params['year']);
+            $positions = Training::findPositionsWithTraining($person, $params['year']);
         } else {
             $positions = PersonPosition::findForPerson($person->id);
         }
@@ -676,20 +676,41 @@ class PersonController extends ApiController
         $this->authorize('alphaShirts', [ Person::class ]);
 
         $rows = Person::select(
-            'id',
-            'callsign',
-            'status',
-            'first_name',
-            'last_name',
-            'email',
+                'id',
+                'callsign',
+                'status',
+                'first_name',
+                'last_name',
+                'email',
                 'longsleeveshirt_size_style',
-            'teeshirt_size_style'
-        )
-                ->whereIn('status', [ 'alpha', 'prospective' ])
-                ->where('user_authorized', true)
-                ->orderBy('callsign')
-                ->get();
+                'teeshirt_size_style'
+            )
+            ->whereIn('status', [ 'alpha', 'prospective' ])
+            ->where('user_authorized', true)
+            ->orderBy('callsign')
+            ->get();
 
         return response()->json([ 'alphas' => $rows ]);
+    }
+
+    /*
+     * Prospecitve / Alpha estimated shirts report
+     */
+
+    public function vehiclePaperwork()
+    {
+        $this->authorize('vehiclePaperwork', [ Person::class ]);
+
+        $rows = DB::table('person')
+            ->select('id', 'callsign', 'status', 'vehicle_paperwork', 'vehicle_insurance_paperwork')
+            ->where('user_authorized', true)
+            ->where(function ($q) {
+                $q->where('vehicle_paperwork', true);
+                $q->orWhere('vehicle_insurance_paperwork', true);
+            })
+            ->orderBy('callsign')
+            ->get();
+
+        return response()->json([ 'people' => $rows ]);
     }
 }

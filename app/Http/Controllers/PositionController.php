@@ -83,4 +83,14 @@ class PositionController extends ApiController
         $this->log('position-delete', 'Position Deleted', [ 'id' => $position->id]);
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Sandman Qualification Report
+     */
+
+    public function sandmanQualifiedReport()
+    {
+        $this->authorize('sandmanQualified', Position::class);
+        return response()->json( Position::retrieveSandPeopleQualifications());
+    }
 }

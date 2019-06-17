@@ -97,6 +97,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'on_site'                     => 'boolean',
         'osha10'                      => 'boolean',
         'osha30'                      => 'boolean',
+        'sandman_affidavit'           => 'boolean',
         'user_authorized'             => 'boolean',
         'vehicle_blacklisted'         => 'boolean',
         'vehicle_insurance_paperwork' => 'boolean',
@@ -197,7 +198,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
        // Certifications
        'osha10',
-       'osha30'
+       'osha30',
+       'sandman_affidavit'
     ];
 
     const SEARCH_FIELDS = [

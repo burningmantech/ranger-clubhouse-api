@@ -444,6 +444,25 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Determine if the person has worked one or more positions in the last X years
+     */
+
+    public static function didPersonWorkPosition($personId, $years, $positionIds)
+    {
+        if (!is_array($positionIds)) {
+            $positionIds = [ $positionIds ];
+        }
+
+        $cutoff = current_year() - $years;
+        return DB::table('timesheet')
+            ->where('person_id', $personId)
+            ->whereYear('on_duty', '>=', $cutoff)
+            ->whereIn('position_id', $positionIds)
+            ->limit(1)
+            ->exists();
+    }
+
+    /*
      * Calcuate how many credits earned for a year
      */
 

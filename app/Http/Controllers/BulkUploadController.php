@@ -21,7 +21,8 @@ class BulkUploadController extends ApiController
         "vehicle_paperwork",
         "vintage",
         "osha10",
-        "osha30"
+        "osha30",
+        "sandman_affidavit"
     ];
 
     const STATUS_UPDATE_ACTIONS = [

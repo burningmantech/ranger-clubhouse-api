@@ -26,7 +26,7 @@ class TrainingController extends ApiController
 
     public function multipleEnrollmentsReport($id)
     {
-        list ($training, $year) = $this->getTrainingAndYear($id);
+        list($training, $year) = $this->getTrainingAndYear($id);
 
         return response()->json([
             'enrollments' => $training->retrieveMultipleEnrollments($year),
@@ -40,7 +40,7 @@ class TrainingController extends ApiController
 
     public function capacityReport($id)
     {
-        list ($training, $year) = $this->getTrainingAndYear($id);
+        list($training, $year) = $this->getTrainingAndYear($id);
 
         return response()->json([
             'slots' => $training->retrieveSlotsCapacity($year)
@@ -53,7 +53,7 @@ class TrainingController extends ApiController
 
     public function peopleTrainingCompleted($id)
     {
-        list ($training, $year) = $this->getTrainingAndYear($id);
+        list($training, $year) = $this->getTrainingAndYear($id);
 
         return response()->json([
             'slots' => $training->retrievePeopleForTrainingCompleted($year)
@@ -67,7 +67,7 @@ class TrainingController extends ApiController
 
     public function untrainedPeopleReport($id)
     {
-        list ($training, $year) = $this->getTrainingAndYear($id);
+        list($training, $year) = $this->getTrainingAndYear($id);
 
         return response()->json($training->retrieveUntrainedPeople($year));
     }
@@ -76,8 +76,8 @@ class TrainingController extends ApiController
      * Obtain the training position, and year requested
      */
 
-    private function getTrainingAndYear($id) {
-
+    private function getTrainingAndYear($id)
+    {
         $params = request()->validate([
             'year'  => 'required|integer'
         ]);
