@@ -488,6 +488,16 @@ class AccessDocument extends ApiModel
     }
 
     /*
+     * Setter for access_date. Fix up the date to NULL (aka unspecified entry time)
+     * if passed an empty value.
+     */
+
+    public function setAccessDateAttribute($date)
+    {
+        $this->attributes['access_date'] = empty($date) ? NULL : $date;
+    }
+
+    /*
      * Return true if the document expired
      */
 
