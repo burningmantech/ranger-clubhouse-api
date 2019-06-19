@@ -19,7 +19,8 @@ class LambaseBMID
 {
     const TIMEOUT = 60;
 
-    const DEBUG = 1;
+    const DEBUG = 0;
+
     public static function upload($bmids)
     {
         $records = [];
