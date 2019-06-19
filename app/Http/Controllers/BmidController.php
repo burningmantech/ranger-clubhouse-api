@@ -114,7 +114,7 @@ class BmidController extends ApiController
             }
             $bmid->status = 'submitted';
             $bmid->notes = "$uploadDate $user: Uploaded to Lambase\n$bmid->notes";
-            //$bmid->save();
+            $bmid->save();
 
             $results[] = [
                 'person_id' => $bmid->person_id,

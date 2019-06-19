@@ -39,7 +39,7 @@ class Schedule extends ApiModel
         'slot_description',
         'slot_signed_up',
         'slot_url',
-        'person_assigned',
+        'person_assigned',  // TODO: deprecated, remove at the end of July.
         'trainers',
         'slot_begins_time',
         'slot_ends_time',
@@ -107,8 +107,9 @@ class Schedule extends ApiModel
 
             // .. and find out which slots a person has signed up for
             if ($shiftsAvailable) {
+                // TODO - remove person_assign & left join at the end of July.
                 $selectColumns[] = DB::raw('IF(person_slot.person_id IS NULL,FALSE,TRUE) AS person_assigned');
-                $sql = $sql->leftJoin('person_slot', function ($join) use ($personId) {
+                $sql->leftJoin('person_slot', function ($join) use ($personId) {
                     $join->where('person_slot.person_id', $personId)
                           ->on('person_slot.slot_id', 'slot.id');
                 })->join('person_position', function ($join) use ($personId) {
@@ -369,7 +370,7 @@ class Schedule extends ApiModel
 
         if (!$eventDates) {
             // No event dates - return everything as happening during the event
-            $time = $rows->pluck('duration')->sum();
+            $time = $rows->pluck('slot_duration')->sum();
             $credits = $rows->pluck('credits')->sum();
 
             return [
