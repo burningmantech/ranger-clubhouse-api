@@ -397,7 +397,9 @@ class AccessDocument extends ApiModel
             foreach ($rows as $row) {
                 if ($wap == null || $row->access_date == null) {
                     $wap = $row;
-                } elseif ($wap->access_date->gt($row->access_date)) {
+                } else if ($wap->access_date == null) {
+                    continue;
+                } else if ($wap->access_date->gt($row->access_date)) {
                     $wap = $row;
                 }
             }
