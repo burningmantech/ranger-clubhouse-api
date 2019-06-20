@@ -178,7 +178,7 @@ class Bmid extends ApiModel
         case 'signedup':
             // Find any vets who are signed up and/or passed training
             $slotIds = Slot::whereYear('begins', $year)
-                        ->where('begins', '>=', "$year-08-15")
+                        ->where('begins', '>=', "$year-08-10")
                         ->pluck('id');
 
             $signedUpIds = PersonSlot::whereIn('slot_id', $slotIds)
@@ -369,7 +369,7 @@ class Bmid extends ApiModel
                     YEAR(s.begins)=$year
                     AND s.position_id NOT IN ($positionIds)
                     AND YEAR(s.begins)=$year
-                    AND s.begins > '$year-08-15'
+                    AND s.begins > '$year-08-10'
                     AND NOT EXISTS (SELECT 1 FROM access_document wap
                         WHERE wap.person_id=ps.person_id
                         AND wap.type IN ('work_access_pass', 'staff_credential')
