@@ -71,6 +71,6 @@ class PositionPolicy
 
     public function sandmanQualified(Person $user)
     {
-        return $this->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::MANAGE);
     }
 }
