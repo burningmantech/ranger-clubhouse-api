@@ -968,11 +968,12 @@ class PersonScheduleControllerTest extends TestCase
      * has been set. max becomes a mulitpler.
      */
 
-     public function testSignUpLimitWithTrainingSlot() {
-         $this->addPosition(Position::TRAINING);
+    public function testSignUpLimitWithTrainingSlot()
+    {
+        $this->addPosition(Position::TRAINING);
 
-         $shift = $this->trainingSlots[0];
-         $trainerSlot = factory(Slot::class)->create(
+        $shift = $this->trainingSlots[0];
+        $trainerSlot = factory(Slot::class)->create(
              [
                  'begins'      => date($shift->begins),
                  'ends'        => date($shift->ends),
@@ -984,14 +985,14 @@ class PersonScheduleControllerTest extends TestCase
              ]
          );
 
-         $trainer1 = factory(Person::class)->create();
-         factory(PersonSlot::class)->create([ 'person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
-         $trainer2 = factory(Person::class)->create();
-         factory(PersonSlot::class)->create([ 'person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
+        $trainer1 = factory(Person::class)->create();
+        factory(PersonSlot::class)->create([ 'person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
+        $trainer2 = factory(Person::class)->create();
+        factory(PersonSlot::class)->create([ 'person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
 
-         $shift->update([ 'signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id ]);
+        $shift->update([ 'signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id ]);
 
-         $response = $this->json(
+        $response = $this->json(
              'POST',
              "person/{$this->user->id}/schedule",
              [
@@ -999,15 +1000,93 @@ class PersonScheduleControllerTest extends TestCase
              ]
          );
 
-         $response->assertStatus(200);
-         $response->assertJson([ 'status' => 'success' ]);
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'success' ]);
 
-         $this->assertDatabaseHas(
+        $this->assertDatabaseHas(
              'person_slot',
              [
                  'person_id' => $this->user->id,
                  'slot_id'   => $shift->id,
              ]
          );
-     }
+    }
+
+    /*
+     * Recommend working a Burn Weekend shift is none is present in the schedule
+     */
+
+    public function testRecommendBurnWeekendShift()
+    {
+        $year = $this->year;
+
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(true);
+
+        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
+
+        // Check for scheduling
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+                'permission'   => [
+                    'recommend_burn_weekend_shift' => true
+                ]
+            ]);
+
+        // And the HQ interface
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'burn_weekend_shift' => true ]);
+    }
+
+
+    /*
+     * Do not recommend working a Burn Weekend shift because the person is signed up for a Burn Weekend shift.
+     */
+
+    public function testDoNotRecommendBurnWeekendShift()
+    {
+        $year = $this->year;
+
+        $photoMock = $this->mockPhotoStatus('approved');
+        $mrMock = $this->mockManualReviewPass(true);
+
+        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
+
+        $shift = factory(Slot::class)->create(
+             [
+                 'begins'      => date("$year-08-25 18:45:00"),
+                 'ends'        => date("$year-08-25 23:45:00"),
+                 'position_id' => Position::DIRT,
+                 'description' => "BURN WEEKEND BABY!",
+                 'signed_up'   => 0,
+                 'max'         => 10,
+                 'min'         => 0,
+             ]
+         );
+
+        factory(PersonSlot::class)->create([
+             'person_id' => $this->user->id,
+             'slot_id'   => $shift->id
+         ]);
+
+        // Check for scheduling
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+                'permission'   => [
+                    'recommend_burn_weekend_shift' => false
+                ]
+            ]);
+
+        // And check the HQ interface
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'burn_weekend_shift' => false ]);
+    }
 }

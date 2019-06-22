@@ -23,6 +23,8 @@ use App\Mail\TrainingSignup;
 use App\Mail\SlotSignup;
 use App\Mail\TrainingSessionFullMail;
 
+use Carbon\Carbon;
+
 class PersonScheduleController extends ApiController
 {
     /**
@@ -211,6 +213,7 @@ class PersonScheduleController extends ApiController
             }
 
             $response = [
+                'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person->id),
                 'status' => 'success',
                 'signed_up' => $signedUp,
             ];
@@ -280,6 +283,8 @@ class PersonScheduleController extends ApiController
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
+            $result['recommend_burn_weekend_shift'] = Schedule::recommendBurnWeekendShift($person->id);
+
             $data = [ 'slot_id' => $slotId ];
             if ($forced) {
                 $data['forced'] = true;
@@ -396,6 +401,13 @@ class PersonScheduleController extends ApiController
             $canSignUpForShifts = false;
         }
 
+
+        // 2019 Council request - encourage weekend sign ups
+        $recommendWeekendShift = false;
+        if ($status == 'active' || $status == 'inactive' || $status == 'inactive extension') {
+            $recommendWeekendShift = Schedule::recommendBurnWeekendShift($personId);
+        }
+
         $results = [
             'signup_allowed'              => $canSignUpForShifts,
             'callsign_approved'           => $callsignApproved,
@@ -415,9 +427,27 @@ class PersonScheduleController extends ApiController
             'missing_bpguid'              => $missingBpguid,
 
             'missing_behavioral_agreement'  => $missingBehaviorAgreement,
+
+            // Not a hard requirement, just a suggestion
+            'recommend_burn_weekend_shift'    => $recommendWeekendShift,
         ];
 
         return response()->json([ 'permission' => $results ]);
+    }
+
+   /*
+    * Shift recommendations for a person (currently recommend Burn Weekend shift only)
+    *
+    * (use primarily by the HQ interface)
+    */
+
+    public function recommendations(Person $person)
+    {
+        $this->authorize('view', [ Schedule::class, $person ]);
+
+        return response()->json([
+            'burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person->id)
+        ]);
     }
 
     /*
@@ -478,6 +508,13 @@ class PersonScheduleController extends ApiController
             'slot_count'=> count($rows)
         ]);
     }
+
+    /*
+     * Retrieve the schedule summary for a given year.
+     *
+     * Hours and expected credits are broken down into pre-event, event, and post-event
+     * periods along with "other" (usually training)
+     */
 
     public function scheduleSummary(Person $person)
     {
