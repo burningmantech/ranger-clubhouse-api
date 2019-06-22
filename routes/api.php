@@ -137,6 +137,7 @@ Route::group([
     Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
+    Route::get('person/{person}/schedule/recommendations', 'PersonScheduleController@recommendations');
     Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
     Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');

@@ -355,6 +355,46 @@ class Schedule extends ApiModel
     }
 
     /*
+     * Does the person need to be motivated to work a weekend shift?
+     */
+
+    public static function recommendBurnWeekendShift($personId)
+    {
+        $missingWeekendShift = false;
+        $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
+        if (empty($burnWeekendPeriod)) {
+            return false; // Not set, don't bother
+        }
+
+        list($start, $end) = explode('/', $burnWeekendPeriod);
+        $start = trim($start);
+        $end = trim($end);
+
+        $now = SqlHelper::now();
+        if ($now->gt(Carbon::parse($end))) {
+            return false;
+        }
+
+        return !Schedule::hasSignupInPeriod($personId, $start, $end);
+    }
+
+    /*
+     * Determine if a person is signed up for a shift occuring within a certain date range.
+     */
+
+    public static function hasSignupInPeriod($personId, $start, $end)
+    {
+        return DB::table('person_slot')
+            ->join('slot', 'person_slot.slot_id', 'slot.id')
+            ->where('person_slot.person_id', $personId)
+            ->where(function ($q) use ($start, $end) {
+                $q->whereBetween('slot.begins', [ $start, $end ]);
+                $q->orWhereBetween('slot.ends', [ $start, $end ]);
+            })
+            ->exists();
+    }
+
+    /*
      * build a schedule summary (credit / hour break down into pre-event, event, post-event, other)
      */
 
