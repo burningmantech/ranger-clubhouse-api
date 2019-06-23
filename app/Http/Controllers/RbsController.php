@@ -531,7 +531,7 @@ class RbsController extends ApiController
         }
 
         $people = array_values($peopleByIds);
-        usort($people, function ($a, $b) { return strcmp($a->callsign, $b->callsign); });
+        usort($people, function ($a, $b) { return strcasecmp($a->callsign, $b->callsign); });
 
         // Response should match transmit()
         return response()->json([
