@@ -384,7 +384,7 @@ class Timesheet extends ApiModel
 
         usort($freaks, function ($a, $b) {
             if ($a['years'] == $b['years']) {
-                return strcmp($a['callsign'], $b['callsign']);
+                return strcasecmp($a['callsign'], $b['callsign']);
             } else {
                 return $b['years'] - $a['years'];
             }

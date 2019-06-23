@@ -152,22 +152,13 @@ class AccessDocument extends ApiModel
             $sql = self::whereIn('status', self::ACTIVE_STATUSES);
         }
 
-        $personIds = $sql->distinct('person_id')->pluck('person_id');
-
-        $personWith = 'person:id,callsign,status,first_name,last_name,email';
-
-        if ($forDelivery) {
-            $personWith .= ",street1,city,state,zip,country";
-        }
-
-        $rows = self::whereNotIn('status', self::INVALID_STATUSES)
-            ->whereIn('person_id', $personIds)
-            ->with([ $personWith ])
+        $rows = $sql->with([ 'person:id,callsign,status,first_name,last_name,email' ])
             ->get();
 
         $people = [];
 
         if ($forDelivery) {
+            $personIds = $rows->pluck('person_id')->unique()->toArray();
             $deliveries = AccessDocumentDelivery::whereIn('person_id', $personIds)
                 ->where('year', $currentYear)
                 ->get()
@@ -176,12 +167,11 @@ class AccessDocument extends ApiModel
 
         $dateRange = setting('TAS_WAPDateRange');
         if ($dateRange) {
-            list($low, $high) = explode("-", $dateRange);
+            list($low, $high) = explode("-", trim($dateRange));
         } else {
             $low = 5;
             $high = 26;
         }
-
 
         foreach ($rows as $row) {
             // skip deleted person records
@@ -191,22 +181,15 @@ class AccessDocument extends ApiModel
 
             $personId = $row->person_id;
 
-            if ($forDelivery) {
-                $delivery = $deliveries->has($personId) ? $deliveries[$personId] : null;
-                $deliveryMethod = $delivery ? $delivery->method : 'will_call';
-            }
-
             if (!isset($people[$personId])) {
                 $people[$personId] = (object) [
                     'person'    => $row->person,
                     'documents' => []
                 ];
-
-                if ($forDelivery) {
-                    $people[$personId]->delivery_method = $deliveryMethod;
-                }
             }
 
+            $person = $people[$personId];
+            $person->documents[] = $row;
 
             switch ($row->type) {
                 case 'work_access_pass':
@@ -231,75 +214,51 @@ class AccessDocument extends ApiModel
                     break;
             }
 
-            $person = $people[$personId];
-            $person->documents[] = $row;
-
             if ($forDelivery) {
+                $delivery = $deliveries->has($personId) ? $deliveries[$personId] : null;
+                $deliveryMethod = $delivery ? $delivery->method : 'will_call';
+                $person->delivery_method = $deliveryMethod;
                 $deliveryType = "UNKNOWN";
+
                 switch ($row->type) {
                     case 'staff_credential':
-                        $deliveryType = 'WILL_CALL';
+                        $deliveryType = 'will_call';
                         break;
 
                     case 'work_access_pass':
                     case 'work_access_pass_so':
-                        $deliveryType = 'PRINT_AT_HOME';
+                        $deliveryType = 'print_at_home';
+                        break;
+
+                    case 'reduced_price_ticket':
+                        $deliveryType = 'mail';
                         break;
 
                     case 'vehicle_pass':
                     case 'gift_ticket':
-                    case 'reduced_price_ticket':
                         if ($deliveryMethod == 'mail') {
-                            $address = [];
-                            if ($delivery->country == "United States") {
-                                $country = 'US';
-                                $deliveryType = "USPS";
-                            } elseif ($delivery->country == "Canada") {
-                                $country = 'CA';
-                                $deliveryType = "CANADA_UPS";
-                            } else {
-                                $country = $delivery->country;
-                            }
                             $row->delivery_address = [
-                            'street'    => $delivery->street,
-                            'city'      => $delivery->city,
-                            'state'     => substr(strtoupper($delivery->state), 0, 2),
-                            'postal_code' => $delivery->postal_code,
-                            'country'   => $country,
+                                'street'    => $delivery->street,
+                                'city'      => $delivery->city,
+                                'state'     => $delivery->state,
+                                'postal_code' => $delivery->postal_code,
+                                'country'   => 'US',
                             ];
+                            $deliveryType = 'mail';
                         } else {
-                            $deliveryType = "WILL_CALL";
+                            $deliveryType = 'will_call';
                         }
                         break;
                 }
 
                 $row->delivery_type = $deliveryType;
-
-                /*
-                 * Lulu wants us to include Clubhouse addresses for everyone,
-                 * even those not getting something shipped, for some reason.
-                 * But, we cannot include EU countries because of GDPR.
-                 */
-
-                if ($deliveryType == "WILL_CALL" || $deliveryType == "PRINT_AT_HOME") {
-                    $info = $row->person;
-                    if (!self::isEUCountry($info->country)) {
-                        $row->delivery_address = [
-                            'street'    => $info->street1,
-                            'city'      => $info->city,
-                            'state'     => substr(strtoupper($info->state), 0, 2),
-                            'postal_code'   => $info->zip,
-                            'country'   => $info->country
-                        ];
-                    }
-                }
             }
         }
 
         usort(
             $people,
             function ($a, $b) {
-                return strcmp($a->person->callsign, $b->person->callsign);
+                return strcasecmp($a->person->callsign, $b->person->callsign);
             }
         );
 
@@ -348,7 +307,7 @@ class AccessDocument extends ApiModel
         usort(
             $people,
             function ($a, $b) {
-                return strcmp($a['person']->callsign, $b['person']->callsign);
+                return strcasecmp($a['person']->callsign, $b['person']->callsign);
             }
         );
 
