@@ -134,13 +134,19 @@ class GroundhogDay extends Command
         }
 
         $settings = [
-            'BroadcastClubhouseSandbox' => true,
-            'BroadcastClubhouseNotify'  => false,
-            'TwilioAuthToken'           => 'deadbeef',
-            'LambaseJumpinUrl'          => 'https://example.com',
-            'TwilioAccountSID'          => 'deadbeef',
-            'TimesheetCorrectionEnable' => true,
-            'TimesheetCorrectionYear'   => $year,
+            'BroadcastClubhouseNotify'         => false,
+            'BroadcastClubhouseSandbox'        => true,
+            'LambaseJumpinUrl'                 => 'https://example.com',
+            'ManualReviewAuthConfig'           => '',
+            'ManualReviewDisabledAllowSignups' => true,
+            'MealInfoAvailable'                => true,
+            'RadioInfoAvailable'               => true,
+            'SFprdClientId'                    => '',
+            'TicketingPeriod'                  => 'offseason',
+            'TimesheetCorrectionEnable'        => true,
+            'TimesheetCorrectionYear'          => $year,
+            'TwilioAccountSID'                 => 'deadbeef',
+            'TwilioAuthToken'                  => 'deadbeef',
         ];
 
         foreach ($settings as $name => $value) {
@@ -167,7 +173,7 @@ class GroundhogDay extends Command
             'vehicle_paperwork' => false,
             'timesheet_confirmed' => false,
             'behavioral_agreement' => false,
-
+            'message'   => '',
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
         ]);
 

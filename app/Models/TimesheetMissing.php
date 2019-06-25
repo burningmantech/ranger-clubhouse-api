@@ -172,9 +172,9 @@ class TimesheetMissing extends ApiModel
             $partner = $sql->get(['id', 'callsign'])->first();
 
             if (!$partner) {
-                // Try soundex lookup
-                $soundex = soundex($name);
-                $partner = Person::where('callsign_soundex', $name)->get(['id', 'callsign'])->first();
+                // Try metaphone lookup
+                $metaphone = metaphone($name);
+                $partner = Person::where('callsign_soundex', $metaphone)->get(['id', 'callsign'])->first();
                 if (!$partner) {
                     $partners[] = [ 'callsign' => $name ];
                     continue;
