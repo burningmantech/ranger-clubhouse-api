@@ -364,7 +364,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // remove duplicate spaces
             $q = trim(preg_replace('/\s+/', ' ', $query['query']));
             $normalized = self::normalizeCallsign($q);
-            $soundex = soundex($normalized);
+            $metaphone = metaphone($normalized);
 
             if (substr($q, 0, 1) == '+') {
                 // Search by number
@@ -384,10 +384,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             }
             $likeQuery = '%'.$q.'%';
 
-            if (isset($query['search_fields'])) {
+            $emailOnly = (stripos($q, '@') !== false);
+            if ($emailOnly) {
+                // Force to email only search if atsign is present
+                $sql = self::where(function ($sql) use ($likeQuery, $q) {
+                    $sql->where('email', $q);
+                    $sql->orWhere('email', 'like', $likeQuery);
+                });
+            } else if (isset($query['search_fields'])) {
                 $fields = explode(',', $query['search_fields']);
 
-                $sql = self::where(function ($sql) use ($q,$fields,$likeQuery,$normalized, $soundex) {
+                $sql = self::where(function ($sql) use ($q,$fields,$likeQuery,$normalized, $metaphone) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
                             throw new \InvalidArgumentException("Search field '$field' is not allowed.");
@@ -409,7 +416,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                         } else if ($field == 'callsign') {
                                 $sql->orWhere('callsign_normalized', $normalized);
                                 $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
-                                $sql->orWhere('callsign_soundex', $soundex);
+                                $sql->orWhere('callsign_soundex', $metaphone);
                         } else {
                             $sql->orWhere($field, 'like', $likeQuery);
                         }
@@ -420,12 +427,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             }
 
             $orderBy = "CASE";
-            if (stripos($q, '@') !== false) {
+            if ($emailOnly) {
                 $orderBy .= " WHEN email=".SqlHelper::quote($q)." THEN CONCAT('00', callsign)";
                 $orderBy .= " WHEN email like ".SqlHelper::quote($likeQuery)." THEN CONCAT('03', callsign)";
             }
             $orderBy .= " WHEN callsign_normalized=".SqlHelper::quote($normalized)." THEN CONCAT('01', callsign)";
-            $orderBy .= " WHEN callsign_soundex=".SqlHelper::quote($soundex)." THEN CONCAT('02', callsign)";
+            $orderBy .= " WHEN callsign_soundex=".SqlHelper::quote($metaphone)." THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
@@ -482,16 +489,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $like = '%'.$query.'%';
 
         $normalized = self::normalizeCallsign($query);
-        $soundex = soundex($normalized);
+        $metaphone = metaphone($normalized);
         $quoted = SqlHelper::quote($normalized);
         $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
-        $quoted = SqlHelper::quote($soundex);
+        $quoted = SqlHelper::quote($metaphone);
         $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
         $orderBy .= " ELSE callsign END";
 
         $sql = DB::table('person')
-                ->where(function ($q) use ($query, $like, $normalized, $soundex) {
-                    $q->orWhere('callsign_soundex', $soundex);
+                ->where(function ($q) use ($query, $like, $normalized, $metaphone) {
+                    $q->orWhere('callsign_soundex', $metaphone);
                     $q->orWhere('callsign_normalized', $normalized);
                     $q->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
                 })->limit($limit)
@@ -749,13 +756,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Normalize store a normalized and soundex version of the callsign
+     * Normalize store a normalized and metaphone version of the callsign
      */
 
     public function setCallsignAttribute($value) {
         $this->attributes['callsign'] = $value;
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
-        $this->attributes['callsign_soundex'] = soundex($this->attributes['callsign_normalized']);
+        $this->attributes['callsign_soundex'] = metaphone($this->attributes['callsign_normalized']);
     }
 
     /**
