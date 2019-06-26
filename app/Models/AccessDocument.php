@@ -327,6 +327,10 @@ class AccessDocument extends ApiModel
         $wap = null;
 
         foreach ($rows as $row) {
+            if ($row->status == 'claimed' || $row->status == 'submitted') {
+                return $row;
+            }
+
             if ($wap == null || $row->access_date == null) {
                 $wap = $row;
             } elseif ($wap->access_date && $wap->access_date->gt($row->access_date)) {
@@ -354,6 +358,10 @@ class AccessDocument extends ApiModel
         foreach ($waps as $personId => $rows) {
             $wap = null;
             foreach ($rows as $row) {
+                if ($row->status == 'claimed' || $row->status == 'submitted') {
+                    $wap = $row;
+                    break;
+                }
                 if ($wap == null || $row->access_date == null) {
                     $wap = $row;
                 } else if ($wap->access_date == null) {
@@ -367,6 +375,19 @@ class AccessDocument extends ApiModel
         }
 
         return $people;
+    }
+
+    /**
+     *
+     * Update all non-submitted WAPs for a person
+     */
+
+    public static function updateWAPsForPerson($personId, $accessDate, $accessAnyTime)
+    {
+        self::where('person_id', $personId)
+            ->whereIn('type', [ 'staff_credential', 'work_access_pass'])
+            ->whereIn('status', [ 'qualified', 'claimed', 'banked' ])
+            ->update([ 'access_date' => $accessDate, 'access_any_time' => $accessAnyTime ]);
     }
 
     /**

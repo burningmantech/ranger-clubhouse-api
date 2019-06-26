@@ -424,20 +424,13 @@ class Bmid extends ApiModel
 
     public function updateWap()
     {
-        if ($this->_access_date == $this->_original_access_date
-        && $this->_access_any_time == $this->_original_access_any_time) {
-            return;
-        }
+        AccessDocument::updateWAPsForPerson($this->person_id, $this->_access_date, $this->_access_any_time);
 
         $wap = $this->wap;
-
-        if (!$wap || $wap->status == "submitted") {
-            return;
+        if ($wap) {
+            $wap->refresh();
+            $this->setWap($wap);
         }
-
-        $wap->access_date = $this->_access_date;
-        $wap->access_any_time = $this->_access_any_time;
-        $wap->saveWithoutValidation();
     }
 
     public function setTitle1Attribute($value)
