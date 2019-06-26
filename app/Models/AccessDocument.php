@@ -153,6 +153,7 @@ class AccessDocument extends ApiModel
         }
 
         $rows = $sql->with([ 'person:id,callsign,status,first_name,last_name,email' ])
+            ->orderBy('source_year')
             ->get();
 
         $people = [];
@@ -279,6 +280,7 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [ 'qualified', 'banked' ])
             ->whereYear('expiry_date', $year)
             ->with([ 'person:id,callsign,email,status'])
+            ->orderBy('source_year')
             ->get();
 
         $peopleByIds = [];
@@ -323,6 +325,7 @@ class AccessDocument extends ApiModel
         $rows = self::where('person_id', $personId)
             ->whereIn('type', [ 'staff_credential', 'work_access_pass' ])
             ->whereIn('status', [ 'qualified', 'claimed', 'banked', 'submitted' ])
+            ->orderBy('source_year')
             ->get();
         $wap = null;
 
@@ -350,6 +353,7 @@ class AccessDocument extends ApiModel
         $waps = self::whereIn('person_id', $personIds)
             ->whereIn('type', [ 'staff_credential', 'work_access_pass' ])
             ->whereIn('status', [ 'qualified', 'claimed', 'banked', 'submitted' ])
+            ->orderBy('source_year')
             ->get()
             ->groupBy('person_id');
 
