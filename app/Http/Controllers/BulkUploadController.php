@@ -455,18 +455,18 @@ class BulkUploadController extends ApiController
                 $record->status = 'failed';
                 $record->details = 'WAP has already been submitted';
             } else {
-                $record->status = 'success';
                 if ($anytime) {
-                    $wap->access_date = null;
-                    $wap->access_any_time = true;
+                    $accessDate = null;
+                    $accessAnyTime = true;
                 } else {
-                    $wap->access_date = $accessDateCleaned;
-                    $wap->access_any_time = false;
+                    $accessDate = $accessDateCleaned;
+                    $accessAnyTime = false;
                 }
                 $oldValue = (string) $wap->access_date;
                 if ($commit) {
-                    $this->saveModel($wap, $record);
+                    AccessDocument::updateWAPsForPerson($person->id, $accessDate, $accessAnyTime);
                 }
+                $record->status = 'success';
             }
         }
     }
