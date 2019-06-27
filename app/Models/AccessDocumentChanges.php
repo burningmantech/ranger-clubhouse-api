@@ -20,9 +20,15 @@ class AccessDocumentChanges extends Model
     ];
 
     public static function log($record, $personId, $changes) {
+        if (is_integer($record)) {
+            $id = $record;
+        } else {
+            $id = $record->id;
+        }
+
         $row = new AccessDocumentChanges([
             'table_name'    => 'access_document',
-            'record_id'     => $record->id,
+            'record_id'     => $id,
             'operation'     => 'modify',
             'changes'       => json_encode($changes),
             'changer_person_id' => $personId
