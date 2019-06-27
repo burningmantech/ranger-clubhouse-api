@@ -395,6 +395,57 @@ class Timesheet extends ApiModel
         })->values();
     }
 
+    /**
+     *
+     * Retrieve the top N hours worked within a given year range.
+     */
+
+    public static function retrieveTopHourEarners($startYear, $endYear, $topLimit)
+    {
+        // Find all eligible candidates
+        $people = Person::select('id', 'callsign', 'status', 'email')
+                    ->whereIn('status', [ 'active', 'inactive' ])
+                    ->where('user_authorized', true)
+                    ->get();
+
+        $cadidates = collect([]);
+
+        foreach ($people as $person) {
+            for ($year = $endYear; $year >= $startYear; $year = $year - 1) {
+                // Walk backward thru time and find the most recent year worked.
+                $seconds = self::join('position', 'timesheet.position_id', 'position.id')
+                        ->where('person_id', $person->id)
+                        ->whereYear('on_duty', $year)
+                        ->where('position.count_hours', true)
+                        ->get()
+                        ->sum('duration');
+                if ($seconds > 0) {
+                    // Hey found a candidate
+                    $cadidates[] = (object) [
+                        'person'    => $person,
+                        'seconds'   => $seconds,
+                        'year'      => $year
+                    ];
+                    break;
+                }
+            }
+        }
+
+        $cadidates = $cadidates->sortByDesc('seconds')->splice(0, $topLimit);
+
+        return $cadidates->map(function ($c) {
+            $person = $c->person;
+            return [
+                'id'       => $person->id,
+                'callsign' => $person->callsign,
+                'status'   => $person->status,
+                'email'    => $person->email,
+                'hours'    => round($c->seconds / 3600.0, 2),
+                'year'     => $c->year,
+            ];
+        });
+    }
+
     /*
      * Radio Eligibility
      *

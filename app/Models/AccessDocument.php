@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\ApiModel;
 use App\Models\Person;
@@ -63,7 +64,8 @@ class AccessDocument extends ApiModel
     ];
 
     protected $appends = [
-        'past_expire_date'
+        'past_expire_date',
+        'has_staff_credential'
     ];
 
     public static function boot()
@@ -152,7 +154,11 @@ class AccessDocument extends ApiModel
             $sql = self::whereIn('status', self::ACTIVE_STATUSES);
         }
 
-        $rows = $sql->with([ 'person:id,callsign,status,first_name,last_name,email' ])
+        $rows = $sql->select(
+                '*',
+                DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
+            )
+            ->with([ 'person:id,callsign,status,first_name,last_name,email,home_phone' ])
             ->orderBy('source_year')
             ->get();
 
@@ -216,14 +222,14 @@ class AccessDocument extends ApiModel
             }
 
             if ($forDelivery) {
-                $delivery = $deliveries->has($personId) ? $deliveries[$personId] : null;
+                $delivery = $deliveries[$personId] ?? null;
                 $deliveryMethod = $delivery ? $delivery->method : 'will_call';
                 $person->delivery_method = $deliveryMethod;
                 $deliveryType = "UNKNOWN";
 
                 switch ($row->type) {
                     case 'staff_credential':
-                        $deliveryType = 'will_call';
+                        $deliveryType = 'staff_credentialing';
                         break;
 
                     case 'work_access_pass':
@@ -232,18 +238,21 @@ class AccessDocument extends ApiModel
                         break;
 
                     case 'reduced_price_ticket':
-                        $deliveryType = 'mail';
+                        $deliveryType = $deliveryMethod;
                         break;
 
                     case 'vehicle_pass':
                     case 'gift_ticket':
-                        if ($deliveryMethod == 'mail') {
+                        if ($row->type == 'vehicle_pass' && $row->has_staff_credential) {
+                            $deliveryType = 'staff_credentialing';
+                        } else if ($deliveryMethod == 'mail') {
                             $row->delivery_address = [
-                                'street'    => $delivery->street,
-                                'city'      => $delivery->city,
-                                'state'     => $delivery->state,
+                                'street'      => $delivery->street,
+                                'city'        => $delivery->city,
+                                'state'       => $delivery->state,
                                 'postal_code' => $delivery->postal_code,
-                                'country'   => 'US',
+                                'country'     => 'US',
+                                'phone'       => $row->person->home_phone,
                             ];
                             $deliveryType = 'mail';
                         } else {
@@ -490,6 +499,15 @@ class AccessDocument extends ApiModel
     public function getPastExpireDateAttribute()
     {
         return ($this->expiry_date && $this->expiry_date->year < current_year());
+    }
+
+    /*
+     * Return true if the person claimed a SC for the year
+     */
+
+    public function getHasStaffCredentialAttribute()
+    {
+        return ($this->attributes['has_staff_credential'] ?? false);
     }
 
     /*

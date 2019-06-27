@@ -58,6 +58,7 @@ Route::group([
 
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
+    Route::get('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
     Route::patch('access-document/{access_document}/status', 'AccessDocumentController@status');
     Route::resource('access-document', 'AccessDocumentController');
 
