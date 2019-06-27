@@ -80,4 +80,8 @@ class AccessDocumentPolicy
     {
         return ($user->id == $personId);
     }
+
+    public function markSubmitted(Person $user) {
+        return false;
+    }
 }

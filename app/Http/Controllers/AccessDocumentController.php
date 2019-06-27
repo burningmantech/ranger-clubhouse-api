@@ -64,6 +64,25 @@ class AccessDocumentController extends ApiController
     }
 
     /*
+     * Mark a list of claimed documents as submitted
+     */
+
+    public function markSubmitted()
+    {
+        $this->authorize('markSubmitted', AccessDocument::class);
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        AccessDocument::whereIn('id', $params['ids'])
+            ->where('status', 'claimed')
+            ->update([ 'status' => 'submitted' ]);
+
+        return $this->success();
+    }
+
+    /*
      * Create an access document
      */
 
