@@ -75,9 +75,17 @@ class AccessDocumentController extends ApiController
             'ids.*' => 'integer',
         ]);
 
-        AccessDocument::whereIn('id', $params['ids'])
+        $ids = $params['ids'];
+
+        $rows = AccessDocument::whereIn('id', $ids)
             ->where('status', 'claimed')
-            ->update([ 'status' => 'submitted' ]);
+            ->get();
+
+        foreach ($rows as $row) {
+            $oldStatus = $row->status;
+            $row->update([ 'status' => 'submitted' ]);
+            AccessDocumentChanges::log($row, $this->user->id, [ 'status' => [ $oldStatus, 'submitted' ] ]);
+        }
 
         return $this->success();
     }
