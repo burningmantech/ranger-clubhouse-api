@@ -126,7 +126,7 @@ class Timesheet extends ApiModel
         $rows = $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
 
         if (!$personId) {
-            $rows = $rows->sortBy('person.callsign')->values();
+            $rows = $rows->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
         }
 
         return $rows;

@@ -295,7 +295,7 @@ class Bmid extends ApiModel
 
         $bmids = $bmids->sortBy(function ($bmid, $key) {
             return $bmid->person ? $bmid->person->callsign : "";
-        })->values();
+        }, SORT_NATURAL|SORT_FLAG_CASE)->values();
 
         return $bmids;
     }

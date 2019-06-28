@@ -37,9 +37,15 @@ class TraineeStatus extends ApiModel
     }
 
     public static function didPersonPassForYear($personId, $positionId, $year) {
+        $positionIds = [ $positionId ];
+
+        if ($positionId == Position::HQ_FULL_TRAINING) {
+            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
                 ->where('trainee_status.person_id', $personId)
-                ->where('slot.position_id', $positionId)
+                ->whereIn('slot.position_id', $positionIds)
                 ->whereYear('slot.begins', $year)
                 ->where('passed', 1)
                 ->exists();

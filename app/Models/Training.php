@@ -271,6 +271,11 @@ class Training extends Position
 
     public function retrieveSlotsCapacity($year)
     {
+        $positionIds = [ $this->id ];
+        if ($this->id == Position::HQ_FULL_TRAINING) {
+            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+
         $rows = DB::table('slot')
           ->select(
               'slot.id as slot_id',
@@ -302,7 +307,7 @@ class Training extends Position
               )
           )
           ->whereYear('slot.begins', $year)
-          ->where('slot.position_id', $this->id)
+          ->whereIn('slot.position_id', $positionIds)
           ->orderBy('slot.begins')->get();
 
         foreach ($rows as $row) {
@@ -326,6 +331,8 @@ class Training extends Position
 
     public static function findArtAlphas($positionId, $personIds)
     {
+        // TODO: extend to support multiple training positions
+
         if (empty($personIds)) {
             return [];
         }
@@ -368,6 +375,14 @@ class Training extends Position
 
     public function retrievePeopleForTrainingCompleted($year)
     {
+        // TODO: extend to support multiple training positions
+
+        $positionIds = [ $this->id ];
+        if ($this->id == Position::HQ_FULL_TRAINING) {
+            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+        $positionIds = implode(',', $positionIds);
+
         $rows = DB::select(
                 "SELECT
                     person.id,
@@ -382,12 +397,11 @@ class Training extends Position
                 INNER JOIN position ON slot.position_id = position.id
                 WHERE person.id = trainee_status.person_id
                      AND slot.id = trainee_status.slot_id
-                     AND position.id = :position_id
+                     AND position.id IN ($positionIds)
                      AND YEAR(slot.begins) = :year
                      AND passed = 1
                  ORDER BY slot.begins, description, callsign",
                  [
-                     'position_id'  => $this->id,
                      'year'         => $year
                  ]
         );
@@ -447,7 +461,13 @@ class Training extends Position
             //        throw new \InvalidArgumentException('No other position references this position for training');
         }
 
-        $trainingSlotIds = Slot::where('position_id', $this->id)->whereYear('begins', $year)->pluck('id');
+        $positionIds = [ $this->id ];
+
+        if ($this->id == Position::HQ_FULL_TRAINING) {
+            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+
+        $trainingSlotIds = Slot::whereIn('position_id', $positionIds)->whereYear('begins', $year)->pluck('id');
 
         if ($trainingSlotIds->isEmpty()) {
             return [
@@ -463,6 +483,8 @@ class Training extends Position
          * (yah, not crazy about the sub-selects here.)
          */
 
+        $positionIds = implode(',', $positionIds);
+        error_log("POSITION IDS ".json_encode($positionIds));
         $rows = DB::select("SELECT
                 person_slot.person_id,
                 person_slot.slot_id,
@@ -480,7 +502,7 @@ class Training extends Position
              AND person_slot.person_id NOT IN (
                     SELECT person_id FROM person_slot
                      WHERE slot_id IN
-                       (SELECT id FROM slot WHERE position_id={$this->id} AND YEAR(begins)=$year)
+                       (SELECT id FROM slot WHERE position_id IN ($positionIds) AND YEAR(begins)=$year)
                )
             ORDER BY slot.begins asc");
 
@@ -581,7 +603,7 @@ class Training extends Position
                 }
             }
 
-            ksort($untrainedNotPassed);
+            ksort($untrainedNotPassed, SORT_NATURAL|SORT_FLAG_CASE);
             $untrainedNotPassed = array_values($untrainedNotPassed);
         }
 
