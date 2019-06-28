@@ -76,9 +76,20 @@ class PersonEventInfo extends ApihouseResult
 
             $training = $trained[$need->training_position_id] ?? null;
 
+            // TODO: Support multiple ART training positions
+            if (!$training && $need->training_position_id == Position::HQ_REFRESHER_TRAINING) {
+                $training = $trained[Position::HQ_REFRESHER_TRAINING] ?? null;
+            }
+
             if (!$training || !$training->passed) {
+                $positions = [ $need->training_position_id ];
+
+                // TODO: Support multiple ART training positions
+                if ($need->training_position_id == Position::HQ_FULL_TRAINING) {
+                    $positions[] = Position::HQ_REFRESHER_TRAINING;
+                }
                 $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
-                        ->where('position_id', $need->training_position_id)
+                        ->whereIn('position_id', $positions)
                         ->whereYear('begins', $year)
                         ->where('person_slot.person_id', $personId)
                         ->orderBy('begins', 'desc')
@@ -117,7 +128,6 @@ class PersonEventInfo extends ApihouseResult
                     // Session has passed, fail it.
                     $status->status = 'fail';
                 }
-
             } else {
                 // Nothing found.
                 $status->status = 'no-shift';

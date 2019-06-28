@@ -153,7 +153,7 @@ class PersonMentor extends ApiModel
         $history =  PersonMentor::with([ 'mentor:id,callsign' ])
                    ->where('person_id', $personId)
                    ->get()
-                   ->sortBy('mentor.callsign')
+                   ->sortBy('mentor.callsign', SORT_NATURAL|SORT_FLAG_CASE)
                    ->groupBy('mentor_year');
 
 

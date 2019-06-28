@@ -146,7 +146,7 @@ class RbsController extends ApiController
         if (isset($attrs['has_muster_position'])) {
             $info['muster_positions'] = [
                 'frequent' => Position::find(RBS::FREQUENT_MUSTER_POSITIONS)
-                            ->sortBy('title')
+                            ->sortBy('title', SORT_NATURAL|SORT_FLAG_CASE)
                             ->values()
                             ->map(function ($row) {
                                 return [ 'id' => $row->id, 'title' => $row->title ];

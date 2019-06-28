@@ -103,7 +103,7 @@ class Alpha
                 ->filter(function ($r) {
                     return $r->person != null;
                 })
-                ->sortBy('person.callsign')
+                ->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)
                 ->pluck('person')
                 ->values();
 
@@ -121,7 +121,7 @@ class Alpha
         $rows = PersonSlot::whereIn('slot_id', $slots->pluck('id')->toArray())
                 ->with('person')
                 ->get()
-                ->sortBy('person.callsign')
+                ->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)
                 ->values();
 
         $slotInfo = $slots->map(function($slot) {

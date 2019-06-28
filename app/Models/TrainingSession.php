@@ -25,8 +25,15 @@ class TrainingSession extends Slot
 
     public static function findAllForTrainingYear($trainingId, $year)
     {
+        $positionIds = [ $trainingId ];
+
+        // TODO: Extend to multiple training positions
+        if ($trainingId == Position::HQ_FULL_TRAINING) {
+            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+
         return self::whereYear('begins', $year)
-                ->where('position_id', $trainingId)
+                ->whereIn('position_id', $positionIds)
                 ->orderBy('begins')
                 ->get();
     }
@@ -146,7 +153,7 @@ class TrainingSession extends Slot
 
     public function retrieveTrainers()
     {
-        $trainerPositions = @Position::TRAINERS[$this->position_id];
+        $trainerPositions = Position::TRAINERS[$this->position_id] ?? null;
         if (!$trainerPositions) {
             return [];
             //throw new \InvalidArgumentException('No trainer positions are associated.');
@@ -169,7 +176,7 @@ class TrainingSession extends Slot
             $rows = PersonSlot::with([ 'person:id,callsign,first_name,last_name,email'])
                         ->where('slot_id', $trainerSlot->id)->get();
 
-            $rows = $rows->sortBy(function ($p) { return $p->person->callsign; })->values();
+            $rows = $rows->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
 
             $instructors = $rows->map(function($row) {
                 $person = $row->person;

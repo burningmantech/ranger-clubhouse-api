@@ -116,7 +116,7 @@ class Broadcast extends ApiModel {
             $messages = BroadcastMessage::where('broadcast_id', $log->id)
                 ->with([ 'person:id,callsign,first_name,last_name' ])
                 ->get()
-                ->sortBy('person.callsign')->values();
+                ->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
 
             $people = [];
             foreach ($messages as $message) {

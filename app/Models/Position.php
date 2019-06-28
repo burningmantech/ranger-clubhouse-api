@@ -25,6 +25,7 @@ class Position extends ApiModel
     const HQ_WINDOW = 3;
     const HQ_TRAINER = 34;
     const HQ_FULL_TRAINING = 31;
+    const HQ_REFRESHER_TRAINING = 49;
     const HQ_LEAD = 32;
     const HQ_SHORT = 33;
     const HQ_RUNNER = 18;
@@ -83,6 +84,7 @@ class Position extends ApiModel
         ],
         Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],
         Position::HQ_FULL_TRAINING => [ Position::HQ_TRAINER ],
+        Position::HQ_REFRESHER_TRAINING => [ Position::HQ_TRAINER ],
         Position::SANDMAN_TRAINING => [ Position::SANDMAN_TRAINER ],
         Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER ],
     ];
