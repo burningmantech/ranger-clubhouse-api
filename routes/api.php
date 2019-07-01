@@ -181,13 +181,16 @@ Route::group([
 
     Route::resource('setting', 'SettingController');
 
-    Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
-    Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
-    Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
-    Route::get('slot/years', 'SlotController@years');
-    Route::get('slot/{slot}/people', 'SlotController@people');
-    Route::post('slot/copy', 'SlotController@copy');
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
+    Route::post('slot/copy', 'SlotController@copy');
+    Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
+    Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
+    Route::get('slot/shift-coverage-report', 'SlotController@shiftCoverageReport');
+    Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
+    Route::get('slot/shift-signups-report', 'SlotController@shiftSignUpsReport');
+    Route::get('slot/years', 'SlotController@years');
+
+    Route::get('slot/{slot}/people', 'SlotController@people');
     Route::resource('slot', 'SlotController');
 
     Route::get('sms', 'SmsController@getNumbers');
@@ -221,6 +224,7 @@ Route::group([
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
     Route::get('timesheet/shirts-earned', 'TimesheetController@shirtsEarnedReport');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
+    Route::get('timesheet/special-teams', 'TimesheetController@specialTeamsReport');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::resource('timesheet', 'TimesheetController');
 
