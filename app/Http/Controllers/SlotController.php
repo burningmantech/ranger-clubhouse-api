@@ -13,6 +13,7 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 
 use App\Lib\HQWindow;
+use App\Lib\ShiftReporting;
 
 use Carbon\Carbon;
 
@@ -335,5 +336,34 @@ class SlotController extends ApiController
         ]);
 
         return response()->json(HQWindow::retrieveCheckInOutForecast($params['year'], $params['interval']));
+    }
+
+    /*
+     * Shift Coverage Report
+     */
+
+    public function shiftCoverageReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $params = request()->validate([
+            'year'  => 'required|integer',
+            'type'  => 'required|string'
+        ]);
+
+        return response()->json(ShiftReporting::retrieveShiftCoverageByYearType($params['year'], $params['type']));
+    }
+
+    /*
+     * Shift Sign Up Report
+     */
+
+    public function shiftSignUpsReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $year = $this->getYear();
+
+        return response()->json([ 'positions' => ShiftReporting::retrieveShiftSignupsForYear($year) ]);
     }
 }

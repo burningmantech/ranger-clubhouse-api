@@ -397,6 +397,10 @@ class AccessDocument extends ApiModel
 
     public static function updateWAPsForPerson($personId, $accessDate, $accessAnyTime)
     {
+        if (empty($accessDate)) {
+            $accessDate = null;
+        }
+
         self::where('person_id', $personId)
             ->whereIn('type', [ 'staff_credential', 'work_access_pass'])
             ->whereIn('status', [ 'qualified', 'claimed', 'banked' ])

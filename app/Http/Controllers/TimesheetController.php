@@ -615,4 +615,23 @@ class TimesheetController extends ApiController
         }
         return response()->json([ 'status' => ($haveError ? 'error' : 'success'), 'entries' => $entries, 'commit' => true ]);
     }
+
+    /*
+     * Special Teams reporting
+     */
+
+     public function specialTeamsReport()
+     {
+         $params = request()->validate([
+             'position_ids'   => 'required|array',
+             'position_ids.*' => 'integer|exists:position,id',
+             'start_year'     => 'required|integer|lte:end_year',
+             'end_year'       => 'required|integer',
+             'include_inactive' => 'sometimes|boolean'
+         ]);
+
+         return response()->json([
+             'people' => Timesheet::retrieveSpecialTeamsWork($params['position_ids'], $params['start_year'], $params['end_year'], ($params['include_inactive'] ?? false))
+        ]);
+     }
 }

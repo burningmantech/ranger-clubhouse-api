@@ -12,6 +12,7 @@ class Position extends ApiModel
     const DIRT = 2;
     const DIRT_TRAINING = 13;
     const DIRT_PRE_EVENT = 53;
+    const MENTOR = 9;
 
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
@@ -19,14 +20,16 @@ class Position extends ApiModel
     const GREEN_DOT_MENTEE = 50;
     const GREEN_DOT_TRAINING = 101;
     const GREEN_DOT_TRAINER = 100;
-
-    const MENTOR = 9;
+    const SANCTUARY = 54;
+    const SANCTUARY_HOST = 68;
 
     const HQ_WINDOW = 3;
+    const HQ_WINDOW_PRE_EVENT = 117;
     const HQ_TRAINER = 34;
     const HQ_FULL_TRAINING = 31;
     const HQ_REFRESHER_TRAINING = 49;
     const HQ_LEAD = 32;
+    const HQ_LEAD_PRE_EVENT = 118;
     const HQ_SHORT = 33;
     const HQ_RUNNER = 18;
 
@@ -35,6 +38,7 @@ class Position extends ApiModel
     const DPW_RANGER = 105;
 
     const OOD = 10;
+    const DEPUTY_OOD = 87;
 
     const BURN_COMMAND_TEAM = 99;
     const BURN_PERIMETER = 19;
@@ -58,8 +62,34 @@ class Position extends ApiModel
     const TRAINER_ASSOCIATE = 88;
     const TRAINER_UBER = 95;
 
+    const TOW_TRUCK_DRIVER = 20;
     const TOW_TRUCK_TRAINING = 102;
     const TOW_TRUCK_TRAINER = 121;
+
+    const GERLACH_PATROL = 75;
+    const GERLACH_PATROL_LEAD = 76;
+    const GERLACH_PATROL_GREEN_DOT = 122;
+
+    const ECHELON_FIELD = 17;
+    const ECHELON_FIELD_LEAD = 81;
+
+    const RSCI = 25;
+    const RSCI_MENTOR = 92;
+    const RSCI_MENTEE = 93;
+
+    const RNR = 11;
+
+    const INTERCEPT = 5;
+    const INTERCEPT_DISPATCH = 6;
+    const INTERCEPT_OPERATOR = 66;
+
+    const OPERATOR = 56;
+
+    const LEAL = 7;
+    const LEAL_MENTEE = 8;
+    const LEAL_MENTOR = 85;
+    const LEAL_PARTNER = 116;
+    const LEAL_PRE_EVENT = 119;
 
     const TYPES = [
         'Command',
