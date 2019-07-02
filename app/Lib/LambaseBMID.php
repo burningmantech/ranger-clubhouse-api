@@ -77,12 +77,15 @@ class LambaseBMID
                 [ 'Content-Type: application/json', 'Content-Length: ' . strlen($json) ]
             );
             $result = curl_exec($ch);
-            curl_close($ch);
 
             if ($result === false) {
                 $httpCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-                throw new LambaseBMIDException("Lambase Unknown HTTP response code [$httpCode]");
+                $error = curl_error($ch);
+                curl_close($ch);
+                throw new LambaseBMIDException("Lambase Unknown HTTP response code [$httpCode] or error [$error]");
             }
+
+            curl_close($ch);
 
             $decodedResult = json_decode($result);
             if ($decodedResult == null) {
@@ -91,7 +94,7 @@ class LambaseBMID
 
             $success = [];
             foreach ($decodedResult as $n => $obj) {
-                $success[] = $obj->wsid;
+                $success[$obj->wsid] = true;
             }
 
             foreach ($bmids as $bmid) {
