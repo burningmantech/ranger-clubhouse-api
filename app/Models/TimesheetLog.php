@@ -38,23 +38,30 @@ class TimesheetLog extends ApiModel
     /**
      * Find the logs for a person & year. Include the timesheet and positions
      *
+     * Use the on_duty date to lookup, timesheet_log.created_at may
+     * be in different year.
+     *
      * @param integer $personId
      * @param integer $year
      */
 
     public static function findForPersonYear($personId, $year)
     {
-        $timesheets = self::with([
+        $timesheets = self::select('timesheet_log.*')
+            ->with([
                     'person:id,callsign', 'creator:id,callsign',
                     'timesheet:id,on_duty,off_duty,position_id',
                     'timesheet.position:id,title'
             ])
-            ->where('person_id', $personId)
-            ->whereYear('created_at', $year)
-            ->whereNotNull('timesheet_id')
+            ->join('timesheet', 'timesheet.id', 'timesheet_log.timesheet_id')
+            ->where('timesheet_log.person_id', $personId)
+            ->whereYear('timesheet.on_duty', $year)
             ->orderBy('created_at')
             ->get();
 
+        // Possible issue: if the person confirms their timesheet in the year following
+        // it may not be seen in the year being view. (.e.g, hubcap worked in 2018, yet
+        // did not confirm his timesheets until 2019. The confirmation would appear in the 2019 log.)
         $other = self::with([ 'person:id,callsign', 'creator:id,callsign'])
             ->where('person_id', $personId)
             ->whereYear('created_at', $year)
