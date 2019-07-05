@@ -86,6 +86,8 @@ class Bmid extends ApiModel
     public $_original_access_any_time;
     public $_original_access_date;
 
+    public $uploadedToLambase = false;
+
 
     public static function boot()
     {

@@ -27,11 +27,11 @@ class LambaseBMID
         foreach ($bmids as $bmid) {
             $record = [
                 'user'        => $bmid->person_id,
-                'callsign'    => $bmid->callsign,
-                'email'       => $bmid->email,
-                'firstname'   => $bmid->first_name,
-                'lastname'    => $bmid->last_name,
-                'bpguid'      => $bmid->bpguid,
+                'callsign'    => $bmid->person->callsign,
+                'email'       => $bmid->person->email,
+                'firstname'   => $bmid->person->first_name,
+                'lastname'    => $bmid->person->last_name,
+                'bpguid'      => $bmid->person->bpguid,
                 'meals'       => $bmid->meals,
                 'showers'     => ($bmid->showers ? "Y" : "N"),
                 'mvr'         => ($bmid->org_vehicle_insurance ? "Y" : "N"),
@@ -68,7 +68,7 @@ class LambaseBMID
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);
             curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
