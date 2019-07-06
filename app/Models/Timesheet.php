@@ -664,7 +664,11 @@ class Timesheet extends ApiModel
         $eventDates = EventDate::findForYear($year);
 
         if (!$eventDates) {
-            throw new \InvalidArgumentException("Cannot find event dates for $year");
+            return [
+                'event_start' => '',
+                'event_end'   => '',
+                'people'      => []
+            ];
         }
 
         $people = Person::whereNotIn('status', [ 'alpha', 'auditor', 'bonked', 'past prospective', 'prospective' ])
@@ -673,7 +677,11 @@ class Timesheet extends ApiModel
             ->get();
 
         if ($people->isEmpty()) {
-            return [];
+            return [
+                'event_start' => (string) $eventDates->event_start,
+                'event_end'   => (string) $eventDates->event_end,
+                'people'      => []
+            ];
         }
 
 
