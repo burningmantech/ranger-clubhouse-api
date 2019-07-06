@@ -143,4 +143,23 @@ class TimesheetPolicy
     {
         return false;
     }
+
+    /**
+     * Can the user run the hours/credit report
+     */
+
+    public function hoursCreditsReport(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user run the Special Teams report
+     */
+
+    public function specialTeamsReport(Person $user)
+    {
+        return false;
+    }
+
 }

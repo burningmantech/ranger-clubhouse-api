@@ -95,10 +95,15 @@ class PositionCredit extends ApiModel
 
     public static function warmYearCache($year, $positionIds) {
         $year = intval($year);
-        $rows = self::whereIn('position_id', $positionIds)
-                ->whereYear('start_time', $year)
+        $sql = self::whereYear('start_time', $year)
                 ->whereYear('end_time', $year)
-                ->orderBy('start_time')->get();
+                ->orderBy('start_time');
+
+        if (!empty($positionIds)) {
+            $sql->whereIn('position_id', $positionIds);
+        }
+
+        $rows = $sql->get();
 
         foreach ($rows as $row) {
             // Cache the timestamp converstion

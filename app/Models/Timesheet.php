@@ -659,6 +659,82 @@ class Timesheet extends ApiModel
         ];
     }
 
+    public static function retrieveHoursCredits($year)
+    {
+        $eventDates = EventDate::findForYear($year);
+
+        if (!$eventDates) {
+            throw new \InvalidArgumentException("Cannot find event dates for $year");
+        }
+
+        $people = Person::whereNotIn('status', [ 'alpha', 'auditor', 'bonked', 'past prospective', 'prospective' ])
+            ->whereRaw('EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty)=? LIMIT 1)', [ $year ])
+            ->orderBy('callsign')
+            ->get();
+
+        if ($people->isEmpty()) {
+            return [];
+        }
+
+
+        $personIds = $people->pluck('id');
+        $yearsByIds = self::yearsRangeredCountForIds($personIds);
+
+        PositionCredit::warmYearCache($year, []);
+
+        $entriesByPerson = self::whereIn('person_id', $personIds)
+            ->whereYear('on_duty', $year)
+            ->with([ 'position:id,count_hours' ])
+            ->get()
+            ->groupBy('person_id');
+
+        $results = [];
+        $now = SqlHelper::now()->timestamp;
+
+        foreach ($people as $person) {
+
+            $entries = $entriesByPerson[$person->id] ?? null;
+            if (!$entries) {
+                continue;
+            }
+
+            $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
+            foreach ($entries as $entry) {
+                $summary->computeTotals(
+                        $entry->position_id,
+                         $entry->on_duty->timestamp,
+                         $entry->off_duty ? $entry->off_duty->timestamp :  $now,
+                         $entry->position->count_hours);
+            }
+
+            $results[] = [
+                'id'                  => $person->id,
+                'callsign'            => $person->callsign,
+                'status'              => $person->status,
+                'first_name'          => $person->first_name,
+                'last_name'           => $person->last_name,
+                'email'               => $person->email,
+                'years'               => $yearsByIds[$person->id] ?? 0,
+                'pre_event_duration'  => $summary->pre_event_duration,
+                'pre_event_credits'   => $summary->pre_event_credits,
+                'event_duration'      => $summary->event_duration,
+                'event_credits'       => $summary->event_credits,
+                'post_event_duration' => $summary->post_event_duration,
+                'post_event_credits'  => $summary->post_event_credits,
+                'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
+                'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+                'other_duration'      => $summary->other_duration,
+                'counted_duration'    => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            ];
+        }
+
+        return [
+            'event_start' => (string) $eventDates->event_start,
+            'event_end'   => (string) $eventDates->event_end,
+            'people'      => $results
+        ];
+    }
+
     public function getDurationAttribute()
     {
         // Did a select already compute this?

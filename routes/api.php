@@ -218,6 +218,7 @@ Route::group([
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
     Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
+    Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::get('timesheet/log', 'TimesheetController@showLog');
     Route::post('timesheet/signin', 'TimesheetController@signin');

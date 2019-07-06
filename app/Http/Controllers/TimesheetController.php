@@ -622,6 +622,8 @@ class TimesheetController extends ApiController
 
      public function specialTeamsReport()
      {
+         $this->authorize('specialTeamsReport', [ Timesheet::class ]);
+
          $params = request()->validate([
              'position_ids'   => 'required|array',
              'position_ids.*' => 'integer|exists:position,id',
@@ -633,5 +635,18 @@ class TimesheetController extends ApiController
          return response()->json([
              'people' => Timesheet::retrieveSpecialTeamsWork($params['position_ids'], $params['start_year'], $params['end_year'], ($params['include_inactive'] ?? false))
         ]);
+     }
+
+     /*
+      * Hours/Credits report
+      */
+
+     public function hoursCreditsReport()
+     {
+         $this->authorize('hoursCreditsReport', [ Timesheet::class ]);
+
+         $year = $this->getYear();
+
+         return response()->json(Timesheet::retrieveHoursCredits($year));
      }
 }
