@@ -397,9 +397,12 @@ class PersonScheduleController extends ApiController
 
         // New for 2019, everyone has to agree to the org's behavioral standards agreement.
         $missingBehaviorAgreement = !$person->behavioral_agreement;
+        /*
+         July 5th, 2019 - agreement language is slightly broken. Agreement is optional.
         if ($missingBehaviorAgreement) {
             $canSignUpForShifts = false;
         }
+        */
 
 
         // 2019 Council request - encourage weekend sign ups
