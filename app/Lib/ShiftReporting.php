@@ -36,6 +36,7 @@ class ShiftReporting {
         [ Position::DIRT_GREEN_DOT, 'GD Dirt', self::CALLSIGNS ],
         [ Position::GREEN_DOT_MENTOR, 'GD Mentors', self::CALLSIGNS ],
         [ Position::GREEN_DOT_MENTEE, 'GD Mentees', self::CALLSIGNS ],
+        [ Position::GERLACH_PATROL_GREEN_DOT, 'GD Gerlach', self::CALLSIGNS ],
         [ Position::SANCTUARY, 'Sanctuary', self::CALLSIGNS ],
         // [ Position::SANCTUARY_HOST, 'Sanctuary Host', self::CALLSIGNS ] -- GD cadre deprecated the position for 2019.
      ];
@@ -70,6 +71,7 @@ class ShiftReporting {
         [ Position::RSCI, 'RSCI', self::CALLSIGNS ],
         [ Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS ],
         [ Position::OPERATOR, 'Opr', self::CALLSIGNS ],
+        [ Position::RSC_WESL, 'WESL', self::CALLSIGNS ],
         [ Position::TROUBLESHOOTER, 'TS', self::CALLSIGNS ],
         [ Position::LEAL, 'LEAL', self::CALLSIGNS ],
         [ Position::GREEN_DOT_LEAD, 'GDL', self::CALLSIGNS ],
@@ -77,8 +79,8 @@ class ShiftReporting {
         [ Position::SANCTUARY, 'Sanc', self::CALLSIGNS ],
         //[ Position::SANCTUARY_HOST, 'SancHst', self::CALLSIGNS ],
         [ Position::GERLACH_PATROL_LEAD, 'GerPatLd', self::CALLSIGNS ],
-        [ Position::GERLACH_PATROL, 'GerPat', self::CALLSIGNS ],
-        [ Position::DIRT, 'Dirt', self::COUNT ],
+        [ [ Position::GERLACH_PATROL, Position::GERLACH_PATROL_GREEN_DOT ], 'GerPat', self::CALLSIGNS ],
+        [ [ Position::DIRT, Position::DIRT_SHINY_PENNY ], 'Dirt', self::COUNT ],
         [ Position::DIRT_GREEN_DOT, 'GD', self::COUNT ],
         [ Position::RNR, 'RNR', self::COUNT ],
         [ Position::BURN_PERIMETER, 'Burn', self::COUNT ]
@@ -99,7 +101,7 @@ class ShiftReporting {
         'gerlach-patrol' => [ Position::GERLACH_PATROL, self::GERLACH_PATROL ],
         'echelon'        => [ Position::ECHELON_FIELD, self::ECHELON ],
         'pre-event'      => [ Position::DIRT_PRE_EVENT, self::PRE_EVENT ],
-        'command'        => [ Position::DIRT, self::COMMAND ],
+        'command'        => [ [ Position::DIRT, Position::DIRT_POST_EVENT ], self::COMMAND ],
     ];
 
     public static function retrieveShiftCoverageByYearType($year, $type)
@@ -151,10 +153,15 @@ class ShiftReporting {
 
     public static function getShiftsByPosition($year, $positionId)
     {
-        $slots = Slot::whereYear('begins', $year)
-            ->where('position_id', $positionId)
-            ->orderBy('begins')
-            ->get();
+        $sql = Slot::whereYear('begins', $year);
+
+        if (is_array($positionId)) {
+            $sql->whereIn('position_id', $positionId);
+        } else {
+            $sql->where('position_id', $positionId);
+        }
+
+        $slots = $sql->orderBy('begins')->get();
 
         foreach ($slots as $slot) {
             $slot->begins_epoch = self::adjustToHourBoundary($slot->begins);
@@ -192,7 +199,6 @@ class ShiftReporting {
         $sql = DB::table('person_slot')
                 ->join('person', 'person.id', 'person_slot.person_id')
                 ->join('slot', 'slot.id', 'person_slot.slot_id')
-                ->where('slot.position_id', $positionId)
                 ->where(function ($q) use ($begins, $ends) {
                     // Shift spans the entire period
                     $q->where(function($q) use ($begins, $ends) {
@@ -215,6 +221,12 @@ class ShiftReporting {
                         $q->where('slot.begins', '<', $ends);
                     });
                 });
+
+        if (is_array($positionId)) {
+            $sql->whereIn('slot.position_id', $positionId);
+        } else {
+            $sql->where('slot.position_id', $positionId);
+        }
 
         if ($flag == self::COUNT) {
             return $sql->count('person.id');

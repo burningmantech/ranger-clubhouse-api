@@ -12,6 +12,9 @@ class Position extends ApiModel
     const DIRT = 2;
     const DIRT_TRAINING = 13;
     const DIRT_PRE_EVENT = 53;
+    const DIRT_POST_EVENT = 120;
+    const DIRT_SHINY_PENNY = 107;
+
     const MENTOR = 9;
 
     const DIRT_GREEN_DOT = 4;
@@ -84,6 +87,7 @@ class Position extends ApiModel
     const INTERCEPT_OPERATOR = 66;
 
     const OPERATOR = 56;
+    const RSC_WESL = 109;
 
     const LEAL = 7;
     const LEAL_MENTEE = 8;
