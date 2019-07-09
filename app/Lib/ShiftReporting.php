@@ -80,7 +80,7 @@ class ShiftReporting {
         //[ Position::SANCTUARY_HOST, 'SancHst', self::CALLSIGNS ],
         [ Position::GERLACH_PATROL_LEAD, 'GerPatLd', self::CALLSIGNS ],
         [ [ Position::GERLACH_PATROL, Position::GERLACH_PATROL_GREEN_DOT ], 'GerPat', self::CALLSIGNS ],
-        [ [ Position::DIRT, Position::DIRT_SHINY_PENNY ], 'Dirt', self::COUNT ],
+        [ [ Position::DIRT, Position::DIRT_SHINY_PENNY, Position::DIRT_POST_EVENT ], 'Dirt', self::COUNT ],
         [ Position::DIRT_GREEN_DOT, 'GD', self::COUNT ],
         [ Position::RNR, 'RNR', self::COUNT ],
         [ Position::BURN_PERIMETER, 'Burn', self::COUNT ]
