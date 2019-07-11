@@ -74,8 +74,8 @@ class PersonMessage extends ApiModel
      * @param return bool true if model is valid
      */
 
-    public function validate($rules=null): bool {
-        if (!parent::validate($rules)) {
+    public function validate($rules = null, $throwOnFailure = false): bool {
+        if (!parent::validate($rules, $throwOnFailure)) {
             return false;
         }
 
@@ -83,6 +83,9 @@ class PersonMessage extends ApiModel
 
         $recipient = Person::findByCallsign($this->recipient_callsign);
         if (!$recipient) {
+            if ($throwOnFailure) {
+                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
+            }
             $this->addError('recipient_callsign', 'Callsign does not exist');
             return false;
         }
