@@ -202,7 +202,7 @@ class SlotController extends ApiController
                     }
                     $target->signed_up = 0;
                     $target->active = $activate;
-                    $target->save();
+                    $target->saveOrThrow();
                     array_push($results, $target);
                 }
             });
