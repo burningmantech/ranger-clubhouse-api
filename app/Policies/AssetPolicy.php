@@ -79,4 +79,13 @@ class AssetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /*
+     * Determine whether the user see the asset history
+     */
+
+    public function history(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }

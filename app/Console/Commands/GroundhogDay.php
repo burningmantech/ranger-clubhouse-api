@@ -115,6 +115,7 @@ class GroundhogDay extends Command
             'contact_log',
             'feedback',
             'log',
+            'motd',
             'mentee_status',
             'sessions',
             'ticket'
@@ -187,11 +188,17 @@ class GroundhogDay extends Command
                 $q->whereRaw("EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE (slot.begins >= '$start' AND slot.ends <= '$end') AND person_slot.person_id=person.id LIMIT 1)");
                 $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
             })->update([
-                'on_site' => true,
-                'asset_authorized' => true,
-                'vehicle_paperwork' => true,
+                'on_site'              => true,
+                'asset_authorized'     => true,
+                'vehicle_paperwork'    => true,
                 'behavioral_agreement' => true,
               ]);
+        // Setup an announcement
+
+        Motd::create([
+            'message'    => "Welcome to the Training Server where the date is always ".date('l, F jS Y', strtotime($groundHogDay)).".",
+            'person_id' => 4594,
+        ]);
 
         $this->info("Creating mysql dump of groundhog database");
         $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-".date('Y-m-d').".sql";

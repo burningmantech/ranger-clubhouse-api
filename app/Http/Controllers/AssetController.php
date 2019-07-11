@@ -102,7 +102,7 @@ class AssetController extends ApiController
 
     public function history(Asset $asset)
     {
-        $this->authorize('update', $asset);
+        $this->authorize('history', $asset);
 
         return response()->json([ 'asset_history' => AssetPerson::retrieveHistory($asset->id) ]);
     }
