@@ -77,7 +77,7 @@ class PersonEventInfo extends ApihouseResult
             $training = $trained[$need->training_position_id] ?? null;
 
             // TODO: Support multiple ART training positions
-            if (!$training && $need->training_position_id == Position::HQ_REFRESHER_TRAINING) {
+            if (!$training && $need->training_position_id == Position::HQ_FULL_TRAINING) {
                 $training = $trained[Position::HQ_REFRESHER_TRAINING] ?? null;
             }
 

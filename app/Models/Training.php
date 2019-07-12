@@ -484,7 +484,6 @@ class Training extends Position
          */
 
         $positionIds = implode(',', $positionIds);
-        error_log("POSITION IDS ".json_encode($positionIds));
         $rows = DB::select("SELECT
                 person_slot.person_id,
                 person_slot.slot_id,
@@ -530,8 +529,12 @@ class Training extends Position
                 }, $peopleSignedUp[$row->id]);
                 $untrainedSignedup[] = $row;
             }
-
-            ksort($untrainedSignedup);
+            usort(
+                $untrainedSignedup,
+                function ($a, $b) {
+                    return strcasecmp($a->callsign, $b->callsign);
+                }
+            );
         }
 
         /*
