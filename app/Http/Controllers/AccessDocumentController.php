@@ -31,7 +31,7 @@ class AccessDocumentController extends ApiController
     }
 
     /*
-     * Retrieve all current/active access documents by person
+     * Retrieve all current/active access documents 
      */
 
      public function current()
