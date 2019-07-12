@@ -35,7 +35,7 @@ abstract class ApiModel extends Model //implements AuditableContract
         return get_called_class()::where('id', $id)->exists();
     }
 
-    public function validate($rules = null)
+    public function validate($rules = null, $throwOnFailure = false)
     {
         if ($rules === null) {
             if ($this->exists) {
@@ -66,6 +66,9 @@ abstract class ApiModel extends Model //implements AuditableContract
 
         if ($validator->fails()) {
             $this->errors = $validator->errors();
+            if ($throwOnFailure) {
+                throw new \Illuminate\Validation\ValidationException($validator);
+            }
             return false;
         }
 
@@ -79,6 +82,14 @@ abstract class ApiModel extends Model //implements AuditableContract
         }
 
         return parent::save($options);
+    }
+
+    public function saveOrThrow($options = [])
+    {
+        $this->validate(null, true); // throws if validation fails
+        if (!parent::save($options)) {
+            throw new \RuntimeException("Could not save $this");
+        }
     }
 
     public function saveWithoutValidation($options = [])

@@ -123,7 +123,7 @@ class PositionCreditController extends ApiController
                 if (!empty($position)) {
                     $target->position_id = $position;
                 }
-                $target->save();
+                $target->saveOrThrow();
                 array_push($results, $target);
             }
         });
