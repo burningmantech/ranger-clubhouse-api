@@ -49,7 +49,7 @@ class WaitForDatabase extends Command
                 DB::connection()->getPdo();
                 $this->info('Database is alive');
                 exit(0);
-            } catch (\Illuminate\Database\QueryException $e) {
+            } catch (\Exception $e) {
                 sleep(1);
             }
         }
