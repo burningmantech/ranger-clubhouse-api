@@ -15,6 +15,9 @@ fi;
 
 cd /var/www/application;
 
+echo "Waiting for database to come online...";
+php artisan db:wait;
+
 echo "Caching Laravel configuration and routes...";
 php artisan config:cache;
 php artisan route:cache;
