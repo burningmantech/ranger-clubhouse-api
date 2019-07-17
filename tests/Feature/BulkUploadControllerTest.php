@@ -9,6 +9,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\Person;
+use App\Models\Position;
+use App\Models\PersonPosition;
 use App\Models\RadioEligible;
 
 class BulkUploadControllerTest extends TestCase
@@ -116,6 +118,48 @@ class BulkUploadControllerTest extends TestCase
 
         $person->refresh();
         $this->assertEquals('alpha', $person->status);
+        $this->assertDatabaseHas('person_position', [
+            'person_id' => $person->id,
+            'position_id' => Position::ALPHA
+        ]);
+    }
+
+    /*
+     * Test changing status from alpha to active
+     */
+
+    public function testUpdatePersonStatusAlphaToActive()
+    {
+        $person = factory(Person::class)->create([
+            'status'    => 'alpha'
+        ]);
+
+        factory(PersonPosition::class)->create([
+            'person_id' => $person->id,
+            'position_id' => Position::ALPHA
+        ]);
+
+        $response = $this->json('POST', 'bulk-upload', [
+            'action'    => 'active',
+            'records'   => $person->callsign,
+            'commit'    => true,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'results' => [
+            [
+                'callsign'  => $person->callsign,
+                'status'    => 'success',
+                'changes'    => [ 'alpha', 'active' ]
+            ]
+        ]]);
+
+        $person->refresh();
+        $this->assertEquals('active', $person->status);
+        $this->assertDatabaseMissing('person_position', [
+            'person_id' => $person->id,
+            'position_id' => Position::ALPHA
+        ]);
     }
 
     /*
