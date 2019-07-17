@@ -2,6 +2,9 @@
 
 namespace App\Lib;
 
+use Illuminate\Support\Facades\Auth;
+
+use App\Models\ActionLog;
 use App\Models\BMID;
 
 class LambaseBMIDException extends \Exception
@@ -17,7 +20,7 @@ class LambaseBMIDException extends \Exception
 
 class LambaseBMID
 {
-    const TIMEOUT = 60;
+    const TIMEOUT = 120;
 
     const DEBUG = 0;
 
@@ -62,8 +65,16 @@ class LambaseBMID
         } else {
             $json = json_encode($records, JSON_UNESCAPED_SLASHES);
             $hash = urlencode(md5("fuckoff" . $json));
+
+
             $url = setting('LambasePrintStatusUpdateUrl') . "?method=printstatus";
             $url = $url . "&hash=$hash";
+
+            ActionLog::record(Auth::user(), 'lambase-submit', 'Lambase submission', [
+                'json'    => $json,
+                'records' => $records,
+                'url'     => $url
+             ]);
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -86,6 +97,8 @@ class LambaseBMID
             }
 
             curl_close($ch);
+
+            ActionLog::record(Auth::user(), 'lambase-response', 'Lambase response', [ 'result' => $result ]);
 
             $decodedResult = json_decode($result);
             if ($decodedResult == null) {

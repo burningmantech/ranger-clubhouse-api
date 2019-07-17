@@ -282,7 +282,19 @@ class BulkUploadController extends ApiController
 
             $record->status = 'success';
             if ($commit) {
+                $exists = $bmid->exists;
+                if ($exists) {
+                    $changes = $bmid->getChangedValues();
+                }
                 $this->saveModel($bmid, $record);
+                if ($record->status == 'success') {
+                    if ($exists) {
+                        $changes['id'] = $bmid->id;
+                        $this->log('bmid-update', 'bulk update', $changes, $bmid->person_id);
+                    } else {
+                        $this->log('bmid-create', 'bulk update', $bmid->getAttributes(), $bmid->person_id);
+                    }
+                }
             }
 
             $record->changes = [ $oldValue, $newValue ];

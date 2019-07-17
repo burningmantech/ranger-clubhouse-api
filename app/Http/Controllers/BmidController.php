@@ -7,6 +7,8 @@ use Illuminate\Validation\Rule;
 use App\Models\Bmid;
 use App\Lib\LambaseBMID;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+
 class BmidController extends ApiController
 {
     /**
@@ -160,6 +162,9 @@ class BmidController extends ApiController
             return $this->restError($bmid);
         }
 
+        $this->log('bmid-create', 'bmid create', $bmid->getAttributes(), $bmid->person_id);
+
+        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
         return $this->success($bmid);
     }
 
@@ -170,6 +175,8 @@ class BmidController extends ApiController
     public function show(Bmid $bmid)
     {
         $this->authorize('show', $bmid);
+
+        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
 
         return $this->success($bmid);
     }
@@ -182,10 +189,20 @@ class BmidController extends ApiController
     {
         $this->authorize('update', $bmid);
 
+        // load up additional info
+        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
         $this->fromRest($bmid);
+
+        $changes = $bmid->getChangedValues();
         if (!$bmid->save()) {
             return $this->restError($bmid);
         }
+
+        if (!empty($changes)) {
+            $changes['id'] = $bmid->id;
+            $this->log('bmid-update', 'bmid update', $changes, $bmid->person_id);
+        }
+
 
         return $this->success($bmid);
     }
@@ -198,6 +215,7 @@ class BmidController extends ApiController
     {
         $this->authorize('delete', $bmid);
         $bmid->delete();
+        $this->log('bmid-delete', 'bmid delete', $bmid, $bmid->person_id);
         return $this->restDeleteSuccess();
     }
 }
