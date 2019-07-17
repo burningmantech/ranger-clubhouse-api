@@ -37,7 +37,7 @@ class BmidController extends ApiController
             'filter'   => [
                 'required',
                 'string',
-                Rule::in([ 'special', 'alpha', 'signedup', 'submitted', 'printed', 'nonprint' ])
+                Rule::in([ 'special', 'alpha', 'signedup', 'submitted', 'printed', 'nonprint', 'no-shifts' ])
             ]
         ]);
 
