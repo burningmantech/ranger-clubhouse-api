@@ -186,11 +186,8 @@ class BulkUploadController extends ApiController
             $newValue = $person->status = $action;
             $record->status = 'success';
             if ($commit) {
-                if ($this->saveModel($person, $record)) {
-                    $person->changeStatus($person->status, $action, 'bulk update');
-                } else {
-                    continue;
-                }
+                $person->changeStatus($newValue, $oldValue, 'bulk update');
+                $this->saveModel($person, $record);
             }
             $record->changes = [ $oldValue, $newValue ];
         }
