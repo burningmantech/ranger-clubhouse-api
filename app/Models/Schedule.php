@@ -295,13 +295,6 @@ class Schedule extends ApiModel
         $year = $slot->begins->year;
         $positionId = $slot->position_id;
 
-        $part = $slot->sessionGroupPart();
-
-        if (!$part) {
-            // Not trying to join a mulitple-part session, do a normal lookup
-            return !self::haveMultipleEnrollments($personId, $positionId, $year, $enrollments);
-        }
-
         $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
         if ($slotIds->isEmpty()) {
             // Good to go!
@@ -309,6 +302,11 @@ class Schedule extends ApiModel
         }
 
         $slots = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
+        // Two or more enrollments is bad news, there's only two part session.
+        if ($slots->count() >= 2) {
+            $enrollments = $slots;
+            return false;
+        }
 
         foreach ($slots as $row) {
             if ($row->isPartOfSessionGroup($slot)) {
