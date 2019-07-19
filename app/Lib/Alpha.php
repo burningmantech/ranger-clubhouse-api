@@ -210,6 +210,6 @@ class Alpha
                 ->where('status', 'alpha')
                 ->orderBy('person.callsign')
                 ->get();
-        return $people->filter(function ($p) { return $p->mentor_status != 'pending'; });
+        return $people->filter(function ($p) { return $p->mentor_status != 'pending'; })->values();
     }
 }
