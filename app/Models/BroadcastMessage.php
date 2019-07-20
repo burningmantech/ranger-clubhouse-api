@@ -36,7 +36,7 @@ class BroadcastMessage extends ApiModel
         $personId = $query['person_id'] ?? null;
         $direction = !empty($query['direction']) ? $query['direction'] : null;
         $status = !empty($query['status']) ? $query['status'] : null;
-
+        $isAsc = ($query['order'] ?? '') == 'asc';
 
         $sql = self::query();
 
@@ -66,7 +66,7 @@ class BroadcastMessage extends ApiModel
 
         $sql->offset($page * $pageSize)->limit($pageSize);
         $sql->with([ 'person:id,callsign' ])
-           ->orderBy('created_at');
+           ->orderBy('created_at', $isAsc ? 'asc' : 'desc');
 
         $rows = $sql->get();
 

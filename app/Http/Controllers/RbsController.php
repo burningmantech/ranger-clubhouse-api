@@ -18,15 +18,6 @@ use Illuminate\Support\Facades\DB;
 
 class RbsController extends ApiController
 {
-    public function __construct()
-    {
-        parent::__construct();
-
-        if (!$this->userHasRole([ Role::ADMIN, Role::MEGAPHONE ])) {
-            $this->notPermitted("Must have the Admin or Megaphone roles");
-        }
-    }
-
     /*
      * Broadcast configuration
      */
@@ -61,6 +52,8 @@ class RbsController extends ApiController
 
     public function unverifiedStopped()
     {
+        $this->authorize('unverifiedStopped', Broadcast::class);
+
         $sql = DB::table('person')
             ->select(
                 'id',
@@ -105,12 +98,15 @@ class RbsController extends ApiController
 
     public function recipients()
     {
+
         $params = request()->validate([
             'type'  => 'required|string',
             'count_only' => 'sometimes|boolean'
         ]);
 
         $type = $params['type'];
+        $attrs = $this->verifyType($type);
+
         $countOnly = $params['count_only'] ?? false;
         $criteria = $this->grabCriteria($type);
 
@@ -129,10 +125,7 @@ class RbsController extends ApiController
         ]);
 
         $type = $params['type'];
-        $attrs = RBS::ATTRIBUTES[$type] ?? null;
-        if (!$attrs) {
-            throw new \InvalidArgumentException("Unknown broadcast type");
-        }
+        $attrs = $this->verifyType($type);
 
         // Copy over the attributes
         $info = [];
@@ -230,6 +223,8 @@ class RbsController extends ApiController
 
     public function unknownPhones()
     {
+        $this->authorize('unknownPhones', Broadcast::class);
+
         $params = request()->validate([
             'year'  => 'required|integer'
         ]);
@@ -243,6 +238,8 @@ class RbsController extends ApiController
 
     public function stats()
     {
+        $this->authorize('stats', Broadcast::class);
+
         foreach (Person::LIVE_STATUSES as $status) {
             $sql = DB::table('person')->where('status', $status);
 
@@ -278,11 +275,11 @@ class RbsController extends ApiController
                             ->where('sms_off_playa_stopped', true)
                             ->count();
 
-            $onPlayaUnverified = (clone $sql) ->where('sms_on_playa', '!=', '')
+            $onPlayaUnverified = (clone $sql)->where('sms_on_playa', '!=', '')
                             ->where('sms_on_playa_verified', false)
                             ->count();
 
-            $offPlayaUnverified = (clone $sql) ->where('sms_on_playa', '!=', '')
+            $offPlayaUnverified = (clone $sql)->where('sms_on_playa', '!=', '')
                             ->where('sms_on_playa_verified', false)
                             ->count();
 
@@ -302,6 +299,7 @@ class RbsController extends ApiController
 
         return response()->json([ 'stats' => $stats ]);
     }
+
     /*
      * Transmit a message to the world
      */
@@ -320,9 +318,9 @@ class RbsController extends ApiController
         ]);
 
         $type = $params['type'];
-        $criteria = $this->grabCriteria($type);
+        $attrs = $this->verifyType($type);
 
-        $attrs = RBS::ATTRIBUTES[$type];
+        $criteria = $this->grabCriteria($type);
 
         $sendSMS = $params['send_sms'] ?? false;
         $sendEmail = $params['send_email'] ?? false;
@@ -436,12 +434,14 @@ class RbsController extends ApiController
         ]);
     }
 
+    /*
+     * Setup a validation array to grab and verify the query parameters needed
+     * for the given broadcast type.
+     */
+
     private static function grabCriteria($type)
     {
-        $attrs = RBS::ATTRIBUTES[$type] ?? null;
-        if (!$attrs) {
-            throw new \InvalidArgumentException("Unknown broadcast type");
-        }
+        $attrs = RBS::ATTRIBUTES[$type];
 
         $validations = [
             'send_clubhouse' => 'sometimes|boolean',
@@ -489,6 +489,8 @@ class RbsController extends ApiController
         $params = request()->validate([
             'broadcast_id'  => 'required|integer',
         ]);
+
+        $this->authorize('retry', Broadcast::class);
 
         $broadcast = Broadcast::findWithFailedMessages($params['broadcast_id']);
 
@@ -545,6 +547,10 @@ class RbsController extends ApiController
         ]);
     }
 
+    /*
+     * Find a person transmit record already built up or built a new one
+     */
+
     private function findOrBuildPerson(& $peopleByIds, $message)
     {
         $person = $peopleByIds[$message->person_id] ?? null;
@@ -564,5 +570,21 @@ class RbsController extends ApiController
         $peopleByIds[$person->id] = $person;
 
         return $person;
+    }
+
+    /*
+     * Verify the broadcast type exists, and if the user is allowed to use it.
+     */
+
+    private function verifyType($type) {
+
+        $attrs = RBS::ATTRIBUTES[$type] ?? null;
+        if (!$attrs) {
+            throw new \InvalidArgumentException("Unknown broadcast type");
+        }
+
+        $this->authorize('typeAllowed', [ Broadcast::class, $type ]);
+
+        return $attrs;
     }
 }

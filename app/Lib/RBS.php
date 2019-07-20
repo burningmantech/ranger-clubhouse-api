@@ -478,6 +478,8 @@ class RBS
         $attending = $params['attending'] ?? false;
         $training  = $params['training'] ?? '';
 
+        $isEmergency = $broadcastType == Broadcast::TYPE_EMERGENCY;
+
         /*
          * Here be SQL dragons.
          */
@@ -588,8 +590,8 @@ class RBS
             $sendClubhouse = $params['send_clubhouse'] ?? false;
         }
 
-        // Need to select everyone if a Clubhouse message is to be created.
-        if (!$sendClubhouse && ($broadcastType != Broadcast::TYPE_EMERGENCY)) {
+        // Need to select everyone if a Clubhouse message is to be created, or it's an emergency.
+        if (!$sendClubhouse && !$isEmergency) {
             $prefCond = [];
             if ($sendSms) {
                 // Figure out which number to send to
@@ -603,13 +605,16 @@ class RBS
             $sql->whereRaw($prefCond);
         }
 
-        if ($broadcastType != Broadcast::TYPE_SLOT_EDIT) {
+        if ($broadcastType != Broadcast::TYPE_SLOT_EDIT && $broadcastType != Broadcast::TYPE_SLOT) {
             if (isset($attrs['has_status']) && !empty($params['statuses'])) {
                 $sql->whereIn('person.status', $params['statuses']);
             } else {
                 $sql->where('person.status', 'active');
             }
         }
+
+        // Safety check: These statuses should never, ever receive a broadcast
+        $sql->whereNotIn('status', [ 'bonked', 'deceased', 'dismissed', 'past prospective', 'resigned', 'suspended', 'uberbonked' ]);
 
         $sql->where('person.user_authorized', true);
 
@@ -641,11 +646,6 @@ class RBS
             $sql->whereRaw($trainingCond);
         }
 
-        // Just counting?
-        if ($countOnly) {
-            return $sql->distinct('person.id')->count();
-        }
-
         $cols = [
             DB::raw('DISTINCT person.id'),
             'person.callsign',
@@ -673,14 +673,45 @@ class RBS
 
         $rows = $sql->select($cols)->orderBy('person.callsign')->get();
 
+        $smsColumn = $alert->on_playa ? 'sms_on_playa' : 'sms_off_playa';
+        $verifyColumn = $smsColumn.'_verified';
+        $stopColumn = $smsColumn.'_stopped';
+
         foreach ($rows as $row) {
             if (!$sendSms) {
                 $row->use_sms = false;
+            } else {
+                $haveSMS = !empty($row->{$smsColumn}) && $row->{$verifyColumn} && !$row->{$stopColumn};
+                if (!$haveSMS) {
+                    $row->use_sms = false; // do not have a number that can be used
+                } else if ($isEmergency) {
+                    $row->use_sms = true; // force override
+                }
             }
 
-             if (!$sendEmail) {
-                 $row->use_email = false;
-             }
+            if ($isEmergency) {
+                $row->use_email = true;
+            } else if (!$sendEmail) {
+                $row->use_email = false;
+            }
+        }
+
+        /*
+         * A person is only a candidate recipient if one of the following is true:
+         * - A Clubhouse message is to be sent
+         * - It's an emergency
+         * - A SMS is being send and the alert pref is allowed & number is okay (has verified #, and is not stopped).
+         * - The email alert is set to allow
+         */
+
+        if (!$sendClubhouse && !$isEmergency) {
+            $rows = $rows->filter(function ($row) use ($sendSms, $sendEmail) {
+                return ($sendSms && $row->use_sms) || ($sendEmail && $row->use_email);
+            });
+        }
+
+        if ($countOnly) {
+            return $rows->count();
         }
 
         return $rows;
