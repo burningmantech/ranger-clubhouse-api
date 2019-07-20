@@ -136,6 +136,21 @@ class PositionController extends ApiController
                     $missingPeopleQuery = Person::whereNotIn('status', $nonTrainingStatuses);
                 } elseif ($position['all_rangers']) {
                     $missingPeopleQuery = Person::whereIn('status', $rangerStatuses);
+                    // also show non-Rangers who have the position, suspiciously
+                    $nonRangersQuery =
+                        PersonPosition::where('position_id', $pos->id)
+                            ->join('person', 'person.id', '=', 'person_position.person_id')
+                            ->whereNotIn('person.status', $rangerStatuses);
+                    if ($params['onPlaya']) {
+                        $nonRangersQuery = $nonRangersQuery->where('person.on_site', 'true');
+                    }
+                    $suspiciousPersonIds = $nonRangersQuery->pluck('person_id')->toArray();
+                    if (!empty($suspiciousPersonIds)) {
+                        $position['personIds'] = $suspiciousPersonIds;
+                        foreach ($suspiciousPersonIds as $pid) {
+                            $allPeople[$pid] = true;
+                        }
+                    }
                 }
                 if ($params['onPlaya']) {
                     $missingPeopleQuery = $missingPeopleQuery->where('on_site', true);
