@@ -692,6 +692,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // Add login role
             $addIds = Role::where('new_user_eligible', true)->pluck('id');
             PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
+
+            // First-year Alphas get the Dirt - Shiny Penny position
+            if ($oldStatus == Person::ALPHA) {
+                PersonPosition::addIdsToPerson($personId, [ Position::DIRT_SHINY_PENNY ], $changeReason);
+            }
             break;
 
         case Person::ALPHA:
