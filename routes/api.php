@@ -161,6 +161,7 @@ Route::group([
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
 
+    Route::get('position/people-by-position', 'PositionController@peopleByPosition');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
     Route::resource('position', 'PositionController');
 
