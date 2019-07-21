@@ -127,7 +127,9 @@ class AuthController extends Controller
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
-        Mail::to($person->email)->send(new ResetPassword($resetPassword, setting('GeneralSupportEmail')));
+        if (!mail_to($person->email, new ResetPassword($resetPassword, setting('GeneralSupportEmail')))) {
+            return response()->json([ 'status' => 'mail-fail' ]);
+        }
 
         return response()->json([ 'status' => 'success' ]);
     }

@@ -197,7 +197,7 @@ class PersonScheduleController extends ApiController
             // Notify the person about signing up
             if ($slot->isTraining() && !$slot->has_started) {
                 $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
-                Mail::to($person->email)->send($message);
+                mail_to($person->email, $message);
             }
             /*else {
                 $message = new SlotSignup($slot, setting('ShiftSignupFromEmail'));
@@ -209,7 +209,7 @@ class PersonScheduleController extends ApiController
             // Is the training slot at capacity?
             if ($slot->isTraining() && $signedUp >= $slot->max && !$slot->has_started) {
                 // fire off an email letting the Training Acamedy know
-                Mail::to(setting('TrainingFullEmail'))->send(new TrainingSessionFullMail($slot, $signedUp));
+                mail_to(setting('TrainingFullEmail'), new TrainingSessionFullMail($slot, $signedUp));
             }
 
             $response = [

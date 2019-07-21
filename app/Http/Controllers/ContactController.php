@@ -60,7 +60,10 @@ class ContactController extends ApiController
          }
 
          $mail = new ContactMail($sender, $recipient, $subject,  $message);
-         Mail::to($recipient->email)->send($mail);
+         if (!mail_to($recipient->email, $mail)) {
+             return $this->error('Failed to send email');
+         }
+
          ContactLog::record($sender->id, $recipient->id, $action, $recipient->email, $subject, $message);
 
          return $this->success();
