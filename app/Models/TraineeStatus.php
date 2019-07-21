@@ -21,15 +21,24 @@ class TraineeStatus extends ApiModel
         'begins'    => 'date'
     ];
 
-    /*
+    /**
      * Find trainee_status records with joined slot for a person & year.
      * (Note: record returned will be a merged trainee_state & slot row.
+     *
+     * @param integer $personId person id to find
+     * @param integer $year year to look up
+     * @return Illuminate\Database\Eloquent\Collection
      */
 
     public static function findForPersonYear($personId, $year)
     {
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
-                ->where('person_id', $personId)
+                // Ensure the person is actually signed up
+                ->join('person_slot', function ($q) use ($personId)  {
+                    $q->on('person_slot.slot_id', 'trainee_status.slot_id');
+                    $q->where('person_slot.person_id', $personId);
+                })
+                ->where('trainee_status.person_id', $personId)
                 ->whereYear('slot.begins', $year)
                 ->orderBy('slot.begins')
                 ->get();
