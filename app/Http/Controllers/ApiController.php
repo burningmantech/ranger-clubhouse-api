@@ -120,7 +120,7 @@ class ApiController extends Controller
     public function success($resource=null, $meta=null, $resourceName = null)
     {
         if (!$resource) {
-            return response()->json([ 'message' => 'success' ]);
+            return response()->json([ 'status' => 'success' ]);
         }
 
         if (is_iterable($resource)) {

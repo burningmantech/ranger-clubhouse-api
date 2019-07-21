@@ -851,7 +851,7 @@ class RBS
         if ($sendEmail) {
             $email = $person->email;
             try {
-                Mail::to($email)->send(new ClubhouseNewMessageMail($person, $from, $subject, $message));
+                mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message));
                 $status = Broadcast::STATUS_SENT;
             } catch (\Exception $e) {
                 ErrorLog::recordException($e, 'email-exception', [
