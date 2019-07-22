@@ -4,10 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+
 use App\Models\Bmid;
+use App\Models\Person;
+use App\Models\Photo;
+use App\Models\LambasePhoto;
+
 use App\Lib\LambaseBMID;
 
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use GuzzleHttp;
 
 class BmidController extends ApiController
 {
@@ -218,4 +224,90 @@ class BmidController extends ApiController
         $this->log('bmid-delete', 'bmid delete', $bmid, $bmid->person_id);
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Test BMID submission
+     */
+
+    const ROSCOE_TEST_ID = 1293;
+
+    public function testUpload()
+    {
+        $this->checkTestToken();
+
+        $person = Person::findOrFail(self::ROSCOE_TEST_ID);
+
+        $bmid = Bmid::firstOrNewForPersonYear(self::ROSCOE_TEST_ID, current_year());
+
+        $bmid->meals = 'all';
+        $bmid->showers = 1;
+        $bmid->org_vehicle_insurance = 1;
+        $bmid->title1 = "Title 1";
+        $bmid->title2 = "Title 2";
+        $bmid->title3 = "Title 3";
+        $bmid->batch = date('n/j/y G:i:s')." test upload";
+
+        $exchange = LambaseBMID::upload([ $bmid ], true);
+        if ($bmid->uploadedToLambase) {
+            $response = "BMID was successfully uploaded.";
+        } else {
+            $response = "BMID upload failed - Lambase did include BMID in response.";
+        }
+        return <<<EOM
+Result:
+{$response}
+
+Lambase upload URL used:
+{$exchange['url']}
+
+Clubhouse to Lambase JSON:
+{$exchange['json']}
+
+Lambase response:
+{$exchange['result']}
+
+
+EOM;
+
+    }
+
+    public function testPhoto()
+    {
+        $this->checkTestToken();
+
+        $person = Person::findOrFail(self::ROSCOE_TEST_ID);
+
+        $lambase = new LambasePhoto($person);
+        $url = $lambase->getUploadUrl();
+        error_log("PHOTO $url");
+
+        $client = new GuzzleHttp\Client();
+        $res = $client->request('GET', $url);
+        $status = $res->getStatusCode();
+        return <<<EOM
+Touched Lambase URL:
+$url
+
+Status code:
+$status
+
+EOM;
+    }
+
+
+    private function checkTestToken()
+    {
+        $token = setting('BmidTestToken');
+
+        if (empty($token)) {
+            throw new \RuntimeException("BMID test token not set -- cannot authorzie request");
+        }
+
+        $ourToken = request()->input('token');
+
+        if ($token != $ourToken) {
+            $this->notPermitted("Token mismatch -- not authorized.");
+        }
+    }
+
 }
