@@ -41,6 +41,9 @@ Route::group([
     Route::match([ 'GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
     Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
+
+    Route::get('bmid/test-upload', 'BmidController@testUpload');
+    Route::get('bmid/test-photo', 'BmidController@testPhoto');
 });
 
 
