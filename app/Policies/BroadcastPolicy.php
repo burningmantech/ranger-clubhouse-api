@@ -52,6 +52,14 @@ class BroadcastPolicy
     }
 
     /*
+     * Can a user see the unknown phones
+     */
+
+    public function unknownPhones(Person $user) {
+        return false;
+    }
+
+    /*
      * Is the user allowed to interact with the broadcast type?
      */
 
