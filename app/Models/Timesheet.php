@@ -476,12 +476,12 @@ class Timesheet extends ApiModel
             if (!$person->hours_last_year) {
                 $person->hours_last_year = 0.0;
             }
-            $person->hours_last_year = round($person->hours_last_year);
+            $person->hours_last_year = round($person->hours_last_year, 2);
 
             if (!$person->hours_prev_year) {
                 $person->hours_prev_year = 0.0;
             }
-            $person->hours_prev_year = round($person->hours_prev_year);
+            $person->hours_prev_year = round($person->hours_prev_year, 2);
 
             // Qualified radio hours is last year, OR the previous year if last year
             // was less than 10 hours and the previous year was greater than last year.
