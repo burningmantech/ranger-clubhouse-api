@@ -23,7 +23,7 @@ class BroadcastMessage extends ApiModel
     {
         return self::where('status', Broadcast::STATUS_UNKNOWN_PHONE)
                 ->whereYear('created_at', $year)
-                ->orderBy('created_at')
+                ->orderBy('created_at', 'desc')
                 ->get();
     }
 
