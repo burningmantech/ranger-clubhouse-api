@@ -261,7 +261,7 @@ class TimesheetController extends ApiController
         $unqualifiedReason = null;
 
         // Are they trained for this position?
-        if (!Training::isPersonTrained($personId, $positionId, current_year(), $requiredPositionId)) {
+        if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($isAdmin) {
                 $signonForced = true;

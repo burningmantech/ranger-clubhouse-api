@@ -213,7 +213,7 @@ class PersonScheduleController extends ApiController
             }
 
             $response = [
-                'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person->id),
+                'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person),
                 'status' => 'success',
                 'signed_up' => $signedUp,
             ];
@@ -283,7 +283,7 @@ class PersonScheduleController extends ApiController
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
-            $result['recommend_burn_weekend_shift'] = Schedule::recommendBurnWeekendShift($person->id);
+            $result['recommend_burn_weekend_shift'] = Schedule::recommendBurnWeekendShift($person);
 
             $data = [ 'slot_id' => $slotId ];
             if ($forced) {
@@ -329,26 +329,26 @@ class PersonScheduleController extends ApiController
 
         $mrDisabledAllowSignups = setting('ManualReviewDisabledAllowSignups');
 
-        if ($mrDisabledAllowSignups) {
-            // Manual review is not need at the moment
+        if ($mrDisabledAllowSignups || $status == Person::NON_RANGER) {
+            // Manual review is disabled, or the person is a non ranger
             $manualReviewPassed = true;
         } else {
             $manualReviewPassed = ManualReview::personPassedForYear($personId, $year);
         }
 
-        if ($status == "auditor") {
+        if ($status == Person::AUDITOR) {
             // Auditors don't require BMID photo
             if ($manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
             $callsignApproved = true;
-        } elseif ($status != "past prospective") {
+        } elseif ($status != Person::PAST_PROSPECTIVE) {
             if ($callsignApproved && ($photoStatus == 'approved') && $manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
 
             // Everyone except Auditors and non rangers need to have BPGUID on file.
-            if ($status != "non ranger") {
+            if ($status !=  Person::NON_RANGER) {
                 if (empty($person->bpguid)) {
                     $missingBpguid = true;
                     $canSignUpForShifts = false;
@@ -378,13 +378,13 @@ class PersonScheduleController extends ApiController
         if (!$canSignUpForShifts) {
             // Per Roslyn and Threepio 2/23/2017, we require people to have
             // a lam photo before they can take the Manual Review
-            if ($isPotentialRanger || $status == "prospective waitlist") {
+            if ($isPotentialRanger || $status == Person::PROSPECTIVE_WAITLIST) {
                 if (($photoStatus == 'not-required' || $photoStatus == 'approved') && !$manualReviewPassed
                         && ($manualReviewCap == 0 ||
                             $manualReviewCount < $manualReviewCap)) {
                     $showManualReviewLink = true;
                 }
-            } elseif ($status != "past prospective" && ($photoStatus == 'approved' || $photoStatus == 'not-required') && !$manualReviewPassed) {
+            } elseif ($status != Person::PAST_PROSPECTIVE && ($photoStatus == 'approved' || $photoStatus == 'not-required') && !$manualReviewPassed) {
                 $showManualReviewLink = true;
             }
         }
@@ -397,19 +397,16 @@ class PersonScheduleController extends ApiController
 
         // New for 2019, everyone has to agree to the org's behavioral standards agreement.
         $missingBehaviorAgreement = !$person->behavioral_agreement;
-        /*
+/*
          July 5th, 2019 - agreement language is slightly broken. Agreement is optional.
         if ($missingBehaviorAgreement) {
             $canSignUpForShifts = false;
         }
-        */
+*/
 
 
         // 2019 Council request - encourage weekend sign ups
-        $recommendWeekendShift = false;
-        if ($status == 'active' || $status == 'inactive' || $status == 'inactive extension') {
-            $recommendWeekendShift = Schedule::recommendBurnWeekendShift($personId);
-        }
+        $recommendWeekendShift = Schedule::recommendBurnWeekendShift($person);
 
         $results = [
             'signup_allowed'              => $canSignUpForShifts,
@@ -449,7 +446,7 @@ class PersonScheduleController extends ApiController
         $this->authorize('view', [ Schedule::class, $person ]);
 
         return response()->json([
-            'burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person->id)
+            'burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person)
         ]);
     }
 

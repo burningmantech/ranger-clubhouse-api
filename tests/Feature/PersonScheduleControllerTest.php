@@ -1066,6 +1066,35 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson([ 'burn_weekend_shift' => true ]);
     }
 
+    /*
+     * Do NOT recommend working a Burn Weekend shift is none is present in the schedule for a non ranger
+     */
+
+    public function testRecommendBurnWeekendShiftForNonRanger()
+    {
+        $year = $this->year;
+
+        $photoMock = $this->mockPhotoStatus('approved');
+        $this->user->update([ 'status' => Person::NON_RANGER ]);
+
+        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
+
+        // Check for scheduling
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+                'permission'   => [
+                    'recommend_burn_weekend_shift' => false
+                ]
+            ]);
+
+        // And the HQ interface
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
+
+        $response->assertStatus(200);
+        $response->assertJson([ 'burn_weekend_shift' => false ]);
+    }
 
     /*
      * Do not recommend working a Burn Weekend shift because the person is signed up for a Burn Weekend shift.
