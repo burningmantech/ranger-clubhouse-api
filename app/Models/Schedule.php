@@ -356,8 +356,17 @@ class Schedule extends ApiModel
      * Does the person need to be motivated to work a weekend shift?
      */
 
-    public static function recommendBurnWeekendShift($personId)
+    public static function recommendBurnWeekendShift($person)
     {
+        $status = $person->status;
+        if ($status == Person::ALPHA
+        || $status == Person::AUDITOR
+        || $status == Person::PROSPECTIVE
+        || $status == Person::PROSPECTIVE_WAITLIST
+        || $status == Person::NON_RANGER) {
+            return false;
+        }
+
         $missingWeekendShift = false;
         $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
         if (empty($burnWeekendPeriod)) {
@@ -373,7 +382,7 @@ class Schedule extends ApiModel
             return false;
         }
 
-        return !Schedule::hasSignupInPeriod($personId, $start, $end);
+        return !Schedule::hasSignupInPeriod($person->id, $start, $end);
     }
 
     /*

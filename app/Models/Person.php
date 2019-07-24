@@ -50,7 +50,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const INACTIVE = 'inactive';
     const INACTIVE_EXTENSION = 'inactive extension';
     const NON_RANGER = 'non ranger';
-    const PASTPROSPECTIVE = 'past prospective';
+    const PAST_PROSPECTIVE = 'past prospective';
     const PROSPECTIVE = 'prospective';
     const PROSPECTIVE_WAITLIST = 'prospective waitlist';
     const RESIGNED = 'resigned';
@@ -735,7 +735,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         case Person::AUDITOR:
         case Person::PROSPECTIVE:
         case Person::PROSPECTIVE_WAITLIST:
-        case Person::PASTPROSPECTIVE:
+        case Person::PAST_PROSPECTIVE:
             // Remove all roles, and reset back to the default roles
             PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
 

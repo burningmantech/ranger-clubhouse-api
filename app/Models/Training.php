@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Helpers\DateHelper;
 
 use App\Models\ApiModel;
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\TraineeStatus;
@@ -27,16 +28,19 @@ class Training extends Position
     /**
      * Determine if a person is trained for a position
      *
-     * @param int $personId person to lookup
+     * @param Person $person person to check
      * @param int $positionId position to check against
      * @param string $required training position title required if the person needs training
      * @param boolean true if person is trained, otherwise $required will be set.
      */
 
-    public static function isPersonTrained($personId, $positionId, $year, & $requiredPositionId)
+    public static function isPersonTrained($person, $positionId, $year, & $requiredPositionId)
     {
+        $personId = $person->id;
+
         // The person has to have passed dirt training
-        if (!TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
+        if ($person->status != Person::NON_RANGER
+        && !TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
             $requiredPositionId = Position::DIRT_TRAINING;
             return false;
         }
