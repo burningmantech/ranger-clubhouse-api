@@ -33,10 +33,11 @@ class PositionController extends ApiController
     {
         $this->authorize('store', Position::class);
 
-        $position = new \App\Models\Position;
+        $position = new Position;
         $this->fromRest($position);
 
         if ($position->save()) {
+            $this->log('position-create', 'position create', [ 'position' => $position ]);
             return $this->success($position);
         }
 
@@ -66,7 +67,12 @@ class PositionController extends ApiController
         $this->authorize('update', Position::class);
         $this->fromRest($position);
 
+        $changes = $position->getChangedValues();
         if ($position->save()) {
+            if (!empty($changes)) {
+                $changes['position_id'] = $position->id;
+                $this->log('position-update', 'position update', $changes);
+            }
             return $this->success($position);
         }
 
@@ -83,7 +89,7 @@ class PositionController extends ApiController
     {
         $this->authorize('delete', Position::class);
         $position->delete();
-        $this->log('position-delete', 'Position Deleted', [ 'id' => $position->id]);
+        $this->log('position-delete', 'position delete', [ 'position' => $position ]);
         return $this->restDeleteSuccess();
     }
 
