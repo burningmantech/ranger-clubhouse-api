@@ -348,6 +348,7 @@ class PersonController extends ApiController
         $pm = PersonPhoto::find($person->id);
         if ($pm) {
             $pm->delete();
+            $this->log('lambase-photo-clear', '', null, $person->id);
         }
 
         return $this->success();
