@@ -67,7 +67,8 @@ class Bmid extends ApiModel
         'access_date',
         'wap_id',
         'wap_status',
-        'wap_type'
+        'wap_type',
+        'has_signups'
     ];
 
     const INSANE_PERSON_COLUMNS = [
@@ -87,6 +88,8 @@ class Bmid extends ApiModel
     public $_original_access_date;
 
     public $uploadedToLambase = false;
+
+    public $has_signups = false;
 
 
     public static function boot()
@@ -228,6 +231,14 @@ class Bmid extends ApiModel
                     ->toArray();
             break;
 
+        case 'no-shifts':
+            // Any BMIDs held back
+            $ids = Bmid::where('year', $year)
+                    ->whereRaw("NOT EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE bmid.person_id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
+                    ->pluck('person_id')
+                    ->toArray();
+            break;
+
         default:
             // Find the special people.
             // "You're good enough, smart enough, and doggone it, people like you."
@@ -316,6 +327,20 @@ class Bmid extends ApiModel
         $bmidsByPerson  = $bmids->keyBy('person_id');
         foreach ($waps as $personId => $wap) {
             $bmidsByPerson[$personId]->setWap($wap);
+        }
+
+        // Figure out who has signed up for the year.
+        $year = current_year();
+
+        $ids = DB::table('person')
+                ->select('id')
+                ->whereIn('id', $personIds)
+                ->whereRaw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE person.id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
+                ->get()
+                ->pluck('id');
+
+        foreach ($ids as $id) {
+            $bmidsByPerson[$id]->has_signups = true;
         }
     }
 
@@ -493,6 +518,11 @@ class Bmid extends ApiModel
     public function getWapTypeAttribute()
     {
         return $this->wap ? $this->wap->type : null;
+    }
+
+    public function getHasSignupsAttribute()
+    {
+        return $this->has_signups;
     }
 
     public function isPrintable() {

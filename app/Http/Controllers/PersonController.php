@@ -195,7 +195,7 @@ class PersonController extends ApiController
             if ($emailChanged
             && $person->status == Person::PROSPECTIVE
             && $person->id == $this->user->id) {
-                Mail::to(setting('VCEmail'))->send(new NotifyVCEmailChangeMail($person, $oldEmail));
+                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail));
             }
 
             if ($statusChanged) {
@@ -348,6 +348,7 @@ class PersonController extends ApiController
         $pm = PersonPhoto::find($person->id);
         if ($pm) {
             $pm->delete();
+            $this->log('lambase-photo-clear', '', null, $person->id);
         }
 
         return $this->success();
@@ -629,7 +630,7 @@ class PersonController extends ApiController
 
         if (Person::emailExists($person->email)) {
             // An account already exists with the same email..
-            Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'duplicate email', $person, $intent));
+            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'duplicate email', $person, $intent));
             $this->log('person-create-fail', 'duplicate email', [ 'person' => $params['person'] ]);
             return response()->json([ 'status' => 'email-exists' ]);
         }
@@ -643,13 +644,13 @@ class PersonController extends ApiController
 
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
-            Mail::to($accountCreateEmail)->send(new AccountCreationMail('failed', 'database creation error', $person, $intent));
+            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent));
             $this->log('person-create-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
             return $this->restError($person);
         }
 
         // Log account creation
-        Mail::to($accountCreateEmail)->send(new AccountCreationMail('success', 'account created', $person, $intent));
+        mail_to($accountCreateEmail, new AccountCreationMail('success', 'account created', $person, $intent));
         $this->log('person-create', 'registration', null, $person->id);
 
         // Set the password
@@ -661,7 +662,7 @@ class PersonController extends ApiController
 
         // Send a welcome email to the person if not an auditor
         if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
-            Mail::to($person->email)->send(new WelcomeMail($person));
+            mail_to($person->email, new WelcomeMail($person));
         }
 
         return response()->json([ 'status' => 'success' ]);

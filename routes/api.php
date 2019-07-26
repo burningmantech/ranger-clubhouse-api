@@ -41,6 +41,9 @@ Route::group([
     Route::match([ 'GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
     Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
+
+    Route::get('bmid/test-upload', 'BmidController@testUpload');
+    Route::get('bmid/test-photo', 'BmidController@testPhoto');
 });
 
 
@@ -161,6 +164,7 @@ Route::group([
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
 
+    Route::get('position/people-by-position', 'PositionController@peopleByPosition');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
     Route::resource('position', 'PositionController');
 

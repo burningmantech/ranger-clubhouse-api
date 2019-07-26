@@ -420,6 +420,9 @@ class Slot extends ApiModel
      * Is the slot part of a session group?
      */
     public function isPartOfSessionGroup($slot) {
-        return $slot->sessionGroupName() == $this->sessionGroupName();
+        $ourPart = $this->sessionGroupPart();
+        $theirPart = $slot->sessionGroupPart();
+
+        return ($ourPart && $theirPart && $slot->sessionGroupName() == $this->sessionGroupName());
     }
 }

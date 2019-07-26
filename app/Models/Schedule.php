@@ -295,13 +295,6 @@ class Schedule extends ApiModel
         $year = $slot->begins->year;
         $positionId = $slot->position_id;
 
-        $part = $slot->sessionGroupPart();
-
-        if (!$part) {
-            // Not trying to join a mulitple-part session, do a normal lookup
-            return !self::haveMultipleEnrollments($personId, $positionId, $year, $enrollments);
-        }
-
         $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
         if ($slotIds->isEmpty()) {
             // Good to go!
@@ -309,6 +302,11 @@ class Schedule extends ApiModel
         }
 
         $slots = Slot::whereIn('id', $slotIds)->with('position:id,title')->get();
+        // Two or more enrollments is bad news, there's only two part session.
+        if ($slots->count() >= 2) {
+            $enrollments = $slots;
+            return false;
+        }
 
         foreach ($slots as $row) {
             if ($row->isPartOfSessionGroup($slot)) {
@@ -358,8 +356,17 @@ class Schedule extends ApiModel
      * Does the person need to be motivated to work a weekend shift?
      */
 
-    public static function recommendBurnWeekendShift($personId)
+    public static function recommendBurnWeekendShift($person)
     {
+        $status = $person->status;
+        if ($status == Person::ALPHA
+        || $status == Person::AUDITOR
+        || $status == Person::PROSPECTIVE
+        || $status == Person::PROSPECTIVE_WAITLIST
+        || $status == Person::NON_RANGER) {
+            return false;
+        }
+
         $missingWeekendShift = false;
         $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
         if (empty($burnWeekendPeriod)) {
@@ -375,7 +382,7 @@ class Schedule extends ApiModel
             return false;
         }
 
-        return !Schedule::hasSignupInPeriod($personId, $start, $end);
+        return !Schedule::hasSignupInPeriod($person->id, $start, $end);
     }
 
     /*
