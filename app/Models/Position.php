@@ -67,7 +67,7 @@ class Position extends ApiModel
     const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
     const TROUBLESHOOTER = 91;
-    const TROUBLESHOOTER_RIDE_ALONG = 127;
+    const TROUBLESHOOTER_MENTEE = 127;
 
     // Trainer positions for Dirt
     const TRAINING = 13;
@@ -76,6 +76,7 @@ class Position extends ApiModel
     const TRAINER_UBER = 95;
 
     const TOW_TRUCK_DRIVER = 20;
+    const TOW_TRUCK_MENTEE = 69;
     const TOW_TRUCK_TRAINING = 102;
     const TOW_TRUCK_TRAINER = 121;
 
