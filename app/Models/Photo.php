@@ -38,6 +38,7 @@ class Photo
      * 'error' - unknown error, usually Lambase communication failure
      */
 
+    const MISS_PIGGY_ID = 1196;
     public static function retrieveInfo($person, $sync = false)
     {
         $source = setting('PhotoSource');
@@ -48,7 +49,9 @@ class Photo
 
             // Only return a upload url if uploads are enabled, and the user is person requested,
             // or the user is an admin.
-            if ($user && ($user->id == $person->id || $user->isAdmin()) && setting('PhotoUploadEnable')) {
+
+            // TODO : GET LAMBASE FIXED AND REMOVE THE EDGE CASE FOR MISS PIGGY!
+            if ($user && ($user->id == $person->id || $user->isAdmin()) && (setting('PhotoUploadEnable') || $person->id == self::MISS_PIGGY_ID)) {
                 $uploadUrl = $lambase->getUploadUrl();
             } else {
                 $uploadUrl = null;
