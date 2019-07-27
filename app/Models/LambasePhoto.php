@@ -6,6 +6,9 @@
 
 namespace App\Models;
 
+use GuzzleHttp;
+use GuzzleHttp\Exception\RequestException;
+
 class LambasePhoto
 {
     public $person;
@@ -135,36 +138,47 @@ class LambasePhoto
     {
         $person = $this->person;
 
+        $url = setting('LambaseStatusUrl');
+
+        if (empty($url)) {
+            throw new \RuntimeException('LambaseStatusUrl is not set');
+        }
+
         $query = http_build_query([
-            'method' => 'photostatus',
-            'wsid'   => $person->id,
-            'wshash' => md5("fuckoff".$person->id),
-            'mail'   => $person->email,
-            'handle' => $person->callsign,
+            'method'  => 'photostatus',
+            'wsid'    => $person->id,
+            'wshash'  => md5("fuckoff".$person->id),
+            'mail'    => $person->email,
+            'handle'  => $person->callsign,
             'barcode' => ''
         ]);
 
-        return setting('LambaseStatusUrl')."?$query";
+        return $url.'?'.$query;
     }
 
     /*
-    * Return the contents of a page at a given URL.
-    * We use curl instead of file_get_contents both for
-    * speed and ability to control timeouts.
-    */
+     * Return the contents of a page at a given URL.
+     */
 
-    public static function fetchUrl($url, $timeout = 3)
+    public static function fetchUrl($url, $timeout = 60)
     {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        $result = curl_exec($ch);
-        curl_close($ch);
+        $client = new GuzzleHttp\Client();
 
-        return $result;
+        try {
+            $res = $client->request('GET', $url, [
+                'read_timeout' => $timeout,
+                'connect_timeout' => 10
+            ]);
+        } catch (RequestException $e) {
+            return null;
+        }
+
+        $status = $res->getStatusCode();
+        if ($status != 200) {
+            return null;
+        }
+
+        return $res->getBody();
     }
 
     /*
@@ -178,8 +192,8 @@ class LambasePhoto
     {
         $localPic = Photo::localPathForPerson($this->person->id);
 
-        $havePic = file_exists($localPic);
-        if (!$havePic) {
+        if (!file_exists($localPic)) {
+            // File does not exist.
             return true;
         }
 
@@ -226,7 +240,7 @@ class LambasePhoto
         $lambaseImageUrl = $this->getImageUrl($lambaseImage);
 
         $imageData  = $this->fetchUrl($lambaseImageUrl);
-        if ($imageData == false) {
+        if (empty($imageData)) {
             return false;
         }
         $result = file_put_contents($localPic, $imageData);
