@@ -7,15 +7,14 @@ use Illuminate\Support\Facades\Auth;
 
 class Photo
 {
-    const MUGSHOT_PATH = 'images/mugshots/id-%05u.jpg';
-    const THUMBNAIL_PATH = 'images/mugshots/thumbs/thumb-%05u.jpg';
-    const ASSET_DIR = 'public';
+    const MUGSHOT_PATH = 'mugshots/id-%05u.jpg';
+    const MUGSHOT_URL = '/mugshots/id-%05u.jpg';
 
     public static function imageUrlForPerson($personId)
     {
         $path = self::localPathForPerson($personId);
         if (file_exists($path)) {
-            return asset(sprintf(self::MUGSHOT_PATH, $personId));
+            return sprintf(self::MUGSHOT_URL, $personId);
         } else {
             return null;
         }
@@ -23,8 +22,7 @@ class Photo
 
     public static function localPathForPerson($personId)
     {
-        $mugshotPath = sprintf(self::MUGSHOT_PATH, $personId);
-        return base_path().'/'.self::ASSET_DIR.'/'.$mugshotPath;
+        return sprintf(storage_path(self::MUGSHOT_PATH), $personId);
     }
 
     /*
@@ -42,7 +40,9 @@ class Photo
     public static function retrieveInfo($person, $sync = false)
     {
         $source = setting('PhotoSource');
+
         if ($source == 'Lambase') {
+            $storeLocal = setting('PhotoStoreLocally') == true;
             $lambase = new LambasePhoto($person);
 
             $user = Auth::user();
@@ -59,15 +59,23 @@ class Photo
 
             $personPhoto = PersonPhoto::find($person->id);
             if (!$sync && $personPhoto && $personPhoto->isApproved()) {
+                $photoUrl = null;
+                if ($storeLocal) {
+                    $photoUrl = Photo::imageUrlForPerson($person->id);
+                }
+
+                if (!$photoUrl) {
+                    $photoUrl = $lambase->getImageUrl($personPhoto->lambase_image);
+                }
+
                 return [
-                   'photo_url'    => $lambase->getImageUrl($personPhoto->lambase_image),
+                   'photo_url'    => $photoUrl,
                    'photo_status' => 'approved',
                    'upload_url'   => $uploadUrl,
                    'source'       => 'lambase',
                    'message'      => '',
                 ];
             }
-            $storeLocal = setting('PhotoStoreLocally') == true;
 
             $status = $lambase->getStatus();
 

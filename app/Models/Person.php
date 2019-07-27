@@ -60,7 +60,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     // Statuses consider 'live' or still active account allowed
     // to login, and do stuff.
-    // Used by App\Validator\StateForCountry & BroadcastController
+    // Used by App\Validator\StateForCountry & BroadcastController & Sync Photos
 
     const LIVE_STATUSES = [
         'active',

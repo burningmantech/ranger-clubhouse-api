@@ -279,7 +279,6 @@ EOM;
 
         $lambase = new LambasePhoto($person);
         $url = $lambase->getUploadUrl();
-        error_log("PHOTO $url");
 
         $client = new GuzzleHttp\Client();
         $res = $client->request('GET', $url);
