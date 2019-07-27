@@ -16,15 +16,23 @@ class Position extends ApiModel
     const DIRT_SHINY_PENNY = 107;
 
     const MENTOR = 9;
+    const MENTOR_LEAD = 15;
+    const MENTOR_SHORT = 35;
+    const MENTOR_APPRENTICE = 70;
+    const MENTOR_MITTEN = 67;
+    const MENTOR_KHAKI = 86;
+    const MENTOR_RADIO_TRAINER = 72;
 
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
+    const GREEN_DOT_LEAD_INTERN = 126;
     const GREEN_DOT_MENTOR = 40;
     const GREEN_DOT_MENTEE = 50;
     const GREEN_DOT_TRAINING = 101;
     const GREEN_DOT_TRAINER = 100;
     const SANCTUARY = 54;
     const SANCTUARY_HOST = 68;
+    const SANCTUARY_MENTEE = 123;
 
     const HQ_WINDOW = 3;
     const HQ_WINDOW_PRE_EVENT = 117;
@@ -43,10 +51,10 @@ class Position extends ApiModel
     const OOD = 10;
     const DEPUTY_OOD = 87;
 
+    const ART_CAR_WRANGLER = 125;
     const BURN_COMMAND_TEAM = 99;
     const BURN_PERIMETER = 19;
     const BURN_QUAD_LEAD = 114;
-
     const SANDMAN = 61;
     const SANDMAN_TRAINER = 108;
     const SANDMAN_TRAINING = 80;
@@ -54,10 +62,12 @@ class Position extends ApiModel
 
     const SITE_SETUP = 59;
     const SITE_SETUP_LEAD = 96;
+
     const RSC_SHIFT_LEAD = 12;
     const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
     const TROUBLESHOOTER = 91;
+    const TROUBLESHOOTER_MENTEE = 127;
 
     // Trainer positions for Dirt
     const TRAINING = 13;
@@ -66,6 +76,7 @@ class Position extends ApiModel
     const TRAINER_UBER = 95;
 
     const TOW_TRUCK_DRIVER = 20;
+    const TOW_TRUCK_MENTEE = 69;
     const TOW_TRUCK_TRAINING = 102;
     const TOW_TRUCK_TRAINER = 121;
 
@@ -75,12 +86,14 @@ class Position extends ApiModel
 
     const ECHELON_FIELD = 17;
     const ECHELON_FIELD_LEAD = 81;
+    const ECHELON_FIELD_LEAD_TRAINING = 111;
 
     const RSCI = 25;
     const RSCI_MENTOR = 92;
     const RSCI_MENTEE = 93;
 
     const RNR = 11;
+    const RNR_RIDE_ALONG = 115;
 
     const INTERCEPT = 5;
     const INTERCEPT_DISPATCH = 6;
@@ -94,6 +107,8 @@ class Position extends ApiModel
     const LEAL_MENTOR = 85;
     const LEAL_PARTNER = 116;
     const LEAL_PRE_EVENT = 119;
+
+    const QUARTERMASTER = 84;
 
     const TYPES = [
         'Command',

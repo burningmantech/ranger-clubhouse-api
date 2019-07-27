@@ -10,7 +10,7 @@ class ShiftReporting {
      const CALLSIGNS = 1;
      const COUNT = 2;
 
-     const PRE_EVENT= [
+     const PRE_EVENT = [
          [ Position::OOD, 'OOD', self::CALLSIGNS ],
          [ Position::RSC_SHIFT_LEAD_PRE_EVENT, 'RSL', self::CALLSIGNS ],
          [ Position::LEAL_PRE_EVENT, 'LEAL', self::CALLSIGNS ],
@@ -19,26 +19,22 @@ class ShiftReporting {
      ];
 
      const HQ = [
-         [ Position::HQ_LEAD, 'Lead', self::CALLSIGNS ],
+         [ [ Position::HQ_LEAD, Position::HQ_LEAD_PRE_EVENT ], 'Lead', self::CALLSIGNS ],
          [ Position::HQ_SHORT, 'Short', self::CALLSIGNS ],
-         [ Position::HQ_WINDOW, 'Window', self::CALLSIGNS ],
+         [ [ Position::HQ_WINDOW, Position::HQ_WINDOW_PRE_EVENT ], 'Window', self::CALLSIGNS ],
          [ Position::HQ_RUNNER, 'Runner', self::CALLSIGNS ]
-     ];
-
-     const HQ_PRE_EVENT = [
-         [ Position::HQ_LEAD_PRE_EVENT, 'Lead Pre-Event', self::CALLSIGNS ],
-         [ Position::HQ_SHORT, 'Short', self::CALLSIGNS ],
-         [ Position::HQ_WINDOW_PRE_EVENT, 'Window Pre-Event', self::CALLSIGNS ],
      ];
 
      const GREEN_DOT = [
         [ Position::GREEN_DOT_LEAD, 'GDL', self::CALLSIGNS ],
+        [ Position::GREEN_DOT_LEAD_INTERN, 'GDL Intern', self::CALLSIGNS ],
         [ Position::DIRT_GREEN_DOT, 'GD Dirt', self::CALLSIGNS ],
         [ Position::GREEN_DOT_MENTOR, 'GD Mentors', self::CALLSIGNS ],
         [ Position::GREEN_DOT_MENTEE, 'GD Mentees', self::CALLSIGNS ],
-        [ Position::GERLACH_PATROL_GREEN_DOT, 'GD Gerlach', self::CALLSIGNS ],
         [ Position::SANCTUARY, 'Sanctuary', self::CALLSIGNS ],
+        [ Position::SANCTUARY_MENTEE, 'Sanc Mentee', self::CALLSIGNS ],
         // [ Position::SANCTUARY_HOST, 'Sanctuary Host', self::CALLSIGNS ] -- GD cadre deprecated the position for 2019.
+        [ Position::GERLACH_PATROL_GREEN_DOT, 'Gerlach GD', self::CALLSIGNS ],
      ];
 
      const GERLACH_PATROL = [
@@ -50,6 +46,7 @@ class ShiftReporting {
      const ECHELON = [
          [ Position::ECHELON_FIELD_LEAD, 'Echelon Lead', self::CALLSIGNS ],
          [ Position::ECHELON_FIELD, 'Echelon Field', self::CALLSIGNS ],
+         [ Position::ECHELON_FIELD_LEAD_TRAINING, 'Lead Training', self::CALLSIGNS ],
      ];
 
      const RSCI_MENTOR = [
@@ -59,7 +56,8 @@ class ShiftReporting {
 
      const INTERCEPT = [
          [ Position::INTERCEPT_DISPATCH, 'Dispatch', self::CALLSIGNS ],
-         [ Position::INTERCEPT_OPERATOR, 'Operator', self::CALLSIGNS ],
+         // Intercept Operator position deprecated in favor of Operator shifts matching Intercept hours
+         [ [ Position::INTERCEPT_OPERATOR, Position::OPERATOR ], 'Operator', self::CALLSIGNS ],
          [ Position::INTERCEPT, 'Interceptors', self::CALLSIGNS ],
          [ Position::INTERCEPT, 'Count', self::COUNT ]
      ];
@@ -70,21 +68,47 @@ class ShiftReporting {
         [ Position::RSC_SHIFT_LEAD, 'RSL', self::CALLSIGNS ],
         [ Position::RSCI, 'RSCI', self::CALLSIGNS ],
         [ Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS ],
+        [ Position::RSC_WESL, 'WESL', self::CALLSIGNS ],
         [ Position::OPERATOR, 'Opr', self::CALLSIGNS ],
         [ Position::RSC_WESL, 'WESL', self::CALLSIGNS ],
-        [ Position::TROUBLESHOOTER, 'TS', self::CALLSIGNS ],
-        [ Position::LEAL, 'LEAL', self::CALLSIGNS ],
-        [ Position::GREEN_DOT_LEAD, 'GDL', self::CALLSIGNS ],
-        [ Position::TOW_TRUCK_DRIVER, 'Tow', self::CALLSIGNS ],
-        [ Position::SANCTUARY, 'Sanc', self::CALLSIGNS ],
+        [ [ Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE ], 'TS', self::CALLSIGNS, [ Position::TROUBLESHOOTER_MENTEE => 'Mentee' ] ],
+        [ [ Position::LEAL, Position::LEAL_PARTNER ], 'LEAL', self::CALLSIGNS, [ Position::LEAL_PARTNER => 'Partner' ] ],
+        [ [ Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN ], 'GDL', self::CALLSIGNS, [ Position::GREEN_DOT_LEAD_INTERN => 'Intern' ] ],
+        [ [ Position::TOW_TRUCK_DRIVER, Position::TOW_TRUCK_MENTEE], 'Tow', self::CALLSIGNS, [ Position::TOW_TRUCK_MENTEE => 'Mentee' ] ],
+        [ [ Position::SANCTUARY, Position::SANCTUARY_MENTEE ], 'Sanc', self::CALLSIGNS, [ Position::SANCTUARY_MENTEE => 'Mentee' ] ],
         //[ Position::SANCTUARY_HOST, 'SancHst', self::CALLSIGNS ],
         [ Position::GERLACH_PATROL_LEAD, 'GerPatLd', self::CALLSIGNS ],
         [ [ Position::GERLACH_PATROL, Position::GERLACH_PATROL_GREEN_DOT ], 'GerPat', self::CALLSIGNS ],
         [ [ Position::DIRT, Position::DIRT_SHINY_PENNY, Position::DIRT_POST_EVENT ], 'Dirt', self::COUNT ],
         [ Position::DIRT_GREEN_DOT, 'GD', self::COUNT ],
-        [ Position::RNR, 'RNR', self::COUNT ],
-        [ Position::BURN_PERIMETER, 'Burn', self::COUNT ]
+        [ [ Position::RNR, Position::RNR_RIDE_ALONG ], 'RNR', self::COUNT ],
+        [ [ Position::BURN_PERIMETER, Position::ART_CAR_WRANGLER, Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN], 'Burn', self::COUNT ]
     ];
+
+     const PERIMETER = [
+         [ Position::BURN_COMMAND_TEAM, 'Burn Command', self::CALLSIGNS ],
+         // As of 2019 the Burn Quad Lead position has not been used
+         // [ Position::BURN_QUAD_LEAD, 'Quad Lead', self::CALLSIGNS ],
+         [ Position::SANDMAN, 'Sandman', self::CALLSIGNS ],
+         [ Position::ART_CAR_WRANGLER, 'Art Car', self::CALLSIGNS ],
+         [ Position::BURN_PERIMETER, 'Perimeter', self::CALLSIGNS ],
+         [ Position::BURN_PERIMETER, 'Perimeter #', self::COUNT ],
+         [ [ Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN, Position::ART_CAR_WRANGLER, Position::BURN_PERIMETER ], 'Total #', self::COUNT ],
+         // Troubleshooter not included in count because some are in the city
+         [ Position::TROUBLESHOOTER, 'Troubleshooter', self::CALLSIGNS ],
+     ];
+
+     const MENTORS = [
+         [ Position::MENTOR_LEAD, 'Lead', self::CALLSIGNS ],
+         [ Position::MENTOR_SHORT, 'Short', self::CALLSIGNS ],
+         [ Position::MENTOR, 'Mentor', self::CALLSIGNS ],
+         [ Position::MENTOR_MITTEN, 'Mitten', self::CALLSIGNS ],
+         [ Position::MENTOR_APPRENTICE, 'Apprentice', self::CALLSIGNS ],
+         [ Position::MENTOR_KHAKI, 'Khaki', self::CALLSIGNS ],
+         [ Position::MENTOR_RADIO_TRAINER, 'Radio', self::CALLSIGNS ],
+         [ Position::ALPHA, 'Alpha', self::CALLSIGNS ],
+         [ Position::QUARTERMASTER, 'QM', self::CALLSIGNS ],
+     ];
 
     /*
      * The various type which can be reported on.
@@ -93,10 +117,11 @@ class ShiftReporting {
      */
 
     const COVERAGE_TYPES = [
+        'perimeter'      => [ Position::BURN_PERIMETER, self::PERIMETER ],
         'intercept'      => [ Position::INTERCEPT, self::INTERCEPT ],
-        'hq'             => [ Position::HQ_SHORT, self::HQ ],
-        'hq-pre-event'   => [ Position::HQ_WINDOW_PRE_EVENT, self::HQ_PRE_EVENT ],
+        'hq'             => [ [ Position::HQ_SHORT, Position::HQ_WINDOW_PRE_EVENT ], self::HQ ],
         'gd'             => [ Position::DIRT_GREEN_DOT, self::GREEN_DOT ],
+        'mentor'         => [ Position::ALPHA, self::MENTORS ],
         'rsci-mentor'    => [ Position::RSCI_MENTOR, self::RSCI_MENTOR ],
         'gerlach-patrol' => [ Position::GERLACH_PATROL, self::GERLACH_PATROL ],
         'echelon'        => [ Position::ECHELON_FIELD, self::ECHELON ],
@@ -119,8 +144,9 @@ class ShiftReporting {
             $positions = [];
             foreach ($coverage as $post) {
                 list ($positionId, $shortTitle, $flag) = $post;
+                $parenthetical = empty($post[3]) ? array() : $post[3];
 
-                $shifts = self::getSignUps($positionId, $shift->begins_epoch, $shift->ends_epoch, $flag);
+                $shifts = self::getSignUps($positionId, $shift->begins_epoch, $shift->ends_epoch, $flag, $parenthetical);
 
                 $positions[] = [
                     'position_id' => $positionId,
@@ -191,7 +217,7 @@ class ShiftReporting {
 	 * and time range.
 	 */
 
-    public static function getSignUps($positionId, $begins, $ends, $flag)
+    public static function getSignUps($positionId, $begins, $ends, $flag, $parenthetical)
     {
         $begins = $begins->clone()->addMinutes(90);
         $ends = $ends->clone()->subMinutes(90);
@@ -232,8 +258,9 @@ class ShiftReporting {
             return $sql->count('person.id');
         }
 
-        $rows = $sql->select('person.id', 'callsign', 'slot.begins', 'slot.ends')
+        $rows = $sql->select('person.id', 'callsign', 'slot.begins', 'slot.ends', 'slot.position_id')
                 ->orderBy('slot.begins')
+                ->orderBy('slot.ends', 'desc')
                 ->orderBy('person.callsign')
                 ->get();
 
@@ -243,10 +270,11 @@ class ShiftReporting {
         $groups = $rows->groupBy('begins');
 
         foreach ($groups as $begins => $rows) {
-            $people = $rows->map(function ($row) {
+            $people = $rows->map(function($row) use ($parenthetical) {
                 return [
                     'id'       => $row->id,
                     'callsign' => $row->callsign,
+                    'parenthetical' => $parenthetical[$row->position_id] ?? '',
                 ];
             });
 
