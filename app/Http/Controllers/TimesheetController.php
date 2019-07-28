@@ -633,7 +633,10 @@ class TimesheetController extends ApiController
          ]);
 
          return response()->json([
-             'people' => Timesheet::retrieveSpecialTeamsWork($params['position_ids'], $params['start_year'], $params['end_year'], ($params['include_inactive'] ?? false))
+             'people' => Timesheet::retrieveSpecialTeamsWork(
+                            $params['position_ids'], $params['start_year'],
+                            $params['end_year'], ($params['include_inactive'] ?? false),
+                            $this->userCanViewEmail())
         ]);
      }
 

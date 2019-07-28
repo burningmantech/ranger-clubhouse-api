@@ -498,7 +498,7 @@ class Timesheet extends ApiModel
      * Retrieve time worked on special teams
      */
 
-    public static function retrieveSpecialTeamsWork($positionIds, $startYear, $endYear, $includeInactive)
+    public static function retrieveSpecialTeamsWork($positionIds, $startYear, $endYear, $includeInactive, $viewEmail = false)
     {
         $sql = DB::table('person')
             ->select(
@@ -550,16 +550,21 @@ class Timesheet extends ApiModel
                 $totalDuration += $duration;
             }
 
-            $results[] = [
+            $result = [
                 'id'         => $person->id,
                 'callsign'   => $person->callsign,
                 'first_name' => $person->first_name,
                 'last_name'  => $person->last_name,
                 'status'     => $person->status,
-                'email'      => $person->email,
                 'years'      => $years,
                 'total_duration' => $totalDuration
             ];
+
+            if ($viewEmail) {
+                $result['email'] = $person->email;
+            }
+
+            $results[] = $result;
         }
 
         usort($results, function ($a,$b) {
