@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 use App\Http\Controllers\Controller;
 
-use App\Models\Person;
 use App\Models\ActionLog;
+use App\Models\Person;
+use App\Models\Role;
 
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
@@ -177,6 +178,10 @@ class ApiController extends Controller
             }
         }
         return response()->json([ 'errors' => $payload ], $status);
+    }
+
+    public function userCanViewEmail() {
+        return $this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL ]);
     }
 
     public function log($event, $message, $data=null, $targetPersonId=null) {
