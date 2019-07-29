@@ -229,7 +229,7 @@ Route::group([
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
     Route::get('timesheet/shirts-earned', 'TimesheetController@shirtsEarnedReport');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
-    Route::get('timesheet/special-teams', 'TimesheetController@specialTeamsReport');
+    Route::match([ 'GET', 'POST'], 'timesheet/special-teams', 'TimesheetController@specialTeamsReport');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::resource('timesheet', 'TimesheetController');
 
