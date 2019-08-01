@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
 use App\Models\Help;
+use App\Models\HelpHit;
 
 class HelpController extends ApiController
 {
@@ -46,6 +47,9 @@ class HelpController extends ApiController
      */
     public function show(Help $help)
     {
+        $personId = $this->user ? $this->user->id : null;
+        HelpHit::record($help->id, $personId);
+
         return $this->success($help);
     }
 
