@@ -54,6 +54,7 @@ class TimesheetMissingController extends ApiController
         }
 
         if ($timesheetMissing->save()) {
+            $this->log('timesheet-missing-create', '', $timesheetMissing, $timesheetMissing->person_id);
             $timesheetMissing->loadRelationships();
             return $this->success($timesheetMissing);
         }
@@ -78,6 +79,11 @@ class TimesheetMissingController extends ApiController
             $timesheetMissing->reviewed_at = SqlHelper::now();
         }
 
+        if ($timesheetMissing->isDirty('notes')
+        && $timesheetMissing->review_status != 'pending') {
+            $timesheetMissing->review_status = 'pending';
+        }
+
         $createNew = ($timesheetMissing->review_status == 'approved' && $timesheetMissing->create_entry);
 
 
@@ -90,6 +96,7 @@ class TimesheetMissingController extends ApiController
 
         try {
             DB::beginTransaction();
+            $changes = $timesheetMissing->getChangedValues();
             if (!$timesheetMissing->save()) {
                 DB::rollback();
                 return $this->restError($timesheetMissing);
@@ -116,6 +123,12 @@ class TimesheetMissingController extends ApiController
                          "missing entry ".$timesheet->position->title." ".(string) $timesheet->on_duty);
 
             }
+
+            if (!empty($changes)) {
+                $changes['id'] = $timesheetMissing->id;
+                $this->log('timesheet-missing-update', '', $changes, $timesheetMissing->person_id);
+            }
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollback();
@@ -132,7 +145,7 @@ class TimesheetMissingController extends ApiController
     public function show(TimesheetMissing $timesheetMissing)
     {
         $this->authorize('view', [ TimesheetMissing::class, $timesheetMissing->person_id ]);
-        $timesheet->loadRelationships();
+        $timesheetMissing->loadRelationships();
         return $this->success($timesheetMissing);
     }
 
@@ -144,7 +157,7 @@ class TimesheetMissingController extends ApiController
      {
          $this->authorize('destroy',$timesheetMissing);
          $timesheetMissing->delete();
-
+         $this->log('timesheet-missing-delete', '', [ 'timesheet_missing' => $timesheetMissing ], $timesheetMissing->person_id);
          return $this->restDeleteSuccess();
      }
 }

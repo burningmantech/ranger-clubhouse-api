@@ -192,6 +192,8 @@ class TimesheetControllerTest extends TestCase
 
     public function testTimesheetStore()
     {
+        $this->addRole(Role::ADMIN);
+
         $year = $this->year;
         $data = [
              'person_id'    => $this->targetPerson->id,
@@ -270,6 +272,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testTimesheetDestroy()
     {
+        $this->addRole(Role::ADMIN);
         $timesheetId = $this->timesheet->id;
 
         $response = $this->json('DELETE', "timesheet/{$timesheetId}");
@@ -735,6 +738,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testVerifyBulkSigninOut()
     {
+        $this->addRole(Role::ADMIN);
         $this->createBulkPeople();
         $person1 = $this->person1;
         $person2 = $this->person2;
@@ -775,6 +779,8 @@ class TimesheetControllerTest extends TestCase
 
     public function testCommitBulkSigninOut()
     {
+        $this->addRole(Role::ADMIN);
+
         $this->createBulkPeople();
         $person1 = $this->person1;
         $person2 = $this->person2;
@@ -831,6 +837,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testVerificationFailureBulkSigninOut()
     {
+        $this->addRole(Role::ADMIN);
         $this->createBulkPeople();
         $person1 = $this->person1;
         $person2 = $this->person2;

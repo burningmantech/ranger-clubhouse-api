@@ -42,9 +42,6 @@ class Timesheet extends ApiModel
         'timesheet_confirmed_at',
         'timesheet_confirmed',
         'verified',
-
-        // Meta information - not part of the schema
-        'is_incorrect', // is the entry to be marked as incorrect?
     ];
 
     protected $rules = [
@@ -101,11 +98,23 @@ class Timesheet extends ApiModel
         return $this->load(self::RELATIONSHIPS);
     }
 
+    public static function find($id) {
+        return self::selectBase()->where('id', $id)->first();
+    }
+
+    public static function findOrFail($id) {
+            return self::selectBase()->where('id', $id)->firstOrFail();
+    }
+
+    public static function selectBase() {
+        return self::select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
+            ->with(self::RELATIONSHIPS);
+    }
+
     public static function findForQuery($query)
     {
         $year = 0;
-        $sql = self::select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
-            ->with(self::RELATIONSHIPS);
+        $sql = self::selectBase();
 
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
@@ -799,10 +808,5 @@ class Timesheet extends ApiModel
     public function setVerifiedAtToNow()
     {
         $this->verified_at = SqlHelper::now();
-    }
-
-    public function setIsIncorrectAttribute($value)
-    {
-        $this->_is_incorrect = $value;
     }
 }
