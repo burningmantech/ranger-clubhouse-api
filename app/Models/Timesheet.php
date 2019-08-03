@@ -42,11 +42,14 @@ class Timesheet extends ApiModel
         'timesheet_confirmed_at',
         'timesheet_confirmed',
         'verified',
+
+        // Meta information - not part of the schema
+        'is_incorrect', // is the entry to be marked as incorrect?
     ];
 
     protected $rules = [
         'person_id' => 'required|integer',
-        'position_id' => 'required|integer'
+        'position_id' => 'required|integer',
     ];
 
     protected $appends = [
@@ -64,9 +67,12 @@ class Timesheet extends ApiModel
 
     protected $casts = [
         'verified' => 'boolean',
+        'is_incorrect' => 'boolean'
     ];
 
     public $credits;
+
+    public $_is_incorrect;
 
     const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title,count_hours' ];
 
@@ -260,6 +266,7 @@ class Timesheet extends ApiModel
         $rows = self::with([ 'person:id,callsign', 'position:id,title'])
             ->whereYear('on_duty', $year)
             ->where('verified', false)
+            ->where('notes', '!=', '')
             ->where('review_status', 'pending')
             ->whereNotNull('off_duty')
             ->orderBy('on_duty')
@@ -792,5 +799,10 @@ class Timesheet extends ApiModel
     public function setVerifiedAtToNow()
     {
         $this->verified_at = SqlHelper::now();
+    }
+
+    public function setIsIncorrectAttribute($value)
+    {
+        $this->_is_incorrect = $value;
     }
 }

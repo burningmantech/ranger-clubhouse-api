@@ -17,7 +17,8 @@ class TimesheetFilter
 
     const USER_FIELDS = [
         'notes',
-        'verified'
+        'verified',
+        'is_incorrect'
     ];
 
     const MANAGE_FIELDS = [
