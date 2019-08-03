@@ -152,30 +152,39 @@ class TimesheetController extends ApiController
                             .' new '.Position::retrieveTitle($timesheet->position_id);
         }
 
+        if ($timesheet->isDirty('review_status')) {
+            $reviewInfo[] = 'status '.$timesheet->review_status;
+        }
+
+        if ($timesheet->isDirty('notes')) {
+            $verifyInfo[] = 'note updated';
+
+        }
+
+        // Update reviewer person if the review status or review notes changed
+        if ($timesheet->isDirty('review_status') || $timesheet->isDirty('reviewer_notes')) {
+            $timesheet->reviewer_person_id = $this->user->id;
+        }
+
+        if ($timesheet->is_incorrect) {
+            $verifyInfo[] = 'marked incorrect';
+            $timesheet->verified = false;
+            $timesheet->review_status = 'pending';
+         }
+
         if ($timesheet->isDirty('verified')) {
             if ($timesheet->verified) {
                 $timesheet->setVerifiedAtToNow();
                 $timesheet->verified_person_id = $this->user->id;
                 $verifyInfo[] = 'verified';
             } else {
-                $verifyInfo[] = 'unverified';
+                if (!$timesheet->is_incorrect) {
+                    $verifyInfo[] = 'set unverified';
+                }
                 if ($person->timesheet_confirmed) {
                     $markedUnconfirmed = true;
                 }
             }
-        }
-
-        if ($timesheet->isDirty('notes')) {
-            $verifyInfo[] = 'note updated';
-        }
-
-        if ($timesheet->isDirty('review_status')) {
-            $reviewInfo[] = 'status '.$timesheet->review_status;
-        }
-
-        // Update reviewer person if the review status or review notes changed
-        if ($timesheet->isDirty('review_status') || $timesheet->isDirty('reviewer_notes')) {
-            $timesheet->reviewer_person_id = $this->user->id;
         }
 
         if (!$timesheet->save()) {
@@ -193,7 +202,7 @@ class TimesheetController extends ApiController
             TimesheetLog::record('verify', $person->id, $this->user->id, $timesheet->id, implode(', ', $verifyInfo));
         }
 
-        if ($markedUnconfirmed) {
+        if ($markedUnconfirmed && $person->timesheet_confirmed) {
             $person->timesheet_confirmed = false;
             $person->saveWithoutValidation();
             TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - entry marked incorrect');

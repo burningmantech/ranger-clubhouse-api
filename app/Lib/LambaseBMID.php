@@ -24,7 +24,7 @@ class LambaseBMID
 
     const DEBUG = 0;
 
-    public static function upload($bmids, $returnExchange = false)
+    public static function upload($bmids, $returnExchange = false, $printStatus = "readytoprint")
     {
         $records = [];
         foreach ($bmids as $bmid) {
@@ -42,7 +42,7 @@ class LambaseBMID
                 'title2'      => $bmid->title2,
                 'title3'      => $bmid->title3,
                 'batchid'     => $bmid->batch,
-                'printstatus' => "readytoprint",
+                'printstatus' => $printStatus,
             ];
 
             switch ($bmid->status) {
