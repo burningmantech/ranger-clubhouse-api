@@ -44,6 +44,17 @@ class TimesheetController extends ApiController
         return $this->success($rows, null, 'timesheet');
     }
 
+    /**
+     * Retrieve single timesheet
+     */
+
+    public function show(Timesheet $timesheet)
+    {
+        $this->authorize('index', [ Timesheet::class, $timesheet->person_id ]);
+        return $this->success($timesheet);
+    }
+
+
     /*
      * Retrieve a timesheet log for a person & year
      */
@@ -115,6 +126,7 @@ class TimesheetController extends ApiController
 
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
+            $this->log('timesheet-create', '', $timesheet, $timesheet->person_id);
             return $this->success($timesheet);
         }
 
@@ -156,21 +168,19 @@ class TimesheetController extends ApiController
             $reviewInfo[] = 'status '.$timesheet->review_status;
         }
 
-        if ($timesheet->isDirty('notes')) {
-            $verifyInfo[] = 'note updated';
-
-        }
-
         // Update reviewer person if the review status or review notes changed
         if ($timesheet->isDirty('review_status') || $timesheet->isDirty('reviewer_notes')) {
             $timesheet->reviewer_person_id = $this->user->id;
         }
 
-        if ($timesheet->is_incorrect) {
-            $verifyInfo[] = 'marked incorrect';
+        if ($timesheet->isDirty('notes')) {
+            $verifyInfo[] = 'note update';
             $timesheet->verified = false;
-            $timesheet->review_status = 'pending';
-         }
+            if ($timesheet->review_status != 'pending') {
+                $timesheet->review_status = 'pending';
+                $verifyInfo[] = 'resubmit for review';
+            }
+        }
 
         if ($timesheet->isDirty('verified')) {
             if ($timesheet->verified) {
@@ -178,15 +188,14 @@ class TimesheetController extends ApiController
                 $timesheet->verified_person_id = $this->user->id;
                 $verifyInfo[] = 'verified';
             } else {
-                if (!$timesheet->is_incorrect) {
-                    $verifyInfo[] = 'set unverified';
-                }
+                $verifyInfo[] = 'marked incorrect';
                 if ($person->timesheet_confirmed) {
                     $markedUnconfirmed = true;
                 }
             }
         }
 
+        $changes = $timesheet->getChangedValues();
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
@@ -211,6 +220,11 @@ class TimesheetController extends ApiController
         // Load up position title, reviewer callsigns in case of change.
         $timesheet->loadRelationships();
 
+        if (!empty($changes)) {
+            $chanages['id'] = $timesheet->id;
+            $this->log('timesheet-update', '', $changes, $timesheet->person_id);
+        }
+
         return $this->success($timesheet);
     }
 
@@ -230,6 +244,8 @@ class TimesheetController extends ApiController
             $timesheet->id,
             "{$positionTitle} {$timesheet->on_duty} - {$timesheet->off_duty}"
         );
+
+        $this->log('timesheet-delete', '', $timesheet, $timesheet->person_id);
 
         return $this->restDeleteSuccess();
     }
@@ -298,28 +314,33 @@ class TimesheetController extends ApiController
         $timesheet = new Timesheet($params);
         $timesheet->setOnDutyToNow();
 
-        if ($timesheet->save()) {
-            $timesheet->loadRelationships();
+        if (!$timesheet->save()) {
+            return $this->restError($timesheet);
+        }
 
-            $message = '';
-            $response = [
-                    'status'       => 'success',
-                    'timesheet_id' => $timesheet->id,
-                    'forced'       => $signonForced
-                ];
+        $this->log('timesheet-create', 'sign in', $timesheet, $timesheet->person_id);
 
-            if ($signonForced) {
-                $response['forced'] = true;
-                if ($unqualifiedReason) {
-                    $message = "forced (unqualified {$unqualifiedReason}) ";
-                    $response['unqualified_reason'] = $unqualifiedReason;
-                } else {
-                    $message = "forced (not trained {$positionRequired}) ";
-                    $response['required_training'] = $positionRequired;
-                }
+        $timesheet->loadRelationships();
+
+        $message = '';
+        $response = [
+            'status'       => 'success',
+            'timesheet_id' => $timesheet->id,
+            'forced'       => $signonForced
+        ];
+
+        if ($signonForced) {
+            $response['forced'] = true;
+            if ($unqualifiedReason) {
+                $message = "forced (unqualified {$unqualifiedReason}) ";
+                $response['unqualified_reason'] = $unqualifiedReason;
+            } else {
+                $message = "forced (not trained {$positionRequired}) ";
+                $response['required_training'] = $positionRequired;
             }
+        }
 
-            TimesheetLog::record(
+        TimesheetLog::record(
                 'signon',
                 $person->id,
                 $this->user->id,
@@ -328,10 +349,7 @@ class TimesheetController extends ApiController
                 $timesheet->position->title." ".(string) $timesheet->on_duty
             );
 
-            return response()->json($response);
-        }
-
-        return $this->restError($timesheet);
+        return response()->json($response);
     }
 
     /*
@@ -347,8 +365,10 @@ class TimesheetController extends ApiController
         }
 
         $timesheet->setOffDutyToNow();
+        $changes = $timesheet->getChangedValues();
         $timesheet->save();
         $timesheet->loadRelationships();
+        $this->log('timesheet-update', 'signout', $timesheet, $timesheet->person_id);
         TimesheetLog::record(
             'signoff',
             $timesheet->person_id,
@@ -408,7 +428,10 @@ class TimesheetController extends ApiController
 
             $person->saveWithoutValidation();
             TimesheetLog::record(
-                'confirmed', $person->id, $this->user->id, null,
+                'confirmed',
+                $person->id,
+                $this->user->id,
+                null,
                 ($person->timesheet_confirmed ? 'confirmed' : 'unconfirmed')
              );
         }
@@ -615,7 +638,18 @@ class TimesheetController extends ApiController
                 break;
             }
 
+            $isExisting = $timesheet->id ? true : false;
+            if ($isExisting) {
+                $changes = $timesheet->getChangedValues();
+            }
+
             if ($timesheet->save()) {
+                if ($isExisting) {
+                    $changes['id'] = $timesheet->id;
+                    $this->log('timesheet-update', 'bulk sign in/out', $changes, $timesheet->person_id);
+                } else {
+                    $this->log('timesheet-create', 'bulk sign in/out', $timesheet, $timesheet->person_id);
+                }
                 TimesheetLog::record($event, $personId, $userId, $timesheet->id, $message);
             } else {
                 $entry->errors = [ "timesheet entry save failure ".json_encode($timesheet->getErrors()) ];
@@ -629,11 +663,11 @@ class TimesheetController extends ApiController
      * Special Teams reporting
      */
 
-     public function specialTeamsReport()
-     {
-         $this->authorize('specialTeamsReport', [ Timesheet::class ]);
+    public function specialTeamsReport()
+    {
+        $this->authorize('specialTeamsReport', [ Timesheet::class ]);
 
-         $params = request()->validate([
+        $params = request()->validate([
              'position_ids'   => 'required|array',
              'position_ids.*' => 'integer|exists:position,id',
              'start_year'     => 'required|integer|lte:end_year',
@@ -641,24 +675,27 @@ class TimesheetController extends ApiController
              'include_inactive' => 'sometimes|boolean'
          ]);
 
-         return response()->json([
+        return response()->json([
              'people' => Timesheet::retrieveSpecialTeamsWork(
-                            $params['position_ids'], $params['start_year'],
-                            $params['end_year'], ($params['include_inactive'] ?? false),
-                            $this->userCanViewEmail())
+                            $params['position_ids'],
+                 $params['start_year'],
+                            $params['end_year'],
+                 ($params['include_inactive'] ?? false),
+                            $this->userCanViewEmail()
+             )
         ]);
-     }
+    }
 
-     /*
-      * Hours/Credits report
-      */
+    /*
+     * Hours/Credits report
+     */
 
-     public function hoursCreditsReport()
-     {
-         $this->authorize('hoursCreditsReport', [ Timesheet::class ]);
+    public function hoursCreditsReport()
+    {
+        $this->authorize('hoursCreditsReport', [ Timesheet::class ]);
 
-         $year = $this->getYear();
+        $year = $this->getYear();
 
-         return response()->json(Timesheet::retrieveHoursCredits($year));
-     }
+        return response()->json(Timesheet::retrieveHoursCredits($year));
+    }
 }

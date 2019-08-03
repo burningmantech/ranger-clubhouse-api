@@ -13,7 +13,7 @@ class TimesheetPolicy
 
     public function before(Person $user)
     {
-        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::MANAGE, Role::ADMIN])) {
+        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN])) {
             return true;
         }
     }
@@ -23,7 +23,7 @@ class TimesheetPolicy
      */
     public function index(Person $user, $personId)
     {
-        return ($user->id == $personId);
+        return $user->hasRole(Role::MANAGE) || ($user->id == $personId);
     }
 
     /*
@@ -41,7 +41,7 @@ class TimesheetPolicy
 
     public function update(Person $user, Timesheet $timesheet)
     {
-        return ($user->id == $timesheet->person_id);
+        return $user->hasRole(Role::MANAGE) || ($user->id == $timesheet->person_id);
     }
 
     /*
@@ -50,12 +50,12 @@ class TimesheetPolicy
 
     public function confirm(Person $user, $personId)
     {
-        return ($user->id == $personId);
+        return $user->hasRole(Role::MANAGE) || ($user->id == $personId);
     }
 
     /*
      * Can a user delete a timesheet? Only timesheet manager,
-     * login manage, or admin, covered in before()
+     * or admin, covered in before()
      */
 
     public function destroy(Person $user, Timesheet $timesheet)
@@ -69,7 +69,7 @@ class TimesheetPolicy
 
     public function signin(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*
@@ -78,7 +78,7 @@ class TimesheetPolicy
 
     public function signoff(Person $user, Timesheet $timesheet)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*
@@ -87,7 +87,7 @@ class TimesheetPolicy
 
     public function log(Person $user, $id)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*
@@ -96,7 +96,7 @@ class TimesheetPolicy
 
     public function correctionRequests(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*
@@ -105,7 +105,7 @@ class TimesheetPolicy
 
     public function unconfirmedPeople(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -114,7 +114,7 @@ class TimesheetPolicy
 
     public function freakingYearsReport(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -123,7 +123,7 @@ class TimesheetPolicy
 
     public function shirtsEarnedReport(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -132,7 +132,7 @@ class TimesheetPolicy
 
     public function radioEligibilityReport(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -150,7 +150,7 @@ class TimesheetPolicy
 
     public function hoursCreditsReport(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -159,7 +159,7 @@ class TimesheetPolicy
 
     public function specialTeamsReport(Person $user)
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
 }
