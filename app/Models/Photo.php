@@ -51,7 +51,7 @@ class Photo
             // or the user is an admin.
 
             // TODO : GET LAMBASE FIXED AND REMOVE THE EDGE CASE FOR MISS PIGGY!
-            if ($user && ($user->id == $person->id || $user->isAdmin()) && (setting('PhotoUploadEnable') || $person->id == self::MISS_PIGGY_ID)) {
+            if ($user && ($user->id == $person->id || $user->isAdmin()) && (setting('PhotoUploadEnable') || $user->id == self::MISS_PIGGY_ID)) {
                 $uploadUrl = $lambase->getUploadUrl();
             } else {
                 $uploadUrl = null;
