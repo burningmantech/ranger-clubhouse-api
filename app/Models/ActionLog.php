@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Person;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class ActionLog extends Model
 {
@@ -36,6 +37,7 @@ class ActionLog extends Model
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
         $endTime = $query['end_time'] ?? null;
+        $lastDay = $query['lastday'] ?? false;
 
         $sql = self::query();
 
@@ -77,6 +79,10 @@ class ActionLog extends Model
 
         if ($endTime) {
             $sql->where('created_at', '<=', $endTime);
+        }
+
+        if ($lastDay) {
+            $sql->where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'));
         }
 
         // How many total for the query

@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
+use App\Models\ActionLog;
+use App\Models\Broadcast;
+use App\Models\ErrorLog;
 use App\Models\LambasePhoto;
-use App\Models\PersonPhoto;
 use App\Models\Person;
+use App\Models\PersonPhoto;
 use App\Models\Photo;
+
+use App\Mail\DailyReportMail;
 
 class MaintenanceController extends ApiController
 {
@@ -41,6 +46,25 @@ class MaintenanceController extends ApiController
         }
 
         return response()->json([ 'results' => $results, 'errors' => $errors ]);
+    }
+
+    public function dailyReport()
+    {
+        $this->checkMaintenanceToken();
+
+        $failedBroadcasts = Broadcast::findLogs([ 'lastday' => true, 'failed' => true]);
+        $errorLogs = ErrorLog::findForQuery([ 'lastday' => true, 'page_size' => 1000 ])['logs'];
+
+        $roleLogs = ActionLog::findForQuery([ 'lastday' => 'true', 'page_size' => 1000, 'events' => [ 'person-role-add', 'person-role-remove' ] ], false)['logs'];
+        $statusLogs = ActionLog::findForQuery([ 'lastday' => 'true', 'page_size' => 1000, 'events' => [ 'person-status-change', 'person-status-change' ] ], false)['logs'];
+        foreach ($statusLogs as $log) {
+            $json = json_decode($log->data);
+            $log->oldStatus = $json->status[0];
+            $log->newStatus = $json->status[1];
+        }
+
+        mail_to('youngfrankenstein@burningman.org', new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
+        return $this->success();
     }
 
 
