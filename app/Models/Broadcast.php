@@ -93,15 +93,23 @@ class Broadcast extends ApiModel {
                 ->firstOrFail();
     }
 
-    public static function findLogs($year, $failedOnly=false)
+    public static function findLogs($query)
     {
+        $year = $query['year'] ?? 0;
+        $failedOnly = $query['failed'] ?? false;
+        $lastDay = $query['lastday'] ?? false;
+
         $sql = self::with([
-                'alert:id,title',
-                'sender:id,callsign',
-                'retry_person:id,callsign'
-            ])
-            ->whereYear('created_at', $year)
-            ->orderBy('created_at', 'desc');
+            'alert:id,title',
+            'sender:id,callsign',
+            'retry_person:id,callsign'
+        ])->orderBy('created_at', 'desc');
+
+        if ($year) {
+            $sql->whereYear('created_at', $year);
+        } else if ($lastDay) {
+            $sql->where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'));
+        }
 
         if ($failedOnly) {
             $sql->where(function($q) {

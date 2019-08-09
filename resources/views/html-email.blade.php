@@ -42,6 +42,10 @@
       vertical-align: top;
     }
 
+    table th {
+      text-align: left;
+    }
+
     /* -------------------------------------
           BODY & CONTAINER
       ------------------------------------- */
@@ -113,8 +117,7 @@
       font-family: sans-serif;
       font-weight: 400;
       line-height: 1.4;
-      margin: 0;
-      margin-bottom: 30px;
+      margin: 10px 0;
     }
 
     h1 {
@@ -248,10 +251,36 @@
       Margin: 20px 0;
     }
 
+    .table {
+      border-spacing: 2px;
+      border-color: grey;
+      border-collapse: collapse;
+    }
+
+    .table thead th {
+      vertical-align: bottom;
+      border-bottom: 2px solid #dee2e6;
+      color: #495057;
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .table-sm {
+      font-size: 0.9em;
+    }
+
+    .table-sm th, .table-sm td {
+        padding: 0.3rem;
+    }
+
     /* -------------------------------------
           RESPONSIVE AND MOBILE FRIENDLY STYLES
       ------------------------------------- */
-    @mediaonly screen and (max-width: 620px) {
+    @mediaonlyscreenand(max-width: 620px) {
       table[class=body] h1 {
         font-size: 28px !important;
         margin-bottom: 10px !important;

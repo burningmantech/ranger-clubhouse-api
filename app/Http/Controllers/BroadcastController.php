@@ -32,7 +32,7 @@ class BroadcastController extends ApiController
 
         $this->authorize('messages', [ Broadcast::class, $params['person_id'] ?? null]);
 
-        return response()->json([ 'logs' => Broadcast::findLogs($params['year'], $params['failed'] ?? false) ]);
+        return response()->json([ 'logs' => Broadcast::findLogs([ 'year' => $params['year'], 'failed' => ($params['failed'] ?? false) ]) ]);
     }
 
     /**
