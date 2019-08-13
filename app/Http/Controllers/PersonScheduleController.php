@@ -44,6 +44,11 @@ class PersonScheduleController extends ApiController
 
         $rows = Schedule::findForQuery($query);
 
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
+        }
+
         return $this->success($rows, null, 'schedules');
     }
 
@@ -475,6 +480,11 @@ class PersonScheduleController extends ApiController
             'year'      => $year,
             'remaining' => true
         ]);
+
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
 
         $time = 0;
         $credits = 0.0;
