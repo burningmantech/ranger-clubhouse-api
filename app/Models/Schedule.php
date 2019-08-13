@@ -58,6 +58,8 @@ class Schedule extends ApiModel
         'slot_ends'
     ];
 
+    public $_credits = null;
+
     const SHIFT_STARTS_WITHIN = 30; // A shift starts within X minutes
 
     public static function findForQuery($query)
@@ -130,8 +132,23 @@ class Schedule extends ApiModel
             ->orderBy('slot.begins', 'asc', 'position.title', 'asc', 'slot.description', 'asc')
             ->get()->toArray();
 
-        // return an array of Schedule loaded from the rows
-        return Schedule::hydrate($rows);
+        $rows =  Schedule::hydrate($rows);
+
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+
+            foreach ($rows as $row) {
+                // Don't count hours if the position and time period do not earn credits.
+                // e.g., Troubleshooting Training off playa does not earn credits, while TT during the event does.
+                if ($row->position_count_hours && $row->credits == 0.0) {
+                    $row->position_count_hours = false;
+                }
+            }
+        }
+
+
+        return $rows;
     }
 
     /*
@@ -437,7 +454,13 @@ class Schedule extends ApiModel
         $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
 
         foreach ($rows as $row) {
-            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $row->position_count_hours);
+            $countHours = $row->position_count_hours;
+            if ($countHours
+            && PositionCredit::computeCredits($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $year) == 0) {
+                $countHours = false;
+            }
+
+            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $countHours);
         }
 
         return [
@@ -468,7 +491,11 @@ class Schedule extends ApiModel
 
     public function getCreditsAttribute()
     {
-        return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
+        if ($this->_credits == null) {
+            $this->_credits = PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
+        }
+
+        return $this->_credits;
     }
 
     /*
