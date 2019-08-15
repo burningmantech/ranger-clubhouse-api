@@ -104,6 +104,10 @@ class LambaseBMID
 
         ActionLog::record(Auth::user(), 'lambase-response', 'Lambase response', [ 'result' => $result ]);
 
+        // Strip out any debugging message which Lambase likes to randomly throw in. *ggggrrrrr*
+        // JSON should be any array with objects. e.g., "[{wsid:13},{wsid:14}]"
+        $result = preg_replace("/^(.*?)\[/", "[", $result);
+
         $decodedResult = json_decode($result);
         if ($decodedResult == null) {
             throw new LambaseBMIDException("Failed to decode Lambase", $result);
