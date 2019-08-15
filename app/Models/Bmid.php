@@ -175,7 +175,7 @@ class Bmid extends ApiModel
         switch ($filter) {
         case 'alpha':
             // Find all alphas & prospective
-            $ids = Person::whereIn('status', [ 'alpha', 'prospecitve' ])
+            $ids = Person::whereIn('status', [ 'alpha', 'prospective' ])
                     ->get('id')
                     ->pluck('id');
             break;
