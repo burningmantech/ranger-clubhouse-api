@@ -63,7 +63,7 @@ class MaintenanceController extends ApiController
             $log->newStatus = $json->status[1];
         }
 
-        mail_to('youngfrankenstein@burningman.org', new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
+        mail_to(explode(',', setting('DailyReportEmail')), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
         return $this->success();
     }
 
