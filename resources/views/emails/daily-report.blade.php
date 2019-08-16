@@ -39,7 +39,7 @@
   </tbody>
 </table>
 @else
-<b class="color: green">Congratulations! No error were reported.</b>
+<b class="color: green">Congratulations! No error logs were recorded.</b>
 @endif
 
 
@@ -112,7 +112,15 @@
     <tr>
       <td>{{$log->created_at}}</td>
       <td>{{$log->target_person->callsign}}</td>
-      <td>{{$log->person->callsign}}</td>
+      <td>
+        @if ($log->person)
+        {{$log->person->callsign}}
+        @elseif ($log->person_id)
+        {{$log->person_id}}
+        @else
+        -
+        @endif
+      </td>
       <td>
         @if ($log->event == 'person-role-add')
         {{$log->roles->implode('title', ', ')}}
