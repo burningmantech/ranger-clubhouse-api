@@ -32,6 +32,7 @@ class TraineeStatus extends ApiModel
 
     public static function findForPersonYear($personId, $year)
     {
+        // Find the first training that passed
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
                 // Ensure the person is actually signed up
                 ->join('person_slot', function ($q) use ($personId)  {
@@ -40,6 +41,7 @@ class TraineeStatus extends ApiModel
                 })
                 ->where('trainee_status.person_id', $personId)
                 ->whereYear('slot.begins', $year)
+                ->orderBy('trainee_status.passed', 'asc')
                 ->orderBy('slot.begins')
                 ->get();
 
