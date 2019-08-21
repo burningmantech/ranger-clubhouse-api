@@ -77,16 +77,15 @@ class PersonFilter
         'home_phone',
         'alt_phone',
 
-        'camp_location',
-        'on_site',
-
         'longsleeveshirt_size_style',
         'teeshirt_size_style',
 
         'languages'
     ];
 
-    const EMERGENCY_CONTACT_FIELDS = [
+    const HQ_INFO = [
+        'on_site',
+        'camp_location',
         'emergency_contact',
 
         // TODO remove below when CH1 is decomissioned
@@ -177,7 +176,7 @@ class PersonFilter
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
-        [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
+        [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ] ],
         [ self::AGREEMENT_FIELDS ],
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
@@ -187,7 +186,7 @@ class PersonFilter
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
         [ self::RANGER_ADMIN_FIELDS ],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
-        [ self::TIMESHEET_FIELDS ]
+        [ self::TIMESHEET_FIELDS ],
     ];
 
     const FIELDS_DESERIALIZE = [
@@ -201,7 +200,7 @@ class PersonFilter
         [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
-        [ self::EMERGENCY_CONTACT_FIELDS, true, [ Role::VC ]],
+        [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ]],
         [ self::AGREEMENT_FIELDS, true, [ Role::ADMIN ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
@@ -210,7 +209,7 @@ class PersonFilter
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
         [ self::RANGER_ADMIN_FIELDS, false, [ Role::ADMIN ]],
-        [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]]
+        [ self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]],
     ];
 
     public function buildFields(array $fieldGroups, $authorizedUser): array
