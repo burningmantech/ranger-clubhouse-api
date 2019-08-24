@@ -90,7 +90,9 @@ class BulkSignInOut
 
         $errors = [];
 
-        $columns = array_filter($columns, function ($entry) { return $entry != ''; });
+        $columns = array_filter($columns, function ($entry) {
+            return $entry != '';
+        });
         $count = count($columns);
 
         $callsign = $columns[0];
@@ -198,23 +200,31 @@ class BulkSignInOut
 
         if (!$personId) {
             $errors[] = "callsign '$callsign' not found";
-        } else if (empty($errors)) {
+        } elseif (empty($errors)) {
             $timesheet = Timesheet::findOnDutyForPersonYear($personId, $year);
             $timesheetId = $timesheet ? $timesheet->id : null;
 
             if ($action != 'out' && $timesheetId) {
                 $errors[] = 'is on duty';
-            } else if ($action == 'out' && !$timesheetId) {
+            } elseif ($action == 'out' && !$timesheetId) {
                 $errors[] = 'is not on duty';
-            } else if ($timesheet) {
+            } elseif ($timesheet) {
                 $signin = $timesheet->on_duty->timestamp;
+            } elseif ($action == 'inout') {
+                $checkIn = date(self::DATETIME_FORMAT, $signin);
+                $checkOut = date(self::DATETIME_FORMAT, $signout);
+                $overlap = Timesheet::findOverlapForPerson($personId, $checkIn, $checkOut);
+
+                if ($overlap) {
+                    $errors[] = "overlapping or duplicate timesheet. Position {$overlap->position->title} Start {$overlap->on_duty} End {$overlap->off_duty}";
+                }
             }
         }
 
         if ($timesheetId) {
             $positionId = $timesheet->position_id;
             $position = $timesheet->position->title;
-        } else if ($position != '') {
+        } elseif ($position != '') {
             $title = strtolower($position);
             if (isset($positionTitles[$title])) {
                 $p = $positionTitles[$title];
