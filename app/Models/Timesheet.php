@@ -180,6 +180,21 @@ class Timesheet extends ApiModel
             ->first();
     }
 
+    /*
+     * Find an existing overlapping timesheet entry for a date range
+     */
+
+    public static function findOverlapForPerson($personId, $onduty, $offduty)
+    {
+        return self::where('person_id', $personId)
+            ->where(function ($sql) use  ($onduty, $offduty) {
+                $sql->whereBetween('on_duty', [ $onduty, $offduty ]);
+                $sql->orWhereBetween('off_duty', [ $onduty, $offduty ]);
+                $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [ $onduty ]);
+               $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [ $offduty ]);
+            })->first();
+    }
+
     public static function findShiftWithinMinutes($personId, $startTime, $withinMinutes)
     {
         return self::with([ 'position:id,title' ])
