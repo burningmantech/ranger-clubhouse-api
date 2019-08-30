@@ -144,4 +144,12 @@ class AssetPerson extends ApiModel
          return $sql->orderBy('person.callsign')->orderBy('asset_person.checked_out')->get();
      }
 
+     public function setAttachmentIdAttribute($value) {
+         if (empty($value)) {
+             $value = null;
+         }
+
+         $this->attributes['attachment_id'] = $value;
+     }
+
 }
