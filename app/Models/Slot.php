@@ -211,7 +211,7 @@ class Slot extends ApiModel
         switch ($type) {
         case 'non-dirt':
             $sql->whereNotIn('slot.position_id', [
-                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_SHINY_PENNY,
+                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
                 Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
             ])->where('position.type', '=', 'Frontline');
             break;
@@ -222,7 +222,7 @@ class Slot extends ApiModel
 
         case 'dirt+green':
             $sql->whereIn('slot.position_id', [
-                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_SHINY_PENNY,
+                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
                 Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
             ])->orderBy('years', 'desc');
             break;
@@ -238,7 +238,7 @@ class Slot extends ApiModel
                 ->select('person_position.person_id', 'position.short_title', 'position.id as position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('position.on_sl_report', 1)
-                ->whereNotIn('position.id', [ Position::DIRT, Position::DIRT_SHINY_PENNY])    // Don't need report on dirt
+                ->whereNotIn('position.id', [ Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY])    // Don't need report on dirt
                 ->whereIn('person_position.person_id', $personIds)
                 ->get()
                 ->groupBy('person_id');
