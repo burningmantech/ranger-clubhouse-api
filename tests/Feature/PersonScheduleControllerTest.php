@@ -589,19 +589,20 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $this->user->id;
         $this->addPosition(Position::TRAINING);
 
+        $year = date('Y') + 1;
 
         $part1 = factory(Slot::class)->create([
             'description' => 'Elysian Fields - Part 1',
             'position_id' =>  Position::TRAINING,
-            'begins'      => date("Y-08-30 12:00:00"),
-            'ends'        => date("Y-08-30 18:00:00")
+            'begins'      => date("$year-08-30 12:00:00"),
+            'ends'        => date("$year-08-30 18:00:00")
         ]);
 
         $part2 = factory(Slot::class)->create([
             'description' => 'Elysian Fields - Part 2',
             'position_id' =>  Position::TRAINING,
-            'begins'      => date("Y-08-31 12:00:00"),
-            'ends'        => date("Y-08-31 18:00:00")
+            'begins'      => date("$year-08-31 12:00:00"),
+            'ends'        => date("$year-08-31 18:00:00")
         ]);
 
         factory(PersonSlot::class)->create(
