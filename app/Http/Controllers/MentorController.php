@@ -21,7 +21,7 @@ class MentorController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'mentees' => PersonMentor::findMenteesForYear($year) ]);
+        return response()->json([ 'mentees' => PersonMentor::findMenteesForYear($year, $this->userCanViewEmail()) ]);
     }
 
     /*

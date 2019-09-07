@@ -182,10 +182,15 @@ class PersonMentor extends ApiModel
      * Find all mentees for year
      */
 
-    public static function findMenteesForYear($year)
+    public static function findMenteesForYear($year, $includeEmail)
     {
+        $personColumns = 'person:id,callsign,first_name,last_name,status';
+        if ($includeEmail) {
+            $personColumns .= ',email';
+        }
+
         $personGroups = PersonMentor::where('mentor_year', $year)
-                ->with([ 'person:id,callsign,first_name,last_name,status', 'mentor:id,callsign' ])
+                ->with([$personColumns, 'mentor:id,callsign' ])
                 ->get()
                 ->groupBy('person_id');
 
@@ -209,7 +214,7 @@ class PersonMentor extends ApiModel
             })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
 
 
-            $people[] = [
+            $person =  [
                 'id'            => $first->person_id,
                 'callsign'      => $first->person->callsign,
                 'first_name'    => $first->person->first_name,
@@ -218,7 +223,13 @@ class PersonMentor extends ApiModel
                 'mentor_status' => $first->status,
                 'mentors'       => $mentors
             ];
-        }
+
+            if ($includeEmail) {
+                $person['email'] = $first->person->email;
+            }
+
+            $people[] = $person;
+         }
 
         usort($people, function ($a, $b) {
             return strcasecmp($a['callsign'], $b['callsign']);
