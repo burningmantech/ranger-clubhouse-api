@@ -233,7 +233,11 @@ class TimesheetMissing extends ApiModel
             $sql = $sql->where('review_status', 'pending');
         }
 
-        return $sql->get();
+        $rows = $sql->get();
+
+        return $rows->sortBy(function ($p) {
+            return $p->person->callsign;
+        }, SORT_NATURAL|SORT_FLAG_CASE)->values();
     }
 
     public function setCreateEntryAttribute($value) {
