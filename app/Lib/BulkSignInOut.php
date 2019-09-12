@@ -90,9 +90,16 @@ class BulkSignInOut
 
         $errors = [];
 
-        $columns = array_filter($columns, function ($entry) {
-            return $entry != '';
-        });
+        if (empty($columns[0])) {
+            $action = 'unknown';
+            $errors[] = 'Callsign not specified';
+            $entry = (object) [
+                'action'    => 'unknown',
+                'errors'    => [ 'Callsign not specified' ]
+            ];
+            return false;
+        }
+
         $count = count($columns);
 
         $callsign = $columns[0];
