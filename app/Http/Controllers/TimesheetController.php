@@ -257,7 +257,7 @@ class TimesheetController extends ApiController
     public function signin(Request $request)
     {
         $this->authorize('signin', [ Timesheet::class ]);
-        $isAdmin = $this->userHasRole(Role::ADMIN);
+        $canForceSignon = $this->userHasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]);
 
         $params = request()->validate([
             'person_id'    => 'required|integer',
@@ -288,7 +288,7 @@ class TimesheetController extends ApiController
         // Are they trained for this position?
         if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);
-            if ($isAdmin) {
+            if ($canForceSignon) {
                 $signonForced = true;
             } else {
                 return response()->json([
@@ -301,7 +301,7 @@ class TimesheetController extends ApiController
 
         // Sandman blocker - must be qualified
         if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
-            if ($isAdmin) {
+            if ($canForceSignon) {
                 $signonForced = true;
             } else {
                 return response()->json([

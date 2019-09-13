@@ -122,8 +122,7 @@ class MentorController extends ApiController
         $params = request()->validate([
              'assignments.*.person_id' => 'required|integer',
              'assignments.*.status' => 'required|string',
-             'assignments.*.mentors.*.person_mentor_id' => 'sometimes|integer|exists:person_mentor,id',
-             'assignments.*.mentors.*.mentor_id' => 'present|integer',
+             'assignments.*.mentors.*.mentor_id' => 'present|integer|exists:person,id',
          ]);
 
         $alphas = $params['assignments'];
@@ -131,38 +130,66 @@ class MentorController extends ApiController
         $result = [];
 
         $ids = array_column($alphas, 'person_id');
+        $year = current_year();
 
         $people = Person::findOrFail($ids)->keyBy('id');
+        $allMentors = PersonMentor::whereIn('person_id', $ids)->where('mentor_year', $year)->get()->groupBy('person_id');
 
+        $mentorCache = [];
         foreach ($alphas as $alpha) {
-            $person = $people[$alpha['person_id']];
+            $personId = $alpha['person_id'];
+            $person = $people[$personId];
             $status = $alpha['status'];
 
-            $mentors = [];
+            if (isset($allMentors[$personId])) {
+                $currentMentors = $allMentors[$personId]->pluck('mentor_id')->toArray();
+            } else {
+                $currentMentors = [];
+            }
+
+            $mentorCount = 0;
             foreach ($alpha['mentors'] as $mentor) {
                 $mentorId = $mentor['mentor_id'];
-                if (isset($mentor['person_mentor_id'])) {
-                    $pm = PersonMentor::find($mentor['person_mentor_id']);
-                    if ($pm->person_id != $person->id) {
-                        throw new \InvalidArgumentException("person_mentor#{$pm->id} does not belong to person#{$person->id}");
-                    }
-                    $pm->status = $status;
-                    $pm->mentor_id = $mentorId;
-                    $pm->save();
-                } else {
-                    $pm = PersonMentor::create([
-                         'person_id'   => $person->id,
-                         'mentor_id'   => $mentor['mentor_id'],
-                         'status'      => $status,
-                         'mentor_year' => current_year()
-                     ]);
+                if (in_array($mentorId, $currentMentors)) {
+                    $mentorCount++;
                 }
-
-                $mentors[] = [
-                     'person_mentor_id' => $pm->id,
-                     'mentor_id'        => $pm->mentor_id
-                 ];
             }
+
+            $mentors = [];
+            $mentorIds = [];
+            if ($mentorCount > 0 && $mentorCount == count($currentMentors)) {
+                // Simple status update
+                PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->update([ 'status' => $status ]);
+                foreach ($allMentors[$personId] as $mentor) {
+                    $mentorIds[] = $mentor->mentor_id;
+                    $mentors[] = [
+                        'person_mentor_id' => $mentor->id,
+                        'mentor_id'        => $mentor->mentor_id
+                    ];
+                }
+            } else {
+                // Rebuild the mentors
+                PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->delete();
+                foreach ($alpha['mentors'] as $mentor) {
+                    $mentorId = $mentor['mentor_id'];
+                    $mentor = PersonMentor::create([
+                         'person_id'   => $person->id,
+                         'mentor_id'   => $mentorId,
+                         'status'      => $status,
+                         'mentor_year' => $year
+                    ]);
+                    $mentorIds[] = $mentor->mentor_id;
+                    $mentors[] = [
+                         'person_mentor_id' => $mentor->id,
+                         'mentor_id'        => $mentor->mentor_id
+                     ];
+                }
+            }
+
+            $callsigns = Person::select('id', 'callsign')->whereIn('id', $mentorIds)->get()->keyBy('id');
+            usort($mentors, function ($a, $b) use ($callsigns) {
+                return strcasecmp($callsigns[$a['mentor_id']]->callsign, $callsigns[$b['mentor_id']]->callsign);
+            });
 
             $results[] = [
                  'person_id' => $person->id,
