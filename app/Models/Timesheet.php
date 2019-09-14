@@ -281,6 +281,17 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Find out if the person has an alpha timesheet entry for the current year
+     */
+
+    public static function hasAlphaEntry($personId) {
+        return Timesheet::where('person_id', $personId)
+                ->whereYear('on_duty', current_year())
+                ->where('position_id', Position::ALPHA)
+                ->exists();
+    }
+
+    /*
      * Retrieve all corrections requests for a given year
      */
 
@@ -302,6 +313,44 @@ class Timesheet extends ApiModel
         return $rows->sortBy(function ($p) {
             return $p->person->callsign;
         }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+    }
+
+    public static function retrieveCombinedCorrectionRequestsForYear($year)
+    {
+        $corrections = self::retrieveCorrectionRequestsForYear($year);
+
+        $requests = [];
+        foreach ($corrections as $req) {
+            $requests[] = [
+                'person'    => $req->person,
+                'position'  => $req->position,
+                'on_duty'   => (string)$req->on_duty,
+                'off_duty'  => (string)$req->off_duty,
+                'duration'  => $req->duration,
+                'credits'   => $req->credits,
+                'is_missing'=> false,
+                'notes' => $req->notes
+            ];
+        }
+
+        $missing = TimesheetMissing::retrieveForPersonOrAllForYear(null, $year);
+
+        foreach ($missing as $req) {
+            $requests[] = [
+                'person'    => $req->person,
+                'position'  => $req->position,
+                'on_duty'   => (string)$req->on_duty,
+                'off_duty'  => (string)$req->off_duty,
+                'duration'  => $req->duration,
+                'credits'   => $req->credits,
+                'is_missing'=> true,
+                'notes' => $req->notes
+            ];
+        }
+
+        usort($requests, function ($a, $b) { return strcasecmp($a['person']->callsign, $b['person']->callsign); });
+
+        return $requests;
     }
 
     /*

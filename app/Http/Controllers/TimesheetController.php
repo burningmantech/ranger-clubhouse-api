@@ -459,9 +459,8 @@ class TimesheetController extends ApiController
         $this->authorize('correctionRequests', [ Timesheet::class ]);
 
         return response()->json([
-               'corrections'    => Timesheet::retrieveCorrectionRequestsForYear($year),
-               'missing_requests'   => TimesheetMissing::retrieveForPersonOrAllForYear(null, $year)
-           ]);
+            'requests' => Timesheet::retrieveCombinedCorrectionRequestsForYear($year)
+        ]);
     }
     /*
      * Timesheet Unconfirmed Report
