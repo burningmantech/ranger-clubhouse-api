@@ -362,15 +362,19 @@ class PersonController extends ApiController
     {
         $params = request()->validate([
             'include_training'   => 'sometimes|boolean',
+            'include_mentee' => 'sometimes|boolean',
             'year'               => 'required_if:include_training,true|integer'
         ]);
 
         $this->authorize('view', $person);
 
-        if (@$params['include_training']) {
+        $includeTraining = $params['include_training'] ?? false;
+        $includeMentee = $params['include_mentee'] ?? false;
+
+        if ($includeTraining) {
             $positions = Training::findPositionsWithTraining($person, $params['year']);
         } else {
-            $positions = PersonPosition::findForPerson($person->id);
+            $positions = PersonPosition::findForPerson($person->id, $includeMentee);
         }
 
         return response()->json([ 'positions' =>  $positions]);

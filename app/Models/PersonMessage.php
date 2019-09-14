@@ -79,18 +79,20 @@ class PersonMessage extends ApiModel
             return false;
         }
 
-        /* Find callsigns and verify contents */
+        if (!$this->exists) {
+            /* Find callsigns and verify contents */
 
-        $recipient = Person::findByCallsign($this->recipient_callsign);
-        if (!$recipient) {
-            if ($throwOnFailure) {
-                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
+            $recipient = Person::findByCallsign($this->recipient_callsign);
+            if (!$recipient) {
+                if ($throwOnFailure) {
+                    throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
+                }
+                $this->addError('recipient_callsign', 'Callsign does not exist');
+                return false;
             }
-            $this->addError('recipient_callsign', 'Callsign does not exist');
-            return false;
-        }
 
-        $this->person_id = $recipient->id;
+            $this->person_id = $recipient->id;
+        }
 
         return true;
     }

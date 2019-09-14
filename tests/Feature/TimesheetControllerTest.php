@@ -502,19 +502,10 @@ class TimesheetControllerTest extends TestCase
 
         $person = $this->targetPerson;
 
-        $data = [
-             'on_duty'          => $onDuty,
-             'off_duty'         => $offDuty,
-             'person_id'        => $this->targetPerson->id,
-             'create_person_id' => $this->user->id,
-             'position_id'      => Position::DIRT,
-             'notes'            => 'Give me hours!',
-         ];
-
         factory(TimesheetMissing::class)->create([
              'on_duty'          => $onDuty,
              'off_duty'         => $offDuty,
-             'person_id'        => $this->targetPerson->id,
+             'person_id'        => $person->id,
              'create_person_id' => $this->user->id,
              'position_id'      => Position::DIRT,
              'notes'            => 'Give me hours!',
@@ -524,20 +515,25 @@ class TimesheetControllerTest extends TestCase
         $response->assertStatus(200);
 
         $response->assertJson([
-             'corrections' => [
+             'requests' => [
                  [
-                     'id' => $timesheet->id,
                      'notes' => 'Would thoust correctith thine entry?',
                      'person' => [
                          'id'   => $person->id,
                          'callsign' => $person->callsign
                      ]
-                 ]
+                 ],
+                 [
+                      'on_duty'  => $onDuty,
+                      'off_duty' => $offDuty,
+                      'notes'       => 'Give me hours!',
+                      'is_missing'  => true,
+                      'person'   => [
+                          'id'       => $person->id,
+                          'callsign' => $person->callsign
+                      ],
+                  ]
             ],
-
-            'missing_requests' => [
-                $data
-            ]
          ]);
     }
 

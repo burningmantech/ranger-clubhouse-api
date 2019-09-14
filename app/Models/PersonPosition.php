@@ -61,13 +61,29 @@ class PersonPosition extends ApiModel
      * Return the positions held for a user
      */
 
-     public static function findForPerson($personId)
+     public static function findForPerson($personId, $includeMentee = false)
      {
-         return self::select('position.id', 'position.title', 'position.training_position_id')
+         $rows = self::select('position.id', 'position.title', 'position.training_position_id')
                 ->join('position', 'position.id', '=', 'person_position.position_id')
                 ->where('person_id', $personId)
                 ->orderBy('position.title')
                 ->get();
+
+          if (!$includeMentee) {
+              return $rows;
+          }
+
+          // Find mentee and alpha positions
+          $sql = Position::select('position.id', 'position.title', 'position.training_position_id')
+                   ->where('title', 'like', '%mentee%');
+
+          if (Timesheet::hasAlphaEntry($personId)) {
+              $sql->orWhere('id', Position::ALPHA);
+          }
+
+          $other = $sql->get();
+
+          return $rows->merge($other)->unique('id')->sortBy('title')->values();
      }
 
      /**

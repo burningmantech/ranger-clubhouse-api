@@ -82,8 +82,13 @@ class PersonMessageController extends ApiController
     {
         $this->authorize('markread', $person_message);
 
-        if (!$person_message->markRead()) {
-            return $this->restError('Cannot mark message as read');
+        $params = request()->validate([
+            'delivered' => 'required|boolean'
+        ]);
+
+        $person_message->delivered = $params['delivered'];
+        if (!$person_message->save()) {
+            return $this->restError($person_message);
         }
 
         return $this->success();
