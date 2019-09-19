@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\Person;
 use App\Models\PersonPosition;
@@ -982,5 +983,57 @@ class TimesheetControllerTest extends TestCase
             ]
 
         ]);
+    }
+
+    /*
+     * Test Thank You cards
+     */
+
+    public function testThankYouCards()
+    {
+        $password = 'thank you';
+        $this->setting('ThankYouCardsHash', hash('sha256', $password));
+
+        $this->addRole(Role::ADMIN);
+        $year = date('Y');
+
+        DB::table('timesheet')->delete();
+
+        $person = factory(Person::class)->create();
+        $timesheet = factory(Timesheet::class)->create([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("$year-m-d 01:00:00"),
+            'off_duty'    => date("$year-m-d 02:00:00"),
+        ]);
+
+        $response = $this->json('GET', 'timesheet/thank-you', [ 'year' => $year, 'password' => $password ]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'people' => [
+                [
+                    'id'         => $person->id,
+                    'callsign'   => $person->callsign,
+                    'first_name' => $person->first_name,
+                    'last_name'  => $person->last_name
+                ]
+            ]
+        ]);
+
+    }
+
+    /*
+     * Test Thank You cards wrong password
+     */
+
+    public function testThankYouCardsWrongPassword()
+    {
+        $password = 'thank you';
+        $this->setting('ThankYouCardsHash', hash('sha256', $password));
+
+        $this->addRole(Role::ADMIN);
+        $response = $this->json('GET', 'timesheet/thank-you', [ 'year' => date('Y'), 'password' => 'wrong password' ]);
+        $response->assertStatus(403);
     }
 }

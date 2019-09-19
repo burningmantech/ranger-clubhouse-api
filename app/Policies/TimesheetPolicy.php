@@ -171,4 +171,13 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /**
+     * Can the user run the Thank You cards report
+     */
+
+    public function thankYou(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }
