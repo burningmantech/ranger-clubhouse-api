@@ -47,6 +47,7 @@ class Timesheet extends ApiModel
     protected $rules = [
         'person_id' => 'required|integer',
         'position_id' => 'required|integer',
+        'off_duty'    => 'nullable|sometimes|after_or_equal:on_duty'
     ];
 
     protected $appends = [
@@ -98,15 +99,18 @@ class Timesheet extends ApiModel
         return $this->load(self::RELATIONSHIPS);
     }
 
-    public static function find($id) {
+    public static function find($id)
+    {
         return self::selectBase()->where('id', $id)->first();
     }
 
-    public static function findOrFail($id) {
-            return self::selectBase()->where('id', $id)->firstOrFail();
+    public static function findOrFail($id)
+    {
+        return self::selectBase()->where('id', $id)->firstOrFail();
     }
 
-    public static function selectBase() {
+    public static function selectBase()
+    {
         return self::select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
             ->with(self::RELATIONSHIPS);
     }
@@ -187,11 +191,11 @@ class Timesheet extends ApiModel
     public static function findOverlapForPerson($personId, $onduty, $offduty)
     {
         return self::where('person_id', $personId)
-            ->where(function ($sql) use  ($onduty, $offduty) {
+            ->where(function ($sql) use ($onduty, $offduty) {
                 $sql->whereBetween('on_duty', [ $onduty, $offduty ]);
                 $sql->orWhereBetween('off_duty', [ $onduty, $offduty ]);
                 $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [ $onduty ]);
-               $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [ $offduty ]);
+                $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [ $offduty ]);
             })->first();
     }
 
@@ -284,7 +288,8 @@ class Timesheet extends ApiModel
      * Find out if the person has an alpha timesheet entry for the current year
      */
 
-    public static function hasAlphaEntry($personId) {
+    public static function hasAlphaEntry($personId)
+    {
         return Timesheet::where('person_id', $personId)
                 ->whereYear('on_duty', current_year())
                 ->where('position_id', Position::ALPHA)
@@ -348,7 +353,9 @@ class Timesheet extends ApiModel
             ];
         }
 
-        usort($requests, function ($a, $b) { return strcasecmp($a['person']->callsign, $b['person']->callsign); });
+        usort($requests, function ($a, $b) {
+            return strcasecmp($a['person']->callsign, $b['person']->callsign);
+        });
 
         return $requests;
     }
@@ -587,7 +594,7 @@ class Timesheet extends ApiModel
                     DB::raw('YEAR(timesheet.on_duty) as year'),
                     DB::raw('SUM( TIMESTAMPDIFF( SECOND, timesheet.on_duty, timesheet.off_duty ) ) AS duration')
                 )
-            ->leftJoin('person_position', function($q) use ($positionIds) {
+            ->leftJoin('person_position', function ($q) use ($positionIds) {
                 $q->on('person_position.person_id', 'person.id');
                 $q->whereIn('person_position.position_id', $positionIds);
             })
@@ -647,7 +654,7 @@ class Timesheet extends ApiModel
             $results[] = $result;
         }
 
-        usort($results, function ($a,$b) {
+        usort($results, function ($a, $b) {
             return strcasecmp($a['callsign'], $b['callsign']);
         });
 
@@ -785,7 +792,6 @@ class Timesheet extends ApiModel
         $now = SqlHelper::now()->timestamp;
 
         foreach ($people as $person) {
-
             $entries = $entriesByPerson[$person->id] ?? null;
             if (!$entries) {
                 continue;
@@ -797,7 +803,8 @@ class Timesheet extends ApiModel
                         $entry->position_id,
                          $entry->on_duty->timestamp,
                          $entry->off_duty ? $entry->off_duty->timestamp :  $now,
-                         $entry->position->count_hours);
+                         $entry->position->count_hours
+                );
             }
 
             $results[] = [
@@ -825,6 +832,162 @@ class Timesheet extends ApiModel
             'event_start' => (string) $eventDates->event_start,
             'event_end'   => (string) $eventDates->event_end,
             'people'      => $results
+        ];
+    }
+
+    public static function sanityChecker($year)
+    {
+        $withBase = [ 'position:id,title', 'person:id,callsign' ];
+
+        $rows = self::whereYear('on_duty', $year)
+                ->whereNull('off_duty')
+                ->with($withBase)
+                ->get()
+                ->sortBy('person.callsign')
+                ->values();
+
+        $onDutyEntries = $rows->map(function ($row) {
+            return [
+                'person'    => [
+                    'id'    => $row->person_id,
+                    'callsign'  => $row->person ? $row->person->callsign : 'Person #'.$row->person_id,
+                ],
+                'callsign'  => $row->person ? $row->person->callsign : 'Person #'.$row->person_id,
+                'on_duty'   => (string) $row->on_duty,
+                'duration'  => $row->duration,
+                'credits'   => $row->credits,
+                'position'  => [
+                    'id'    => $row->position_id,
+                    'title' => $row->position ? $row->position->title : 'Position #'.$row->position_id,
+                ]
+            ];
+        })->values();
+
+        $rows = self::whereYear('on_duty', $year)
+                ->whereRaw('on_duty > off_duty')
+                ->whereNotNull('off_duty')
+                ->with($withBase)
+                ->get()
+                ->sortBy('person.callsign')
+                ->values();
+
+        $endBeforeStartEntries = $rows->map(function ($row) {
+            return [
+                'person'    => [
+                    'id'    => $row->person_id,
+                    'callsign'  => $row->person ? $row->person->callsign : 'Person #'.$row->person_id,
+                ],
+                'on_duty'   => (string) $row->on_duty,
+                'off_duty'  => (string) $row->off_duty,
+                'duration'  => $row->duration,
+                'position'  => [
+                    'id'    => $row->position_id,
+                    'title' => $row->position ? $row->position->title : 'Position #'.$row->position_id,
+                ]
+            ];
+        });
+
+        $people = self::whereYear('on_duty', $year)
+                ->whereNotNull('off_duty')
+                ->with($withBase)
+                ->orderBy('person_id')
+                ->orderBy('on_duty')
+                ->get()
+                ->groupBy('person_id');
+
+        $overlappingPeople = [];
+        foreach ($people as $personId => $entries) {
+            $overlapping = [];
+
+            $prevEntry = null;
+            foreach ($entries as $entry) {
+                if ($prevEntry) {
+                    if ($entry->on_duty->timestamp < ($prevEntry->on_duty->timestamp + $prevEntry->duration)) {
+                        $overlapping[] = [
+                            [
+                                'timesheet_id'  => $prevEntry->id,
+                                'position' => [
+                                    'id'    => $prevEntry->position_id,
+                                    'title' => $prevEntry->position ? $prevEntry->position->title : 'Position #'.$prevEntry->position_id,
+                                ],
+                                'on_duty'   => (string) $prevEntry->on_duty,
+                                'off_duty'  => (string) $prevEntry->off_duty,
+                                'duration'  => $prevEntry->duration,
+                            ],
+                            [
+                                'timesheet_id'  => $entry->id,
+                                'position' => [
+                                    'id'    => $entry->position_id,
+                                    'title' => $entry->position ? $entry->position->title : 'Position #'.$entry->position_id,
+                                ],
+                                'on_duty'   => (string) $entry->on_duty,
+                                'off_duty'  => (string) $entry->off_duty,
+                                'duration'  => $entry->duration,
+                            ]
+                        ];
+                    }
+                }
+                $prevEntry = $entry;
+            }
+
+            if (!empty($overlapping)) {
+                $first = $entries[0];
+                $overlappingPeople[] = [
+                    'person'    => [
+                        'id'    => $first->person_id,
+                        'callsign' => $first->person ? $first->person->callsign : 'Person #'.$first->person_id
+                    ],
+                    'entries' => $overlapping
+                ];
+            }
+        }
+
+        usort($overlappingPeople, function ($a, $b) {
+            return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
+        });
+
+        $minHour = 24;
+
+        foreach (Position::PROBLEM_HOURS as $positionId => $hours) {
+            if ($hours < $minHour) {
+                $minHour = $hours;
+            }
+        }
+
+        $rows = self:: select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
+                ->whereYear('on_duty', $year)
+                ->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, IFNULL(off_duty,now())) >= $minHour")
+                ->with($withBase)
+                ->orderBy('duration', 'desc')
+                ->get();
+
+        $tooLongEntries = $rows->filter(function ($row) {
+            if (!isset(Position::PROBLEM_HOURS[$row->position_id])) {
+                return true;
+            }
+
+            return Position::PROBLEM_HOURS[$row->position_id] < ($row->duration / 3600.0);
+        })->values()->map(function($row) {
+            return [
+                'person'    => [
+                    'id'       => $row->person_id,
+                    'callsign' => $row->person ? $row->person->callsign : 'Person #'.$row->person_id,
+                ],
+                'on_duty'   => (string) $row->on_duty,
+                'off_duty'  => (string) $row->off_duty,
+                'duration'  => $row->duration,
+                'position'  => [
+                    'id'    => $row->position_id,
+                    'title' => $row->position ? $row->position->title : 'Position #'.$row->position_id,
+                ]
+            ];
+        });
+
+        return [
+            'on_duty'          => $onDutyEntries,
+            'end_before_start' => $endBeforeStartEntries,
+            'overlapping'      => $overlappingPeople,
+            'too_long'         => $tooLongEntries
         ];
     }
 

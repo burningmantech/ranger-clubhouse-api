@@ -108,6 +108,15 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /*
+     * Can the user see the timesheet unconfirmed people?
+     */
+
+    public function sanityChecker(Person $user)
+    {
+        return $user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]);
+    }
+
     /**
      * Can the user run a freaking years report?
      */

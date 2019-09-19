@@ -480,6 +480,21 @@ class TimesheetController extends ApiController
     }
 
     /*
+     * Timesheet Sanity Checker
+     */
+
+    public function sanityChecker()
+    {
+        $params = request()->validate([
+              'year' => 'required|integer'
+          ]);
+
+        $this->authorize('sanityChecker', [ Timesheet::class ]);
+
+        return response()->json(Timesheet::sanityChecker($params['year']));
+    }
+
+    /*
      * T-Shirts Earned Report
      */
 
