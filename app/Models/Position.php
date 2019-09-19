@@ -84,6 +84,8 @@ class Position extends ApiModel
     const GERLACH_PATROL_LEAD = 76;
     const GERLACH_PATROL_GREEN_DOT = 122;
 
+    const HOT_SPRINGS_PATROL_DRIVER = 39;
+
     const ECHELON_FIELD = 17;
     const ECHELON_FIELD_LEAD = 81;
     const ECHELON_FIELD_LEAD_TRAINING = 111;
@@ -94,6 +96,8 @@ class Position extends ApiModel
 
     const RNR = 11;
     const RNR_RIDE_ALONG = 115;
+
+    const PERSONNEL_MANAGER = 63;
 
     const INTERCEPT = 5;
     const INTERCEPT_DISPATCH = 6;
@@ -153,6 +157,22 @@ class Position extends ApiModel
     ];
 
     const SANDMAN_YEAR_CUTOFF = 5;
+
+    const PROBLEM_HOURS = [
+        Position::OOD => 28,
+        Position::PERSONNEL_MANAGER => 28,
+        Position::GREEN_DOT_LEAD => 28,
+        Position::HQ_LEAD => 28,
+        Position::TOW_TRUCK_DRIVER => 28,
+
+        Position::MENTOR_SHORT => 17,
+
+        Position::GERLACH_PATROL => 15,
+        Position::GERLACH_PATROL_LEAD => 15,
+        Position::DEPUTY_OOD => 15,
+
+        Position::HOT_SPRINGS_PATROL_DRIVER => 15,
+    ];
 
     protected $table = 'position';
 

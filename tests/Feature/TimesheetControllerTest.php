@@ -882,4 +882,105 @@ class TimesheetControllerTest extends TestCase
              ]
          ]);
     }
+
+    /*
+     * Test Timesheet Sanity Checker
+     */
+
+    public function testTImesheetSanityChecker()
+    {
+        $this->addRole(Role::ADMIN);
+        $year = current_year();
+
+        $person = factory(Person::class)->create();
+        $onDuty = factory(Timesheet::class)->create([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("Y-m-d 00:00:00")
+        ]);
+
+        $ymd = "$year-08-15";
+        $endBeforeStart = factory(Timesheet::class)->make([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("$ymd 03:00:00"),
+            'off_duty'    => date("$ymd 00:30:00")
+        ]);
+        $endBeforeStart->saveWithoutValidation();
+
+        $ymd = "$year-08-16";
+        $overlapFirst = factory(Timesheet::class)->create([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("$ymd 04:00:00"),
+            'off_duty'    => date("$ymd 05:00:00")
+        ]);
+        $overlapSecond = factory(Timesheet::class)->create([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'on_duty'     => date("$ymd 04:30:00"),
+            'off_duty'    => date("$ymd 05:30:00")
+        ]);
+
+        $ymd = "$year-08-17";
+        $tooLong = factory(Timesheet::class)->create([
+            'person_id'   => $person->id,
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'on_duty'     => date("$year-08-17 04:30:00"),
+            'off_duty'    => date("$year-08-18 04:30:00")
+        ]);
+
+        $response = $this->json('GET', 'timesheet/sanity-checker', [ 'year' => $year ]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'on_duty' => [
+                [
+                    'person' => [ 'id' => $person->id ],
+                    'on_duty'   => (string)$onDuty->on_duty,
+                    'position'  => [
+                        'id'    => $onDuty->position_id,
+                    ]
+                ]
+            ],
+            'end_before_start' => [
+                [
+                    'person'   => [ 'id' => $person->id ],
+                    'on_duty'  => (string)$endBeforeStart->on_duty,
+                    'off_duty' => (string)$endBeforeStart->off_duty,
+                    'position' => [ 'id' => $endBeforeStart->position_id ]
+                ]
+            ],
+
+            'overlapping' => [
+                [
+                    'person'   => [ 'id' => $person->id ],
+                    'entries' => [
+                        [
+                            [
+                                'on_duty'   => (string)$overlapFirst->on_duty,
+                                'off_duty'  => (string)$overlapFirst->off_duty,
+                                'position'  => [ 'id' => $overlapFirst->position_id ]
+                            ],
+                            [
+                                'on_duty'   => (string)$overlapSecond->on_duty,
+                                'off_duty'  => (string)$overlapSecond->off_duty,
+                                'position'  => [ 'id' => $overlapSecond->position_id ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+
+            'too_long' => [
+                [
+                    'person'   => [ 'id' => $tooLong->person_id ],
+                    'position' => [ 'id' => $tooLong->position_id ],
+                    'on_duty'  => (string)$tooLong->on_duty,
+                    'off_duty' => (string)$tooLong->off_duty,
+                ]
+            ]
+
+        ]);
+    }
 }

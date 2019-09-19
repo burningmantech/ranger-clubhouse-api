@@ -41,6 +41,7 @@ script:
 cache:
   directories:
     - ~/docker_images
+    - ~/.composer/cache/files
 
 
 notifications:
