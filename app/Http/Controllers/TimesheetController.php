@@ -712,4 +712,24 @@ class TimesheetController extends ApiController
 
         return response()->json(Timesheet::retrieveHoursCredits($year));
     }
+
+    /*
+     * Thank You cards
+     */
+
+    public function thankYou()
+    {
+        $this->authorize('thankYou', [ Timesheet::class ]);
+
+        $params = request()->validate([
+            'password'  => 'required|string',
+            'year' => 'required|integer',
+        ]);
+
+        if (hash('sha256', $params['password']) != setting('ThankYouCardsHash')) {
+            $this->notPermitted('Invalid password');
+        }
+
+        return response()->json([ 'people' => Timesheet::retrievePeopleToThank($params['year']) ]);
+    }
 }
