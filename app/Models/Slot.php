@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
 use Illuminate\Support\Facades\DB;
+
+use App\Models\ApiModel;
+use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\EventDate;
 
@@ -62,6 +64,10 @@ class Slot extends ApiModel
 
     public function trainer_slot() {
         return $this->belongsTo(Slot::class, 'trainer_slot_id');
+    }
+
+    public function person_slot() {
+        return $this->hasMany(PersonSlot::class);
     }
 
     public static function findForQuery($query) {

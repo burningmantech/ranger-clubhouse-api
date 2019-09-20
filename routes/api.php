@@ -193,6 +193,8 @@ Route::group([
     Route::get('slot/shift-coverage-report', 'SlotController@shiftCoverageReport');
     Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');
     Route::get('slot/shift-signups-report', 'SlotController@shiftSignUpsReport');
+    Route::get('slot/position-schedule-report', 'SlotController@positionScheduleReport');
+    Route::get('slot/callsign-schedule-report', 'SlotController@callsignScheduleReport');
     Route::get('slot/years', 'SlotController@years');
 
     Route::get('slot/{slot}/people', 'SlotController@people');
