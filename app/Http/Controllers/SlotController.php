@@ -366,4 +366,31 @@ class SlotController extends ApiController
 
         return response()->json([ 'positions' => ShiftReporting::retrieveShiftSignupsForYear($year) ]);
     }
+
+    /*
+     * Schedule By Position Report
+     */
+
+    public function positionScheduleReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $year = $this->getYear();
+
+        return response()->json([ 'positions' => ShiftReporting::retrievePositionScheduleReport($year) ]);
+    }
+
+    /*
+     * Schedule By Callsign Report
+     */
+
+    public function callsignScheduleReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $year = $this->getYear();
+
+        return response()->json([ 'people' => ShiftReporting::retrieveCallsignScheduleReport($year) ]);
+    }
+
 }

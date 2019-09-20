@@ -428,4 +428,122 @@ class SlotControllerTest extends TestCase
             ]
         ]);
     }
+
+    /*
+     * Test Schedule By Position report
+     */
+
+    public function testScheduleByPosition()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $year = date('Y');
+        $person = factory(Person::class)->create();
+        $position = factory(Position::class)->create([
+            'id'    => Position::DIRT_GREEN_DOT,
+            'title' => 'Dirt - Green Dot'
+        ]);
+
+        $slot = factory(Slot::class)->create([
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'begins'      => date("$year-m-d 10:00:00"),
+            'ends'        => date("$year-m-d 11:00:00"),
+            'max'         => 10,
+        ]);
+
+        factory(PersonSlot::class)->create([
+            'person_id' => $person->id,
+            'slot_id'   => $slot->id
+        ]);
+
+        $emptySlot = factory(Slot::class)->create([
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'begins'      => date("$year-m-d 13:00:00"),
+            'ends'        => date("$year-m-d 14:00:00"),
+            'max'         => 10,
+        ]);
+
+        $response = $this->json('GET', 'slot/position-schedule-report', [ 'year' => $year]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'positions' => [
+                [
+                    'id'    => $position->id,
+                    'title' => $position->title,
+                    'slots' => [
+                        [
+                            'begins'    => (string) $slot->begins,
+                            'ends'      => (string) $slot->ends,
+                            'max'       => $slot->max,
+                            'sign_ups' => [
+                                [
+                                    'id'    => $person->id,
+                                    'callsign'  => $person->callsign
+                                ]
+                            ]
+                        ],
+                        [
+                            'begins'    => (string) $emptySlot->begins,
+                            'ends'      => (string) $emptySlot->ends,
+                            'max'       => $emptySlot->max,
+                            'sign_ups' => [ ]
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+    /*
+     * Test Schedule By Callsign report
+     */
+
+    public function testScheduleByCallsign()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $year = date('Y');
+        $person = factory(Person::class)->create();
+        $position = factory(Position::class)->create([
+            'id'    => Position::DIRT_GREEN_DOT,
+            'title' => 'Dirt - Green Dot'
+        ]);
+
+        $slot = factory(Slot::class)->create([
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'begins'      => date("$year-m-d 10:00:00"),
+            'ends'        => date("$year-m-d 11:00:00"),
+            'max'         => 10,
+        ]);
+
+        factory(PersonSlot::class)->create([
+            'person_id' => $person->id,
+            'slot_id'   => $slot->id
+        ]);
+
+        $response = $this->json('GET', 'slot/callsign-schedule-report', [ 'year' => $year]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'people' => [
+                [
+                    'id'       => $person->id,
+                    'callsign' => $person->callsign,
+                    'slots'    => [
+                        [
+                            'position'  => [
+                                'id'    => $position->id,
+                                'title' => $position->title,
+                            ],
+                            'begins'    => (string) $slot->begins,
+                            'ends'      => (string) $slot->ends,
+                            'description'       => $slot->description,
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
 }
