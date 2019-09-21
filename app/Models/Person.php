@@ -526,6 +526,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         throw new \InvalidArgumentException("Unknown type [$type]");
     }
 
+    public static function retrievePeopleByLocation($year)
+    {
+        return self::select(
+            'id', 'callsign', 'first_name', 'last_name', 'status', 'email',
+            'city', 'state', 'zip', 'country',
+            DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
+            DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != ".Position::ALPHA." WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
+            )
+            ->orderBy('country')
+            ->orderBy('state')
+            ->orderBy('city')
+            ->orderBy('zip')
+            ->get();
+    }
+
     public function isValidPassword(string $password): bool
     {
         if (self::passwordMatch($this->password, $password)) {
