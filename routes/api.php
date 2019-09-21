@@ -133,6 +133,7 @@ Route::group([
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
     Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
+    Route::get('person/by-location', 'PersonController@peopleByLocation');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');

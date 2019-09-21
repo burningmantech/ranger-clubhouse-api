@@ -718,4 +718,21 @@ class PersonController extends ApiController
 
         return response()->json([ 'people' => $rows ]);
     }
+
+    /*
+     * People By Location report
+     */
+
+    public function peopleByLocation()
+    {
+        $this->authorize('peopleByLocation', [ Person::class ]);
+
+        $params = request()->validate([
+            'year'  => 'sometimes|integer',
+        ]);
+
+        $year = $params['year'] ?? current_year();
+
+        return response()->json([ 'people' => Person::retrievePeopleByLocation($year) ]);
+    }
 }
