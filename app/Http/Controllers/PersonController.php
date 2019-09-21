@@ -746,4 +746,16 @@ class PersonController extends ApiController
 
         return response()->json([ 'roles' => Person::retrievePeopleByRole() ]);
     }
+
+    /*
+     * People By Status report
+     */
+
+    public function peopleByStatus()
+    {
+        $this->authorize('peopleByStatus', [ Person::class ]);
+
+        return response()->json([ 'statuses' => Person::retrievePeopleByStatus() ]);
+    }
+
 }

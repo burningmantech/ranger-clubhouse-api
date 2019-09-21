@@ -562,6 +562,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         })->values();
     }
 
+    public static function retrievePeopleByStatus()
+    {
+        $statusGroups = self::select('id', 'callsign', 'status')
+                ->orderBy('status')
+                ->orderBy('callsign')
+                ->get()
+                ->groupBy('status');
+
+        return $statusGroups->sortKeys()->map(function ($group, $status) {
+            return [
+                'status'    => $status,
+                'people'    => $group->map(function ($row) {
+                    return [
+                        'id' => $row->id,
+                        'callsign' => $row->callsign
+                    ];
+                })->values()
+            ];
+        })->values();
+    }
+
     public function isValidPassword(string $password): bool
     {
         if (self::passwordMatch($this->password, $password)) {

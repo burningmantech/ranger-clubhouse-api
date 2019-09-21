@@ -1105,4 +1105,50 @@ class PersonControllerTest extends TestCase
         ]);
     }
 
+    /*
+     * Test People By Role
+     */
+
+    public function testPeopleByStatus()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $deceased = factory(Person::class)->create([ 'status' => 'deceased' ]);
+        $inactive = factory(Person::class)->create([ 'status' => 'inactive' ]);
+        $response = $this->json('GET', 'person/by-status');
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'statuses' => [
+                [
+                    'status'    => 'active',
+                    'people' => [
+                        [
+                            'id' => $this->user->id,
+                            'callsign' => $this->user->callsign,
+                        ]
+                    ]
+                ],
+                [
+                    'status'    => 'deceased',
+                    'people' => [
+                        [
+                            'id' => $deceased->id,
+                            'callsign' => $deceased->callsign,
+                        ]
+                    ]
+                ],
+                [
+                    'status'    => 'inactive',
+                    'people' => [
+                        [
+                            'id' => $inactive->id,
+                            'callsign' => $inactive->callsign,
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+    }
+
 }
