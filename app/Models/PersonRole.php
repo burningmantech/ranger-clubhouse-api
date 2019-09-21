@@ -14,6 +14,10 @@ class PersonRole extends ApiModel
 
     protected $table = 'person_role';
 
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
     public static function findRolesForPerson($personId)
     {
         return PersonRole::select('role.id', 'role.title')

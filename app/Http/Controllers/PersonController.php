@@ -699,7 +699,7 @@ class PersonController extends ApiController
     }
 
     /*
-     * Prospecitve / Alpha estimated shirts report
+     * Vehicle Paperwork Report
      */
 
     public function vehiclePaperwork()
@@ -734,5 +734,16 @@ class PersonController extends ApiController
         $year = $params['year'] ?? current_year();
 
         return response()->json([ 'people' => Person::retrievePeopleByLocation($year) ]);
+    }
+
+    /*
+     * People By Role report
+     */
+
+    public function peopleByRole()
+    {
+        $this->authorize('peopleByRole', [ Person::class ]);
+
+        return response()->json([ 'roles' => Person::retrievePeopleByRole() ]);
     }
 }
