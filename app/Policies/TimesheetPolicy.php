@@ -180,4 +180,13 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /*
+     * Can the user run the Timesheet By Callsign report
+     */
+
+    public function timesheetByCallsign(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }
