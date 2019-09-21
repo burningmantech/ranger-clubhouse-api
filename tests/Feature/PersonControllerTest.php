@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
 use App\Models\Person;
+use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\PersonPosition;
@@ -1147,6 +1148,54 @@ class PersonControllerTest extends TestCase
                         ]
                     ]
                 ],
+            ]
+        ]);
+    }
+
+    /*
+     * Test Languages Report
+     */
+
+    public function testLanguagesReport()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $personEnglish = factory(Person::class)->create([ 'on_site' => 1 ]);
+        factory(PersonLanguage::class)->create([
+            'person_id' => $personEnglish->id,
+            'language_name' => 'English'
+        ]);
+
+        $personFrench = factory(Person::class)->create([ 'on_site' => 1 ]);
+        factory(PersonLanguage::class)->create([
+            'person_id' => $personFrench->id,
+            'language_name' => 'French'
+        ]);
+
+        $response = $this->json('GET', 'person/languages');
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'languages' => [
+                [
+                    'language'  => 'English',
+                    'people'    => [
+                        [
+                            'id'    => $personEnglish->id,
+                            'callsign' => $personEnglish->callsign
+                        ]
+                    ]
+                ],
+
+                [
+                    'language'  => 'French',
+                    'people'    => [
+                        [
+                            'id'    => $personFrench->id,
+                            'callsign' => $personFrench->callsign
+                        ]
+                    ]
+                ]
             ]
         ]);
     }

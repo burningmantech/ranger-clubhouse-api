@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\ApiModel;
 
+use App\Models\Person;
+
 class PersonLanguage extends ApiModel
 {
     const OFF_DUTY = 1;
@@ -26,6 +28,10 @@ class PersonLanguage extends ApiModel
      */
     public $timestamps = false;
 
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
     /*
      * Retrieve a comma-separated list of language spoken by a person
      * @var integer $person_id Person to lookup
@@ -47,7 +53,7 @@ class PersonLanguage extends ApiModel
     public static function updateForPerson($person_id, $language) {
         self::where('person_id', $person_id)->delete();
 
-        $languages = preg_split('/[,\.]/', $language);
+        $languages = preg_split('/([,\.;&]|\band\b)/', $language);
 
         foreach ($languages as $name) {
             $tongue = trim($name);
@@ -95,5 +101,38 @@ class PersonLanguage extends ApiModel
         }
 
         return $sql->get();
+    }
+
+    public static function retrieveAllOnSiteSpeakers()
+    {
+        $personId = Person::where('on_site', true)
+                    ->whereIn('status', Person::LIVE_STATUSES)
+                    ->pluck('id');
+
+        $languages = self::whereIn('person_id', $personId)
+                    ->with([ 'person' => function ($q) {
+                        $q->select('id', 'callsign');
+                        $q->orderBy('callsign');
+                    } ])
+                    ->orderBy('language_name')
+                    ->get()
+                    ->filter(function ($row) { return $row->person != null;} )
+                    ->groupBy(function ($r) {
+                        return strtolower(trim($r->language_name));
+                    });
+
+        $rows = $languages->map(function ($people, $name) {
+            return [
+                'language'  => $people[0]->language_name,
+                'people'    => $people->map(function ($row) {
+                    return [
+                        'id'       => $row->person_id,
+                        'callsign' => $row->person->callsign
+                    ];
+                })->values()
+            ];
+        })->sortBy('language', SORT_NATURAL|SORT_FLAG_CASE)->values();
+
+        return $rows;
     }
 }

@@ -132,10 +132,11 @@ Route::group([
     Route::resource('motd', 'MotdController');
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
-    Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
+    Route::get('person/languages', 'PersonController@languagesReport');
     Route::get('person/by-location', 'PersonController@peopleByLocation');
     Route::get('person/by-role', 'PersonController@peopleByRole');
     Route::get('person/by-status', 'PersonController@peopleByStatus');
+    Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
