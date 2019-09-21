@@ -1051,4 +1051,58 @@ class PersonControllerTest extends TestCase
         ]);
     }
 
+    /*
+     * Test People By Role
+     */
+
+    public function testPeopleByRole()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $adminRole = factory(Role::class)->create([
+            'id' => Role::ADMIN,
+            'title' => 'Admin',
+        ]);
+
+        $manageRole = factory(Role::class)->create([
+            'id'    => Role::MANAGE,
+            'title' => 'Manage'
+        ]);
+
+        $adminPerson = factory(Person::class)->create();
+
+        factory(PersonRole::class)->create([
+            'person_id' => $adminPerson->id,
+            'role_id'   => Role::ADMIN
+        ]);
+
+        $response = $this->json('GET', 'person/by-role');
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'roles' => [
+                [
+                    'id'    => Role::ADMIN,
+                    'title' => 'Admin',
+                    'people' => [
+                        [
+                            'id' => $adminPerson->id,
+                            'callsign' => $adminPerson->callsign
+                        ]
+                    ]
+                ],
+                [
+                    'id'    => Role::MANAGE,
+                    'title' => 'Manage',
+                    'people' => [
+                        [
+                            'id' => $this->user->id,
+                            'callsign' => $this->user->callsign
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
 }

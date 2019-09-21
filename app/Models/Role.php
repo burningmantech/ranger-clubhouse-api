@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
+use App\Models\PersonRole;
 
 class Role extends ApiModel
 {
@@ -36,6 +37,10 @@ class Role extends ApiModel
         'title',
         'new_user_eligible'
     ];
+
+    public function person_role() {
+        return $this->hasMany(PersonRole::class);
+    }
 
     public static function findAll()
     {

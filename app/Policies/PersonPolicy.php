@@ -118,4 +118,8 @@ class PersonPolicy
     public function peopleByLocation(Person $user) {
         return $user->hasRole([ Role::ADMIN, Role::VIEW_PII, Role::MANAGE ]);
     }
+
+    public function peopleByRole(Person $user) {
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
+    }
 }

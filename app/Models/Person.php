@@ -541,6 +541,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             ->get();
     }
 
+    public static function retrievePeopleByRole()
+    {
+        $roles = Role::with([ 'person_role.person:id,callsign' ])->orderBy('title')->get();
+
+        return $roles->map(function ($row) {
+            $people = $row->person_role->sort(function($a, $b) { return strcasecmp($a->person ? $a->person->callsign : 'Person #'.$a->person_id, $b->person ? $b->person->callsign : 'Person #'.$b->person_id); });
+
+            return [
+                'id'    => $row->id,
+                'title' => $row->title,
+                'people' => $people->map(function ($row) {
+                    $person = $row->person;
+                    return [
+                        'id' => $row->person_id,
+                        'callsign' => $person ? $person->callsign : 'Person #'.$row->person_id
+                    ];
+                })->values()
+            ];
+        })->values();
+    }
+
     public function isValidPassword(string $password): bool
     {
         if (self::passwordMatch($this->password, $password)) {
