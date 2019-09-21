@@ -720,7 +720,7 @@ class PersonController extends ApiController
     }
 
     /*
-     * Prospecitve / Alpha estimated shirts report
+     * People By Location report
      */
 
     public function peopleByLocation()
