@@ -1020,7 +1020,6 @@ class TimesheetControllerTest extends TestCase
                 ]
             ]
         ]);
-
     }
 
     /*
@@ -1035,5 +1034,46 @@ class TimesheetControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/thank-you', [ 'year' => date('Y'), 'password' => 'wrong password' ]);
         $response->assertStatus(403);
+    }
+
+    /*
+     * Test Timesheet By Callsign report
+     */
+
+    public function testTimesheetByCallsign()
+    {
+        $year = 2010;
+
+        $person = factory(Person::class)->create();
+
+        $entry = factory(Timesheet::class)->create([
+            'person_id' => $person->id,
+            'position_id' => Position::DIRT,
+            'on_duty'   => date("$year-08-25 00:00:00"),
+            'off_duty'   => date("$year-08-25 01:00:00"),
+        ]);
+
+        $response = $this->json('GET', 'timesheet/by-callsign', [ 'year' => $year ]);
+        $response->assertStatus(200);
+        $response->assertJson([
+            'people'  => [
+                [
+                    'id'         => $person->id,
+                    'callsign'  => $person->callsign,
+                    'status'     => $person->status,
+                    'timesheet' => [
+                        [
+                            'position' => [
+                                'id' => Position::DIRT,
+                                'title' => 'Dirt'
+                            ],
+                            'on_duty' => (string)$entry->on_duty,
+                            'off_duty' => (string)$entry->off_duty,
+                            'duration' => 3600,
+                        ]
+                    ]
+                ]
+            ]
+        ]);
     }
 }

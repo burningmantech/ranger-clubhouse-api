@@ -732,4 +732,17 @@ class TimesheetController extends ApiController
 
         return response()->json([ 'people' => Timesheet::retrievePeopleToThank($params['year']) ]);
     }
+
+    /*
+     * Timesheet by Callsign report
+     */
+
+     public function timesheetByCallsign()
+     {
+         $this->authorize('timesheetByCallsign', [ Timesheet::class ]);
+
+         $year = $this->getYear();
+
+         return response()->json([ 'people' => Timesheet::retrieveAllForYearByCallsign($year) ]);
+     }
 }

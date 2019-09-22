@@ -68,8 +68,6 @@ class Timesheet extends ApiModel
         'is_incorrect' => 'boolean'
     ];
 
-    public $credits;
-
     public $_is_incorrect;
 
     const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title,count_hours' ];
@@ -662,6 +660,52 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Retrieve all timesheets for a given year, grouped by callsign
+     */
+
+    public static function retrieveAllForYearByCallsign($year)
+    {
+        $rows = self::whereYear('on_duty', $year)
+                ->with([ 'person:id,callsign,status', 'position:id,title,count_hours' ])
+                ->orderBy('on_duty')
+                ->get();
+
+        if (!$rows->isEmpty()) {
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        $personGroups = $rows->groupBy('person_id');
+
+        return $personGroups->map(function ($group) {
+            $person = $group[0]->person;
+
+            return [
+                'id' => $group[0]->person_id,
+                'callsign' => $person ? $person->callsign : "Person #".$group[0]->person_id,
+                'status' => $person ? $person->status : 'deleted',
+
+                'total_credits' => $group->pluck('credits')->sum(),
+                'total_duration' => $group->pluck('duration')->sum(),
+                'total_appreciation_duration' => $group->filter(function($t) { return $t->position ? $t->position->count_hours : false; })->pluck('duration')->sum(),
+
+                'timesheet' => $group->map(function ($t) {
+                    return [
+                        'on_duty'   => (string) $t->on_duty,
+                        'off_duty'  => (string) $t->off_duty,
+                        'duration'  => $t->duration,
+                        'credits'   => $t->credits,
+                        'position'   => [
+                            'id'    => $t->position_id,
+                            'title' => $t->position ? $t->position->title : "Position #".$t->position_id,
+                            'count_hours' => $t->position ? $t->position->count_hours : 0,
+                        ]
+                    ];
+                })->values()
+            ];
+        })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+    }
+
+    /*
      * Determine if the person has worked one or more positions in the last X years
      */
 
@@ -967,7 +1011,7 @@ class Timesheet extends ApiModel
             }
 
             return Position::PROBLEM_HOURS[$row->position_id] < ($row->duration / 3600.0);
-        })->values()->map(function($row) {
+        })->values()->map(function ($row) {
             return [
                 'person'    => [
                     'id'       => $row->person_id,
@@ -1041,12 +1085,20 @@ class Timesheet extends ApiModel
 
     public function getCreditsAttribute()
     {
-        return PositionCredit::computeCredits(
+        if (isset($this->attributes['credits'])) {
+            return $this->attributes['credits'];
+        }
+
+        $credits = PositionCredit::computeCredits(
             $this->position_id,
             $this->on_duty->timestamp,
             ($this->off_duty ?? SqlHelper::now())->timestamp,
             $this->on_duty->year
         );
+
+        $this->attributes['credits'] = $credits;
+
+        return $credits;
     }
 
     public function setOnDutyToNow()
