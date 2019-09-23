@@ -193,6 +193,7 @@ Route::group([
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
     Route::post('slot/copy', 'SlotController@copy');
     Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
+    Route::get('slot/flakes', 'SlotController@flakeReport');
     Route::get('slot/hq-forecast-report', 'SlotController@hqForecastReport');
     Route::get('slot/shift-coverage-report', 'SlotController@shiftCoverageReport');
     Route::get('slot/shift-lead-report', 'SlotController@shiftLeadReport');

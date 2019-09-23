@@ -12,6 +12,8 @@ use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
 
+use App\Helpers\SqlHelper;
+
 use App\Lib\HQWindow;
 use App\Lib\ShiftReporting;
 
@@ -391,6 +393,26 @@ class SlotController extends ApiController
         $year = $this->getYear();
 
         return response()->json([ 'people' => ShiftReporting::retrieveCallsignScheduleReport($year) ]);
+    }
+
+    /*
+     * Flake Report
+     */
+
+    public function flakeReport()
+    {
+        $this->authorize('report', Slot::class);
+
+        $params = request()->validate([
+            'date'  => 'sometimes|date'
+        ]);
+
+        $date = $params['date'] ?? SqlHelper::now();
+
+        return response()->json([
+            'positions' => ShiftReporting::retrieveFlakeReport($date),
+            'date'  => (string)$date,
+        ]);
     }
 
 }

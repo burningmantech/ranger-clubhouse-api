@@ -335,6 +335,7 @@ class Slot extends ApiModel
         });
     }
 
+
     public function getPositionTitleAttribute() {
         return $this->position ? $this->position->title : "Position #{$this->position_id}";
     }
