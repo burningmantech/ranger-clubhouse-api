@@ -171,7 +171,7 @@ jobs:
           name: docker-clubhouse
 
       - name: Load Docker image
-        run: gzip --uncompress --stdout docker-clubhouse/image.tgz | docker image load
+          gzip --uncompress --stdout images/api.tgz | docker image load
 
       - name: Install Python
         uses: actions/setup-python@v1
