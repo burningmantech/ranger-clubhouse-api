@@ -154,7 +154,7 @@ jobs:
   deploy-staging:
     name: Deploy code from master branch to the staging environment
 
-    needs: [docker]
+    needs: [check-syntax, unit, docker, test-docker]
     if: github.ref == 'refs/heads/master'
 
     runs-on: ubuntu-latest
