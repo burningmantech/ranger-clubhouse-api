@@ -168,7 +168,7 @@ jobs:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v1
         with:
-          name: docker-clubhouse
+          name: images
 
       - name: Load Docker image
         run: gzip --uncompress --stdout images/api.tgz | docker image load
