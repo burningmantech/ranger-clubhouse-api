@@ -154,7 +154,7 @@ jobs:
   deploy-staging:
     name: Deploy code from master branch to the staging environment
 
-    needs: [docker]
+    needs: [check-syntax, unit, docker, test-docker]
     if: github.ref == 'refs/heads/master'
 
     runs-on: ubuntu-latest
@@ -168,7 +168,7 @@ jobs:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v1
         with:
-          name: docker-clubhouse
+          name: images
 
       - name: Load Docker image
         run: gzip --uncompress --stdout images/api.tgz | docker image load
