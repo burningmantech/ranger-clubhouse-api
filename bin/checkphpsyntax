@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Checks PHP syntax in specific files or recursively in a directory.
+# If the $PHP environment variable is set, that will be used as the
+# path to the PHP version to check.
+#
+# Usage:
+#   checkphpsyntax src/Foo/ src/Bar
+#   PHP=/path/to/php7 checkphpsyntax  # check ./api ./src ./standard by default
+
+set -e
+set -u
+
+php_cmd="${PHP:-php}";
+
+php_major="$("${php_cmd}" -v | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
+
+if [ ! ${php_major} -eq 7 ]; then
+    echo "PHP major version 7 is required";
+    exit 78;  # EX_CONFIG
+fi;
+
+tmp="$(mktemp)";
+
+paths="${@:-./api ./src ./standard}";
+
+find ${paths} -name "*.php" -exec "${php_cmd}" -l {} ";" \
+    | grep -v "No syntax errors detected in " \
+    | tee "${tmp}" >&2;
+
+if [ -s "${tmp}" ]; then status=1; else status=0; fi;
+
+rm "${tmp}";
+
+exit ${status};
