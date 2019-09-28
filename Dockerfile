@@ -38,7 +38,7 @@ COPY ./artisan        ./
 COPY ./composer.*     ./
 COPY ./phpunit.xml    ./
 COPY ./server.php     ./
-COPY ./.env.testing    ./
+COPY ./.env.testing   ./
 
 
 # -----------------------------------------------------------------------------
