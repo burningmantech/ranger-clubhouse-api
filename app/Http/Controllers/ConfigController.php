@@ -25,6 +25,7 @@ class ConfigController extends Controller
         'OnPlaya',
         'PersonnelEmail',
         'RadioCheckoutFormUrl',
+        'RangerFeedbackFormUrl',
         'RangerPoliciesUrl',
         'ReadOnly',
         'RpTicketThreshold',
