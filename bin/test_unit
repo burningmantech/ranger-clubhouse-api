@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Run checkphpsyntax from the PHP Docker image.
+# Run unit tests.
 #
 
 . "$(dirname "$0")/.common.sh";

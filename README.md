@@ -1,6 +1,6 @@
 # Black Rock Ranger Secret Clubhouse API Service
 
-[![Travis CI](https://travis-ci.com/burningmantech/ranger-clubhouse-api.svg?branch=master)](https://travis-ci.com/burningmantech/ranger-clubhouse-api)
+[![Build Status](https://github.com/burningmantech/ranger-clubhouse-api/workflows/CI%2fCD/badge.svg)](https://github.com/burningmantech/ranger-clubhouse-api/actions)
 
 ## Prerequisites
 
