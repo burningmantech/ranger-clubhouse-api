@@ -24,7 +24,7 @@ class TimesheetMissingController extends ApiController
 
         if (isset($params['person_id'])) {
             $this->authorize('view', [ TimesheetMissing::class, $params['person_id'] ]);
-        } else if ($this->user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ])) {
+        } elseif ($this->user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ])) {
             $this->notPermitted('You are not permitted to view all the timesheet missing requests.');
         }
 
@@ -56,6 +56,12 @@ class TimesheetMissingController extends ApiController
         if ($timesheetMissing->save()) {
             $this->log('timesheet-missing-create', '', $timesheetMissing, $timesheetMissing->person_id);
             $timesheetMissing->loadRelationships();
+            $person = $this->findPerson($timesheetMissing->person_id);
+            if ($person->timesheet_confirmed) {
+                $person->timesheet_confirmed = false;
+                $person->saveWithoutValidation();
+                TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new missing request created');
+            }
             return $this->success($timesheetMissing);
         }
 
@@ -118,10 +124,19 @@ class TimesheetMissingController extends ApiController
                     throw new \InvalidArgumentException('Failed to create new entry.');
                 }
 
-                TimesheetLog::record('created',
-                        $person->id, $this->user->id, $timesheet->id,
-                         "missing entry ".$timesheet->position->title." ".(string) $timesheet->on_duty);
+                TimesheetLog::record(
+                    'created',
+                    $person->id,
+                    $this->user->id,
+                    $timesheet->id,
+                         "missing entry ".$timesheet->position->title." ".(string) $timesheet->on_duty
+                );
 
+                if ($person->timesheet_confirmed) {
+                    $person->timesheet_confirmed = false;
+                    $person->saveWithoutValidation();
+                    TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new (missing) entry created');
+                }
             }
 
             if (!empty($changes)) {
@@ -153,11 +168,11 @@ class TimesheetMissingController extends ApiController
      * Delete a timesheet missing record.
      */
 
-     public function destroy(TimesheetMissing $timesheetMissing)
-     {
-         $this->authorize('destroy',$timesheetMissing);
-         $timesheetMissing->delete();
-         $this->log('timesheet-missing-delete', '', [ 'timesheet_missing' => $timesheetMissing ], $timesheetMissing->person_id);
-         return $this->restDeleteSuccess();
-     }
+    public function destroy(TimesheetMissing $timesheetMissing)
+    {
+        $this->authorize('destroy', $timesheetMissing);
+        $timesheetMissing->delete();
+        $this->log('timesheet-missing-delete', '', [ 'timesheet_missing' => $timesheetMissing ], $timesheetMissing->person_id);
+        return $this->restDeleteSuccess();
+    }
 }
