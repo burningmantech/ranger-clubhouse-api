@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM burningman/php-nginx:7.2.23-alpine3.10 as php
+FROM burningman/php-nginx:7.3.10-alpine3.10 as php
 
 # Copy the install script, run it, delete it
 COPY ./docker/install_php /docker_install/install
