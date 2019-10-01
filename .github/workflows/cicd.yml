@@ -22,32 +22,32 @@ jobs:
       - name: Print GitHub Context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "${GITHUB_CONTEXT}"
+        run: echo "${GITHUB_CONTEXT}";
 
       - name: Print Job Context
         env:
           JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "${JOB_CONTEXT}"
+        run: echo "${JOB_CONTEXT}";
 
       - name: Print Steps Context
         env:
           STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "${STEPS_CONTEXT}"
+        run: echo "${STEPS_CONTEXT}";
 
       - name: Print Runner Context
         env:
           RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "${RUNNER_CONTEXT}"
+        run: echo "${RUNNER_CONTEXT}";
 
       - name: Print Strategy Context
         env:
           STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "${STRATEGY_CONTEXT}"
+        run: echo "${STRATEGY_CONTEXT}";
 
       - name: Print Matrix Context
         env:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "${MATRIX_CONTEXT}"
+        run: echo "${MATRIX_CONTEXT}";
 
 
   check-syntax:
@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Check PHP Syntax
-        run: ./bin/checkphpsyntax
+        run: ./bin/checkphpsyntax;
         env:
           PHP: php7.2
 
@@ -82,13 +82,13 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build Docker image
-        run: ./bin/build
+        run: ./bin/build;
 
       - name: Save Docker image
         run: |
-          mkdir images
-          docker image save ranger-clubhouse-api_dev:latest | gzip -9 > images/dev.tgz
-          docker image save ranger-clubhouse-api:dev        | gzip -9 > images/api.tgz
+          mkdir images;
+          docker image save ranger-clubhouse-api_dev:latest | gzip -9 > images/dev.tgz;
+          docker image save ranger-clubhouse-api:dev        | gzip -9 > images/api.tgz;
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v1
@@ -118,11 +118,11 @@ jobs:
 
       - name: Load Docker image
         run: |
-          gzip --uncompress --stdout images/dev.tgz | docker image load
-          gzip --uncompress --stdout images/api.tgz | docker image load
+          gzip --uncompress --stdout images/dev.tgz | docker image load;
+          gzip --uncompress --stdout images/api.tgz | docker image load;
 
       - name: Run unit tests
-        run: ./bin/test_unit
+        run: ./bin/test_unit;
 
 
   test-docker:
@@ -145,10 +145,10 @@ jobs:
           name: images
 
       - name: Load Docker image
-        run: gzip --uncompress --stdout images/api.tgz | docker image load
+        run: gzip --uncompress --stdout images/api.tgz | docker image load;
 
       - name: Test Docker image
-        run: ./bin/test_docker
+        run: ./bin/test_docker;
 
 
   deploy-staging:
@@ -171,7 +171,7 @@ jobs:
           name: images
 
       - name: Load Docker image
-        run: gzip --uncompress --stdout images/api.tgz | docker image load
+        run: gzip --uncompress --stdout images/api.tgz | docker image load;
 
       - name: Install Python
         uses: actions/setup-python@v1
@@ -179,7 +179,7 @@ jobs:
           python-version: '3.7'
 
       - name: Deploy to staging
-        run: ./bin/deploy staging
+        run: ./bin/deploy staging;
         env:
           # https://github.com/burningmantech/ranger-secret-clubhouse/settings/secrets
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
