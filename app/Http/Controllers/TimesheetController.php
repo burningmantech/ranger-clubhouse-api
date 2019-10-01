@@ -127,6 +127,12 @@ class TimesheetController extends ApiController
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
             $this->log('timesheet-create', '', $timesheet, $timesheet->person_id);
+            $person = $this->findPerson($timesheet->person_id);
+            if ($person->timesheet_confirmed) {
+                $person->timesheet_confirmed = false;
+                $person->saveWithoutValidation();
+                TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new entry created');
+            }
             return $this->success($timesheet);
         }
 
@@ -737,12 +743,12 @@ class TimesheetController extends ApiController
      * Timesheet by Callsign report
      */
 
-     public function timesheetByCallsign()
-     {
-         $this->authorize('timesheetByCallsign', [ Timesheet::class ]);
+    public function timesheetByCallsign()
+    {
+        $this->authorize('timesheetByCallsign', [ Timesheet::class ]);
 
-         $year = $this->getYear();
+        $year = $this->getYear();
 
-         return response()->json([ 'people' => Timesheet::retrieveAllForYearByCallsign($year) ]);
-     }
+        return response()->json([ 'people' => Timesheet::retrieveAllForYearByCallsign($year) ]);
+    }
 }
