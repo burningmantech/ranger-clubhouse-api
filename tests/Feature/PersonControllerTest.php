@@ -37,7 +37,6 @@ class PersonControllerTest extends TestCase
     {
         parent::setUp();
         $this->signInUser();
-
     }
 
 
@@ -52,7 +51,6 @@ class PersonControllerTest extends TestCase
             "person/{$person->id}",
             ['person' => $data]
         );
-
     }
 
 
@@ -64,7 +62,6 @@ class PersonControllerTest extends TestCase
     {
         $response = $this->json('GET', 'person', [ 'statuses' => 'active' ]);
         $response->assertStatus(403);
-
     }
 
 
@@ -104,7 +101,6 @@ class PersonControllerTest extends TestCase
         $this->assertContains($person[0]['id'], $ids);
         $this->assertContains($person[1]['id'], $ids);
         $this->assertNotEquals($person[0]['id'], $person[1]['id']);
-
     }
 
 
@@ -121,7 +117,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
         $response->assertJsonStructure([ 'person' ]);
-
     }
 
 
@@ -134,7 +129,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$this->user->id}");
         $response->assertStatus(200);
         $response->assertJsonStructure([ 'person' ]);
-
     }
 
 
@@ -148,7 +142,6 @@ class PersonControllerTest extends TestCase
         $person   = factory(Person::class)->create();
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(403);
-
     }
 
     /**
@@ -168,7 +161,6 @@ class PersonControllerTest extends TestCase
                 'first_name' => $newFirstName,
             ]
         );
-
     }
 
 
@@ -196,7 +188,6 @@ class PersonControllerTest extends TestCase
                 'language_name' => '19th century victorian burner',
             ]
         );
-
     }
 
 
@@ -218,7 +209,6 @@ class PersonControllerTest extends TestCase
                 'status' => 'active',
             ]
         );
-
     }
 
 
@@ -240,7 +230,6 @@ class PersonControllerTest extends TestCase
                 'status' => 'auditor',
             ]
         );
-
     }
 
 
@@ -248,28 +237,28 @@ class PersonControllerTest extends TestCase
      * Test failure for trying to disapprove the callsign
      */
 
-/*
-    Feb 2019 - Allowing callsign_approval to be changed at anytime.
+    /*
+        Feb 2019 - Allowing callsign_approval to be changed at anytime.
 
-    public function testChangeCallsignApprovalFailure()
-    {
-        $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create();
+        public function testChangeCallsignApprovalFailure()
+        {
+            $this->addRole(Role::ADMIN);
+            $person = factory(Person::class)->create();
 
-        $personId = $person->id;
-        $response = $this->putPerson($person, [ 'callsign_approved' => false ]);
+            $personId = $person->id;
+            $response = $this->putPerson($person, [ 'callsign_approved' => false ]);
 
-        $response->assertStatus(422);
-        $this->assertDatabaseMissing(
-            'person',
-            [
-                'id'                => $personId,
-                'callsign_approved' => false,
-            ]
-        );
+            $response->assertStatus(422);
+            $this->assertDatabaseMissing(
+                'person',
+                [
+                    'id'                => $personId,
+                    'callsign_approved' => false,
+                ]
+            );
 
-    }
-*/
+        }
+    */
 
     /**
      * Test success on approving the callsign
@@ -292,30 +281,29 @@ class PersonControllerTest extends TestCase
                 'callsign_approved' => true,
             ]
         );
-
     }
 
     /**
      * Test updating formerly_known_as when callsign is changed
      */
 
-     public function testUpdateFormerlyKnownAsWhenCallsignChanges()
-     {
-         $this->addRole(Role::ADMIN);
-         $person = factory(Person::class)->create();
+    public function testUpdateFormerlyKnownAsWhenCallsignChanges()
+    {
+        $this->addRole(Role::ADMIN);
+        $person = factory(Person::class)->create();
 
-         $oldCallsign = $person->callsign;
-         $response = $this->putPerson($person, [ 'callsign' => 'Irregular Apocalypse']);
-         $response->assertStatus(200);
-         $person->refresh();
-         $this->assertEquals($oldCallsign, $person->formerly_known_as);
+        $oldCallsign = $person->callsign;
+        $response = $this->putPerson($person, [ 'callsign' => 'Irregular Apocalypse']);
+        $response->assertStatus(200);
+        $person->refresh();
+        $this->assertEquals($oldCallsign, $person->formerly_known_as);
 
-         // change one more time to verify a comma was added..
-         $response = $this->putPerson($person, [ 'callsign' => 'Zero Gravitas']);
-         $response->assertStatus(200);
-         $person->refresh();
-         $this->assertEquals("$oldCallsign,Irregular Apocalypse", $person->formerly_known_as);
-     }
+        // change one more time to verify a comma was added..
+        $response = $this->putPerson($person, [ 'callsign' => 'Zero Gravitas']);
+        $response->assertStatus(200);
+        $person->refresh();
+        $this->assertEquals("$oldCallsign,Irregular Apocalypse", $person->formerly_known_as);
+    }
 
 
     /**
@@ -340,7 +328,6 @@ class PersonControllerTest extends TestCase
                 return $mail->hasTo(setting('VCEmail'));
             }
         );
-
     }
 
 
@@ -357,7 +344,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('DELETE', "person/{$person->id}");
         $response->assertStatus(204);
         $this->assertDatabaseMissing('person', [ 'id' => $person->id]);
-
     }
 
 
@@ -394,7 +380,6 @@ class PersonControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-
     }
 
 
@@ -415,7 +400,6 @@ class PersonControllerTest extends TestCase
         );
 
         $response->assertStatus(422);
-
     }
 
 
@@ -437,7 +421,6 @@ class PersonControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-
     }
 
 
@@ -459,7 +442,6 @@ class PersonControllerTest extends TestCase
         );
 
         $response->assertStatus(422);
-
     }
 
 
@@ -485,7 +467,6 @@ class PersonControllerTest extends TestCase
         $response->assertJsonStructure([ 'positions' ]);
         $json = $response->json();
         $this->assertCount(3, $json['positions']);
-
     }
 
 
@@ -551,7 +532,6 @@ class PersonControllerTest extends TestCase
                 'position_id' => $oldPosition->id,
             ]
         );
-
     }
 
 
@@ -584,7 +564,6 @@ class PersonControllerTest extends TestCase
                 ],
             ]
         );
-
     }
 
 
@@ -650,7 +629,6 @@ class PersonControllerTest extends TestCase
                 'role_id'   => $oldRole->id,
             ]
         );
-
     }
 
 
@@ -721,7 +699,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$this->user->id}/unread-message-count");
         $response->assertStatus(200);
         $response->assertJson([ 'unread_message_count' => 3]);
-
     }
 
 
@@ -754,7 +731,6 @@ class PersonControllerTest extends TestCase
                 ]
             ]
         );
-
     }
 
 
@@ -778,7 +754,6 @@ class PersonControllerTest extends TestCase
                 ]
             ]
         );
-
     }
 
 
@@ -815,7 +790,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$personId}/credits", [ 'year' => $year ]);
         $response->assertStatus(200);
         $response->assertJson([ 'credits' => 24.10 ]);
-
     }
 
 
@@ -839,7 +813,6 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$this->user->id}/mentees");
         $response->assertStatus(200);
         $this->assertCount(1, $response->json()['mentees'][0]['mentees']);
-
     }
 
 
@@ -876,7 +849,6 @@ class PersonControllerTest extends TestCase
                 ],
             ]
         );
-
     }
 
 
@@ -897,7 +869,6 @@ class PersonControllerTest extends TestCase
             'home_phone' => $faker->phoneNumber,
 
         ];
-
     }
 
 
@@ -934,7 +905,6 @@ class PersonControllerTest extends TestCase
         );
 
         Mail::assertNotSent(WelcomeMail::class);
-
     }
 
 
@@ -957,7 +927,6 @@ class PersonControllerTest extends TestCase
         $response->assertStatus(422);
 
         Mail::assertNothingSent();
-
     }
 
     /*
@@ -985,7 +954,6 @@ class PersonControllerTest extends TestCase
                 return $mail->hasTo(setting('AccountCreationEmail'));
             }
         );
-
     }
 
     /*
@@ -1023,7 +991,7 @@ class PersonControllerTest extends TestCase
             'country' => 'CA'
         ]);
 
-        $response = $this->json('GET', 'person/by-location', [ 'year' => date('Y' )]);
+        $response = $this->json('GET', 'person/by-location', [ 'year' => date('Y')]);
         $response->assertStatus(200);
 
         $response->assertJson([
@@ -1200,4 +1168,86 @@ class PersonControllerTest extends TestCase
         ]);
     }
 
+    /*
+     * People By Status Change Report
+     */
+
+    public function testPeopleByStatusChangeReport()
+    {
+        $this->addRole(Role::ADMIN);
+
+        // Create a current timesheet so test account does not appear in any list.
+        factory(Timesheet::class)->create([
+            'person_id'   => $this->user->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date('Y-01-01 10:00:00'),
+            'off_duty'    => date('Y-01-01 11:00:00')
+        ]);
+
+        $year = date('Y');
+
+        // Inactive recommendation - an active account who has not worked in the last 3 years but may have worked in the last 5.
+        $inactive = factory(Person::class)->create([
+            'status'    => Person::ACTIVE
+        ]);
+
+        $inactiveYear = $year - 5;
+        factory(Timesheet::class)->create([
+            'person_id'   => $inactive->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("$inactiveYear-09-01 10:00:00"),
+            'off_duty'    => date("$inactiveYear-09-01 11:00:00"),
+        ]);
+
+        // Retirement recommendation - an inactive account who has not worked in the last 5 years.
+        $retired = factory(Person::class)->create([
+            'status'    => Person::INACTIVE
+        ]);
+
+        $retiredYear = $year - 6;
+        factory(Timesheet::class)->create([
+            'person_id'   => $retired->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date("$retiredYear-09-01 10:00:00"),
+            'off_duty'    => date("$retiredYear-09-01 11:00:00"),
+        ]);
+
+        // Active recommendation - an inactive account that worked this last year.
+        $active = factory(Person::class)->create([
+            'status'    => Person::INACTIVE
+        ]);
+
+        factory(Timesheet::class)->create([
+            'person_id'   => $active->id,
+            'position_id' => Position::DIRT,
+            'on_duty'     => date('Y-09-01 10:00:00'),
+            'off_duty'    => date('Y-09-01 11:00:00'),
+        ]);
+
+        // Past Prospective recommendation - any bonked, alpha, prospective account
+        $pastProspective = factory(Person::class)->create([
+                'status'     => 'prospective'
+        ]);
+
+        $vintage = factory(Person::class)->create();
+        for ($workYear = $year - 10; $workYear <= $year; $workYear++) {
+            factory(Timesheet::class)->create([
+                'person_id' => $vintage->id,
+                'position_id' => Position::DIRT,
+                'on_duty'   => date("$workYear-01-01 10:00:00"),
+                'off_duty'   => date("$workYear-01-01 11:00:00")
+            ]);
+        }
+
+        // Mark callsign as vintage - any active who has worked for
+        $response = $this->json('GET', 'person/by-status-change', [ 'year' => $year ]);
+
+        $response->assertJson([
+            'inactives' => [[ 'id' => $inactive->id, 'last_year' => $inactiveYear ]],
+            'retired' => [[ 'id' => $retired->id, 'last_year' => $retiredYear ]],
+            'actives' => [[ 'id' => $active->id, 'last_year' => $year ]],
+            'past_prospectives' => [[ 'id' => $pastProspective->id ]],
+            'vintage'   => [[ 'id' => $vintage->id ]]
+        ]);
+    }
 }

@@ -136,6 +136,7 @@ Route::group([
     Route::get('person/by-location', 'PersonController@peopleByLocation');
     Route::get('person/by-role', 'PersonController@peopleByRole');
     Route::get('person/by-status', 'PersonController@peopleByStatus');
+    Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
     Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
