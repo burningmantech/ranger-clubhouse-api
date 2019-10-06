@@ -126,4 +126,8 @@ class PersonPolicy
     public function peopleByStatus(Person $user) {
         return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
     }
+
+    public function peopleByStatusChange(Person $user) {
+        return $user->hasRole(Role::ADMIN);
+    }
 }

@@ -29,6 +29,7 @@ class BulkUploadController extends ApiController
         "active",
         "alpha",
         "inactive",
+        "past prospective",
         "prospective waitlist",
         "prospective",
         "retired"
@@ -88,6 +89,7 @@ class BulkUploadController extends ApiController
             'action'    => 'required|string',
             'records'   => 'required|string',
             'commit'    => 'sometimes|boolean',
+            'reason'    => 'sometimes|string',
         ]);
 
         if (!$this->userHasRole(Role::ADMIN)) {
@@ -95,9 +97,12 @@ class BulkUploadController extends ApiController
         }
 
         $action = $params['action'];
-        $commit = @$params['commit'];
+        $commit = $params['commit'] ?? false;
+        $reason = $params['reason'] ?? 'bulk upload';
+        $recordsParam = $params['records'];
 
-        $lines = explode("\n", str_replace("\r", "", $params['records']));
+
+        $lines = explode("\n", str_replace("\r", "", $recordsParam));
 
         foreach ($lines as $line) {
             if (empty(trim($line))) {
@@ -134,17 +139,17 @@ class BulkUploadController extends ApiController
         }
 
         if (in_array($action, self::SET_COLUMN_UPDATE_ACTIONS)) {
-            $this->changePersonColumn($records, $action, $commit);
+            $this->changePersonColumn($records, $action, $commit, $reason);
         } elseif (in_array($action, self::STATUS_UPDATE_ACTIONS)) {
-            $this->changePersonStatus($records, $action, $commit);
+            $this->changePersonStatus($records, $action, $commit, $reason);
         } elseif (in_array($action, self::BMID_ACTIONS)) {
-            $this->processBmid($records, $action, $commit);
+            $this->processBmid($records, $action, $commit, $reason);
         } elseif ($action == 'tickets') {
-            $this->processTickets($records, $action, $commit);
+            $this->processTickets($records, $action, $commit, $reason);
         } elseif ($action == 'wap') {
-            $this->processWAPs($records, $action, $commit);
+            $this->processWAPs($records, $action, $commit, $reason);
         } elseif ($action == 'eventradio') {
-            $this->processEventRadio($records, $action, $commit);
+            $this->processEventRadio($records, $action, $commit, $reason);
         } else {
             throw new \InvalidArgumentException('Unknown action');
         }
@@ -171,10 +176,19 @@ class BulkUploadController extends ApiController
             return $result;
         }, $records);
 
+        if ($commit) {
+            $this->log('bulk-upload', 'bulk upload commit', [
+                'action'  => $action,
+                'reason'  => $reason,
+                'records' => $recordsParam,
+                'results' => $results
+            ]);
+        }
+
         return response()->json([ 'results' => $results, 'commit' => $commit ? true : false ]);
     }
 
-    private function changePersonStatus($records, $action, $commit)
+    private function changePersonStatus($records, $action, $commit, $reason)
     {
         foreach ($records as $record) {
             $person = $record->person;
@@ -186,14 +200,14 @@ class BulkUploadController extends ApiController
             $newValue = $person->status = $action;
             $record->status = 'success';
             if ($commit) {
-                $person->changeStatus($newValue, $oldValue, 'bulk update');
+                $person->changeStatus($newValue, $oldValue, $reason);
                 $this->saveModel($person, $record);
             }
             $record->changes = [ $oldValue, $newValue ];
         }
     }
 
-    private function changePersonColumn($records, $action, $commit)
+    private function changePersonColumn($records, $action, $commit, $reason)
     {
         foreach ($records as $record) {
             $person = $record->person;
@@ -208,7 +222,7 @@ class BulkUploadController extends ApiController
             if ($commit) {
                 $changes = $person->getChangedValues();
                 if ($this->saveModel($person, $record)) {
-                    $this->log('person-update', 'bulk update', $changes, $person->id);
+                    $this->log('person-update', $reason, $changes, $person->id);
                 } else {
                     continue;
                 }
@@ -217,7 +231,7 @@ class BulkUploadController extends ApiController
         }
     }
 
-    private function processBmid($records, $action, $commit)
+    private function processBmid($records, $action, $commit, $reason)
     {
         $year = current_year();
 
@@ -287,9 +301,9 @@ class BulkUploadController extends ApiController
                 if ($record->status == 'success') {
                     if ($exists) {
                         $changes['id'] = $bmid->id;
-                        $this->log('bmid-update', 'bulk update', $changes, $bmid->person_id);
+                        $this->log('bmid-update', $reason, $changes, $bmid->person_id);
                     } else {
-                        $this->log('bmid-create', 'bulk update', $bmid->getAttributes(), $bmid->person_id);
+                        $this->log('bmid-create', $reason, $bmid->getAttributes(), $bmid->person_id);
                     }
                 }
             }
@@ -298,7 +312,7 @@ class BulkUploadController extends ApiController
         }
     }
 
-    private function processTickets($records, $action, $commit)
+    private function processTickets($records, $action, $commit, $reason)
     {
         $year = current_year();
 
@@ -393,7 +407,7 @@ class BulkUploadController extends ApiController
                     'type'        => $type,
                     'source_year' => $sourceYear,
                     'expiry_date' => $expiryYear,
-                    'comments'    => "$uploadDate {$this->user->callsign}: bulk uploaded",
+                    'comments'    => "$uploadDate {$this->user->callsign}: $reason",
                     'status'      => 'qualified',
                 ]
             );
@@ -409,7 +423,7 @@ class BulkUploadController extends ApiController
         }
     }
 
-    private function processWAPs($records, $action, $commit)
+    private function processWAPs($records, $action, $commit, $reason)
     {
         $year = current_year();
         $low = 5;
@@ -480,7 +494,7 @@ class BulkUploadController extends ApiController
         }
     }
 
-    private function processEventRadio($records, $action, $commit)
+    private function processEventRadio($records, $action, $commit, $reason)
     {
         $year = current_year();
 

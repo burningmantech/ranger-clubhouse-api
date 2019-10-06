@@ -768,4 +768,17 @@ class PersonController extends ApiController
 
         return response()->json([ 'languages' => PersonLanguage::retrieveAllOnSiteSpeakers() ]);
     }
+
+    /*
+     * People By Status Change Report
+     */
+
+    public function peopleByStatusChange()
+    {
+        $this->authorize('peopleByStatusChange', [ Person::class ]);
+        $year = $this->getYear();
+
+        return response()->json(Person::retrieveRecommendedStatusChanges($year));
+    }
+
 }
