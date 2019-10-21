@@ -42,6 +42,7 @@ Route::group([
 
     Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
     Route::get('maintenance/daily-report', 'MaintenanceController@dailyReport');
+    Route::get('maintenance', 'MaintenanceController@index');
 
     Route::get('bmid/test-upload', 'BmidController@testUpload');
     Route::get('bmid/test-photo', 'BmidController@testPhoto');
@@ -63,6 +64,13 @@ Route::group([
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
+    Route::post('access-document/grant-waps', 'AccessDocumentController@grantWAPs');
+    Route::post('access-document/grant-alpha-waps', 'AccessDocumentController@grantAlphaWAPs');
+    Route::post('access-document/grant-vps', 'AccessDocumentController@grantVehiclePasses');
+    Route::post('access-document/set-staff-credentials-access-date', 'AccessDocumentController@setStaffCredentialsAccessDate');
+    Route::post('access-document/clean-access-documents', 'AccessDocumentController@cleanAccessDocsFromPriorEvent');
+    Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
+    Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
     Route::patch('access-document/{access_document}/status', 'AccessDocumentController@status');
     Route::resource('access-document', 'AccessDocumentController');
 
@@ -87,6 +95,7 @@ Route::group([
     Route::get('bmid/manage', 'BmidController@manage');
     Route::get('bmid/manage-person', 'BmidController@managePerson');
     Route::get('bmid/sanity-check', 'BmidController@sanityCheck');
+    Route::post('bmid/set-bmid-titles', 'BmidController@setBMIDTitles');
     Route::resource('bmid', 'BmidController');
 
     Route::get('broadcast', 'BroadcastController@index');
@@ -113,6 +122,13 @@ Route::group([
 
     Route::get('event-dates/year', 'EventDatesController@showYear');
     Route::resource('event-dates', 'EventDatesController');
+
+    Route::post('maintenance/update-positions', 'MaintenanceController@updatePositions');
+    Route::post('maintenance/mark-off-site', 'MaintenanceController@markOffSite');
+    Route::post('maintenance/deauthorize-assets', 'MaintenanceController@deauthorizeAssets');
+    Route::post('maintenance/reset-pnvs', 'MaintenanceController@resetPNVs');
+    Route::post('maintenance/reset-past-prospectives', 'MaintenanceController@resetPassProspectives');
+    Route::post('maintenance/archive-messages', 'MaintenanceController@archiveMessages');
 
     Route::resource('manual-review', 'ManualReviewController@passed');
 

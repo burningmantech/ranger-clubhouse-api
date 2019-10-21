@@ -66,6 +66,9 @@ class Position extends ApiModel
     const RSC_SHIFT_LEAD = 12;
     const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
+    const OPERATIONS_MANAGER = 37;
+    const DEPARTMENT_MANAGER = 106;
+
     const TROUBLESHOOTER = 91;
     const TROUBLESHOOTER_MENTEE = 127;
 

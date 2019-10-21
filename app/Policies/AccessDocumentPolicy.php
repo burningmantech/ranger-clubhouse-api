@@ -11,7 +11,8 @@ class AccessDocumentPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user) {
+    public function before(Person $user)
+    {
         if ($user->hasRole([Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
             return true;
         }
@@ -81,7 +82,43 @@ class AccessDocumentPolicy
         return ($user->id == $personId);
     }
 
-    public function markSubmitted(Person $user) {
+    public function markSubmitted(Person $user)
+    {
+        return false;
+    }
+
+    public function grantWAPs(Person $user)
+    {
+        return false;
+    }
+
+    public function grantAlphaWAPs(Person $user)
+    {
+        return false;
+    }
+
+    public function grantVehiclePasses(Person $user)
+    {
+        return false;
+    }
+
+    public function setStaffCredentialsAccessDate(Person $user)
+    {
+        return false;
+    }
+
+    public function cleanAccessDocsFromPriorEvent(Person $user)
+    {
+        return false;
+    }
+
+    public function bankAccessDocuments(Person $user)
+    {
+        return false;
+    }
+
+    public function expireAccessDocuments(Person $user)
+    {
         return false;
     }
 }

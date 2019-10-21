@@ -274,8 +274,8 @@ class AccessDocument extends ApiModel
 
         return [
             'people'   => $people,
-            'day_high' => $high,
-            'day_low'  => $low,
+            'day_high' => (int) $high,
+            'day_low'  => (int) $low,
         ];
     }
 
@@ -401,10 +401,23 @@ class AccessDocument extends ApiModel
             $accessDate = null;
         }
 
-        self::where('person_id', $personId)
+        $rows = self::where('person_id', $personId)
             ->whereIn('type', [ 'staff_credential', 'work_access_pass'])
             ->whereIn('status', [ 'qualified', 'claimed', 'banked' ])
-            ->update([ 'access_date' => $accessDate, 'access_any_time' => $accessAnyTime ]);
+            ->get();
+
+        $user = Auth::user();
+        $userId = $user ? $user->id : 0;
+
+        foreach ($rows as $row) {
+            $row->access_date = $accessDate;
+            $row->access_any_time = $accessAnyTime;
+            $changes = $row->getChangedValues();
+            $row->saveWithoutValidation();
+            if (!empty($changes)) {
+                AccessDocumentChanges::log($row, $userId, $changes);
+            }
+        }
     }
 
     /**
@@ -473,13 +486,25 @@ class AccessDocument extends ApiModel
     }
 
     /*
+     * Add a comment to the comments column.
+     */
+
+    public function addComment($comment, $callsign) {
+        $date = date('n/j/y G:i:s');
+        $this->comments = "$date $callsign: $comment\n{$this->comments}";
+    }
+
+    /*
      * Setter for expiry_date. Fixup the date if its only a year.
      */
 
     public function setExpiryDateAttribute($date)
     {
-        if (is_string($date) && strlen($date) == 4
-        || is_numeric($date)) {
+        if (is_numeric($date)) {
+            $date = (string) $date;
+        }
+
+        if (strlen($date) == 4) {
             $date .= "-09-15 00:00:00";
         }
 

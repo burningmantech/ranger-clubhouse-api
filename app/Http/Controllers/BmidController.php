@@ -7,9 +7,11 @@ use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 use App\Models\Bmid;
-use App\Models\Person;
-use App\Models\Photo;
 use App\Models\LambasePhoto;
+use App\Models\Person;
+use App\Models\PersonPosition;
+use App\Models\Photo;
+use App\Models\Position;
 
 use App\Lib\LambaseBMID;
 
@@ -224,6 +226,90 @@ class BmidController extends ApiController
         $this->log('bmid-delete', 'bmid delete', $bmid, $bmid->person_id);
         return $this->restDeleteSuccess();
     }
+
+    /*
+     * Set BMID titles based on positions held in Clubhouse.
+     */
+
+    public function setBMIDTitles()
+    {
+        $this->authorize('setBMIDTitles', [ Bmid::class ]);
+
+        $titles = [
+            // Title 1
+            Position::RSC_SHIFT_LEAD => [ 'title1', 'Shift Lead' ],
+            Position::DEPARTMENT_MANAGER => [ 'title1', 'Department Manager' ],
+            Position::OPERATIONS_MANAGER => [ 'title1', 'Operations Manager' ],
+            Position::OOD => [ 'title1', 'Officer of the Day' ],
+            // Title 2
+            Position::LEAL => [ 'title2', 'LEAL' ],
+            // Title 3
+            Position::DOUBLE_OH_7 => [ 'title3', '007']
+        ];
+
+        $year = current_year();
+
+        $bmidTitles = [];
+        $bmids = [];
+
+        foreach ($titles as $positionId => $title) {
+            // Find folks who have the position
+            $people = PersonPosition::where('position_id', $positionId)->pluck('person_id');
+
+            foreach ($people as $personId) {
+                $bmid = $bmids[$personId] ?? null;
+                if ($bmid == null) {
+                    $bmid = Bmid::findForPersonManage($personId, $year);
+                    // cache the BMID record - multiple titles might be set
+                    $bmids[$personId] = $bmid;
+                }
+
+                $bmid->{$title[0]} = $title[1];
+
+                if (!isset($bmids[$personId])) {
+                    $bmidTitles[$personId] = [];
+                }
+                $bmidTitles[$personId][$title[0]] = $title[1];
+            }
+        }
+
+        $badges = [];
+
+        foreach ($bmids as $bmid) {
+            if ($bmid->id) {
+                $changes = $bmid->getChangedValues();
+                if (empty($changes)) {
+                    // Nothing changed - Skip this one.
+                    continue;
+                }
+                $changes['id'] = $bmid->id;
+                $isNew = false;
+            } else {
+                $isNew = true;
+            }
+            $bmid->saveWithoutValidation();
+            $this->log($isNew ? 'bmid-create' : 'bmid-update', 'maintenance - set BMID titles', $isNew ? $bmid : $changes, $bmid->person_id);
+
+            $person = $bmid->person;
+            $title = $bmidTitles[$bmid->person_id];
+            $badges[] = [
+                'id'       => $personId,
+                'callsign' => $person->callsign,
+                'status'   => $person->status,
+                'title1'   => $title['title1'] ?? null,
+                'title2'   => $title['title2'] ?? null,
+                'title3'   => $title['title3'] ?? null,
+            ];
+        }
+
+        usort($badges, function ($a, $b) {
+            return strcasecmp($a['callsign'], $b['callsign']);
+        });
+
+        return response()->json([ 'bmids' => $badges ]);
+    }
+
+
 
     /**
      * Test BMID submission

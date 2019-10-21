@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\Person;
+use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
@@ -299,62 +300,100 @@ class BmidControllerTest extends TestCase
      * Find a potential BMID to manage
      */
 
-     public function testFindPotentialBmidToManage()
-     {
-         $person = factory(Person::class)->create();
+    public function testFindPotentialBmidToManage()
+    {
+        $person = factory(Person::class)->create();
 
-         $response = $this->json('GET', 'bmid/manage-person',
-            [ 'year' => $this->year, 'person_id' => $person->id ]);
+        $response = $this->json(
+             'GET',
+             'bmid/manage-person',
+            [ 'year' => $this->year, 'person_id' => $person->id ]
+         );
 
-          $response->assertStatus(200);
-          $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
               'bmid' => [
                   'person_id' => $person->id,
                   'year'      => $this->year,
               ]
           ]);
 
-          $json = json_decode($response->getContent(), true);
-          $this->assertEquals(false, isset($json['bmid']['id']));
-     }
+        $json = json_decode($response->getContent(), true);
+        $this->assertEquals(false, isset($json['bmid']['id']));
+    }
 
-     /*
-      * Find an existing BMID to manage
-      */
+    /*
+     * Find an existing BMID to manage
+     */
 
-      public function testFindExistingBmidToManage()
-      {
-          $person = factory(Person::class)->create();
-          $bmid = factory(Bmid::class)->create([ 'person_id' => $person->id, 'year' => $this->year ]);
+    public function testFindExistingBmidToManage()
+    {
+        $person = factory(Person::class)->create();
+        $bmid = factory(Bmid::class)->create([ 'person_id' => $person->id, 'year' => $this->year ]);
 
-          $response = $this->json('GET', 'bmid/manage-person',
-             [ 'year' => $this->year, 'person_id' => $person->id ]);
+        $response = $this->json(
+              'GET',
+              'bmid/manage-person',
+             [ 'year' => $this->year, 'person_id' => $person->id ]
+          );
 
-           $response->assertStatus(200);
-           $response->assertJson([
+        $response->assertStatus(200);
+        $response->assertJson([
                'bmid' => [
                    'id'        => $bmid->id,
                    'person_id' => $person->id,
                    'year'      => $this->year,
                ]
            ]);
-      }
+    }
 
-      /*
-       * Do not find any BMIDs
-       */
+    /*
+     * Do not find any BMIDs
+     */
 
-       public function testDoNotFindBmidToManage()
-       {
-           $response = $this->json('GET', 'bmid/manage-person',
-              [ 'year' => $this->year, 'person_id' => 999999 ]);
+    public function testDoNotFindBmidToManage()
+    {
+        $response = $this->json(
+               'GET',
+               'bmid/manage-person',
+              [ 'year' => $this->year, 'person_id' => 999999 ]
+           );
 
-           $response->assertStatus(422);
-           $response->assertJson([
+        $response->assertStatus(422);
+        $response->assertJson([
                'errors' => [
                    [ 'title' => 'The selected person id is invalid.'  ]
                ]
             ]);
-       }
+    }
 
+    /*
+     * Test setting BMID titles for people who have special positions
+     */
+
+    public function testSetBMIDTitles()
+    {
+        // No BMID should be created for a person who does not hold any special positions.
+        $simple = factory(Person::class)->create();
+
+        // BMID should be created and one title set.
+        $special = factory(Person::class)->create();
+        factory(PersonPosition::class)->create([ 'person_id' => $special->id, 'position_id' => Position::OOD ]);
+
+        $response = $this->json('POST', 'bmid/set-bmid-titles');
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'bmids.*.id');
+        $response->assertJson([
+                'bmids' => [
+                    [
+                        'id'       => $special->id,
+                        'callsign' => $special->callsign,
+                        'title1'   => 'Officer of the Day'
+                    ]
+                ]
+            ]);
+
+        $this->assertDatabaseHas('bmid', [ 'person_id' => $special->id, 'title1' =>  'Officer of the Day' ]);
+        $this->assertDatabaseMissing('bmid', [ 'person_id' => $simple->id ]);
+    }
 }

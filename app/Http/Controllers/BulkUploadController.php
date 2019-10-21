@@ -6,10 +6,11 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
+use App\Models\AccessDocumentChanges;
 use App\Models\Bmid;
-use App\Models\Role;
 use App\Models\Person;
 use App\Models\RadioEligible;
+use App\Models\Role;
 
 use Carbon\Carbon;
 
@@ -418,7 +419,9 @@ class BulkUploadController extends ApiController
 
             $record->status = 'success';
             if ($commit) {
-                $this->saveModel($ad, $record);
+                if ($this->saveModel($ad, $record)) {
+                    AccessDocumentChanges::log($ad, $this->user->id, $ad, 'create');
+                }
             }
         }
     }

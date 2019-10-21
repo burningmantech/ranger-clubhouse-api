@@ -22,6 +22,10 @@ class PersonPosition extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
+    public function position() {
+        return $this->belongsTo(Position::class);
+    }
+
     public static function havePosition($personId, $positionId) {
         $sql = self::where('person_id', $personId);
         if (is_array($positionId)) {
