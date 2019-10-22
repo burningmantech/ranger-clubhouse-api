@@ -19,13 +19,13 @@ abstract class TestCase extends BaseTestCase
 
     public function setUp() : void
     {
+        parent::setUp();
+
         // force garbage collection before each test
         // Faker triggers a memory allocation bug.
         gc_collect_cycles();
 
         Setting::$cache = [];
-
-        parent::setUp();
     }
 
     public function createUser()

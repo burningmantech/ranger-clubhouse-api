@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
+use App\Models\AccessDocumentChanges;
 use App\Models\AccessDocumentDelivery;
 use App\Models\Person;
 use App\Models\Timesheet;
@@ -201,7 +202,7 @@ class TicketingController extends ApiController
         $year = current_year();
 
         foreach ($params['names'] as $row) {
-            $soName = $row['name'];
+            $soName = trim($row['name']);
             $soId = $row['id'];
 
             if ($soId == 'new') {
@@ -217,6 +218,7 @@ class TicketingController extends ApiController
 
                 // Looks good, create it
                 $accessDocument = AccessDocument::createSOWAP($personId, $year, $soName);
+                AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, 'create');
                 $documents[] = [ 'id' => $accessDocument->id, 'name' => $soName ];
             } else {
                 // Find the existing record
@@ -231,11 +233,19 @@ class TicketingController extends ApiController
                     $wap->name = $soName;
                 }
 
+                $changes = $wap->getChangedValues();
                 $dirty = $wap->getDirty();
+                $isNew = $wap->id == null;
                 if (!empty($dirty)) {
                     $wap->save();
                     $dirty['id'] = $wap->id;
                     $documents[] = $dirty;
+
+                    if ($isNew) {
+                        AccessDocumentChanges::log($wap, $this->user->id, $wap, 'create');
+                    } else {
+                        AccessDocumentChanges::log($wap, $this->user->id, $changes);
+                    }
                 }
             }
         }

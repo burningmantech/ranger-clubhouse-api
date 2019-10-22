@@ -15,8 +15,8 @@ use App\Models\Slot;
 
 class SlotControllerTest extends TestCase
 {
-    use WithFaker;
     use RefreshDatabase;
+    use WithFaker;
 
     /*
      * have each test have a fresh user that is logged in,

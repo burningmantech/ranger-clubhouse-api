@@ -68,4 +68,13 @@ class BmidPolicy
     {
         return false;
     }
+
+    /**
+     * Determine whether the user can set special titles
+     *
+     */
+    public function setBMIDTitles(Person $user)
+    {
+        return false;
+    }
 }

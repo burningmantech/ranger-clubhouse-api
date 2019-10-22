@@ -73,6 +73,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'retired'
     ];
 
+    const ACTIVE_STATUSES = [
+        'active',
+        'inactive',
+        'inactive extension',
+        'retired'
+    ];
+
     /**
      * The database table name.
      * @var string
@@ -391,7 +398,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     $sql->where('email', $q);
                     $sql->orWhere('email', 'like', $likeQuery);
                 });
-            } else if (isset($query['search_fields'])) {
+            } elseif (isset($query['search_fields'])) {
                 $fields = explode(',', $query['search_fields']);
 
                 $sql = self::where(function ($sql) use ($q,$fields,$likeQuery,$normalized, $metaphone) {
@@ -413,10 +420,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                                         ]);
                                 });
                             }
-                        } else if ($field == 'callsign') {
-                                $sql->orWhere('callsign_normalized', $normalized);
-                                $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
-                                $sql->orWhere('callsign_soundex', $metaphone);
+                        } elseif ($field == 'callsign') {
+                            $sql->orWhere('callsign_normalized', $normalized);
+                            $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
+                            $sql->orWhere('callsign_soundex', $metaphone);
                         } else {
                             $sql->orWhere($field, 'like', $likeQuery);
                         }
@@ -529,8 +536,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public static function retrievePeopleByLocation($year)
     {
         return self::select(
-            'id', 'callsign', 'first_name', 'last_name', 'status', 'email',
-            'city', 'state', 'zip', 'country',
+            'id',
+            'callsign',
+            'first_name',
+            'last_name',
+            'status',
+            'email',
+            'city',
+            'state',
+            'zip',
+            'country',
             DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
             DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != ".Position::ALPHA." WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
             )
@@ -546,7 +561,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $roles = Role::with([ 'person_role.person:id,callsign' ])->orderBy('title')->get();
 
         return $roles->map(function ($row) {
-            $people = $row->person_role->sort(function($a, $b) { return strcasecmp($a->person ? $a->person->callsign : 'Person #'.$a->person_id, $b->person ? $b->person->callsign : 'Person #'.$b->person_id); });
+            $people = $row->person_role->sort(function ($a, $b) {
+                return strcasecmp($a->person ? $a->person->callsign : 'Person #'.$a->person_id, $b->person ? $b->person->callsign : 'Person #'.$b->person_id);
+            });
 
             return [
                 'id'    => $row->id,
@@ -583,8 +600,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         })->values();
     }
 
-    public static function retrieveRecommendedStatusChanges($year) {
-
+    public static function retrieveRecommendedStatusChanges($year)
+    {
         $filterTestAccounts = function ($r) {
             // Filter out testing accounts, and temporary laminates.
             return !preg_match('/(^(testing|lam #|temp \d+))|\(test\)/i', $r->callsign);
@@ -592,7 +609,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         // Inactive means that you have not rangered in any of the last 3 events
         // but you have rangered in at least one of the last 5 events
-        $inactives = Person::select('id', 'callsign', 'status', 'email',
+        $inactives = Person::select(
+            'id',
+            'callsign',
+            'status',
+            'email',
                     DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
                 )->where('status', 'active')
                 ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year ])
@@ -602,7 +623,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 ->filter($filterTestAccounts)->values();
 
         // Retired means that you have not rangered in any of the last 5 events
-        $retired = Person::select('id', 'callsign', 'status', 'email',
+        $retired = Person::select(
+            'id',
+            'callsign',
+            'status',
+            'email',
                     DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
                 )->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ])
                 ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 5, $year ])
@@ -613,9 +638,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         // Mark as vintage are people who have been active for 10 years or more.
         $vintage = DB::table('timesheet')
-                ->select('person_id as id', 'callsign', 'status', 'email',
+                ->select(
+                    'person_id as id',
+                    'callsign',
+                    'status',
+                    'email',
                     DB::raw('YEAR(MAX(on_duty)) AS last_year'),
-                    DB::raw('count(distinct(YEAR(on_duty))) as years'))
+                    DB::raw('count(distinct(YEAR(on_duty))) as years')
+                )
                 ->join('person', 'person.id', 'timesheet.person_id')
                 ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE ])
                 ->whereNotIn('position_id', [ Position::ALPHA, Position::DIRT_TRAINING ])
@@ -627,7 +657,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 ->filter($filterTestAccounts)->values();
 
         // People who have been active in the last three events yet are listed as inactive
-        $actives = Person::select('id', 'callsign', 'status', 'email',
+        $actives = Person::select(
+            'id',
+            'callsign',
+            'status',
+            'email',
                     DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
                 )->whereIn('status', [ Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED ])
                 ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year])
@@ -885,30 +919,82 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
+     * Reset callsign to the last name, first character of first name, and the last two digits of the current year
+     * LastFirstYY
+     *
+     * When the person was bonked, append a 'B'
+     * If the new callsign already exits, find one that does not exists by appending a number to the last name.
+     *
+     * e.g. Jane Smith, year 2019 -> SmithJ19
+     *           or Smith1J19, Smith2J19, etc if SmithJ19 already exists.
+     *
+     * @return bool true if the callsign was successfully reset
+     */
+
+    public function resetCallsign()
+    {
+        $year = current_year() % 100;
+        for ($tries = 0; $tries < 10; $tries++) {
+            $newCallsign = $this->last_name;
+            if ($tries > 0) {
+                $newCallsign .= $tries + 1;
+            }
+            $newCallsign .= substr($this->first_name, 0, 1) .  $year;
+            if ($this->status == Person::BONKED) {
+                $newCallsign .= 'B';
+            }
+
+            if (!self::where('callsign', $newCallsign)->exists()) {
+                $this->callsign = $newCallsign;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Normalize store a normalized and metaphone version of the callsign
      */
 
-    public function setCallsignAttribute($value) {
+    public function setCallsignAttribute($value)
+    {
+        $value = trim($value);
         $this->attributes['callsign'] = $value;
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
         $this->attributes['callsign_soundex'] = metaphone($this->attributes['callsign_normalized']);
+
+        // Update the callsign FKA if the callsign did actually change.
+        if ($this->isDirty('callsign')) {
+            $oldCallsign = $this->getOriginal('callsign');
+            if (!empty($oldCallsign)) {
+                $fka = $this->formerly_known_as;
+                if (empty($fka)) {
+                    $this->formerly_known_as = $oldCallsign;
+                } elseif (strpos($fka, $oldCallsign) === false) {
+                    $this->formerly_known_as = $fka.','.$oldCallsign;
+                }
+            }
+        }
     }
 
     /**
      * Normalize shirt sizes
      */
 
-     public function getLongsleeveshirtSizeStyleAttribute() {
-         return empty($this->attributes['longsleeveshirt_size_style']) ? 'Unknown' : $this->attributes['longsleeveshirt_size_style'];
-     }
+    public function getLongsleeveshirtSizeStyleAttribute()
+    {
+        return empty($this->attributes['longsleeveshirt_size_style']) ? 'Unknown' : $this->attributes['longsleeveshirt_size_style'];
+    }
 
-     public function getTeeshirtSizeStyleAttribute() {
-         return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
-     }
+    public function getTeeshirtSizeStyleAttribute()
+    {
+        return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
+    }
 
-     /*
-      * Summarize gender - used by the Shift Lead Report
-      */
+    /*
+     * Summarize gender - used by the Shift Lead Report
+     */
     public static function summarizeGender($gender)
     {
         $check = trim(strtolower($gender));
@@ -947,5 +1033,4 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         // Can't determine - return the value
         return $gender;
     }
-
 }
