@@ -23,7 +23,6 @@ use App\Helpers\SqlHelper;
 
 class TimesheetControllerTest extends TestCase
 {
-    use WithFaker;
     use RefreshDatabase;
 
     /*

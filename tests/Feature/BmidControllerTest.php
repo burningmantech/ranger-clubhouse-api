@@ -19,7 +19,6 @@ use App\Models\TraineeStatus;
 class BmidControllerTest extends TestCase
 {
     use RefreshDatabase;
-    use WithFaker;
 
     /*
      * have each test have a fresh user that is logged in.

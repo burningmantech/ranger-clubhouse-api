@@ -364,10 +364,8 @@ class MaintenanceController extends ApiController
             return response()->json([ 'status' => 'archive-exists', 'year' => $prevYear ]);
         }
 
-        DB::transaction(function () use ($year, $table) {
-            DB::statement("CREATE TABLE $table AS SELECT * FROM person_message");
-            DB::statement("DELETE FROM person_message WHERE YEAR(timestamp) < $year");
-        });
+        DB::statement("CREATE TABLE $table AS SELECT * FROM person_message");
+        DB::statement("DELETE FROM person_message WHERE YEAR(timestamp) < $year");
 
         return response()->json([ 'status' => 'success', 'year' => $prevYear ]);
     }

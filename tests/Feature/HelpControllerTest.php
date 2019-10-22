@@ -11,8 +11,8 @@ use App\Models\Help;
 
 class HelpControllerTest extends TestCase
 {
-    use WithFaker;
     use RefreshDatabase;
+    use WithFaker;
 
     public function setUp() : void
     {

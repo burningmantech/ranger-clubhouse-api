@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use App\Models\AccessDocument;
@@ -546,13 +545,14 @@ class AccessDocumentControllerTest extends TestCase
            ]);
 
         $response = $this->json('POST', 'access-document/bank-access-documents');
+
         $response->assertStatus(200);
-        $response->assertJsonCount(1, 'access_documents.*.id');
         $response->assertJson([
               'access_documents' => [ [ 'id' => $qualified->id, 'status' => 'banked' ]
               ]
           ]);
 
+        $response->assertJsonCount(1, 'access_documents.*.id');
         $this->assertDatabaseHas('access_document', [ 'id' => $qualified->id, 'status' => 'banked' ]);
         $this->assertDatabaseHas('access_document', [ 'id' => $vp->id, 'status' => 'qualified' ]);
     }

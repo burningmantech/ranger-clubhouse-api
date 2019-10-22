@@ -24,7 +24,6 @@ use App\Mail\TrainingSignup;
 
 class PersonScheduleControllerTest extends TestCase
 {
-    use WithFaker;
     use RefreshDatabase;
 
     /*

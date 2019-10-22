@@ -483,6 +483,7 @@ class AccessDocumentController extends ApiController
                 ->get();
 
 
+        $documents = [];
         foreach ($rows as $ad) {
             if ($ad->type == 'staff_credential') {
                 $ad->access_date = null;
@@ -506,7 +507,6 @@ class AccessDocumentController extends ApiController
                 ->with('person:id,callsign,status')
                 ->get();
 
-        $documents = [];
         foreach ($rows as $ad) {
             $ad->access_date = null;
             $ad->access_any_time = false;
