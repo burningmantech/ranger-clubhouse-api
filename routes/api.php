@@ -256,6 +256,7 @@ Route::group([
     Route::get('timesheet/sanity-checker', 'TimesheetController@sanityChecker');
     Route::get('timesheet/by-callsign', 'TimesheetController@timesheetByCallsign');
     Route::get('timesheet/thank-you', 'TimesheetController@thankYou');
+    Route::get('timesheet/totals', 'TimesheetController@timesheetTotals');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::match([ 'GET', 'POST'], 'timesheet/special-teams', 'TimesheetController@specialTeamsReport');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');

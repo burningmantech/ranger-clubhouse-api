@@ -1057,9 +1057,9 @@ class TimesheetControllerTest extends TestCase
         $response->assertJson([
             'people'  => [
                 [
-                    'id'         => $person->id,
+                    'id'        => $person->id,
                     'callsign'  => $person->callsign,
-                    'status'     => $person->status,
+                    'status'    => $person->status,
                     'timesheet' => [
                         [
                             'position' => [
@@ -1075,4 +1075,65 @@ class TimesheetControllerTest extends TestCase
             ]
         ]);
     }
+
+    /*
+     * Test the Timesheet Totals report
+     */
+
+     public function testTimesheetTotalsReport()
+     {
+         $year = date('Y');
+
+         $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
+         $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
+
+         // Clear out the default timesheets created in setUp()
+         Timesheet::query()->delete();
+
+         factory(Timesheet::class)->create([
+             'person_id'    => $personA->id,
+             'on_duty'      => date('Y-08-20 10:00:00'),
+             'off_duty'     => date('Y-08-20 11:00:00'),
+             'position_id'  => Position::DIRT
+         ]);
+
+         factory(Timesheet::class)->create([
+             'person_id'    => $personB->id,
+             'on_duty'      => date('Y-08-20 10:00:00'),
+             'off_duty'     => date('Y-08-20 12:00:00'),
+             'position_id'  => Position::HQ_WINDOW
+         ]);
+
+         $response = $this->json('GET', 'timesheet/totals', [ 'year' => $year ]);
+         $response->assertStatus(200);
+
+         $response->assertJsonCount(2, 'people.*.id');
+
+         $response->assertJson([
+             'people' => [
+                 [
+                     'id'        => $personA->id,
+                     'callsign'  => $personA->callsign,
+                     'status'    => $personA->status,
+                     'positions' => [
+                         [
+                             'id'   => Position::DIRT,
+                             'duration' => 3600
+                         ]
+                     ]
+                 ],
+                 [
+                     'id'        => $personB->id,
+                     'callsign'  => $personB->callsign,
+                     'status'    => $personB->status,
+                     'positions' => [
+                         [
+                             'id'   => Position::HQ_WINDOW,
+                             'duration' => 7200
+                         ]
+                     ]
+                 ]
+             ]
+         ]);
+     }
 }

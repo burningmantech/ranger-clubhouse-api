@@ -189,4 +189,13 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /*
+     * Can the user run the Timesheet Totals report
+     */
+
+    public function timesheetTotals(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }

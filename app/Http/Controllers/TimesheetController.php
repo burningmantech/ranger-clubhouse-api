@@ -751,4 +751,16 @@ class TimesheetController extends ApiController
 
         return response()->json([ 'people' => Timesheet::retrieveAllForYearByCallsign($year) ]);
     }
+
+    /*
+     * Timesheet Totals Report
+     */
+
+    public function timesheetTotals()
+    {
+        $this->authorize('timesheetTotals', [ Timesheet::class ]);
+        $year = $this->getYear();
+
+        return response()->json([ 'people' => TImesheet::retrieveTimesheetTotals($year) ]);
+    }
 }
