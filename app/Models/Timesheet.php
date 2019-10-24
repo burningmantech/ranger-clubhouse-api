@@ -686,7 +686,9 @@ class Timesheet extends ApiModel
 
                 'total_credits' => $group->pluck('credits')->sum(),
                 'total_duration' => $group->pluck('duration')->sum(),
-                'total_appreciation_duration' => $group->filter(function($t) { return $t->position ? $t->position->count_hours : false; })->pluck('duration')->sum(),
+                'total_appreciation_duration' => $group->filter(function ($t) {
+                    return $t->position ? $t->position->count_hours : false;
+                })->pluck('duration')->sum(),
 
                 'timesheet' => $group->map(function ($t) {
                     return [
@@ -879,6 +881,10 @@ class Timesheet extends ApiModel
         ];
     }
 
+    /*
+     * Run through the timesheets in a given year, and sniff for problematic entries.
+     */
+
     public static function sanityChecker($year)
     {
         $withBase = [ 'position:id,title', 'person:id,callsign' ];
@@ -915,6 +921,11 @@ class Timesheet extends ApiModel
                 ->sortBy('person.callsign')
                 ->values();
 
+        /*
+         * Do any entries have the end time before the start time?
+         * (should never happen..famous last words)
+         */
+
         $endBeforeStartEntries = $rows->map(function ($row) {
             return [
                 'person'    => [
@@ -930,6 +941,10 @@ class Timesheet extends ApiModel
                 ]
             ];
         });
+
+        /*
+         * Look for overlapping entries
+         */
 
         $people = self::whereYear('on_duty', $year)
                 ->whereNotNull('off_duty')
@@ -991,7 +1006,6 @@ class Timesheet extends ApiModel
         });
 
         $minHour = 24;
-
         foreach (Position::PROBLEM_HOURS as $positionId => $hours) {
             if ($hours < $minHour) {
                 $minHour = $hours;
@@ -1004,6 +1018,10 @@ class Timesheet extends ApiModel
                 ->with($withBase)
                 ->orderBy('duration', 'desc')
                 ->get();
+
+        /*
+         * Look for entries that may be too long. (i.e. a person forgot to signout in a timely manner.)
+         */
 
         $tooLongEntries = $rows->filter(function ($row) {
             if (!isset(Position::PROBLEM_HOURS[$row->position_id])) {
@@ -1062,33 +1080,109 @@ class Timesheet extends ApiModel
         })->values();
     }
 
+    /*
+     * Find everyone who worked in a given year, and summarize the positions (total time & credits)
+     */
+
+    public static function retrieveTimesheetTotals($year)
+    {
+        $rows = Timesheet::whereYear('on_duty', $year)
+            ->join('position', 'position.id', 'timesheet.position_id')
+            ->where('position.count_hours', true)
+            ->with([ 'person:id,callsign,status', 'position:id,title'])
+            ->orderBy('timesheet.person_id')
+            ->get();
+
+        if (!$rows->isEmpty()) {
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        $timesheetByPerson = $rows->groupBy('person_id');
+
+        $results = [];
+
+        foreach ($timesheetByPerson as $personId => $entries) {
+            $person = $entries[0]->person;
+
+            $group = $entries->groupBy('position_id');
+            $positions = [];
+            $totalDuration = 0;
+            $totalCredits = 0.0;
+
+            // Summarize the positions worked
+            foreach ($group as $positionId => $posEntries) {
+                $position = $posEntries[0];
+                $duration = $posEntries->pluck('duration')->sum();
+                $totalDuration += $duration;
+                $credits = $posEntries->pluck('credits')->sum();
+                $totalCredits += $credits;
+                $positions[] = [
+                    'id'       => $positionId,
+                    'title'    => $position->title,
+                    'duration' => $duration,
+                    'credits'  => $credits,
+                ];
+            }
+
+            // Sort by position title
+            usort($positions, function ($a,$b) {
+                return strcasecmp($a['title'], $b['title']);
+            });
+
+            $results[] = [
+                'id'        => $personId,
+                'callsign'  => $person ? $person->callsign : 'Person #'.$personId,
+                'status'    => $person->status,
+                'positions' => $positions,
+                'total_duration' => $totalDuration,
+                'total_credits'  => $totalCredits,
+            ];
+        }
+
+        usort($results, function ($a, $b) {
+            return strcasecmp($a['callsign'], $b['callsign']);
+        });
+
+        return $results;
+    }
+
+    /*
+     * Return the total seconds on duty.
+     */
+
     public function getDurationAttribute()
     {
-        // Did a select already compute this?
+        // Did a SQL SELECT already compute this?
         if (isset($this->attributes['duration'])) {
             return (int)$this->attributes['duration'];
         }
 
         $on_duty = $this->getOriginal('on_duty');
-
         if ($this->off_duty) {
             return $this->off_duty->diffInSeconds($this->on_duty);
         }
 
+        // Still on duty - return how many seconds have elasped so far
         return Carbon::parse(SqlHelper::now())->diffInSeconds($this->on_duty);
     }
 
     public function getPositionTitleAttribute()
     {
-        return $this->attributes['position_title'];
+        return $this->attributes['position_title'] ?? '';
     }
+
+    /*
+     * Return the credits earned
+     */
 
     public function getCreditsAttribute()
     {
+        // Already computed?
         if (isset($this->attributes['credits'])) {
             return $this->attributes['credits'];
         }
 
+        // Go forth and get the tasty credits!
         $credits = PositionCredit::computeCredits(
             $this->position_id,
             $this->on_duty->timestamp,
