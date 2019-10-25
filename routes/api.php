@@ -188,6 +188,9 @@ Route::group([
 
     Route::get('position/people-by-position', 'PositionController@peopleByPosition');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
+    Route::get('position/sanity-checker', 'PositionController@sanityChecker');
+    Route::post('position/repair', 'PositionController@repair');
+
     Route::resource('position', 'PositionController');
 
     Route::get('rbs/config', 'RbsController@config');

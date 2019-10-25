@@ -229,12 +229,27 @@ class PersonMentor extends ApiModel
             }
 
             $people[] = $person;
-         }
+        }
 
         usort($people, function ($a, $b) {
             return strcasecmp($a['callsign'], $b['callsign']);
         });
 
         return $people;
+    }
+
+    /*
+     * Find the year a person passed
+     */
+
+    public static function retrieveYearPassed($personId)
+    {
+        $row = DB::table('person_mentor')
+                ->where('person_id', $personId)
+                ->where('status', 'pass')
+                ->orderBy('mentor_year', 'desc')
+                ->first();
+
+        return $row ? $row->mentor_year : null;
     }
 }

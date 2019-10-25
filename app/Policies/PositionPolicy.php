@@ -73,4 +73,24 @@ class PositionPolicy
     {
         return $user->hasRole(Role::MANAGE);
     }
+
+    /**
+     * Determine if the person can run the Position Sanity Checker
+     */
+
+    public function sanityChecker(Person $user)
+    {
+        return $user->hasRole([ Role::MANAGE, Role::GRANT_POSITION ]);
+    }
+
+    /**
+     * Determine if the person can run the Position Sanity Checker
+     */
+
+    public function repair(Person $user)
+    {
+        // Only admins & Gran Positions are allowed to run it.
+        return $user->hasRole(Role::GRANT_POSITION);
+    }
+
 }

@@ -110,6 +110,9 @@ class PositionController extends ApiController
         $params = request()->validate([
             'onPlaya' => 'sometimes|boolean'
         ]);
+
+        $onPlaya = $params['onPlaya'] ?? false;
+
         $positions = array();
         $allPeople = array();
         // Statuses that qualify for "all rangers"
@@ -131,7 +134,7 @@ class PositionController extends ApiController
             $position = $pos->toArray();
             if (!$position['new_user_eligible'] && !$position['all_rangers']) { // show people with the position
                 $pps = PersonPosition::where('position_id', $pos->id);
-                if ($params['onPlaya']) {
+                if ($onPlaya) {
                     $pps = $pps->join('person', 'person.id', '=', 'person_position.person_id')
                                ->where('person.on_site', true);
                 }
@@ -147,7 +150,7 @@ class PositionController extends ApiController
                         PersonPosition::where('position_id', $pos->id)
                             ->join('person', 'person.id', '=', 'person_position.person_id')
                             ->whereNotIn('person.status', $rangerStatuses);
-                    if ($params['onPlaya']) {
+                    if ($onPlaya) {
                         $nonRangersQuery = $nonRangersQuery->where('person.on_site', 'true');
                     }
                     $suspiciousPersonIds = $nonRangersQuery->pluck('person_id')->toArray();
@@ -158,7 +161,7 @@ class PositionController extends ApiController
                         }
                     }
                 }
-                if ($params['onPlaya']) {
+                if ($onPlaya) {
                     $missingPeopleQuery = $missingPeopleQuery->where('on_site', true);
                 }
                 $personIds = $missingPeopleQuery
@@ -189,4 +192,32 @@ class PositionController extends ApiController
         $this->authorize('sandmanQualified', Position::class);
         return response()->json(Position::retrieveSandPeopleQualifications());
     }
+
+    /**
+     * Sanity check
+     */
+
+    public function sanityChecker()
+    {
+        $this->authorize('sanityChecker', [ Position::class ]);
+        return response()->json(Position::sanityChecker());
+    }
+
+    /**
+     * Position Sanity Checker
+     */
+
+    public function repair()
+    {
+        $this->authorize('repair', [ Position::class ]);
+
+        $params = request()->validate([
+            'repair'       => 'required|string',
+            'people_ids'   => 'required|array',
+            'people_ids.*' => 'required|integer|exists:person,id',
+        ]);
+
+        return response()->json(Position::repair($params['repair'], $params['people_ids']));
+    }
+
 }
