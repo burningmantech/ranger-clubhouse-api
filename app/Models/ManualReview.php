@@ -20,10 +20,16 @@ class ManualReview extends ApiModel
         'passdate' => 'datetime',
     ];
 
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
     public static function findForQuery($query)
     {
-        $sql = self::select('manual_review.*', 'person.callsign')
-                ->join('person', 'manual_review.person_id', 'person.id');
+        $sql = self::select('manual_review.*')
+            ->with([ 'person:id,callsign,status' ])
+            ->join('person', 'person.id', 'manual_review.person_id');
 
         if (isset($query['year'])) {
             $sql->whereYear('passdate', $query['year']);
@@ -33,7 +39,7 @@ class ManualReview extends ApiModel
             $sql->where('person_id', $query['person_id']);
         }
 
-        return $sql->get();
+        return $sql->get()->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
     }
 
     public static function findForPersonYear($personId, $year)
@@ -76,7 +82,7 @@ class ManualReview extends ApiModel
         $gSheet->connect();
         $sheetResults = $gSheet->getResults();
 
-        $rows = self::findForQuery([ 'year' => $year]);
+        $rows = self::findForQuery([ 'year' => $year ]);
 
         $alreadyPassed = [
             'test' => 'booga booga',
@@ -88,13 +94,14 @@ class ManualReview extends ApiModel
         $graduated = [];
 
         foreach ($rows as $row) {
-            $alreadyPassed[$row->callsign] = $row;
+            if ($row->person) {
+                $alreadyPassed[$row->person->callsign] = $row;
+            }
         }
 
         $peopleMissing = [];
         foreach ($sheetResults as $entry) {
             if (count($entry) != 2) {
-                $errors[] = 'Row in Google sheet missing some data: '.json_encode($entry);
                 continue;
             }
 
@@ -119,8 +126,6 @@ class ManualReview extends ApiModel
                 if (isset($people[$callsign])) {
                     $bulkInsert[] = [ $people[$callsign]->id, $passdate ];
                     $graduated[] = $callsign;
-                } else {
-                    $errors[] = "Callsign [$callsign] is missing.";
                 }
             }
 
@@ -130,11 +135,74 @@ class ManualReview extends ApiModel
                 DB::insert($sql, array_flatten($bulkInsert));
             }
         }
+    }
 
-        return [
-            'errors'    => $errors,
-            'new'       => $graduated
-        ];
+    /*
+     * Retrieve the raw spreadsheet and report on the contents. Purely a diagnostic aid.
+     *
+     */
+
+    public static function retrieveSpreadsheet() {
+        $gSheet = new ManualReviewGoogle;
+        $gSheet->connect();
+        $sheetResults = $gSheet->getResults();
+
+        foreach ($sheetResults as $line => $entry) {
+            $errors = [];
+            $line++;
+
+            if (count($entry) != 2) {
+                $rows[] = [
+                    'line'      => $line,
+                    'passdate'  => '',
+                    'callsign'  => '',
+                    'errors'    => [ 'Malformed row - not exactly 2 columns (found '.count($entry).'): '.print_r($entry, true) ]
+                ];
+                continue;
+            }
+
+            list ($passdate, $callsign) = $entry;
+
+            if ($callsign == 'test' || $callsign == 'Ranger Radio Handle (imported from Clubhouse)') {
+                $rows[] = [
+                    'line'  => $line,
+                    'passdate' => $passdate,
+                    'callsign' => $callsign
+                ];
+                continue;
+            }
+
+            $time = strtotime($passdate);
+            if ($time === false) {
+                $errors[] = "Invalid date '$passdate'";
+            }
+
+            $person = Person::findByCallsign($callsign);
+            if (!$person) {
+                $errors[] = "Unknown handle '$callsign'";
+            }
+
+            $row = [
+                'line' => $line,
+                'passdate' => $passdate,
+                'callsign' => $callsign,
+            ];
+
+            if ($person) {
+                $row['person'] = [
+                    'id' => $person->id,
+                    'callsign' => $person->callsign
+                ];
+            }
+
+            if (!empty($errors)) {
+                $row['errors'] = $errors;
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     public static function markPersonAsPassed($personId, $passdate, $year)

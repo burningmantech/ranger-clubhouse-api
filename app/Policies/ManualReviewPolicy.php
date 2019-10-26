@@ -64,4 +64,31 @@ class ManualReviewPolicy
     {
         return false;
     }
+
+    /*
+     * Can the user import the manual review spreadsheet?
+     */
+
+    public function import(Person $user)
+    {
+        return false; // only admins
+    }
+
+    /*
+     * Can the user see the manual review configuration?
+     */
+
+    public function config(Person $user)
+    {
+        return false; // only admins
+    }
+
+    /*
+     * Can the user see the raw spreadsheet
+     */
+
+    public function spreadsheet(Person $user)
+    {
+        return false; // only admins
+    }
 }

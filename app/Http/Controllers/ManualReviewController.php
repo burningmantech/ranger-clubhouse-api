@@ -23,7 +23,8 @@ class ManualReviewController extends ApiController
         ]);
 
         $this->authorize('view', ManualReview::class);
-        return $this->success(ManualReview::findForQuery($query));
+        $rows = ManualReview::findForQuery($query);
+        return $this->success($rows, null, 'manual_review');
     }
 
     /**
@@ -90,4 +91,48 @@ class ManualReviewController extends ApiController
         $this->log('manual-review-delete', 'ManualReview Deleted', [ 'id' => $manualReview->id]);
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Import the Manual Review results from the Google Spreadsheet
+     *
+     */
+
+    public function import()
+    {
+        $this->authorize('import', ManualReview::class);
+
+        ManualReview::importFromGoogle(current_year());
+
+        return $this->success();
+    }
+
+    /**
+     * Retrieve the Google Spreadsheet
+     *
+     */
+
+    public function spreadsheet()
+    {
+        $this->authorize('spreadsheet', ManualReview::class);
+
+        return response()->json([ 'spreadsheet' => ManualReview::retrieveSpreadsheet() ]);
+    }
+
+    /*
+     * Obtain the Manual Review configuration
+     */
+
+     public function config()
+     {
+         $this->authorize('config', ManualReview::class);
+
+         $mrSettings = setting([
+             'ManualReviewDisabledAllowSignups',
+             'ManualReviewGoogleSheetId',
+             'ManualReviewLinkEnable',
+             'ManualReviewProspectiveAlphaLimit'
+         ]);
+
+         return response()->json($mrSettings);
+     }
 }
