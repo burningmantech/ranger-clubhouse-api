@@ -77,6 +77,7 @@ Route::group([
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
     Route::resource('action-log', 'ActionLogController', [ 'only' => 'index' ]);
+    Route::resource('clubhouse1-log', 'Clubhouse1LogController', [ 'only' => 'index' ]);
 
     Route::resource('alert', 'AlertController');
 
