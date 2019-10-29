@@ -29,6 +29,7 @@ class PersonFilter
         'date_verified',
         'create_date',
         'timestamp',
+        'sfuid',
     ];
 
     const ROLES_FIELDS = [
@@ -46,12 +47,6 @@ class PersonFilter
         'last_name',
         'gender',
     ];
-
-    // TODO remove when CH1 is decomissioned
-    const BARCODE_FIELDS = [
-        'barcode',
-    ];
-
 
     const CALLSIGNS_FIELDS = [
         'callsign',
@@ -72,8 +67,6 @@ class PersonFilter
         'zip',
         'country',
 
-        'birthdate',
-
         'home_phone',
         'alt_phone',
 
@@ -86,18 +79,7 @@ class PersonFilter
     const HQ_INFO = [
         'on_site',
         'camp_location',
-        'emergency_contact',
-
-        // TODO remove below when CH1 is decomissioned
-        'em_first_name',
-        'em_mi',
-        'em_last_name',
-        'em_handle',
-
-        'em_home_phone',
-        'em_alt_phone',
-        'em_email',
-        'em_camp_location',
+        'emergency_contact'
     ];
 
     const AGREEMENT_FIELDS = [
@@ -109,7 +91,6 @@ class PersonFilter
         'vehicle_insurance_paperwork',
         'vehicle_blacklisted',
         'sandman_affidavit'
-
     ];
 
     const EVENT_FIELDS = [
@@ -119,9 +100,7 @@ class PersonFilter
     ];
 
     const BMID_FIELDS = [
-        'lam_status',
         'bpguid',
-        'sfuid',
     ];
 
     const MENTOR_FIELDS = [
@@ -173,7 +152,6 @@ class PersonFilter
         [ self::CALLSIGNS_FIELDS ],
         [ self::CERTIFICATIONS_FIELDS ],
         [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
-        [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
         [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ] ],
@@ -197,7 +175,6 @@ class PersonFilter
         [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
         [ self::ROLES_FIELDS, false, [ Role::MENTOR, Role::VC ] ],
         [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
-        [ self::BARCODE_FIELDS, true, [ Role::VIEW_PII, Role::MANAGE, Role::VC ] ],
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
         [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ]],

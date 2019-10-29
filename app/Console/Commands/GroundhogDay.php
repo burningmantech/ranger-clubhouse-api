@@ -157,7 +157,6 @@ class GroundhogDay extends Command
         // No fruit-cup.. err.. Personal Information for you tonight!
         DB::table('person')->update([
             'on_site'    => false,
-            'birthdate' => '1970-12-31',
             'home_phone' => '123-456-7890',
             'alt_phone' => '123-456-7890',
             'sms_on_playa' => '',
@@ -165,9 +164,6 @@ class GroundhogDay extends Command
             'street1' => '123 Any St.',
             'street2' => '',
             'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),
-            'em_home_phone' => '',
-            'em_alt_phone' => '',
-            'em_email' => '',
             'mentors_flag_note' => '',
             'mentors_notes' => '',
             'asset_authorized' => false,

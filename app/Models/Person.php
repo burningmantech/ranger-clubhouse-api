@@ -133,7 +133,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'formerly_known_as',
         'vintage',
 
-        'barcode',
         'behavioral_agreement',
         'status',
         'status_date',
@@ -153,8 +152,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'zip',
         'country',
 
-        'birthdate',
-
         'home_phone',
         'alt_phone',
 
@@ -165,22 +162,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'teeshirt_size_style',
         'emergency_contact',
 
-        'em_first_name',
-        'em_mi',
-        'em_last_name',
-        'em_handle',
-
-        'em_home_phone',
-        'em_alt_phone',
-        'em_email',
-        'em_camp_location',
         'asset_authorized',
 
         'vehicle_blacklisted',
         'vehicle_paperwork',
         'vehicle_insurance_paperwork',
 
-        'lam_status',
         'bpguid',
         'sfuid',
 
@@ -214,7 +201,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'name',
         'first_name',
         'last_name',
-        'barcode',
         'callsign',
         'formerly_known_as'
     ];
