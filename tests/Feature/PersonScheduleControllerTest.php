@@ -36,7 +36,7 @@ class PersonScheduleControllerTest extends TestCase
         parent::setUp();
 
         $this->setting('ManualReviewDisabledAllowSignups', false);
-
+        $this->setting('TrainingFullEmail', 'full@example.com');
         $this->signInUser();
 
         // scheduling ends up sending lots of emails..

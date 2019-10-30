@@ -7,6 +7,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use App\Models\AccessDocumentDelivery;
 use App\Models\Bmid;
 use App\Models\Help;
+use App\Models\Setting;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -40,6 +41,10 @@ class RouteServiceProvider extends ServiceProvider
 
         Route::bind('help', function ($id) {
             return Help::findByIdOrSlug($id) ?? abort(404);
+        });
+
+        Route::bind('setting', function ($id) {
+            return Setting::find($id) ?? abort(404);
         });
     }
 

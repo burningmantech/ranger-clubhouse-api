@@ -37,6 +37,8 @@ class PersonControllerTest extends TestCase
     {
         parent::setUp();
         $this->signInUser();
+        $this->setting('VCEmail', 'vc@example.com');
+        $this->setting('AccountCreationEmail', 'newuser@example.com');
     }
 
 

@@ -33,6 +33,7 @@ class BmidControllerTest extends TestCase
         $this->year = current_year();
 
         $this->setting('TAS_BoxOfficeOpenDate', "{$this->year}-08-25 00:00");
+        $this->setting('TAS_DefaultWAPDate', date('Y-08-26'));
     }
 
     public function createBmids()
