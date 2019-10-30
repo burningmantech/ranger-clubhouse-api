@@ -17,9 +17,9 @@ class ConfigControllerTest extends TestCase
      */
     public function testConfigResults()
     {
+        $this->setting('GeneralSupportEmail', 'test@example.com');
         $response = $this->json('GET', 'config');
-
         $response->assertStatus(200);
-        $response->assertJson([ 'VCSRevision' => setting('VCSRevision') ]);
+        $response->assertJson([ 'GeneralSupportEmail' => 'test@example.com' ]);
     }
 }

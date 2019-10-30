@@ -14,9 +14,6 @@ class ConfigController extends Controller
 
     const CLIENT_CONFIGS = [
         'AdminEmail',
-        'ClassicClubhouseUrl',
-        'DeploymentEnvironment',
-        'DualClubhouse',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',
         'MealDates',
@@ -30,11 +27,8 @@ class ConfigController extends Controller
         'ReadOnly',
         'RpTicketThreshold',
         'ScTicketThreshold',
-        'SiteNotice',
-        'SiteTitle',
         'TrainingAcademyEmail',
         'VCEmail',
-        'VCSRevision',
         'YrTicketThreshold',
     ];
 
@@ -44,6 +38,8 @@ class ConfigController extends Controller
         if (config('clubhouse.GroundhogDayServer')) {
             $configs['GroundhogDayTime'] = (string) SqlHelper::now();
         }
+
+        $configs['DeploymentEnvironment'] = config('clubhouse.DeploymentEnvironment');
 
         return response()->json($configs);
     }

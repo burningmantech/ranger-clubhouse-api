@@ -344,9 +344,9 @@ test_config() {
 
     http_body < "${response}" > "${body}";
 
-    # Received JSON payload should have a "VCSRevision" key.
-    if ! grep '"VCSRevision":' "${body}" > /dev/null; then
-        fail "Configuration payload lacks VCSRevision.";
+    # Received JSON payload should have a "AdminEmail" key.
+    if ! grep '"AdminEmail":' "${body}" > /dev/null; then
+        fail "Configuration payload lacks AdminEmail.";
         echo "Content-Type: ${content_type}";
         echo "Response:"; cat "${response}";
         return 1;

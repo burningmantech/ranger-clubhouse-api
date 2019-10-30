@@ -94,19 +94,7 @@ abstract class TestCase extends BaseTestCase
 
     public function setting($name, $value)
     {
-        if (is_numeric($value)) {
-            $type = 'integer';
-        } elseif (is_bool($value)) {
-            $type = 'bool';
-        } else {
-            $type = 'string';
-        }
-
         Setting::where('name', $name)->delete();
-        Setting::insert([
-            'name'  => $name,
-            'type'  => $type,
-            'value' => $value,
-        ]);
+        Setting::insert([ 'name'  => $name, 'value' => $value ]);
     }
 }

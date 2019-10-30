@@ -237,6 +237,8 @@ class AccessDocumentControllerTest extends TestCase
     {
         $this->addAdminRole();
 
+        $this->setting('TAS_DefaultWAPDate', date('Y-08-20'));
+
         $year = date('Y') - 2;
         $active = factory(Person::class)->create([ 'callsign' => 'A' ]);
         $timesheet = factory(Timesheet::class)->create([
