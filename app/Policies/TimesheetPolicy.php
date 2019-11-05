@@ -198,4 +198,13 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /*
+     * Can the user run the Timesheet By Position Report
+     */
+
+    public function timesheetByPosition(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
 }

@@ -181,7 +181,7 @@ class TimesheetControllerTest extends TestCase
                       'action'  => 'signon',
                       'message' => 'Dirt '.$onDuty,
                     ]
-                ] ],
+                  ] ],
              ]
          ]);
     }
@@ -533,7 +533,7 @@ class TimesheetControllerTest extends TestCase
                           'callsign' => $person->callsign
                       ],
                   ]
-            ],
+             ],
          ]);
     }
 
@@ -1080,60 +1080,125 @@ class TimesheetControllerTest extends TestCase
      * Test the Timesheet Totals report
      */
 
-     public function testTimesheetTotalsReport()
-     {
-         $year = date('Y');
+    public function testTimesheetTotalsReport()
+    {
+        $year = date('Y');
 
-         $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
-         $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
+        $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
+        $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
 
-         // Clear out the default timesheets created in setUp()
-         Timesheet::query()->delete();
+        // Clear out the default timesheets created in setUp()
+        Timesheet::query()->delete();
 
-         factory(Timesheet::class)->create([
-             'person_id'    => $personA->id,
-             'on_duty'      => date('Y-08-20 10:00:00'),
-             'off_duty'     => date('Y-08-20 11:00:00'),
-             'position_id'  => Position::DIRT
-         ]);
+        factory(Timesheet::class)->create([
+            'person_id'    => $personA->id,
+            'on_duty'      => date('Y-08-20 10:00:00'),
+            'off_duty'     => date('Y-08-20 11:00:00'),
+            'position_id'  => Position::DIRT
+        ]);
 
-         factory(Timesheet::class)->create([
-             'person_id'    => $personB->id,
-             'on_duty'      => date('Y-08-20 10:00:00'),
-             'off_duty'     => date('Y-08-20 12:00:00'),
-             'position_id'  => Position::HQ_WINDOW
-         ]);
+        factory(Timesheet::class)->create([
+            'person_id'    => $personB->id,
+            'on_duty'      => date('Y-08-20 10:00:00'),
+            'off_duty'     => date('Y-08-20 12:00:00'),
+            'position_id'  => Position::HQ_WINDOW
+        ]);
 
-         $response = $this->json('GET', 'timesheet/totals', [ 'year' => $year ]);
-         $response->assertStatus(200);
+        $response = $this->json('GET', 'timesheet/totals', [ 'year' => $year ]);
+        $response->assertStatus(200);
 
-         $response->assertJsonCount(2, 'people.*.id');
+        $response->assertJsonCount(2, 'people.*.id');
 
-         $response->assertJson([
-             'people' => [
-                 [
-                     'id'        => $personA->id,
-                     'callsign'  => $personA->callsign,
-                     'status'    => $personA->status,
-                     'positions' => [
-                         [
-                             'id'   => Position::DIRT,
-                             'duration' => 3600
-                         ]
-                     ]
-                 ],
-                 [
-                     'id'        => $personB->id,
-                     'callsign'  => $personB->callsign,
-                     'status'    => $personB->status,
-                     'positions' => [
-                         [
-                             'id'   => Position::HQ_WINDOW,
-                             'duration' => 7200
-                         ]
-                     ]
-                 ]
-             ]
-         ]);
-     }
+        $response->assertJson([
+            'people' => [
+                [
+                    'id'        => $personA->id,
+                    'callsign'  => $personA->callsign,
+                    'status'    => $personA->status,
+                    'positions' => [
+                        [
+                            'id'   => Position::DIRT,
+                            'duration' => 3600
+                        ]
+                    ]
+                ],
+                [
+                    'id'        => $personB->id,
+                    'callsign'  => $personB->callsign,
+                    'status'    => $personB->status,
+                    'positions' => [
+                        [
+                            'id'   => Position::HQ_WINDOW,
+                            'duration' => 7200
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+     /*
+      * Test the Timesheet By Position report
+      */
+
+    public function testTimesheetByPositionReport()
+    {
+        $year = date('Y');
+
+        $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
+        $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
+
+        // Clear out the default timesheets created in setUp()
+        Timesheet::query()->delete();
+
+        $entryA = factory(Timesheet::class)->create([
+            'person_id'    => $personA->id,
+            'on_duty'      => date('Y-08-20 10:00:00'),
+            'off_duty'     => date('Y-08-20 11:00:00'),
+            'position_id'  => Position::DIRT
+        ]);
+
+        $entryB = factory(Timesheet::class)->create([
+            'person_id'    => $personB->id,
+            'on_duty'      => date('Y-08-20 10:00:00'),
+            'off_duty'     => date('Y-08-20 12:00:00'),
+            'position_id'  => Position::HQ_WINDOW
+        ]);
+
+        $response = $this->json('GET', 'timesheet/by-position', [ 'year' => $year ]);
+        $response->assertStatus(200);
+
+        $response->assertJsonCount(2, 'positions.*.id');
+
+        $response->assertJson([
+            'positions' => [
+                [
+                    'id'    => Position::DIRT,
+                    'timesheets' => [[
+                            'person' => [
+                                'id'        => $personA->id,
+                                'callsign'  => $personA->callsign,
+                                'status'    => $personA->status,
+                            ],
+                            'on_duty'  => (string) $entryA->on_duty,
+                            'off_duty' => (string) $entryA->off_duty,
+                            'duration' => 3600
+                    ]],
+                ],
+                [
+                    'id'    => Position::HQ_WINDOW,
+                    'timesheets' => [[
+                            'person' => [
+                                'id'        => $personB->id,
+                                'callsign'  => $personB->callsign,
+                                'status'    => $personB->status,
+                            ],
+                            'on_duty'  => (string) $entryB->on_duty,
+                            'off_duty' => (string) $entryB->off_duty,
+                            'duration' => 7200
+                    ]]
+                ]
+            ]
+        ]);
+    }
 }

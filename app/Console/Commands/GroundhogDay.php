@@ -174,7 +174,7 @@ class GroundhogDay extends Command
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
         ]);
 
-        DB::table('setting')->where('is_encrypted', true)->update([ 'value' => '' ]);
+        DB::table('setting')->where('is_credential', true)->update([ 'value' => '' ]);
 
         // Mark everyone on site who has a timesheet or is schedule to work as on site and signed paperwork
         DB::table('person')
