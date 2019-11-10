@@ -8,6 +8,7 @@ use App\Models\ApiModel;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\EventDate;
+use App\Models\Timesheet;
 
 use Carbon\Carbon;
 
@@ -71,38 +72,43 @@ class Slot extends ApiModel
     }
 
     public static function findForQuery($query) {
-        $sql = self::with(self::WITH_POSITION_TRAINER);
+        $sql = self::baseSql();
 
         if (isset($query['year'])) {
-            $sql = $sql->whereYear('begins', $query['year']);
+            $sql->whereYear('begins', $query['year']);
         }
 
         if (isset($query['type'])) {
-            $sql = $sql->where('type', $query['type']);
+            $sql->where('type', $query['type']);
         }
 
         if (isset($query['position_id'])) {
-            $sql = $sql->where('position_id', $query['position_id']);
+            $sql->where('position_id', $query['position_id']);
         }
 
-        return $sql->get();
+        if (isset($query['has_ended'])) {
+            $sql->where('has_ended', $query['has_ended']);
+        }
+
+        return $sql->orderBy('begins')->get();
     }
 
-    public static function findBase($slotId) {
+    public static function baseSql() {
         return self::select(
                 'slot.*',
                 DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
-                DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended')
+                DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'),
+                DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
             )
-            ->where('id', $slotId)->with(self::WITH_POSITION_TRAINER);
+            ->with(self::WITH_POSITION_TRAINER);
     }
 
     public static function find($slotId) {
-        return self::findBase($slotId)->first();
+        return self::baseSql()->where('id', $slotId)->first();
     }
 
     public static function findOrFail($slotId) {
-        return self::findBase($slotId)->firstOrFail();
+        return self::baseSql()->where('id', $slotId)->firstOrFail();
     }
 
     public static function findWithSignupsForYear($year)
@@ -114,13 +120,35 @@ class Slot extends ApiModel
                 ->get();
     }
 
-    public static function findSignUps($slotId) {
-        return DB::table('person_slot')
+    public static function findSignUps($slotId, $includeOnDuty = false) {
+        $rows = DB::table('person_slot')
             ->select('person.id', 'person.callsign')
             ->join('person', 'person.id', '=', 'person_slot.person_id')
             ->where('person_slot.slot_id', $slotId)
             ->orderBy('person.callsign', 'asc')
             ->get();
+
+        if (!$includeOnDuty || $rows->isEmpty()) {
+            return $rows;
+        }
+
+        $ids = $rows->pluck('id');
+        $entries = Timesheet::whereIn('person_id', $ids)
+                    ->whereNull('off_duty')
+                    ->with('position:id,title')
+                    ->get();
+
+        $byPerson = $rows->keyBy('id');
+        foreach ($entries as $entry) {
+            $byPerson[$entry->person_id]->on_duty = [
+                'id'    => $entry->id,
+                'position' => [ 'id' => $entry->position->id, 'title' => $entry->position->title ],
+                'on_duty' => (string) $entry->on_duty,
+                'duration' => $entry->duration,
+            ];
+        }
+
+        return $rows;
     }
 
     public static function findYears() {

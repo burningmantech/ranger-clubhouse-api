@@ -281,9 +281,10 @@ class TimesheetController extends ApiController
             return response()->json([ 'status' => 'position-not-held' ]);
         }
 
-        // they cannot be already on duty.
-        if (Timesheet::isPersonOnDuty($personId)) {
-            return response()->json([ 'status' => 'already-on-duty' ]);
+        // they cannot be already on duty
+        $onDuty = Timesheet::findPersonOnDuty($personId);
+        if ($onDuty) {
+            return response()->json([ 'status' => 'already-on-duty', 'timesheet' => $onDuty ]);
         }
 
         $signonForced = false;
@@ -367,7 +368,7 @@ class TimesheetController extends ApiController
         $this->authorize('signoff', $timesheet);
 
         if ($timesheet->off_duty) {
-            throw new \InvalidArgumentException("Timesheet already signed off");
+            return response()->json([ 'status' => 'already-signed-off', 'timesheet' => $timesheet ]);
         }
 
         $timesheet->setOffDutyToNow();
@@ -382,7 +383,8 @@ class TimesheetController extends ApiController
             $timesheet->id,
             $timesheet->position->title." ".(string) $timesheet->off_duty
         );
-        return $this->success($timesheet);
+        return response()->json([ 'status' => 'success', 'timesheet' => $timesheet ]);
+
     }
 
     /*
