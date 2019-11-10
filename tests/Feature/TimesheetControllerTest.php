@@ -395,12 +395,8 @@ class TimesheetControllerTest extends TestCase
     public function testAlreadySignedout()
     {
         $response = $this->json('POST', "timesheet/{$this->timesheet->id}/signoff");
-        $response->assertStatus(422);
-        $response->assertJson([
-             'errors' => [ [
-                     'title' => 'Timesheet already signed off'
-             ] ]
-         ]);
+        $response->assertStatus(200);
+        $response->assertJson([ 'status' => 'already-signed-off' ]);
     }
 
     /*

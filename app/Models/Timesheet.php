@@ -149,12 +149,13 @@ class Timesheet extends ApiModel
         return $rows;
     }
 
-    public static function isPersonOnDuty($personId)
+    public static function findPersonOnDuty($personId)
     {
         return self::where('person_id', $personId)
                 ->whereYear('on_duty', current_year())
                 ->whereNull('off_duty')
-                ->exists();
+                ->with([ 'position:id,title' ])
+                ->first();
     }
 
     /*

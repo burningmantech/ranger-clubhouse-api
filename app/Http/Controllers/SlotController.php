@@ -238,8 +238,8 @@ class SlotController extends ApiController
 
     public function people(Slot $slot)
     {
-        $signUps = Slot::findSignUps($slot->id);
-        return response()->json([ 'people' => $signUps]);
+        $params = request()->validate([ 'is_onduty' => 'sometimes|boolean' ]);
+        return response()->json([ 'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false)]);
     }
 
     /*
