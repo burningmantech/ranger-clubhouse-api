@@ -309,7 +309,7 @@ class Schedule extends ApiModel
         }
 
         foreach ($slots as $row) {
-            if ($row->isPartOfSessionGroup($slot)) {
+            if (Slot::isPartOfSessionGroup($row->description, $slot->description)) {
                 return true;
             }
         }

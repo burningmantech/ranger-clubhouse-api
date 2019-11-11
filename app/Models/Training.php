@@ -197,7 +197,7 @@ class Training extends Position
 
     public function retrieveMultipleEnrollments($year)
     {
-        $rows = DB::table('person')
+        $byPerson = DB::table('person')
         ->select(
             'person.id as person_id',
             'person.callsign',
@@ -229,30 +229,62 @@ class Training extends Position
         )
            ->orderBy('person.callsign', 'asc')
            ->orderBy('date', 'ASC')
-           ->get();
+           ->get()
+           ->groupBy('person_id');
 
         $people = [];
-        foreach ($rows as $row) {
-            $personId = $row->person_id;
-            if (!isset($people[$personId])) {
-                $people[$personId] = [
-                    'person_id'   => $personId,
-                    'callsign'    => $row->callsign,
-                    'first_name'  => $row->first_name,
-                    'last_name'   => $row->last_name,
-                    'email'       => $row->email,
-                    'enrollments' => []
-                ];
+        foreach ($byPerson as $personId => $slots) {
+            foreach ($slots as $slot) {
+                $slot->isMultiParter = false;
             }
 
-            $people[$personId]['enrollments'][] = [
-                'slot_id'  => $row->slot_id,
-                'date'     => $row->date,
-                'location' => $row->location,
+            $haveMultiples = false;
+
+            foreach ($slots as $check) {
+                if ($check->isMultiParter) {
+                    continue;
+                }
+
+                foreach ($slots as $slot) {
+                    if ($slot->isMultiParter || $slot->slot_id == $check->slot_id) {
+                        continue;
+                    }
+
+                    if (Slot::isPartOfSessionGroup($slot->location, $check->location)) {
+                        $slot->isMultiParter = true;
+                        $check->isMultiParter = true;
+                        break;
+                    }
+                }
+
+                if (!$check->isMultiParter) {
+                    $haveMultiples = true;
+                    break;
+                }
+            }
+
+            if ($haveMultiples == false) {
+                continue;
+            }
+
+            $person = $slots[0];
+            $people[] = [
+                'person_id'   => $personId,
+                'callsign'    => $person->callsign,
+                'first_name'  => $person->first_name,
+                'last_name'   => $person->last_name,
+                'email'       => $person->email,
+                'enrollments' => $slots->map(function ($row) {
+                    return [
+                        'slot_id'  => $row->slot_id,
+                        'date'     => $row->date,
+                        'location' => $row->location,
+                    ];
+                })->values()
             ];
         }
 
-        return array_values($people);
+        return $people;
     }
 
     /*
