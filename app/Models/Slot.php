@@ -430,8 +430,8 @@ class Slot extends ApiModel
      * Find and return the session part number if it exists.
      */
 
-    public function sessionGroupPart() {
-        $matched = preg_match('/\bPart (\d)\b/i', $this->description, $matches);
+    public static function sessionGroupPart($description) {
+        $matched = preg_match('/\bPart (\d)\b/i', $description, $matches);
 
         if (!$matched) {
             return 0;
@@ -446,18 +446,17 @@ class Slot extends ApiModel
      * "Pre-Event - Part 1" becomes "Pre-Event"
      */
 
-    public function sessionGroupName() {
-        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $this->description, $matches);
+    public static function sessionGroupName($description) {
+        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
         return $matched ? $matches[1] : null;
     }
 
     /*
      * Is the slot part of a session group?
      */
-    public function isPartOfSessionGroup($slot) {
-        $ourPart = $this->sessionGroupPart();
-        $theirPart = $slot->sessionGroupPart();
-
-        return ($ourPart && $theirPart && $slot->sessionGroupName() == $this->sessionGroupName());
+    public static function isPartOfSessionGroup($ourDescription, $theirDescription) {
+        return (self::sessionGroupPart($ourDescription)
+                && self::sessionGroupPart($theirDescription)
+                && self::sessionGroupName($ourDescription) == self::sessionGroupName($theirDescription));
     }
 }
