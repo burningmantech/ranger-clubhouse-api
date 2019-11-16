@@ -19,6 +19,8 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 
 use App\Mail\NotifyVCEmailChangeMail;
 use APp\Mail\AccountCreationMail;
@@ -469,6 +471,137 @@ class PersonControllerTest extends TestCase
         $response->assertJsonStructure([ 'positions' ]);
         $json = $response->json();
         $this->assertCount(3, $json['positions']);
+    }
+
+    /**
+     * Test retrieve person positions w/training
+     */
+
+    public function testPersonPositionsWithNoTrainingSuccess()
+    {
+        $personId = $this->user->id;
+
+        factory(Position::class)->create([ 'id' => Position::DIRT, 'title' => 'Dirt' ]);
+
+        factory(PersonPosition::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::DIRT
+        ]);
+
+        $response = $this->json('GET', "person/{$personId}/positions", [
+            'include_training' => true,
+            'year' => current_year()
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'positions.*.id');
+        $response->assertJson([
+            'positions' => [[
+                'id'    => Position::DIRT,
+                'is_untrained' => true
+            ]]
+        ]);
+    }
+
+    /**
+     * Test retrieve person positions w/training
+     */
+
+    public function testPersonPositionsUnTrainedSuccess()
+    {
+        $personId = $this->user->id;
+
+        factory(Position::class)->create([ 'id' => Position::DIRT, 'title' => 'Dirt' ]);
+        factory(PersonPosition::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::DIRT
+        ]);
+        factory(PersonPosition::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::TRAINING
+        ]);
+
+        $slot = factory(Slot::class)->create([
+            'begins'    => date('Y-08-25 10:00:00'),
+            'ends'      => date('Y-08-25 11:00:00'),
+            'position_id' => Position::TRAINING
+        ]);
+
+        factory(PersonSlot::class)->create([
+            'person_id' => $personId,
+            'slot_id' => $slot->id
+        ]);
+
+        factory(TraineeStatus::class)->create([
+            'person_id' => $personId,
+            'slot_id' => $slot->id,
+            'passed' => true
+        ]);
+
+        /*
+         * Setup a person to be a Green Dot Trainer who taught a session
+         */
+
+        factory(Position::class)->create([
+            'id' => Position::DIRT_GREEN_DOT,
+            'title' => 'Dirt - Green Dot',
+            'training_position_id' => Position::GREEN_DOT_TRAINING,
+        ]);
+
+        factory(Position::class)->create([
+            'id' => Position::GREEN_DOT_TRAINING,
+            'title' => 'Green Dot Training',
+        ]);
+
+        factory(Position::class)->create([
+            'id' => Position::GREEN_DOT_TRAINER,
+            'title' => 'Green Dot Trainer',
+        ]);
+
+        factory(PersonPosition::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::DIRT_GREEN_DOT
+        ]);
+
+        factory(PersonPosition::class)->create([
+            'person_id' => $personId,
+            'position_id' => Position::GREEN_DOT_TRAINER
+        ]);
+
+        $trainerSlot = factory(Slot::class)->create([
+            'begins'    => date('Y-08-26 10:00:00'),
+            'ends'      => date('Y-08-26 11:00:00'),
+            'position_id' => Position::GREEN_DOT_TRAINER
+        ]);
+
+        $traineeSlot = factory(Slot::class)->create([
+            'begins'    => date('Y-08-26 10:00:00'),
+            'ends'      => date('Y-08-26 11:00:00'),
+            'position_id' => Position::GREEN_DOT_TRAINING
+        ]);
+
+        factory(PersonSlot::class)->create([
+            'person_id' => $personId,
+            'slot_id' => $trainerSlot->id
+        ]);
+
+        factory(TrainerStatus::class)->create([
+            'person_id' => $personId,
+            'slot_id' => $traineeSlot->id,
+            'trainer_slot_id' => $trainerSlot->id,
+            'status' => TrainerStatus::ATTENDED
+        ]);
+
+        $response = $this->json('GET', "person/{$personId}/positions", [
+            'include_training' => true,
+            'year' => current_year()
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(2, 'positions.*.id');
+        $json = $response->json();
+        $this->assertFalse(isset($json['positions'][0]['is_untrained']));
+        $this->assertFalse(isset($json['positions'][1]['is_untrained']));
     }
 
 

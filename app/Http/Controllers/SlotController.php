@@ -11,6 +11,8 @@ use App\Models\Slot;
 use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 
 use App\Helpers\SqlHelper;
 
@@ -226,6 +228,8 @@ class SlotController extends ApiController
 
         $slot->delete();
         PersonSlot::deleteForSlot($slot->id);
+        TraineeStatus::deleteForSlot($slot->id);
+        TrainerStatus::deleteForSlot($slot->id);
 
         $this->log('slot-delete', 'delete', [ 'slot' => $slot ]);
 

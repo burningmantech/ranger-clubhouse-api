@@ -46,6 +46,16 @@ class TrainingSessionPolicy
         return $this->checkForArt($user, $training_session);
     }
 
+    /**
+     * Can the user set trainer status?
+     *
+     */
+
+    public function trainerStatus(Person $user, TrainingSession $training_session)
+    {
+        return $this->checkForArt($user, $training_session);
+    }
+
     private function checkForArt(Person $user, TrainingSession $training_session) {
         return ($training_session->isArt() && $user->hasRole(Role::ART_TRAINER));
     }

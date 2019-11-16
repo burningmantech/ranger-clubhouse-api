@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Person;
 use App\Models\Schedule;
 use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 use App\Models\Training;
 use App\Models\TrainingSession;
 
@@ -82,11 +83,49 @@ class TrainingSessionController extends ApiController
         foreach ($params['students'] as $student) {
             $personId = $student['id'];
 
-            $traineeStatus = TraineeStatus::firstOrCreateForSession($personId, $session->id);
+            $traineeStatus = TraineeStatus::firstOrNewForSession($personId, $session->id);
             $traineeStatus->fill($student);
+            $changes = $traineeStatus->getChangedValues();
             $traineeStatus->save();
+            if (!empty($changes)) {
+                $changes['slot_id'] = $id;
+                $this->log('trainee-status-update', '', $changes, $personId);
+            }
         }
 
         return response()->json([ 'students' => $session->retrieveStudents()]);
     }
+
+    /*
+     * Mark trainers as attended, or not.
+     */
+
+     public function trainerStatus($id)
+     {
+         $session = TrainingSession::findOrFail($id);
+         $this->authorize('trainerStatus', $session);
+
+         $params = request()->validate([
+             'trainers.*.id'     => 'required|integer',
+             'trainers.*.trainer_slot_id' => 'required|integer',
+             'trainers.*.status' => 'nullable|string',
+         ]);
+
+         foreach ($params['trainers'] as $trainer) {
+             $personId = $trainer['id'];
+
+             $trainerStatus = TrainerStatus::firstOrNewForSession($session->id, $personId);
+             $trainerStatus->status = $trainer['status'];
+             $trainerStatus->trainer_slot_id = $trainer['trainer_slot_id'];
+             $changes = $trainerStatus->getChangedValues();
+             $trainerStatus->save();
+             if (!empty($changes)) {
+                 $changes['slot_id'] = $id;
+                 $changes['trainer_slot_id'] = $trainer['trainer_slot_id'];
+                 $this->log('trainer-status-update', '', $changes, $personId);
+             }
+         }
+
+         return response()->json([ 'trainers' => $session->retrieveTrainers()]);
+     }
 }

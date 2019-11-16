@@ -636,7 +636,7 @@ class RBS
             $trainingCond .= " (SELECT 1 FROM trainee_status
                 INNER JOIN slot on slot.id = trainee_status.slot_id
                 WHERE trainee_status.person_id = person.id
-                     AND slot.position_id = ".Position::DIRT_TRAINING."
+                     AND slot.position_id = ".Position::TRAINING."
                      AND YEAR(slot.begins) = $year";
             if ($training == 'passed') {
                 $trainingCond .= " AND passed=1";

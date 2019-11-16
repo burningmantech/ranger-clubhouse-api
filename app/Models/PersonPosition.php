@@ -54,7 +54,7 @@ class PersonPosition extends ApiModel
             $rows->prepend((object) [
                 'position_id'          => Position::DIRT,
                 'title'                => 'Dirt',
-                'training_position_id' => Position::DIRT_TRAINING
+                'training_position_id' => Position::TRAINING
             ]);
         }
 

@@ -49,7 +49,7 @@ class TimesheetControllerTest extends TestCase
 
         factory(Position::class)->create(
             [
-                'id'    => Position::DIRT_TRAINING,
+                'id'    => Position::TRAINING,
                 'title' => 'Training',
                 'type'  => 'Training',
             ]
@@ -117,7 +117,7 @@ class TimesheetControllerTest extends TestCase
         $slot = factory(Slot::class)->create([
             'begins'    => date("Y-01-01 00:00:00"),
             'ends'      => date('Y-01-01 01:00:00'),
-            'position_id'  => Position::DIRT_TRAINING,
+            'position_id'  => Position::TRAINING,
         ]);
 
         factory(PersonSlot::class)->create([
@@ -323,7 +323,7 @@ class TimesheetControllerTest extends TestCase
         $response->assertJson([
             'status'         => 'not-trained',
             'position_title' => 'Training',
-            'position_id'    => Position::DIRT_TRAINING,
+            'position_id'    => Position::TRAINING,
         ]);
     }
 
