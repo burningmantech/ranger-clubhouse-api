@@ -634,7 +634,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 )
                 ->join('person', 'person.id', 'timesheet.person_id')
                 ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE ])
-                ->whereNotIn('position_id', [ Position::ALPHA, Position::DIRT_TRAINING ])
+                ->whereNotIn('position_id', [ Position::ALPHA, Position::TRAINING ])
                 ->where('vintage', false)
                 ->groupBy([ 'person_id', 'callsign', 'status', 'email' ])
                 ->havingRaw('count(distinct(YEAR(on_duty))) >= 10')

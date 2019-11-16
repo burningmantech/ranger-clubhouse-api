@@ -14,7 +14,8 @@ use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
 
-class TrainingStatus {
+class TrainingStatus
+{
     public $position_title;
     public $position_id;
     public $status;
@@ -47,7 +48,8 @@ class PersonEventInfo extends ApihouseResult
      * @return PersonEventInfo
      */
 
-    static public function findForPersonYear($personId, $year) {
+    public static function findForPersonYear($personId, $year)
+    {
         $info = new PersonEventInfo();
 
         $info->person_id = $personId;
@@ -63,7 +65,7 @@ class PersonEventInfo extends ApihouseResult
 
         $info->trainings = [];
         $now = SqlHelper::now();
-        foreach($requireTraining as $need) {
+        foreach ($requireTraining as $need) {
             $status = new TrainingStatus;
             $status->position_title = $need->title;
             $status->position_id = $need->position_id;
@@ -71,7 +73,7 @@ class PersonEventInfo extends ApihouseResult
             $info->trainings[] = $status;
             // TODO: Remove this at some point.
             if ($need->position_id == Position::DIRT) {
-                $need->training_position_id = Position::DIRT_TRAINING;
+                $need->training_position_id = Position::TRAINING;
             }
 
             $training = $trained[$need->training_position_id] ?? null;
@@ -79,6 +81,15 @@ class PersonEventInfo extends ApihouseResult
             // TODO: Support multiple ART training positions
             if (!$training && $need->training_position_id == Position::HQ_FULL_TRAINING) {
                 $training = $trained[Position::HQ_REFRESHER_TRAINING] ?? null;
+            }
+
+            $teachingPositions = Position::TRAINERS[$need->training_position_id] ?? null;
+            if ($teachingPositions) {
+                $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
+                $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
+            } else {
+                $taught = [];
+                $trainer = null;
             }
 
             if (!$training || !$training->passed) {
@@ -98,13 +109,29 @@ class PersonEventInfo extends ApihouseResult
                 $slot = null;
             }
 
-            if ($training) {
+            /*
+             * The order of presedence is:
+             *
+             * 1. A training where the person was a trainer, and marked as attended
+             * 2. A passed training.
+             * 3. If a training wasn't passed but there's a later session signed up use that
+             * 4. A future training as student
+             * 5. A future training as trainer
+             */
+
+            if ($trainer) {
+                // Person taught the course
+                $status->location = $trainer->description;
+                $status->date = $trainer->begins;
+                $status->is_trainer = true;
+                $status->status = 'pass';
+            }  else if ($training) {
                 // If the person did not pass, BUT there is a later sign up
                 // use the later sign up.
-                if (!$training->passed && $slot && $slot->begins->gt($training->begins)) {
+                if (!$training->passed && $slot && $slot->ends->gt($training->ends)) {
                     $status->location = $slot->description;
                     $status->date = $slot->begins;
-                    if ($status->date->gt($now)) {
+                    if ($status->ends->gt($now)) {
                         $status->status = 'pending';
                     } else {
                         $status->status = 'fail';
@@ -113,21 +140,39 @@ class PersonEventInfo extends ApihouseResult
                     $status->location = $training->description;
 
                     $status->date = $training->begins;
-                    if ($training->begins->gt($now)) {
+                    if ($training->ends->gt($now)) {
                         $status->status = 'pending';
                     } else {
                         $status->status = ($training->passed ? 'pass' : 'fail');
                     }
                 }
-            } else if ($slot) {
+            } elseif ($slot) {
                 $status->location = $slot->description;
                 $status->date = $slot->begins;
-                if (Carbon::parse($status->date)->gt($now)) {
+                // Training signed up and no trainee status
+                if (Carbon::parse($slot->ends)->gt($now)) {
+                    // Session hasn't ended yet
                     $status->status = 'pending';
                 } else {
                     // Session has passed, fail it.
                     $status->status = 'fail';
                 }
+            } else if ($teachingPositions && !$taught->isEmpty()) {
+                // find the first pending session
+                $slot = $taught->firstWhere('status', null);
+                if (!$slot) {
+                    // nothing found - try to use a no-show
+                    $slot = $taught->firstWhere('status', 'no-show');
+                    if (!$slot) {
+                        // okay, try the first session
+                        $slot = $taught->first();
+                    }
+                }
+
+                $status->location = $slot->description;
+                $status->date = $slot->begins;
+                $status->status = $slot->status ?? 'pending';
+                $status->is_trainer = true;
             } else {
                 // Nothing found.
                 $status->status = 'no-shift';
@@ -137,6 +182,10 @@ class PersonEventInfo extends ApihouseResult
                 $status->date = (string) $status->date;
             }
         }
+
+        usort($info->trainings, function ($a, $b) {
+            return strcmp($a->position_title, $b->position_title);
+        });
 
 
         $radio = RadioEligible::findForPersonYear($personId, $year);

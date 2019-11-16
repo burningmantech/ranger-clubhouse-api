@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\ApiModel;
+use App\Models\EventDate;
 use App\Models\PersonSlot;
 use App\Models\Position;
-use App\Models\EventDate;
 use App\Models\Timesheet;
+use App\Models\TrainerStatus;
 
 use Carbon\Carbon;
 
@@ -69,6 +70,10 @@ class Slot extends ApiModel
 
     public function person_slot() {
         return $this->hasMany(PersonSlot::class);
+    }
+
+    public function trainer_status() {
+        return $this->hasMany(TrainerStatus::class, 'trainer_slot_id');
     }
 
     public static function findForQuery($query) {
@@ -303,7 +308,7 @@ class Slot extends ApiModel
                 // The check for the mentee shift is a hack to prevent past years from showing
                 // a GD Mentee as a qualified GD.
                 if ($haveGDPosition ) {
-                    $person->is_greendot = TraineeStatus::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
+                    $person->is_greendot = Training::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
                     if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
                         $person->is_greendot = false; // just in case
                         // Not trained - remove the GD positions
@@ -387,7 +392,7 @@ class Slot extends ApiModel
     }
 
     public function isArt() {
-        return ($this->position_id != Position::DIRT_TRAINING);
+        return ($this->position_id != Position::TRAINING);
     }
 
     /*

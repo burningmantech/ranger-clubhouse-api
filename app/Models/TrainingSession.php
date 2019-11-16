@@ -73,7 +73,7 @@ class TrainingSession extends Slot
         $personIds = $people->pluck('person_id');
         $people = $people->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
 
-        $isDirtTraining = ($this->position_id == Position::DIRT_TRAINING);
+        $isDirtTraining = ($this->position_id == Position::TRAINING);
 
         $peopleYearsRangered = Timesheet::yearsRangeredCountForIds($personIds);
         if (!$isDirtTraining) {
@@ -166,26 +166,38 @@ class TrainingSession extends Slot
             // Find the trainer's slot that begins within a hour of the slot start time.
             $trainerSlot = Slot::where('description', $this->description)
                 ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [ $this->begins, $this->ends ])
-                ->where('position_id', $trainerPositionId)->first();
+                ->where('position_id', $trainerPositionId)
+                ->first();
 
             if ($trainerSlot == null) {
                 continue;
             }
 
             // Retrieve the trainers
-            $rows = PersonSlot::with([ 'person:id,callsign,first_name,last_name,email'])
-                        ->where('slot_id', $trainerSlot->id)->get();
+            $rows = PersonSlot::with([ 'person:id,callsign,first_name,last_name,email' ])
+                        ->where('slot_id', $trainerSlot->id)
+                        ->get();
 
             $rows = $rows->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
 
-            $instructors = $rows->map(function($row) {
+            if (!$rows->isEmpty()) {
+                $trainerStatuses = TrainerStatus::findBySlotPersonIds($this->id, $rows->pluck('person_id'))->keyBy('person_id');
+            } else {
+                $trainerStatuses = [];
+            }
+
+            $instructors = $rows->map(function($row) use ($trainerPosition, $trainerStatuses, $trainerSlot) {
                 $person = $row->person;
+                $trainer = $trainerStatuses[$person->id] ?? null;
+
                 return [
                     'id'         => $person->id,
                     'callsign'   => $person->callsign,
                     'first_name' => $person->first_name,
                     'last_name'  => $person->last_name,
                     'email'      => $person->email,
+                    'status' => $trainer ? $trainer->status : 'pending',
+                    'trainer_slot_id' => $trainerSlot->id,
                 ];
             });
 

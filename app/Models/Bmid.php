@@ -363,7 +363,7 @@ class Bmid extends ApiModel
          * Find people who have signed up shifts starting before their WAP access date
          */
 
-        $positionIds = implode(',', [ Position::DIRT_TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER]);
+        $positionIds = implode(',', [ Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER]);
         $ids = DB::select("SELECT ps.person_id as id
             FROM person_slot ps
             JOIN slot s ON s.id=ps.slot_id
@@ -387,7 +387,7 @@ class Bmid extends ApiModel
          * Find people who signed up early shifts yet do not have a WAP
          */
 
-        $positionIds = implode(',', [ Position::DIRT_TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER, Position::GREEN_DOT_TRAINER, Position::GREEN_DOT_TRAINING]);
+        $positionIds = implode(',', [ Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER, Position::GREEN_DOT_TRAINER, Position::GREEN_DOT_TRAINING]);
         $ids = DB::select("SELECT ps.person_id as id
                 FROM person_slot ps
                 JOIN slot s ON s.id=ps.slot_id

@@ -34,14 +34,14 @@ class Training extends Position
      * @param boolean true if person is trained, otherwise $required will be set.
      */
 
-    public static function isPersonTrained($person, $positionId, $year, & $requiredPositionId)
+    public static function isPersonTrained($person, $positionId, $year, &$requiredPositionId)
     {
         $personId = $person->id;
 
         // The person has to have passed dirt training
         if ($person->status != Person::NON_RANGER
-        && !TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
-            $requiredPositionId = Position::DIRT_TRAINING;
+        && !self::didPersonPassForYear($personId, Position::TRAINING, $year)) {
+            $requiredPositionId = Position::TRAINING;
             return false;
         }
 
@@ -59,7 +59,7 @@ class Training extends Position
         }
 
         // And check if person did pass the ART
-        if (TraineeStatus::didPersonPassForYear($personId, $trainingId, $year)) {
+        if (self::didPersonPassForYear($personId, $trainingId, $year)) {
             return true;
         }
 
@@ -101,35 +101,67 @@ class Training extends Position
                 'title' => $position->title,
             ];
 
-            if ($position->id == Position::DIRT) {
-                if (!TraineeStatus::didPersonPassForYear($personId, Position::DIRT_TRAINING, $year)) {
-                    $info->is_untrained = true;
-                    $info->training_position_id = Position::DIRT_TRAINING;
-                    $info->training_title = 'Training';
-                }
-            } else {
-                $trainingId = $position->training_position_id;
-                if ($trainingId && !TraineeStatus::didPersonPassForYear($personId, $trainingId, $year)) {
-                    $info->is_untrained = true;
-                    $info->training_position_id = $trainingId;
-                    $info->training_title = Position::retrieveTitle($trainingId);
-                }
+            $personPositions[] = $info;
 
-                if ($position->id == Position::SANDMAN) {
-                    $unqualifiedReason = null;
-                    $isQualified = Position::isSandmanQualified($person, $unqualifiedReason);
-
-                    if (!$isQualified) {
-                        $info->is_unqualified = true;
-                        $info->unqualified_reason = $unqualifiedReason;
-                    }
+            $trainer = null;
+            if ($position->training_position_id) {
+                $teachingPositions = Position::TRAINERS[$position->training_position_id] ?? null;
+                if ($teachingPositions) {
+                    $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
+                    // Find the session the person taught and was marked present.
+                    $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
                 }
             }
 
-            $personPositions[] = $info;
+            /*
+             * Assume the person is trained unless indicated otherwise
+             */
+
+            $positionId = $position->id;
+            switch ($positionId) {
+            case Position::DIRT:
+            case Position::DIRT_PRE_EVENT:
+            case Position::DIRT_POST_EVENT:
+                $trainingId = Position::TRAINING;
+                break;
+
+            default:
+                $trainingId = $position->training_position_id;
+                break;
+            }
+
+            if ($positionId == Position::SANDMAN) {
+                $unqualifiedReason = null;
+                $isQualified = Position::isSandmanQualified($person, $unqualifiedReason);
+
+                if (!$isQualified) {
+                    $info->is_unqualified = true;
+                    $info->unqualified_reason = $unqualifiedReason;
+                }
+            }
+
+            /*
+             * Mark the person has untrained if:
+             * - was NOT a trainer who taught a session
+             * - and the position requires training
+             * - and the person did not pass/attend training
+             */
+
+            if (!$trainer && $trainingId && !self::didPersonPassForYear($personId, $trainingId, $year)) {
+                $info->is_untrained = true;
+                $info->training_position_id = $trainingId;
+                $info->training_title = Position::retrieveTitle($trainingId);
+            }
+
         }
 
         return $personPositions;
+    }
+
+    public static function didPersonPassForYear($personId, $positionId, $year)
+    {
+        return TraineeStatus::didPersonPassForYear($personId, $positionId, $year)
+            || TrainerStatus::didPersonTeachForYear($personId, $positionId, $year);
     }
 
     /**
@@ -146,7 +178,7 @@ class Training extends Position
         if (is_numeric($id)) {
             $position = self::where('id', $id)->firstOrfail();
         } elseif ($id == 'dirt') {
-            $position = self::where('id', Position::DIRT_TRAINING)->firstOrfail();
+            $position = self::where('id', Position::TRAINING)->firstOrfail();
         } else {
             $position = self::where('title', str_replace('-', ' ', $id))->firstOrFail();
         }
@@ -420,7 +452,7 @@ class Training extends Position
         $positionIds = implode(',', $positionIds);
 
         $rows = DB::select(
-                "SELECT
+            "SELECT
                     person.id,
                     callsign,
                     first_name,
@@ -437,7 +469,7 @@ class Training extends Position
                      AND YEAR(slot.begins) = :year
                      AND passed = 1
                  ORDER BY slot.begins, description, callsign",
-                 [
+            [
                      'year'         => $year
                  ]
         );
@@ -667,11 +699,11 @@ class Training extends Position
                      'trainee_status.notes',
                      'trainee_status.rank',
                      DB::raw('(NOW() >= slot.begins) as has_started')
-                )->join('slot', function ($j) use ($year) {
+                 )->join('slot', function ($j) use ($year) {
                     $j->on('slot.id', 'person_slot.slot_id');
                     $j->whereYear('slot.begins', $year);
-                    $j->where('slot.position_id', Position::DIRT_TRAINING);
-                })
+                    $j->where('slot.position_id', Position::TRAINING);
+                 })
                  ->leftJoin('trainee_status', function ($j) use ($personId) {
                      $j->on('slot.id', 'trainee_status.slot_id');
                      $j->where('trainee_status.person_id', $personId);
@@ -682,12 +714,73 @@ class Training extends Position
     }
 
     /*
+     * Retrieve all trainers and their attendance for a given year
+     */
+
+    public function retrieveTrainerAttendanceForYear($year)
+    {
+
+        $teachingPositions = Position::TRAINERS[$this->id] ?? null;
+
+        if (!$teachingPositions) {
+            return [];
+        }
+
+        $slots = Slot::whereYear('begins', $year)
+                ->whereIn('position_id', $teachingPositions)
+                ->with([ 'position:id,title', 'person_slot.person:id,callsign', 'trainer_slot' ])
+                ->orderBy('begins')
+                ->get();
+
+        $trainers = [];
+
+        foreach ($slots as $slot) {
+            // Find the training slot that begins within a hour of the slot start time.
+            $trainingSlot = Slot::where('description', $slot->description)
+                ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [ $slot->begins, $slot->ends ])
+                ->where('position_id', $this->id)
+                ->first();
+
+            if ($trainingSlot == null) {
+                continue;
+            }
+
+            foreach ($slot->person_slot as $ps) {
+                if (!isset($trainers[$ps->person_id])) {
+                    $trainers[$ps->person_id] = (object) [
+                        'id'    => $ps->person_id,
+                        'callsign' => $ps->person ? $ps->person->callsign : 'Person #'.$ps->person_id,
+                        'slots' => []
+                    ];
+                }
+
+                $trainer = $trainers[$ps->person_id];
+                $ts = $slot->trainer_status->firstWhere('person_id', $ps->person_id);
+                $trainer->slots[] = (object) [
+                    'id'             => $slot->id,
+                    'begins'         => (string) $slot->begins,
+                    'description'    => $slot->description,
+                    'position_title' => $slot->position->title,
+                    'status' => $ts ? $ts->status : 'pending',
+                    'training_slot_id' => $trainingSlot->id,
+                ];
+            }
+        }
+
+        usort($trainers, function ($a, $b) {
+            return strcasecmp($a->callsign, $b->callsign);
+        });
+
+        return $trainers;
+    }
+
+    /*
      * Is this training position an ART module?
      */
 
     public function getIsArtAttribute()
     {
-        return ($this->id != Position::DIRT_TRAINING);
+        return ($this->id != Position::TRAINING);
     }
 
     /*
@@ -696,6 +789,6 @@ class Training extends Position
 
     public function getSlugAttribute()
     {
-        return ($this->id == Position::DIRT_TRAINING) ? 'dirt' : str_slug($this->title);
+        return ($this->id == Position::TRAINING) ? 'dirt' : str_slug($this->title);
     }
 }

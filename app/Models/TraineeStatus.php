@@ -18,7 +18,8 @@ class TraineeStatus extends ApiModel
 
     protected $casts = [
         'passed'    => 'boolean',
-        'begins'    => 'date'
+        'begins'    => 'date',
+        'ends'  => 'date'
     ];
 
     /**
@@ -62,8 +63,16 @@ class TraineeStatus extends ApiModel
                 ->exists();
     }
 
-    public static function firstOrCreateForSession($personId, $sessionId) {
-        return self::firstOrCreate([ 'person_id' => $personId, 'slot_id' => $sessionId]);
+    public static function firstOrNewForSession($personId, $sessionId) {
+        return self::firstOrNew([ 'person_id' => $personId, 'slot_id' => $sessionId]);
+    }
+
+    /*
+     * Delete all records refering to a slot. Used by slot deletion.
+     */
+
+    public static function deleteForSlot($slotId) {
+        self::where('slot_id', $slotId)->delete();
     }
 
     public function setRankAttribute($value) {

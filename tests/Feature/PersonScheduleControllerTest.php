@@ -48,7 +48,7 @@ class PersonScheduleControllerTest extends TestCase
         // Setup default (real world) positions
         $this->trainingPosition = factory(Position::class)->create(
             [
-                'id'    => Position::DIRT_TRAINING,
+                'id'    => Position::TRAINING,
                 'title' => 'Training',
                 'type'  => 'Training',
             ]
@@ -87,7 +87,7 @@ class PersonScheduleControllerTest extends TestCase
                 [
                     'begins'      => date("$year-05-$day 09:45:00"),
                     'ends'        => date("$year-05-$day 17:45:00"),
-                    'position_id' => Position::DIRT_TRAINING,
+                    'position_id' => Position::TRAINING,
                     'description' => "Training #$i",
                     'signed_up'   => 0,
                     'max'         => 10,

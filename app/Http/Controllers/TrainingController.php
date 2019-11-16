@@ -73,6 +73,19 @@ class TrainingController extends ApiController
     }
 
     /*
+     * Show who has not completed training or not signed up for training
+     * (ART modules only)
+     */
+
+    public function trainerAttendanceReport($id)
+    {
+        list($training, $year) = $this->getTrainingAndYear($id);
+
+        return response()->json([ 'trainers' => $training->retrieveTrainerAttendanceForYear($year) ]);
+    }
+
+
+    /*
      * Obtain the training position, and year requested
      */
 
@@ -87,4 +100,5 @@ class TrainingController extends ApiController
 
         return [ $training, $params['year'] ];
     }
+
 }

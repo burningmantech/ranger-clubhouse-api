@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 class Position extends ApiModel
 {
     const ALPHA = 1;
+
     const DIRT = 2;
-    const DIRT_TRAINING = 13;
     const DIRT_PRE_EVENT = 53;
     const DIRT_POST_EVENT = 120;
     const DIRT_SHINY_PENNY = 107;
@@ -137,7 +137,7 @@ class Position extends ApiModel
     //
 
     const TRAINERS = [
-        Position::DIRT_TRAINING => [
+        Position::TRAINING => [
              Position::TRAINER,
              Position::TRAINER_ASSOCIATE,
              Position::TRAINER_UBER
@@ -235,7 +235,7 @@ class Position extends ApiModel
             ->orderBy('title');
 
         if ($excludeDirt) {
-            $sql = $sql->where('id', '!=', Position::DIRT_TRAINING);
+            $sql = $sql->where('id', '!=', Position::TRAINING);
         }
 
         return $sql->get()->toArray();

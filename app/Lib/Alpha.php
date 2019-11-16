@@ -45,7 +45,7 @@ class Alpha
             ->whereRaw("EXISTS
                 (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id
                     AND slot.position_id=? AND YEAR(slot.begins)=?
-                WHERE person_slot.person_id=person.id LIMIT 1)", [ Position::DIRT_TRAINING, $year ])
+                WHERE person_slot.person_id=person.id LIMIT 1)", [ Position::TRAINING, $year ])
             ->orderBy('callsign');
 
         $rows = $sql->get();
