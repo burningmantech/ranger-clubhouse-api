@@ -131,7 +131,7 @@ class PersonEventInfo extends ApihouseResult
                 if (!$training->passed && $slot && $slot->ends->gt($training->ends)) {
                     $status->location = $slot->description;
                     $status->date = $slot->begins;
-                    if ($status->ends->gt($now)) {
+                    if ($slot->ends->gt($now)) {
                         $status->status = 'pending';
                     } else {
                         $status->status = 'fail';
