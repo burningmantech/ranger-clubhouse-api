@@ -11,6 +11,7 @@ use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
+use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
@@ -267,7 +268,8 @@ class TimesheetController extends ApiController
 
         $params = request()->validate([
             'person_id'    => 'required|integer',
-            'position_id'  => 'required|integer|exists:position,id'
+            'position_id'  => 'required|integer|exists:position,id',
+            'slot_id'      => 'sometimes|integer|exists:slot,id',
         ]);
 
         $personId = $params['person_id'];
@@ -319,6 +321,11 @@ class TimesheetController extends ApiController
         }
 
         $timesheet = new Timesheet($params);
+        if (!$timesheet->slot_id) {
+            // Try to associate a slot with the sign on
+            $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+        }
+
         $timesheet->setOnDutyToNow();
 
         if (!$timesheet->save()) {
@@ -658,6 +665,11 @@ class TimesheetController extends ApiController
                 $event = 'signoff';
                 $message = "bulk upload $positionTitle $signout";
                 break;
+            }
+
+            if (!$timesheet->slot_id) {
+                // Try to associate a sign up with the entry
+                $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
             }
 
             $isExisting = $timesheet->id ? true : false;
