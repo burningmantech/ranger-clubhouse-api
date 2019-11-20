@@ -119,6 +119,11 @@ class TimesheetMissingController extends ApiController
                     'position_id' => $timesheetMissing->new_position_id,
                 ]);
 
+                if (!$timesheet->slot_id) {
+                    // Try to associate a slot with the sign on
+                    $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($person->id, $timesheet->position_id, $timesheet->on_duty);
+                }
+
                 if (!$timesheet->save()) {
                     DB::rollback();
                     throw new \InvalidArgumentException('Failed to create new entry.');

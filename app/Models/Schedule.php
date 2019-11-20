@@ -352,6 +352,28 @@ class Schedule extends ApiModel
         });
     }
 
+    /**
+     * Find the (probable) slot sign up for a person based on the posiiton and time.
+     *
+     * @param integer $personId the person in question
+     * @param integer $positionId the position to search for
+     * @param string $begins the time to look for.
+     * @return mixed return the id of the slot found, or null if nothing.
+     */
+
+    public static function findSlotSignUpByPositionTime($personId, $positionId, $begins)
+    {
+        $signUp = PersonSlot::join('slot', function ($q) use ($begins) {
+            $q->on('slot.id', 'person_slot.slot_id');
+            $q->whereRaw('slot.begins BETWEEN DATE_SUB(?, INTERVAL 45 MINUTE) AND DATE_ADD(?, INTERVAL 45 MINUTE)',
+                        [ $begins, $begins ]);
+        })->where('person_id', $personId)
+        ->where('slot.position_id', $positionId)
+        ->first();
+
+        return $signUp ? $signUp->slot_id : null;
+    }
+
     /*
      * Does the person need to be motivated to work a weekend shift?
      */

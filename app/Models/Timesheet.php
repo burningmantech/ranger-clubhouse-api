@@ -3,18 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+
 use Carbon\Carbon;
 use App\Helpers\SqlHelper;
 
 use App\Lib\WorkSummary;
 
-use App\Models\ApiModel;
 use App\Helpers\DateHelper;
+
+use App\Models\ApiModel;
+use App\Models\Person;
 use App\Models\Position;
 use App\Models\PositionCredits;
-use App\Models\Person;
+use App\Models\Slot;
 
-use DB;
 
 class Timesheet extends ApiModel
 {
@@ -42,6 +45,7 @@ class Timesheet extends ApiModel
         'timesheet_confirmed_at',
         'timesheet_confirmed',
         'verified',
+        'slot_id'
     ];
 
     protected $rules = [
@@ -90,6 +94,11 @@ class Timesheet extends ApiModel
     public function position()
     {
         return $this->belongsTo(Position::class);
+    }
+
+    public function slot()
+    {
+        return $this->belongsTo(Slot::class);
     }
 
     public function loadRelationships()
