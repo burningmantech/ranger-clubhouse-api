@@ -21,7 +21,7 @@ class AddSlotIdToTimesheet extends Migration
         });
 
         // Pulling in all the timesheets will exceed the default memory limit
-        ini_set('memory_limit', '2G');
+        /*ini_set('memory_limit', '2G');
 
         $entries = Timesheet::all();
         foreach ($entries as $entry) {
@@ -29,7 +29,7 @@ class AddSlotIdToTimesheet extends Migration
             if ($entry->slot_id) {
                 $entry->saveWithoutValidation();
             }
-        }
+        }*/
     }
 
     /**
