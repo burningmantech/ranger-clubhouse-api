@@ -21,7 +21,7 @@
         "fzaninotto/faker": "~1.4",
         "laravel/tinker": "^1.0.6",
         "mockery/mockery": "~1.0",
-        "nunomaduro/collision": "~2.1",
+        "nunomaduro/collision": "~3.0",
         "orangehill/iseed": "^2.6",
         "phpunit/phpunit": "~8.0"
     },
