@@ -12,7 +12,7 @@
         "google/apiclient": "^2.2",
         "guzzlehttp/guzzle": "^6.3",
         "laravel/framework": "5.8.*",
-        "league/fractal": "^0.17.0",
+        "league/fractal": "^0.18.0",
         "twilio/sdk": "^5.24",
         "tymon/jwt-auth": "^1.0"
     },
