@@ -14,6 +14,8 @@ use Carbon\Carbon;
 
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Str;
+
 /*
  * Training is an inherited Position object with more things!
  */
@@ -789,6 +791,6 @@ class Training extends Position
 
     public function getSlugAttribute()
     {
-        return ($this->id == Position::TRAINING) ? 'dirt' : str_slug($this->title);
+        return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
     }
 }
