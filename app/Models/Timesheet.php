@@ -130,6 +130,7 @@ class Timesheet extends ApiModel
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
         $onDuty = $query['on_duty'] ?? false;
+        $dutyDate = $query['duty_date'] ?? null;
         $overHours = $query['over_hours'] ?? 0;
 
         if ($year) {
@@ -147,6 +148,11 @@ class Timesheet extends ApiModel
             if ($overHours) {
                 $sql->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, now()) >= ?", [ $overHours ]);
             }
+        }
+
+        if ($dutyDate) {
+            $sql->where('on_duty', '<=', $dutyDate);
+            $sql->whereRaw('IFNULL(off_duty, NOW()) >= ?', [ $dutyDate ]);
         }
 
         $rows = $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();

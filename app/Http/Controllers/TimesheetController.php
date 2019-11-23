@@ -31,6 +31,7 @@ class TimesheetController extends ApiController
             'person_id' => 'sometimes|numeric',
             'on_duty'   => 'sometimes|boolean',
             'over_hours' => 'sometimes|integer',
+            'duty_date' => 'sometimes|date',
         ]);
 
         $this->authorize('index', [ Timesheet::class, $params['person_id'] ?? null ]);
