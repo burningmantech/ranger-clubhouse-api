@@ -387,7 +387,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             } elseif (isset($query['search_fields'])) {
                 $fields = explode(',', $query['search_fields']);
 
-                $sql = self::where(function ($sql) use ($q,$fields,$likeQuery,$normalized, $metaphone) {
+                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
                             throw new \InvalidArgumentException("Search field '$field' is not allowed.");
@@ -534,7 +534,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'country',
             DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
             DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != ".Position::ALPHA." WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
-            )
+        )
             ->orderBy('country')
             ->orderBy('state')
             ->orderBy('city')
@@ -544,25 +544,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function retrievePeopleByRole()
     {
-        $roles = Role::with([ 'person_role.person:id,callsign' ])->orderBy('title')->get();
+        $roleGroups = DB::table('role')
+                ->select('role.id as role_id', 'role.title', 'person.id as person_id', 'person.callsign')
+                ->join('person_role', 'person_role.role_id', 'role.id')
+                ->join('person', 'person.id', 'person_role.person_id')
+                ->orderBy('callsign')
+                ->get()
+                ->groupBy('role_id');
 
-        return $roles->map(function ($row) {
-            $people = $row->person_role->sort(function ($a, $b) {
-                return strcasecmp($a->person ? $a->person->callsign : 'Person #'.$a->person_id, $b->person ? $b->person->callsign : 'Person #'.$b->person_id);
-            });
-
-            return [
-                'id'    => $row->id,
-                'title' => $row->title,
-                'people' => $people->map(function ($row) {
-                    $person = $row->person;
-                    return [
-                        'id' => $row->person_id,
-                        'callsign' => $person ? $person->callsign : 'Person #'.$row->person_id
-                    ];
-                })->values()
+        $roles = [];
+        foreach ($roleGroups as $roleId => $group) {
+            $roles[] = [
+                    'id'    => $roleId,
+                    'title' => $group[0]->title,
+                    'people' => $group->map(function ($row) {
+                        return [ 'id' => $row->person_id, 'callsign' => $row->callsign ];
+                    })->values()
             ];
-        })->values();
+        }
+
+        usort($roles, function ($a,$b) { return strcasecmp($a['title'], $b['title']); });
+        return $roles;
     }
 
     public static function retrievePeopleByStatus()
@@ -600,8 +602,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'callsign',
             'status',
             'email',
-                    DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
-                )->where('status', 'active')
+            DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
+        )->where('status', 'active')
                 ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year ])
                 ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 5, $year - 4])
                 ->orderBy('callsign')
@@ -614,8 +616,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'callsign',
             'status',
             'email',
-                    DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
-                )->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ])
+            DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
+        )->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ])
                 ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 5, $year ])
                 ->orderBy('callsign')
                 ->get()
@@ -648,8 +650,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'callsign',
             'status',
             'email',
-                    DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
-                )->whereIn('status', [ Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED ])
+            DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year')
+        )->whereIn('status', [ Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED ])
                 ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year])
                 ->orderBy('callsign')
                 ->get()
@@ -828,45 +830,45 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $changeReason = $reason . " new status $newStatus";
 
         switch ($newStatus) {
-        case Person::ACTIVE:
-            // grant the new ranger all the basic positions
-            $addIds = Position::where('all_rangers', true)->pluck('id');
-            PersonPosition::addIdsToPerson($personId, $addIds, $changeReason);
+            case Person::ACTIVE:
+                // grant the new ranger all the basic positions
+                $addIds = Position::where('all_rangers', true)->pluck('id');
+                PersonPosition::addIdsToPerson($personId, $addIds, $changeReason);
 
-            // Add login role
-            $addIds = Role::where('new_user_eligible', true)->pluck('id');
-            PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
+                // Add login role
+                $addIds = Role::where('new_user_eligible', true)->pluck('id');
+                PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
 
-            // First-year Alphas get the Dirt - Shiny Penny position
-            if ($oldStatus == Person::ALPHA) {
-                PersonPosition::addIdsToPerson($personId, [ Position::DIRT_SHINY_PENNY ], $changeReason);
-            }
-            break;
+                // First-year Alphas get the Dirt - Shiny Penny position
+                if ($oldStatus == Person::ALPHA) {
+                    PersonPosition::addIdsToPerson($personId, [ Position::DIRT_SHINY_PENNY ], $changeReason);
+                }
+                break;
 
-        case Person::ALPHA:
-            // grant the alpha the alpha position
-            PersonPosition::addIdsToPerson($personId, [ Position::ALPHA ], $changeReason);
-            break;
+            case Person::ALPHA:
+                // grant the alpha the alpha position
+                PersonPosition::addIdsToPerson($personId, [ Position::ALPHA ], $changeReason);
+                break;
 
-        case Person::UBERBONKED:
-        case Person::DECEASED:
-        case Person::DISMISSED:
-        case Person::RESIGNED:
-            // Remove all positions
-            PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+            case Person::UBERBONKED:
+            case Person::DECEASED:
+            case Person::DISMISSED:
+            case Person::RESIGNED:
+                // Remove all positions
+                PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
 
-            // Remove all roles
-            PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
+                // Remove all roles
+                PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
 
-            // Remove asset authorization and lock user out of system
-            $this->asset_authorized = 0;
-            $this->user_authorized = 0;
-            break;
+                // Remove asset authorization and lock user out of system
+                $this->asset_authorized = 0;
+                $this->user_authorized = 0;
+                break;
 
-        case Person::BONKED:
-            // Remove all positions
-            PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
-            break;
+            case Person::BONKED:
+                // Remove all positions
+                PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+                break;
 
         // Note that it used to be that changing status to INACTIVE
         // removed all of your positions other than "Training."  We decided
@@ -875,17 +877,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         // If you are one of the below, the only role you get is login
         // and position is Training
-        case Person::RETIRED:
-        case Person::AUDITOR:
-        case Person::PROSPECTIVE:
-        case Person::PROSPECTIVE_WAITLIST:
-        case Person::PAST_PROSPECTIVE:
-            // Remove all roles, and reset back to the default roles
-            PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
+            case Person::RETIRED:
+            case Person::AUDITOR:
+            case Person::PROSPECTIVE:
+            case Person::PROSPECTIVE_WAITLIST:
+            case Person::PAST_PROSPECTIVE:
+                // Remove all roles, and reset back to the default roles
+                PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
 
-            // Remove all positions, and reset back to the default positions
-            PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
-            break;
+                // Remove all positions, and reset back to the default positions
+                PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
+                break;
         }
 
         if ($oldStatus == Person::ALPHA) {
