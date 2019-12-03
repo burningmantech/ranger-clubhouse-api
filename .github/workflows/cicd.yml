@@ -65,7 +65,7 @@ jobs:
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax;
         env:
-          PHP: php7.2
+          PHP: php7.3.11
 
 
   docker:
