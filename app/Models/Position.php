@@ -212,6 +212,11 @@ class Position extends ApiModel
         'training_position_id'  => 'nullable|exists:position,id',
     ];
 
+    public function training_positions()
+    {
+        return $this->hasMany(Position::class, 'training_position_id');
+    }
+
     /*
      * Find all positions
      */

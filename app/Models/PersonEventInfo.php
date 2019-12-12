@@ -14,15 +14,6 @@ use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
 
-class TrainingStatus
-{
-    public $position_title;
-    public $position_id;
-    public $status;
-    public $location;
-    public $date;
-};
-
 class PersonEventInfo extends ApihouseResult
 {
     public $person_id;
@@ -55,7 +46,7 @@ class PersonEventInfo extends ApihouseResult
         $info->person_id = $personId;
         $info->year = $year;
 
-        $requireTraining = PersonPosition::findTrainingRequired($personId);
+        $requireTraining = PersonPosition::findTrainingPositions($personId);
         $trainings = TraineeStatus::findForPersonYear($personId, $year);
 
         $trained = [];
@@ -65,25 +56,27 @@ class PersonEventInfo extends ApihouseResult
 
         $info->trainings = [];
         $now = SqlHelper::now();
-        foreach ($requireTraining as $need) {
-            $status = new TrainingStatus;
-            $status->position_title = $need->title;
-            $status->position_id = $need->position_id;
 
-            $info->trainings[] = $status;
-            // TODO: Remove this at some point.
-            if ($need->position_id == Position::DIRT) {
-                $need->training_position_id = Position::TRAINING;
-            }
+        $trainingPositions = [];
 
-            $training = $trained[$need->training_position_id] ?? null;
+        foreach ($requireTraining as $position) {
+            $trainingPositionId = $position->id;
+            $status = (object) [
+                'position_id'    => $trainingPositionId,
+                'position_title' => $position->title,
+                'date'           => null,
+                'status'         => null,
+                'location'       => null,
+            ];
+
+            $training = $trained[$trainingPositionId] ?? null;
 
             // TODO: Support multiple ART training positions
-            if (!$training && $need->training_position_id == Position::HQ_FULL_TRAINING) {
+            if (!$training && $trainingPositionId == Position::HQ_FULL_TRAINING) {
                 $training = $trained[Position::HQ_REFRESHER_TRAINING] ?? null;
             }
 
-            $teachingPositions = Position::TRAINERS[$need->training_position_id] ?? null;
+            $teachingPositions = Position::TRAINERS[$trainingPositionId] ?? null;
             if ($teachingPositions) {
                 $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
                 $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
@@ -93,14 +86,14 @@ class PersonEventInfo extends ApihouseResult
             }
 
             if (!$training || !$training->passed) {
-                $positions = [ $need->training_position_id ];
+                $ids = [ $trainingPositionId ];
 
                 // TODO: Support multiple ART training positions
-                if ($need->training_position_id == Position::HQ_FULL_TRAINING) {
-                    $positions[] = Position::HQ_REFRESHER_TRAINING;
+                if ($trainingPositionId == Position::HQ_FULL_TRAINING) {
+                    $ids[] = Position::HQ_REFRESHER_TRAINING;
                 }
                 $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
-                        ->whereIn('position_id', $positions)
+                        ->whereIn('position_id', $ids)
                         ->whereYear('begins', $year)
                         ->where('person_slot.person_id', $personId)
                         ->orderBy('begins', 'desc')
@@ -125,7 +118,7 @@ class PersonEventInfo extends ApihouseResult
                 $status->date = $trainer->begins;
                 $status->is_trainer = true;
                 $status->status = 'pass';
-            }  else if ($training) {
+            } elseif ($training) {
                 // If the person did not pass, BUT there is a later sign up
                 // use the later sign up.
                 if (!$training->passed && $slot && $slot->ends->gt($training->ends)) {
@@ -157,7 +150,7 @@ class PersonEventInfo extends ApihouseResult
                     // Session has passed, fail it.
                     $status->status = 'fail';
                 }
-            } else if ($teachingPositions && !$taught->isEmpty()) {
+            } elseif ($teachingPositions && !$taught->isEmpty()) {
                 // find the first pending session
                 $slot = $taught->firstWhere('status', null);
                 if (!$slot) {
@@ -181,6 +174,52 @@ class PersonEventInfo extends ApihouseResult
             if ($status->date) {
                 $status->date = (string) $status->date;
             }
+
+            $hasMentee = false;
+            $status->required_by = $position->training_positions->map(function ($r) use (&$hasMentee) {
+                return [ 'id' => $r->id, 'title' => $r->title ];
+            })->sortBy('title')->values();
+
+            if ($trainingPositionId == Position::GREEN_DOT_TRAINING
+            && $status->status != 'no-shift') {
+                $status->is_green_dot_pnv = !PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
+                if ($status->is_green_dot_pnv) {
+                    // Check to see if the person has signed up for or worked a GD mentee shift.
+                    $status->mentee_slot = Slot::findFirstSignUp($personId, Position::GREEN_DOT_MENTEE, $year);
+                    $status->mentee_timesheet = Timesheet::findLatestForPersonPosition($personId, Position::GREEN_DOT_MENTEE, $year);
+                }
+            }
+
+            if ($status->required_by->isEmpty()) {
+                /*
+                 * Person could be a prospective ART ranger. An ART training is available, yet
+                 * holds no ART positions which requires training.
+                 * Let the user know which positions might require training
+                 */
+
+                $requires = null;
+                switch ($trainingPositionId) {
+                    case Position::GREEN_DOT_TRAINING:
+                        $requires = [ 'id' => Position::GREEN_DOT_MENTEE, 'title' => 'Green Dot Mentee' ];
+                        break;
+                    case Position::SANDMAN_TRAINING:
+                        $requires = [ 'id' => Position::SANDMAN, 'title' => 'Sandman' ];
+                        break;
+                    case Position::TOW_TRUCK_TRAINING:
+                        $requires = [ 'id' => Position::TOW_TRUCK_MENTEE, 'title' => 'Tow Truck Mentee' ];
+                        break;
+                    case Position::HQ_FULL_TRAINING:
+                        $requires = [ 'id' => Position::HQ_WINDOW, 'title' => 'HQ Window' ];
+                        break;
+                }
+
+                if ($requires) {
+                    $requires['not_granted'] = true;
+                    $status->required_by = [ $requires ];
+                }
+            }
+
+            $info->trainings[] = $status;
         }
 
         usort($info->trainings, function ($a, $b) {

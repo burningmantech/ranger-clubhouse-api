@@ -60,23 +60,28 @@ class Slot extends ApiModel
         'begins',
     ];
 
-    public function position() {
+    public function position()
+    {
         return $this->belongsTo(Position::class, 'position_id');
     }
 
-    public function trainer_slot() {
+    public function trainer_slot()
+    {
         return $this->belongsTo(Slot::class, 'trainer_slot_id');
     }
 
-    public function person_slot() {
+    public function person_slot()
+    {
         return $this->hasMany(PersonSlot::class);
     }
 
-    public function trainer_status() {
+    public function trainer_status()
+    {
         return $this->hasMany(TrainerStatus::class, 'trainer_slot_id');
     }
 
-    public static function findForQuery($query) {
+    public static function findForQuery($query)
+    {
         $sql = self::baseSql();
 
         if (isset($query['year'])) {
@@ -98,21 +103,24 @@ class Slot extends ApiModel
         return $sql->orderBy('begins')->get();
     }
 
-    public static function baseSql() {
+    public static function baseSql()
+    {
         return self::select(
-                'slot.*',
-                DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
-                DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'),
-                DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
-            )
+            'slot.*',
+            DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
+            DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'),
+            DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
+        )
             ->with(self::WITH_POSITION_TRAINER);
     }
 
-    public static function find($slotId) {
+    public static function find($slotId)
+    {
         return self::baseSql()->where('id', $slotId)->first();
     }
 
-    public static function findOrFail($slotId) {
+    public static function findOrFail($slotId)
+    {
         return self::baseSql()->where('id', $slotId)->firstOrFail();
     }
 
@@ -125,7 +133,8 @@ class Slot extends ApiModel
                 ->get();
     }
 
-    public static function findSignUps($slotId, $includeOnDuty = false) {
+    public static function findSignUps($slotId, $includeOnDuty = false)
+    {
         $rows = DB::table('person_slot')
             ->select('person.id', 'person.callsign')
             ->join('person', 'person.id', '=', 'person_slot.person_id')
@@ -156,7 +165,25 @@ class Slot extends ApiModel
         return $rows;
     }
 
-    public static function findYears() {
+
+    /*
+     * Find the first slot signed up for by a person and position in a given year
+     */
+
+    public static function findFirstSignUp($personId, $positionId, $year)
+    {
+        return self::join('person_slot', function ($q) use ($personId) {
+                $q->on('person_slot.slot_id', 'slot.id');
+                $q->where('person_slot.person_id', $personId);
+            })->where('position_id', $positionId)
+            ->whereYear('begins', $year)
+            ->where('slot.position_id', $positionId)
+            ->orderBy('begins')
+            ->first();
+    }
+
+    public static function findYears()
+    {
         return self::selectRaw('YEAR(begins) as year')
                 ->groupBy(DB::raw('YEAR(begins)'))
                 ->pluck('year')->toArray();
@@ -165,7 +192,7 @@ class Slot extends ApiModel
     public static function retrieveDirtTimes($year)
     {
         $rows = DB::table('slot')
-            ->select('position_id','begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
+            ->select('position_id', 'begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
             ->whereYear('begins', $year)
             ->whereIn('position_id', [ Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT])
             ->orderBy('begins')
@@ -239,7 +266,7 @@ class Slot extends ApiModel
             'position.id AS position_id',
             DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id) AS years')
         )
-        ->join('person_slot', 'person_slot.slot_id','=','slot.id')
+        ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
         ->join('person', 'person.id', '=', 'person_slot.person_id')
         ->join('position', 'position.id', '=', 'slot.position_id')
         ->orderBy('slot.begins')
@@ -248,23 +275,23 @@ class Slot extends ApiModel
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
 
         switch ($type) {
-        case 'non-dirt':
-            $sql->whereNotIn('slot.position_id', [
+            case 'non-dirt':
+                $sql->whereNotIn('slot.position_id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
                 Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
-            ])->where('position.type', '=', 'Frontline');
-            break;
+                ])->where('position.type', '=', 'Frontline');
+                break;
 
-        case 'command':
-            $sql->where('position.type', 'Command');
-            break;
+            case 'command':
+                $sql->where('position.type', 'Command');
+                break;
 
-        case 'dirt+green':
-            $sql->whereIn('slot.position_id', [
+            case 'dirt+green':
+                $sql->whereIn('slot.position_id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
                 Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
-            ])->orderBy('years', 'desc');
-            break;
+                ])->orderBy('years', 'desc');
+                break;
         }
 
         $sql->orderBy('callsign');
@@ -307,7 +334,7 @@ class Slot extends ApiModel
 
                 // The check for the mentee shift is a hack to prevent past years from showing
                 // a GD Mentee as a qualified GD.
-                if ($haveGDPosition ) {
+                if ($haveGDPosition) {
                     $person->is_greendot = Training::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
                     if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
                         $person->is_greendot = false; // just in case
@@ -327,10 +354,10 @@ class Slot extends ApiModel
         return $people;
     }
 
-    public static function countGreenDotsScheduled($shiftStart, $shiftEnd, $femaleOnly=false)
+    public static function countGreenDotsScheduled($shiftStart, $shiftEnd, $femaleOnly = false)
     {
         $sql = DB::table('slot')
-        ->join('person_slot', 'person_slot.slot_id','=','slot.id')
+        ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
         ->join('person', 'person.id', '=', 'person_slot.person_id')
         ->whereIn('slot.position_id', [ Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR ]);
 
@@ -369,11 +396,13 @@ class Slot extends ApiModel
     }
 
 
-    public function getPositionTitleAttribute() {
+    public function getPositionTitleAttribute()
+    {
         return $this->position ? $this->position->title : "Position #{$this->position_id}";
     }
 
-    public function loadRelationships() {
+    public function loadRelationships()
+    {
         $this->load(self::WITH_POSITION_TRAINER);
     }
 
@@ -382,7 +411,8 @@ class Slot extends ApiModel
         return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
     }
 
-    public function isTraining() {
+    public function isTraining()
+    {
         $position = $this->position;
         if ($position == null) {
             return false;
@@ -391,7 +421,8 @@ class Slot extends ApiModel
         return $position->type == "Training" && stripos($position->title, "trainer") === false;
     }
 
-    public function isArt() {
+    public function isArt()
+    {
         return ($this->position_id != Position::TRAINING);
     }
 
@@ -399,43 +430,47 @@ class Slot extends ApiModel
      * Humanized datetime formats - for sending emails
      */
 
-     public function getBeginsHumanFormatAttribute() {
-         return $this->begins->format('l M d Y @ H:i');
-     }
+    public function getBeginsHumanFormatAttribute()
+    {
+        return $this->begins->format('l M d Y @ H:i');
+    }
 
-     public function getEndsHumanFormatAttribute() {
-         return $this->ends->format('l M d Y @ H:i');
-     }
+    public function getEndsHumanFormatAttribute()
+    {
+        return $this->ends->format('l M d Y @ H:i');
+    }
 
      /*
       * Check to see if the slot begins within the pre-event period and
       * is not a training slot
       */
 
-      public function isPreEventRestricted() {
-          if (!$this->begins || !$this->position_id) {
-              return false;
-          }
+    public function isPreEventRestricted()
+    {
+        if (!$this->begins || !$this->position_id) {
+            return false;
+        }
 
-          $eventDate = EventDate::findForYear($this->begins->year);
+        $eventDate = EventDate::findForYear($this->begins->year);
 
-          if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {
-              return false;
-          }
+        if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {
+            return false;
+        }
 
-          if ($this->begins->lt($eventDate->pre_event_slot_start) || $this->begins->gte($eventDate->pre_event_slot_end)) {
-              // Outside of Pre-Event period
-              return false;
-          }
+        if ($this->begins->lt($eventDate->pre_event_slot_start) || $this->begins->gte($eventDate->pre_event_slot_end)) {
+            // Outside of Pre-Event period
+            return false;
+        }
 
-          return !$this->isTraining();
-      }
+        return !$this->isTraining();
+    }
 
     /*
      * Find and return the session part number if it exists.
      */
 
-    public static function sessionGroupPart($description) {
+    public static function sessionGroupPart($description)
+    {
         $matched = preg_match('/\bPart (\d)\b/i', $description, $matches);
 
         if (!$matched) {
@@ -451,7 +486,8 @@ class Slot extends ApiModel
      * "Pre-Event - Part 1" becomes "Pre-Event"
      */
 
-    public static function sessionGroupName($description) {
+    public static function sessionGroupName($description)
+    {
         $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
         return $matched ? $matches[1] : null;
     }
@@ -459,7 +495,8 @@ class Slot extends ApiModel
     /*
      * Is the slot part of a session group?
      */
-    public static function isPartOfSessionGroup($ourDescription, $theirDescription) {
+    public static function isPartOfSessionGroup($ourDescription, $theirDescription)
+    {
         return (self::sessionGroupPart($ourDescription)
                 && self::sessionGroupPart($theirDescription)
                 && self::sessionGroupName($ourDescription) == self::sessionGroupName($theirDescription));
