@@ -102,6 +102,7 @@ COPY --from=build /var/www/application /var/www/application
 
 # Copy start-nginx script and override supervisor config to use it
 COPY ./docker/start-nginx /usr/bin/start-nginx
+COPY ./docker/clubhouse-worker /usr/bin/clubhouse-worker
 COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 
 # Replace Nginx default site config
