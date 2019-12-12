@@ -18,4 +18,5 @@ exec docker run                 \
     --env-file="${env_file}"    \
     --publish=8000:80           \
     "${image_name}"             \
+    "$@"
     ;

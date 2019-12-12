@@ -1,0 +1,10 @@
+#!/bin/sh
+
+#
+# Start Clubhouse background worker
+#
+
+set -eu
+
+echo "Starting Clubhouse background worker...";
+php artisan queue:work;
