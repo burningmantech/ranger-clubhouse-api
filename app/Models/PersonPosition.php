@@ -40,23 +40,20 @@ class PersonPosition extends ApiModel
      * Return a list of positions that need training
      */
 
-    public static function findTrainingRequired($personId) {
-        $rows = self::select('position.id as position_id', 'position.title', 'position.training_position_id')
-                ->join('position', 'position.id', '=', 'person_position.position_id')
-                ->where('person_id', $personId)
-                ->where(function($query) {
-                    $query->whereNotNull('position.training_position_id')
-                    ->orWhere('position.id', Position::DIRT);
-                })->get();
-
-        // Always include DIRT
-        if (!$rows->contains('position_id', Position::DIRT)) {
-            $rows->prepend((object) [
-                'position_id'          => Position::DIRT,
-                'title'                => 'Dirt',
-                'training_position_id' => Position::TRAINING
-            ]);
-        }
+    public static function findTrainingPositions($personId) {
+        $rows = Position::where('type', 'Training')
+                ->join('person_position', 'person_position.position_id', 'position.id')
+                ->where('person_position.person_id', $personId)
+                ->where(function ($q) {
+                    $q->where('position.id', Position::TRAINING);
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM position trainposition WHERE trainposition.training_position_id=position.id LIMIT 1)');
+                })
+                ->orderBy('title')
+                ->with([
+                    'training_positions' => function($q) use ($personId) {
+                        $q->whereRaw('id IN (SELECT position_id FROM person_position WHERE person_position.person_id=?)', [ $personId ]);
+                    }])
+                ->get();
 
         return $rows;
     }

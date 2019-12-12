@@ -264,6 +264,19 @@ class Timesheet extends ApiModel
     }
 
     /*
+     * Find the latest timesheet entry for a person in a position and given year
+     */
+
+     public static function findLatestForPersonPosition($personId, $positionId, $year)
+     {
+         return self::where('person_id', $personId)
+            ->where('position_id', $positionId)
+            ->whereYear('on_duty', $year)
+            ->orderBy('on_duty', 'desc')
+            ->first();
+     }
+
+    /*
      * Find out how many years list of people have rangered.
      *
      * If the person has never rangered for whatever reason that person
