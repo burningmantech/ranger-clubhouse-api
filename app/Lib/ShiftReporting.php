@@ -261,7 +261,7 @@ class ShiftReporting
             return $sql->count('person.id');
         }
 
-        $rows = $sql->select('person.id', 'callsign', 'slot.begins', 'slot.ends', 'slot.position_id')
+        $rows = $sql->select('person.id', 'callsign', 'callsign_pronounce', 'slot.begins', 'slot.ends', 'slot.position_id')
                 ->orderBy('slot.begins')
                 ->orderBy('slot.ends', 'desc')
                 ->orderBy('person.callsign')
@@ -274,11 +274,17 @@ class ShiftReporting
 
         foreach ($groups as $begins => $rows) {
             $people = $rows->map(function ($row) use ($parenthetical) {
-                return [
+                $i =  [
                     'id'       => $row->id,
                     'callsign' => $row->callsign,
                     'parenthetical' => $parenthetical[$row->position_id] ?? '',
                 ];
+
+                if (!empty($row->callsign_pronounce)) {
+                    $i['callsign_pronounce'] = $row->callsign_pronounce;
+                }
+
+                return $i;
             });
 
             $shifts[] = [

@@ -46,6 +46,7 @@ class PersonFilter
         'mi',
         'last_name',
         'gender',
+        'callsign_pronounce'
     ];
 
     const CALLSIGNS_FIELDS = [
