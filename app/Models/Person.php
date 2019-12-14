@@ -131,6 +131,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'callsign',
         'callsign_approved',
         'formerly_known_as',
+        'callsign_pronounce',
+
         'vintage',
 
         'behavioral_agreement',
@@ -211,6 +213,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     protected $rules = [
         'callsign'   => 'required|string|max:64',
+        'callsign_pronounce' => 'sometimes|string|nullable|max:200',
         'status'     => 'required|string',
         'formerly_known_as' => 'sometimes|string|nullable|max:200',
 
