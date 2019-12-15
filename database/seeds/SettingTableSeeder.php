@@ -66,7 +66,6 @@ class SettingTableSeeder extends Seeder
         \DB::table('setting')->insert([ 'name' => 'TicketsAndStuffEnablePNV', 'value' => 'false' ]);
         \DB::table('setting')->insert([ 'name' => 'TimesheetCorrectionEnable',  'value' => 'true'  ]);
         \DB::table('setting')->insert([ 'name' => 'TimesheetCorrectionYear',  'value' => '2018' ]);
-        \DB::table('setting')->insert([ 'name' => 'TrainingFullEmail',  'value' => 'ranger-trainingacademy-list@burningman.org' ]);
         \DB::table('setting')->insert([ 'name' => 'TrainingSignupFromEmail', 'value' => 'do-no-reply@burningman.org' ]);
         \DB::table('setting')->insert([ 'name' => 'VCEmail',  'value' => 'ranger-vc-list@burningman.org' ]);
         \DB::table('setting')->insert([ 'name' => 'YrTicketThreshold',  'value' => '2019' ]);

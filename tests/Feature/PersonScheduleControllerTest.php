@@ -36,7 +36,6 @@ class PersonScheduleControllerTest extends TestCase
         parent::setUp();
 
         $this->setting('ManualReviewDisabledAllowSignups', false);
-        $this->setting('TrainingFullEmail', 'full@example.com');
         $this->signInUser();
 
         // scheduling ends up sending lots of emails..
@@ -51,6 +50,8 @@ class PersonScheduleControllerTest extends TestCase
                 'id'    => Position::TRAINING,
                 'title' => 'Training',
                 'type'  => 'Training',
+                'slot_full_email' => 'training-academy@example.com',
+                'prevent_multiple_enrollments' => true,
             ]
         );
 
@@ -68,6 +69,8 @@ class PersonScheduleControllerTest extends TestCase
                 'id'    => Position::GREEN_DOT_TRAINING,
                 'title' => 'Green Dot - Training',
                 'type'  => 'Training',
+                'slot_full_email' => 'greendots@example.com',
+                'prevent_multiple_enrollments' => true,
             ]
         );
 

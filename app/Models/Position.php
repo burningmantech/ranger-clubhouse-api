@@ -191,7 +191,9 @@ class Position extends ApiModel
         'min',
         'new_user_eligible',
         'on_sl_report',
+        'prevent_multiple_enrollments',
         'short_title',
+        'slot_full_email',
         'title',
         'training_position_id',
         'type',
@@ -202,6 +204,7 @@ class Position extends ApiModel
         'auto_signout'      => 'bool',
         'new_user_eligible' => 'bool',
         'on_sl_report'      => 'bool',
+        'prevent_multiple_enrollments' => 'bool'
     ];
 
     protected $rules = [
@@ -209,7 +212,7 @@ class Position extends ApiModel
         'short_title' => 'sometimes|string|max:6|nullable',
         'min'   => 'integer',
         'max'   => 'integer',
-        'training_position_id'  => 'nullable|exists:position,id',
+        'training_position_id'  => 'nullable|exists:position,id'
     ];
 
     public function training_positions()

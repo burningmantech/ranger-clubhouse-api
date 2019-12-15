@@ -509,11 +509,6 @@ class Setting extends ApiModel
             'type' => 'email',
         ],
 
-        'TrainingFullEmail' => [
-            'description' => 'Email address to alert when training session is full.',
-            'type' => 'email',
-        ],
-
         'TrainingSignupFromEmail' => [
             'description' => 'From email address for training sign up messages',
             'type' => 'email',
