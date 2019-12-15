@@ -109,7 +109,9 @@ class PersonScheduleController extends ApiController
 
         list($canForce, $isTrainer) = $this->canForceScheduleChange($slot);
 
+        $preventMultipleEnrollments = $slot->position->prevent_multiple_enrollments;
         if ($slot->isTraining()
+        && $preventMultipleEnrollments
         && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
             if ($isTrainer) {
                 $trainerForced = true;
@@ -133,6 +135,7 @@ class PersonScheduleController extends ApiController
             }
             $multipleEnrollmentForced = true;
         } elseif ($slot->position_id == Position::ALPHA
+            && $preventMultipleEnrollments
             && Schedule::haveMultipleEnrollments($person->id, Position::ALPHA, $slot->begins->year, $enrollments)) {
             // Alpha is enrolled multiple times.
             if (!$canForce) {
@@ -199,17 +202,15 @@ class PersonScheduleController extends ApiController
                 $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
                 mail_to($person->email, $message);
             }
-            /*else {
-                $message = new SlotSignup($slot, setting('ShiftSignupFromEmail'));
-            }*/
-
 
             $signedUp = $result['signed_up'];
 
             // Is the training slot at capacity?
-            if ($slot->isTraining() && $signedUp >= $slot->max && !$slot->has_started) {
-                // fire off an email letting the Training Acamedy know
-                mail_to(setting('TrainingFullEmail'), new TrainingSessionFullMail($slot, $signedUp));
+            if ($slot->isTraining()
+            && $signedUp >= $slot->max && !$slot->has_started
+            && !empty($slot->position->slot_full_email)) {
+                // fire off an email letting the TA or ART team know a session has become full.
+                mail_to($slot->position->slot_full_email, new TrainingSessionFullMail($slot, $signedUp));
             }
 
             $response = [
