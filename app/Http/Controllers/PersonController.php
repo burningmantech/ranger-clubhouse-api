@@ -140,23 +140,22 @@ class PersonController extends ApiController
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
 
-        // The callsign approval can only be unset if the person is not a ranger
-        /*
-         * Feb 2019 Per VC request callsign_approved is allowed to be changed anytime.
-         * The client will confirm with the user.
-         */
-//        if ($person->isDirty('callsign_approved')
-//            && !$person->callsign_approved
-//            && !in_array($person->status, [ "prospective", "past prospective", "alpha"])
-//        ) {
-//            throw new \InvalidArgumentException('callsign_approved can not be unset once approved and status is not prospecitve, past prospecitve, or alpha.');
-//        }
-
         $statusChanged = false;
         if ($person->isDirty('status')) {
             $statusChanged = true;
             $newStatus = $person->status;
             $oldStatus = $person->getOriginal('status');
+
+            /*
+             * When the status is updated to Past Prospecitve and the callsign is
+             * not being changed, reset the the callsign and unapprove it.
+             */
+
+            if ($newStatus == Person::PAST_PROSPECTIVE
+            && !$person->isDirty('callsign')) {
+                $person->resetCallsign();
+                $person->callsign_approved = false;
+            }
         }
 
         $emailChanged = false;
