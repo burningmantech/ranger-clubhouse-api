@@ -288,6 +288,33 @@ class PersonControllerTest extends TestCase
     }
 
     /**
+     * Test success on changing the status to past prospective
+     */
+
+
+    public function testPastProspectiveStatus()
+    {
+        $this->addRole(Role::ADMIN);
+        $person = factory(Person::class)->create();
+
+        $oldCallsign = $person->callsign;
+        $personId = $person->id;
+        $response = $this->putPerson($person, [ 'status' => Person::PAST_PROSPECTIVE ]);
+
+        $newCallsign = $person->last_name . substr($person->first_name, 0,1) . (current_year() % 100);
+        $response->assertStatus(200);
+        $this->assertDatabaseHas(
+            'person',
+            [
+                'id'                => $personId,
+                'callsign_approved' => false,
+                'callsign'          => $newCallsign,
+                'formerly_known_as' => $oldCallsign
+            ]
+        );
+    }
+
+    /**
      * Test updating formerly_known_as when callsign is changed
      */
 
