@@ -146,16 +146,6 @@ class PersonController extends ApiController
             $newStatus = $person->status;
             $oldStatus = $person->getOriginal('status');
 
-            /*
-             * When the status is updated to Past Prospecitve and the callsign is
-             * not being changed, reset the the callsign and unapprove it.
-             */
-
-            if ($newStatus == Person::PAST_PROSPECTIVE
-            && !$person->isDirty('callsign')) {
-                $person->resetCallsign();
-                $person->callsign_approved = false;
-            }
         }
 
         $emailChanged = false;
