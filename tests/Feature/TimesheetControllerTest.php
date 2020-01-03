@@ -242,7 +242,7 @@ class TimesheetControllerTest extends TestCase
               'timesheet_id'    => $timesheetId,
               'action'          => 'update',
               'create_person_id' => $this->user->id,
-              'message'         => "on duty old 2019-08-25 06:00:00 new 2019-09-10 00:00:00, off duty old 2019-08-25 12:00:00 new 2019-09-10 13:00:00, position old Dirt new HQ Window",
+              'message'         => "on duty old $year-08-25 06:00:00 new $year-09-10 00:00:00, off duty old $year-08-25 12:00:00 new $year-09-10 13:00:00, position old Dirt new HQ Window",
           ]);
     }
 
