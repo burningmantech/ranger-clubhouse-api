@@ -30,6 +30,8 @@ class PersonFilter
         'create_date',
         'timestamp',
         'sfuid',
+        'logged_in_at',
+        'last_seen_at'
     ];
 
     const ROLES_FIELDS = [
@@ -74,7 +76,8 @@ class PersonFilter
         'longsleeveshirt_size_style',
         'teeshirt_size_style',
 
-        'languages'
+        'languages',
+        'has_reviewed_pi'
     ];
 
     const HQ_INFO = [

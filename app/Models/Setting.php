@@ -182,6 +182,11 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
+        'MentorEmail' => [
+            'description' => 'Mentor Cadre email. Shown to Alphas when suggesting contacting the cadre.',
+            'type' => 'email'
+        ],
+
         'MotorpoolPolicyEnable' => [
             'description' => 'Enable Motorpool Policy Page',
             'type' => 'bool',
@@ -190,6 +195,11 @@ class Setting extends ApiModel
         'OnPlaya' => [
             'description' => 'Enable server relocated to playa notification (unsupported currently)',
             'type' => 'bool',
+        ],
+
+        'OnboardAlphaShiftPrepLink' => [
+            'description' => 'Used by the Onboarding Checklist for PNVs. Link to how to prep for your Alpha Shift in the Ranger Manual',
+            'type' => 'string'
         ],
 
         'PNVWaitList' => [

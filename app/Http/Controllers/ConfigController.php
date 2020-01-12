@@ -16,6 +16,7 @@ class ConfigController extends Controller
         'AdminEmail',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',
+        'MentorEmail',
         'MealDates',
         'MealInfoAvailable',
         'MotorpoolPolicyEnable',

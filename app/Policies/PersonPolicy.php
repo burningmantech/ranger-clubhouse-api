@@ -52,6 +52,23 @@ class PersonPolicy
      */
     public function update(Person $user, Person $person)
     {
+        $status = $person->status;
+
+        /*
+         * Do not allow a person to be updated by a non-Admin
+         * when the status is problematic.
+         */
+
+        if (($person->user_authorized == false
+        || $status == Person::DECEASED
+        || $status == Person::DISMISSED
+        || $status == Person::UBERBONKED
+        || $status == Person::SUSPENDED
+        || $status == Person::RESIGNED)
+        && !$user->isAdmin())  {
+            return false;
+        }
+
         if ($user->id == $person->id) {
             return true;
         }

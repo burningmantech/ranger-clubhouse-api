@@ -31,10 +31,10 @@ class TraineeStatus extends ApiModel
      * @return Illuminate\Database\Eloquent\Collection
      */
 
-    public static function findForPersonYear($personId, $year)
+    public static function findForPersonYear($personId, $year, $positionId = null)
     {
         // Find the first training that passed
-        return self::join('slot', 'slot.id', 'trainee_status.slot_id')
+        $sql = self::join('slot', 'slot.id', 'trainee_status.slot_id')
                 // Ensure the person is actually signed up
                 ->join('person_slot', function ($q) use ($personId)  {
                     $q->on('person_slot.slot_id', 'trainee_status.slot_id');
@@ -43,8 +43,13 @@ class TraineeStatus extends ApiModel
                 ->where('trainee_status.person_id', $personId)
                 ->whereYear('slot.begins', $year)
                 ->orderBy('trainee_status.passed', 'asc')
-                ->orderBy('slot.begins')
-                ->get();
+                ->orderBy('slot.begins');
+
+        if ($positionId) {
+            $sql->where('slot.position_id', $positionId);
+        }
+
+        return $sql->get();
 
     }
 

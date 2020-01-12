@@ -80,6 +80,11 @@ class Slot extends ApiModel
         return $this->hasMany(TrainerStatus::class, 'trainer_slot_id');
     }
 
+    public function trainee_statuses()
+    {
+        return $this->hasMany(TraineeStatus::class);
+    }
+
     public static function findForQuery($query)
     {
         $sql = self::baseSql();
@@ -182,11 +187,32 @@ class Slot extends ApiModel
             ->first();
     }
 
+    /**
+     * Find all the years we have slots for
+     *
+     * @return array list of years
+     */
+
     public static function findYears()
     {
         return self::selectRaw('YEAR(begins) as year')
                 ->groupBy(DB::raw('YEAR(begins)'))
                 ->pluck('year')->toArray();
+    }
+
+    /**
+     * Check to see if an activated slot exists for a given position in the
+     * current year.
+     *
+     * @param integer $positionId Position to find
+     * @param bool true if a slot was found.
+     */
+
+    public static function haveActiveForPosition($positionId) {
+        return self::whereYear('begins', current_year())
+                ->where('position_id', $positionId)
+                ->where('active', true)
+                ->exists();
     }
 
     public static function retrieveDirtTimes($year)

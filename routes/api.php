@@ -165,6 +165,7 @@ Route::group([
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/credits', 'PersonController@credits');
+    Route::get('person/{person}/milestones', 'PersonController@milestones');
     Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/recommendations', 'PersonScheduleController@recommendations');
@@ -184,6 +185,7 @@ Route::group([
     Route::get('person/{person}/user-info', 'PersonController@userInfo');
     Route::get('person/{person}/unread-message-count', 'PersonController@UnreadMessageCount');
     Route::get('person/{person}/event-info', 'PersonController@eventInfo');
+    Route::post('person/{person}/onboard-debug', 'PersonController@onboardDebug');
 
     Route::resource('person', 'PersonController', [ 'only' => [ 'index','show','store','update','destroy' ]]);
 
