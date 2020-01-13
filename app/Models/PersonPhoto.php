@@ -16,6 +16,15 @@ class PersonPhoto extends ApiModel
         'lambase_date'
     ];
 
+    public static function retrieveStatus($personId) {
+        $photo = self::where('person_id', $personId)->first();
+        if ($photo == null) {
+            return 'missing';
+        }
+
+        return $photo->status;
+    }
+
     public function isApproved() {
         return $this->status == 'approved';
     }

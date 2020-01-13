@@ -270,7 +270,7 @@ class Schedule extends ApiModel
 
     public static function haveMultipleEnrollments($personId, $positionId, $year, & $enrollments)
     {
-        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
+        $slotIds = self::findEnrolledSlotIds($personId. $year, $positionId);
 
         if ($slotIds->isEmpty()) {
             $enrollments = null;
@@ -295,7 +295,7 @@ class Schedule extends ApiModel
         $year = $slot->begins->year;
         $positionId = $slot->position_id;
 
-        $slotIds = self::findEnrolledSlotIds($positionId, $year, $personId);
+        $slotIds = self::findEnrolledSlotIds($personId, $year, $positionId);
         if ($slotIds->isEmpty()) {
             // Good to go!
             return true;
@@ -318,14 +318,20 @@ class Schedule extends ApiModel
         return false;
     }
 
-    public static function findEnrolledSlotIds($positionId, $year, $personId)
+    public static function findEnrolledSlotIds($personId, $year, $positionId)
+    {
+        return self::findEnrolledSlots($personId, $year, $positionId)->pluck('slot_id');
+    }
+
+    public static function findEnrolledSlots($personId, $year, $positionId)
     {
         return PersonSlot::where('person_slot.person_id', $personId)
                     ->join('slot', function ($query) use ($positionId, $year) {
                         $query->whereRaw('slot.id=person_slot.slot_id');
                         $query->where('slot.position_id', $positionId);
                         $query->whereYear('slot.begins', $year);
-                    })->get()->pluck('slot_id');
+                    })->orderBy('slot.begins')
+                    ->get();
     }
 
     public static function retrieveStartingSlotsForPerson($personId)

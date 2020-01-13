@@ -406,6 +406,10 @@ class PersonScheduleController extends ApiController
 */
 
 
+        if (($status == Person::AUDITOR || $status == Person::PROSPECTIVE || $status == Person::ALPHA) && !$person->has_reviewed_pi) {
+            // PNV & Auditors must review their personal info first
+            $canSignUpForShifts = false;
+        }
         // 2019 Council request - encourage weekend sign ups
         $recommendWeekendShift = Schedule::recommendBurnWeekendShift($person);
 
@@ -431,6 +435,8 @@ class PersonScheduleController extends ApiController
 
             // Not a hard requirement, just a suggestion
             'recommend_burn_weekend_shift'    => $recommendWeekendShift,
+
+            'has_reviewed_pi' => $person->has_reviewed_pi,
         ];
 
         return response()->json([ 'permission' => $results ]);

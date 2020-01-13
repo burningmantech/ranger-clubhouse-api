@@ -114,8 +114,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'create_date'                 => 'datetime',
         'date_verified'               => 'date',
         'status_date'                 => 'date',
-        'message_updated_at'             => 'datetime',
+        'message_updated_at'          => 'datetime',
         'timestamp'                   => 'timestamp',
+        'logged_in_at'                => 'datetime',
+        'last_seen_at'                => 'datetime'
     ];
 
     /*
@@ -153,6 +155,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state',
         'zip',
         'country',
+        'has_reviewed_pi',
 
         'home_phone',
         'alt_phone',
@@ -231,12 +234,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state'      => 'state_for_country:live_only',
         'country'    => 'required|string|max:25',
 
+        'has_reviewed_pi' => 'sometimes|boolean',
+
         'home_phone' => 'sometimes|string|max:25',
         'alt_phone'  => 'sometimes|string|nullable|max:25',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
         'gender'    => 'sometimes|string|nullable|max:32',
 
+    ];
+
+    protected $attributes = [
+        'has_reviewed_pi' => false
     ];
 
     /*
@@ -578,7 +587,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             ];
         }
 
-        usort($roles, function ($a,$b) { return strcasecmp($a['title'], $b['title']); });
+        usort($roles, function ($a, $b) {
+            return strcasecmp($a['title'], $b['title']);
+        });
         return $roles;
     }
 
@@ -849,6 +860,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $personId = $this->id;
         $this->status_date = SqlHelper::now();
+        $this->status = $newStatus;
 
         ActionLog::record(Auth::user(), 'person-status-change', $reason, [ 'status' => [ $oldStatus, $newStatus ] ], $personId);
 

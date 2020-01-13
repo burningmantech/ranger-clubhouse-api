@@ -12,6 +12,7 @@ use App\Models\ActionLog;
 use App\Http\RestApi;
 use App\Mail\ResetPassword;
 use DB;
+use App\Helpers\SqlHelper;
 
 class AuthController extends Controller
 {
@@ -52,12 +53,18 @@ class AuthController extends Controller
             return response()->json([ 'status' => 'invalid-credentials'], 401);
         }
 
-        if ($person->user_authorized == false) {
+        $status = $person->status;
+
+        if ($person->user_authorized == false
+        || $status == Person::DECEASED
+        || $status == Person::DISMISSED
+        || $status == Person::UBERBONKED
+        || $status == Person::RESIGNED) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
             return response()->json([ 'status' => 'account-disabled'], 401);
         }
 
-        if ($person->status == Person::SUSPENDED) {
+        if ($status == Person::SUSPENDED) {
             ActionLog::record($person, 'auth-failed', 'Account suspended', $actionData);
             return response()->json([ 'status' => 'account-suspended'], 401);
         }
@@ -67,8 +74,12 @@ class AuthController extends Controller
             return response()->json([ 'status' => 'login-disabled' ], 401);
         }
 
+        $lastLoggedIn = $person->logged_in_at;
+        $person->logged_in_at = SqlHelper::now();
+        $person->saveWithoutValidation();
+
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
-        return $this->respondWithToken(auth()->login($person), $person);
+        return $this->respondWithToken(auth()->login($person), $person, $lastLoggedIn);
     }
 
     /**
@@ -142,12 +153,13 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-    protected function respondWithToken($token, $person)
+    protected function respondWithToken($token, $person, $lastLoggedIn)
     {
         // TODO does a 'refresh_token' need to be provided?
         return response()->json( [
             'token'      => $token,
             'person_id'  => $person->id,
+            'last_logged_in' => (string) $lastLoggedIn,
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60
         ]);
