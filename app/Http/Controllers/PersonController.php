@@ -624,7 +624,7 @@ class PersonController extends ApiController
 
         // make the callsign for an auditor.
         if ($person->status == 'auditor') {
-            $person->makeAuditorCallsign();
+            $person->resetCallsign();
         }
 
         $person->create_date = SqlHelper::now();

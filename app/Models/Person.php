@@ -934,20 +934,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Make an Auditor callsign out the last name, the first letter of the first name,
-     * current year, and adding '(NR)'.
-     */
-
-    public function makeAuditorCallsign()
-    {
-        $this->callsign = $this->last_name . substr($this->first_name, 0, 1) . current_year() . '(NR)';
-    }
-
-    /**
      * Reset callsign to the last name, first character of first name, and the last two digits of the current year
      * LastFirstYY
      *
-     * When the person was bonked, append a 'B'
+     * If the person was bonked, append a 'B'.
+     * If the person is an auditor, append a '(NR)'
      * If the new callsign already exits, find one that does not exists by appending a number to the last name.
      *
      * e.g. Jane Smith, year 2019 -> SmithJ19
@@ -967,6 +958,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $newCallsign .= substr($this->first_name, 0, 1) .  $year;
             if ($this->status == Person::BONKED) {
                 $newCallsign .= 'B';
+            } else if ($this->status == Person::AUDITOR) {
+                $newCallsign .= '(NR)';
             }
 
             if (!self::where('callsign', $newCallsign)->exists()) {

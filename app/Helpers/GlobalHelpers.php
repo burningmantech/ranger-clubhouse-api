@@ -36,6 +36,10 @@ if (!function_exists('setting')) {
 if (!function_exists('mail_to')) {
     function mail_to($email, $message)
     {
+        if (is_string($email) && strpos($email, ',') !== false) {
+            $email = explode(',', $email);
+        }
+
         try {
             Mail::to($email)->send($message);
             return true;
