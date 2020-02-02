@@ -23,6 +23,7 @@ class PersonPolicy
     {
         return $user->hasRole(self::AUTHORIZED_ROLES);
     }
+
     /*
      * Determine whether the user can view the person.
      *

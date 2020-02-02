@@ -10,20 +10,16 @@ use App\Helpers\SqlHelper;
 
 use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
-use App\Models\Photo;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
 
-use Illuminate\Support\Facades\Mail;
 use App\Mail\TrainingSignup;
-use App\Mail\SlotSignup;
 use App\Mail\TrainingSessionFullMail;
-
-use Carbon\Carbon;
 
 class PersonScheduleController extends ApiController
 {
@@ -312,7 +308,8 @@ class PersonScheduleController extends ApiController
         $callsignApproved = $person->callsign_approved;
 
         $canSignUpForShifts = false;
-        $isPotentialRanger = ($status == "prospective" || $status == "alpha");
+        $isPNV = ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
+        $isAuditor = ($status == Person::AUDITOR);
 
         $manualReviewCap = setting('ManualReviewProspectiveAlphaLimit');
         $manualReviewMyRank = 1;
@@ -321,11 +318,10 @@ class PersonScheduleController extends ApiController
 
         $missingBpguid = false;
 
-        if ($status == "auditor" || setting('AllowSignupsWithoutPhoto')) {
-            $photoStatus = 'not-required';
+        if ($isAuditor || setting('AllowSignupsWithoutPhoto')) {
+            $photoStatus = PersonPhoto::NOT_REQUIRED;
         } else {
-            $result = Photo::retrieveInfo($person);
-            $photoStatus = $result['photo_status'];
+            $photoStatus = PersonPhoto::retrieveStatus($person);
         }
 
         $mrDisabledAllowSignups = setting('ManualReviewDisabledAllowSignups');
@@ -337,14 +333,14 @@ class PersonScheduleController extends ApiController
             $manualReviewPassed = ManualReview::personPassedForYear($personId, $year);
         }
 
-        if ($status == Person::AUDITOR) {
+        if ($isAuditor) {
             // Auditors don't require BMID photo
             if ($manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
             $callsignApproved = true;
         } elseif ($status != Person::PAST_PROSPECTIVE) {
-            if ($callsignApproved && ($photoStatus == 'approved') && $manualReviewPassed) {
+            if ($callsignApproved && ($photoStatus == PersonPhoto::APPROVED) && $manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
 
@@ -357,7 +353,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        if (!$mrDisabledAllowSignups && $manualReviewCap > 0 && $isPotentialRanger) {
+        if (!$mrDisabledAllowSignups && $manualReviewCap > 0 && $isPNV) {
             $manualReviewMyRank = ManualReview::prospectiveOrAlphaRankForYear($personId, $year);
             if ($manualReviewMyRank == -1) {
                 $manualReviewMyRank = 100000;       // Hack to make life easier below
@@ -379,13 +375,14 @@ class PersonScheduleController extends ApiController
         if (!$canSignUpForShifts) {
             // Per Roslyn and Threepio 2/23/2017, we require people to have
             // a lam photo before they can take the Manual Review
-            if ($isPotentialRanger || $status == Person::PROSPECTIVE_WAITLIST) {
-                if (($photoStatus == 'not-required' || $photoStatus == 'approved') && !$manualReviewPassed
+            $photoOk = ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED);
+            if ($isPNV || $status == Person::PROSPECTIVE_WAITLIST) {
+                if ($photoOk && !$manualReviewPassed
                         && ($manualReviewCap == 0 ||
                             $manualReviewCount < $manualReviewCap)) {
                     $showManualReviewLink = true;
                 }
-            } elseif ($status != Person::PAST_PROSPECTIVE && ($photoStatus == 'approved' || $photoStatus == 'not-required') && !$manualReviewPassed) {
+            } elseif ($status != Person::PAST_PROSPECTIVE && $photoOk && !$manualReviewPassed) {
                 $showManualReviewLink = true;
             }
         }

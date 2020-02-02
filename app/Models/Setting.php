@@ -111,31 +111,6 @@ class Setting extends ApiModel
             'type' => 'string',
         ],
 
-        'LambaseImageUrl' => [
-            'description' => 'Lambase Image URL',
-            'type' => 'string',
-        ],
-
-        'LambaseJumpinUrl' => [
-            'description' => 'Lambase Upload and Login link',
-            'type' => 'string',
-        ],
-
-        'LambasePrintStatusUpdateUrl' => [
-            'description' => 'Lambase Printing Status API url',
-            'type' => 'string',
-        ],
-
-        'LambaseReportUrl' => [
-            'description' => 'Lambase Photo Status Report API url',
-            'type' => 'string',
-        ],
-
-        'LambaseStatusUrl' => [
-            'description' => 'Lambase status URL - should rarely change',
-            'type' => 'string',
-        ],
-
         'MaintenanceToken' => [
             'description' => 'Security Token used to initiate nightly maintenance tasks',
             'type' => 'string',
@@ -212,19 +187,30 @@ class Setting extends ApiModel
             'type' => 'email',
         ],
 
-        'PhotoSource' => [
-            'description' => 'Mugshot image location',
-            'type' => 'string',
-            'options' => [
-                [ 'Lambase', 'from the Lambase server' ],
-                [ 'local', 'from the local server' ],
-                [ 'test', 'serve a dummy image file (for testing only)' ],
-            ]
+        'PhotoAnalysisEnabled' => [
+            'description'   => 'Run all uploaded photos through AWS Rekognition face detection',
+            'type'  => 'bool',
         ],
 
-        'PhotoStoreLocally' => [
-            'description' => 'Enable storing Lambase photos locally',
-            'type' => 'bool',
+        'PhotoRekognitionAccessKey' => [
+            'description'   => 'AWS Rekognition Access Key used for BMID photo analysis',
+            'type'  => 'string',
+            'is_credential' => true
+        ],
+
+        'PhotoRekognitionAccessSecret' => [
+            'description'   => 'AWS Rekognition Secret Key used for BMID photo analysis',
+            'type'  => 'string',
+            'is_credential' => true
+        ],
+
+        'PhotoStorage' => [
+            'description' => 'Photo storage driver to use',
+            'type' => 'string',
+            'options' => [
+                [ 'photos-s3', 'the AWS S3 bucket' ],
+                [ 'photos-local', 'the local server (on playa)' ],
+            ]
         ],
 
         'PhotoUploadEnable' => [

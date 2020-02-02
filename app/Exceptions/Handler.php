@@ -20,23 +20,13 @@ class Handler extends ExceptionHandler
      * @var array
      */
     protected $dontReport = [
-        \Illuminate\Auth\AuthenticationException::class,
         \Illuminate\Auth\Access\AuthorizationException::class,
-        \Symfony\Component\HttpKernel\Exception\HttpException::class,
+        \Illuminate\Auth\AuthenticationException::class,
         \Illuminate\Database\Eloquent\ModelNotFoundException::class,
         \Illuminate\Validation\ValidationException::class,
-        Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
         \InvalidArgumentException::class,
-    ];
-
-    /**
-     * A list of the inputs that are never flashed for validation exceptions.
-     *
-     * @var array
-     */
-    protected $dontFlash = [
-        'password',
-        'password_confirmation',
+        \Symfony\Component\HttpKernel\Exception\HttpException::class,
+        Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
     ];
 
     /**
@@ -47,9 +37,20 @@ class Handler extends ExceptionHandler
      * @param  \Exception  $exception
      * @return void
      */
-    public function report(Exception $exception)
+    public function report(\Exception $exception)
     {
-        parent::report($exception);
+        if (!$this->shouldReport($exception)) {
+            return;
+        }
+
+        if (app()->isLocal()) {
+            Log::debug("Exception ".$exception->getTraceAsString());
+            return;
+        }
+
+        error_log("Exception reported ".get_class($exception));
+
+        ErrorLog::recordException($exception, 'server-exception');
     }
 
     /**
@@ -59,22 +60,17 @@ class Handler extends ExceptionHandler
      * @param  \Exception  $e
      * @return \Illuminate\Http\Response
      */
-    public function render($request, Exception $e)
+    public function render($request, \Exception $e)
     {
-        if (app()->isLocal()) {
-            // For debugging purposes.
-            error_log("Exception [".get_class($e)."]: ". $e->getMessage() ." file ".$e->getFile().":".$e->getLine());
-        }
-
         /*
          * Handle JWT exceptions.
          */
 
         if ($e instanceof Tymon\JWTAuth\Exceptions\TokenExpiredException) {
-    		return response()->json(['token_expired'], $e->getStatusCode());
-    	} else if ($e instanceof Tymon\JWTAuth\Exceptions\TokenInvalidException) {
-    		return response()->json(['token_invalid'], $e->getStatusCode());
-    	}
+            return response()->json(['token_expired'], $e->getStatusCode());
+        } elseif ($e instanceof Tymon\JWTAuth\Exceptions\TokenInvalidException) {
+            return response()->json(['token_invalid'], $e->getStatusCode());
+        }
 
         // Record not found
         if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
@@ -93,7 +89,7 @@ class Handler extends ExceptionHandler
         }
 
         // No authorization token / not logged in
-        if ($e instanceOf \Illuminate\Auth\AuthenticationException) {
+        if ($e instanceof \Illuminate\Auth\AuthenticationException) {
             return response()->json([ 'error' => 'Not authenticated.'], 401);
         }
 
@@ -111,21 +107,11 @@ class Handler extends ExceptionHandler
 
             switch ($e->getStatusCode()) {
                 case '404':
-                   return RestApi::error(response(), 404, 'Endpoint not found');
+                    return RestApi::error(response(), 404, 'Endpoint not found');
                 case '405':
                     return RestApi::error(response(), 405, 'Method not allowed');
                 default:
                     return RestApi::error(response(), $statusCode, 'Unknown status.');
-
-            }
-        }
-
-        if (!app()->isLocal()) {
-            // Fatal server error.. record what happened.
-            try {
-                ErrorLog::recordException($e, 'server-exception');
-            } catch (\Exception $ignore) {
-                // ignore exception.
             }
         }
 

@@ -40,12 +40,11 @@ Route::group([
 
     Route::match([ 'GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
-    Route::get('maintenance/photo-sync', 'MaintenanceController@photoSync');
     Route::get('maintenance/daily-report', 'MaintenanceController@dailyReport');
     Route::get('maintenance', 'MaintenanceController@index');
 
-    Route::get('bmid/test-upload', 'BmidController@testUpload');
-    Route::get('bmid/test-photo', 'BmidController@testPhoto');
+    // Only used for development.
+    Route::get('photos/{file}', 'PersonPhotoController@photoImage')->where('file', '.*');
 });
 
 
@@ -176,8 +175,8 @@ Route::group([
 
     Route::get('person/{person}/positions', 'PersonController@positions');
     Route::post('person/{person}/positions', 'PersonController@updatePositions');
-    Route::get('person/{person}/photo', 'PersonController@photo');
-    Route::post('person/{person}/photo-clear', 'PersonController@photoClear');
+    Route::get('person/{person}/photo', 'PersonPhotoController@photo');
+    Route::post('person/{person}/photo', 'PersonPhotoController@upload');
     Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
@@ -188,6 +187,11 @@ Route::group([
     Route::post('person/{person}/onboard-debug', 'PersonController@onboardDebug');
 
     Route::resource('person', 'PersonController', [ 'only' => [ 'index','show','store','update','destroy' ]]);
+
+    Route::get('person-photo/review-config', 'PersonPhotoController@reviewConfig');
+    Route::post('person-photo/{person_photo}/replace', 'PersonPhotoController@replace');
+    Route::post('person-photo/{person_photo}/activate', 'PersonPhotoController@activate');
+    Route::resource('person-photo', 'PersonPhotoController');
 
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');

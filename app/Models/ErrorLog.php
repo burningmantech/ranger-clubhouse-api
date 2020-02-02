@@ -184,6 +184,6 @@ class ErrorLog extends ApiModel
 
     public function setDataAttribute($value)
     {
-        $this->attributes['data'] = is_array($value) ? json_encode($value) : $value;
+        $this->attributes['data'] = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : $value;
     }
 }

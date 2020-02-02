@@ -6,7 +6,7 @@ use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
-use App\Models\Photo;
+use App\Models\PersonPhoto;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
@@ -180,7 +180,7 @@ class Alpha
         $person->on_alpha_shift = (isset($result[0]) && $result[0]->on_duty);
 
         if (!$excludePhotos) {
-            $photo = Photo::retrieveInfo($row);
+            $photo = PersonPhoto::retrieveInfo($row);
             $person->photo_approved = ($photo['photo_status'] == 'approved');
             $person->photo_status = $photo['photo_status'];
             if ($person->photo_approved) {
