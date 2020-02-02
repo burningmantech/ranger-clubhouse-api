@@ -8,10 +8,11 @@
 set -eu
 
 # Needed to build PHP extensions
-apk add --no-cache libxml2-dev;
+apk add --no-cache libxml2-dev libpng-dev;
 
 docker-php-ext-install             \
     ctype                          \
+    gd                             \
     json                           \
     mbstring                       \
     pdo                            \
