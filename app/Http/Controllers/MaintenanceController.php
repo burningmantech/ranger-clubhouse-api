@@ -12,12 +12,9 @@ use App\Models\ActionLog;
 use App\Models\BMID;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
-use App\Models\LambasePhoto;
 use App\Models\Person;
-use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
-use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
@@ -27,38 +24,6 @@ use App\Mail\DailyReportMail;
 
 class MaintenanceController extends ApiController
 {
-    public function photoSync()
-    {
-        ini_set('max_execution_time', 300);
-
-        $this->checkMaintenanceToken();
-
-        list($photos, $errors) = LambasePhoto::retrieveAllStatuses();
-        $results = [];
-
-        foreach ($photos as $photo) {
-            if (!$photo->person_id) {
-                continue;
-            }
-
-            $pm = PersonPhoto::find($photo->person_id);
-            // A lack of PersonPhoto record OR change in status or approval date
-            // reconstruct the record
-            // TODO: Ask Ice about adding a image url column to the retrieve all request
-            if (!$pm
-                || $pm->status != $photo->status
-                || (string) $pm->lambase_date != $photo->date) {
-                $person = Person::find($photo->person_id);
-
-                if ($person) {
-                    $results[] = Photo::retrieveInfo($person, true);
-                }
-            }
-        }
-
-        return response()->json([ 'results' => $results, 'errors' => $errors ]);
-    }
-
     public function dailyReport()
     {
         $this->checkMaintenanceToken();

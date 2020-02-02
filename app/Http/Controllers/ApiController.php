@@ -121,7 +121,7 @@ class ApiController extends Controller
 
     public function success($resource=null, $meta=null, $resourceName = null)
     {
-        if (!$resource) {
+        if ($resource === null) {
             return response()->json([ 'status' => 'success' ]);
         }
 

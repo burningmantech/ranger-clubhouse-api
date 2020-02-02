@@ -17,20 +17,21 @@ use App\Models\Bmid;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
+use App\Models\Help;
 use App\Models\ManualReview;
 use App\Models\Motd;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
+use App\Models\PersonPhoto;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
-use App\Models\Slot;
 use App\Models\Setting;
+use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TimesheetMissing;
-use App\Models\Help;
 use App\Models\Training;
 use App\Models\TrainingSession;
 
@@ -39,27 +40,28 @@ use App\Policies\AccessDocumentPolicy;
 use App\Policies\ActionLogPolicy;
 use App\Policies\AlertPersonPolicy;
 use App\Policies\AlertPolicy;
+use App\Policies\AssetAttachmentPolicy;
 use App\Policies\AssetPersonPolicy;
 use App\Policies\AssetPolicy;
-use App\Policies\AssetAttachmentPolicy;
 use App\Policies\BmidPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
+use App\Policies\HelpPolicy;
 use App\Policies\ManualReviewPolicy;
 use App\Policies\MotdPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
+use App\Policies\PersonPhotoPolicy;
 use App\Policies\PersonPolicy;
-use App\Policies\PositionPolicy;
 use App\Policies\PositionCreditPolicy;
+use App\Policies\PositionPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SchedulePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SlotPolicy;
 use App\Policies\TimesheetMissingPolicy;
 use App\Policies\TimesheetPolicy;
-use App\Policies\HelpPolicy;
 use App\Policies\TrainingPolicy;
 use App\Policies\TrainingSessionPolicy;
 
@@ -83,11 +85,13 @@ class AuthServiceProvider extends ServiceProvider
         Broadcast::class => BroadcastPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,
-        Motd::class => MotdPolicy::class,
+        Help::class => HelpPolicy::class,
         ManualReview::class => ManualReviewPolicy::class,
+        Motd::class => MotdPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
+        PersonPhoto::class => PersonPhotoPolicy::class,
         Position::class => PositionPolicy::class,
         PositionCredit::class => PositionCreditPolicy::class,
         Role::class => RolePolicy::class,
@@ -96,7 +100,6 @@ class AuthServiceProvider extends ServiceProvider
         Slot::class => SlotPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,
-        Help::class => HelpPolicy::class,
         Training::class => TrainingPolicy::class,
         TrainingSession::class => TrainingSessionPolicy::class,
 

@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Mail;
 
 use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
-use App\Models\Photo;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
@@ -795,18 +795,15 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    private function mockPhotoStatus($status)
+    private function setupPhotoStatus($status)
     {
-        $mock = $this->mock('alias:\App\Models\Photo');
-        $mock->shouldReceive('retrieveInfo')->andReturn([
-            'photo_url'    => 'http://localhost/photo.png',
-            'photo_status' => $status,
-            'upload_url'   => 'http://localhost/upload',
-            'source'       => 'lambase',
-            'message'      => ''
+        $photo = factory(PersonPhoto::class)->create([
+            'person_id' => $this->user->id,
+            'status'    => $status,
         ]);
 
-        return $mock;
+        $this->user->person_photo_id = $photo->id;
+        $this->user->saveWithoutValidation();
     }
 
     private function mockManualReviewPass($result)
@@ -823,7 +820,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowActiveWhoPassedManualReviewAndHasPhoto()
     {
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -844,9 +841,8 @@ class PersonScheduleControllerTest extends TestCase
      * Deny an active, who passed manual review, and has no photo.
      */
 
-    public function testDenyActiveWithMissingPhoto()
+    public function testDenyActiveWithPhoto()
     {
-        $photoMock = $this->mockPhotoStatus('missing');
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -870,7 +866,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDenyActiveWhoDidNotPassManualReview()
     {
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(false);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -895,7 +891,7 @@ class PersonScheduleControllerTest extends TestCase
 /*
     public function testDenyActiveWhoDidNotSignBehavioralAgreement()
     {
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
         $this->user->update([ 'behavioral_agreement' => false ]);
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -918,7 +914,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
         $this->user->update([ 'behavioral_agreement' => false ]);
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -942,7 +938,6 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->user->update([ 'status' => 'auditor' ]);
 
-        $photoMock = $this->mockPhotoStatus('missing');
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
@@ -967,7 +962,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->user->update([ 'status' => 'prospective' ]);
 
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
 
         $mrMock = $this->mockManualReviewPass(true);
         $mrMock->shouldReceive('prospectiveOrAlphaRankForYear')->andReturn(99);
@@ -1047,7 +1042,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $year = $this->year;
 
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
@@ -1077,7 +1072,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $year = $this->year;
 
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $this->user->update([ 'status' => Person::NON_RANGER ]);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
@@ -1107,7 +1102,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $year = $this->year;
 
-        $photoMock = $this->mockPhotoStatus('approved');
+        $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");

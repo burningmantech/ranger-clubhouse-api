@@ -16,4 +16,6 @@ return [
     // the database running with the faketime shim.
     'GroundhogDayServer'    => env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_SERVER', false),
 
+    'RekognitionAccessKey' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_KEY', ''),
+    'RekognitionAccessSecret' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_SECRET', ''),
 ];

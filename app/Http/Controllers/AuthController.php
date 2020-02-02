@@ -55,18 +55,15 @@ class AuthController extends Controller
 
         $status = $person->status;
 
-        if ($person->user_authorized == false
-        || $status == Person::DECEASED
-        || $status == Person::DISMISSED
-        || $status == Person::UBERBONKED
-        || $status == Person::RESIGNED) {
-            ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
-            return response()->json([ 'status' => 'account-disabled'], 401);
-        }
-
         if ($status == Person::SUSPENDED) {
             ActionLog::record($person, 'auth-failed', 'Account suspended', $actionData);
             return response()->json([ 'status' => 'account-suspended'], 401);
+        }
+
+        if ($person->user_authorized == false
+        || in_array($status, Person::LOCKED_STATUSES)) {
+            ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
+            return response()->json([ 'status' => 'account-disabled'], 401);
         }
 
         if (!$person->hasRole(Role::LOGIN)) {

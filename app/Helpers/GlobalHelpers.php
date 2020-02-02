@@ -28,7 +28,7 @@ if (!function_exists('setting')) {
 /**
  * Send an email. Alias for Mail:to()->send() with exception handling.
  *
- * @param mixed $email string or string array of email addresses to send
+ * @param mixed $email string, string with a comma(s), or string array of email addresses to send
  * @param Mailable $message the message to send
  * @return boolean true if mail was successfully queued, false if an exception happened.
  */

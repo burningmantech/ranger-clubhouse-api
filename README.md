@@ -20,7 +20,7 @@ You will need the following things properly installed on your computer.
 
 ## Running / Development
 
-* `php -S localhost:8000 -t public`
+* `php -S localhost:8000 -t public server.php`
 * See the [ranger-clubhouse-web](https://github.com/burningmantech/ranger-clubhouse-web) `README` for instructions on how to start the frontend
 
 ## Developing with Docker

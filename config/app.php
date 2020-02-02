@@ -214,6 +214,7 @@ return [
 
         // For email message generation
         'HyperLinkHelper'   => App\Helpers\HyperLinkHelper::class,
+        'PersonPhoto'       => App\Models\PersonPhoto::class,
 
     ],
 

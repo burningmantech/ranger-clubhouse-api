@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+
 use App\Models\AccessDocumentDelivery;
 use App\Models\Bmid;
 use App\Models\Help;
@@ -46,6 +47,7 @@ class RouteServiceProvider extends ServiceProvider
         Route::bind('setting', function ($id) {
             return Setting::find($id) ?? abort(404);
         });
+
     }
 
     /**

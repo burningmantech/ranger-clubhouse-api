@@ -34,7 +34,6 @@ class SettingTableSeeder extends Seeder
         \DB::table('setting')->insert([ 'name' => 'MotorpoolPolicyEnable',  'value' => 'false' ]);
         \DB::table('setting')->insert([ 'name' => 'OnPlaya', 'value' => 'false' ]);
         \DB::table('setting')->insert([ 'name' => 'PersonnelEmail',  'value' => 'ranger-personnel@burningman.org' ]);
-        \DB::table('setting')->insert([ 'name' => 'PhotoSource',  'value' => 'Lambase' ]);
         \DB::table('setting')->insert([ 'name' => 'PhotoStoreLocally', 'value' => 'false' ]);
         \DB::table('setting')->insert([ 'name' => 'PNVWaitList', 'value' => 'false' ]);
         \DB::table('setting')->insert([ 'name' => 'RadioCheckoutFormUrl',  'value' => 'https://drive.google.com/open?id=1p4EerIDN6ZRxcWkI7tDFGuMf6SgL1LTQ' ]);

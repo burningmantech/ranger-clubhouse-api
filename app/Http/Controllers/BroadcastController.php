@@ -14,6 +14,10 @@ class BroadcastController extends ApiController
     {
         parent::__construct();
 
+        if (app()->runningInConsole()) {
+            return;
+        }
+
         if (!$this->userHasRole(Role::ADMIN)) {
             $this->notPermitted("Must have the Admin role");
         }

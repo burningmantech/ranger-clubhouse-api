@@ -22,14 +22,17 @@ use Illuminate\Support\Facades\DB;
 
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-use App\Models\Alert;
-use App\Models\ApiModel;
-use App\Models\PersonRole;
-use App\Models\Role;
-use App\Models\PersonPosition;
 use App\Helpers\SqlHelper;
 
 use Carbon\Carbon;
+
+use App\Models\Alert;
+use App\Models\ApiModel;
+use App\Models\PersonPhoto;
+use App\Models\PersonPosition;
+use App\Models\PersonRole;
+use App\Models\Role;
+
 
 class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
 {
@@ -58,27 +61,45 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const SUSPENDED = 'suspended';
     const UBERBONKED = 'uberbonked';
 
-    // Statuses consider 'live' or still active account allowed
-    // to login, and do stuff.
-    // Used by App\Validator\StateForCountry & BroadcastController & Sync Photos
+    /*
+     *Statuses consider 'live' or still active account allowed
+     * to login, and do stuff.
+     * Used by App\Validator\StateForCountry & BroadcastController
+     */
 
     const LIVE_STATUSES = [
-        'active',
-        'alpha',
-        'inactive',
-        'non ranger',
-        'past prospective',
-        'prospective waitlist',
-        'prospective',
-        'retired'
+        Person::ACTIVE,
+        Person::ALPHA,
+        Person::INACTIVE,
+        Person::INACTIVE_EXTENSION,
+        Person::NON_RANGER,
+        Person::PAST_PROSPECTIVE,
+        Person::PROSPECTIVE_WAITLIST,
+        Person::PROSPECTIVE,
+        Person::RETIRED
     ];
 
     const ACTIVE_STATUSES = [
-        'active',
-        'inactive',
-        'inactive extension',
-        'retired'
+        Person::ACTIVE,
+        Person::INACTIVE,
+        Person::INACTIVE_EXTENSION,
+        Person::RETIRED
     ];
+
+    /*
+     * Locked status are those which the account cannot be allowed
+     * to logged into (either tempoarily or permanently), and which
+     * should not receive messages.
+     */
+
+    const LOCKED_STATUSES = [
+        Person::DECEASED,
+        Person::DISMISSED,
+        Person::UBERBONKED,
+        Person::RESIGNED,
+        Person::SUSPENDED
+    ];
+
 
     /**
      * The database table name.
@@ -329,6 +350,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function person_position()
     {
         return $this->hasMany(PersonPosition::class);
+    }
+
+    public function person_photo() {
+        return $this->belongsTo(PersonPhoto::class);
     }
 
     public static function findByEmail(string $email)
@@ -792,6 +817,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function isAdmin(): bool
     {
         return $this->hasRole(Role::ADMIN);
+    }
+
+    public function isPNV() : bool
+    {
+        $status = $this->status;
+
+        return ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
     }
 
     /*

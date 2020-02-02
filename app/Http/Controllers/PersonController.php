@@ -11,7 +11,6 @@ use App\Http\Controllers\ApiController;
 
 use App\Helpers\SqlHelper;
 
-use App\Models\LambasePhoto;
 use App\Models\ManualReview;
 use App\Models\Person;
 use App\Models\PersonEventInfo;
@@ -21,7 +20,6 @@ use App\Models\PersonMessage;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-use App\Models\Photo;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Timesheet;
@@ -187,6 +185,8 @@ class PersonController extends ApiController
             }
         }
 
+        $person->languages = PersonLanguage::retrieveForPerson($person->id);
+
         return $this->toRestFiltered($person);
     }
 
@@ -221,29 +221,27 @@ class PersonController extends ApiController
                     'person_position',
                     'person_role',
                     'person_slot',
+                    'radio_eligible',
                     'timesheet',
+                    'timesheet_log',
+                    'timesheet_missing',
+                    'trainee_status',
+                    'trainer_status'
                 ];
 
                 foreach ($tables as $table) {
                     DB::table($table)->where('person_id', $personId)->delete();
                 }
 
+                // Photos require a bit of extra work.
+                PersonPhoto::deleteAllForPerson($personId);
+
                 // Farewell, parting is such sweet sorrow . . .
                 $person->delete();
             }
         );
 
-        $this->log(
-            'person-delete',
-            'Person delete',
-            [
-                    'callsign' => $person->callsign,
-                    'status' => $person->status,
-                    'first_name' => $person->first_name,
-                    'last_name' => $person->last_name,
-            ],
-            $person->id
-        );
+        $this->log('person-delete', 'Person delete', [ 'person' => $person ], $person->id);
 
         return $this->restDeleteSuccess();
     }
@@ -297,42 +295,6 @@ class PersonController extends ApiController
 
         $this->log('person-password', 'Password changed', null, $person->id);
         $person->changePassword($passwords['password']);
-
-        return $this->success();
-    }
-
-    /*
-     * Obtain the photo url, and upload link if enabled.
-     * (may also download the photo from lambase)
-     */
-
-    public function photo(Request $request, Person $person)
-    {
-        $this->authorize('view', $person);
-
-        $params = request()->validate([
-            'sync' => 'sometimes|boolean'
-        ]);
-
-        return response()->json([ 'photo' => Photo::retrieveInfo($person, $params['sync'] ?? false)]);
-    }
-
-    /*
-     * Clear the cached photo info
-     *
-     * Used by the Upload photo button to let the Clubhouse know the user is heading
-     * off to Lambase, and the cache info should be cleared to pick up the Submitted status.
-     */
-
-    public function photoClear(Person $person)
-    {
-        $this->authorize('update', $person);
-
-        $pm = PersonPhoto::find($person->id);
-        if ($pm) {
-            $pm->delete();
-            $this->log('lambase-photo-clear', '', null, $person->id);
-        }
 
         return $this->success();
     }
@@ -892,11 +854,16 @@ class PersonController extends ApiController
                 $milestones['missing_bpguid'] = true;
             }
 
-            $milestones['photo_status'] = PersonPhoto::retrieveStatus($person->id);
+            $milestones['photo_status'] = PersonPhoto::retrieveStatus($person);
         }
 
         return response()->json([ 'milestones' => $milestones ]);
     }
+
+    /*
+     *  Is the given time within a grace period?
+     *  Is the given time within a grace period?
+     */
 
     private function isTimeWithinGracePeriod($time, $now)
     {
@@ -904,6 +871,11 @@ class PersonController extends ApiController
 
         return $time->addHours(12)->gt($now);
     }
+
+    /*
+     *  Onboard debugging endpoint. Only available on a staging or local development
+     * server.
+     */
 
     public function onboardDebug(Person $person)
     {

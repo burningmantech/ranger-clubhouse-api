@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,7 +24,11 @@ class AppServiceProvider extends ServiceProvider
         // See https://laravel.com/docs/master/migrations#indexes
         Schema::defaultStringLength(191);
 
-        if (app()->isLocal()) {
+        // Allow modern sized photos to be uploaded
+        ini_set('upload_max_filesize', '32M');
+        ini_set('post_max_size', '32M');
+
+        if (env('APP_DEBUG')) {
             Event::listen('Illuminate\Database\Events\QueryExecuted', function ($query) {
                 $placeholder = preg_quote('?', '/');
                 $sql = $query->sql;
@@ -41,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
                 // replace all newlines with spaces except those in quotes
                 $sql = preg_replace('/\n(?![^"]*"(?:(?:[^"]*"){2})*[^"]*$)/i', ' ', $sql);
                 $sql = preg_replace('/\s{2,}/i', ' ', $sql);
-                error_log("SQL [$query->time ms] $sql");
+                error_log("[$query->time ms] SQL $sql");
             });
         }
 
