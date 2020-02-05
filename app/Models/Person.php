@@ -31,6 +31,7 @@ use App\Models\ApiModel;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
+use App\Models\PersonStatus;
 use App\Models\Role;
 
 
@@ -894,7 +895,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->status_date = SqlHelper::now();
         $this->status = $newStatus;
 
-        ActionLog::record(Auth::user(), 'person-status-change', $reason, [ 'status' => [ $oldStatus, $newStatus ] ], $personId);
+        PersonStatus::record($this->id, $oldStatus, $newStatus, $reason, Auth::id());
 
         $changeReason = $reason . " new status $newStatus";
 

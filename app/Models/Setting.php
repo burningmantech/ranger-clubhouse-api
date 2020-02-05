@@ -244,7 +244,7 @@ class Setting extends ApiModel
         ],
 
         'RpTicketThreshold' => [
-            'description' => 'Credit threshold for reduced price ticket',
+            'description' => 'Credit threshold for a reduced price ticket. Shown on the Schedule and Ticket announce pages',
             'type' => 'float',
         ],
 
@@ -314,7 +314,7 @@ class Setting extends ApiModel
         ],
 
         'ScTicketThreshold' => [
-            'description' => 'Credit threshold for staff credential',
+            'description' => 'Credit threshold for staff credential. Shown on the Schedule and Ticket announce pages',
             'type' => 'float',
         ],
 
@@ -539,8 +539,8 @@ class Setting extends ApiModel
         ],
 
         'YrTicketThreshold' => [
-            'description' => 'Threshold year to earn credits',
-            'type' => 'float',
+            'description' => 'Event year shown in combination with RpTicketThreshold and ScTicketThreshold settings on the Schedule and Ticket Announce page. (Note: year - 1 will be shown as earned year on Ticket Announce)',
+            'type' => 'integer',
         ],
     ];
 

@@ -8,9 +8,13 @@ use App\Http\RestApi;
 use App\Models\ErrorLog;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
+use \Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
 
 class Handler extends ExceptionHandler
 {
@@ -43,12 +47,16 @@ class Handler extends ExceptionHandler
             return;
         }
 
-        if (app()->isLocal()) {
-            Log::debug("Exception ".$exception->getTraceAsString());
-            return;
+        if ($exception instanceof CommandRuntimeException) {
+            if (Str::contains($exception->getMessage(), ['Not enough arguments'])) {
+                return;
+            }
         }
 
-        error_log("Exception reported ".get_class($exception));
+        if (app()->isLocal()) {
+            parent::report($exception);
+            return;
+        }
 
         ErrorLog::recordException($exception, 'server-exception');
     }

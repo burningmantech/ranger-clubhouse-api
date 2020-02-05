@@ -141,7 +141,7 @@
 </table>
 @endif
 
-<h3 class="color: green">Status Changes ({{count($statusLogs)}})</h3>
+<h3>Status Changes ({{count($statusLogs)}})</h3>
 @if (count($statusLogs) == 0)
 <b>No status changes happened.</b>
 @else
@@ -150,7 +150,7 @@
     <tr>
       <th>Timestamp</th>
       <th>Callsign</th>
-      <th>Culprit</th>
+      <th>Source</th>
       <th>Old</th>
       <th>New</th>
       <th>Reason</th>
@@ -160,11 +160,11 @@
     @foreach ($statusLogs as $log)
     <tr>
       <td>{{$log->created_at}}</td>
-      <td>{{$log->target_person->callsign}}</td>
       <td>{{$log->person->callsign}}</td>
-      <td>{{$log->oldStatus}}</td>
-      <td>{{$log->newStatus}}</td>
-      <td>{{$log->message}}</td>
+      <td>{{$log->person_source->callsign}}</td>
+      <td>{{$log->old_status}}</td>
+      <td>{{$log->new_status}}</td>
+      <td>{{$log->reason}}</td>
     </tr>
     @endforeach
 </table>

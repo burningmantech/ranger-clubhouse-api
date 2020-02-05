@@ -36,6 +36,8 @@ class PhotoLambaseConvertCommand extends Command
      */
     public function handle()
     {
+        ini_set('memory_limit', '2G');
+
         $rows = LambasePhoto::where('status', '!=', 'missing')->with('person:id,callsign,status')->get();
 
         $storage = PersonPhoto::storage();
@@ -91,8 +93,10 @@ class PhotoLambaseConvertCommand extends Command
             DB::table('person')->where('id', $row->person_id)->update([ 'person_photo_id' => $photo->id ]);
 
             $contents = file_get_contents($file);
-            $storage->put($photo->orig_filename, $contents);
-            $storage->put($photo->image_filename, $contents);
+            $storage->put(PersonPhoto::STORAGE_DIR . $photo->orig_filename, $contents);
+            $storage->put(PersonPhoto::STORAGE_DIR . $photo->image_filename, $contents);
+
+            gc_collect_cycles();
         }
 
         if (!empty($foundErrors)) {

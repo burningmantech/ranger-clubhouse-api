@@ -8,10 +8,11 @@ use Illuminate\Http\Request;
 use App\Lib\PotentialClubhouseAccountFromSalesforce;
 use App\Lib\SalesforceClubhouseInterface;
 
-use App\Models\Person;
-use App\Models\PersonRole;
-use App\Models\PersonPosition;
 use App\Models\ErrorLog;
+use App\Models\Person;
+use App\Models\PersonPosition;
+use App\Models\PersonRole;
+use App\Models\PersonStatus;
 
 use App\Helpers\SqlHelper;
 use App\Mail\WelcomeMail;
@@ -196,14 +197,15 @@ class SalesforceController extends ApiController
             return false;
         }
 
-        $this->log('person-create', 'salesforce import', [
-            'bpguid'    => $pca->bpguid,
-            'sfuid'     => $pca->sfuid
-        ], $person->id);
+        $this->log('person-create', 'salesforce import', $person, $person->id);
 
         // Setup the default roles & positions
         PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
         PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
+
+        // Record the initial status for tracking through the Unified Flagging View
+        PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
+
 
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {

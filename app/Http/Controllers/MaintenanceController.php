@@ -32,12 +32,7 @@ class MaintenanceController extends ApiController
         $errorLogs = ErrorLog::findForQuery([ 'lastday' => true, 'page_size' => 1000 ])['logs'];
 
         $roleLogs = ActionLog::findForQuery([ 'lastday' => 'true', 'page_size' => 1000, 'events' => [ 'person-role-add', 'person-role-remove' ] ], false)['logs'];
-        $statusLogs = ActionLog::findForQuery([ 'lastday' => 'true', 'page_size' => 1000, 'events' => [ 'person-status-change', 'person-status-change' ] ], false)['logs'];
-        foreach ($statusLogs as $log) {
-            $json = json_decode($log->data);
-            $log->oldStatus = $json->status[0];
-            $log->newStatus = $json->status[1];
-        }
+        $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with([ 'person:id,callsign', 'person_source:id,callsign'])->get();
 
         mail_to(explode(',', setting('DailyReportEmail')), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
         return $this->success();
