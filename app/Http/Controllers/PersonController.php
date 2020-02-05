@@ -20,14 +20,15 @@ use App\Models\PersonMessage;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
+use App\Models\PersonSlot;
+use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\Schedule;
+use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\Training;
-use App\Models\Slot;
-use App\Models\Schedule;
-use App\Models\PersonSlot;
 
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
@@ -608,6 +609,9 @@ class PersonController extends ApiController
         // Setup the default roles & positions
         PersonRole::resetRoles($person->id, 'registration', Person::ADD_NEW_USER);
         PersonPosition::resetPositions($person->id, 'registration', Person::ADD_NEW_USER);
+
+        // Record the initial status for tracking through the Unified Flagging View
+        PersonStatus::record($person->id, '', Person::AUDITOR, 'registration', $person->id);
 
         // Send a welcome email to the person if not an auditor
         if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
