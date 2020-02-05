@@ -15,12 +15,14 @@ use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
+use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
 
 use App\Mail\DailyReportMail;
+use RuntimeException;
 
 class MaintenanceController extends ApiController
 {
@@ -28,13 +30,13 @@ class MaintenanceController extends ApiController
     {
         $this->checkMaintenanceToken();
 
-        $failedBroadcasts = Broadcast::findLogs([ 'lastday' => true, 'failed' => true]);
-        $errorLogs = ErrorLog::findForQuery([ 'lastday' => true, 'page_size' => 1000 ])['logs'];
+        $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
+        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['logs'];
 
-        $roleLogs = ActionLog::findForQuery([ 'lastday' => 'true', 'page_size' => 1000, 'events' => [ 'person-role-add', 'person-role-remove' ] ], false)['logs'];
-        $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with([ 'person:id,callsign', 'person_source:id,callsign'])->get();
+        $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['logs'];
+        $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with(['person:id,callsign', 'person_source:id,callsign'])->get();
 
-        mail_to(explode(',', setting('DailyReportEmail')), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
+        mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
         return $this->success();
     }
 
@@ -43,7 +45,7 @@ class MaintenanceController extends ApiController
         $token = setting('MaintenanceToken');
 
         if (empty($token)) {
-            throw new \RuntimeException("Maintenance token not set -- cannot authorzie request");
+            throw new RuntimeException("Maintenance token not set -- cannot authorzie request");
         }
 
         $ourToken = request()->input('token');
@@ -64,9 +66,9 @@ class MaintenanceController extends ApiController
         $this->checkForAdmin();
 
         $allRangersPositions = Position::where('all_rangers', true)
-                    ->orderBy('title')
-                    ->get()
-                    ->keyBy('id');
+            ->orderBy('title')
+            ->get()
+            ->keyBy('id');
 
         /*
          * Only look at those Rangers who meet all of the following criteria:
@@ -76,12 +78,12 @@ class MaintenanceController extends ApiController
          */
 
         $actives = Person::select('id', 'callsign', 'status')
-                    ->with('person_position')
-                    ->whereIn('person.status', Person::ACTIVE_STATUSES)
-                    ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_id=person.id AND position_id=? LIMIT 1)', [ Position::DIRT])
-                    ->whereRaw('(SELECT COUNT(*) FROM person_position WHERE person_id=person.id AND position_id IN ('.implode(',', $allRangersPositions->pluck('id')->toArray()).')) != '.$allRangersPositions->count())
-                    ->orderBy('callsign')
-                    ->get();
+            ->with('person_position')
+            ->whereIn('person.status', Person::ACTIVE_STATUSES)
+            ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_id=person.id AND position_id=? LIMIT 1)', [Position::DIRT])
+            ->whereRaw('(SELECT COUNT(*) FROM person_position WHERE person_id=person.id AND position_id IN (' . implode(',', $allRangersPositions->pluck('id')->toArray()) . ')) != ' . $allRangersPositions->count())
+            ->orderBy('callsign')
+            ->get();
 
         $activePeople = [];
         foreach ($actives as $person) {
@@ -92,7 +94,7 @@ class MaintenanceController extends ApiController
             foreach ($allRangersPositions as $position) {
                 if (!in_array($position->id, $haveIds)) {
                     $addPositions[] = [
-                        'id'    => $position->id,
+                        'id' => $position->id,
                         'title' => $position->title,
                     ];
                     $ids[] = $position->id;
@@ -101,9 +103,9 @@ class MaintenanceController extends ApiController
 
             if (!empty($addPositions)) {
                 $activePeople[] = [
-                    'id'            => $person->id,
-                    'callsign'      => $person->callsign,
-                    'status'        => $person->status,
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'status' => $person->status,
                     'positions_add' => $addPositions
                 ];
 
@@ -112,13 +114,13 @@ class MaintenanceController extends ApiController
         }
 
         $newUserPositions = Position::where('new_user_eligible', true)
-                            ->orderBy('title')
-                            ->get();
+            ->orderBy('title')
+            ->get();
 
         $prospectives = Person::where('status', Person::PROSPECTIVE)
-                        ->with([ 'person_position','person_position.position' ])
-                        ->orderBy('callsign')
-                        ->get();
+            ->with(['person_position', 'person_position.position'])
+            ->orderBy('callsign')
+            ->get();
 
         $prospectivePeople = [];
         $newUserPositionIds = $newUserPositions->pluck('id')->toArray();
@@ -130,7 +132,7 @@ class MaintenanceController extends ApiController
             foreach ($newUserPositions as $position) {
                 if (!in_array($position->id, $haveIds)) {
                     $addPositions[] = [
-                        'id'    => $position->id,
+                        'id' => $position->id,
                         'title' => $position->title,
                     ];
                     $addIds[] = $position->id;
@@ -143,7 +145,7 @@ class MaintenanceController extends ApiController
                 if (!in_array($pp->position_id, $newUserPositionIds)) {
                     $position = $pp->position;
                     $removePositions[] = [
-                        'id'    => $position->id,
+                        'id' => $position->id,
                         'title' => $position->title,
                     ];
                     $removeIds[] = $position->id;
@@ -152,10 +154,10 @@ class MaintenanceController extends ApiController
 
             if (!empty($addPositions) || !empty($removePositions)) {
                 $prospectivePeople[] = [
-                    'id'               => $person->id,
-                    'callsign'         => $person->callsign,
-                    'status'           => $person->status,
-                    'positions_add'    => $addPositions,
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'status' => $person->status,
+                    'positions_add' => $addPositions,
                     'positions_remove' => $removePositions
                 ];
 
@@ -170,7 +172,7 @@ class MaintenanceController extends ApiController
         }
 
         return response()->json([
-            'actives'      => $activePeople,
+            'actives' => $activePeople,
             'prospectives' => $prospectivePeople,
         ]);
     }
@@ -187,14 +189,14 @@ class MaintenanceController extends ApiController
         $people = Person::select('id', 'callsign')->where('on_site', true)->get();
 
         // .. and actually mark them. (would be nice if Eloquent could have a get() then update() feature)
-        Person::where('on_site', true)->update([ 'on_site' => false ]);
+        Person::where('on_site', true)->update(['on_site' => false]);
 
         // Log what was done
         foreach ($people as $person) {
-            $this->log('person-update', 'maintenance - marked off site', [ 'on_site' => [ true, false ] ], $person->id);
+            $this->log('person-update', 'maintenance - marked off site', ['on_site' => [true, false]], $person->id);
         }
 
-        return response()->json([ 'count' => $people->count() ]);
+        return response()->json(['count' => $people->count()]);
     }
 
     /*
@@ -214,10 +216,10 @@ class MaintenanceController extends ApiController
         */
 
         $people = Person::where('asset_authorized', true)
-                ->orWhere('vehicle_paperwork', true)
-                ->orWhere('vehicle_insurance_paperwork', true)
-                ->orWhere('sandman_affidavit', true)
-                ->get();
+            ->orWhere('vehicle_paperwork', true)
+            ->orWhere('vehicle_insurance_paperwork', true)
+            ->orWhere('sandman_affidavit', true)
+            ->get();
 
         // Clear the logs, and log the action
         foreach ($people as $person) {
@@ -231,7 +233,7 @@ class MaintenanceController extends ApiController
             }
         }
 
-        return response()->json([ 'count' => $people->count() ]);
+        return response()->json(['count' => $people->count()]);
     }
 
     /*
@@ -242,16 +244,16 @@ class MaintenanceController extends ApiController
     {
         $this->checkForAdmin();
 
-        $pnvs = Person::whereIn('status', [ Person::ALPHA, Person::BONKED, Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST ])
-                ->orderBy('callsign')
-                ->get();
+        $pnvs = Person::whereIn('status', [Person::ALPHA, Person::BONKED, Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST])
+            ->orderBy('callsign')
+            ->get();
 
         $people = [];
         foreach ($pnvs as $person) {
             $result = [
-                'id'       => $person->id,
+                'id' => $person->id,
                 'callsign' => $person->callsign,
-                'status'   => $person->status
+                'status' => $person->status
             ];
 
             if ($person->resetCallsign()) {
@@ -267,7 +269,7 @@ class MaintenanceController extends ApiController
             $people[] = $result;
         }
 
-        return response()->json([ 'people' => $people ]);
+        return response()->json(['people' => $people]);
     }
 
     /*
@@ -279,16 +281,16 @@ class MaintenanceController extends ApiController
         $this->checkForAdmin();
 
         $pp = Person::where('status', Person::PAST_PROSPECTIVE)
-                ->where('callsign_approved', true)
-                ->orderBy('callsign')
-                ->get();
+            ->where('callsign_approved', true)
+            ->orderBy('callsign')
+            ->get();
 
         $people = [];
         foreach ($pp as $person) {
             $result = [
-                'id'       => $person->id,
+                'id' => $person->id,
                 'callsign' => $person->callsign,
-                'status'   => $person->status
+                'status' => $person->status
             ];
 
             if ($person->resetCallsign()) {
@@ -303,7 +305,7 @@ class MaintenanceController extends ApiController
             $people[] = $result;
         }
 
-        return response()->json([ 'people' => $people ]);
+        return response()->json(['people' => $people]);
     }
 
     /*
@@ -321,15 +323,14 @@ class MaintenanceController extends ApiController
         $exists = count(DB::select("SHOW TABLES LIKE '$table'"));
 
         if ($exists) {
-            return response()->json([ 'status' => 'archive-exists', 'year' => $prevYear ]);
+            return response()->json(['status' => 'archive-exists', 'year' => $prevYear]);
         }
 
         DB::statement("CREATE TABLE $table AS SELECT * FROM person_message");
         DB::statement("DELETE FROM person_message WHERE YEAR(timestamp) < $year");
 
-        return response()->json([ 'status' => 'success', 'year' => $prevYear ]);
+        return response()->json(['status' => 'success', 'year' => $prevYear]);
     }
-
 
 
     private function checkForAdmin()
