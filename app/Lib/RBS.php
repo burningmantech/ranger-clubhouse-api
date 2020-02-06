@@ -614,7 +614,7 @@ class RBS
         }
 
         // Safety check: These statuses should never, ever receive a broadcast
-        $sql->whereNotIn('status', [ 'bonked', 'deceased', 'dismissed', 'past prospective', 'resigned', 'suspended', 'uberbonked' ]);
+        $sql->whereNotIn('status', Person::NO_MESSAGES_STATUSES);
 
         $sql->where('person.user_authorized', true);
 
@@ -820,8 +820,10 @@ class RBS
         $senderAddress = '';
 
         $logIds = [];
-
         $smsFail = 0;
+        $smsSandboxed = setting('BroadcastSMSSandbox');
+        $emailSandboxed = setting('BroadcastMailSandbox');
+
         if ($sendSMS) {
             $smsMessage = "You have a new Ranger Clubhouse msg from $from. Subject: ";
             $limit = (RBS::SMS_LIMIT - (strlen($smsMessage) + 3));
@@ -830,7 +832,11 @@ class RBS
             $smsMessage .= substr($subject, 0, $size).'  '.RBS::SMS_SUFFIX;
 
             try {
-                $status = SMSService::broadcast([ $phoneNumber ], $smsMessage);
+                if (!$smsSandboxed) {
+                    $status = SMSService::broadcast([$phoneNumber], $smsMessage);
+                } else {
+                    $status = Broadcast::STATUS_SENT;
+                }
             } catch (SMSException $e) {
                 ErrorLog::recordException($e, 'sms-exception', [
                     'type'    => 'clubhouse-notify',
@@ -851,7 +857,9 @@ class RBS
         if ($sendEmail) {
             $email = $person->email;
             try {
-                mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message));
+                if (!$emailSandboxed) {
+                    mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message));
+                }
                 $status = Broadcast::STATUS_SENT;
             } catch (\Exception $e) {
                 ErrorLog::recordException($e, 'email-exception', [

@@ -372,6 +372,9 @@ class PersonPhoto extends ApiModel
             }
 
             $info['rejections'] = $rejections;
+            if (!empty($photo->reject_message)) {
+                $info['reject_message'] = $photo->reject_message;
+            }
         }
 
         return $info;
