@@ -22,7 +22,7 @@ fi;
 
 tmp="$(mktemp)";
 
-paths="${@:-./api ./src ./standard}";
+paths="${@:-./app ./tests ./database}";
 
 find ${paths} -name "*.php" -exec "${php_cmd}" -l {} ";" \
     | grep -v "No syntax errors detected in " \

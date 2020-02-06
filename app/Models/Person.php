@@ -101,6 +101,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         Person::SUSPENDED
     ];
 
+    /*
+     * No messages status are those that should not receive any messages
+     * either Clubhouse Messaging or the RBS
+     */
+
+    const NO_MESSAGES_STATUSES = [
+        Person::BONKED,
+        Person::DECEASED,
+        Person::DISMISSED,
+        Person::PAST_PROSPECTIVE,
+        Person::RESIGNED,
+        Person::SUSPENDED,
+        Person::UBERBONKED
+    ];
+
 
     /**
      * The database table name.

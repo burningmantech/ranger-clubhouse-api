@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 use App\Models\ApiModel;
 use App\Helpers\DateHelper;
+use App\Models\Person;
 
 class PersonMessage extends ApiModel
 {
@@ -59,6 +60,10 @@ class PersonMessage extends ApiModel
             ->get(['person_message.*', 'creator.callsign as creator_callsign', 'sender.id as sender_person_id']);
     }
 
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
     public static function countUnread($personId)
     {
         return PersonMessage::where('person_id', $personId)->where('delivered', false)->count();
@@ -88,6 +93,11 @@ class PersonMessage extends ApiModel
                     throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
                 }
                 $this->addError('recipient_callsign', 'Callsign does not exist');
+                return false;
+            }
+
+            if (in_array($recipient->status, Person::NO_MESSAGES_STATUSES)) {
+                $this->addError('recipient_callsign', "Person has the status {$recipient->status} and may not be sent a message.");
                 return false;
             }
 

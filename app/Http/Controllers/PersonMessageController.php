@@ -48,7 +48,7 @@ class PersonMessageController extends ApiController
         $person_message->creator_person_id = $this->user->id;
 
         if ($person_message->save()) {
-            $person = Person::find($person_message->person_id);
+            $person = $person_message->person;
             RBS::clubhouseMessageNotify($person, $this->user->id,
                 $person_message->message_from, $person_message->subject, $person_message->body);
             return $this->success($person_message);
