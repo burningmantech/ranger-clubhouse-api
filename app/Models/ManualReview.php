@@ -57,6 +57,12 @@ class ManualReview extends ApiModel
 
     public static function personPassedForYear($personId, $year, $runImport=true)
     {
+        if ($year >= 2020) {
+            // In theory, the Manual Review is going away this year (2020).. hack it
+            // so the Google spreadsheet is not hit
+            return false;
+        }
+
         if (ManualReview::existsPersonForYear($personId, $year)) {
             return true;
         }
