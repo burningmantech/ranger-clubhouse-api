@@ -11,7 +11,11 @@ class ActionLog extends Model
 {
     protected $table = 'action_logs';
 
-    protected $guarded = [ ];
+    protected $guarded = [];
+
+    protected $casts = [
+        'data' => 'array'
+    ];
 
     // created_at is handled by the database itself
     public $timestamps = false;
@@ -33,7 +37,7 @@ class ActionLog extends Model
         $personId = $query['person_id'] ?? null;
         $page = $query['page'] ?? 1;
         $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
-        $events = $query['events'] ?? [ ];
+        $events = $query['events'] ?? [];
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
         $endTime = $query['end_time'] ?? null;
@@ -90,7 +94,7 @@ class ActionLog extends Model
 
         if (!$total) {
             // Nada.. don't bother
-            return [ 'logs' => [ ], 'page' => 0, 'total' => 0, 'total_pages' => 0 ];
+            return ['action_logs' => [], 'meta' => ['page' => 0, 'total' => 0, 'total_pages' => 0]];
         }
 
         // Results sort 'asc' or 'desc'
@@ -105,36 +109,31 @@ class ActionLog extends Model
         $sql->offset($page * $pageSize)->limit($pageSize);
 
         // .. and go get it!
-        $rows = $sql->with([ 'person:id,callsign', 'target_person:id,callsign'])->get();
+        $rows = $sql->with(['person:id,callsign', 'target_person:id,callsign'])->get();
 
         foreach ($rows as $row) {
             if (empty($row->data)) {
                 continue;
             }
 
-            $data = json_decode($row->data);
-            if (!$data) {
-                continue;
+            if (isset($data['slot_id'])) {
+                $row->slot = Slot::where('id', $data['slot_id'])->with('position:id,title')->first();
             }
 
-            if (isset($data->slot_id)) {
-                $row->slot = Slot::where('id', $data->slot_id)->with('position:id,title')->first();
+            if (isset($data['enrolled_slot_ids']) && is_array($data['enrolled_slot_ids'])) {
+                $row->enrolled_slots = Slot::whereIn('id', $data['enrolled_slot_ids'])->with('position:id,title')->first();
             }
 
-            if (isset($data->enrolled_slot_ids) && is_array($data->enrolled_slot_ids)) {
-                $row->enrolled_slots = Slot::whereIn('id', $data->enrolled_slot_ids)->with('position:id,title')->first();
+            if (isset($data['position_ids']) && is_array($data['position_ids'])) {
+                $row->positions = Position::whereIn('id', $data['position_ids'])->orderBy('title')->get(['id', 'title']);
             }
 
-            if (isset($data->position_ids) && is_array($data->position_ids)) {
-                $row->positions = Position::whereIn('id', $data->position_ids)->orderBy('title')->get([ 'id', 'title' ]);
+            if (isset($data['position_id'])) {
+                $row->position = Position::where('id', $data['position_id'])->first();
             }
 
-            if (isset($data->position_id)) {
-                $row->position = Position::where('id', $data->position_id)->first();
-            }
-
-            if (isset($data->role_ids) && is_array($data->role_ids)) {
-                $row->roles = Role::whereIn('id', array_values($data->role_ids))->orderBy('title')->get([ 'id', 'title' ]);
+            if (isset($data['role_ids']) && is_array($data['role_ids'])) {
+                $row->roles = Role::whereIn('id', array_values($data['role_ids']))->orderBy('title')->get(['id', 'title']);
             }
 
             if ($redactData) {
@@ -143,15 +142,17 @@ class ActionLog extends Model
         }
 
         return [
-            'logs'        => $rows,
-            'total'       => $total,
-            'total_pages' => (int) (($total + ($pageSize - 1))/$pageSize),
-            'page_size'   => $pageSize,
-            'page'        => $page + 1,
-         ];
+            'action_logs' => $rows,
+            'meta' => [
+                'total' => $total,
+                'total_pages' => (int)(($total + ($pageSize - 1)) / $pageSize),
+                'page_size' => $pageSize,
+                'page' => $page + 1,
+            ]
+        ];
     }
 
-    public static function record($person, $event, $message, $data=null, $targetPersonId=null)
+    public static function record($person, $event, $message, $data = null, $targetPersonId = null)
     {
         $log = new ActionLog;
         $log->event = $event;
@@ -160,7 +161,7 @@ class ActionLog extends Model
         $log->target_person_id = $targetPersonId;
 
         if ($data) {
-            $log->data = json_encode($data);
+            $log->data = $data;
         }
 
         $log->save();
