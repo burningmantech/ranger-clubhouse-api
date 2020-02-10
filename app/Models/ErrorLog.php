@@ -15,6 +15,10 @@ class ErrorLog extends ApiModel
     // Allow mass assignment.
     protected $guarded = [];
 
+    protected $casts = [
+        'data' => 'array'
+    ];
+
     public function person()
     {
         return $this->belongsTo(Person::class);
@@ -24,7 +28,7 @@ class ErrorLog extends ApiModel
      * Record an error
      */
 
-    public static function record($error_type, $data=[])
+    public static function record($error_type, $data = [])
     {
         $error = [
             'error_type' => $error_type,
@@ -32,12 +36,12 @@ class ErrorLog extends ApiModel
 
         $req = request();
         if ($req) {
-            $data['method']      = $req->method();
-            $data['parameters']  = $req->all();
+            $data['method'] = $req->method();
+            $data['parameters'] = $req->all();
 
-            $error['ip']         = $req->ip();
+            $error['ip'] = $req->ip();
             $error['user_agent'] = $req->userAgent();
-            $error['url']        = $req->fullUrl();
+            $error['url'] = $req->fullUrl();
         }
 
         $error['data'] = $data;
@@ -53,17 +57,17 @@ class ErrorLog extends ApiModel
      * @param array $extra any additional data to be logged
      */
 
-    public static function recordException($e, $error_type, $extra=[])
+    public static function recordException($e, $error_type, $extra = [])
     {
         // Inspect the exception for name, message, source location,
         // and backtrace
         $data = [
             'exception' => [
-                'class'   => class_basename($e),
+                'class' => class_basename($e),
                 'message' => $e->getMessage(),
-                'file'    => $e->getFile(),
-                'line'    => $e->getLine(),
-                'backtrace'  => $e->getTrace(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'backtrace' => $e->getTrace(),
             ]
         ];
 
@@ -78,7 +82,7 @@ class ErrorLog extends ApiModel
 
         $error = [
             'error_type' => $error_type,
-            'data'       => $data
+            'data' => $data
         ];
 
         // Include the IP, user_agent and URL location
@@ -143,7 +147,7 @@ class ErrorLog extends ApiModel
 
         if (!$total) {
             // Nada.. don't bother
-            return [ 'logs' => [ ], 'page' => 0, 'total' => 0, 'total_pages' => 0 ];
+            return ['error_logs' => [], 'meta' => ['page' => 0, 'total' => 0, 'total_pages' => 0]];
         }
 
         // Results sort 'asc' or 'desc'
@@ -170,20 +174,13 @@ class ErrorLog extends ApiModel
         $rows = $sql->with('person:id,callsign')->get();
 
         return [
-            'logs'        => $rows,
-            'total'       => $total,
-            'total_pages' => (int) (($total + ($pageSize - 1))/$pageSize),
-            'page_size'   => $pageSize,
-            'page'        => $page + 1,
-         ];
-    }
-
-    /*
-     * Encode the data column as JSON if its an array.
-     */
-
-    public function setDataAttribute($value)
-    {
-        $this->attributes['data'] = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : $value;
+            'error_logs' => $rows,
+            'meta' => [
+                'total' => $total,
+                'total_pages' => (int)(($total + ($pageSize - 1)) / $pageSize),
+                'page_size' => $pageSize,
+                'page' => $page + 1,
+            ]
+        ];
     }
 }

@@ -435,7 +435,6 @@ class PersonPhotoController extends ApiController
         } catch (\Exception $e) {
             ErrorLog::recordException($e, 'person-photo-convert-exception', [
                 'target_person_id' => $personId,
-                'image'            => $imageParam,
                 'filename'         => $filename
              ]);
 

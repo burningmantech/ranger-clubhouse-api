@@ -60,7 +60,8 @@ class ErrorLogController extends ApiController
              'page_size'  => 'sometimes|integer',
         ]);
 
-        return response()->json(ErrorLog::findForQuery($params));
+         $result = ErrorLog::findForQuery($params);
+        return $this->success($result['error_logs'], $result['meta'], 'error_logs');
     }
 
     public function purge() {
