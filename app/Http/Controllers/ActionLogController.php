@@ -48,7 +48,8 @@ class ActionLogController extends ApiController
             }
         }
 
-        return response()->json(ActionLog::findForQuery($params, $redactData));
+        $result = ActionLog::findForQuery($params, $redactData);
+        return $this->success($result['action_logs'], $result['meta'], 'action_logs');
     }
 
     /**
