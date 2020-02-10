@@ -148,6 +148,7 @@ Route::group([
     Route::post('mentor/convert', 'MentorController@convert');
     Route::get('mentor/verdicts', 'MentorController@verdicts');
 
+    Route::get('motd/bulletin', 'MotdController@bulletin');
     Route::resource('motd', 'MotdController');
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');

@@ -29,4 +29,24 @@ class Motd extends ApiModel
     {
         return self::orderBy('created_at')->with('person:id,callsign')->get();
     }
+
+    public static function findForStatus($status) {
+        switch ($status) {
+            case Person::AUDITOR:
+                $type = 'for_auditors';
+                break;
+            case Person::PROSPECTIVE:
+            case Person::ALPHA:
+                $type = 'for_pnvs';
+                break;
+            default:
+                if (in_array($status, Person::NO_MESSAGES_STATUSES)) {
+                    return [];
+                }
+                $type = 'for_rangers';
+                break;
+        }
+
+        return self::where($type, 1)->orderBy('created_at')->get();
+    }
 }

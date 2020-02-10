@@ -5,12 +5,21 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ApiController;
 
 use App\Models\Motd;
+use App\Models\Person;
 
 class MotdController extends ApiController
 {
     public function index()
     {
+        $this->authorize('index', Motd::class);
+
         return $this->success(Motd::findAll(), null, 'motd');
+    }
+
+    public function bulletin()
+    {
+        $this->authorize('bulletin', Motd::class);
+        return $this->success(Motd::findForStatus($this->user->status), null, 'motd');
     }
 
     public function show(Motd $motd)
