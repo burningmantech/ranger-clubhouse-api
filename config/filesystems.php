@@ -13,7 +13,9 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DRIVER', 'photos-local'),
+    'default' => env('FILESYSTEM_DRIVER', 'local'),
+
+    // Note photo storage is controlled thru the PhotoStorage setting in config/clubhouse.php
 
     /*
     |--------------------------------------------------------------------------
@@ -70,7 +72,6 @@ return [
             'url' => env('RANGER_CLUBHOUSE_S3_URL', 'https://ranger-photos.s3-us-west-2.amazonaws.com'),
             'visibility' => 'public',
         ],
-
 
         's3' => [
             'driver' => 's3',

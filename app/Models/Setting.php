@@ -204,15 +204,6 @@ class Setting extends ApiModel
             'is_credential' => true
         ],
 
-        'PhotoStorage' => [
-            'description' => 'Photo storage driver to use',
-            'type' => 'string',
-            'options' => [
-                [ 'photos-s3', 'the AWS S3 bucket' ],
-                [ 'photos-local', 'the local server (on playa)' ],
-            ]
-        ],
-
         'PhotoUploadEnable' => [
             'description' => 'Enable Photo Uploading',
             'type' => 'bool',
