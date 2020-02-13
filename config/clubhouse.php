@@ -18,4 +18,9 @@ return [
 
     'RekognitionAccessKey' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_KEY', ''),
     'RekognitionAccessSecret' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_SECRET', ''),
+
+    /*
+     * What config/filesystem.php driver to use for photo storage.
+     */
+    'PhotoStorage' => env('RANGER_CLUBHOUSE_PHOTO_STORAGE', 'photos-local')
 ];

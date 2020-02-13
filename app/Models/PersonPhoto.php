@@ -29,6 +29,7 @@ class PersonPhoto extends ApiModel
     public $timestamps = true;
 
     const STORAGE_DIR = 'photos/';
+    const STORAGE_STAGING_DIR = 'staging/';
 
     protected $guarded = [
         'person_id',
@@ -325,12 +326,12 @@ class PersonPhoto extends ApiModel
 
     public function getImageUrlAttribute()
     {
-        return self::storage()->url(self::STORAGE_DIR . $this->image_filename);
+        return self::storage()->url(self::storagePath($this->image_filename));
     }
 
     public function getOrigUrlAttribute()
     {
-        return self::storage()->url(self::STORAGE_DIR . $this->orig_filename);
+        return self::storage()->url(self::storagePath($this->orig_filename));
     }
 
     public static function retrieveStatus($person)
@@ -382,7 +383,7 @@ class PersonPhoto extends ApiModel
 
     public static function storage()
     {
-        $storage = setting('PhotoStorage');
+        $storage = config('clubhouse.PhotoStorage');
         if (!$storage) {
             throw new \RuntimeException('PhotoStorage setting is not configured');
         }
@@ -399,17 +400,17 @@ class PersonPhoto extends ApiModel
             $this->image_filename = $file;
         }
 
-        return self::storage()->put(self::STORAGE_DIR . $file, $contents);
+        return self::storage()->put(self::storagePath($file), $contents);
     }
 
     public function deleteImage()
     {
-        self::storage()->delete(self::STORAGE_DIR .$this->image_filename);
+        self::storage()->delete(self::storagePath($this->image_filename));
     }
 
     public function deleteOrigImage()
     {
-        self::storage()->delete(self::STORAGE_DIR .$this->orig_filename);
+        self::storage()->delete(self::storagePath($this->orig_filename));
     }
 
 
@@ -525,5 +526,10 @@ class PersonPhoto extends ApiModel
 
             $this->analysis_status = 'failed';
         }
+    }
+
+    public static function storagePath(string $filename) : string {
+        $path = config('clubhouse.DeploymentEnvironment') == 'Staging' ? self::STORAGE_STAGING_DIR : self::STORAGE_DIR;
+        return $path . $filename;
     }
 }

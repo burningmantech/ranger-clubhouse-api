@@ -72,13 +72,14 @@ class ClubhousePhoto extends Migration
             'LambaseReportUrl', 'LambaseStatusUrl',
             'PhotoStoreLocally', 'PhotoSource'
         ])->delete();
-
+/*
         $setting = Setting::where('name', 'PhotoStorage')->first();
         if (!$setting) {
             $setting = new Setting([ 'name' => 'PhotoStorage']);
         }
         $setting->value = 'photos-s3';
         $setting->save();
+*/
     }
 
     /**

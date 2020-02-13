@@ -93,8 +93,8 @@ class PhotoLambaseConvertCommand extends Command
             DB::table('person')->where('id', $row->person_id)->update([ 'person_photo_id' => $photo->id ]);
 
             $contents = file_get_contents($file);
-            $storage->put(PersonPhoto::STORAGE_DIR . $photo->orig_filename, $contents);
-            $storage->put(PersonPhoto::STORAGE_DIR . $photo->image_filename, $contents);
+            $storage->put(PersonPhoto::storagePath($photo->orig_filename), $contents);
+            $storage->put(PersonPhoto::storagePath($photo->image_filename), $contents);
 
             gc_collect_cycles();
         }

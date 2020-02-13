@@ -188,7 +188,7 @@ class PersonPhotoController extends ApiController
 
         // Delete the old (cropped) photo
         try {
-            PersonPhoto::storage()->delete(PersonPhoto::STORAGE_DIR . $oldFilename);
+            PersonPhoto::storage()->delete(PersonPhoto::storagePath($oldFilename));
         } catch (\Exception $e) {
             ErrorLog::recordException($e, 'person-photo-delete-exception', [
                     'target_person_id' => $personPhoto->person_id,
@@ -386,7 +386,7 @@ class PersonPhotoController extends ApiController
             $this->notPermitted("Unauthorized.");
         }
 
-        $path = PersonPhoto::storage()->path(PersonPhoto::STORAGE_DIR . $filename);
+        $path = PersonPhoto::storage()->path(PersonPhoto::storagePath($filename));
 
         if (!file_exists($path)) {
             abort(404);
