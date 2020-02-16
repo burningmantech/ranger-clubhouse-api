@@ -9,6 +9,7 @@ use App\Models\ErrorLog;
 
 use App\Helpers\SqlHelper;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -292,6 +293,20 @@ class PersonPhoto extends ApiModel
                 'page'         => $page + 1,
             ]
          ];
+    }
+
+    /**
+     * Find all photos queued up for review.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public static function findAllPending()
+    {
+        return self::where('status', self::SUBMITTED)
+                ->orderBy('created_at')
+                ->with('person:id,callsign,status')
+                ->get();
     }
 
     public static function deleteAllForPerson($personId)
