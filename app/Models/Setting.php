@@ -204,6 +204,11 @@ class Setting extends ApiModel
             'is_credential' => true
         ],
 
+        'PhotoPendingNotifyEmail' => [
+            'description' => 'Email(s) to notify when photos are queued up for review. (nightly mail)',
+            'type' => 'email'
+        ],
+
         'PhotoUploadEnable' => [
             'description' => 'Enable Photo Uploading',
             'type' => 'bool',

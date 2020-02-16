@@ -6,22 +6,19 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\DB;
 
-use App\Models\AccessDocument;
-use App\Models\AccessDocumentChanges;
 use App\Models\ActionLog;
-use App\Models\BMID;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonPosition;
-use App\Models\PersonSlot;
 use App\Models\PersonStatus;
+use App\Models\PersonPhoto;
 use App\Models\Position;
 use App\Models\Role;
-use App\Models\Slot;
-use App\Models\Timesheet;
 
 use App\Mail\DailyReportMail;
+use App\Mail\PhotoPendingMail;
+
 use RuntimeException;
 
 class MaintenanceController extends ApiController
@@ -31,12 +28,18 @@ class MaintenanceController extends ApiController
         $this->checkMaintenanceToken();
 
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
-        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['logs'];
+        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['error_logs'];
 
-        $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['logs'];
+        $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
         $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with(['person:id,callsign', 'person_source:id,callsign'])->get();
 
         mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
+
+        $pendingPhotos = PersonPhoto::findAllPending();
+
+        if ($pendingPhotos->isNotEmpty()){
+            mail_to(setting('PhotoPendingNotifyEmail'), new PhotoPendingMail($pendingPhotos));
+        }
         return $this->success();
     }
 
