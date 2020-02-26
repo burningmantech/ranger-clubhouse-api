@@ -65,7 +65,7 @@ class PersonPhotoPolicy
         return false;
     }
 
-    public function review(Person $user, PersonPhoto $personPhoto) {
+    public function rejectPreview(Person $user, PersonPhoto $personPhoto) {
         return false;
     }
 }

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use App\Models\ApiModel;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+
 class TraineeStatus extends ApiModel
 {
     protected $table = 'trainee_status';
@@ -17,9 +20,9 @@ class TraineeStatus extends ApiModel
     ];
 
     protected $casts = [
-        'passed'    => 'boolean',
-        'begins'    => 'date',
-        'ends'  => 'date'
+        'passed' => 'boolean',
+        'begins' => 'date',
+        'ends' => 'date'
     ];
 
     /**
@@ -35,15 +38,15 @@ class TraineeStatus extends ApiModel
     {
         // Find the first training that passed
         $sql = self::join('slot', 'slot.id', 'trainee_status.slot_id')
-                // Ensure the person is actually signed up
-                ->join('person_slot', function ($q) use ($personId)  {
-                    $q->on('person_slot.slot_id', 'trainee_status.slot_id');
-                    $q->where('person_slot.person_id', $personId);
-                })
-                ->where('trainee_status.person_id', $personId)
-                ->whereYear('slot.begins', $year)
-                ->orderBy('trainee_status.passed', 'asc')
-                ->orderBy('slot.begins');
+            // Ensure the person is actually signed up
+            ->join('person_slot', function ($q) use ($personId) {
+                $q->on('person_slot.slot_id', 'trainee_status.slot_id');
+                $q->where('person_slot.person_id', $personId);
+            })
+            ->where('trainee_status.person_id', $personId)
+            ->whereYear('slot.begins', $year)
+            ->orderBy('trainee_status.passed', 'asc')
+            ->orderBy('slot.begins');
 
         if ($positionId) {
             $sql->where('slot.position_id', $positionId);
@@ -53,34 +56,39 @@ class TraineeStatus extends ApiModel
 
     }
 
-    public static function didPersonPassForYear($personId, $positionId, $year) {
-        $positionIds = [ $positionId ];
+    public static function didPersonPassForYear($personId, $positionId, $year)
+    {
+        $positionIds = [$positionId];
 
         if ($positionId == Position::HQ_FULL_TRAINING) {
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
-                ->where('trainee_status.person_id', $personId)
-                ->whereIn('slot.position_id', $positionIds)
-                ->whereYear('slot.begins', $year)
-                ->where('passed', 1)
-                ->exists();
+            ->where('trainee_status.person_id', $personId)
+            ->whereIn('slot.position_id', $positionIds)
+            ->whereYear('slot.begins', $year)
+            ->where('passed', 1)
+            ->exists();
     }
 
-    public static function firstOrNewForSession($personId, $sessionId) {
-        return self::firstOrNew([ 'person_id' => $personId, 'slot_id' => $sessionId]);
+    public static function firstOrNewForSession($personId, $sessionId)
+    {
+        return self::firstOrNew(['person_id' => $personId, 'slot_id' => $sessionId]);
     }
+
 
     /*
      * Delete all records refering to a slot. Used by slot deletion.
      */
 
-    public static function deleteForSlot($slotId) {
+    public static function deleteForSlot($slotId)
+    {
         self::where('slot_id', $slotId)->delete();
     }
 
-    public function setRankAttribute($value) {
+    public function setRankAttribute($value)
+    {
         $this->attributes['rank'] = empty($value) ? null : $value;
     }
 }

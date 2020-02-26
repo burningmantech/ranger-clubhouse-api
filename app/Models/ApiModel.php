@@ -2,23 +2,41 @@
 
 namespace App\Models;
 
+use App\Models\ActionLog;
+use App\Models\Person;
+
 use Illuminate\Database\Eloquent\Model;
+
 use Illuminate\Support\MessageBag;
+use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Validation\Factory as Validator;
 
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
 
-abstract class ApiModel extends Model //implements AuditableContract
-{
-    //use Auditable;
 
+abstract class ApiModel extends Model
+{
     /**
      * Don't use created_at/updated_at.
      *
      * @var bool
      */
     public $timestamps = false;
+
+    /**
+     * Audit the changes to the record?
+     * @var bool
+     */
+
+    protected $auditModel = false;
+
+    /**
+     * The reason the record is being created or updated. Works with $auditModel
+     * @var string
+     */
+    public $auditReason;
 
     protected $errors;
 
@@ -30,9 +48,67 @@ abstract class ApiModel extends Model //implements AuditableContract
     protected $resourceSingle;
     protected $resourceCollection;
 
-    public static function recordExists($id) : bool
-    {
-        return get_called_class()::where('id', $id)->exists();
+    public static function boot() {
+        parent::boot();
+        self::saving(function ($model) {
+            $model->_prepAudit();
+        });
+
+        self::saved(function ($model) {
+            $model->_recordAudit();
+         });
+    }
+
+    /**
+     * Prepare to audit a record. If the record is existing, grab the changes
+     * before the save happens. Otherwise, the entire record will be logged.
+     */
+
+    public function _prepAudit() {
+        if (!$this->auditModel) {
+            return;
+        }
+
+        if ($this->exists) {
+            // Existing record -- grab the changes
+            $this->auditChanges = $this->getChangedValues();
+            $this->auditIsNew = false;
+        } else {
+            $this->auditIsNew = true;
+        }
+    }
+
+    /**
+     * Record changes to the record.
+     *
+     * The changes are logged as the event 'table-name-{create,update}'.
+     */
+
+    public function _recordAudit() {
+        if (!$this->auditModel) {
+            return;
+        }
+
+        $table = str_replace('_', '-', $this->getTable());
+        if ($model->auditIsNew) {
+            $data = $this->attributes;
+            $event = $table .'-create';
+        } else {
+            $values = $this->auditChanges;
+            if (empty($values)) {
+                return; // Nothing to record
+            }
+            $data['id'] = $this->id;
+            $event = $table .'-update';
+        }
+
+        if ($this instanceof Person) {
+            $personId = $this->id;
+        } else {
+            $personId = ($this->attributes['person_id'] ?? null);
+        }
+
+        ActionLog::record(Auth::user(), $event, $this->auditReason, $data, $personId);
     }
 
     public function validate($rules = null, $throwOnFailure = false)
@@ -121,14 +197,16 @@ abstract class ApiModel extends Model //implements AuditableContract
         return $this->rules;
     }
 
-    // Laravel does not have this!?
     public function getAppends()
     {
         return $this->appends;
     }
 
-    // Get the changed columns
-
+    /**
+     * Grab the changed values. Used for auditing.
+     *
+     * @return array [ 'column-name' => [ 'oldValue', 'newValue' ]]
+     */
     public function getChangedValues()
     {
         $changes = [];

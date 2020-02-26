@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
 
 /*
@@ -41,7 +42,11 @@ class PersonPhotoController extends ApiController
             'page'          => 'sometimes|integer',
             'page_size'     => 'sometimes|integer',
             'person_id'     => 'sometimes|integer',
-            'include_rejects' => 'sometimes|boolean'
+            'include_rejects' => 'sometimes|boolean',
+            'sort' => [
+                'sometimes',
+                Rule::in(['callsign'])
+            ],
         ]);
 
         $result = PersonPhoto::findForQuery($params);
@@ -372,6 +377,24 @@ class PersonPhotoController extends ApiController
         }
 
         return $this->success();
+    }
+
+    /**
+     * Preview a rejection email
+     *
+     *
+     */
+    public function rejectPreview(PersonPhoto $personPhoto)
+    {
+        $this->authorize('rejectPreview', $personPhoto);
+
+        $params = request()->validate([
+            'reject_reasons' => 'sometimes|array',
+            'reject_message' => 'sometimes|string'
+        ]);
+        
+        $mail = new PhotoRejectedMail($personPhoto->person, $params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
+        return response()->json([ 'mail' => $mail->render() ]);
     }
 
     /*

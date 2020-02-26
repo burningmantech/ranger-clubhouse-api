@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use App\Helpers\DateHelper;
-
 use App\Models\ApiModel;
 use App\Models\Person;
 use App\Models\PersonPosition;
+use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\TraineeStatus;
-
+use App\Models\TraineeNote;
 use Carbon\Carbon;
 
 use Illuminate\Support\Facades\DB;
@@ -165,6 +164,8 @@ class Training extends Position
         return TraineeStatus::didPersonPassForYear($personId, $positionId, $year)
             || TrainerStatus::didPersonTeachForYear($personId, $positionId, $year);
     }
+
+
 
     /**
      * Find a position which should be a training position.
@@ -714,6 +715,55 @@ class Training extends Position
                  ->orderBy('slot.begins')
                  ->get();
     }
+
+    /**
+     * Retrieve all trainings up to the given year and position for ids
+     *
+     * @param $peopleIds people to look up
+     * @param int $positionId position to find (usually Training)
+     * @param int $year find trainings upto and including the year
+     * @return \Illuminate\Support\Collection
+     */
+    public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year)
+    {
+        // Find the sign ups
+        $rows = DB::table('slot')
+            ->select(
+                'person_slot.person_id as person_id',
+                'slot.id as slot_id',
+                'slot.description as slot_description',
+                'slot.begins as slot_begins',
+                DB::raw('YEAR(slot.begins) as slot_year'),
+                DB::raw('IF(slot.ends < NOW(), true, false) as slot_has_ended'),
+                DB::raw('IFNULL(trainee_status.passed, FALSE) as training_passed'),
+                'trainee_status.rank as training_rank',
+                'trainee_status.feedback_delivered as feedback_delivered'
+            )->join('person_slot', 'person_slot.slot_id', 'slot.id')
+            ->join('person', 'person.id', 'person_slot.person_id')
+            ->leftJoin('trainee_status', function ($j) {
+                $j->on('trainee_status.person_id', '=', 'person_slot.person_id');
+                $j->on('trainee_status.slot_id', '=', 'person_slot.slot_id');
+            })
+            ->whereYear('slot.begins', '<=', $year)
+            ->where('slot.position_id', $positionId)
+            ->whereIn('person_slot.person_id', $peopleIds)
+            ->orderBy('person_slot.person_id')
+            ->orderBy('slot.begins')
+            ->get();
+
+
+        foreach ($rows as $row) {
+            $row->training_notes = TraineeNote::findAllForPersonSlot($row->person_id, $row->slot_id);
+            $ps = PersonStatus::findForTime($row->person_id, $row->slot_begins);
+            if ($ps) {
+                $row->person_status = ($ps->new_status == Person::VINTAGE) ? Person::ACTIVE : $ps->new_status;
+            } else {
+                $row->person_status = 'unknown';
+            }
+        }
+        return $rows->groupBy('person_id');
+    }
+
 
     /*
      * Retrieve all trainers and their attendance for a given year

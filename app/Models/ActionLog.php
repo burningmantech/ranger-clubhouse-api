@@ -14,6 +14,7 @@ class ActionLog extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'created_at' => 'datetime',
         'data' => 'array'
     ];
 
@@ -157,7 +158,7 @@ class ActionLog extends Model
         $log = new ActionLog;
         $log->event = $event;
         $log->person_id = $person ? $person->id : null;
-        $log->message = $message;
+        $log->message = $message ?? '';
         $log->target_person_id = $targetPersonId;
 
         if ($data) {

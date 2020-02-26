@@ -17,6 +17,11 @@ class PersonMentor extends ApiModel
         'notes'
     ];
 
+    const PASS = 'pass';
+    const BONK = 'bonk';
+    const SELF_BONK = 'self-bonk';
+    const PENDING = 'pending';
+
     public function mentor()
     {
         return $this->belongsTo(Person::class);
@@ -32,12 +37,19 @@ class PersonMentor extends ApiModel
         return self::where('mentor_id', $personId)->limit(1)->exists();
     }
 
-    public static function retrieveAllForPerson($personId)
+    /**
+     * Retrieve all mentors for a person, check if the mentors want to be contacted or not.
+     *
+     * @param $personId
+     * @return array
+     */
+
+    public static function retrieveAllForPerson(int $personId) : array
     {
         $ids = PersonMentor::where('mentor_id', $personId)
-                ->groupBy('person_id')
-                ->pluck('person_id')
-                ->toArray();
+            ->groupBy('person_id')
+            ->pluck('person_id')
+            ->toArray();
 
         if (empty($ids)) {
             return [];
@@ -62,14 +74,14 @@ class PersonMentor extends ApiModel
             LEFT JOIN person as mentor ON mentor.id=person_mentor.mentor_id
             LEFT JOIN alert_person ON alert_person.person_id=person_mentor.person_id AND
                     alert_person.alert_id=:alert_id
-            WHERE person_mentor.person_id IN ('.implode(',', $ids).') AND
+            WHERE person_mentor.person_id IN (' . implode(',', $ids) . ') AND
                 EXISTS (SELECT 1 FROM person_mentor pm WHERE pm.mentor_id=:person_id AND pm.person_id=person_mentor.person_id AND pm.mentor_year=person_mentor.mentor_year LIMIT 1)
 
             ORDER BY person_mentor.mentor_year desc, person.callsign, mentor.callsign',
             [
                 'person_id' => $personId,
-                'alert_id'  => Alert::MENTOR_CONTACT,
-                'type'      => 'mentee-contact',
+                'alert_id' => Alert::MENTOR_CONTACT,
+                'type' => 'mentee-contact',
             ]
         );
 
@@ -84,13 +96,13 @@ class PersonMentor extends ApiModel
 
             if (!isset($years[$year][$personId])) {
                 /*
-                 * sanitze the status. A disabled account, or status that is not
+                 * sanitize the status. A disabled account, or status that is not
                  * active or inactive is marked 'not active'.
                  */
 
                 $status = $row->status;
                 if (!$row->user_authorized
-                || ($status != 'active' && $status != 'inactive')) {
+                    || ($status != Person::ACTIVE && $status != Person::INACTIVE)) {
                     $status = 'not active';
                     $canContact = 'none';
                 } else {
@@ -98,18 +110,18 @@ class PersonMentor extends ApiModel
                 }
 
                 $years[$year][$personId] = [
-                    'person_id'         => $personId,
-                    'callsign'          => $row->callsign,
-                    'status'            => $status,
+                    'person_id' => $personId,
+                    'callsign' => $row->callsign,
+                    'status' => $status,
                     'formerly_known_as' => $row->formerly_known_as,
-                    'contact_status'    => $canContact,
-                    'mentor_status'     => $row->mentor_status,
+                    'contact_status' => $canContact,
+                    'mentor_status' => $row->mentor_status,
                     'mentors' => []
                 ];
             }
 
             $years[$year][$personId]['mentors'][] = [
-                'callsign'  => $row->mentor_callsign,
+                'callsign' => $row->mentor_callsign,
                 'person_id' => $row->mentor_id,
             ];
 
@@ -134,27 +146,28 @@ class PersonMentor extends ApiModel
                 }
             }
             $result[] = [
-                'year'    => $year,
+                'year' => $year,
                 'mentees' => $people,
-                'passed'  => $passed,
-                'bonked'  => $bonked
+                'passed' => $passed,
+                'bonked' => $bonked
             ];
         }
 
         return $result;
     }
 
-    /*
+    /**
      * Find the mentors for a person
+     * @param $personId
+     * @return array
      */
-
     public static function retrieveMentorHistory($personId)
     {
-        $history =  PersonMentor::with([ 'mentor:id,callsign' ])
-                   ->where('person_id', $personId)
-                   ->get()
-                   ->sortBy('mentor.callsign', SORT_NATURAL|SORT_FLAG_CASE)
-                   ->groupBy('mentor_year');
+        $history = PersonMentor::with(['mentor:id,callsign'])
+            ->where('person_id', $personId)
+            ->get()
+            ->sortBy('mentor.callsign', SORT_NATURAL | SORT_FLAG_CASE)
+            ->groupBy('mentor_year');
 
 
         $summary = [];
@@ -162,18 +175,22 @@ class PersonMentor extends ApiModel
             $people = [];
             foreach ($mentors as $mentor) {
                 $people[] = [
-                   'id'    => $mentor->mentor_id,
-                   'callsign' => $mentor->mentor->callsign,
-                   'person_mentor_id' => $mentor->id
-               ];
+                    'id' => $mentor->mentor_id,
+                    'callsign' => $mentor->mentor->callsign,
+                    'person_mentor_id' => $mentor->id
+                ];
             }
 
             $summary[] = [
-               'year'    => $year,
-               'status' => $mentors[0]->status,
-               'mentors' => $people
-           ];
+                'year' => $year,
+                'status' => $mentors[0]->status,
+                'mentors' => $people
+            ];
         }
+
+        usort($summary, function ($r) {
+            return $r['year'];
+        });
 
         return $summary;
     }
@@ -190,38 +207,38 @@ class PersonMentor extends ApiModel
         }
 
         $personGroups = PersonMentor::where('mentor_year', $year)
-                ->with([$personColumns, 'mentor:id,callsign' ])
-                ->get()
-                ->groupBy('person_id');
+            ->with([$personColumns, 'mentor:id,callsign'])
+            ->get()
+            ->groupBy('person_id');
 
         $people = [];
         foreach ($personGroups as $personId => $group) {
             $first = $group[0];
             if ($first->person == null) {
-                $first->person = (object) [
-                    'callsign'   => "!Deleted #{$first->person_id}",
+                $first->person = (object)[
+                    'callsign' => "!Deleted #{$first->person_id}",
                     'first_name' => 'n/a',
-                    'last_name'  => 'n/a',
-                    'status'     => 'deleted',
+                    'last_name' => 'n/a',
+                    'status' => 'deleted',
                 ];
             }
 
             $mentors = $group->map(function ($row) {
                 return [
-                    'id'       => $row->mentor->id,
+                    'id' => $row->mentor->id,
                     'callsign' => $row->mentor->callsign,
                 ];
-            })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+            })->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
 
 
-            $person =  [
-                'id'            => $first->person_id,
-                'callsign'      => $first->person->callsign,
-                'first_name'    => $first->person->first_name,
-                'last_name'     => $first->person->last_name,
-                'status'        => $first->person->status,
+            $person = [
+                'id' => $first->person_id,
+                'callsign' => $first->person->callsign,
+                'first_name' => $first->person->first_name,
+                'last_name' => $first->person->last_name,
+                'status' => $first->person->status,
                 'mentor_status' => $first->status,
-                'mentors'       => $mentors
+                'mentors' => $mentors
             ];
 
             if ($includeEmail) {
@@ -245,11 +262,60 @@ class PersonMentor extends ApiModel
     public static function retrieveYearPassed($personId)
     {
         $row = DB::table('person_mentor')
-                ->where('person_id', $personId)
-                ->where('status', 'pass')
-                ->orderBy('mentor_year', 'desc')
-                ->first();
+            ->where('person_id', $personId)
+            ->where('status', 'pass')
+            ->orderBy('mentor_year', 'desc')
+            ->first();
 
         return $row ? $row->mentor_year : null;
+    }
+
+    /**
+     *  Bulk retrieve the entire mentor history upto and including the given year
+     *
+     * @param array $peopleIds people to find their mentor history
+     * @param integer $year mentor years to find up to and including
+     * @return array
+     */
+
+    public static function retrieveAllMentorsForIds(array $peopleIds, int $year) : array
+    {
+        $peopleGroups = self::whereIn('person_id', $peopleIds)
+            ->with('mentor:id,callsign')
+            ->orderBy('person_id')
+            ->orderBy('mentor_year')
+            ->get()
+            ->groupBy('person_id');
+
+        $mentees = [];
+
+        foreach ($peopleGroups as $personId => $mentors) {
+            $mentorsByYear = [];
+            $person = $mentors[0];
+
+            foreach ($mentors as $mentor) {
+                $year = $mentor->mentor_year;
+                $pm = $mentor->mentor;
+                if (!isset($mentorsByYear[$year])) {
+                    $mentorsByYear[$year] = [
+                        'status' => $mentor->status,
+                        'mentors' => []
+                    ];
+                }
+                $mentorsByYear[$year]['mentors'][] = [
+                    'id' => $mentor->mentor_id,
+                    'callsign' => $pm ? $pm->callsign : "Deleted #{$mentor->mentor_id}"
+                ];
+            }
+
+            foreach (array_keys($mentorsByYear) as $year) {
+                usort($mentorsByYear[$year]['mentors'], function ($a, $b) {
+                    return strcasecmp($a['callsign'], $b['callsign']);
+                });
+            }
+            $mentees[$personId] = $mentorsByYear;
+        }
+
+        return $mentees;
     }
 }

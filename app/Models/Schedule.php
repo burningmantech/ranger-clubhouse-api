@@ -12,16 +12,18 @@ use App\Models\Slot;
 
 use Carbon\Carbon;
 
+use Exception;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 //
 // Meta Model
 // This will combined slot & position and maybe person_slot.
 //
 
-class ScheduleException extends \Exception
+class ScheduleException extends Exception
 {
-};
+}
 
 class Schedule extends ApiModel
 {
@@ -63,7 +65,7 @@ class Schedule extends ApiModel
     public static function findForQuery($query)
     {
         if (empty($query['year'])) {
-            throw new \InvalidArgumentException('Missing year parameter');
+            throw new InvalidArgumentException('Missing year parameter');
         }
 
         $year = $query['year'];
@@ -96,8 +98,8 @@ class Schedule extends ApiModel
         // Is this a simple schedule find for a person?
         if ($personId && !$shiftsAvailable) {
             $sql = DB::table('person_slot')
-                    ->where('person_slot.person_id', $personId)
-                    ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
+                ->where('person_slot.person_id', $personId)
+                ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
             if ($remaining) {
                 $sql->whereRaw('slot.ends > NOW()');
             }
@@ -111,10 +113,10 @@ class Schedule extends ApiModel
                 $selectColumns[] = DB::raw('IF(person_slot.person_id IS NULL,FALSE,TRUE) AS person_assigned');
                 $sql->leftJoin('person_slot', function ($join) use ($personId) {
                     $join->where('person_slot.person_id', $personId)
-                          ->on('person_slot.slot_id', 'slot.id');
+                        ->on('person_slot.slot_id', 'slot.id');
                 })->join('person_position', function ($join) use ($personId) {
                     $join->where('person_position.person_id', $personId)
-                         ->on('person_position.position_id', 'slot.position_id');
+                        ->on('person_position.position_id', 'slot.position_id');
                 });
             }
         }
@@ -173,10 +175,10 @@ class Schedule extends ApiModel
     // @return array
     //
 
-    public static function addToSchedule($personId, $slot, $force=false): array
+    public static function addToSchedule($personId, $slot, $force = false): array
     {
         if (PersonSlot::haveSlot($personId, $slot->id)) {
-            return [ 'status' => 'exists', 'signed_up' => $slot->signed_up ];
+            return ['status' => 'exists', 'signed_up' => $slot->signed_up];
         }
 
         $addForced = false;
@@ -186,7 +188,7 @@ class Schedule extends ApiModel
         $now = SqlHelper::now();
 
         if ($now->gt($slot->begins) && !$force) {
-            return [ 'status' => 'has-started', 'signed_up' => $slot->signed_up ];
+            return ['status' => 'has-started', 'signed_up' => $slot->signed_up];
         }
 
         $max = $slot->max;
@@ -216,7 +218,7 @@ class Schedule extends ApiModel
             // looks up! sign up the person
             $ps = new PersonSlot([
                 'person_id' => $personId,
-                'slot_id'   => $updateSlot->id
+                'slot_id' => $updateSlot->id
             ]);
             $ps->save();
 
@@ -225,13 +227,13 @@ class Schedule extends ApiModel
             DB::commit();
 
             return [
-                'status'    => 'success',
+                'status' => 'success',
                 'signed_up' => $updateSlot->signed_up,
-                'forced'    => $addForced,
+                'forced' => $addForced,
             ];
         } catch (ScheduleException $e) {
             DB::rollback();
-            return [ 'status' => $e->getMessage(), 'signed_up' => $updateSlot->signed_up ];
+            return ['status' => $e->getMessage(), 'signed_up' => $updateSlot->signed_up];
         }
     }
 
@@ -242,25 +244,25 @@ class Schedule extends ApiModel
     public static function deleteFromSchedule($personId, $personSlotId): array
     {
         $personSlot = PersonSlot::where([
-                    [ 'person_id', $personId],
-                    [ 'slot_id', $personSlotId]
-                ])->firstOrFail();
+            ['person_id', $personId],
+            ['slot_id', $personSlotId]
+        ])->firstOrFail();
 
         try {
             DB::beginTransaction();
             $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
-                                ->lockForUpdate()->firstOrFail();
+                ->lockForUpdate()->firstOrFail();
             $personSlot->delete();
             if ($slot->signed_up > 0) {
                 $slot->update(['signed_up' => ($slot->signed_up - 1)]);
             }
             DB::commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             throw $e;
         }
 
-        return [ 'status' => 'success', 'signed_up' => $slot->signed_up ];
+        return ['status' => 'success', 'signed_up' => $slot->signed_up];
     }
 
     /*
@@ -268,9 +270,9 @@ class Schedule extends ApiModel
      * and if so what are the enrollments?
      */
 
-    public static function haveMultipleEnrollments($personId, $positionId, $year, & $enrollments)
+    public static function haveMultipleEnrollments($personId, $positionId, $year, &$enrollments)
     {
-        $slotIds = self::findEnrolledSlotIds($personId. $year, $positionId);
+        $slotIds = self::findEnrolledSlotIds($personId . $year, $positionId);
 
         if ($slotIds->isEmpty()) {
             $enrollments = null;
@@ -288,7 +290,7 @@ class Schedule extends ApiModel
      * enrollments and see if the parts match.
      */
 
-    public static function canJoinTrainingSlot($personId, $slot, & $enrollments)
+    public static function canJoinTrainingSlot($personId, $slot, &$enrollments)
     {
         $enrollments = null;
 
@@ -326,35 +328,35 @@ class Schedule extends ApiModel
     public static function findEnrolledSlots($personId, $year, $positionId)
     {
         return PersonSlot::where('person_slot.person_id', $personId)
-                    ->join('slot', function ($query) use ($positionId, $year) {
-                        $query->whereRaw('slot.id=person_slot.slot_id');
-                        $query->where('slot.position_id', $positionId);
-                        $query->whereYear('slot.begins', $year);
-                    })->orderBy('slot.begins')
-                    ->get();
+            ->join('slot', function ($query) use ($positionId, $year) {
+                $query->whereRaw('slot.id=person_slot.slot_id');
+                $query->where('slot.position_id', $positionId);
+                $query->whereYear('slot.begins', $year);
+            })->orderBy('slot.begins')
+            ->get();
     }
 
     public static function retrieveStartingSlotsForPerson($personId)
     {
-        $rows =  PersonSlot::join('slot', function ($query) {
+        $rows = PersonSlot::join('slot', function ($query) {
             $query->whereRaw('slot.id=person_slot.slot_id');
             $query->whereRaw(
-                        'slot.begins BETWEEN DATE_SUB(NOW(), INTERVAL ? MINUTE) AND DATE_ADD(NOW(), INTERVAL ? MINUTE)',
-                        [ self::SHIFT_STARTS_WITHIN, self::SHIFT_STARTS_WITHIN]
-                    );
+                'slot.begins BETWEEN DATE_SUB(NOW(), INTERVAL ? MINUTE) AND DATE_ADD(NOW(), INTERVAL ? MINUTE)',
+                [self::SHIFT_STARTS_WITHIN, self::SHIFT_STARTS_WITHIN]
+            );
         })
             ->where('person_id', $personId)
             ->with('slot.position:id,title')->get();
 
         return $rows->map(function ($row) {
             return [
-                    'slot_id'   => $row->slot_id,
-                    'slot_description' => $row->slot->description,
-                    'position_id' => $row->slot->position_id,
-                    'position_title' => $row->slot->position->title,
-                    'slot_begins' => (string) $row->slot->begins,
-                    'slot_ends' => (string) $row->slot->ends,
-                ];
+                'slot_id' => $row->slot_id,
+                'slot_description' => $row->slot->description,
+                'position_id' => $row->slot->position_id,
+                'position_title' => $row->slot->position->title,
+                'slot_begins' => (string)$row->slot->begins,
+                'slot_ends' => (string)$row->slot->ends,
+            ];
         });
     }
 
@@ -372,10 +374,10 @@ class Schedule extends ApiModel
         $signUp = PersonSlot::join('slot', function ($q) use ($begins) {
             $q->on('slot.id', 'person_slot.slot_id');
             $q->whereRaw('slot.begins BETWEEN DATE_SUB(?, INTERVAL 45 MINUTE) AND DATE_ADD(?, INTERVAL 45 MINUTE)',
-                        [ $begins, $begins ]);
+                [$begins, $begins]);
         })->where('person_id', $personId)
-        ->where('slot.position_id', $positionId)
-        ->first();
+            ->where('slot.position_id', $positionId)
+            ->first();
 
         return $signUp ? $signUp->slot_id : null;
     }
@@ -388,14 +390,12 @@ class Schedule extends ApiModel
     {
         $status = $person->status;
         if ($status == Person::ALPHA
-        || $status == Person::AUDITOR
-        || $status == Person::PROSPECTIVE
-        || $status == Person::PROSPECTIVE_WAITLIST
-        || $status == Person::NON_RANGER) {
+            || $status == Person::AUDITOR
+            || $status == Person::PROSPECTIVE
+            || $status == Person::NON_RANGER) {
             return false;
         }
 
-        $missingWeekendShift = false;
         $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
         if (empty($burnWeekendPeriod)) {
             return false; // Not set, don't bother
@@ -423,8 +423,8 @@ class Schedule extends ApiModel
             ->join('slot', 'person_slot.slot_id', 'slot.id')
             ->where('person_slot.person_id', $personId)
             ->where(function ($q) use ($start, $end) {
-                $q->whereBetween('slot.begins', [ $start, $end ]);
-                $q->orWhereBetween('slot.ends', [ $start, $end ]);
+                $q->whereBetween('slot.begins', [$start, $end]);
+                $q->orWhereBetween('slot.ends', [$start, $end]);
             })
             ->exists();
     }
@@ -435,7 +435,7 @@ class Schedule extends ApiModel
 
     public static function scheduleSummaryForPersonYear($personId, $year)
     {
-        $rows = self::findForQuery([ 'person_id' => $personId, 'year' => $year ]);
+        $rows = self::findForQuery(['person_id' => $personId, 'year' => $year]);
 
         $eventDates = EventDate::findForYear($year);
 
@@ -449,16 +449,16 @@ class Schedule extends ApiModel
             $credits = $rows->pluck('credits')->sum();
 
             return [
-                'pre_event_duration'  => 0,
-                'pre_event_credits'   => 0,
-                'event_duration'      => $time,
-                'event_credits'       => $credits,
+                'pre_event_duration' => 0,
+                'pre_event_credits' => 0,
+                'event_duration' => $time,
+                'event_credits' => $credits,
                 'post_event_duration' => 0,
-                'post_event_credits'  => 0,
-                'total_duration'      => $time,
-                'total_credits'       => $credits,
-                'other_duration'      => 0,
-                'counted_duration'    => 0,
+                'post_event_credits' => 0,
+                'total_duration' => $time,
+                'total_credits' => $credits,
+                'other_duration' => 0,
+                'counted_duration' => 0,
             ];
         }
 
@@ -469,18 +469,18 @@ class Schedule extends ApiModel
         }
 
         return [
-            'pre_event_duration'  => $summary->pre_event_duration,
-            'pre_event_credits'   => $summary->pre_event_credits,
-            'event_duration'      => $summary->event_duration,
-            'event_credits'       => $summary->event_credits,
+            'pre_event_duration' => $summary->pre_event_duration,
+            'pre_event_credits' => $summary->pre_event_credits,
+            'event_duration' => $summary->event_duration,
+            'event_credits' => $summary->event_credits,
             'post_event_duration' => $summary->post_event_duration,
-            'post_event_credits'  => $summary->post_event_credits,
-            'total_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
-            'total_credits'       => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
-            'other_duration'      => $summary->other_duration,
-            'counted_duration'      => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
-            'event_start'         => (string) $eventDates->event_start,
-            'event_end'           => (string) $eventDates->event_end,
+            'post_event_credits' => $summary->post_event_credits,
+            'total_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
+            'total_credits' => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+            'other_duration' => $summary->other_duration,
+            'counted_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'event_start' => (string)$eventDates->event_start,
+            'event_end' => (string)$eventDates->event_end,
         ];
     }
 

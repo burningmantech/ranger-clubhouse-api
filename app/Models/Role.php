@@ -18,6 +18,7 @@ class Role extends ApiModel
     const EDIT_SLOTS       = 7;   // Edit Slots
     const LOGIN            = 11;  // Person allowed to login
     const MANAGE           = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
+    const INTAKE           = 13;  // Intake Management
     const MENTOR           = 101; // Mentor - access mentor section
     const TRAINER          = 102; // Trainer
     const VC               = 103; // Volunteer Coordinator -

@@ -3,6 +3,8 @@
 namespace app\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
+use \Illuminate\Support\Facades\DB;
+
 use Illuminate\Database\Eloquent\Collection;
 
 use App\Http\Controllers\Controller;
@@ -13,8 +15,6 @@ use App\Models\Role;
 
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
-
-use DB;
 
 class ApiController extends Controller
 {
@@ -119,6 +119,16 @@ class ApiController extends Controller
         return response()->json($json);
     }
 
+    /**
+     * Return either a JSON success if all arguments are null or
+     * a REST json success response
+     *
+     * @param mixed $resource an array, eloquent collection, or similar to return
+     * @param mixed $meta any meta information
+     * @param mixed $resourceName name of the resource, used when the collection is empty.
+     * @return \Illuminate\Http\JsonResponse
+     */
+
     public function success($resource=null, $meta=null, $resourceName = null)
     {
         if ($resource === null) {
@@ -194,6 +204,13 @@ class ApiController extends Controller
             $targetPersonId
         );
     }
+
+    /**
+     * Tells the user (via Handler::render) the operation is not authorized
+     *
+     * @param $message string to send back
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
 
     public function notPermitted($message)
     {

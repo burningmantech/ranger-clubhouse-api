@@ -13,6 +13,7 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
+use App\Models\TraineeNote;
 
 use App\Helpers\SqlHelper;
 
@@ -28,6 +29,7 @@ class SlotController extends ApiController
      *
      * @return \Illuminate\Http\Response
      */
+
     public function index()
     {
         $this->authorize('index', Slot::class);
@@ -230,6 +232,7 @@ class SlotController extends ApiController
         PersonSlot::deleteForSlot($slot->id);
         TraineeStatus::deleteForSlot($slot->id);
         TrainerStatus::deleteForSlot($slot->id);
+        TraineeNote::deleteForSlot($slot->id);
 
         $this->log('slot-delete', 'delete', [ 'slot' => $slot ]);
 

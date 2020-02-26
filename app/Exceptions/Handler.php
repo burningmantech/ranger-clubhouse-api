@@ -9,9 +9,6 @@ use App\Models\ErrorLog;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 use \Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
@@ -53,7 +50,8 @@ class Handler extends ExceptionHandler
             }
         }
 
-        if (app()->isLocal()) {
+        // Report the exception on the console if running in development or testing.
+        if (app()->isLocal() || app()->runningUnitTests()) {
             parent::report($exception);
             return;
         }
@@ -110,6 +108,12 @@ class Handler extends ExceptionHandler
             return response()->json([ 'error' => $message ], 403);
         }
 
+        /*
+         * A HTTP exception is thrown when:
+         * - The URL/endpoint cannot be found (status 404)
+         * - The wrong HTTP verb was used (status 405)
+         * - Something, something, something, bad.
+         */
         if ($this->isHttpException($e)) {
             $statusCode = $e->getStatusCode();
 
@@ -130,7 +134,7 @@ class Handler extends ExceptionHandler
 
         // Bad SQL statement, no biscuit!
         if ($e instanceof \Illuminate\Database\QueryException) {
-            if (app()->isLocal()) {
+            if (app()->isLocal() || app()->runningUnitTests()) {
                 // For development return the full SQL statement
                 return RestApi::error(response(), 500, "SQL Exception $file:$line - $message");
             } else {

@@ -50,9 +50,10 @@ class CreatePersonStatusTable extends Migration
                 ]);
             }
         }
+ /*
         $rows = ActionLog::where('event', 'person-status-change')->get();
         foreach ($rows as $row) {
-            $data = json_decode($row->data);
+             $data = json_decode($row->data);
             $status = $data->status;
             PersonStatus::create([
                 'person_id' => $row->target_person_id,
@@ -63,7 +64,7 @@ class CreatePersonStatusTable extends Migration
                 'created_at' => $row->created_at
             ]);
         }
-
+*/
     }
 
     /**

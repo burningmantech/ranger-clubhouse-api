@@ -20,6 +20,7 @@ use App\Models\Slot;
 
 use App\Mail\TrainingSignup;
 use App\Mail\TrainingSessionFullMail;
+use Illuminate\Http\Response;
 
 class PersonScheduleController extends ApiController
 {
@@ -29,10 +30,10 @@ class PersonScheduleController extends ApiController
 
     public function index(Person $person)
     {
-        $this->authorize('view', [ Schedule::class, $person]);
+        $this->authorize('view', [Schedule::class, $person]);
 
-        $query = request()->validate( [
-            'year'    => 'required|digits:4',
+        $query = request()->validate([
+            'year' => 'required|digits:4',
             'shifts_available' => 'sometimes|boolean',
         ]);
 
@@ -55,11 +56,11 @@ class PersonScheduleController extends ApiController
     public function store(Person $person)
     {
         $params = request()->validate([
-            'slot_id'  => 'required|integer',
-            'force'    => 'sometimes|boolean'
+            'slot_id' => 'required|integer',
+            'force' => 'sometimes|boolean'
         ]);
 
-        $this->authorize('create', [ Schedule::class, $person ]);
+        $this->authorize('create', [Schedule::class, $person]);
 
         $slotId = $params['slot_id'];
 
@@ -68,7 +69,7 @@ class PersonScheduleController extends ApiController
         // Slot must be activated in order to allow signups
         if (!$slot->active) {
             return response()->json([
-                'status'    => 'not-active',
+                'status' => 'not-active',
                 'signed_up' => $slot->signed_up,
             ]);
         }
@@ -76,43 +77,28 @@ class PersonScheduleController extends ApiController
         // You must hold the position
         if (!PersonPosition::havePosition($person->id, $slot->position_id)) {
             return response()->json([
-                'status'        => 'no-position',
-                'signed_up'     => $slot->signed_up,
+                'status' => 'no-position',
+                'signed_up' => $slot->signed_up,
                 'position_title' => Position::retrieveTitle($slot->position_id)
             ]);
         }
 
         $confirmForce = $params['force'] ?? false;
 
-        /*
-         * Enrollment in multiple training sessions is not allowed unless:
-         *
-         * - The person is a Trainer of the appropriate type.
-         *   (e.g., Traing -> Trainer/Assoc. Trainer/Uber, Green Dot Training -> G.D. Trainer, etc)
-         * - The logged in user holds the Trainer, Mentor or VC role, or ART Trainer is the slot is a ART module
-         */
-
         $trainerForced = false;
 
         $enrollments = null;
         $multipleEnrollmentForced = false;
-        $hasStartedForced = false;
 
-        $forced = false;
+        $logData = ['slot_id' => $slotId];
 
-        $mayForce = false;  // let the user know they may force the add or not
-        $logData = [ 'slot_id' => $slotId ];
-
-        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot);
+        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot, true);
 
         $preventMultipleEnrollments = $slot->position->prevent_multiple_enrollments;
         if ($slot->isTraining()
-        && $preventMultipleEnrollments
-        && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
-            if ($isTrainer) {
-                $trainerForced = true;
-                $canForce = true;
-            } elseif (!$canForce) {
+            && $preventMultipleEnrollments
+            && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
+            if (!$canForce) {
                 $logData['training_multiple_enrollment'] = true;
                 $logData['enrolled_slot_ids'] = $enrollments->pluck('id');
                 // Not a trainer, nor has sufficent roles.. your jedi mind tricks will not work here.
@@ -125,11 +111,12 @@ class PersonScheduleController extends ApiController
 
                 return response()->json([
                     'status' => 'multiple-enrollment',
-                    'slots'  => $enrollments,
+                    'slots' => $enrollments,
                     'signed_up' => $slot->signed_up,
                 ]);
             }
             $multipleEnrollmentForced = true;
+            $trainerForced = $isTrainer;
         } elseif ($slot->position_id == Position::ALPHA
             && $preventMultipleEnrollments
             && Schedule::haveMultipleEnrollments($person->id, Position::ALPHA, $slot->begins->year, $enrollments)) {
@@ -146,7 +133,7 @@ class PersonScheduleController extends ApiController
 
                 return response()->json([
                     'status' => 'multiple-enrollment',
-                    'slots'  => $enrollments,
+                    'slots' => $enrollments,
                     'signed_up' => $slot->signed_up,
                 ]);
             }
@@ -155,115 +142,111 @@ class PersonScheduleController extends ApiController
 
         // Go try to add the person to the slot/session
         $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
-
         $status = $result['status'];
-        if ($status == 'success') {
-            $person->update(['active_next_event' => 1]);
+        if ($status != 'success') {
+            $response = ['status' => $status, 'signed_up' => $result['signed_up']];
 
-            $forcedReasons = [];
-            if ($trainerForced) {
-                $forcedReasons[] = 'trainer forced';
-                $logData['trainer_forced'] = true;
-            }
-
-            if ($multipleEnrollmentForced) {
-                $forcedReasons[] = 'multiple enrollment';
-                $logData['multiple_enrollment'] = true;
-            }
-
-            if ($result['forced']) {
-                $forcedReasons[] = 'overcapacity';
-                $logData['overcapacity'] = true;
-            }
-
-            if ($slot->has_started) {
-                $forcedReasons[] = 'started';
-                $logData['started'] = true;
-            }
-
-            $action = "added";
-            if (!empty($forcedReasons)) {
-                $action .= ' ('.implode(',', $forcedReasons).')';
-            }
-
-            $this->log(
-                'person-slot-add',
-                $action,
-                $logData,
-                $person->id
-            );
-
-            // Notify the person about signing up
-            if ($slot->isTraining() && !$slot->has_started) {
-                $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
-                mail_to($person->email, $message);
-            }
-
-            $signedUp = $result['signed_up'];
-
-            // Is the training slot at capacity?
-            if ($slot->isTraining()
-            && $signedUp >= $slot->max && !$slot->has_started
-            && !empty($slot->position->slot_full_email)) {
-                // fire off an email letting the TA or ART team know a session has become full.
-                mail_to($slot->position->slot_full_email, new TrainingSessionFullMail($slot, $signedUp));
-            }
-
-            $response = [
-                'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person),
-                'status' => 'success',
-                'signed_up' => $signedUp,
-            ];
-
-            if ($result['forced']) {
-                $response['full_forced'] = true;
-            }
-
-            if ($slot->has_started) {
-                $response['started_forced'] = true;
-            }
-
-            if ($trainerForced || $multipleEnrollmentForced) {
-                $response['slots'] = $enrollments;
-
-                if ($trainerForced) {
-                    $response['trainer_forced'] = true;
-                } elseif ($multipleEnrollmentForced) {
-                    $response['multiple_forced'] = true;
-                }
+            if (($status == 'has-started' || $status == 'full') && $canForce) {
+                // Let the user know the sign up can be forced.
+                $response['may_force'] = true;
             }
 
             return response()->json($response);
-        } elseif (($status == 'has-started' || $status == 'full') && $canForce) {
-            // Let the user know they may force the add after confirmation.
-            $mayForce = true;
         }
 
+        // Person might be active next (this) event.
+        $person->update(['active_next_event' => 1]);
 
-        $response = [ 'status' => $status, 'signed_up' => $result['signed_up'] ];
-        if ($mayForce) {
-            $response['may_force'] = true;
+        $forcedReasons = [];
+
+        if ($trainerForced) {
+            $forcedReasons[] = 'trainer forced';
+            $logData['trainer_forced'] = true;
+        }
+
+        if ($multipleEnrollmentForced) {
+            $forcedReasons[] = 'multiple enrollment';
+            $logData['multiple_enrollment'] = true;
+        }
+
+        if ($result['forced']) {
+            $forcedReasons[] = 'overcapacity';
+            $logData['overcapacity'] = true;
+        }
+
+        if ($slot->has_started) {
+            $forcedReasons[] = 'started';
+            $logData['started'] = true;
+        }
+
+        $action = "added";
+        if (!empty($forcedReasons)) {
+            $action .= ' (' . implode(',', $forcedReasons) . ')';
+        }
+
+        $this->log('person-slot-add', $action, $logData, $person->id);
+
+        // Notify the person about the Training signing up
+        if ($slot->isTraining() && !$slot->has_started) {
+            $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
+            mail_to($person->email, $message);
+        }
+
+        $signedUp = $result['signed_up'];
+
+        // Is the training slot at capacity?
+        if ($slot->isTraining()
+            && $signedUp >= $slot->max
+            && !$slot->has_started
+            && !empty($slot->position->slot_full_email)) {
+            // fire off an email letting the TA or ART team know a session has become full.
+            mail_to($slot->position->slot_full_email, new TrainingSessionFullMail($slot, $signedUp));
+        }
+
+        $response = [
+            'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person),
+            'status' => 'success',
+            'signed_up' => $signedUp,
+        ];
+
+        if ($result['forced']) {
+            $response['full_forced'] = true;
+        }
+
+        if ($slot->has_started) {
+            $response['started_forced'] = true;
+        }
+
+        if ($trainerForced || $multipleEnrollmentForced) {
+            $response['slots'] = $enrollments;
+
+            if ($trainerForced) {
+                $response['trainer_forced'] = true;
+            } elseif ($multipleEnrollmentForced) {
+                $response['multiple_forced'] = true;
+            }
         }
 
         return response()->json($response);
+
     }
 
     /**
      * Remove the slot from the person's schedule
      *
-     * @param  int $personId slot to delete for person
-     * @param  int $slotId   to delete
-     * @return \Illuminate\Http\Response
+     * @param int $personId slot to delete for person
+     * @param int $slotId to delete
+     * @return Response
      */
 
     public function destroy(Person $person, $slotId)
     {
-        $this->authorize('delete', [ Schedule::class, $person ]);
+        $this->authorize('delete', [Schedule::class, $person]);
 
         $slot = Slot::findOrFail($slotId);
         $now = SqlHelper::now();
 
-        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot);
+        list($canForce, $isTrainer) = $this->canForceScheduleChange($slot, false);
 
         $forced = false;
         if ($now->gt($slot->begins)) {
@@ -282,7 +265,7 @@ class PersonScheduleController extends ApiController
         if ($result['status'] == 'success') {
             $result['recommend_burn_weekend_shift'] = Schedule::recommendBurnWeekendShift($person);
 
-            $data = [ 'slot_id' => $slotId ];
+            $data = ['slot_id' => $slotId];
             if ($forced) {
                 $data['forced'] = true;
             }
@@ -298,23 +281,21 @@ class PersonScheduleController extends ApiController
 
     public function permission(Person $person)
     {
-        $params = request()->validate([ 'year' => 'required|integer' ]);
+        $params = request()->validate(['year' => 'required|integer']);
 
-        $this->authorize('view', [ Schedule::class, $person ]);
+        $this->authorize('view', [Schedule::class, $person]);
 
         $year = $params['year'];
         $personId = $person->id;
         $status = $person->status;
         $callsignApproved = $person->callsign_approved;
 
-        $canSignUpForShifts = false;
-        $isPNV = ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
-        $isAuditor = ($status == Person::AUDITOR);
+        if ($status == Person::PAST_PROSPECTIVE) {
+            return response()->json(['permission' => [ 'signup_allowed' => false ] ]);
+        }
 
-        $manualReviewCap = setting('ManualReviewProspectiveAlphaLimit');
-        $manualReviewMyRank = 1;
-        $manualReviewCount = 1;
-        $missedManualReviewWindow = false;
+        $canSignUpForShifts = false;
+        $isAuditor = ($status == Person::AUDITOR);
 
         $missingBpguid = false;
 
@@ -339,71 +320,44 @@ class PersonScheduleController extends ApiController
                 $canSignUpForShifts = true;
             }
             $callsignApproved = true;
-        } elseif ($status != Person::PAST_PROSPECTIVE) {
+        } else {
             if ($callsignApproved && ($photoStatus == PersonPhoto::APPROVED) && $manualReviewPassed) {
                 $canSignUpForShifts = true;
             }
 
             // Everyone except Auditors and non rangers need to have BPGUID on file.
-            if ($status !=  Person::NON_RANGER) {
-                if (empty($person->bpguid)) {
-                    $missingBpguid = true;
-                    $canSignUpForShifts = false;
-                }
-            }
-        }
-
-        if (!$mrDisabledAllowSignups && $manualReviewCap > 0 && $isPNV) {
-            $manualReviewMyRank = ManualReview::prospectiveOrAlphaRankForYear($personId, $year);
-            if ($manualReviewMyRank == -1) {
-                $manualReviewMyRank = 100000;       // Hack to make life easier below
-            }
-            $manualReviewCount = ManualReview::countPassedProspectivesAndAlphasForYear($year);
-
-            if ($manualReviewPassed && $manualReviewMyRank > $manualReviewCap) {
-                // Don't mark the person has missed the manual review window if
-                // manual review is disabled AND signups are allowed
-                if (!$mrDisabledAllowSignups) {
-                    $missedManualReviewWindow = true;
-                }
+            if ($status != Person::NON_RANGER && empty($person->bpguid)) {
+                $missingBpguid = true;
                 $canSignUpForShifts = false;
             }
         }
 
-
         $showManualReviewLink = false;
-        if (!$canSignUpForShifts) {
-            // Per Roslyn and Threepio 2/23/2017, we require people to have
-            // a lam photo before they can take the Manual Review
-            $photoOk = ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED);
-            if ($isPNV || $status == Person::PROSPECTIVE_WAITLIST) {
-                if ($photoOk && !$manualReviewPassed
-                        && ($manualReviewCap == 0 ||
-                            $manualReviewCount < $manualReviewCap)) {
-                    $showManualReviewLink = true;
-                }
-            } elseif ($status != Person::PAST_PROSPECTIVE && $photoOk && !$manualReviewPassed) {
-                $showManualReviewLink = true;
-            }
+        // Per Roslyn and Threepio 2/23/2017, we require people to have
+        // a lam photo before they can take the Manual Review
+        if (!$canSignUpForShifts
+            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED) && !$manualReviewPassed) {
+            $showManualReviewLink = true;
         }
 
+
         if (setting('ManualReviewLinkEnable')) {
-            $manualReviewUrl = setting('ManualReviewGoogleFormBaseUrl').urlencode($person->callsign);
+            $manualReviewUrl = setting('ManualReviewGoogleFormBaseUrl') . urlencode($person->callsign);
         } else {
             $manualReviewUrl = '';
         }
 
         // New for 2019, everyone has to agree to the org's behavioral standards agreement.
         $missingBehaviorAgreement = !$person->behavioral_agreement;
-/*
-         July 5th, 2019 - agreement language is slightly broken. Agreement is optional.
-        if ($missingBehaviorAgreement) {
-            $canSignUpForShifts = false;
-        }
-*/
+        /*
+                 July 5th, 2019 - agreement language is slightly broken. Agreement is optional.
+                if ($missingBehaviorAgreement) {
+                    $canSignUpForShifts = false;
+                }
+        */
 
 
-        if (($status == Person::AUDITOR || $status == Person::PROSPECTIVE || $status == Person::ALPHA) && !$person->has_reviewed_pi) {
+        if (($isAuditor || $status == Person::PROSPECTIVE || $status == Person::ALPHA) && !$person->has_reviewed_pi) {
             // PNV & Auditors must review their personal info first
             $canSignUpForShifts = false;
         }
@@ -411,43 +365,40 @@ class PersonScheduleController extends ApiController
         $recommendWeekendShift = Schedule::recommendBurnWeekendShift($person);
 
         $results = [
-            'signup_allowed'              => $canSignUpForShifts,
-            'callsign_approved'           => $callsignApproved,
-            'photo_status'                => $photoStatus,
+            'signup_allowed' => $canSignUpForShifts,
+            'callsign_approved' => $callsignApproved,
+            'photo_status' => $photoStatus,
             // is the manual review link allowed to be shown (if link is enabled)
-            'manual_review_allowed'       => $showManualReviewLink,
+            'manual_review_allowed' => $showManualReviewLink,
             // was manual review taken/passed?
-            'manual_review_passed'        => $manualReviewPassed,
-            // did the prospective/alpha late in taking the review?
-            'manual_review_window_missed' => $missedManualReviewWindow,
-            // cap on how many prospective/alpha can take the manual review
-            'manual_review_cap'           => $manualReviewCap,
+            'manual_review_passed' => $manualReviewPassed,
+
             // Manual Review page link - if enabled
-            'manual_review_url'           => $manualReviewUrl,
+            'manual_review_url' => $manualReviewUrl,
 
             // Everyone except Auditors & Non Rangers should have a BPGUID (aka Burner Profile ID)
-            'missing_bpguid'              => $missingBpguid,
+            'missing_bpguid' => $missingBpguid,
 
-            'missing_behavioral_agreement'  => $missingBehaviorAgreement,
+            'missing_behavioral_agreement' => $missingBehaviorAgreement,
 
             // Not a hard requirement, just a suggestion
-            'recommend_burn_weekend_shift'    => $recommendWeekendShift,
+            'recommend_burn_weekend_shift' => $recommendWeekendShift,
 
             'has_reviewed_pi' => $person->has_reviewed_pi,
         ];
 
-        return response()->json([ 'permission' => $results ]);
+        return response()->json(['permission' => $results]);
     }
 
-   /*
-    * Shift recommendations for a person (currently recommend Burn Weekend shift only)
-    *
-    * (use primarily by the HQ interface)
-    */
+    /*
+     * Shift recommendations for a person (currently recommend Burn Weekend shift only)
+     *
+     * (use primarily by the HQ interface)
+     */
 
     public function recommendations(Person $person)
     {
-        $this->authorize('view', [ Schedule::class, $person ]);
+        $this->authorize('view', [Schedule::class, $person]);
 
         return response()->json([
             'burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person)
@@ -460,10 +411,10 @@ class PersonScheduleController extends ApiController
 
     public function imminent(Person $person)
     {
-        $this->authorize('view', [ Schedule::class, $person ]);
+        $this->authorize('view', [Schedule::class, $person]);
 
         return response()->json([
-            'slots'    => Schedule::retrieveStartingSlotsForPerson($person->id)
+            'slots' => Schedule::retrieveStartingSlotsForPerson($person->id)
         ]);
     }
 
@@ -474,14 +425,14 @@ class PersonScheduleController extends ApiController
 
     public function expected(Person $person)
     {
-        $this->authorize('view', [ Schedule::class, $person ]);
+        $this->authorize('view', [Schedule::class, $person]);
 
         $now = SqlHelper::now();
         $year = current_year();
 
         $rows = Schedule::findForQuery([
             'person_id' => $person->id,
-            'year'      => $year,
+            'year' => $year,
             'remaining' => true
         ]);
 
@@ -507,9 +458,9 @@ class PersonScheduleController extends ApiController
         }
 
         return response()->json([
-            'duration'  => $time,
-            'credits'   => $credits,
-            'slot_count'=> count($rows)
+            'duration' => $time,
+            'credits' => $credits,
+            'slot_count' => count($rows)
         ]);
     }
 
@@ -522,41 +473,50 @@ class PersonScheduleController extends ApiController
 
     public function scheduleSummary(Person $person)
     {
-        $this->authorize('view', [ Schedule::class, $person ]);
+        $this->authorize('view', [Schedule::class, $person]);
 
         $year = $this->getYear();
 
-        return response()->json([ 'summary' => Schedule::scheduleSummaryForPersonYear($person->id, $year) ]);
+        return response()->json(['summary' => Schedule::scheduleSummaryForPersonYear($person->id, $year)]);
     }
 
-    private function canForceScheduleChange($slot)
+    /**
+     * Is the user allowed to force a schedule change?
+     *
+     * - Admins are allowed
+     * - ART Trainers (role) are allowed for any ART training
+     * - Trainers (role) are only allowed to remove people, not sign up (per 2020 TA request)
+     *
+     * @param $slot
+     * @param bool $isSignup true if check for a sign up, false for a removal
+     * @return array [ canForce
+     */
+
+    private function canForceScheduleChange($slot, $isSignup = true)
     {
-        $rolesCanForce = null;
-        $canForce = false;
         $isTrainer = false;
+        $roleCanForce = null;
 
         if ($slot->isTraining()) {
-            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR ];
             if ($slot->isArt()) {
-                $rolesCanForce[] = Role::ART_TRAINER;
-            }
-            $trainers = Position::TRAINERS[$slot->position_id] ?? null;
-            if ($trainers && PersonPosition::havePosition($this->user->id, $trainers)) {
-                // Person is a trainer.. allowed to force sign up to trainings
+                $roleCanForce = Role::ART_TRAINER;
                 $isTrainer = true;
-                $canForce = true;
+            } else if (!$isSignup) {
+                /*
+                 * Per request from TA 2020 - Dirt Trainers may NOT manually add students BUT
+                 * are allowed to remove students.
+                 */
+                $roleCanForce = Role::TRAINER;
+                $isTrainer = true;
             }
         } elseif ($slot->position_id == Position::ALPHA) {
-            $rolesCanForce = [ Role::ADMIN, Role::TRAINER, Role::MENTOR ];
-        } else {
-            // Not a training or alpha slot. need confirmation from admin on forcing add
-            $rolesCanForce = [ Role::ADMIN ];
+            $roleCanForce = Role::MENTOR;
         }
 
-        if (!$canForce) {
-            $canForce = $rolesCanForce ? $this->userHasRole($rolesCanForce) : false;
+        if ($roleCanForce && $this->userHasRole($roleCanForce)) {
+            return [true, $isTrainer];
         }
 
-        return [ $canForce, $isTrainer ];
+        return [$this->userHasRole(Role::ADMIN), false];
     }
 }
