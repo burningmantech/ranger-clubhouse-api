@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'America/Los_Angeles',
+    // Using a city which does not observe PDT, so UTC-7 works year round.
+    'timezone' => 'America/Phoenix',
 
     /*
     |--------------------------------------------------------------------------

@@ -216,6 +216,8 @@ class PersonController extends ApiController
                     //'contact_log',
                     'manual_review',
                     'mentee_status',
+                    'person_intake',
+                    'person_intake_note',
                     'person_language',
                     'person_mentor',
                     'person_message',
@@ -226,6 +228,7 @@ class PersonController extends ApiController
                     'timesheet',
                     'timesheet_log',
                     'timesheet_missing',
+                    'trainee_note',
                     'trainee_status',
                     'trainer_status'
                 ];
@@ -894,7 +897,10 @@ class PersonController extends ApiController
         if (!empty($photoStatus)) {
             $photo = PersonPhoto::where('person_id', $person->id)->first();
             if (!$photo) {
-                $photo = new PersonPhoto([ 'person_id' => $person->id ]);
+                $photo = new PersonPhoto;
+                $photo->person_id = $person->id;
+                $photo->image_filename = 'test.jpg';
+                $photo->orig_filename = 'test-orig.jpg';
             }
 
             $photo->status = $photoStatus;
@@ -1066,5 +1072,16 @@ class PersonController extends ApiController
         }
 
         throw new \InvalidArgumentException("Unknown onboard debugging command");
+    }
+
+    /**
+     * Retrieve status history
+     */
+
+    public function statusHistory(Person $person)
+    {
+        $this->authorize('statusHistory', Person::class);
+
+        return response()->json([ 'history' => PersonStatus::retrieveAllForId($person->id) ]);
     }
 }

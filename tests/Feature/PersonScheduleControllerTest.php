@@ -31,7 +31,7 @@ class PersonScheduleControllerTest extends TestCase
      * and a set of positions.
      */
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -47,9 +47,9 @@ class PersonScheduleControllerTest extends TestCase
         // Setup default (real world) positions
         $this->trainingPosition = factory(Position::class)->create(
             [
-                'id'    => Position::TRAINING,
+                'id' => Position::TRAINING,
                 'title' => 'Training',
-                'type'  => 'Training',
+                'type' => 'Training',
                 'slot_full_email' => 'training-academy@example.com',
                 'prevent_multiple_enrollments' => true,
             ]
@@ -57,18 +57,18 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->dirtPosition = factory(Position::class)->create(
             [
-                'id'    => Position::DIRT,
+                'id' => Position::DIRT,
                 'title' => 'Dirt',
-                'type'  => 'Frontline',
+                'type' => 'Frontline',
             ]
         );
 
         // Used for ART training & signups
         $this->greenDotTrainingPosition = factory(Position::class)->create(
             [
-                'id'    => Position::GREEN_DOT_TRAINING,
+                'id' => Position::GREEN_DOT_TRAINING,
                 'title' => 'Green Dot - Training',
-                'type'  => 'Training',
+                'type' => 'Training',
                 'slot_full_email' => 'greendots@example.com',
                 'prevent_multiple_enrollments' => true,
             ]
@@ -76,41 +76,41 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->greenDotDirtPosition = factory(Position::class)->create(
             [
-                'id'                   => Position::DIRT_GREEN_DOT,
-                'title'                => 'Green Dot - Dirt',
-                'type'                 => 'Frontline',
+                'id' => Position::DIRT_GREEN_DOT,
+                'title' => 'Green Dot - Dirt',
+                'type' => 'Frontline',
                 'training_position_id' => $this->greenDotTrainingPosition->id,
             ]
         );
 
         $this->trainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
-            $day                   = (25 + $i);
+            $day = (25 + $i);
             $this->trainingSlots[] = factory(Slot::class)->create(
                 [
-                    'begins'      => date("$year-05-$day 09:45:00"),
-                    'ends'        => date("$year-05-$day 17:45:00"),
+                    'begins' => date("$year-05-$day 09:45:00"),
+                    'ends' => date("$year-05-$day 17:45:00"),
                     'position_id' => Position::TRAINING,
                     'description' => "Training #$i",
-                    'signed_up'   => 0,
-                    'max'         => 10,
-                    'min'         => 0,
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
             );
         }
 
         $this->dirtSlots = [];
         for ($i = 0; $i < 3; $i++) {
-            $day               = (25 + $i);
+            $day = (25 + $i);
             $this->dirtSlots[] = factory(Slot::class)->create(
                 [
-                    'begins'      => date("$year-08-$day 09:45:00"),
-                    'ends'        => date("$year-08-$day 17:45:00"),
+                    'begins' => date("$year-08-$day 09:45:00"),
+                    'ends' => date("$year-08-$day 17:45:00"),
                     'position_id' => Position::DIRT,
                     'description' => "Dirt #$i",
-                    'signed_up'   => 0,
-                    'max'         => 10,
-                    'min'         => 0,
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
             );
         }
@@ -120,32 +120,43 @@ class PersonScheduleControllerTest extends TestCase
             $day = (25 + $i);
             $this->greenDotTrainingSlots[] = factory(Slot::class)->create(
                 [
-                    'begins'      => date("$year-06-$day 09:45:00"),
-                    'ends'        => date("$year-06-$day 17:45:00"),
+                    'begins' => date("$year-06-$day 09:45:00"),
+                    'ends' => date("$year-06-$day 17:45:00"),
                     'position_id' => Position::GREEN_DOT_TRAINING,
                     'description' => "GD Training #$i",
-                    'signed_up'   => 0,
-                    'max'         => 10,
-                    'min'         => 0,
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
             );
         }
 
         $this->greenDotSlots = [];
         for ($i = 0; $i < 3; $i++) {
-            $day                   = (25 + $i);
+            $day = (25 + $i);
             $this->greenDotSlots[] = factory(Slot::class)->create(
                 [
-                    'begins'      => date("$year-08-$day 09:45:00"),
-                    'ends'        => date("$year-08-$day 17:45:00"),
+                    'begins' => date("$year-08-$day 09:45:00"),
+                    'ends' => date("$year-08-$day 17:45:00"),
                     'position_id' => Position::DIRT_GREEN_DOT,
                     'description' => "Green Dot #$i",
-                    'signed_up'   => 0,
-                    'max'         => 10,
-                    'min'         => 0,
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
             );
         }
+    }
+
+    public function createPerson()
+    {
+        $person = factory(Person::class)->create();
+        factory(PersonPosition::class)->create([
+            'person_id' => $person->id,
+            'position_id' => Position::TRAINING
+        ]);
+
+        return $person;
     }
 
 
@@ -165,14 +176,14 @@ class PersonScheduleControllerTest extends TestCase
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $slotId,
+                'slot_id' => $slotId,
             ]
         );
 
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", [ 'year' => $this->year ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year]);
         $response->assertStatus(200);
 
-        $response->assertJsonStructure([ 'schedules' => [ [ 'id' ] ] ]);
+        $response->assertJsonStructure(['schedules' => [['id']]]);
         $this->assertCount(1, $response->json()['schedules']);
         $this->assertEquals($slotId, $response->json()['schedules'][0]['id']);
     }
@@ -194,11 +205,11 @@ class PersonScheduleControllerTest extends TestCase
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $slotId,
+                'slot_id' => $slotId,
             ]
         );
 
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", [ 'year' => $this->year, 'shifts_available' => 1 ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year, 'shifts_available' => 1]);
         $response->assertStatus(200);
 
         // Should match 6 shifts - 3 trainings and 3 dirt shift
@@ -212,9 +223,9 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDoNotFindAnyShiftsForYear()
     {
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", [ 'year' => $this->year, 'shifts_available' => 1 ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year, 'shifts_available' => 1]);
         $response->assertStatus(200);
-        $response->assertJson([ 'schedules' => []]);
+        $response->assertJson(['schedules' => []]);
     }
 
 
@@ -236,13 +247,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
 
@@ -276,13 +287,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
 
@@ -308,7 +319,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'max' => 1]);
+        $shift->update(['max' => 1]);
 
         $response = $this->json(
             'POST',
@@ -319,7 +330,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
         Mail::assertSent(TrainingSessionFullMail::class);
     }
 
@@ -341,13 +352,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'no-position']);
+        $response->assertJson(['status' => 'no-position']);
 
         $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -361,7 +372,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1 ]);
+        $shift->update(['signed_up' => 1, 'max' => 1]);
 
         $response = $this->json(
             'POST',
@@ -372,13 +383,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'full' ]);
+        $response->assertJson(['status' => 'full']);
 
         $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -390,7 +401,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testPreventSignupForStartedShift()
     {
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
+        $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
         $this->addPosition(Position::TRAINING);
 
         $response = $this->json(
@@ -402,13 +413,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'has-started' ]);
+        $response->assertJson(['status' => 'has-started']);
 
         $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -424,22 +435,22 @@ class PersonScheduleControllerTest extends TestCase
         $person = factory(Person::class)->create();
         $this->addPosition(Position::DIRT, $person);
         $shift = $this->dirtSlots[0];
-        $err = $shift->update([ 'signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00') ]);
+        $err = $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
 
         $response = $this->json(
             'POST',
             "person/{$person->id}/schedule",
-            [ 'slot_id' => $shift->id, 'force' => 1 ]
+            ['slot_id' => $shift->id, 'force' => 1]
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $person->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -448,28 +459,30 @@ class PersonScheduleControllerTest extends TestCase
      * Allow a trainer to add a person to past training shift
      */
 
-    public function testAllowSignupForPastShiftForTrainer()
+    public function testDenySignupForPastShiftForTrainer()
     {
-        $this->addPosition([ Position::TRAINING, Position::TRAINER ]);
-        $personId = $this->user->id;
+        $this->addRole(Role::TRAINER);
+
+        $person = $this->createPerson();
+        $personId = $person->id;
 
         $training = $this->trainingSlots[0];
-        $training->update([ 'begins' => date('2010-08-25 10:00:00')]);
+        $training->update(['begins' => date('2010-08-25 10:00:00')]);
 
         $response = $this->json(
             'POST',
             "person/{$personId}/schedule",
-            [ 'slot_id' => $training->id, 'force' => true ]
+            ['slot_id' => $training->id, 'force' => true]
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success', 'started_forced' => true ]);
+        $response->assertJson(['status' => 'has-started' ]);
 
-        $this->assertDatabaseHas(
+        $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $personId,
-                'slot_id'   => $training->id,
+                'slot_id' => $training->id,
             ]
         );
     }
@@ -485,7 +498,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1, ]);
+        $shift->update(['signed_up' => 1, 'max' => 1,]);
 
         $response = $this->json(
             'POST',
@@ -496,13 +509,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'full', 'may_force' => true ]);
+        $response->assertJson(['status' => 'full', 'may_force' => true]);
 
         $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $person->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -518,7 +531,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $shift = $this->trainingSlots[0];
-        $shift->update([ 'signed_up' => 1, 'max' => 1, ]);
+        $shift->update(['signed_up' => 1, 'max' => 1,]);
 
         $response = $this->json(
             'POST',
@@ -530,13 +543,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success', 'full_forced' => true ]);
+        $response->assertJson(['status' => 'success', 'full_forced' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $person->id,
-                'slot_id'   => $shift->id,
+                'slot_id' => $shift->id,
             ]
         );
     }
@@ -556,7 +569,7 @@ class PersonScheduleControllerTest extends TestCase
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $previousTraining->id,
+                'slot_id' => $previousTraining->id,
             ]
         );
 
@@ -571,13 +584,13 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'multiple-enrollment' ]);
+        $response->assertJson(['status' => 'multiple-enrollment']);
 
         $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $personId,
-                'slot_id'   => $attemptedTraining->id,
+                'slot_id' => $attemptedTraining->id,
             ]
         );
     }
@@ -595,39 +608,39 @@ class PersonScheduleControllerTest extends TestCase
 
         $part1 = factory(Slot::class)->create([
             'description' => 'Elysian Fields - Part 1',
-            'position_id' =>  Position::TRAINING,
-            'begins'      => date("$year-08-30 12:00:00"),
-            'ends'        => date("$year-08-30 18:00:00")
+            'position_id' => Position::TRAINING,
+            'begins' => date("$year-08-30 12:00:00"),
+            'ends' => date("$year-08-30 18:00:00")
         ]);
 
         $part2 = factory(Slot::class)->create([
             'description' => 'Elysian Fields - Part 2',
-            'position_id' =>  Position::TRAINING,
-            'begins'      => date("$year-08-31 12:00:00"),
-            'ends'        => date("$year-08-31 18:00:00")
+            'position_id' => Position::TRAINING,
+            'begins' => date("$year-08-31 12:00:00"),
+            'ends' => date("$year-08-31 18:00:00")
         ]);
 
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $part1->id,
+                'slot_id' => $part1->id,
             ]
         );
 
         $response = $this->json(
             'POST',
             "person/{$personId}/schedule",
-            [ 'slot_id' => $part2->id ]
+            ['slot_id' => $part2->id]
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $this->user->id,
-                'slot_id'   => $part2->id,
+                'slot_id' => $part2->id,
             ]
         );
     }
@@ -649,7 +662,7 @@ class PersonScheduleControllerTest extends TestCase
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $previousTraining->id,
+                'slot_id' => $previousTraining->id,
             ]
         );
 
@@ -664,34 +677,35 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success', 'multiple_forced' => true ]);
+        $response->assertJson(['status' => 'success', 'multiple_forced' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $personId,
-                'slot_id'   => $attemptedTraining->id,
+                'slot_id' => $attemptedTraining->id,
             ]
         );
     }
 
 
     /*
-     * Allow a trainer to sign themselves multiple time to a training session.
+     * Deny a trainer to sign some one else up multiple time to a training session.
      */
 
-    public function testAllowMultipleEnrollmentsForTrainingSessionsForTrainers()
+    public function testDenyMultipleEnrollmentsForTrainingSessionsForTrainers()
     {
-        $this->addRole(Role::ADMIN);
-        $this->addPosition([ Position::TRAINING, Position::TRAINER ]);
-        $personId = $this->user->id;
 
+        $this->addRole(Role::TRAINER);
+
+        $person = $this->createPerson();
+        $personId = $person->id;
         $previousTraining = $this->trainingSlots[0];
 
         factory(PersonSlot::class)->create(
             [
                 'person_id' => $personId,
-                'slot_id'   => $previousTraining->id,
+                'slot_id' => $previousTraining->id,
             ]
         );
 
@@ -700,21 +714,20 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json(
             'POST',
             "person/{$personId}/schedule",
-            [ 'slot_id' => $attemptedTraining->id ]
+            ['slot_id' => $attemptedTraining->id]
         );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success', 'trainer_forced' => true ]);
+        $response->assertJson(['status' => 'multiple-enrollment']);
 
-        $this->assertDatabaseHas(
+        $this->assertDatabaseMissing(
             'person_slot',
             [
                 'person_id' => $personId,
-                'slot_id'   => $attemptedTraining->id,
+                'slot_id' => $attemptedTraining->id,
             ]
         );
     }
-
 
     /*
      * Remove a signup
@@ -722,11 +735,11 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDeleteSignupSuccess()
     {
-        $shift      = $this->dirtSlots[0];
-        $personId   = $this->user->id;
+        $shift = $this->dirtSlots[0];
+        $personId = $this->user->id;
         $personSlot = [
             'person_id' => $personId,
-            'slot_id'   => $shift->id,
+            'slot_id' => $shift->id,
         ];
 
         factory(PersonSlot::class)->create($personSlot);
@@ -742,19 +755,19 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testPreventDeleteSignup()
     {
-        $shift      = $this->dirtSlots[0];
-        $shift->update([ 'begins' => date('2000-01-01 12:00:00')]);
-        $personId   = $this->user->id;
+        $shift = $this->dirtSlots[0];
+        $shift->update(['begins' => date('2000-01-01 12:00:00')]);
+        $personId = $this->user->id;
         $personSlot = [
             'person_id' => $personId,
-            'slot_id'   => $shift->id,
+            'slot_id' => $shift->id,
         ];
 
         factory(PersonSlot::class)->create($personSlot);
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'has-started' ]);
+        $response->assertJson(['status' => 'has-started']);
         $this->assertDatabaseHas('person_slot', $personSlot);
     }
 
@@ -764,12 +777,12 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowDeleteSignupIfAdmin()
     {
-        $shift      = $this->dirtSlots[0];
-        $shift->update([ 'begins' => date('2000-01-01 12:00:00')]);
-        $personId   = $this->user->id;
+        $shift = $this->dirtSlots[0];
+        $shift->update(['begins' => date('2000-01-01 12:00:00')]);
+        $personId = $this->user->id;
         $personSlot = [
             'person_id' => $personId,
-            'slot_id'   => $shift->id,
+            'slot_id' => $shift->id,
         ];
 
         factory(PersonSlot::class)->create($personSlot);
@@ -778,7 +791,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
         $this->assertDatabaseMissing('person_slot', $personSlot);
     }
 
@@ -788,7 +801,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testFailWhenDeletingNonExistentSignup()
     {
-        $shift    = $this->dirtSlots[0];
+        $shift = $this->dirtSlots[0];
         $personId = $this->user->id;
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
@@ -799,7 +812,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $photo = factory(PersonPhoto::class)->create([
             'person_id' => $this->user->id,
-            'status'    => $status,
+            'status' => $status,
         ]);
 
         $this->user->person_photo_id = $photo->id;
@@ -824,17 +837,17 @@ class PersonScheduleControllerTest extends TestCase
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-             'year' => $this->year
-         ]);
+            'year' => $this->year
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-             'permission'   => [
-                 'signup_allowed'       => true,
-                 'callsign_approved'    => true,
-                 'manual_review_passed' => true,
-             ]
-         ]);
+            'permission' => [
+                'signup_allowed' => true,
+                'callsign_approved' => true,
+                'manual_review_passed' => true,
+            ]
+        ]);
     }
 
     /*
@@ -846,18 +859,18 @@ class PersonScheduleControllerTest extends TestCase
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-              'year' => $this->year
-          ]);
+            'year' => $this->year
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-              'permission'   => [
-                  'signup_allowed'       => false,
-                  'callsign_approved'    => true,
-                  'manual_review_passed' => true,
-                  'photo_status'         => 'missing',
-              ]
-          ]);
+            'permission' => [
+                'signup_allowed' => false,
+                'callsign_approved' => true,
+                'manual_review_passed' => true,
+                'photo_status' => 'missing',
+            ]
+        ]);
     }
 
     /*
@@ -870,43 +883,43 @@ class PersonScheduleControllerTest extends TestCase
         $mrMock = $this->mockManualReviewPass(false);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-               'year' => $this->year
-           ]);
+            'year' => $this->year
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-               'permission'   => [
-                   'signup_allowed'       => false,
-                   'callsign_approved'    => true,
-                   'manual_review_passed' => false,
-                   'photo_status'         => 'approved',
-               ]
-           ]);
+            'permission' => [
+                'signup_allowed' => false,
+                'callsign_approved' => true,
+                'manual_review_passed' => false,
+                'photo_status' => 'approved',
+            ]
+        ]);
     }
 
     /*
      * Deny an active who did not sign the behavioral standards agreement
      */
 
-/*
-    public function testDenyActiveWhoDidNotSignBehavioralAgreement()
-    {
-        $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(true);
-        $this->user->update([ 'behavioral_agreement' => false ]);
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-               'year' => $this->year
-           ]);
+    /*
+        public function testDenyActiveWhoDidNotSignBehavioralAgreement()
+        {
+            $photoMock = $this->setupPhotoStatus('approved');
+            $mrMock = $this->mockManualReviewPass(true);
+            $this->user->update([ 'behavioral_agreement' => false ]);
+            $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+                   'year' => $this->year
+               ]);
 
-        $response->assertStatus(200);
-        $response->assertJson([
-               'permission'   => [
-                   'signup_allowed'       => false,
-                   'missing_behavioral_agreement' => true,
-               ]
-           ]);
-    }
-    */
+            $response->assertStatus(200);
+            $response->assertJson([
+                   'permission'   => [
+                       'signup_allowed'       => false,
+                       'missing_behavioral_agreement' => true,
+                   ]
+               ]);
+        }
+        */
 
     /*
      * Warn user the behavioral agreement was not agreed to but allow sign ups.
@@ -916,18 +929,18 @@ class PersonScheduleControllerTest extends TestCase
     {
         $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockManualReviewPass(true);
-        $this->user->update([ 'behavioral_agreement' => false ]);
+        $this->user->update(['behavioral_agreement' => false]);
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-               'year' => $this->year
-           ]);
+            'year' => $this->year
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-               'permission'   => [
-                   'signup_allowed'       => true,
-                   'missing_behavioral_agreement' => true,
-               ]
-           ]);
+            'permission' => [
+                'signup_allowed' => true,
+                'missing_behavioral_agreement' => true,
+            ]
+        ]);
     }
 
     /*
@@ -936,53 +949,22 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndPassedManualReview()
     {
-        $this->user->update([ 'status' => 'auditor' ]);
+        $this->user->update(['status' => 'auditor']);
 
         $mrMock = $this->mockManualReviewPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-              'year' => $this->year
-          ]);
+            'year' => $this->year
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-              'permission'   => [
-                  'signup_allowed'       => true,
-                  'callsign_approved'    => true,
-                  'manual_review_passed' => true,
-              ]
-          ]);
-    }
-
-    /*
-     * Deny an prospective who missed the manual review window
-     */
-
-    public function testDenyProspectiveWhoMissedManualReviewWindow()
-    {
-        $this->user->update([ 'status' => 'prospective' ]);
-
-        $photoMock = $this->setupPhotoStatus('approved');
-
-        $mrMock = $this->mockManualReviewPass(true);
-        $mrMock->shouldReceive('prospectiveOrAlphaRankForYear')->andReturn(99);
-        $mrMock->shouldReceive('countPassedProspectivesAndAlphasForYear')->andReturn(100);
-
-        $this->setting('ManualReviewProspectiveAlphaLimit', 50);
-
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
-               'year' => $this->year
-           ]);
-
-        $response->assertStatus(200);
-        $response->assertJson([
-               'permission'   => [
-                   'signup_allowed'       => false,
-                   'callsign_approved'    => true,
-                   'manual_review_passed' => true,
-                   'manual_review_window_missed' => true,
-               ]
-           ]);
+            'permission' => [
+                'signup_allowed' => true,
+                'callsign_approved' => true,
+                'manual_review_passed' => true,
+            ]
+        ]);
     }
 
     /*
@@ -996,42 +978,42 @@ class PersonScheduleControllerTest extends TestCase
 
         $shift = $this->trainingSlots[0];
         $trainerSlot = factory(Slot::class)->create(
-             [
-                 'begins'      => date($shift->begins),
-                 'ends'        => date($shift->ends),
-                 'position_id' => Position::TRAINER,
-                 'description' => "Trainers",
-                 'signed_up'   => 2,
-                 'max'         => 2,
-                 'min'         => 0,
-             ]
-         );
+            [
+                'begins' => date($shift->begins),
+                'ends' => date($shift->ends),
+                'position_id' => Position::TRAINER,
+                'description' => "Trainers",
+                'signed_up' => 2,
+                'max' => 2,
+                'min' => 0,
+            ]
+        );
 
         $trainer1 = factory(Person::class)->create();
-        factory(PersonSlot::class)->create([ 'person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
+        factory(PersonSlot::class)->create(['person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
         $trainer2 = factory(Person::class)->create();
-        factory(PersonSlot::class)->create([ 'person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
+        factory(PersonSlot::class)->create(['person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
 
-        $shift->update([ 'signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id ]);
+        $shift->update(['signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id]);
 
         $response = $this->json(
-             'POST',
-             "person/{$this->user->id}/schedule",
-             [
-                 'slot_id' => $shift->id,
-             ]
-         );
+            'POST',
+            "person/{$this->user->id}/schedule",
+            [
+                'slot_id' => $shift->id,
+            ]
+        );
 
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
-             'person_slot',
-             [
-                 'person_id' => $this->user->id,
-                 'slot_id'   => $shift->id,
-             ]
-         );
+            'person_slot',
+            [
+                'person_id' => $this->user->id,
+                'slot_id' => $shift->id,
+            ]
+        );
     }
 
     /*
@@ -1048,20 +1030,20 @@ class PersonScheduleControllerTest extends TestCase
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 
         // Check for scheduling
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
 
         $response->assertStatus(200);
         $response->assertJson([
-                'permission'   => [
-                    'recommend_burn_weekend_shift' => true
-                ]
-            ]);
+            'permission' => [
+                'recommend_burn_weekend_shift' => true
+            ]
+        ]);
 
         // And the HQ interface
         $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
 
         $response->assertStatus(200);
-        $response->assertJson([ 'burn_weekend_shift' => true ]);
+        $response->assertJson(['burn_weekend_shift' => true]);
     }
 
     /*
@@ -1073,25 +1055,25 @@ class PersonScheduleControllerTest extends TestCase
         $year = $this->year;
 
         $photoMock = $this->setupPhotoStatus('approved');
-        $this->user->update([ 'status' => Person::NON_RANGER ]);
+        $this->user->update(['status' => Person::NON_RANGER]);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 
         // Check for scheduling
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
 
         $response->assertStatus(200);
         $response->assertJson([
-                'permission'   => [
-                    'recommend_burn_weekend_shift' => false
-                ]
-            ]);
+            'permission' => [
+                'recommend_burn_weekend_shift' => false
+            ]
+        ]);
 
         // And the HQ interface
         $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
 
         $response->assertStatus(200);
-        $response->assertJson([ 'burn_weekend_shift' => false ]);
+        $response->assertJson(['burn_weekend_shift' => false]);
     }
 
     /*
@@ -1108,36 +1090,36 @@ class PersonScheduleControllerTest extends TestCase
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 
         $shift = factory(Slot::class)->create(
-             [
-                 'begins'      => date("$year-08-25 18:45:00"),
-                 'ends'        => date("$year-08-25 23:45:00"),
-                 'position_id' => Position::DIRT,
-                 'description' => "BURN WEEKEND BABY!",
-                 'signed_up'   => 0,
-                 'max'         => 10,
-                 'min'         => 0,
-             ]
-         );
+            [
+                'begins' => date("$year-08-25 18:45:00"),
+                'ends' => date("$year-08-25 23:45:00"),
+                'position_id' => Position::DIRT,
+                'description' => "BURN WEEKEND BABY!",
+                'signed_up' => 0,
+                'max' => 10,
+                'min' => 0,
+            ]
+        );
 
         factory(PersonSlot::class)->create([
-             'person_id' => $this->user->id,
-             'slot_id'   => $shift->id
-         ]);
+            'person_id' => $this->user->id,
+            'slot_id' => $shift->id
+        ]);
 
         // Check for scheduling
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [ 'year' => $year ]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
 
         $response->assertStatus(200);
         $response->assertJson([
-                'permission'   => [
-                    'recommend_burn_weekend_shift' => false
-                ]
-            ]);
+            'permission' => [
+                'recommend_burn_weekend_shift' => false
+            ]
+        ]);
 
         // And check the HQ interface
         $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
 
         $response->assertStatus(200);
-        $response->assertJson([ 'burn_weekend_shift' => false ]);
+        $response->assertJson(['burn_weekend_shift' => false]);
     }
 }

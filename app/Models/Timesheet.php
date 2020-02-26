@@ -323,6 +323,28 @@ class Timesheet extends ApiModel
                 ->exists();
     }
 
+    /**
+     * Retrieve all the timesheet for the given people and position.
+     *
+     * @param array $personIds
+     * @param int $positionId
+     * @return Collection group by person_id and sub-grouped by year
+     */
+
+    public static function retrieveAllForPositionIds(array $personIds, int $positionId)
+    {
+        return self::whereIn('person_id', $personIds)
+                ->where('position_id', $positionId)
+                ->orderBy('on_duty')
+                ->get()
+                ->groupBy([
+                    'person_id',
+                    function ($row) {
+                        return $row->on_duty->year;
+                    }
+                ]);
+    }
+
     /*
      * Retrieve all corrections requests for a given year
      */

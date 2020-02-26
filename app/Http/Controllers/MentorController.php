@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ApiController;
 use App\Models\Person;
 use App\Models\PersonMentor;
-use App\Policies\PersonMentorPolicy;
 
 use App\Lib\Alpha;
 
@@ -28,25 +27,21 @@ class MentorController extends ApiController
      * Retrieve all potential alphas
      *
      * exclude_bonks: do no include people who have already been bonked
-     * exclude_photos: do not attempt to obtain the photo/lambase status
      */
-
 
     public function potentials()
     {
         $params = request()->validate([
             'exclude_bonks'     => 'sometimes|boolean',
-            'exclude_photos' => 'sometimes|boolean',
         ]);
 
-        $excludeBonks = $params['exclude_bonks'] ?? false;
-        $excludePhotos = $params['exclude_photos'] ?? false;
-
-        return response()->json(['potentials' => Alpha::retrievePotentials($excludeBonks, $excludePhotos)]);
+        return response()->json(['potentials' => Alpha::retrievePotentials($params['exclude_bonks'] ?? false)]);
     }
 
     /*
      * Update the mentors_{flag,flag_note,notes} columns for potential alphas
+     *
+     * TODO: REMOVE THIS AFTER MENTOR PAGES HAVE BEEN CONVERTED OVER TO THE UFV
      */
 
     public function updatePotentials()
@@ -90,7 +85,7 @@ class MentorController extends ApiController
 
     public function alphas()
     {
-        return response()->json([ 'alphas' => Alpha::findAllAlphas() ]);
+        return response()->json([ 'alphas' => Alpha::retrieveAllAlphas() ]);
     }
 
     /*
@@ -233,10 +228,11 @@ class MentorController extends ApiController
             $person = $people[$alphaId];
 
             if ($person->status != $status) {
+                $oldStatus = $person->status;
                 $person->status = $status;
                 $person->saveWithoutValidation();
-                $this->log('person-update', 'mentor update', [ 'status' => [ 'alpha', $status ]], $person->id);
-                $person->changeStatus($status, 'alpha', 'mentor update');
+                $this->log('person-update', 'mentor conversion', [ 'status' => [ $oldStatus, $status ]], $person->id);
+                $person->changeStatus($status, $oldStatus, 'mentor conversion');
             }
 
             $results[] = [

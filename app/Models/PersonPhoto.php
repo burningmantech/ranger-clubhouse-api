@@ -219,6 +219,7 @@ class PersonPhoto extends ApiModel
         $personStatus = $params['person_status'] ?? null;
         $personId = $params['person_id'] ?? null;
         $includeRejects = $params['include_rejects'] ?? null;
+        $sort = $params['sort'] ?? '';
 
         $page = $params['page'] ?? 1;
         $pageSize = $params['page_size'] ?? 100;
@@ -238,6 +239,7 @@ class PersonPhoto extends ApiModel
         if ($personStatus) {
             $sql->where('person.status', $personStatus);
         }
+
 
         // How many total for the query
         $total = $sql->count();
@@ -265,8 +267,11 @@ class PersonPhoto extends ApiModel
             $sql->orderBy('is_active', 'desc')
                 ->orderBy('person_photo.created_at', 'desc');
         } else {
-            $sql->orderBy('person.callsign', 'asc')
-            ->orderBy('person_photo.created_at');
+            if ($sort == 'callsign') {
+                $sql->orderBy('person.callsign', 'asc');
+            }
+
+            $sql->orderBy('person_photo.created_at', 'desc');
         }
 
         $rows = $sql->offset($page * $pageSize)
@@ -544,7 +549,7 @@ class PersonPhoto extends ApiModel
     }
 
     public static function storagePath(string $filename) : string {
-        $path = config('clubhouse.DeploymentEnvironment') == 'Staging' ? self::STORAGE_STAGING_DIR : self::STORAGE_DIR;
+        $path = (!app()->isLocal() && config('clubhouse.DeploymentEnvironment') == 'Staging') ? self::STORAGE_STAGING_DIR : self::STORAGE_DIR;
         return $path . $filename;
     }
 }

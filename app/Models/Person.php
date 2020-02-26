@@ -54,16 +54,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const INACTIVE = 'inactive';
     const INACTIVE_EXTENSION = 'inactive extension';
     const NON_RANGER = 'non ranger';
-    const PAST_PROSPECTIVE = 'past prospective';
+    const PAST_PROSPECTIVE = 'past prospective'; // No longer used - retained for archival proposes
     const PROSPECTIVE = 'prospective';
     const PROSPECTIVE_WAITLIST = 'prospective waitlist';
     const RESIGNED = 'resigned';
     const RETIRED = 'retired';
     const SUSPENDED = 'suspended';
     const UBERBONKED = 'uberbonked';
+    const VINTAGE = 'vintage'; // No longer used -- retained for archival proposes
 
     /*
-     *Statuses consider 'live' or still active account allowed
+     * Statuses consider 'live' or still active account allowed
      * to login, and do stuff.
      * Used by App\Validator\StateForCountry & BroadcastController
      */
@@ -75,9 +76,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         Person::INACTIVE_EXTENSION,
         Person::NON_RANGER,
         Person::PAST_PROSPECTIVE,
-        Person::PROSPECTIVE_WAITLIST,
+//        Person::PROSPECTIVE_WAITLIST,
         Person::PROSPECTIVE,
-        Person::RETIRED
+        Person::RETIRED,
+//        Person::VINTAGE
     ];
 
     const ACTIVE_STATUSES = [
@@ -215,9 +217,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'active_next_event',
         'has_note_on_file',
-        'mentors_flag',
-        'mentors_flag_note',
-        'mentors_notes',
+
+        'known_rangers',
+        'known_pnvs',
 
         // 'meta' objects
        'languages',
@@ -1099,4 +1101,33 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         // Can't determine - return the value
         return $gender;
     }
+
+    public function formerlyKnownAsArray($filter=false) {
+        return self::splitCommas($this->formerly_known_as, $filter);
+    }
+
+    public function knownPnvsArray() {
+        return self::splitCommas($this->known_pnvs);
+    }
+
+    public function knownRangersArray() {
+        return self::splitCommas($this->known_rangers);
+    }
+
+    public static function splitCommas($str, $filter=false)
+    {
+        if (empty($str)) {
+            return [];
+        }
+
+        $names =  preg_split('/\s*,\s*/', trim($str));
+        if (!$filter) {
+            return $names;
+        }
+
+        return array_values(array_filter($names, function ($name) {
+           return !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name);
+        }));
+    }
+
 }

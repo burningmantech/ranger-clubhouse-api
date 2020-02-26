@@ -17,7 +17,7 @@ use App\Models\TraineeStatus;
 class TrainingSession extends Slot
 {
     // don't calculate slot credits
-    protected $hidden = [ 'credits' ];
+    protected $hidden = ['credits'];
 
     /*
      * Find all the training sessions (slots) for a training (position) and year
@@ -25,7 +25,7 @@ class TrainingSession extends Slot
 
     public static function findAllForTrainingYear($trainingId, $year)
     {
-        $positionIds = [ $trainingId ];
+        $positionIds = [$trainingId];
 
         // TODO: Extend to multiple training positions
         if ($trainingId == Position::HQ_FULL_TRAINING) {
@@ -33,9 +33,9 @@ class TrainingSession extends Slot
         }
 
         return self::whereYear('begins', $year)
-                ->whereIn('position_id', $positionIds)
-                ->orderBy('begins')
-                ->get();
+            ->whereIn('position_id', $positionIds)
+            ->orderBy('begins')
+            ->get();
     }
 
     /*
@@ -51,7 +51,7 @@ class TrainingSession extends Slot
      * years: how many years this person has rangered
      * position_ids: integer array of the position the person holds
      * need_ranking: if true the person should be ranked only for non-actives and Dirt Training
-     * is_art_alpha: if true the person has not worked an ART position before
+     * is_art_prospective: if true the person has not worked an ART position before
      * is_inactive: ifture, the person is inactive
      * is_retired: if true, the person is retired
      * scored: if true, the person has been marked passed or failed
@@ -65,13 +65,14 @@ class TrainingSession extends Slot
     {
         // Find everyone signed up
         $people = PersonSlot::with([
-                'person:id,callsign,first_name,last_name,email,status',
-                'person.person_position:person_id,position_id'
-            ])
-            ->where('slot_id', $this->id)->get();
+            'person',
+            'person.person_position:person_id,position_id'
+        ])->where('slot_id', $this->id)->get();
 
         $personIds = $people->pluck('person_id');
-        $people = $people->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+        $people = $people->sortBy(function ($p) {
+            return $p->person->callsign;
+        }, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
         $isDirtTraining = ($this->position_id == Position::TRAINING);
 
@@ -82,38 +83,58 @@ class TrainingSession extends Slot
 
         // Next, find the trainee status if any.
         $traineeStatusByIds = TraineeStatus::where('slot_id', $this->id)->get()->keyBy('person_id');
+        $traineeNotesByIds = TraineeNote::where('slot_id', $this->id)
+            ->orderBy('created_at')
+            ->with('person_source:id,callsign')
+            ->get()
+            ->groupBy('person_id');
+
+        // Find the status of the person at the time
+        $peopleStatus = PersonStatus::findStatusForIdsTime($personIds, $this->ends);
+
+        // Yarrr! Here be Black Flags..
+        $blackFlags = PersonIntake::retrieveBlackFlagForIdsYear($personIds, $this->ends->year);
 
         $students = [];
 
-        $pending = 0;
-        $passed = 0;
-
         foreach ($people as $row) {
-            $traineeStatus = @$traineeStatusByIds[$row->person_id];
+            $traineeStatus = $traineeStatusByIds[$row->person_id] ?? null;
             $person = $row->person;
-            $status = $person->status;
+
+            // Find the status at the time of training.
+            if ($peopleStatus->has($row->person_id)) {
+                $status = $peopleStatus[$row->person_id]->new_status;
+            } else {
+                $status = 'unknown';
+            }
 
             $info = [
-                'id'         => $person->id,
-                'callsign'   => $person->callsign,
+                'id' => $person->id,
+                'callsign' => $person->callsign,
                 'first_name' => $person->first_name,
-                'last_name'  => $person->last_name,
-                'status'     => $status,
-                'email'      => $person->email,
-                'years'      => $peopleYearsRangered[$person->id] ?? 0,
-                'position_ids'  => $person->person_position->pluck('position_id'),
+                'last_name' => $person->last_name,
+                'status' => $status,
+                'current_status' => $person->status,
+                'email' => $person->email,
+                'years' => $peopleYearsRangered[$person->id] ?? 0,
+                'position_ids' => $person->person_position->pluck('position_id'),
+                'notes' => $traineeNotesByIds[$person->id] ?? [],
+                'fkas' => $person->formerlyKnownAsArray(true)
             ];
 
+            if (in_array($person->id, $blackFlags)) {
+                $info['black_flag'] = true;
+            }
 
             // Does the person need ranking?
             if ($isDirtTraining) {
-                if ($status != Person::ACTIVE) {
+                if ($status != Person::ACTIVE && $status != 'unknown') {
                     $info['need_ranking'] = true;
                 }
             } else {
                 // Session is an ART training module, is the person an ART alpha?
                 if (in_array($person->id, $artAlphaIds)) {
-                    $info['is_art_alpha'] = true;
+                    $info['is_art_prospective'] = true;
                 }
             }
 
@@ -127,9 +148,8 @@ class TrainingSession extends Slot
             // if the record exists
             if ($traineeStatus) {
                 $info['scored'] = true;
-                $info['notes']  = $traineeStatus->notes;
                 $info['rank'] = $traineeStatus->rank;
-                $info['passed']  = $traineeStatus->passed;
+                $info['passed'] = $traineeStatus->passed;
             } else {
                 $info['scored'] = false;
             }
@@ -165,7 +185,7 @@ class TrainingSession extends Slot
             $trainerPosition = Position::find($trainerPositionId);
             // Find the trainer's slot that begins within a hour of the slot start time.
             $trainerSlot = Slot::where('description', $this->description)
-                ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [ $this->begins, $this->ends ])
+                ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [$this->begins, $this->ends])
                 ->where('position_id', $trainerPositionId)
                 ->first();
 
@@ -174,11 +194,13 @@ class TrainingSession extends Slot
             }
 
             // Retrieve the trainers
-            $rows = PersonSlot::with([ 'person:id,callsign,first_name,last_name,email' ])
-                        ->where('slot_id', $trainerSlot->id)
-                        ->get();
+            $rows = PersonSlot::with(['person:id,callsign,first_name,last_name,email'])
+                ->where('slot_id', $trainerSlot->id)
+                ->get();
 
-            $rows = $rows->sortBy(function ($p) { return $p->person->callsign; }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+            $rows = $rows->sortBy(function ($p) {
+                return $p->person->callsign;
+            }, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
             if (!$rows->isEmpty()) {
                 $trainerStatuses = TrainerStatus::findBySlotPersonIds($this->id, $rows->pluck('person_id'))->keyBy('person_id');
@@ -186,32 +208,33 @@ class TrainingSession extends Slot
                 $trainerStatuses = [];
             }
 
-            $instructors = $rows->map(function($row) use ($trainerPosition, $trainerStatuses, $trainerSlot) {
+            $instructors = $rows->map(function ($row) use ($trainerPosition, $trainerStatuses, $trainerSlot) {
                 $person = $row->person;
                 $trainer = $trainerStatuses[$person->id] ?? null;
 
                 return [
-                    'id'         => $person->id,
-                    'callsign'   => $person->callsign,
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
                     'first_name' => $person->first_name,
-                    'last_name'  => $person->last_name,
-                    'email'      => $person->email,
+                    'last_name' => $person->last_name,
+                    'email' => $person->email,
                     'status' => $trainer ? $trainer->status : 'pending',
                     'trainer_slot_id' => $trainerSlot->id,
                 ];
             });
 
             $trainers[] = [
-                'slot'           => $trainerSlot,
+                'slot' => $trainerSlot,
                 'position_title' => $trainerPosition->title,
-                'trainers'       => $instructors,
+                'trainers' => $instructors,
             ];
         }
 
         return $trainers;
     }
 
-    public function getTrainersAttribute() {
+    public function getTrainersAttribute()
+    {
         return $this->retrieveTrainers();
     }
 }

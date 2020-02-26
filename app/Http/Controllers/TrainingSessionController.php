@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
+use App\Models\PersonIntakeNote;
 use Illuminate\Http\Request;
 
-use App\Models\Person;
-use App\Models\Schedule;
+use App\Models\PersonSlot;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use App\Models\Training;
 use App\Models\TrainingSession;
+use App\Models\TraineeNote;
 
 
 class TrainingSessionController extends ApiController
 {
-
     /*
      * Retrieve the session, students and teachers for a given session.
      */
@@ -25,14 +25,13 @@ class TrainingSessionController extends ApiController
         $session = TrainingSession::findOrFail($id);
         $this->authorize('show', $session);
 
-        return response()->json(
-            [
-            'slot'  => $session,
+        return response()->json([
+            'slot' => $session,
             'students' => $session->retrieveStudents(),
             'trainers' => $session->retrieveTrainers(),
-            ]
-        );
+        ]);
     }
+
     /*
      * Retrieve all the training sessions for a given training.
      */
@@ -40,8 +39,8 @@ class TrainingSessionController extends ApiController
     public function sessions()
     {
         $params = request()->validate([
-            'training_id'   => 'required|integer',
-            'year'          => 'required|integer',
+            'training_id' => 'required|integer',
+            'year' => 'required|integer',
         ]);
 
         $training = Training::findOrFail($params['training_id']);
@@ -53,79 +52,102 @@ class TrainingSessionController extends ApiController
         $info = $sessions->map(
             function ($session) {
                 return [
-                'slot'  => $session,
-                'trainers' => $session->retrieveTrainers(),
+                    'slot' => $session,
+                    'trainers' => $session->retrieveTrainers(),
                 ];
             }
         );
 
-        return response()->json([ 'sessions' => $info ]);
+        return response()->json(['sessions' => $info]);
     }
 
     /*
-     * Score one or more individuals for a training
+     * Score a student
      */
 
-    public function score($id)
+    public function scoreStudent($slotId)
     {
-        $session = TrainingSession::findOrFail($id);
+        $session = TrainingSession::findOrFail($slotId);
         $this->authorize('score', $session);
 
         $params = request()->validate([
-            'students.*.id'     => 'required|integer',
-            'students.*.rank'   => 'nullable|integer',
-            'students.*.notes'  => 'nullable|string',
-            'students.*.passed' => 'boolean',
+            'id' => 'required|integer',
+            'rank' => 'nullable|integer',
+            'note' => 'nullable|string',
+            'passed' => 'boolean',
+            'feedback_delivered' => 'sometimes|boolean'
         ]);
 
-        $students = $params['students'];
+        $personId = $params['id'];
 
-        foreach ($params['students'] as $student) {
-            $personId = $student['id'];
-
-            $traineeStatus = TraineeStatus::firstOrNewForSession($personId, $session->id);
-            $traineeStatus->fill($student);
-            $changes = $traineeStatus->getChangedValues();
-            $traineeStatus->save();
-            if (!empty($changes)) {
-                $changes['slot_id'] = $id;
-                $this->log('trainee-status-update', '', $changes, $personId);
-            }
+        if (!PersonSlot::haveSlot($personId, $slotId)) {
+            return $this->restError('Person is not signed up for the slot');
         }
 
-        return response()->json([ 'students' => $session->retrieveStudents()]);
+        $traineeStatus = TraineeStatus::firstOrNewForSession($personId, $slotId);
+        $traineeStatus->rank = $params['rank'];
+        if (!$session->isArt() && isset($params['feedback_delivered'])) {
+            $traineeStatus->feedback_delivered = $params['feedback_delivered'];
+        }
+        $traineeStatus->passed = $params['passed'];
+        $changes = $traineeStatus->getChangedValues();
+        $isNew = !$traineeStatus->exists;
+        if ($traineeStatus->isDirty('rank')) {
+            $rankUpdated = true;
+            $oldRank = $traineeStatus->getOriginal('rank');
+        } else {
+            $rankUpdated = false;
+        }
+        $traineeStatus->save();
+
+        if (!empty($changes)) {
+            if (!$isNew) {
+                $changes['id'] = $traineeStatus->id;
+            }
+            $this->log($isNew ? 'trainee-status-create' : 'trainee-status-update', '', $isNew ? $traineeStatus : $changes, $personId);
+        }
+
+        if ($rankUpdated) {
+            TraineeNote::record($personId, $session->id, "rank change [" . ($oldRank ?? 'no rank') . "] -> [" . ($traineeStatus->rank ?? 'no rank') . "]", true);
+        }
+
+        if (isset($params['note'])) {
+            TraineeNote::record($personId, $session->id, $params['note']);
+        }
+
+        return response()->json(['students' => $session->retrieveStudents()]);
     }
 
     /*
      * Mark trainers as attended, or not.
      */
 
-     public function trainerStatus($id)
-     {
-         $session = TrainingSession::findOrFail($id);
-         $this->authorize('trainerStatus', $session);
+    public function trainerStatus($id)
+    {
+        $session = TrainingSession::findOrFail($id);
+        $this->authorize('trainerStatus', $session);
 
-         $params = request()->validate([
-             'trainers.*.id'     => 'required|integer',
-             'trainers.*.trainer_slot_id' => 'required|integer',
-             'trainers.*.status' => 'nullable|string',
-         ]);
+        $params = request()->validate([
+            'trainers.*.id' => 'required|integer',
+            'trainers.*.trainer_slot_id' => 'required|integer',
+            'trainers.*.status' => 'nullable|string',
+        ]);
 
-         foreach ($params['trainers'] as $trainer) {
-             $personId = $trainer['id'];
+        foreach ($params['trainers'] as $trainer) {
+            $personId = $trainer['id'];
 
-             $trainerStatus = TrainerStatus::firstOrNewForSession($session->id, $personId);
-             $trainerStatus->status = $trainer['status'];
-             $trainerStatus->trainer_slot_id = $trainer['trainer_slot_id'];
-             $changes = $trainerStatus->getChangedValues();
-             $trainerStatus->save();
-             if (!empty($changes)) {
-                 $changes['slot_id'] = $id;
-                 $changes['trainer_slot_id'] = $trainer['trainer_slot_id'];
-                 $this->log('trainer-status-update', '', $changes, $personId);
-             }
-         }
+            $trainerStatus = TrainerStatus::firstOrNewForSession($session->id, $personId);
+            $trainerStatus->status = $trainer['status'];
+            $trainerStatus->trainer_slot_id = $trainer['trainer_slot_id'];
+            $changes = $trainerStatus->getChangedValues();
+            $trainerStatus->save();
+            if (!empty($changes)) {
+                $changes['slot_id'] = $id;
+                $changes['trainer_slot_id'] = $trainer['trainer_slot_id'];
+                $this->log('trainer-status-update', '', $changes, $personId);
+            }
+        }
 
-         return response()->json([ 'trainers' => $session->retrieveTrainers()]);
-     }
+        return response()->json(['trainers' => $session->retrieveTrainers()]);
+    }
 }

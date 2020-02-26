@@ -107,10 +107,9 @@ class PersonFilter
         'bpguid',
     ];
 
-    const MENTOR_FIELDS = [
-        'mentors_flag',
-        'mentors_flag_note',
-        'mentors_notes',
+    const INTAKE_FIELDS = [
+        'known_rangers',
+        'known_pnvs'
     ];
 
     const SMS_FIELDS = [
@@ -163,7 +162,7 @@ class PersonFilter
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
         // Note: self is not allowed to see mentor notes
-        [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
+        [ self::INTAKE_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
         [ self::RANGER_ADMIN_FIELDS ],
@@ -185,7 +184,7 @@ class PersonFilter
         [ self::AGREEMENT_FIELDS, true, [ Role::ADMIN ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
-        [ self::MENTOR_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC ] ],
+        [ self::INTAKE_FIELDS, false, [ Role::INTAKE, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
