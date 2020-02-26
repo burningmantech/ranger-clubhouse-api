@@ -9,6 +9,7 @@ use App\Models\ErrorLog;
 
 use App\Helpers\SqlHelper;
 
+use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 
 use Aws\Rekognition\RekognitionClient;
 use Aws\Credentials\Credentials;
+use RuntimeException;
 
 /*
  * person_photo represents the most recent photo submission, rejection, or approval
@@ -75,17 +77,17 @@ class PersonPhoto extends ApiModel
     ];
 
     protected $rules = [
-        'status'         => 'required|string',
+        'status' => 'required|string',
     ];
 
     const REJECTIONS = [
-        'underexposed'  => [
+        'underexposed' => [
             'label' => 'Underexposed',
-            'message'   => 'The photo is not bright enough. Your face should be evenly lit and clearly visible. Try taking the photo outside, or turning on more lights within the room'
+            'message' => 'The photo is not bright enough. Your face should be evenly lit and clearly visible. Try taking the photo outside, or turning on more lights within the room'
         ],
 
         'overexposed' => [
-            'label'    => 'Overexposed',
+            'label' => 'Overexposed',
             'message' => 'The photo is too bright. Try turning down the lighting in the room, or move out of direct sunlight',
         ],
 
@@ -95,7 +97,7 @@ class PersonPhoto extends ApiModel
         ],
 
         'grainy' => [
-            'label'   => 'Too grainy',
+            'label' => 'Too grainy',
             'message' => "The photo is too grainy. Move closer to the camera AND not crop the image OR the photo file is too small.",
         ],
 
@@ -145,7 +147,7 @@ class PersonPhoto extends ApiModel
         ],
 
         'wearing-hat' => [
-            'label'   => 'No hats/headbands',
+            'label' => 'No hats/headbands',
             'message' => 'Remove anything on your head such as hats, headbands, wreaths, horns, flowers, etc. Woven braids and religious attire is okay.',
         ],
 
@@ -160,22 +162,22 @@ class PersonPhoto extends ApiModel
         ],
 
         'not-facing' => [
-            'label'   => 'Not facing camera',
+            'label' => 'Not facing camera',
             'message' => 'You must be facing the camera. Side profile shots are not allowed. Turn and face the camera dead on.'
         ],
 
         'too-close' => [
-            'label'   => 'Face too close',
+            'label' => 'Face too close',
             'message' => 'Your face is too close to the camera. Back up a little. Your shoulders should be in the photo.'
         ],
 
         'too-far' => [
-            'label'    => 'Too far away',
+            'label' => 'Too far away',
             'message' => 'Your face is not close enough to the camera. Move in a bit. Your face and shoulders should take up most of the frame.'
         ],
 
-        'not-centered'  => [
-            'label'  => 'Face not centered',
+        'not-centered' => [
+            'label' => 'Face not centered',
             'message' => 'Your face needs to be front and centered. The entire head needs to be visible, with space between the top of your head and the frame.'
         ],
 
@@ -225,8 +227,8 @@ class PersonPhoto extends ApiModel
         $pageSize = $params['page_size'] ?? 100;
 
         $sql = self::select('person_photo.*', DB::raw("(SELECT 1 FROM person WHERE person.id=person_photo.person_id AND person.person_photo_id=person_photo.id LIMIT 1) AS is_active"))
-                ->join('person', 'person.id', 'person_photo.person_id')
-                ->with(self::PERSON_TABLES);
+            ->join('person', 'person.id', 'person_photo.person_id')
+            ->with(self::PERSON_TABLES);
 
         if ($personId) {
             $sql->where('person_id', $personId);
@@ -247,10 +249,10 @@ class PersonPhoto extends ApiModel
         if (!$total) {
             // Nada.. don't bother
             return [
-                'person_photo' => [ ],
+                'person_photo' => [],
                 'meta' => [
-                    'page'        => $page,
-                    'total'       => 0,
+                    'page' => $page,
+                    'total' => 0,
                     'total_pages' => 0
                 ]
             ];
@@ -275,43 +277,44 @@ class PersonPhoto extends ApiModel
         }
 
         $rows = $sql->offset($page * $pageSize)
-                ->limit($pageSize)
-                ->get();
+            ->limit($pageSize)
+            ->get();
 
         if ($includeRejects) {
             foreach ($rows as $row) {
                 $row->appends[] = 'reject_history';
                 $row->reject_history = self::where('person_id', $row->person_id)
-                                ->where('id', '!=', $row->id)
-                                ->where('status', self::REJECTED)
-                                ->orderBy('created_at')
-                                ->get();
+                    ->where('id', '!=', $row->id)
+                    ->where('status', self::REJECTED)
+                    ->with(self::PERSON_TABLES)
+                    ->orderBy('created_at')
+                    ->get();
             }
         }
 
         return [
             'person_photo' => $rows,
-            'meta'  => [
-                'total'        => $total,
-                'total_pages'  => (int) (($total + ($pageSize - 1))/$pageSize),
-                'page_size'    => $pageSize,
-                'page'         => $page + 1,
+            'meta' => [
+                'total' => $total,
+                'total_pages' => (int)(($total + ($pageSize - 1)) / $pageSize),
+                'page_size' => $pageSize,
+                'page' => $page + 1,
             ]
-         ];
+        ];
     }
 
     /**
      * Find all photos queued up for review.
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
     public static function findAllPending()
     {
         return self::where('status', self::SUBMITTED)
-                ->orderBy('created_at')
-                ->with('person:id,callsign,status')
-                ->get();
+            ->orderBy('created_at')
+            ->with('person:id,callsign,status')
+            ->get();
     }
 
     public static function deleteAllForPerson($personId)
@@ -325,14 +328,14 @@ class PersonPhoto extends ApiModel
                 // Remove the files.
                 $row->deleteImage();
                 $row->deleteOrigImage();
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 ErrorLog::record('person-photo-delete-exception', [
-                        'person_id'        => $userId,
-                        'target_person_id' => $personId,
-                        'person_photo_id'  => $personPhoto->id,
-                        'image_filename'   => $personPhoto->image_filename,
-                        'orig_filename'    => $personPhoto->orig_filename
-                 ]);
+                    'person_id' => $userId,
+                    'target_person_id' => $personId,
+                    'person_photo_id' => $personPhoto->id,
+                    'image_filename' => $personPhoto->image_filename,
+                    'orig_filename' => $personPhoto->orig_filename
+                ]);
             }
 
             $row->delete();
@@ -374,8 +377,8 @@ class PersonPhoto extends ApiModel
         }
 
         $info = [
-            'photo_status'   => $status,
-            'photo_url'      => $url,
+            'photo_status' => $status,
+            'photo_url' => $url,
             'upload_enabled' => setting('PhotoUploadEnable')
         ];
 
@@ -405,7 +408,7 @@ class PersonPhoto extends ApiModel
     {
         $storage = config('clubhouse.PhotoStorage');
         if (!$storage) {
-            throw new \RuntimeException('PhotoStorage setting is not configured');
+            throw new RuntimeException('PhotoStorage setting is not configured');
         }
         return Storage::disk($storage);
     }
@@ -463,7 +466,8 @@ class PersonPhoto extends ApiModel
         }, $this->reject_reasons);
     }
 
-    public function getRejectHistoryAttribute() {
+    public function getRejectHistoryAttribute()
+    {
         return $this->reject_history;
     }
 
@@ -471,27 +475,27 @@ class PersonPhoto extends ApiModel
     {
         $status = $this->analysis_status;
         if ($status == 'failed') {
-            return [ 'status' => 'failed' ];
+            return ['status' => 'failed'];
         }
 
         if ($status == 'none' || empty($this->analysis_info)) {
-            return [ 'status' => 'no-data' ];
+            return ['status' => 'no-data'];
         }
 
         $data = json_decode($this->analysis_info);
 
         if ($data == null) {
-            return [ 'status' => 'no-data' ];
+            return ['status' => 'no-data'];
         }
 
         if (empty($data->FaceDetails)) {
-            return [ 'status' => 'success', 'issues' => [ 'no-face' ], 'sharpness' => 0 ];
+            return ['status' => 'success', 'issues' => ['no-face'], 'sharpness' => 0];
         }
 
         $issues = [];
 
         if (count($data->FaceDetails) > 1) {
-            $issues = [ 'multiple-people' ];
+            $issues = ['multiple-people'];
         }
 
         $face = $data->FaceDetails[0];
@@ -506,14 +510,14 @@ class PersonPhoto extends ApiModel
         $box = $face->BoundingBox;
 
         return [
-            'status'    => 'success',
-            'issues'   => $issues,
-            'sharpness' => (int) $face->Quality->Sharpness,
-            'bounding'  => [
-                'height'    => $box->Height,
-                'left'      => $box->Left,
-                'top'       => $box->Top,
-                'width'     => $box->Width
+            'status' => 'success',
+            'issues' => $issues,
+            'sharpness' => (int)$face->Quality->Sharpness,
+            'bounding' => [
+                'height' => $box->Height,
+                'left' => $box->Left,
+                'top' => $box->Top,
+                'width' => $box->Width
             ]
         ];
     }
@@ -526,19 +530,19 @@ class PersonPhoto extends ApiModel
 
         try {
             $rekognition = new RekognitionClient([
-                'region'    => 'us-west-2',
-                'version'   => 'latest',
+                'region' => 'us-west-2',
+                'version' => 'latest',
                 'credentials' => new Credentials(setting('PhotoRekognitionAccessKey'), setting('PhotoRekognitionAccessSecret'))
             ]);
 
             $result = $rekognition->DetectFaces([
-                'Image'      => [ 'Bytes' => $contents ],
-                'Attributes' => [ 'ALL' ]
+                'Image' => ['Bytes' => $contents],
+                'Attributes' => ['ALL']
             ]);
 
             $this->analysis_info = json_encode($result->toArray());
             $this->analysis_status = 'success';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             ErrorLog::recordException($e, 'photo-analyze-exception', [
                 'person_id' => Auth::id(),
                 'target_person_id' => $this->person_id
@@ -548,7 +552,8 @@ class PersonPhoto extends ApiModel
         }
     }
 
-    public static function storagePath(string $filename) : string {
+    public static function storagePath(string $filename): string
+    {
         $path = (!app()->isLocal() && config('clubhouse.DeploymentEnvironment') == 'Staging') ? self::STORAGE_STAGING_DIR : self::STORAGE_DIR;
         return $path . $filename;
     }
