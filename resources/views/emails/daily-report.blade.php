@@ -101,7 +101,7 @@
     <tr>
       <th>Timestamp</th>
       <th>Callsign</th>
-      <th>Culprit</th>
+      <th>Source</th>
       <th>Roles Added</th>
       <th>Roles Removed</th>
       <th>Reason</th>
