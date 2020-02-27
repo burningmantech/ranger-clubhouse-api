@@ -428,7 +428,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             if (substr($q, 0, 1) == '+') {
                 // Search by number
-                $q = ltrim('+', $q);
+                $q = ltrim($q, '+');
                 $person = self::find(intval($q));
 
                 if ($person) {
@@ -437,7 +437,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     $total = $limit = 0;
                 }
                 return [
-                    'people'   => [ $person ],
+                    'people'   => $person ? [ $person ] : [],
                     'total'    => $total,
                     'limit'    => $limit
                 ];
