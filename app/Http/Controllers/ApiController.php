@@ -192,7 +192,7 @@ class ApiController extends Controller
     }
 
     public function userCanViewEmail() {
-        return $this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL ]);
+        return $this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ]);
     }
 
     public function log($event, $message, $data=null, $targetPersonId=null) {

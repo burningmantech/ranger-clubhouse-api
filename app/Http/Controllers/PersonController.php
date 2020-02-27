@@ -35,6 +35,7 @@ use App\Mail\NotifyVCEmailChangeMail;
 use App\Mail\WelcomeMail;
 
 use Carbon\Carbon;
+use InvalidArgumentException;
 
 class PersonController extends ApiController
 {
@@ -47,53 +48,69 @@ class PersonController extends ApiController
         $this->authorize('index', Person::class);
 
         $params = request()->validate([
-            'query'            => 'sometimes|string',
-            'search_fields'    => 'sometimes|string',
-            'statuses'         => 'sometimes|string',
+            'query' => 'sometimes|string',
+            'search_fields' => 'sometimes|string',
+            'statuses' => 'sometimes|string',
             'exclude_statuses' => 'sometimes|string',
-            'limit'            => 'sometimes|integer',
-            'offset'           => 'sometimes|integer',
-            'basic'            => 'sometimes|boolean',
+            'limit' => 'sometimes|integer',
+            'offset' => 'sometimes|integer',
+            'basic' => 'sometimes|boolean',
         ]);
 
         $results = Person::findForQuery($params);
         $people = $results['people'];
-        $meta = [ 'limit' => $results['limit'], 'total' => $results['total'] ];
+        $meta = ['limit' => $results['limit'], 'total' => $results['total']];
 
         if ($params['basic'] ?? false) {
-            if (!$this->userHasRole([ Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER ])) {
-                throw new \InvalidArgumentException("Not authorized for basic search.");
+            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
+                throw new InvalidArgumentException("Not authorized for basic search.");
             }
 
             $rows = [];
+            $canViewEmail = $this->userCanViewEmail();
+            $searchFields = $params['search_fields'] ?? '';
+            $query = trim($params['query'] ?? '');
+
+            if (stripos($searchFields, 'email') !== false) {
+                $searchingForEmail = stripos($query, '@') !== false;
+            }
+
+            $searchingForFKA = stripos($searchFields, 'formerly_known_as') !== false;
             foreach ($results['people'] as $person) {
                 $row = [
-                    'id'              => $person->id,
-                    'callsign'        => $person->callsign,
-                    'status'          => $person->status,
-                    'first_name'      => $person->first_name,
-                    'last_name'       => $person->last_name,
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'status' => $person->status,
+                    'first_name' => $person->first_name,
+                    'last_name' => $person->last_name,
                     'user_authorized' => $person->user_authorized,
                 ];
 
-                if ($this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ])) {
+                if ($canViewEmail) {
                     $row['email'] = $person->email;
                 }
 
-                if (stripos($params['search_fields'] ?? '', 'email') !== false) {
-                    $query = $params['query'] ?? '';
-                    if (stripos($query, '@') !== false) {
-                        if ($person->email == $query) {
-                            $row['email_match'] = 'full';
-                        } elseif (stripos($person->email, $query) !== false) {
-                            $row['email_match'] = 'partial';
+                if ($searchingForEmail) {
+                    if (strcasecmp($person->email, $query) == 0) {
+                        $row['email_match'] = 'full';
+                    } elseif (stripos($person->email, $query) !== false) {
+                        $row['email_match'] = 'partial';
+                    }
+                }
+
+                if ($searchingForFKA) {
+                    foreach ($person->formerlyKnownAsArray(true) as $fka) {
+                        if (stripos($fka, $query) !== false) {
+                            $row['fka_match'] = $fka;
+                            break;
                         }
                     }
                 }
+
                 $rows[] = $row;
             }
 
-            return response()->json([ 'person' => $rows, 'meta' => $meta ]);
+            return response()->json(['person' => $rows, 'meta' => $meta]);
         } else {
             return $this->toRestFiltered($people, $meta, 'person');
         }
@@ -136,10 +153,10 @@ class PersonController extends ApiController
 
         $params = request()->validate(
             [
-            'person.email'  => 'sometimes|email|unique:person,email,'.$person->id.',id'
+                'person.email' => 'sometimes|email|unique:person,email,' . $person->id . ',id'
             ],
             [
-            'person.email.unique'   => 'The email address is already used by another account'
+                'person.email.unique' => 'The email address is already used by another account'
             ]
         );
 
@@ -175,8 +192,8 @@ class PersonController extends ApiController
 
             // Alert VCs when the email address changes for a prospective.
             if ($emailChanged
-            && $person->status == Person::PROSPECTIVE
-            && $person->id == $this->user->id) {
+                && $person->status == Person::PROSPECTIVE
+                && $person->id == $this->user->id) {
                 mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail));
             }
 
@@ -202,7 +219,7 @@ class PersonController extends ApiController
             function () use ($person) {
                 $personId = $person->id;
 
-                DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [ $personId ]);
+                DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
 
                 $tables = [
                     //'access_document_changes',
@@ -245,7 +262,7 @@ class PersonController extends ApiController
             }
         );
 
-        $this->log('person-delete', 'Person delete', [ 'person' => $person ], $person->id);
+        $this->log('person-delete', 'Person delete', ['person' => $person], $person->id);
 
         return $this->restDeleteSuccess();
     }
@@ -283,9 +300,9 @@ class PersonController extends ApiController
         $requireOld = $this->isUser($person) && !$this->userHasRole(Role::ADMIN);
 
         $rules = [
-              'password' => 'required|confirmed',
-              'password_confirmation' => 'required'
-          ];
+            'password' => 'required|confirmed',
+            'password_confirmation' => 'required'
+        ];
 
         if ($requireOld) {
             $rules['password_old'] = 'required';
@@ -310,9 +327,9 @@ class PersonController extends ApiController
     public function positions(Request $request, Person $person)
     {
         $params = request()->validate([
-            'include_training'   => 'sometimes|boolean',
+            'include_training' => 'sometimes|boolean',
             'include_mentee' => 'sometimes|boolean',
-            'year'               => 'required_if:include_training,true|integer'
+            'year' => 'required_if:include_training,true|integer'
         ]);
 
         $this->authorize('view', $person);
@@ -326,8 +343,9 @@ class PersonController extends ApiController
             $positions = PersonPosition::findForPerson($person->id, $includeMentee);
         }
 
-        return response()->json([ 'positions' =>  $positions]);
+        return response()->json(['positions' => $positions]);
     }
+
     /*
      * Update the positions held
      */
@@ -337,8 +355,8 @@ class PersonController extends ApiController
         $this->authorize('updatePositions', $person);
         $params = request()->validate(
             [
-            'position_ids'  => 'present|array',
-            'position_ids.*' => 'sometimes|integer'
+                'position_ids' => 'present|array',
+                'position_ids.*' => 'sometimes|integer'
             ]
         );
 
@@ -380,7 +398,7 @@ class PersonController extends ApiController
             PersonPosition::addIdsToPerson($personId, $newIds, 'person update');
         }
 
-        return response()->json([ 'positions' => PersonPosition::findForPerson($personId) ]);
+        return response()->json(['positions' => PersonPosition::findForPerson($personId)]);
     }
 
     /*
@@ -391,7 +409,7 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
-        return response()->json([ 'roles' => PersonRole::findRolesForPerson($person->id) ]);
+        return response()->json(['roles' => PersonRole::findRolesForPerson($person->id)]);
     }
 
     /*
@@ -403,8 +421,8 @@ class PersonController extends ApiController
         $this->authorize('updateRoles', $person);
         $params = request()->validate(
             [
-            'role_ids'  => 'present|array',
-            'role_ids.*' => 'sometimes|integer'
+                'role_ids' => 'present|array',
+                'role_ids.*' => 'sometimes|integer'
             ]
         );
 
@@ -438,7 +456,7 @@ class PersonController extends ApiController
             PersonRole::addIdsToPerson($personId, $newIds, 'person update');
         }
 
-        return response()->json([ 'roles' => PersonRole::findRolesForPerson($personId) ]);
+        return response()->json(['roles' => PersonRole::findRolesForPerson($personId)]);
     }
 
     /*
@@ -464,16 +482,16 @@ class PersonController extends ApiController
 
         $data = [
             'teacher' => [
-                'is_trainer'     => $person->hasRole([Role::ADMIN, Role::TRAINER]),
+                'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_art_trainer' => $isArtTrainer,
-                'is_mentor'      => $person->hasRole([Role::MENTOR, Role::ADMIN]),
-                'have_mentored'  => PersonMentor::haveMentees($person->id)
+                'is_mentor' => $person->hasRole([Role::MENTOR, Role::ADMIN]),
+                'have_mentored' => PersonMentor::haveMentees($person->id)
             ],
             'unread_message_count' => PersonMessage::countUnread($person->id),
             'years' => Timesheet::years($person->id),
             'all_years' => Timesheet::years($person->id, true),
             'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
-            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [ Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD ])
+            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD])
         ];
 
         /*
@@ -485,7 +503,7 @@ class PersonController extends ApiController
             $data['teacher']['arts'] = Position::findAllTrainings(true);
         }
 
-        return response()->json([ 'user_info' => $data ]);
+        return response()->json(['user_info' => $data]);
     }
 
     /*
@@ -529,7 +547,7 @@ class PersonController extends ApiController
     public function mentees(Person $person)
     {
         $this->authorize('mentees', $person);
-        return response()->json(['mentees' => PersonMentor::retrieveAllForPerson($person->id) ]);
+        return response()->json(['mentees' => PersonMentor::retrieveAllForPerson($person->id)]);
     }
 
     /*
@@ -540,7 +558,7 @@ class PersonController extends ApiController
     {
         $this->authorize('mentors', $person);
 
-        return response()->json([ 'mentors' => PersonMentor::retrieveMentorHistory($person->id) ]);
+        return response()->json(['mentors' => PersonMentor::retrieveMentorHistory($person->id)]);
     }
 
     /**
@@ -552,22 +570,22 @@ class PersonController extends ApiController
     public function register()
     {
         $params = request()->validate([
-            'intent'            => 'required|string',
-            'person.email'      => 'required|email',
-            'person.password'   => 'required|string',
+            'intent' => 'required|string',
+            'person.email' => 'required|email',
+            'person.password' => 'required|string',
             'person.first_name' => 'required|string',
-            'person.mi'         => 'sometimes|string',
-            'person.last_name'  => 'required|string',
-            'person.street1'    => 'required|string',
-            'person.street2'    => 'sometimes|string',
-            'person.apt'        => 'sometimes|string',
-            'person.city'       => 'required|string',
-            'person.state'      => 'required|string',
-            'person.zip'        => 'required|string',
-            'person.country'    => 'required|string',
-            'person.status'     => 'required|string',
+            'person.mi' => 'sometimes|string',
+            'person.last_name' => 'required|string',
+            'person.street1' => 'required|string',
+            'person.street2' => 'sometimes|string',
+            'person.apt' => 'sometimes|string',
+            'person.city' => 'required|string',
+            'person.state' => 'required|string',
+            'person.zip' => 'required|string',
+            'person.country' => 'required|string',
+            'person.status' => 'required|string',
             'person.home_phone' => 'sometimes|string',
-            'person.alt_phone'  => 'sometimes|string',
+            'person.alt_phone' => 'sometimes|string',
         ]);
 
         $accountCreateEmail = setting('AccountCreationEmail');
@@ -578,14 +596,14 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != 'auditor') {
-            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
         if (Person::emailExists($person->email)) {
             // An account already exists with the same email..
             mail_to($accountCreateEmail, new AccountCreationMail('failed', 'duplicate email', $person, $intent));
-            $this->log('person-create-fail', 'duplicate email', [ 'person' => $params['person'] ]);
-            return response()->json([ 'status' => 'email-exists' ]);
+            $this->log('person-create-fail', 'duplicate email', ['person' => $params['person']]);
+            return response()->json(['status' => 'email-exists']);
         }
 
         // make the callsign for an auditor.
@@ -598,7 +616,7 @@ class PersonController extends ApiController
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
             mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent));
-            $this->log('person-create-fail', 'database creation error', [ 'person' => $person, 'errors' => $person->getErrors() ]);
+            $this->log('person-create-fail', 'database creation error', ['person' => $person, 'errors' => $person->getErrors()]);
             return $this->restError($person);
         }
 
@@ -621,7 +639,7 @@ class PersonController extends ApiController
             mail_to($person->email, new WelcomeMail($person));
         }
 
-        return response()->json([ 'status' => 'success' ]);
+        return response()->json(['status' => 'success']);
     }
 
     /*
@@ -630,7 +648,7 @@ class PersonController extends ApiController
 
     public function alphaShirts()
     {
-        $this->authorize('alphaShirts', [ Person::class ]);
+        $this->authorize('alphaShirts', [Person::class]);
 
         $rows = Person::select(
             'id',
@@ -642,12 +660,12 @@ class PersonController extends ApiController
             'longsleeveshirt_size_style',
             'teeshirt_size_style'
         )
-            ->whereIn('status', [ 'alpha', 'prospective' ])
+            ->whereIn('status', ['alpha', 'prospective'])
             ->where('user_authorized', true)
             ->orderBy('callsign')
             ->get();
 
-        return response()->json([ 'alphas' => $rows ]);
+        return response()->json(['alphas' => $rows]);
     }
 
     /*
@@ -656,7 +674,7 @@ class PersonController extends ApiController
 
     public function vehiclePaperwork()
     {
-        $this->authorize('vehiclePaperwork', [ Person::class ]);
+        $this->authorize('vehiclePaperwork', [Person::class]);
 
         $rows = DB::table('person')
             ->select('id', 'callsign', 'status', 'vehicle_paperwork', 'vehicle_insurance_paperwork')
@@ -668,7 +686,7 @@ class PersonController extends ApiController
             ->orderBy('callsign')
             ->get();
 
-        return response()->json([ 'people' => $rows ]);
+        return response()->json(['people' => $rows]);
     }
 
     /*
@@ -677,15 +695,15 @@ class PersonController extends ApiController
 
     public function peopleByLocation()
     {
-        $this->authorize('peopleByLocation', [ Person::class ]);
+        $this->authorize('peopleByLocation', [Person::class]);
 
         $params = request()->validate([
-            'year'  => 'sometimes|integer',
+            'year' => 'sometimes|integer',
         ]);
 
         $year = $params['year'] ?? current_year();
 
-        return response()->json([ 'people' => Person::retrievePeopleByLocation($year) ]);
+        return response()->json(['people' => Person::retrievePeopleByLocation($year)]);
     }
 
     /*
@@ -694,9 +712,9 @@ class PersonController extends ApiController
 
     public function peopleByRole()
     {
-        $this->authorize('peopleByRole', [ Person::class ]);
+        $this->authorize('peopleByRole', [Person::class]);
 
-        return response()->json([ 'roles' => Person::retrievePeopleByRole() ]);
+        return response()->json(['roles' => Person::retrievePeopleByRole()]);
     }
 
     /*
@@ -705,9 +723,9 @@ class PersonController extends ApiController
 
     public function peopleByStatus()
     {
-        $this->authorize('peopleByStatus', [ Person::class ]);
+        $this->authorize('peopleByStatus', [Person::class]);
 
-        return response()->json([ 'statuses' => Person::retrievePeopleByStatus() ]);
+        return response()->json(['statuses' => Person::retrievePeopleByStatus()]);
     }
 
     /*
@@ -716,9 +734,9 @@ class PersonController extends ApiController
 
     public function languagesReport()
     {
-        $this->authorize('peopleByStatus', [ Person::class ]);
+        $this->authorize('peopleByStatus', [Person::class]);
 
-        return response()->json([ 'languages' => PersonLanguage::retrieveAllOnSiteSpeakers() ]);
+        return response()->json(['languages' => PersonLanguage::retrieveAllOnSiteSpeakers()]);
     }
 
     /*
@@ -727,7 +745,7 @@ class PersonController extends ApiController
 
     public function peopleByStatusChange()
     {
-        $this->authorize('peopleByStatusChange', [ Person::class ]);
+        $this->authorize('peopleByStatusChange', [Person::class]);
         $year = $this->getYear();
 
         return response()->json(Person::retrieveRecommendedStatusChanges($year));
@@ -743,11 +761,11 @@ class PersonController extends ApiController
 
         $status = $person->status;
 
-/*
-        if (!in_array($status, [ Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST, Person::ALPHA, Person::AUDITOR ])) {
-            throw new \InvalidArgumentException('Person status does not have milestone');
-        }
-*/
+        /*
+                if (!in_array($status, [ Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST, Person::ALPHA, Person::AUDITOR ])) {
+                    throw new \InvalidArgumentException('Person status does not have milestone');
+                }
+        */
 
         $year = current_year();
         $now = SqlHelper::now();
@@ -755,10 +773,10 @@ class PersonController extends ApiController
         $milestones = [
             'manual_review_passed' => ManualReview::existsPersonForYear($person->id, $year),
             'manual_review_enabled' => setting('ManualReviewLinkEnable'),
-            'manual_review_link' => setting('ManualReviewGoogleFormBaseUrl').urlencode($person->callsign),
+            'manual_review_link' => setting('ManualReviewGoogleFormBaseUrl') . urlencode($person->callsign),
             'behavioral_agreement' => $person->behavioral_agreement,
-            'has_reviewed_pi'  => $person->has_reviewed_pi,
-            'photo_upload_enabled'   => setting('PhotoUploadEnable'),
+            'has_reviewed_pi' => $person->has_reviewed_pi,
+            'photo_upload_enabled' => setting('PhotoUploadEnable'),
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
             'alpha_shift_prep_link' => setting('OnboardAlphaShiftPrepLink')
         ];
@@ -780,7 +798,7 @@ class PersonController extends ApiController
             if ($passed) {
                 // Yay, they passed!
                 $milestoneTraining = [
-                    'status'     => 'passed',
+                    'status' => 'passed',
                     'slot_id' => $passed->id,
                     'begins' => $passed->begins,
                     'description' => $passed->description
@@ -788,23 +806,23 @@ class PersonController extends ApiController
             } else {
                 // Not passed.. but has the person signed up for a later training?
                 $lastTraining = $trainings->last();
-                $lastSignup  = $trainingSignups->last();
+                $lastSignup = $trainingSignups->last();
 
                 if ($lastSignup
-                && (!$lastTraining || ($lastSignup->slot_id != $lastTraining->slot_id || Carbon::parse($lastSignup->begins)->gt($lastTraining->begins)))
-                && self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
+                    && (!$lastTraining || ($lastSignup->slot_id != $lastTraining->slot_id || Carbon::parse($lastSignup->begins)->gt($lastTraining->begins)))
+                    && self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
                     $milestoneTraining = [
-                        'status'      => 'pending',
-                        'slot_id'     => $lastSignup->id,
-                        'begins'      => $lastSignup->begins,
+                        'status' => 'pending',
+                        'slot_id' => $lastSignup->id,
+                        'begins' => $lastSignup->begins,
                         'description' => $lastSignup->description
                     ];
                 } else {
                     $slot = $lastSignup ?? $lastTraining;
                     $milestoneTraining = [
-                        'status'    => 'failed',
+                        'status' => 'failed',
                         'slot_id' => $slot->id,
-                        'begins' =>(string) $slot->begins,
+                        'begins' => (string)$slot->begins,
                         'description' => $slot->description
                     ];
                 }
@@ -815,14 +833,14 @@ class PersonController extends ApiController
 
             if (self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
                 $milestoneTraining = [
-                    'status'     => 'pending',
+                    'status' => 'pending',
                     'slot_id' => $lastSignup->id,
-                    'begins' => (string) $lastSignup->begins,
+                    'begins' => (string)$lastSignup->begins,
                     'description' => $lastSignup->description
                 ];
             } else {
                 $milestoneTraining = [
-                    'status'     => 'failed',
+                    'status' => 'failed',
                     'slot_id' => $lastSignup->id,
                     'begins' => (string)$lastSignup->begins,
                     'description' => $lastSignup->description
@@ -830,7 +848,7 @@ class PersonController extends ApiController
             }
         } else {
             // Person has done nada.. y u no sign up?
-            $milestoneTraining = [ 'status' => 'missing' ];
+            $milestoneTraining = ['status' => 'missing'];
         }
 
         $milestones['training'] = $milestoneTraining;
@@ -848,9 +866,9 @@ class PersonController extends ApiController
                         $alphaStatus = 'pending';
                     }
                     $milestones['alpha_shift'] = [
-                        'slot_id'  => $alphaShift->id,
-                        'begins'   => (string) $alphaShift->begins,
-                        'status'   => $alphaStatus,
+                        'slot_id' => $alphaShift->id,
+                        'begins' => (string)$alphaShift->begins,
+                        'status' => $alphaStatus,
                     ];
                 }
             }
@@ -864,7 +882,7 @@ class PersonController extends ApiController
             $milestones['photo_status'] = PersonPhoto::retrieveStatus($person);
         }
 
-        return response()->json([ 'milestones' => $milestones ]);
+        return response()->json(['milestones' => $milestones]);
     }
 
     /*
@@ -889,7 +907,7 @@ class PersonController extends ApiController
         $year = current_year();
 
         if (config('clubhouse.DeploymentEnvironment') != 'Staging' && !app()->isLocal()) {
-            throw new \InvalidArgumentException('Onboard debugging is only available in the staging server');
+            throw new InvalidArgumentException('Onboard debugging is only available in the staging server');
         }
 
         $photoStatus = request()->input('photo_status');
@@ -916,7 +934,7 @@ class PersonController extends ApiController
                 if ($status == 'missing') {
                     return $this->success();
                 }
-                ManualReview::create([ 'person_id' => $person->id, 'passdate' => "$year-01-01 10:00:00"]);
+                ManualReview::create(['person_id' => $person->id, 'passdate' => "$year-01-01 10:00:00"]);
             } elseif ($status == 'missing') {
                 $mr->delete();
             }
@@ -930,46 +948,46 @@ class PersonController extends ApiController
             switch ($status) {
                 case 'signup':
                     $slot = Slot::create([
-                        'position_id'   => Position::TRAINING,
-                        'begins'    => now()->addHours(24),
-                        'ends'      => now()->addHours(25),
+                        'position_id' => Position::TRAINING,
+                        'begins' => now()->addHours(24),
+                        'ends' => now()->addHours(25),
                         'description' => 'Testing Slot',
                         'active' => true,
-                        'max'   => 10
+                        'max' => 10
                     ]);
-                    PersonSlot::create([ 'person_id' => $person->id, 'slot_id' => $slot->id ]);
+                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
                     return $this->success();
                 case 'signup-past':
                     $slot = Slot::create([
-                        'position_id'   => Position::TRAINING,
-                        'begins'    => now()->subHours(24),
-                        'ends'      => now()->subHours(23),
+                        'position_id' => Position::TRAINING,
+                        'begins' => now()->subHours(24),
+                        'ends' => now()->subHours(23),
                         'description' => 'Past Testing Slot',
                         'active' => true,
-                        'max'   => 10
+                        'max' => 10
                     ]);
-                    PersonSlot::create([ 'person_id' => $person->id, 'slot_id' => $slot->id ]);
+                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
                     return $this->success();
                 case 'signup-now':
                     $slot = Slot::create([
-                        'position_id'   => Position::TRAINING,
-                        'begins'    => now(),
-                        'ends'      => now()->addHours(6),
+                        'position_id' => Position::TRAINING,
+                        'begins' => now(),
+                        'ends' => now()->addHours(6),
                         'description' => 'Now Testing Slot',
                         'active' => true,
-                        'max'   => 10
+                        'max' => 10
                     ]);
-                    PersonSlot::create([ 'person_id' => $person->id, 'slot_id' => $slot->id ]);
+                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
                     return $this->success();
 
                 case 'pass':
                 case 'fail':
                     $rows = PersonSlot::where('person_id', $person->id)
-                            ->select('person_slot.*', 'slot.id as slot_id')
-                            ->join('slot', 'slot.id', 'person_slot.slot_id')
-                            ->where('position_id', Position::TRAINING)
-                            ->whereYear('begins', $year)
-                            ->get();
+                        ->select('person_slot.*', 'slot.id as slot_id')
+                        ->join('slot', 'slot.id', 'person_slot.slot_id')
+                        ->where('position_id', Position::TRAINING)
+                        ->whereYear('begins', $year)
+                        ->get();
 
                     $pass = ($status == 'pass');
                     foreach ($rows as $r) {
@@ -977,9 +995,9 @@ class PersonController extends ApiController
                             ->where('slot_id', $r->slot_id)
                             ->first();
                         if (!$p) {
-                            TraineeStatus::create([ 'person_id' => $person->id, 'slot_id' => $r->slot_id, 'passed' => $pass]);
+                            TraineeStatus::create(['person_id' => $person->id, 'slot_id' => $r->slot_id, 'passed' => $pass]);
                         } else {
-                            $p->update([ 'passed' => $pass ]);
+                            $p->update(['passed' => $pass]);
                         }
                     }
                     return $this->success();
@@ -992,7 +1010,7 @@ class PersonController extends ApiController
                         ->delete();
                     return $this->success();
                 default:
-                    throw new \InvalidArgumentException("Unknown training command");
+                    throw new InvalidArgumentException("Unknown training command");
             }
         }
 
@@ -1003,25 +1021,25 @@ class PersonController extends ApiController
             switch ($status) {
                 case 'signup':
                     $slot = Slot::create([
-                        'position_id'   => Position::ALPHA,
-                        'begins'    => now()->addHours(24),
-                        'ends'      => now()->addHours(25),
+                        'position_id' => Position::ALPHA,
+                        'begins' => now()->addHours(24),
+                        'ends' => now()->addHours(25),
                         'description' => 'Alpha Test Slot',
                         'active' => true,
-                        'max'   => 10
+                        'max' => 10
                     ]);
-                    PersonSlot::create([ 'person_id' => $person->id, 'slot_id' => $slot->id ]);
+                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
                     break;
                 case 'signup-past':
                     $slot = Slot::create([
-                        'position_id'   => Position::ALPHA,
-                        'begins'    => now()->subHours(25),
-                        'ends'      => now()->subHours(24),
+                        'position_id' => Position::ALPHA,
+                        'begins' => now()->subHours(25),
+                        'ends' => now()->subHours(24),
                         'description' => 'Past Alpha Test Slot',
                         'active' => true,
-                        'max'   => 10
+                        'max' => 10
                     ]);
-                    PersonSlot::create([ 'person_id' => $person->id, 'slot_id' => $slot->id ]);
+                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
                     break;
                 case 'pass':
                     // Convert to Active
@@ -1041,7 +1059,7 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new \InvalidArgumentException("Unknown alpha command [$status]");
+                    throw new InvalidArgumentException("Unknown alpha command [$status]");
             }
             return $this->success();
         }
@@ -1054,7 +1072,7 @@ class PersonController extends ApiController
                         ->where('position_id', Position::TRAINING)
                         ->get();
                     foreach ($rows as $r) {
-                        \App\Models\TraineeStatus::where('slot_id', $r->id)->delete();
+                        TraineeStatus::where('slot_id', $r->id)->delete();
                         $r->delete();
                     }
                     break;
@@ -1065,13 +1083,13 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new \InvalidArgumentException("Unknown training command");
+                    throw new InvalidArgumentException("Unknown training command");
             }
 
             return $this->success();
         }
 
-        throw new \InvalidArgumentException("Unknown onboard debugging command");
+        throw new InvalidArgumentException("Unknown onboard debugging command");
     }
 
     /**
@@ -1082,6 +1100,6 @@ class PersonController extends ApiController
     {
         $this->authorize('statusHistory', Person::class);
 
-        return response()->json([ 'history' => PersonStatus::retrieveAllForId($person->id) ]);
+        return response()->json(['history' => PersonStatus::retrieveAllForId($person->id)]);
     }
 }
