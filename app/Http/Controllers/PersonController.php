@@ -73,6 +73,8 @@ class PersonController extends ApiController
 
             if (stripos($searchFields, 'email') !== false) {
                 $searchingForEmail = stripos($query, '@') !== false;
+            } else {
+                $searchingForEmail = false;
             }
 
             $searchingForFKA = stripos($searchFields, 'formerly_known_as') !== false;
