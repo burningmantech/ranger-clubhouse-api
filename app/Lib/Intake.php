@@ -99,17 +99,6 @@ class Intake
                 $pnv[$type . '_team'] = self::buildIntakeTeam($type, $intakeYears, $intakeNotes, $haveFlag);
             }
 
-            if (!empty($intakeYears)) {
-                foreach ($intakeYears as $r) {
-                    if ($r->black_flag) {
-                        $pnv['black_flag_years'][] = $r->year;
-                        if ($r->year == $year) {
-                            $pnv['black_flag'] = true;
-                        }
-                    }
-                }
-            }
-
             /*
              * Build up the PNV mentor history
              */
@@ -170,6 +159,27 @@ class Intake
                 $pnv['trainings'] = [];
             }
 
+            if (!empty($intakeYears)) {
+                foreach ($intakeYears as $r) {
+                    if ($r->black_flag) {
+                        $pnv['black_flag_years'][] = $r->year;
+                        if ($r->year == $year) {
+                            $pnv['black_flag'] = true;
+                        }
+
+                        if (!isset($pnvHistory[$r->year])) {
+                            // An alpha shift without a mentor status.. hmmm..
+                            $pnvHistory[$r->year] = (object)[
+                                'training_status' => 'none',
+                                'mentor_status' => 'none'
+                            ];
+                        }
+                        $pnvHistory[$r->year]->black_flag = true;
+                        $haveFlag = true;
+                    }
+                }
+            }
+
             // Bail out if only flagged PNVs are being searched for
             if ($onlyFlagged && !$haveFlag) {
                 continue;
@@ -212,6 +222,8 @@ class Intake
                     }
                 }
             }
+
+
 
             $pnv['pnv_history'] = $pnvHistory;
 
