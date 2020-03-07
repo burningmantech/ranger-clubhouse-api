@@ -24,13 +24,14 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        if (config('clubhouse.DeploymentEnvironment') == 'Production') {
+        error_log("Scheduler route called Environment is [".config('clubhouse.DeploymentEnvironment')."]");
+        //if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             // Let someone know what's been happening in the Clubhouse
-            $schedule->command('clubhouse:daily-report')->dailyAt('09:00')->onOneServer();
+            $schedule->command('clubhouse:daily-report')->everyMinute()->onOneServer()->emailOutputTo('frankenstein@burningman.org');
 
             // Let the photo reviewers know if photos are queued up.
             $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
-        }
+//        }
     }
 
     /**
