@@ -23,41 +23,6 @@ use RuntimeException;
 
 class MaintenanceController extends ApiController
 {
-    public function dailyReport()
-    {
-        $this->checkMaintenanceToken();
-
-        $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
-        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['error_logs'];
-
-        $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
-        $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with(['person:id,callsign', 'person_source:id,callsign'])->get();
-
-        mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
-
-        $pendingPhotos = PersonPhoto::findAllPending();
-
-        if ($pendingPhotos->isNotEmpty()){
-            mail_to(setting('PhotoPendingNotifyEmail'), new PhotoPendingMail($pendingPhotos));
-        }
-        return $this->success();
-    }
-
-    private function checkMaintenanceToken()
-    {
-        $token = setting('MaintenanceToken');
-
-        if (empty($token)) {
-            throw new RuntimeException("Maintenance token not set -- cannot authorzie request");
-        }
-
-        $ourToken = request()->input('token');
-
-        if ($token != $ourToken) {
-            $this->notPermitted("Not authorized.");
-        }
-    }
-
     /*
      * Add any missing positions  to "active" Rangers, and to Prospectives
      *

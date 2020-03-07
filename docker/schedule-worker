@@ -1,0 +1,18 @@
+#!/bin/sh
+
+#
+# Start Clubhouse schedule worker.
+#
+# Handles all Laravel scheduled jobs as defined in app/Console/Kernel.php -- does not handle queued jobs.
+
+set -eu
+
+echo "Starting Clubhouse schedule worker...";
+
+php /var/www/application/artisan db:wait;
+
+while [ true ]
+do
+    php /var/www/application/artisan schedule:run--no-interaction;
+    sleep 60;
+done
