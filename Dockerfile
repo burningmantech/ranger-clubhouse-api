@@ -97,12 +97,17 @@ RUN php composer.phar install --no-plugins --no-scripts;
 # -----------------------------------------------------------------------------
 FROM php as application
 
+# UTC* causes problems -- use a timezone which does not observe daylight savings and is UTC-7.
+ENV TZ=America/Phoenix
+
 # Copy the application with dependencies from the build container
 COPY --from=build /var/www/application /var/www/application
 
 # Copy start-nginx script and override supervisor config to use it
 COPY ./docker/start-nginx /usr/bin/start-nginx
 COPY ./docker/clubhouse-worker /usr/bin/clubhouse-worker
+COPY ./docker/schedule-worker /usr/bin/schedule-worker
+COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
 COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 
 # Replace Nginx default site config

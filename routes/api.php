@@ -40,9 +40,6 @@ Route::group([
 
     Route::match(['GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
-    Route::get('maintenance/daily-report', 'MaintenanceController@dailyReport');
-    Route::get('maintenance', 'MaintenanceController@index');
-
     // Only used for development.
     Route::get('photos/{file}', 'PersonPhotoController@photoImage')->where('file', '.*');
     Route::get('staging/{file}', 'PersonPhotoController@photoImage')->where('file', '.*');

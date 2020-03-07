@@ -24,8 +24,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')
-        //          ->hourly();
+        // Let someone know what's been happening in the Clubhouse
+        $schedule->command('clubhouse:daily-report')->dailyAt('03:00')->onOneServer();
+
+        // Let the photo reviewers know if photos are queued up.
+        $schedule->command('clubhouse:photo-pending')->dailyAt('04:00')->onOneServer();
     }
 
     /**

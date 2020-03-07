@@ -7,10 +7,13 @@
 
 set -eu
 
+# Install the timezone database
+apk add --no-cache tzdata
+
 # Needed to build PHP extensions
 apk add --no-cache libxml2-dev libpng libpng-dev libjpeg-turbo-dev libwebp-dev;
 
-docker-php-ext-configure gd --with-webp-dir=/usr/include/  --with-jpeg-dir=/usr/include/;
+docker-php-ext-configure gd --with-webp-dir=/usr/include/  --with-jpeg-dir=/usr/include/
 
 docker-php-ext-install             \
     ctype                          \
