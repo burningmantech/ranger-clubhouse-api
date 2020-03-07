@@ -24,10 +24,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        error_log("Scheduler route called Environment is [".config('clubhouse.DeploymentEnvironment')."]");
         //if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             // Let someone know what's been happening in the Clubhouse
-            $schedule->command('clubhouse:daily-report')->everyMinute()->onOneServer()->emailOutputTo('frankenstein@burningman.org');
+            $schedule->command('clubhouse:daily-report')->dailyAt('18:00')->onOneServer()->emailOutputTo('frankenstein@burningman.org');
 
             // Let the photo reviewers know if photos are queued up.
             $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
