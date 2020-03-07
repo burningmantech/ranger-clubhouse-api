@@ -29,7 +29,7 @@ class Kernel extends ConsoleKernel
             $schedule->command('clubhouse:daily-report')->dailyAt('09:00')->onOneServer();
 
             // Let the photo reviewers know if photos are queued up.
-            $schedule->command('clubhouse:photo-pending')->->twiceDaily(9, 21)->onOneServer();
+            $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
         }
     }
 
