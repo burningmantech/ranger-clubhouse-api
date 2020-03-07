@@ -5,14 +5,12 @@
 #
 # Handles all Laravel queued jobs -- does not handled scheduled jobs.
 
-set -eu
-
 echo "Starting Clubhouse queue worker...";
 
 php /var/www/application/artisan db:wait;
 
 while [ true ]
 do
-    php /var/www/application/artisan queue:work --stop-when-empty --tries=3 --memory=2048;
+    php /var/www/application/artisan queue:work --stop-when-empty --tries=3 --memory=1024;
     sleep 60;
 done
