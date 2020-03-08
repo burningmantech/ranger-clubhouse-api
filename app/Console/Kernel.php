@@ -24,13 +24,19 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        //if (config('clubhouse.DeploymentEnvironment') == 'Production') {
+        /*
+         * Note: to avoid the use of a cache server (Laravel task scheduler onOneServer() relies on it),
+         * each scheduled task must ensure it has not been run by another API instance by calling
+         * TaskLog::attemptToStart()
+         */
+
+        if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             // Let someone know what's been happening in the Clubhouse
-            $schedule->command('clubhouse:daily-report')->dailyAt('18:00')->onOneServer()->emailOutputTo('frankenstein@burningman.org');
+            $schedule->command('clubhouse:daily-report')->dailyAt('03:00');
 
             // Let the photo reviewers know if photos are queued up.
-            $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
-//        }
+            $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21);
+        }
     }
 
     /**

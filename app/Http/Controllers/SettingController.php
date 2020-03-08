@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
 
+use App\Models\ErrorLog;
 use App\Models\Setting;
+use Exception;
+use Illuminate\Support\Facades\Artisan;
+use InvalidArgumentException;
 
 class SettingController extends ApiController
 {
@@ -26,7 +30,7 @@ class SettingController extends ApiController
 
     public function store()
     {
-        throw new \InvalidArgumentException('Settings cannot be dynamically created');
+        throw new InvalidArgumentException('Settings cannot be dynamically created');
     }
 
     /*
@@ -46,6 +50,15 @@ class SettingController extends ApiController
         if (!empty($changes)) {
             $changes['name'] = $setting->name;
             $this->log('setting-update', "setting update $setting->name", $changes);
+
+            if (!app()->isLocal()) {
+                try {
+                    // Kick the queue workers to pick up the new settings
+                    Artisan::call('queue:restart');
+                } catch (\Exception $e) {
+                    ErrorLog::recordException($e, 'setting-queue-restart-exception');
+                }
+            }
         }
 
         return $this->success($setting);
@@ -56,8 +69,9 @@ class SettingController extends ApiController
      *
      */
 
-    public function destroy(Setting $setting)
+    public
+    function destroy(Setting $setting)
     {
-        throw new \InvalidArgumentException('Settings cannot be destroyed');
+        throw new InvalidArgumentException('Settings cannot be destroyed');
     }
 }
