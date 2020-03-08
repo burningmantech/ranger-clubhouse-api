@@ -8,6 +8,7 @@ use App\Models\ActionLog;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\PersonStatus;
+use App\Models\TaskLog;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +46,11 @@ class ClubhouseDailyReportCommand extends Command
      */
     public function handle()
     {
+        if (TaskLog::attemptToStart($this->signature) == false) {
+            $this->info("Command already run");
+            return;
+        }
+
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
         $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['error_logs'];
 

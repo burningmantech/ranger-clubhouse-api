@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 
 use \Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
 
+
 class Handler extends ExceptionHandler
 {
     /**
@@ -27,7 +28,8 @@ class Handler extends ExceptionHandler
         \Illuminate\Validation\ValidationException::class,
         \InvalidArgumentException::class,
         \Symfony\Component\HttpKernel\Exception\HttpException::class,
-        Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
+        \Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
+
     ];
 
     /**
@@ -38,10 +40,18 @@ class Handler extends ExceptionHandler
      * @param  \Exception  $exception
      * @return void
      */
+
     public function report(\Exception $exception)
     {
         if (!$this->shouldReport($exception)) {
             return;
+        }
+
+        if ($exception instanceof \Symfony\Component\Process\Exception\ProcessSignaledException) {
+            // May see this when an ECS instance is being shutdown -- don't report it.
+            if ($exception->getSignal() == 9) {
+                return;
+            }
         }
 
         if ($exception instanceof CommandRuntimeException) {

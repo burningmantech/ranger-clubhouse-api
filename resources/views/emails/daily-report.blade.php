@@ -1,6 +1,9 @@
 @component('html-email')
-<h1>Daily Report for {{date('Y-m-d')}}</h1>
+<h2>Daily Report for {{date('Y-m-d')}}</h2>
 
+<p>
+  Report generated at {{now()}}
+</p>
 <h3>Error Logs ({{count($errorLogs)}})</h3>
 @if (count($errorLogs) > 0)
 <table class="table table-sm table-striped">
