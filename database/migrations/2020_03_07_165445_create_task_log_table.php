@@ -15,7 +15,7 @@ class CreateTaskLogTable extends Migration
     {
         Schema::create('task_log', function (Blueprint $table) {
             $table->string('name')->unique();
-            $table->timestamp('started_at');
+            $table->timestamp('started_at')->default(DB::raw('CURRENT_TIMESTAMP'));
         });
     }
 
