@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\ApihouseResult;
-use App\Models\TraineeStatus;
-use App\Models\Slot;
-use App\Models\RadioEligible;
+
 use App\Models\Bmid;
-use App\Models\ManualReview;
+use App\Models\PersonOnlineTraining;
+use App\Models\RadioEligible;
+use App\Models\Slot;
+use App\Models\TraineeStatus;
 
 use App\Helpers\DateHelper;
 use App\Helpers\SqlHelper;
@@ -26,8 +27,8 @@ class PersonEventInfo extends ApihouseResult
     public $showers;
     public $radio_info_available;
 
-    public $manual_review_pass;
-    public $manual_review_date;
+    public $online_training_passed;
+    public $online_training_date;
 
     /*
      * Gather all information related to a given year for a person
@@ -245,13 +246,13 @@ class PersonEventInfo extends ApihouseResult
             $info->meals = 'no-info';
         }
 
-        $manualReview = ManualReview::findForPersonYear($personId, $year);
+        $ot = PersonOnlineTraining::findForPersonYear($personId, $year);
 
-        if ($manualReview) {
-            $info->manual_review_pass = true;
-            $info->manual_review_date = (string) $manualReview->passdate;
+        if ($ot) {
+            $info->online_training_passed = true;
+            $info->online_training_date = (string) $ot->completed_at;
         } else {
-            $info->manual_review_pass = false;
+            $info->online_training_passed = false;
         }
 
         return $info;

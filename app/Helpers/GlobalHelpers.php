@@ -10,18 +10,20 @@ use App\Models\Setting;
 
 use Illuminate\Support\Facades\Mail;
 
-/**
- * Retrieve a configuration variable possibly stored in the database.
- * Alias for Setting::get().
- *
- * @param string $name - setting name
- * @return mixed setting value
- */
 
 if (!function_exists('setting')) {
-    function setting($name)
+    /**
+     * Retrieve a configuration variable possibly stored in the database.
+     * Alias for Setting::get().
+     *
+     * @param string $name - setting name
+     * @param bool $throwOnEmpty - throw an exception if the value is empty. (false is ignored.)
+     * @return mixed setting value
+     */
+
+    function setting($name, $throwOnEmpty=false)
     {
-        return Setting::get($name);
+        return Setting::get($name, $throwOnEmpty);
     }
 }
 

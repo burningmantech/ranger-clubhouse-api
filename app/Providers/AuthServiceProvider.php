@@ -18,11 +18,11 @@ use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
 use App\Models\Help;
-use App\Models\ManualReview;
 use App\Models\Motd;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\Position;
 use App\Models\PositionCredit;
@@ -48,10 +48,10 @@ use App\Policies\BroadcastPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
 use App\Policies\HelpPolicy;
-use App\Policies\ManualReviewPolicy;
 use App\Policies\MotdPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
+use App\Policies\PersonOnlineTrainingPolicy;
 use App\Policies\PersonPhotoPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PositionCreditPolicy;
@@ -86,11 +86,11 @@ class AuthServiceProvider extends ServiceProvider
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,
         Help::class => HelpPolicy::class,
-        ManualReview::class => ManualReviewPolicy::class,
         Motd::class => MotdPolicy::class,
         Person::class => PersonPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
+        PersonOnlineTraining::class => PersonOnlineTrainingPolicy::class,
         PersonPhoto::class => PersonPhotoPolicy::class,
         Position::class => PositionPolicy::class,
         PositionCredit::class => PositionCreditPolicy::class,

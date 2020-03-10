@@ -47,16 +47,24 @@ class ClubhouseDailyReportCommand extends Command
     public function handle()
     {
         if (TaskLog::attemptToStart($this->signature) == false) {
-            $this->info("Command already run");
+            $this->info("Too soon to run again");
             return;
         }
 
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
-        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 1000])['error_logs'];
+        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 20])['error_logs'];
 
         $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
         $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with(['person:id,callsign', 'person_source:id,callsign'])->get();
 
-        mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs));
+        $settings = setting([
+            'OnlineTrainingEnabled',
+            'OnlineTrainingDisabledAllowSignups',
+            'PhotoUploadEnable',
+            'TicketingPeriod',
+            'TimesheetCorrectionEnable'
+        ]);
+
+        mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings));
     }
 }

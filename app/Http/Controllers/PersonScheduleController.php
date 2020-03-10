@@ -8,8 +8,8 @@ use App\Http\Controllers\ApiController;
 
 use App\Helpers\SqlHelper;
 
-use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\Position;
@@ -305,23 +305,23 @@ class PersonScheduleController extends ApiController
             $photoStatus = PersonPhoto::retrieveStatus($person);
         }
 
-        $mrDisabledAllowSignups = setting('ManualReviewDisabledAllowSignups');
+        $otDisabledAllowSignups = setting('OnlineTrainingDisabledAllowSignups');
 
-        if ($mrDisabledAllowSignups || $status == Person::NON_RANGER) {
-            // Manual review is disabled, or the person is a non ranger
-            $manualReviewPassed = true;
+        if ($otDisabledAllowSignups || $status == Person::NON_RANGER) {
+            // Online training is disabled, or the person is a non ranger
+            $otPassed = true;
         } else {
-            $manualReviewPassed = ManualReview::personPassedForYear($personId, $year);
+            $otPassed = PersonOnlineTraining::existsForPersonYear($personId, $year);
         }
 
         if ($isAuditor) {
             // Auditors don't require BMID photo
-            if ($manualReviewPassed) {
+            if ($otPassed) {
                 $canSignUpForShifts = true;
             }
             $callsignApproved = true;
         } else {
-            if ($callsignApproved && ($photoStatus == PersonPhoto::APPROVED) && $manualReviewPassed) {
+            if ($callsignApproved && ($photoStatus == PersonPhoto::APPROVED) && $otPassed) {
                 $canSignUpForShifts = true;
             }
 
@@ -332,19 +332,19 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        $showManualReviewLink = false;
+        $showOtLink = false;
         // Per Roslyn and Threepio 2/23/2017, we require people to have
-        // a lam photo before they can take the Manual Review
+        // a BMID photo before they can take Online Training
         if (!$canSignUpForShifts
-            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED) && !$manualReviewPassed) {
-            $showManualReviewLink = true;
+            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED) && !$otPassed) {
+            $showOtLink = true;
         }
 
 
-        if (setting('ManualReviewLinkEnable')) {
-            $manualReviewUrl = setting('ManualReviewGoogleFormBaseUrl') . urlencode($person->callsign);
+        if (setting('OnlineTrainingEnabled')) {
+            $otUrl = setting('OnlineTrainingUrl');
         } else {
-            $manualReviewUrl = '';
+            $otUrl = '';
         }
 
         // New for 2019, everyone has to agree to the org's behavioral standards agreement.
@@ -368,13 +368,13 @@ class PersonScheduleController extends ApiController
             'signup_allowed' => $canSignUpForShifts,
             'callsign_approved' => $callsignApproved,
             'photo_status' => $photoStatus,
-            // is the manual review link allowed to be shown (if link is enabled)
-            'manual_review_allowed' => $showManualReviewLink,
-            // was manual review taken/passed?
-            'manual_review_passed' => $manualReviewPassed,
+            // is the online training link allowed to be shown (if link is enabled)
+            'online_training_allowed' => $showOtLink,
+            // was online training taken/passed?
+            'online_training_passed' => $otPassed,
 
-            // Manual Review page link - if enabled
-            'manual_review_url' => $manualReviewUrl,
+            // Online training page link - if enabled
+            'online_training_url' => $otUrl,
 
             // Everyone except Auditors & Non Rangers should have a BPGUID (aka Burner Profile ID)
             'missing_bpguid' => $missingBpguid,
