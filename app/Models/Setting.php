@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
+use http\Exception\RuntimeException;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
+use InvalidArgumentException;
 
 class Setting extends ApiModel
 {
@@ -17,7 +19,7 @@ class Setting extends ApiModel
     public $incrementing = false;
 
     protected $rules = [
-        'name'  => 'required|string',
+        'name' => 'required|string',
         'value' => 'required|string|nullable'
     ];
 
@@ -81,8 +83,8 @@ class Setting extends ApiModel
             'description' => 'Ranger Broadcast SMS Service',
             'type' => 'string',
             'options' => [
-                [ 'twilio', 'deliver SMS messages via Twilio' ],
-                [ 'sandbox', 'No SMS sent - developer mode' ],
+                ['twilio', 'deliver SMS messages via Twilio'],
+                ['sandbox', 'No SMS sent - developer mode'],
             ]
         ],
 
@@ -116,37 +118,6 @@ class Setting extends ApiModel
             'type' => 'string',
         ],
 
-        'ManualReviewAuthConfig' => [
-            'description' => 'Manual Review Google Spreadsheet Authentication (a massive JSON blob)',
-            'type' => 'json',
-            'is_credential' => true,
-        ],
-
-        'ManualReviewDisabledAllowSignups' => [
-            'description' => 'Enable shift signups even if Manual Review is disabled',
-            'type' => 'bool',
-        ],
-
-        'ManualReviewGoogleFormBaseUrl' => [
-            'description' => 'Manual Review URL',
-            'type' => 'string',
-        ],
-
-        'ManualReviewGoogleSheetId' => [
-            'description' => 'Manual Review Google Spreadsheet ID',
-            'type' => 'string',
-        ],
-
-        'ManualReviewLinkEnable' => [
-            'description' => 'Show the Manual Review Link',
-            'type' => 'bool',
-        ],
-
-        'ManualReviewProspectiveAlphaLimit' => [
-            'description' => 'Limit the first N Alphas for Manual Review.',
-            'type' => 'integer',
-        ],
-
         'MealDates' => [
             'description' => 'Commissary dates and hours',
             'type' => 'string',
@@ -177,6 +148,60 @@ class Setting extends ApiModel
             'type' => 'string'
         ],
 
+        'OnlineTrainingEnabled' => [
+            'description' => 'Enable online training link',
+            'type' => 'bool'
+        ],
+
+        'OnlineTrainingUrl' => [
+            'description' => 'Online Training Url',
+            'type' => 'string'
+        ],
+
+        'OnlineTrainingDisabledAllowSignups' => [
+            'description' => 'Enable shift signups even if Online Training is disabled',
+            'type' => 'bool',
+        ],
+
+        'DoceboDomain' => [
+            'description' => 'Docebo learning domain to use',
+            'type' => 'string'
+        ],
+
+        'DoceboClientId' => [
+            'description' => 'Docebo Client ID - used to manage users and query course completion',
+            'type' => 'string',
+            'is_credential' => true,
+        ],
+
+        'DoceboClientSecret' => [
+            'description' => 'Docebo Client Seret - used to manage users and query course completion',
+            'type' => 'string',
+            'is_credential' => true,
+        ],
+
+        'DoceboUsername' => [
+            'description' => 'Docebo username - used to manage users and query course compl etion',
+            'type' => 'string',
+            'is_credential' => true,
+        ],
+
+        'DoceboPassword' => [
+            'description' => 'Docebo password - used to manage users and query course completion',
+            'type' => 'string',
+            'is_credential' => true,
+        ],
+
+        'DoceboHalfCourseId' => [
+            'description' => 'Docebo Half Ranger course id (record id, not course code) for active Rangers (2+ years)',
+            'type' => 'integer',
+        ],
+
+        'DoceboFullCourseId' => [
+            'description' => 'Docebo full Ranger course id (record id, not course code) for PNVs, Auditors, Binaries, and Inactive Rangers',
+            'type' => 'integer',
+        ],
+
         'PNVWaitList' => [
             'description' => 'Enable Prospecitve Waitlisting',
             'type' => 'bool',
@@ -188,19 +213,19 @@ class Setting extends ApiModel
         ],
 
         'PhotoAnalysisEnabled' => [
-            'description'   => 'Run all uploaded photos through AWS Rekognition face detection',
-            'type'  => 'bool',
+            'description' => 'Run all uploaded photos through AWS Rekognition face detection',
+            'type' => 'bool',
         ],
 
         'PhotoRekognitionAccessKey' => [
-            'description'   => 'AWS Rekognition Access Key used for BMID photo analysis',
-            'type'  => 'string',
+            'description' => 'AWS Rekognition Access Key used for BMID photo analysis',
+            'type' => 'string',
             'is_credential' => true
         ],
 
         'PhotoRekognitionAccessSecret' => [
-            'description'   => 'AWS Rekognition Secret Key used for BMID photo analysis',
-            'type'  => 'string',
+            'description' => 'AWS Rekognition Secret Key used for BMID photo analysis',
+            'type' => 'string',
             'is_credential' => true
         ],
 
@@ -363,10 +388,10 @@ class Setting extends ApiModel
             'description' => 'Ticket Delivery View',
             'type' => 'string',
             'options' => [
-                [ 'none', 'not available yet' ],
-                [ 'view', 'ticket announcement' ],
-                [ 'accept', 'allow ticket submissions' ],
-                [ 'frozen', 'ticket window is closed' ],
+                ['none', 'not available yet'],
+                ['view', 'ticket announcement'],
+                ['accept', 'allow ticket submissions'],
+                ['frozen', 'ticket window is closed'],
             ]
         ],
 
@@ -394,10 +419,10 @@ class Setting extends ApiModel
             'description' => 'Event Ticket Mode',
             'type' => 'string',
             'options' => [
-                [ 'none', 'not available yet' ],
-                [ 'view', 'ticket announcement' ],
-                [ 'accept', 'allow ticket submissions' ],
-                [ 'frozen', 'ticket window is closed' ],
+                ['none', 'not available yet'],
+                ['view', 'ticket announcement'],
+                ['accept', 'allow ticket submissions'],
+                ['frozen', 'ticket window is closed'],
             ]
         ],
 
@@ -405,10 +430,10 @@ class Setting extends ApiModel
             'description' => 'Vehicle Pass Mode',
             'type' => 'string',
             'options' => [
-                [ 'none', 'not available yet' ],
-                [ 'view', 'ticket announcement' ],
-                [ 'accept', 'allow ticket submissions' ],
-                [ 'frozen', 'ticket window is closed' ],
+                ['none', 'not available yet'],
+                ['view', 'ticket announcement'],
+                ['accept', 'allow ticket submissions'],
+                ['frozen', 'ticket window is closed'],
             ]
         ],
 
@@ -421,10 +446,10 @@ class Setting extends ApiModel
             'description' => 'Work Access Pass Mode',
             'type' => 'string',
             'options' => [
-                [ 'none', 'not available yet' ],
-                [ 'view', 'ticket announcement' ],
-                [ 'accept', 'allow ticket submissions' ],
-                [ 'frozen', 'ticket window is closed' ],
+                ['none', 'not available yet'],
+                ['view', 'ticket announcement'],
+                ['accept', 'allow ticket submissions'],
+                ['frozen', 'ticket window is closed'],
             ]
         ],
 
@@ -437,10 +462,10 @@ class Setting extends ApiModel
             'description' => 'WAP SO Mode',
             'type' => 'string',
             'options' => [
-                [ 'none', 'not available yet' ],
-                [ 'view', 'ticket announcement' ],
-                [ 'accept', 'allow ticket submissions' ],
-                [ 'frozen', 'ticket window is closed' ],
+                ['none', 'not available yet'],
+                ['view', 'ticket announcement'],
+                ['accept', 'allow ticket submissions'],
+                ['frozen', 'ticket window is closed'],
             ]
         ],
 
@@ -474,10 +499,10 @@ class Setting extends ApiModel
             'description' => 'Ticketing Period / Season',
             'type' => 'string',
             'options' => [
-                [ 'offseason', 'Post-event' ],
-                [ 'announce', 'tickets have been awarded but ticketing window is not open' ],
-                [ 'open', 'tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play' ],
-                [ 'closed', 'ticketing is closed changes are not directly allowed' ],
+                ['offseason', 'Post-event'],
+                ['announce', 'tickets have been awarded but ticketing window is not open'],
+                ['open', 'tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play'],
+                ['closed', 'ticketing is closed changes are not directly allowed'],
             ]
         ],
 
@@ -554,7 +579,7 @@ class Setting extends ApiModel
         }
 
         // Lookup the value
-        return Setting::where('name', $name)->firstOrNew([ 'name' => $name ]);
+        return Setting::where('name', $name)->firstOrNew(['name' => $name]);
     }
 
     public static function findOrFail($name)
@@ -574,13 +599,13 @@ class Setting extends ApiModel
 
         $settings = collect([]);
         foreach (self::DESCRIPTIONS as $name => $desc) {
-            $settings[] = $rows[$name] ?? new Setting([ 'name' => $name ]);
+            $settings[] = $rows[$name] ?? new Setting(['name' => $name]);
         }
 
         return $settings->sortBy('name')->values();
     }
 
-    public static function get($name)
+    public static function get($name, $throwOnEmpty = false)
     {
         if (is_array($name)) {
             $rows = self::select('name', 'value')->whereIn('name', $name)->get()->keyBy('name');
@@ -589,16 +614,21 @@ class Setting extends ApiModel
                 $row = $rows[$setting] ?? null;
                 $desc = self::DESCRIPTIONS[$setting] ?? null;
                 if (!$desc) {
-                    throw new \InvalidArgumentException("'$setting' is an unknown setting.");
+                    throw new InvalidArgumentException("'$setting' is an unknown setting.");
                 }
+
+
                 $settings[$setting] = $row ? self::castValue($desc['type'], $row->value) : null;
+                if ($throwOnEmpty && self::notEmpty($settings[$setting])) {
+                    throw new \RuntimeException("Setting '$setting' is empty.");
+                }
             }
 
             return $settings;
         } else {
             $desc = self::DESCRIPTIONS[$name] ?? null;
             if (!$desc) {
-                throw new \InvalidArgumentException("'$name' is an unknown setting.");
+                throw new InvalidArgumentException("'$name' is an unknown setting.");
             }
 
             if (isset(self::$cache[$name])) {
@@ -608,6 +638,9 @@ class Setting extends ApiModel
             $row = self::select('value')->where('name', $name)->first();
 
             $value = $row ? self::castValue($desc['type'], $row->value) : null;
+            if ($throwOnEmpty && self::notEmpty($value)) {
+                throw new \RuntimeException("Setting '$name' is empty.");
+            }
             self::$cache[$name] = $value;
             return $value;
         }
@@ -626,10 +659,15 @@ class Setting extends ApiModel
         }
     }
 
+    public static function notEmpty($value)
+    {
+        return !is_bool($value) && empty($value);
+    }
+
     public function getTypeAttribute()
     {
         $desc = self::DESCRIPTIONS[$this->name] ?? null;
-        return  $desc ? $desc['type'] : null;
+        return $desc ? $desc['type'] : null;
     }
 
     public function getDescriptionAttribute()

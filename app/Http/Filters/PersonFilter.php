@@ -107,6 +107,12 @@ class PersonFilter
         'bpguid',
     ];
 
+    // Learning Management System fields
+    const LMS_FIELDS = [
+        'lms_id',
+        'lms_course'
+    ];
+
     const INTAKE_FIELDS = [
         'known_rangers',
         'known_pnvs'
@@ -161,6 +167,7 @@ class PersonFilter
         [ self::AGREEMENT_FIELDS ],
         [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
         [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
+        [ self::LMS_FIELDS, false, [ Role::ADMIN ]],
         // Note: self is not allowed to see mentor notes
         [ self::INTAKE_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
@@ -184,6 +191,7 @@ class PersonFilter
         [ self::AGREEMENT_FIELDS, true, [ Role::ADMIN ]],
         [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
         [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
+        [ self::LMS_FIELDS, false, [ Role::ADMIN ]],
         [ self::INTAKE_FIELDS, false, [ Role::INTAKE, Role::VC ] ],
         [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],

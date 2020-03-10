@@ -7,8 +7,8 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
-use App\Models\ManualReview;
 use App\Models\Person;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
@@ -26,6 +26,19 @@ class PersonScheduleControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public $dirtPosition;
+    public $dirtSlots;
+
+    public $greenDotDirtPosition;
+    public $greenDotSlots;
+    public $greenDotTrainingPosition;
+    public $greenDotTrainingSlots;
+
+    public $trainingPosition;
+    public $trainingSlots;
+
+    public $year;
+
     /*
      * have each test have a fresh user that is logged in,
      * and a set of positions.
@@ -35,7 +48,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->setting('ManualReviewDisabledAllowSignups', false);
+        $this->setting('OnlineTrainingDisabledAllowSignups', false);
         $this->signInUser();
 
         // scheduling ends up sending lots of emails..
@@ -819,22 +832,22 @@ class PersonScheduleControllerTest extends TestCase
         $this->user->saveWithoutValidation();
     }
 
-    private function mockManualReviewPass($result)
+    private function mockOnlineTrainingPass($result)
     {
-        $mock = $this->mock('alias:\App\Models\ManualReview');
-        $mock->shouldReceive('personPassedForYear')->andReturn($result);
+        $mock = $this->mock('alias:\App\Models\PersonOnlineTraining');
+        $mock->shouldReceive('existsForPersonYear')->andReturn($result);
 
         return $mock;
     }
 
     /*
-     * Allow an active, who passed manual review, and has a photo to sign up.
+     * Allow an active, who completed Online Training, and has a photo to sign up.
      */
 
-    public function testAllowActiveWhoPassedManualReviewAndHasPhoto()
+    public function testAllowActiveWhoCompletedOnlineTrainingAndHasPhoto()
     {
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -845,18 +858,18 @@ class PersonScheduleControllerTest extends TestCase
             'permission' => [
                 'signup_allowed' => true,
                 'callsign_approved' => true,
-                'manual_review_passed' => true,
+                'online_training_passed' => true,
             ]
         ]);
     }
 
     /*
-     * Deny an active, who passed manual review, and has no photo.
+     * Deny an active, who completed Online Training, and has no photo.
      */
 
     public function testDenyActiveWithPhoto()
     {
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -867,20 +880,20 @@ class PersonScheduleControllerTest extends TestCase
             'permission' => [
                 'signup_allowed' => false,
                 'callsign_approved' => true,
-                'manual_review_passed' => true,
+                'online_training_passed' => true,
                 'photo_status' => 'missing',
             ]
         ]);
     }
 
     /*
-     * Deny an active, who has photo, and did not pass manual review
+     * Deny an active, who has photo, and did not complete Online Training
      */
 
-    public function testDenyActiveWhoDidNotPassManualReview()
+    public function testDenyActiveWhoDidNotCompleteOnlineTraining()
     {
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(false);
+        $mrMock = $this->mockOnlineTrainingPass(false);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -891,7 +904,7 @@ class PersonScheduleControllerTest extends TestCase
             'permission' => [
                 'signup_allowed' => false,
                 'callsign_approved' => true,
-                'manual_review_passed' => false,
+                'online_training_passed' => false,
                 'photo_status' => 'approved',
             ]
         ]);
@@ -905,7 +918,7 @@ class PersonScheduleControllerTest extends TestCase
         public function testDenyActiveWhoDidNotSignBehavioralAgreement()
         {
             $photoMock = $this->setupPhotoStatus('approved');
-            $mrMock = $this->mockManualReviewPass(true);
+            $mrMock = $this->mockOnlineTrainingPass(true);
             $this->user->update([ 'behavioral_agreement' => false ]);
             $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                    'year' => $this->year
@@ -928,7 +941,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
         $this->user->update(['behavioral_agreement' => false]);
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -944,14 +957,14 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
-     * Allow an auditor, who passed manual review, and has no photo to sign up.
+     * Allow an auditor, who completed Online Training, and has no photo to sign up.
      */
 
-    public function testAllowAuditorWithNoPhotoAndPassedManualReview()
+    public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
         $this->user->update(['status' => 'auditor']);
 
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -962,14 +975,14 @@ class PersonScheduleControllerTest extends TestCase
             'permission' => [
                 'signup_allowed' => true,
                 'callsign_approved' => true,
-                'manual_review_passed' => true,
+                'online_training_passed' => true,
             ]
         ]);
     }
 
     /*
      * Limit how many people can sign up for a shift when a trainer's slot
-     * has been set. max becomes a mulitpler.
+     * has been set. max becomes a multiplier.
      */
 
     public function testSignUpLimitWithTrainingSlot()
@@ -1025,7 +1038,7 @@ class PersonScheduleControllerTest extends TestCase
         $year = $this->year;
 
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 
@@ -1085,7 +1098,7 @@ class PersonScheduleControllerTest extends TestCase
         $year = $this->year;
 
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockManualReviewPass(true);
+        $mrMock = $this->mockOnlineTrainingPass(true);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 

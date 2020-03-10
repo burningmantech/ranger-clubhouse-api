@@ -132,10 +132,11 @@ Route::group([
     Route::post('maintenance/reset-past-prospectives', 'MaintenanceController@resetPassProspectives');
     Route::post('maintenance/archive-messages', 'MaintenanceController@archiveMessages');
 
-    Route::get('manual-review/config', 'ManualReviewController@config');
-    Route::get('manual-review/spreadsheet', 'ManualReviewController@spreadsheet');
-    Route::post('manual-review/import', 'ManualReviewController@import');
-    Route::resource('manual-review', 'ManualReviewController');
+    Route::get('online-training/config', 'OnlineTrainingController@config');
+    Route::get('online-training/courses', 'OnlineTrainingController@courses');
+    Route::get('online-training/enrollment', 'OnlineTrainingController@enrollment');
+    Route::get('online-training', 'OnlineTrainingController@index');
+    Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
 
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
     Route::resource('messages', 'PersonMessageController', ['only' => ['index', 'store', 'destroy']]);

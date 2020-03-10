@@ -11,7 +11,7 @@ use App\Http\Controllers\ApiController;
 
 use App\Helpers\SqlHelper;
 
-use App\Models\ManualReview;
+use App\Models\PersonOnlineTraining;
 use App\Models\Person;
 use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
@@ -240,6 +240,7 @@ class PersonController extends ApiController
                     'person_language',
                     'person_mentor',
                     'person_message',
+                    'person_online_training',
                     'person_position',
                     'person_role',
                     'person_slot',
@@ -773,9 +774,9 @@ class PersonController extends ApiController
         $now = SqlHelper::now();
 
         $milestones = [
-            'manual_review_passed' => ManualReview::existsPersonForYear($person->id, $year),
-            'manual_review_enabled' => setting('ManualReviewLinkEnable'),
-            'manual_review_link' => setting('ManualReviewGoogleFormBaseUrl') . urlencode($person->callsign),
+            'online_training_passed' => PersonOnlineTraining::existsForPersonYear($person->id, $year),
+            'online_training_enabled' => setting('OnlineTrainingEnabled'),
+            'online_training_url' => setting('OnlineTrainingUrl'),
             'behavioral_agreement' => $person->behavioral_agreement,
             'has_reviewed_pi' => $person->has_reviewed_pi,
             'photo_upload_enabled' => setting('PhotoUploadEnable'),
@@ -929,14 +930,18 @@ class PersonController extends ApiController
             return $this->success();
         }
 
-        $status = request()->input('manual_review');
+        $status = request()->input('online_training');
         if (!empty($status)) {
-            $mr = ManualReview::findForPersonYear($person->id, $year);
+            $mr = PersonOnlineTraining::findForPersonYear($person->id, $year);
             if (!$mr) {
                 if ($status == 'missing') {
                     return $this->success();
                 }
-                ManualReview::create(['person_id' => $person->id, 'passdate' => "$year-01-01 10:00:00"]);
+                PersonOnlineTraining::create([
+                    'person_id' => $person->id,
+                    'completed_at' => "$year-01-01 10:00:00",
+                    'type' => PersonOnlineTraining::DOCEBO
+                ]);
             } elseif ($status == 'missing') {
                 $mr->delete();
             }

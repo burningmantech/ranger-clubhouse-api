@@ -20,8 +20,7 @@ class MotdPolicy
 
     public function index(Person $user)
     {
-        // TODO: set to false in 2 weeks when the old frontend ages out.
-        return true;
+        return false;
     }
 
     public function bulletin(Person $user) {

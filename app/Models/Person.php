@@ -212,8 +212,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'vehicle_paperwork',
         'vehicle_insurance_paperwork',
 
+         // various external services identifiers
         'bpguid',
         'sfuid',
+        'lms_id',
+        'lms_course',
 
         'active_next_event',
         'has_note_on_file',
@@ -842,6 +845,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $status = $this->status;
 
         return ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
+    }
+
+    public function isAuditor() : bool
+    {
+        return ($this->status == Person::AUDITOR);
+    }
+
+    public function isInactive() : bool
+    {
+        $status = $this->status;
+
+        return ($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED);
     }
 
     /*

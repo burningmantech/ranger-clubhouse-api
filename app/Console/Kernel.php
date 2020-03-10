@@ -36,6 +36,10 @@ class Kernel extends ConsoleKernel
 
             // Let the photo reviewers know if photos are queued up.
             $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21);
+
+            // Talk with Docebo to see who completed online training
+            // Runs every 15 mins March thru September
+            $schedule->command('clubhouse:docebo-completion')->cron('0,15,30,45 * * 3-9 *');
         }
     }
 
