@@ -293,7 +293,7 @@ class Setting extends ApiModel
         ],
 
         'SFprdPassword' => [
-            'description' => 'Salesforce Production Password',
+            'description' => 'Salesforce Production Password (login password + security token)',
             'type' => 'string',
             'is_credential' => true,
         ],

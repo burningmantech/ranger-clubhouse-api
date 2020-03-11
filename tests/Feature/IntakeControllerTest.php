@@ -201,38 +201,4 @@ class IntakeControllerTest extends TestCase
             'note' => $note
         ]);
     }
-
-    /*
-     * Test setting and clearing black flag
-     */
-
-    public function testSetAndClearBlackFlag() {
-        $this->addAdminRole();
-        $person = factory(Person::class)->create();
-        $year = 2019;
-
-        $response = $this->json('POST', "intake/{$person->id}/black-flag", [
-            'year' => $year,
-            'black_flag' => 1
-        ]);
-
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('person_intake', [
-            'person_id' => $person->id,
-            'year' => $year,
-            'black_flag' => 1,
-        ]);
-
-        $response = $this->json('POST', "intake/{$person->id}/black-flag", [
-            'year' => 2019,
-            'black_flag' => 0
-        ]);
-
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('person_intake', [
-            'person_id' => $person->id,
-            'year' => $year,
-            'black_flag' => 0,
-        ]);
-    }
-}
+ }

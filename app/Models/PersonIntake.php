@@ -21,7 +21,6 @@ class PersonIntake extends ApiModel
     protected $casts = [
         'created_at' => 'date',
         'updated_at' => 'date',
-        'black_flag' => 'boolean',
     ];
 
     public function person()
@@ -42,10 +41,10 @@ class PersonIntake extends ApiModel
         return $ps;
     }
 
-    public static function retrieveBlackFlagForIdsYear($personIds, $year) {
+    public static function retrievePersonnelIssueForIdsYear($personIds, $year) {
         return self::select('person_id')
                 ->whereIn('person_id', $personIds)
-                ->where('black_flag', true)
+                ->where('personnel_rank', 4)
                 ->where('year', $year)
                 ->pluck('person_id')
                 ->toArray();
@@ -62,4 +61,9 @@ class PersonIntake extends ApiModel
     public function setVcRankAttribute($value) {
         $this->attributes['vc_rank'] = ($value == '') ? null : $value;
     }
+
+    public function setPersonnelRankAttribute($value) {
+        $this->attributes['personnel_rank'] = ($value == '') ? null : $value;
+    }
+
 }

@@ -90,12 +90,12 @@ class Intake
                 'formerly_known_as' => $person->formerlyKnownAsArray(true),
                 'known_rangers' => $person->knownRangersArray(),
                 'known_pnvs' => $person->knownPnvsArray(),
-                'black_flag_years' => [],
+                'personnel_issues' => [],
             ];
 
             $intakeYears = $peopleIntake[$personId] ?? null;
             $intakeNotes = $peopleIntakeNotes[$personId] ?? null;
-            foreach (['rrn', 'mentor', 'vc'] as $type) {
+            foreach (['rrn', 'mentor', 'vc', 'personnel'] as $type) {
                 $pnv[$type . '_team'] = self::buildIntakeTeam($type, $intakeYears, $intakeNotes, $haveFlag);
             }
 
@@ -105,9 +105,9 @@ class Intake
 
             $pnvHistory = [];
             if (isset($mentors[$personId])) {
-                foreach ($mentors[$personId] as $year => $mentorship) {
+                foreach ($mentors[$personId] as $mentorYear => $mentorship) {
                     $status = $mentorship['status'];
-                    $pnvHistory[(int) $year] = (object)[
+                    $pnvHistory[(int) $mentorYear] = (object)[
                         'mentor_status' => $mentorship['status'] ?? 'none',
                         'mentors' => $mentorship['mentors'],
                         'training_status' => 'none',
@@ -161,10 +161,9 @@ class Intake
 
             if (!empty($intakeYears)) {
                 foreach ($intakeYears as $r) {
-                    if ($r->black_flag) {
-                        $pnv['black_flag_years'][] = $r->year;
+                    if ($r->personnel_rank == Intake::FLAG) {
                         if ($r->year == $year) {
-                            $pnv['black_flag'] = true;
+                            $pnv['personnel_issue'] = true;
                         }
 
                         if (!isset($pnvHistory[$r->year])) {
@@ -174,7 +173,7 @@ class Intake
                                 'mentor_status' => 'none'
                             ];
                         }
-                        $pnvHistory[$r->year]->black_flag = true;
+                        $pnvHistory[$r->year]->personnel_issue = true;
                         $haveFlag = true;
                     }
                 }
@@ -209,15 +208,15 @@ class Intake
             if (isset($personStatuses[$personId])) {
                 $statusHistory = $personStatuses[$personId];
                 foreach ($statusHistory as $history) {
-                    $year = $history->created_at->year;
-                    if (!isset($pnvHistory[$year])) {
-                        $pnvHistory[$year] = (object)[
+                    $historyYear = $history->created_at->year;
+                    if (!isset($pnvHistory[$historyYear])) {
+                        $pnvHistory[$historyYear] = (object)[
                             'training_status' => 'none',
                             'mentor_status' => 'none'
                         ];
 
                         if (self::wasAuditorInYear($statusHistory, $year)) {
-                            $pnvHistory[$year]->was_auditor = true;
+                            $pnvHistory[$historyYear]->was_auditor = true;
                         }
                     }
                 }
@@ -289,8 +288,8 @@ class Intake
         }
 
         $result = [];
-        foreach ($teamYears as $year => $info) {
-            $info['year'] = $year;
+        foreach ($teamYears as $teamYear => $info) {
+            $info['year'] = $teamYear;
             $result[] = $info;
         }
 

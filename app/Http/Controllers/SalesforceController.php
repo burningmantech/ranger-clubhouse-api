@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 use App\Lib\PotentialClubhouseAccountFromSalesforce;
 use App\Lib\SalesforceClubhouseInterface;
 
 use App\Models\ErrorLog;
 use App\Models\Person;
+use App\Models\PersonIntakeNote;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
 
-use App\Helpers\SqlHelper;
 use App\Mail\WelcomeMail;
 
 class SalesforceController extends ApiController
@@ -101,8 +100,8 @@ class SalesforceController extends ApiController
                $sfch->updateSalesforceVCStatus($pca);
            }
 
-            if ($pca->status == "ready" && $createAccounts) {
-                if (!$this->createPerson($sfch, $pca, $updateSf)) {
+            if (($pca->status == "ready" || $pca->status == 'existing') && $createAccounts) {
+                if (!$this->importPerson($sfch, $pca, $updateSf)) {
                     $account['message'] = $pca->message;
                 }
             }
@@ -132,17 +131,11 @@ class SalesforceController extends ApiController
                 'known_ranger_names'            => $pca->known_ranger_names,
                 'callsign'                      => $pca->callsign,
                 'vc_status'                     => $pca->vc_status,
+                'vc_comments'                   => $pca->vc_comments,
             ];
 
             if ($pca->existingPerson) {
-                $person = $pca->existingPerson;
-                $account['existing_person'] = [
-                    'id'       => $person->id,
-                    'callsign' => $person->callsign,
-                    'status'   => $person->status,
-                    'first_name' => $person->first_name,
-                    'last_name' => $person->last_name,
-                ];
+                $account['existing_person'] = $pca->existingPerson;
             }
 
 
@@ -155,8 +148,14 @@ class SalesforceController extends ApiController
         ]);
     }
 
-    private function createPerson($sfch, $pca, $updateSf) {
-        $person = new Person;
+    private function importPerson($sfch, $pca, $updateSf) {
+        if ($pca->status == 'existing') {
+            $person = $pca->existingPerson;
+            $isNew = false;
+        } else {
+            $person = new Person;
+            $isNew = true;
+        }
 
         $person->callsign          = $pca->callsign;
         $person->callsign_approved = 1;
@@ -173,11 +172,21 @@ class SalesforceController extends ApiController
         $person->sfuid             = $pca->sfuid;
         $person->emergency_contact = $pca->emergency_contact;
 
+        $person->known_rangers = $pca->known_ranger_names;
+        $person->known_pnvs = $pca->known_pnv_names;
+
         $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
         $person->teeshirt_size_style        = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
 
+        if ($isNew) {
+            $person->password = 'abcdef';
+        } else {
+            $changes = $person->getChangedValues();
+            $changes['id'] = $person->id;
+            $oldStatus = $person->status;
+        }
+
         $person->status = Person::PROSPECTIVE;
-        $person->password = 'abcdef';
 
         try {
             if (!$person->save()) {
@@ -185,9 +194,12 @@ class SalesforceController extends ApiController
                 foreach ($person->getErrors() as $column => $errors) {
                     $message[] = "$column: ".implode(' & ', $errors);
                 }
-                $pca->message = "Creation error: ".implode(', ', $messages);
+                $pca->message = ($isNew ? 'Creation' : 'Update').' error: '.implode(', ', $messages);
                 $pca->status = "failed";
-                ErrorLog::record('salesforce-import-fail', [ 'person' => $person, 'validation-errors' => $person->getErrors() ]);
+                ErrorLog::record('salesforce-import-fail', [
+                    'person' => $person,
+                    'errors' => $person->getErrors()
+                ]);
                 return false;
             }
         } catch (\Illuminate\Database\QueryException $e) {
@@ -197,15 +209,17 @@ class SalesforceController extends ApiController
             return false;
         }
 
-        $this->log('person-create', 'salesforce import', $person, $person->id);
+        $this->log($isNew ? 'person-create' : 'person-update', 'salesforce import', $isNew ? $person : $changes, $person->id);
 
-        // Setup the default roles & positions
-        PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
-        PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
-
-        // Record the initial status for tracking through the Unified Flagging View
-        PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
-
+        if ($isNew) {
+            // Record the initial status for tracking through the Unified Flagging View
+            PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
+            // Setup the default roles & positions
+            PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
+            PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
+        } else {
+            $person->changeStatus(Person::PROSPECTIVE, $oldStatus, 'salesforce import');
+        }
 
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
@@ -213,14 +227,18 @@ class SalesforceController extends ApiController
         }
 
         $pca->chuid = $person->id;
-        $pca->status = "succeeded";
+        $pca->status = 'succeeded';
+
+        if (!empty($pca->vc_comments)) {
+            PersonIntakeNote::record($person->id, current_year(), 'mentor', $pca->vc_comments);
+        }
 
         if ($updateSf) {
             $sfch->updateSalesforceVCStatus($pca);
             $sfch->updateSalesforceClubhouseImportStatusMessage($pca);
             $sfch->updateSalesforceClubhouseUserID($pca);
 
-            if ($pca->status != "succeeded") {
+            if ($pca->status != 'succeeded') {
                 return false;
             }
         }
