@@ -92,8 +92,8 @@ class TrainingSession extends Slot
         // Find the status of the person at the time
         $peopleStatus = PersonStatus::findStatusForIdsTime($personIds, $this->ends);
 
-        // Yarrr! Here be Black Flags..
-        $blackFlags = PersonIntake::retrieveBlackFlagForIdsYear($personIds, $this->ends->year);
+        // Yarrr! Here be personnel issues matey..
+        $personnelIssues = PersonIntake::retrievePersonnelIssueForIdsYear($personIds, $this->ends->year);
 
         $students = [];
 
@@ -122,8 +122,8 @@ class TrainingSession extends Slot
                 'fkas' => $person->formerlyKnownAsArray(true)
             ];
 
-            if (in_array($person->id, $blackFlags)) {
-                $info['black_flag'] = true;
+            if (in_array($person->id, $personnelIssues)) {
+                $info['personnel_issue'] = true;
             }
 
             // Does the person need ranking?

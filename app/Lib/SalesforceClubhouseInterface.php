@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Lib;
 
 /*
@@ -65,7 +66,7 @@ class SalesforceClubhouseInterface
         'VC_Status__c',
         'Known_Rangers__c',
         'Known_Rangers_Names__c',
-        'Know_Prospective_Volunteers__c',       // Remind me to kill DD
+//        'Know_Prospective_Volunteers__c',       // Remind me to kill DD
         'Known_Prospective_Volunteer_Names__c',
         'Ranger_Info__r.FirstName',
         'Ranger_Info__r.LastName',
@@ -138,16 +139,16 @@ class SalesforceClubhouseInterface
         if ($where == "production") {
             $d = "prd";
         }
-        if (setting("SF".$d."Password") == "") {
+        if (setting("SF" . $d . "Password") == "") {
             $this->sf->errorMessage = "sfch->auth: no password for $d";
             return false;
         }
 
-        $this->sf->setClientID(setting("SF".$d."ClientId"));
-        $this->sf->setClientSecret(setting("SF".$d."ClientSecret"));
-        $this->sf->setUsername(setting("SF".$d."Username"));
-        $this->sf->setPassword(setting("SF".$d."Password"));
-        $this->sf->setAuthURL(setting("SF".$d."AuthUrl"));
+        $this->sf->setClientID(setting("SF" . $d . "ClientId"));
+        $this->sf->setClientSecret(setting("SF" . $d . "ClientSecret"));
+        $this->sf->setUsername(setting("SF" . $d . "Username"));
+        $this->sf->setPassword(setting("SF" . $d . "Password"));
+        $this->sf->setAuthURL(setting("SF" . $d . "AuthUrl"));
         return $this->sf->auth();
     }
 
@@ -179,21 +180,17 @@ class SalesforceClubhouseInterface
         }
 
         $r = $this->sf->soqlQuery($q);
-        if ($r == false) {
-            $this->sf->errorMessage = "Salesforce API query failed for $q: "
-                . $this->sf->errorMessage;
+        if ($r == false
+            || (is_array($r) && $r[0]->message != "")) {
+            $this->sf->errorMessage = "Salesforce API query failed for $q: {$this->sf->errorMessage}";
             return false;
         }
-        if (is_array($r) && $r[0]->message != "") {
-            $this->sf->errorMessage = "Salesforce API query failed for $q: "
-                . $this->sf->errorMessage;
-            return false;
-        }
-/*        if ($r->done != 1) {
-            $this->sf->errorMessage =
-                        "Salesforce API query returned unfinished";
-            return false;
-        }*/
+
+        /*        if ($r->done != 1) {
+                    $this->sf->errorMessage =
+                                "Salesforce API query returned unfinished";
+                    return false;
+                }*/
         return $r;
     }
 
@@ -262,7 +259,7 @@ class SalesforceClubhouseInterface
     private function updateSalesforceField($id, $field, $value)
     {
         if (setting('SFEnableWritebacks')) {
-            $js = json_encode([ $field => $value ]);
+            $js = json_encode([$field => $value]);
             $this->sf->objUpdate("Ranger__c", $id, $js);
             if ($this->debug) {
                 Log::debug("updateSalesforceField: updated $field for $id to $value");
