@@ -60,16 +60,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.133.33",
+            "version": "3.133.35",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "bdae58163a527d1d03db9a845fe57795c81e2c49"
+                "reference": "ab87be32ed4f52a9779d40277e4989af35be7dd5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/bdae58163a527d1d03db9a845fe57795c81e2c49",
-                "reference": "bdae58163a527d1d03db9a845fe57795c81e2c49",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/ab87be32ed4f52a9779d40277e4989af35be7dd5",
+                "reference": "ab87be32ed4f52a9779d40277e4989af35be7dd5",
                 "shasum": ""
             },
             "require": {
@@ -140,7 +140,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2020-03-10T18:14:53+00:00"
+            "time": "2020-03-12T19:45:53+00:00"
         },
         {
             "name": "doctrine/cache",
