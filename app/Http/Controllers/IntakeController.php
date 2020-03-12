@@ -62,7 +62,7 @@ class IntakeController extends ApiController
             'year' => 'required|integer',
             'type' => [
                 'required',
-                Rule::in(['rrn', 'vc', 'mentor'])
+                Rule::in(['rrn', 'vc', 'mentor', 'personnel'])
             ],
             'note' => 'sometimes|string',
             'ranking' => 'sometimes|integer|nullable'
@@ -75,6 +75,9 @@ class IntakeController extends ApiController
                 break;
             case 'mentor':
                 $role = Role::MENTOR;
+                break;
+            case 'personnel':
+                $role = Role::ADMIN;
                 break;
             default:
                 $role = Role::INTAKE;
@@ -115,37 +118,7 @@ class IntakeController extends ApiController
         return $this->success();
     }
 
-    /**
-     * Set or clear the black flag on a person / year intake record
-     *
-     * @param Person $person
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
-     */
-
-    public function setBlackFlag(Person $person)
-    {
-        if (!$this->userHasRole(Role::ADMIN)) {
-            $this->notPermitted('Not authorized');
-        }
-
-        $params = request()->validate([
-            'year' => 'required|integer',
-            'black_flag' => 'required|boolean'
-        ]);
-
-        $intake = PersonIntake::findForPersonYearOrNew($person->id, $params['year']);
-        $intake->black_flag = $params['black_flag'];
-        $changes = $intake->getChangedValues();
-        $isNew = !$intake->id;
-        $intake->save();
-
-        $this->logIntakeChanges($person, $changes, $isNew, $intake);
-
-        return $this->success();
-    }
-
-    /**
+     /**
      * Check for the INTAKE role.
      *
      * @return void

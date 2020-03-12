@@ -123,7 +123,6 @@ Route::group([
     Route::get('intake', 'IntakeController@index');
     Route::get('intake/{person}/history', 'IntakeController@history');
     Route::post('intake/{person}/note', 'IntakeController@appendNote');
-    Route::post('intake/{person}/black-flag', 'IntakeController@setBlackFlag');
 
     Route::post('maintenance/update-positions', 'MaintenanceController@updatePositions');
     Route::post('maintenance/mark-off-site', 'MaintenanceController@markOffSite');

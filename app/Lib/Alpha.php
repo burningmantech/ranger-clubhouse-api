@@ -188,8 +188,8 @@ class Alpha
         $teamHistory = $intakeHistory[$personId] ?? null;
         if (!empty($teamHistory)) {
             foreach ($teamHistory as $r) {
-                if ($r->year == $year && $r->black_flag) {
-                    $potential->black_flag = true;
+                if ($r->year == $year && $r->personnel_rank == Intake::FLAG) {
+                    $potential->personnel_issue = true;
                 }
 
                 if ($r->rrn_rank > 0 && $r->rrn_rank != Intake::AVERAGE) {
@@ -212,8 +212,8 @@ class Alpha
                     $potential->have_mentor_flags = true;
                 }
 
-                if ($history->year == $year && $history->black_flag) {
-                    $potential->black_flag = true;
+                if ($history->year == $year && $history->personnel_rank == Intake::FLAG) {
+                    $potential->personnel_issue = true;
                 }
             }
         }

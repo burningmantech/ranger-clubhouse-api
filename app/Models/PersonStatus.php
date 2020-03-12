@@ -33,11 +33,11 @@ class PersonStatus extends ApiModel
     /**
      * Record the change in a person's status.
      *
-     * @param $personId person to track
-     * @param $oldStatus old status
-     * @param $newStatus new status
-     * @param $reason reason it changed
-     * @param $personSourceId user who made the change
+     * @param int $personId person to track
+     * @param string $oldStatus old status
+     * @param string $newStatus new status
+     * @param string $reason reason it changed
+     * @param int $personSourceId user who made the change
      */
 
     public static function record($personId, $oldStatus, $newStatus, $reason, $personSourceId)

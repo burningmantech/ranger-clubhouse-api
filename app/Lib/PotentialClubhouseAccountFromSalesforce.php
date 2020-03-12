@@ -16,35 +16,35 @@ class PotentialClubhouseAccountFromSalesforce
     const STATUS_IMPORTED = "imported";
     const STATUS_SUCCEEDED = "succeeded";
 
-    const REQUIRED_RANGER_INFO_FIELDS = array(
-            'FirstName',
-            'LastName',
-            'MailingStreet',
-            'MailingCity',
-            'MailingState',
-            'MailingCountry',
-            'MailingPostalCode',
-            'npe01__HomeEmail__c',
-            'Phone',
-    //                'Birthdate',
-            'BPGUID__c',
-            'SFUID__c',
-    // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionaire.
-    // *sigh*
-    //        'Emergency_Contact_Name__c',
-    //        'Emergency_Contact_Phone__c',
-    //        'Emergency_Contact_Relationship__c',
-    // The following fields exist but are always blank, at least in the
-    // sandbox, so we ignore them
-    //            'Email',
-    //            'npe01__WorkEmail__c',
-    //            'npe01__Preferred_Email__c',
-    //            'npe01__PreferredPhone__c',
-    //            'npe01__AlternateEmail__c',
-    //            'npe01__WorkPhone__c',
-    //            'MobilePhone',
-    //            'OtherPhone',
-    );
+    const REQUIRED_RANGER_INFO_FIELDS = [
+        'FirstName',
+        'LastName',
+        'MailingStreet',
+        'MailingCity',
+        'MailingState',
+        'MailingCountry',
+        'MailingPostalCode',
+        'npe01__HomeEmail__c',
+        'Phone',
+        //                'Birthdate',
+        'BPGUID__c',
+        'SFUID__c',
+        // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionaire.
+        // *sigh*
+        //        'Emergency_Contact_Name__c',
+        //        'Emergency_Contact_Phone__c',
+        //        'Emergency_Contact_Relationship__c',
+        // The following fields exist but are always blank, at least in the
+        // sandbox, so we ignore them
+        //            'Email',
+        //            'npe01__WorkEmail__c',
+        //            'npe01__Preferred_Email__c',
+        //            'npe01__PreferredPhone__c',
+        //            'npe01__AlternateEmail__c',
+        //            'npe01__WorkPhone__c',
+        //            'MobilePhone',
+        //            'OtherPhone',
+    ];
 
     public $status;     /* "null", "invalid", "ready", "imported", "succeeded" */
     public $message;
@@ -71,6 +71,7 @@ class PotentialClubhouseAccountFromSalesforce
     public $known_ranger_names;
     public $callsign;
     public $vc_status;
+    public $vc_comments;
 
     public function __construct()
     {
@@ -140,6 +141,7 @@ class PotentialClubhouseAccountFromSalesforce
         $this->known_ranger_names = trim(@$sobj->Known_Rangers_Names__c);
         $this->callsign = trim(@$sobj->VC_Approved_Radio_Call_Sign__c);
         $this->vc_status = trim(@$sobj->VC_Status__c);
+        $this->vc_comments = trim(@$sobj->VC_Comments__c);
 
         if ($this->vc_status == "Released to Upload"
             && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
@@ -152,14 +154,14 @@ class PotentialClubhouseAccountFromSalesforce
         if ($this->callsign == "") {
             $this->status = self::STATUS_INVALID;
             $this->message =
-                    "VC_Approved_Radio_Call_Sign is blank";
+                "VC_Approved_Radio_Call_Sign is blank";
             return false;
         }
 
         $ok = true;
         foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
             if ($req == 'MailingState'
-            && !in_array($sobj->Ranger_Info__r->{'MailingCountry'} ?? '', [ 'US', 'CA', 'AU' ])) {
+                && !in_array($sobj->Ranger_Info__r->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
                 continue;
             }
 
@@ -198,40 +200,49 @@ class PotentialClubhouseAccountFromSalesforce
 
         $person = $this->callsignAlreadyExists();
         if ($person) {
-            $this->status = "already_exists_callsign";
+            $this->status = 'existing-callsign';
             $this->message = "Clubhouse account with this callsign already exists";
             $this->existingPerson = $person;
             return;
         }
-        if ($this->callsignIsReserved()) {
-            $this->status = "reserved_callsign";
-            $this->message = "Callsign is on the reserved list";
-            return;
-        }
 
-        $person = $this->emailAlreadyExists();
-        if ($person) {
-            $this->status = "already_exists_email";
-            $this->message = "Clubhouse account with this email address already exists";
-            $this->existingPerson = $person;
+        if ($this->callsignIsReserved()) {
+            $this->status = 'reserved-callsign';
+            $this->message = "Callsign is on the reserved list";
             return;
         }
 
         $person = $this->bpguidAlreadyExists();
         if ($person) {
-            $this->status = "already_exists_bpguid";
-            $this->message = "Clubhouse account with this BPGUID already exists";
-            $this->existingPerson = $person;
+            $this->checkExisting('BPGUID', $person);
             return;
         }
 
-        $person = $this->sfuidAlreadyExists();
+        $person = $this->emailAlreadyExists();
         if ($person) {
-            $this->status = "already_exists_sfuid";
-            $this->message = "Clubhouse account with this SFUID already exists";
-            $this->existingPerson = $person;
+            $this->checkExisting('email address', $person);
             return;
         }
+
+
+        $person = $this->sfuidAlreadyExists();
+        if ($person) {
+            $this->checkExisting('SFUID', $person);
+            return;
+        }
+    }
+
+    public function checkExisting($type, $person)
+    {
+        $status = $person->status;
+        $this->message = "Clubhouse account with this {$type} already exists";
+        if ($status != Person::AUDITOR && $status != Person::PAST_PROSPECTIVE) {
+            $this->status = 'existing-bad-status';
+            $this->message .= ' and is not an auditor or past prospective';
+        } else {
+            $this->status = 'existing';
+        }
+        $this->existingPerson = $person;
     }
 
     /*
@@ -327,7 +338,7 @@ class PotentialClubhouseAccountFromSalesforce
      */
     public static function cookCallsign($callsign)
     {
-        $callsign = str_replace([' ', '-', '!', '?', '.' ], '', $callsign);
+        $callsign = str_replace([' ', '-', '!', '?', '.'], '', $callsign);
         $callsign = strtolower($callsign);
         return $callsign;
     }
@@ -341,14 +352,16 @@ class PotentialClubhouseAccountFromSalesforce
     public static function getReservedCallsigns($style = "raw")
     {
         $reservedCallsigns = array_merge(
-           ReservedCallsigns::$LOCATIONS,
-           ReservedCallsigns::$RADIO_JARGON,
-           ReservedCallsigns::$RANGER_JARGON,
-           ReservedCallsigns::twiiVips(),
-           ReservedCallsigns::$RESERVED
-       );
+            ReservedCallsigns::$LOCATIONS,
+            ReservedCallsigns::$RADIO_JARGON,
+            ReservedCallsigns::$RANGER_JARGON,
+            ReservedCallsigns::twiiVips(),
+            ReservedCallsigns::$RESERVED
+        );
         if ($style == 'cooked') {
-            $reservedCallsigns = array_map(function ($callsign) { return self::cookCallsign($callsign); }, $reservedCallsigns);
+            $reservedCallsigns = array_map(function ($callsign) {
+                return self::cookCallsign($callsign);
+            }, $reservedCallsigns);
         }
         return $reservedCallsigns;
     }
