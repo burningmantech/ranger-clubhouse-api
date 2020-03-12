@@ -105,8 +105,6 @@ COPY --from=build /var/www/application /var/www/application
 
 # Copy start-nginx script and override supervisor config to use it
 COPY ./docker/start-nginx /usr/bin/start-nginx
-COPY ./docker/schedule-worker /usr/bin/schedule-worker
-COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
 COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 
 # Replace Nginx default site config
@@ -115,9 +113,12 @@ COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
 
-# Setup to run the Laravel task scheduler via cron
-COPY docker/cron-start /usr/bin/cron-start
-RUN chmod 755 /usr/bin/cron-start
+# Laravel task scheduler and queue worker
+COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
+COPY ./docker/clubhouse-scheduler /usr/bin/clubhouse-scheduler
+COPY ./docker/clubhouse-worker /usr/bin/clubhouse-worker
+
+RUN chmod 755 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
 
 # Set working directory to application directory
 WORKDIR /var/www/application
