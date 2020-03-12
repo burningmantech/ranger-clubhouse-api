@@ -1,0 +1,6 @@
+#!/bin/sh
+
+env > /etc/environment
+
+echo '* * * * * php /var/www/application/artisan schedule:run -vvv --no-interaction >/dev/stdout 2>&1' | crontab -
+exec /usr/sbin/crond -f -L /dev/stdout
