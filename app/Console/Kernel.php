@@ -34,7 +34,7 @@ class Kernel extends ConsoleKernel
 
         if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             // Let someone know what's been happening in the Clubhouse
-            $schedule->command('clubhouse:daily-report')->everyHour()->emailOutputTo('frankenstein@burningman.org');
+            $schedule->command('clubhouse:daily-report')->hourly()->emailOutputTo('frankenstein@burningman.org');
 
             // Let the photo reviewers know if photos are queued up.
             $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->emailOutputTo('frankenstein@burningman.org');
