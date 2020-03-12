@@ -13,7 +13,9 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        'App\Console\Commands\ClubhouseDailyReportCommand',
+        'App\Console\Commands\ClubhousePhotoPendingCommand',
+        'App\Console\Commands\ClubhouseDoceboCompletion',
     ];
 
     /**
@@ -32,10 +34,10 @@ class Kernel extends ConsoleKernel
 
         if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             // Let someone know what's been happening in the Clubhouse
-            $schedule->command('clubhouse:daily-report')->dailyAt('03:00');
+            $schedule->command('clubhouse:daily-report')->dailyAt('03:00')->emailOutputTo('frankenstein@burningman.org');
 
             // Let the photo reviewers know if photos are queued up.
-            $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21);
+            $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->emailOutputTo('frankenstein@burningman.org');
 
             // Talk with Docebo to see who completed online training
             // Runs every 15 mins March thru September

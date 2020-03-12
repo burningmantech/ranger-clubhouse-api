@@ -13,7 +13,7 @@ class TaskLog extends ApiModel
     protected $primaryKey = 'name';
     protected $guarded = [];
 
-    const DEFAULT_LAST_TIME = 5;
+    const DEFAULT_LAST_TIME = 2;
 
     /**
      * A hack replacement for Laravel's task onOneServer() method which prevents a task

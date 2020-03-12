@@ -115,6 +115,10 @@ COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
 
+# Setup to run the Laravel task scheduler via cron
+COPY docker/cron-start /usr/bin/cron-start
+RUN chmod 755 /usr/bin/cron-start
+
 # Set working directory to application directory
 WORKDIR /var/www/application
 
