@@ -13,6 +13,7 @@ if [ ! -f "${env_file}" ]; then
 fi;
 
 exec docker run                 \
+    --memory=512m               \
     --rm                        \
     --name="${container_name}"  \
     --env-file="${env_file}"    \

@@ -228,11 +228,7 @@ class Docebo
             }
 
             self::setLmsId($person, $row->user_id);
-            $row->person = (object)[
-                'id' => $person->id,
-                'callsign' => $person->callsign,
-                'status' => $person->status,
-            ];
+            $row->person = $person;
         }
     }
 

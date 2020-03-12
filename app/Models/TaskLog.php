@@ -36,7 +36,6 @@ class TaskLog extends ApiModel
 
     public static function attemptToStart(string $name, int $lastMins = self::DEFAULT_LAST_TIME) : bool
     {
-        DB::beginTransaction();
         // Attempt to lock the table
         DB::unprepared('LOCK TABLES task_log WRITE');
         try {
@@ -50,7 +49,6 @@ class TaskLog extends ApiModel
                 if ($task->is_running) {
                     // Still running
                     DB::unprepared('UNLOCK TABLES');
-                    DB::commit();
                     return false;
                 }
             } else {
@@ -60,11 +58,9 @@ class TaskLog extends ApiModel
             $task->started_at = now();
             $task->save();
             DB::unprepared('UNLOCK TABLES');
-            DB::commit();
             return true;
         } catch (\Exception $e) {
             DB::unprepared('UNLOCK TABLES');
-            DB::rollBack();
             ErrorLog::recordException($e, 'task-log-exception');
             return false;
         }
