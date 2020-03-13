@@ -32,18 +32,23 @@ if (!function_exists('setting')) {
  *
  * @param mixed $email string, string with a comma(s), or string array of email addresses to send
  * @param Mailable $message the message to send
+ * @param bool $queueMail true if the email is to be queued for delivery
  * @return boolean true if mail was successfully queued, false if an exception happened.
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to($email, $message)
+    function mail_to($email, $message, $queueMail=false)
     {
         if (is_string($email) && strpos($email, ',') !== false) {
             $email = explode(',', $email);
         }
 
         try {
-            Mail::to($email)->send($message);
+            if ($queueMail) {
+                Mail::to($email)->queue($message);
+            } else {
+                Mail::to($email)->send($message);
+            }
             return true;
         } catch (\Swift_TransportException $e) {
             ErrorLog::recordException($e, 'email-exception', [

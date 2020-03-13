@@ -11,6 +11,7 @@ class PersonOnlineTraining extends ApiModel
 
     protected $casts = [
         'completed_at' => 'datetime',
+        'expires_at' => 'datetime'
     ];
 
     // Table is not directly accessible
@@ -46,7 +47,7 @@ class PersonOnlineTraining extends ApiModel
         return self::whereYear('completed_at', $year)->where('person_id', $personId)->orderBy('completed_at', 'desc')->first();
     }
 
-     public static function existsForPersonYear($personId, $year)
+     public static function didCompleteForYear($personId, $year)
     {
         return self::where('person_id', $personId)->whereYear('completed_at', $year)->exists();
     }

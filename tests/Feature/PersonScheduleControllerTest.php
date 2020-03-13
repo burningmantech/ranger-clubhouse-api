@@ -835,7 +835,7 @@ class PersonScheduleControllerTest extends TestCase
     private function mockOnlineTrainingPass($result)
     {
         $mock = $this->mock('alias:\App\Models\PersonOnlineTraining');
-        $mock->shouldReceive('existsForPersonYear')->andReturn($result);
+        $mock->shouldReceive('didCompleteForYear')->andReturn($result);
 
         return $mock;
     }

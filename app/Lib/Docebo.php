@@ -36,6 +36,9 @@ class Docebo
 
     const STUDENT_LEVEL = 3;
 
+    const EXPIRE_IN_WEEKS = 2;
+
+
     public function __construct()
     {
         $settings = setting(['DoceboDomain', 'DoceboClientId', 'DoceboClientSecret', 'DoceboUsername', 'DoceboPassword'], true);
@@ -329,6 +332,7 @@ class Docebo
         ]);
 
         $person->lms_course = $courseId;
+        $person->lms_course_expiry = now()->addWeeks(self::EXPIRE_IN_WEEKS);
         $person->saveWithoutValidation();
 
         ActionLog::record(Auth::user(), 'docebo-enrollment', '', [
