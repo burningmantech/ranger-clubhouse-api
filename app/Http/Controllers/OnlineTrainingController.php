@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
 
+use App\Lib\Docebo;
+
+use App\Mail\OnlineTrainingEnrollmentMail;
+
 use App\Models\Person;
 use App\Models\PersonOnlineTraining;
 use App\Models\Timesheet;
 
-use App\Lib\Docebo;
-
+use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -66,11 +69,11 @@ class OnlineTrainingController extends ApiController
             $lms = new Docebo();
             if ($lms->findPerson($person) == false) {
                 // Nope, create the user
-                $exists = false;
                 if ($lms->createUser($person, $password) == false) {
                     // Crap, failed.
                     return response()->json(['status' => 'fail']);
                 }
+                $exists = false;
             }
         }
 
@@ -83,10 +86,15 @@ class OnlineTrainingController extends ApiController
             $lms->enrollPerson($person, $courseId);
         }
 
+        if (!$exists) {
+            mail_to($person->email, new OnlineTrainingEnrollmentMail($person, $type, $password));
+        }
+
         return response()->json([
             'status' => $exists ? 'exists' : 'created',
             'password' => $password,
-            'course_type' => $type
+            'course_type' => $type,
+            'expiry_date' => (string) $person->lms_course_expiry,
         ]);
     }
 

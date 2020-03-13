@@ -774,7 +774,7 @@ class PersonController extends ApiController
         $now = SqlHelper::now();
 
         $milestones = [
-            'online_training_passed' => PersonOnlineTraining::existsForPersonYear($person->id, $year),
+            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
             'online_training_enabled' => setting('OnlineTrainingEnabled'),
             'online_training_url' => setting('OnlineTrainingUrl'),
             'behavioral_agreement' => $person->behavioral_agreement,

@@ -110,7 +110,8 @@ class PersonFilter
     // Learning Management System fields
     const LMS_FIELDS = [
         'lms_id',
-        'lms_course'
+        'lms_course',
+        'lms_course_expiry',
     ];
 
     const INTAKE_FIELDS = [

@@ -311,7 +311,7 @@ class PersonScheduleController extends ApiController
             // Online training is disabled, or the person is a non ranger
             $otPassed = true;
         } else {
-            $otPassed = PersonOnlineTraining::existsForPersonYear($personId, $year);
+            $otPassed = PersonOnlineTraining::didCompleteForYear($personId, $year);
         }
 
         if ($isAuditor) {

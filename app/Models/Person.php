@@ -156,7 +156,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'message_updated_at'          => 'datetime',
         'timestamp'                   => 'timestamp',
         'logged_in_at'                => 'datetime',
-        'last_seen_at'                => 'datetime'
+        'last_seen_at'                => 'datetime',
+        'lms_course_expiry'           => 'datetime'
     ];
 
     /*
@@ -217,6 +218,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'sfuid',
         'lms_id',
         'lms_course',
+        'lms_course_expiry',
 
         'active_next_event',
         'has_note_on_file',
