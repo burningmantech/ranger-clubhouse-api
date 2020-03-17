@@ -131,7 +131,7 @@ class SalesforceController extends ApiController
                 'known_ranger_names'            => $pca->known_ranger_names,
                 'callsign'                      => $pca->callsign,
                 'vc_status'                     => $pca->vc_status,
-                'vc_comments'                   => $pca->vc_comments,
+                'why_ranger_comments'           => $pca->why_ranger_comments,
             ];
 
             if ($pca->existingPerson) {
@@ -229,8 +229,8 @@ class SalesforceController extends ApiController
         $pca->chuid = $person->id;
         $pca->status = 'succeeded';
 
-        if (!empty($pca->vc_comments)) {
-            PersonIntakeNote::record($person->id, current_year(), 'mentor', $pca->vc_comments);
+        if (!empty($pca->why_ranger_comments)) {
+            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->why_ranger_comments);
         }
 
         if ($updateSf) {

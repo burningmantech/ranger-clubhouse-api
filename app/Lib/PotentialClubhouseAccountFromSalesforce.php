@@ -71,7 +71,7 @@ class PotentialClubhouseAccountFromSalesforce
     public $known_ranger_names;
     public $callsign;
     public $vc_status;
-    public $vc_comments;
+    public $why_ranger_comments;
 
     public function __construct()
     {
@@ -141,7 +141,7 @@ class PotentialClubhouseAccountFromSalesforce
         $this->known_ranger_names = trim(@$sobj->Known_Rangers_Names__c);
         $this->callsign = trim(@$sobj->VC_Approved_Radio_Call_Sign__c);
         $this->vc_status = trim(@$sobj->VC_Status__c);
-        $this->vc_comments = trim(@$sobj->VC_Comments__c);
+        $this->why_ranger_comments = trim(@$sobj->Why_Ranger_Comments__c);
 
         if ($this->vc_status == "Released to Upload"
             && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
