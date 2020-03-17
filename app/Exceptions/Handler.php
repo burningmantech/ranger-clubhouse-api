@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 
 use \Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
 
+use Throwable;
+
 
 class Handler extends ExceptionHandler
 {
@@ -37,11 +39,11 @@ class Handler extends ExceptionHandler
      *
      * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
      *
-     * @param  \Exception  $exception
+     * @param Throwable $exception
      * @return void
      */
 
-    public function report(\Exception $exception)
+    public function report(Throwable $exception)
     {
         if (!$this->shouldReport($exception)) {
             return;
@@ -73,10 +75,10 @@ class Handler extends ExceptionHandler
      * Render an exception into an HTTP response.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $e
+     * @param  Throwable  $e
      * @return \Illuminate\Http\Response
      */
-    public function render($request, \Exception $e)
+    public function render($request, Throwable $e)
     {
         /*
          * Handle JWT exceptions.
