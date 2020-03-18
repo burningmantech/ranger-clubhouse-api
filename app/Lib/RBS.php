@@ -601,8 +601,10 @@ class RBS
             if ($sendEmail) {
                 $prefCond[] = 'IFNULL(alert_person.use_email, TRUE) IS TRUE';
             }
-            $prefCond = '('.implode(' OR ', $prefCond).')';
-            $sql->whereRaw($prefCond);
+            if (!empty($prefConf)) {
+                $prefCond = '(' . implode(' OR ', $prefCond) . ')';
+                $sql->whereRaw($prefCond);
+            }
         }
 
         if ($broadcastType != Broadcast::TYPE_SLOT_EDIT && $broadcastType != Broadcast::TYPE_SLOT) {

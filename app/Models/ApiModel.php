@@ -15,9 +15,12 @@ use Illuminate\Validation\Factory as Validator;
 use App\Http\RestApi\SerializeRecord;
 use App\Http\RestApi\DeserializeRecord;
 
+use DateTimeInterface;
+
 
 abstract class ApiModel extends Model
 {
+
     /**
      * Don't use created_at/updated_at.
      *
@@ -233,5 +236,18 @@ abstract class ApiModel extends Model
 
     public function getResourceSingle() {
         return (empty($this->resourceSingle) ? $this->getTable() : $this->resourceSingle);
+    }
+
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     *
+     * @param  \DateTimeInterface  $date
+     * @return string
+     */
+
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
     }
 }
