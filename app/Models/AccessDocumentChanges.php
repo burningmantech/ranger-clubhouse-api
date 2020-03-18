@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use DateTimeInterface;
+
 // Do not use ApiModel, do not want to audit the audit table.
 
 class AccessDocumentChanges extends Model
@@ -19,7 +21,8 @@ class AccessDocumentChanges extends Model
         'changer_person_id',
     ];
 
-    public static function log($record, $personId, $changes, $op='modify') {
+    public static function log($record, $personId, $changes, $op = 'modify')
+    {
         if (is_integer($record)) {
             $id = $record;
         } else {
@@ -27,13 +30,24 @@ class AccessDocumentChanges extends Model
         }
 
         $row = new AccessDocumentChanges([
-            'table_name'    => 'access_document',
-            'record_id'     => $id,
-            'operation'     => $op,
-            'changes'       => json_encode($changes),
+            'table_name' => 'access_document',
+            'record_id' => $id,
+            'operation' => $op,
+            'changes' => json_encode($changes),
             'changer_person_id' => $personId
         ]);
 
         $row->save();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     *
+     * @param DateTimeInterface $date
+     * @return string
+     */
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
     }
 }

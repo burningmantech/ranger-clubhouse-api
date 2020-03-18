@@ -7,6 +7,8 @@ use App\Models\Person;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+use DateTimeInterface;
+
 class Clubhouse1Log extends Model
 {
     protected $table = 'log';
@@ -102,5 +104,16 @@ class Clubhouse1Log extends Model
             'page_size'   => $pageSize,
             'page'        => $page + 1,
          ];
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     *
+     * @param  \DateTimeInterface  $date
+     * @return string
+     */
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
     }
 }
