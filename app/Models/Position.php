@@ -193,7 +193,7 @@ class Position extends ApiModel
         'on_sl_report',
         'prevent_multiple_enrollments',
         'short_title',
-        'slot_full_email',
+        'contact_email',
         'title',
         'training_position_id',
         'type',

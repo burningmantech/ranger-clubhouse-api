@@ -17,6 +17,11 @@ use App\Http\RestApi\DeserializeRecord;
 
 use DateTimeInterface;
 
+/**
+ * Class ApiModel
+ * @package App\Models
+ * @mixin Model
+ */
 
 abstract class ApiModel extends Model
 {

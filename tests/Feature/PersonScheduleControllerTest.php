@@ -63,7 +63,7 @@ class PersonScheduleControllerTest extends TestCase
                 'id' => Position::TRAINING,
                 'title' => 'Training',
                 'type' => 'Training',
-                'slot_full_email' => 'training-academy@example.com',
+                'contact_email' => 'training-academy@example.com',
                 'prevent_multiple_enrollments' => true,
             ]
         );
@@ -82,7 +82,7 @@ class PersonScheduleControllerTest extends TestCase
                 'id' => Position::GREEN_DOT_TRAINING,
                 'title' => 'Green Dot - Training',
                 'type' => 'Training',
-                'slot_full_email' => 'greendots@example.com',
+                'contact_email' => 'greendots@example.com',
                 'prevent_multiple_enrollments' => true,
             ]
         );
@@ -556,7 +556,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success', 'full_forced' => true]);
+        $response->assertJson(['status' => 'success', 'overcapacity' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -686,11 +686,12 @@ class PersonScheduleControllerTest extends TestCase
             "person/{$personId}/schedule",
             [
                 'slot_id' => $attemptedTraining->id,
+                'force' => true
             ]
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success', 'multiple_forced' => true]);
+        $response->assertJson(['status' => 'success', 'multiple_enrollment' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
