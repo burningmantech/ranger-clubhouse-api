@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Helpers\DateHelper;
 use App\Helpers\SqlHelper;
 
 use App\Lib\WorkSummary;
@@ -16,19 +15,12 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
-//
-// Meta Model
-// This will combined slot & position and maybe person_slot.
-//
-
 class ScheduleException extends Exception
 {
 }
 
 class Schedule extends ApiModel
 {
-
-    // laravel will pull from $this->attributes
     protected $fillable = [
         'position_id',
         'position_title',
@@ -41,7 +33,6 @@ class Schedule extends ApiModel
         'slot_description',
         'slot_signed_up',
         'slot_url',
-        'person_assigned',  // TODO: deprecated, remove at the end of July.
         'trainers',
         'slot_begins_time',
         'slot_ends_time',
@@ -62,6 +53,27 @@ class Schedule extends ApiModel
 
     const SHIFT_STARTS_WITHIN = 30; // A shift starts within X minutes
 
+    /*
+     * Sign up statuses
+     */
+    const SUCCESS = 'success'; // person was successfully signed up for a slot
+    const FULL = 'full'; // slot is at capacity
+    const MULTIPLE_ENROLLMENT = 'multiple-enrollment'; // person is already enrolled in another slot with same position (i.e. training)
+    const NOT_ACTIVE = 'not-active'; // slot has not been activated
+    const NO_POSITION = 'no-position'; // person does not hold the position the slot is associated with
+    const NO_SLOT = 'no-slot'; // slot does not exist
+    const HAS_STARTED = 'has-started'; // slot has already started
+    const EXISTS = 'exists'; // person is already signed up for the slot.
+
+    /*
+     * Failed sign up statuses that are allowed to be forced if the user has the appropriate
+     * privileges/positions/rolls
+     */
+
+    const MAY_FORCE_STATUSES = [
+        self::FULL, self::HAS_STARTED, self::MULTIPLE_ENROLLMENT
+    ];
+
     public static function findForQuery($query)
     {
         if (empty($query['year'])) {
@@ -79,6 +91,7 @@ class Schedule extends ApiModel
             'position.id as position_id',
             'position.title AS position_title',
             'position.type AS position_type',
+            'position.contact_email',
             'position.count_hours as position_count_hours',
             'slot.begins AS slot_begins',
             'slot.ends AS slot_ends',
@@ -109,12 +122,7 @@ class Schedule extends ApiModel
 
             // .. and find out which slots a person has signed up for
             if ($shiftsAvailable) {
-                // TODO - remove person_assign & left join at the end of July.
-                $selectColumns[] = DB::raw('IF(person_slot.person_id IS NULL,FALSE,TRUE) AS person_assigned');
-                $sql->leftJoin('person_slot', function ($join) use ($personId) {
-                    $join->where('person_slot.person_id', $personId)
-                        ->on('person_slot.slot_id', 'slot.id');
-                })->join('person_position', function ($join) use ($personId) {
+                $sql->join('person_position', function ($join) use ($personId) {
                     $join->where('person_position.person_id', $personId)
                         ->on('person_position.position_id', 'slot.position_id');
                 });
@@ -129,18 +137,24 @@ class Schedule extends ApiModel
             ->whereYear('slot.begins', $year)
             ->join('position', 'position.id', '=', 'slot.position_id')
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
-            ->orderBy('slot.begins', 'asc', 'position.title', 'asc', 'slot.description', 'asc')
-            ->get()->toArray();
+            ->orderBy('slot.begins', 'asc')
+            ->orderBy('position.title', 'asc')
+            ->orderBy('slot.description', 'asc')
+            ->get()
+            ->toArray();
 
         // return an array of Schedule loaded from the rows
         return Schedule::hydrate($rows);
     }
 
-    /*
+    /**
      * Find the next shift for a person
+     *
+     * @param int $personId person to find the next shift for
+     * @return mixed
      */
 
-    public static function findNextShift($personId)
+    public static function findNextShift(int $personId)
     {
         return DB::table('person_slot')
             ->select('position.title', 'slot.description', 'begins')
@@ -153,42 +167,39 @@ class Schedule extends ApiModel
             ->first();
     }
 
-    //
-    // Add a person to a slot, and update the signed up count.
-    // Also verify the signup does not already exist,the sign up
-    // count is not maxed out, the person holds the slot's position,
-    // and the slot exists.
-    //
-    // An array is returned with one of the following values:
-    //   - Success full sign up
-    //     status='success', signed_up=the signed up count include this person
-    //   - Slot is maxed out
-    //      status='full'
-    //   - Person does not hold slot position
-    //      status='no-position'
-    //   - Person is already signed up for the slot
-    //      status='exists'
-    //
-    // @param int $personId person to add
-    // @param int $slotId slot to add to
-    // @param bool $force set true if to ignore the signup limit
-    // @return array
-    //
+    /**
+     * Add a person to a slot, and update the signed up count.
+     * Also verify the signup does not already exist,the sign up
+     * count is not maxed out, the person holds the slot's position,
+     * and the slot exists.
+     *
+     * An array is returned with one of the following values:
+     *   - Success full sign up
+     *     status='success', signed_up=the signed up count include this person
+     *   - Slot is maxed out
+     *      status='full'
+     *   - Person does not hold slot position
+     *      status='no-position'
+     *   - Person is already signed up for the slot
+     *      status='exists'
+     *
+     * @param int $personId person to add
+     * @param Slot $slot slot to add to
+     * @param bool $force set true if to ignore the signup limit
+     * @return array
+     */
 
-    public static function addToSchedule($personId, $slot, $force = false): array
+    public static function addToSchedule(int $personId, Slot $slot, bool $force = false): array
     {
         if (PersonSlot::haveSlot($personId, $slot->id)) {
-            return ['status' => 'exists', 'signed_up' => $slot->signed_up];
+            return ['status' => self::EXISTS, 'signed_up' => $slot->signed_up];
         }
 
-        $addForced = false;
-        $signedUp = 0;
-        $max = 0;
 
-        $now = SqlHelper::now();
+        $now = now();
 
         if ($now->gt($slot->begins) && !$force) {
-            return ['status' => 'has-started', 'signed_up' => $slot->signed_up];
+            return ['status' => self::HAS_STARTED, 'signed_up' => $slot->signed_up];
         }
 
         $max = $slot->max;
@@ -197,22 +208,23 @@ class Schedule extends ApiModel
         }
 
         try {
-            DB::beginTransaction();
+            $isOvercapacity = false;
 
+            DB::beginTransaction();
             // Re-read the slot for update.
             $updateSlot = Slot::where('id', $slot->id)->lockForUpdate()->first();
             if (!$updateSlot) {
                 // shouldn't happen but ya never know...
-                throw new ScheduleException('no-slot');
+                throw new ScheduleException(self::NO_SLOT);
             }
 
             // Cannot exceed sign up limit unless it is forced.
             if ($updateSlot->signed_up >= $max) {
                 if (!$force) {
-                    throw new ScheduleException('full');
+                    throw new ScheduleException(self::FULL);
                 }
 
-                $addForced = true;
+                $isOvercapacity = true;
             }
 
             // looks up! sign up the person
@@ -227,9 +239,9 @@ class Schedule extends ApiModel
             DB::commit();
 
             return [
-                'status' => 'success',
+                'status' => self::SUCCESS,
                 'signed_up' => $updateSlot->signed_up,
-                'forced' => $addForced,
+                'overcapacity' => $isOvercapacity,
             ];
         } catch (ScheduleException $e) {
             DB::rollback();
@@ -251,11 +263,14 @@ class Schedule extends ApiModel
         try {
             DB::beginTransaction();
             $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
-                ->lockForUpdate()->firstOrFail();
+                ->lockForUpdate()
+                ->firstOrFail();
             $personSlot->delete();
+
             if ($slot->signed_up > 0) {
                 $slot->update(['signed_up' => ($slot->signed_up - 1)]);
             }
+
             DB::commit();
         } catch (Exception $e) {
             DB::rollback();
@@ -272,7 +287,7 @@ class Schedule extends ApiModel
 
     public static function haveMultipleEnrollments($personId, $positionId, $year, &$enrollments)
     {
-        $slotIds = self::findEnrolledSlotIds($personId . $year, $positionId);
+        $slotIds = self::findEnrolledSlotIds($personId, $year, $positionId);
 
         if ($slotIds->isEmpty()) {
             $enrollments = null;
@@ -484,17 +499,17 @@ class Schedule extends ApiModel
         ];
     }
 
-    public function getSlotDurationAttribute()
+    public function getSlotDurationAttribute() : int
     {
         return $this->slot_ends_time - $this->slot_begins_time;
     }
 
-    public function getYearAttribute()
+    public function getYearAttribute() : int
     {
         return $this->slot_begins->year;
     }
 
-    public function getCreditsAttribute()
+    public function getCreditsAttribute() : float
     {
         return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
     }

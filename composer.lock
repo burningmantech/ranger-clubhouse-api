@@ -60,16 +60,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.133.38",
+            "version": "3.133.40",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "5ec9442162d83f94918bc17136a2b674a04784e5"
+                "reference": "f89562eaab7f9e5695b10960abb727b64df3da10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/5ec9442162d83f94918bc17136a2b674a04784e5",
-                "reference": "5ec9442162d83f94918bc17136a2b674a04784e5",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/f89562eaab7f9e5695b10960abb727b64df3da10",
+                "reference": "f89562eaab7f9e5695b10960abb727b64df3da10",
                 "shasum": ""
             },
             "require": {
@@ -140,7 +140,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2020-03-17T18:16:01+00:00"
+            "time": "2020-03-19T18:10:38+00:00"
         },
         {
             "name": "doctrine/cache",
@@ -1212,16 +1212,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v7.2.0",
+            "version": "v7.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "77110b6434e65b10b655ab92e645e830b1a79caf"
+                "reference": "261e74cf8c6f760fd302fb08b2b51feb066f8987"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/77110b6434e65b10b655ab92e645e830b1a79caf",
-                "reference": "77110b6434e65b10b655ab92e645e830b1a79caf",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/261e74cf8c6f760fd302fb08b2b51feb066f8987",
+                "reference": "261e74cf8c6f760fd302fb08b2b51feb066f8987",
                 "shasum": ""
             },
             "require": {
@@ -1359,7 +1359,7 @@
                 "framework",
                 "laravel"
             ],
-            "time": "2020-03-17T14:08:55+00:00"
+            "time": "2020-03-19T14:31:45+00:00"
         },
         {
             "name": "lcobucci/jwt",
@@ -4160,16 +4160,16 @@
         },
         {
             "name": "twilio/sdk",
-            "version": "6.0.1",
+            "version": "6.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/twilio/twilio-php.git",
-                "reference": "89381f6fa4400e7b0592755b383e204782fa9cc4"
+                "reference": "eb38f4c6f0d02456d4cbcd7cf88570df9750cda3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/89381f6fa4400e7b0592755b383e204782fa9cc4",
-                "reference": "89381f6fa4400e7b0592755b383e204782fa9cc4",
+                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/eb38f4c6f0d02456d4cbcd7cf88570df9750cda3",
+                "reference": "eb38f4c6f0d02456d4cbcd7cf88570df9750cda3",
                 "shasum": ""
             },
             "require": {
@@ -4206,7 +4206,7 @@
                 "sms",
                 "twilio"
             ],
-            "time": "2020-03-04T22:01:47+00:00"
+            "time": "2020-03-18T19:42:16+00:00"
         },
         {
             "name": "tymon/jwt-auth",
