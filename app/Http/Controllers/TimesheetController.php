@@ -14,8 +14,8 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
-use App\Models\TimesheetMissing;
 use App\Models\Training;
+use App\Models\Person;
 
 use App\Lib\BulkSignInOut;
 
@@ -277,7 +277,7 @@ class TimesheetController extends ApiController
         $positionId = $params['position_id'];
 
         // confirm person exists
-        $person = $this->findPerson($personId);
+        $person = Person::findOrFail($personId);
 
         // Confirm the person is allowed to sign into the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
@@ -294,6 +294,7 @@ class TimesheetController extends ApiController
         $required = null;
         $positionRequired = false;
         $unqualifiedReason = null;
+        $requiredPositionId = 0;
 
         // Are they trained for this position?
         if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
