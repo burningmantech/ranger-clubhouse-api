@@ -75,27 +75,27 @@ RUN php composer.phar install       \
 # -----------------------------------------------------------------------------
 #FROM composer as development
 # Github Token
-#ARG COMPOSER_AUTH
-#ENV COMPOSER_AUTH $COMPOSER_AUTH
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH $COMPOSER_AUTH
 
 # Copy the application source from the source container
-#COPY --from=source /var/www/application /var/www/application
+COPY --from=source /var/www/application /var/www/application
 
 # Set working directory to application directory
-#WORKDIR /var/www/application
+WORKDIR /var/www/application
 
 # Set composer cache directory
-#ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
+ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
 
 # Set file ownership to www-data user and group and change to that user
-#RUN chown -R www-data:www-data /var/www;
-#USER www-data
+RUN chown -R www-data:www-data /var/www;
+USER www-data
 
 # Copy the composer cache from the build container
-#COPY --from=build /var/www/composer_cache /var/www/composer_cache
+COPY --from=build /var/www/composer_cache /var/www/composer_cache
 
 # Run composer to get dependencies
-#RUN php composer.phar install --no-plugins --no-scripts;
+RUN php composer.phar install --no-plugins --no-scripts;
 
 
 # -----------------------------------------------------------------------------

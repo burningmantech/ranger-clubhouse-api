@@ -45,5 +45,5 @@ build php         "${php_image_name}";
 build composer    "${composer_image_name}";
 build source      "${source_image_name}";
 build build       "${build_image_name}";
-#build development "${dev_image_name}";
+build development "${dev_image_name}";
 build application "${api_image_name}";
