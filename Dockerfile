@@ -45,9 +45,6 @@ COPY ./.env.testing   ./
 # This stage runs composer to build the PHP package dependencies.
 # -----------------------------------------------------------------------------
 FROM composer as build
-# Github Token
-ARG COMPOSER_AUTH
-ENV COMPOSER_AUTH $COMPOSER_AUTH
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
@@ -64,6 +61,8 @@ USER www-data
 
 # Run composer to get dependencies
 # Optimize for production and don't install development dependencies
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH $COMPOSER_AUTH
 RUN php composer.phar install       \
     --no-plugins --no-scripts       \
     --optimize-autoloader --no-dev  \
@@ -73,10 +72,7 @@ RUN php composer.phar install       \
 # -----------------------------------------------------------------------------
 # This stage runs composer to build additional dependencies for development.
 # -----------------------------------------------------------------------------
-#FROM composer as development
-# Github Token
-ARG COMPOSER_AUTH
-ENV COMPOSER_AUTH $COMPOSER_AUTH
+FROM composer as development
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
@@ -95,6 +91,8 @@ USER www-data
 COPY --from=build /var/www/composer_cache /var/www/composer_cache
 
 # Run composer to get dependencies
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH $COMPOSER_AUTH
 RUN php composer.phar install --no-plugins --no-scripts;
 
 
