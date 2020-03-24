@@ -11,9 +11,12 @@ use App\Models\TraineeStatus;
 use App\Models\TraineeNote;
 use Carbon\Carbon;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /*
  * Training is an inherited Position object with more things!
@@ -27,21 +30,22 @@ class Training extends Position
     ];
 
     /**
-     * Determine if a person is trained for a position
+     * Is the person trained for a position in a given year?
      *
-     * @param Person $person person to check
-     * @param int $positionId position to check against
-     * @param string $required training position title required if the person needs training
-     * @param boolean true if person is trained, otherwise $required will be set.
+     * @param \App\Models\Person $person person to check
+     * @param int $positionId the position in question
+     * @param int $year year of training
+     * @param int $requiredPositionId the training position required if person is not trained
+     * @return bool true if the person is trained
      */
 
-    public static function isPersonTrained($person, $positionId, $year, &$requiredPositionId)
+    public static function isPersonTrained(Person $person, int $positionId, int $year, int &$requiredPositionId): bool
     {
         $personId = $person->id;
 
         // The person has to have passed dirt training
         if ($person->status != Person::NON_RANGER
-        && !self::didPersonPassForYear($personId, Position::TRAINING, $year)) {
+            && !self::didPersonPassForYear($personId, Position::TRAINING, $year)) {
             $requiredPositionId = Position::TRAINING;
             return false;
         }
@@ -85,20 +89,20 @@ class Training extends Position
      * training_position_id: the position id which person needs to pass training
      * training_title: position title of required training
      *
-     * @param int $personId person to retrieve
+     * @param Person $person person to retrieve
      * @param int $year year to check against
      * @return array
      */
 
-    public static function findPositionsWithTraining($person, $year)
+    public static function findPositionsWithTraining(Person $person, int $year): array
     {
         $personId = $person->id;
         $positions = PersonPosition::findForPerson($personId);
 
         $personPositions = [];
         foreach ($positions as $position) {
-            $info = (object) [
-                'id'    => $position->id,
+            $info = (object)[
+                'id' => $position->id,
                 'title' => $position->title,
             ];
 
@@ -120,15 +124,15 @@ class Training extends Position
 
             $positionId = $position->id;
             switch ($positionId) {
-            case Position::DIRT:
-            case Position::DIRT_PRE_EVENT:
-            case Position::DIRT_POST_EVENT:
-                $trainingId = Position::TRAINING;
-                break;
+                case Position::DIRT:
+                case Position::DIRT_PRE_EVENT:
+                case Position::DIRT_POST_EVENT:
+                    $trainingId = Position::TRAINING;
+                    break;
 
-            default:
-                $trainingId = $position->training_position_id;
-                break;
+                default:
+                    $trainingId = $position->training_position_id;
+                    break;
             }
 
             if ($positionId == Position::SANDMAN) {
@@ -142,7 +146,7 @@ class Training extends Position
             }
 
             /*
-             * Mark the person has untrained if:
+             * Mark the person as untrained if:
              * - was NOT a trainer who taught a session
              * - and the position requires training
              * - and the person did not pass/attend training
@@ -159,20 +163,27 @@ class Training extends Position
         return $personPositions;
     }
 
-    public static function didPersonPassForYear($personId, $positionId, $year)
+    /**
+     * Did the person pass training in a given year? check to see if they were a teach or student.
+     *
+     * @param int $personId person to check
+     * @param int $positionId position in question
+     * @param int $year the year to check in
+     * @return bool true if the person passed in the given year
+     */
+
+    public static function didPersonPassForYear(int $personId, int $positionId, int $year): bool
     {
         return TraineeStatus::didPersonPassForYear($personId, $positionId, $year)
             || TrainerStatus::didPersonTeachForYear($personId, $positionId, $year);
     }
-
-
 
     /**
      * Find a position which should be a training position.
      *
      * @param mixed $id position to find by integer or slug.
      * @return Training
-     * @throws \InvalidArgumentException if record is not a training position.
+     * @throws InvalidArgumentException if record is not a training position.
      */
 
     public static function find($id)
@@ -187,7 +198,7 @@ class Training extends Position
         }
 
         if ($position->type != "Training" || stripos($position->title, "trainer") !== false) {
-            throw new \InvalidArgumentException("Position is not a training position");
+            throw new InvalidArgumentException("Position is not a training position");
         }
 
         return $position;
@@ -198,7 +209,7 @@ class Training extends Position
      *
      * @param mixed $id position to find by id or slug
      * @return Training
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException if position was not found.
+     * @throws ModelNotFoundException if position was not found.
      */
 
     public static function findOrFail($id)
@@ -209,7 +220,7 @@ class Training extends Position
             return $position;
         }
 
-        throw (new \Illuminate\Database\Eloquent\ModelNotFoundException)->setModel(
+        throw (new ModelNotFoundException)->setModel(
             Training::class,
             $id
         );
@@ -230,26 +241,26 @@ class Training extends Position
      * @return array of people who are enrolled multiple times.
      */
 
-    public function retrieveMultipleEnrollments($year)
+    public function retrieveMultipleEnrollments(int $year): array
     {
         $byPerson = DB::table('person')
-        ->select(
-            'person.id as person_id',
-            'person.callsign',
-            'person.first_name',
-            'person.last_name',
-            'person.email',
-            'slot.begins AS date',
-            'slot.description AS location',
-            'slot.id as slot_id'
-        )
-           ->leftJoin('person_slot', 'person_slot.person_id', '=', 'person.id')
-           ->leftJoin('slot', 'slot.id', '=', 'person_slot.slot_id')
-           ->leftJoin('position', 'position.id', '=', 'slot.position_id')
-           ->whereYear('slot.begins', $year)
-           ->where('position.id', $this->id)
-        ->whereRaw(
-            'person.id IN (
+            ->select(
+                'person.id as person_id',
+                'person.callsign',
+                'person.first_name',
+                'person.last_name',
+                'person.email',
+                'slot.begins AS date',
+                'slot.description AS location',
+                'slot.id as slot_id'
+            )
+            ->leftJoin('person_slot', 'person_slot.person_id', '=', 'person.id')
+            ->leftJoin('slot', 'slot.id', '=', 'person_slot.slot_id')
+            ->leftJoin('position', 'position.id', '=', 'slot.position_id')
+            ->whereYear('slot.begins', $year)
+            ->where('position.id', $this->id)
+            ->whereRaw(
+                'person.id IN (
                 SELECT
                   p.id
                 FROM person p
@@ -260,12 +271,12 @@ class Training extends Position
                 GROUP BY p.id
                 HAVING COUNT(s.id) > 1
               )',
-            [ $year, $this->id ]
-        )
-           ->orderBy('person.callsign', 'asc')
-           ->orderBy('date', 'ASC')
-           ->get()
-           ->groupBy('person_id');
+                [$year, $this->id]
+            )
+            ->orderBy('person.callsign', 'asc')
+            ->orderBy('date', 'ASC')
+            ->get()
+            ->groupBy('person_id');
 
         $people = [];
         foreach ($byPerson as $personId => $slots) {
@@ -304,15 +315,15 @@ class Training extends Position
 
             $person = $slots[0];
             $people[] = [
-                'person_id'   => $personId,
-                'callsign'    => $person->callsign,
-                'first_name'  => $person->first_name,
-                'last_name'   => $person->last_name,
-                'email'       => $person->email,
+                'person_id' => $personId,
+                'callsign' => $person->callsign,
+                'first_name' => $person->first_name,
+                'last_name' => $person->last_name,
+                'email' => $person->email,
                 'enrollments' => $slots->map(function ($row) {
                     return [
-                        'slot_id'  => $row->slot_id,
-                        'date'     => $row->date,
+                        'slot_id' => $row->slot_id,
+                        'date' => $row->date,
                         'location' => $row->location,
                     ];
                 })->values()
@@ -340,46 +351,46 @@ class Training extends Position
      * @param int $year the year to search
      */
 
-    public function retrieveSlotsCapacity($year)
+    public function retrieveSlotsCapacity(int $year)
     {
-        $positionIds = [ $this->id ];
+        $positionIds = [$this->id];
         if ($this->id == Position::HQ_FULL_TRAINING) {
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
         $rows = DB::table('slot')
-          ->select(
-              'slot.id as slot_id',
-              'slot.description',
-              'slot.begins as date',
-              'slot.max',
-              DB::raw(
-                  '(
+            ->select(
+                'slot.id as slot_id',
+                'slot.description',
+                'slot.begins as date',
+                'slot.max',
+                DB::raw(
+                    '(
                 SELECT COUNT(person.id) FROM person_slot
                 LEFT JOIN person ON person.id=person_slot.person_id
                 WHERE person_slot.slot_id=slot.id) as signed_up'
-              ),
-              DB::raw(
-                  '(
+                ),
+                DB::raw(
+                    '(
                 SELECT COUNT(person.id) FROM person_slot
                 LEFT JOIN person ON person.id=person_slot.person_id AND person.status in ("alpha", "prospective")
                 WHERE person_slot.slot_id=slot.id) as alpha_count'
-              ),
-              DB::raw(
-                  '(
+                ),
+                DB::raw(
+                    '(
                 SELECT COUNT(person.id) FROM person_slot
                 LEFT JOIN person ON person.id=person_slot.person_id AND person.status NOT IN ("alpha", "auditor", "prospective")
                 WHERE person_slot.slot_id=slot.id) as veteran_count'
-              ),
-              DB::raw(
-                  '(
+                ),
+                DB::raw(
+                    '(
                 SELECT COUNT(person.id) FROM person_slot LEFT JOIN person ON person.id=person_slot.person_id AND person.status="auditor"
                 WHERE person_slot.slot_id=slot.id) as auditor_count'
-              )
-          )
-          ->whereYear('slot.begins', $year)
-          ->whereIn('slot.position_id', $positionIds)
-          ->orderBy('slot.begins')->get();
+                )
+            )
+            ->whereYear('slot.begins', $year)
+            ->whereIn('slot.position_id', $positionIds)
+            ->orderBy('slot.begins')->get();
 
         foreach ($rows as $row) {
             if ($row->signed_up > 0 && $row->max > 0) {
@@ -397,13 +408,12 @@ class Training extends Position
      *
      * @param int $positionId training position
      * @param array $personIds people to look up
-     * @param array person ids who are ART alphas
+     * @return array person ids who are ART alphas
      */
 
-    public static function findArtAlphas($positionId, $personIds)
+    public static function findArtAlphas(int $positionId, array $personIds): array
     {
         // TODO: extend to support multiple training positions
-
         if (empty($personIds)) {
             return [];
         }
@@ -414,10 +424,10 @@ class Training extends Position
         }
 
         $people = DB::table('person_position')
-                ->whereIn('position_id', $trained->pluck('id')->toArray())
-                ->whereIn('person_id', $personIds)
-                ->get()
-                ->keyBy('person_id');
+            ->whereIn('position_id', $trained->pluck('id')->toArray())
+            ->whereIn('person_id', $personIds)
+            ->get()
+            ->keyBy('person_id');
 
         $alphaIds = [];
         foreach ($personIds as $id) {
@@ -444,11 +454,11 @@ class Training extends Position
      * @return array people who have completed training.
      */
 
-    public function retrievePeopleForTrainingCompleted($year)
+    public function retrievePeopleForTrainingCompleted(int $year) : array
     {
         // TODO: extend to support multiple training positions
 
-        $positionIds = [ $this->id ];
+        $positionIds = [$this->id];
         if ($this->id == Position::HQ_FULL_TRAINING) {
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
@@ -473,8 +483,8 @@ class Training extends Position
                      AND passed = 1
                  ORDER BY slot.begins, description, callsign",
             [
-                     'year'         => $year
-                 ]
+                'year' => $year
+            ]
         );
 
         $slots = [];
@@ -485,10 +495,10 @@ class Training extends Position
 
             if (!isset($slotsByIds[$slotId])) {
                 $slot = [
-                    'slot_id'   => $slotId,
+                    'slot_id' => $slotId,
                     'slot_description' => $person->slot_description,
-                    'slot_begins'   => $person->slot_begins,
-                    'people'    => []
+                    'slot_begins' => $person->slot_begins,
+                    'people' => []
                 ];
 
                 $slotsByIds[$slotId] = &$slot;
@@ -497,11 +507,11 @@ class Training extends Position
             }
 
             $slotsByIds[$slotId]['people'][] = [
-                'id'         => $person->id,
+                'id' => $person->id,
                 'first_name' => $person->first_name,
-                'last_name'  => $person->last_name,
-                'callsign'   => $person->callsign,
-                'email'      => $person->email
+                'last_name' => $person->last_name,
+                'callsign' => $person->callsign,
+                'email' => $person->email
             ];
         }
 
@@ -512,15 +522,14 @@ class Training extends Position
      * Find all the people who have an ART position(s) and who have not signed up
      * or completed training.
      *
-     * The return structure is:
-     *
      * @param int $year
-     * @throws \InvalidArgumentException*
+     * @return array
+     * @throws InvalidArgumentException*
      *       - if no other positions references this one as a needs-training position
      *       - if the position has no slots associated with it for a given year.
      */
 
-    public function retrieveUntrainedPeople($year)
+    public function retrieveUntrainedPeople(int $year) : array
     {
         $trainedPositionIds = Position::where('training_position_id', $this->id)->pluck('id');
 
@@ -532,7 +541,7 @@ class Training extends Position
             //        throw new \InvalidArgumentException('No other position references this position for training');
         }
 
-        $positionIds = [ $this->id ];
+        $positionIds = [$this->id];
 
         if ($this->id == Position::HQ_FULL_TRAINING) {
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
@@ -565,8 +574,8 @@ class Training extends Position
             INNER JOIN slot ON slot.id=person_slot.slot_id
             INNER JOIN position ON position.id = slot.position_id
             WHERE person_slot.slot_id IN (
-                SELECT id FROM slot WHERE position_id IN (".
-                    $trainedPositionIds->implode(',')."
+                SELECT id FROM slot WHERE position_id IN (" .
+            $trainedPositionIds->implode(',') . "
                 ) AND YEAR(begins)=$year
               )
              AND person_slot.person_id NOT IN (
@@ -592,10 +601,10 @@ class Training extends Position
             foreach ($rows as $row) {
                 $row->slots = array_map(function ($slot) {
                     return [
-                        'slot_id'     => $slot->slot_id,
-                        'begins'      => $slot->begins,
+                        'slot_id' => $slot->slot_id,
+                        'begins' => $slot->begins,
                         'description' => $slot->description,
-                        'title'       => $slot->title,
+                        'title' => $slot->title,
                     ];
                 }, $peopleSignedUp[$row->id]);
                 $untrainedSignedup[] = $row;
@@ -628,7 +637,7 @@ class Training extends Position
             INNER JOIN slot ON person_slot.slot_id=slot.id
             INNER JOIN person ON person.id=person_slot.person_id
             LEFT JOIN trainee_status ON person_slot.slot_id=trainee_status.slot_id AND person_slot.person_id=trainee_status.person_id
-            WHERE person_slot.slot_id IN (".$trainingSlotIds->implode(',').")
+            WHERE person_slot.slot_id IN (" . $trainingSlotIds->implode(',') . ")
             AND trainee_status.passed != TRUE
             AND NOT EXISTS (SELECT 1 FROM trainee_status ts WHERE ts.slot_id=person_slot.slot_id AND person_slot.person_id=ts.person_id AND ts.passed IS TRUE LIMIT 1)"
         );
@@ -653,11 +662,11 @@ class Training extends Position
                  FROM person_slot
                  INNER JOIN slot ON slot.id=person_slot.slot_id
                  INNER JOIN position ON position.id = slot.position_id
-                 WHERE person_slot.person_id IN (".$personIds->implode(',').")
+                 WHERE person_slot.person_id IN (" . $personIds->implode(',') . ")
                  AND  person_slot.slot_id IN (
-                     SELECT id FROM slot WHERE position_id IN (".
-                         $trainedPositionIds->implode(',').
-                    ") AND YEAR(begins)=$year
+                     SELECT id FROM slot WHERE position_id IN (" .
+                $trainedPositionIds->implode(',') .
+                ") AND YEAR(begins)=$year
                    )
                  ORDER BY person_slot.person_id asc,slot.begins asc"
             );
@@ -677,7 +686,7 @@ class Training extends Position
                 }
             }
 
-            ksort($untrainedNotPassed, SORT_NATURAL|SORT_FLAG_CASE);
+            ksort($untrainedNotPassed, SORT_NATURAL | SORT_FLAG_CASE);
             $untrainedNotPassed = array_values($untrainedNotPassed);
         }
 
@@ -687,44 +696,48 @@ class Training extends Position
         ];
     }
 
-    /*
-     * Find all dirt training sign ups with pass status
+    /**
+     * Find all the dirt trainings for a person in a given year
+     *
+     * @param int $personId person to find
+     * @param int $year year to look
+     * @return Collection the slots & training status found
      */
-
-    public static function retrieveDirtTrainingsForPersonYear($personId, $year)
+    public static function retrieveDirtTrainingsForPersonYear(int $personId, int $year) : \Illuminate\Support\Collection
     {
         return DB::table('person_slot')
-                 ->select(
-                     'slot.id as slot_id',
-                     'slot.description',
-                     'slot.begins',
-                     DB::raw('IFNULL(trainee_status.passed, FALSE) as passed'),
-                     'trainee_status.notes',
-                     'trainee_status.rank',
-                     DB::raw('(NOW() >= slot.begins) as has_started')
-                 )->join('slot', function ($j) use ($year) {
-                    $j->on('slot.id', 'person_slot.slot_id');
-                    $j->whereYear('slot.begins', $year);
-                    $j->where('slot.position_id', Position::TRAINING);
-                 })
-                 ->leftJoin('trainee_status', function ($j) use ($personId) {
-                     $j->on('slot.id', 'trainee_status.slot_id');
-                     $j->where('trainee_status.person_id', $personId);
-                 })
-                 ->where('person_slot.person_id', $personId)
-                 ->orderBy('slot.begins')
-                 ->get();
+            ->select(
+                'slot.id as slot_id',
+                'slot.description',
+                'slot.begins',
+                DB::raw('IFNULL(trainee_status.passed, FALSE) as passed'),
+                'trainee_status.notes',
+                'trainee_status.rank',
+                DB::raw('(NOW() >= slot.begins) as has_started')
+            )->join('slot', function ($j) use ($year) {
+                $j->on('slot.id', 'person_slot.slot_id');
+                $j->whereYear('slot.begins', $year);
+                $j->where('slot.position_id', Position::TRAINING);
+            })
+            ->leftJoin('trainee_status', function ($j) use ($personId) {
+                $j->on('slot.id', 'trainee_status.slot_id');
+                $j->where('trainee_status.person_id', $personId);
+            })
+            ->where('person_slot.person_id', $personId)
+            ->orderBy('slot.begins')
+            ->get();
     }
 
     /**
      * Retrieve all trainings up to the given year and position for ids
      *
-     * @param $peopleIds people to look up
+     * @param array $peopleIds people to look up
      * @param int $positionId position to find (usually Training)
      * @param int $year find trainings upto and including the year
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
-    public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year)
+
+    public static function retrieveTrainingHistoryForIds(array $peopleIds, int $positionId, int $year) : \Illuminate\Support\Collection
     {
         // Find the sign ups
         $rows = DB::table('slot')
@@ -765,11 +778,13 @@ class Training extends Position
     }
 
 
-    /*
+    /**
      * Retrieve all trainers and their attendance for a given year
+     *
+     * @param int $year
+     * @return array
      */
-
-    public function retrieveTrainerAttendanceForYear($year)
+    public function retrieveTrainerAttendanceForYear(int $year) : array
     {
 
         $teachingPositions = Position::TRAINERS[$this->id] ?? null;
@@ -779,17 +794,17 @@ class Training extends Position
         }
 
         $slots = Slot::whereYear('begins', $year)
-                ->whereIn('position_id', $teachingPositions)
-                ->with([ 'position:id,title', 'person_slot.person:id,callsign', 'trainer_slot' ])
-                ->orderBy('begins')
-                ->get();
+            ->whereIn('position_id', $teachingPositions)
+            ->with(['position:id,title', 'person_slot.person:id,callsign', 'trainer_slot'])
+            ->orderBy('begins')
+            ->get();
 
         $trainers = [];
 
         foreach ($slots as $slot) {
             // Find the training slot that begins within a hour of the slot start time.
             $trainingSlot = Slot::where('description', $slot->description)
-                ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [ $slot->begins, $slot->ends ])
+                ->whereRaw('begins BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND ?', [$slot->begins, $slot->ends])
                 ->where('position_id', $this->id)
                 ->first();
 
@@ -799,19 +814,19 @@ class Training extends Position
 
             foreach ($slot->person_slot as $ps) {
                 if (!isset($trainers[$ps->person_id])) {
-                    $trainers[$ps->person_id] = (object) [
-                        'id'    => $ps->person_id,
-                        'callsign' => $ps->person ? $ps->person->callsign : 'Person #'.$ps->person_id,
+                    $trainers[$ps->person_id] = (object)[
+                        'id' => $ps->person_id,
+                        'callsign' => $ps->person ? $ps->person->callsign : 'Person #' . $ps->person_id,
                         'slots' => []
                     ];
                 }
 
                 $trainer = $trainers[$ps->person_id];
                 $ts = $slot->trainer_status->firstWhere('person_id', $ps->person_id);
-                $trainer->slots[] = (object) [
-                    'id'             => $slot->id,
-                    'begins'         => (string) $slot->begins,
-                    'description'    => $slot->description,
+                $trainer->slots[] = (object)[
+                    'id' => $slot->id,
+                    'begins' => (string)$slot->begins,
+                    'description' => $slot->description,
                     'position_title' => $slot->position->title,
                     'status' => $ts ? $ts->status : 'pending',
                     'training_slot_id' => $trainingSlot->id,
@@ -826,20 +841,23 @@ class Training extends Position
         return $trainers;
     }
 
-    /*
-     * Is this training position an ART module?
+    /**
+     * Is this training an ART training?
+     *
+     * @return bool
      */
-
-    public function getIsArtAttribute()
+    public function getIsArtAttribute() : bool
     {
         return ($this->id != Position::TRAINING);
     }
 
-    /*
+    /**
      * Convert the position title into a slug (lower cased, dasherized)
+     *
+     * @return string "dirt" or title slug
      */
 
-    public function getSlugAttribute()
+    public function getSlugAttribute() : string
     {
         return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
     }

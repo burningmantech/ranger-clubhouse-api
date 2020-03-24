@@ -69,7 +69,7 @@ class TrainingSession extends Slot
             'person.person_position:person_id,position_id'
         ])->where('slot_id', $this->id)->get();
 
-        $personIds = $people->pluck('person_id');
+        $personIds = $people->pluck('person_id')->toArray();
         $people = $people->sortBy(function ($p) {
             return $p->person->callsign;
         }, SORT_NATURAL | SORT_FLAG_CASE)->values();
@@ -180,7 +180,7 @@ class TrainingSession extends Slot
         }
 
         $trainers = [];
-        // Attempt to find the matching trainer's slots
+
         foreach ($trainerPositions as $trainerPositionId) {
             $trainerPosition = Position::find($trainerPositionId);
             // Find the trainer's slot that begins within a hour of the slot start time.
@@ -227,6 +227,10 @@ class TrainingSession extends Slot
                 'slot' => $trainerSlot,
                 'position_title' => $trainerPosition->title,
                 'trainers' => $instructors,
+                'is_primary_trainer' => ($this->isArt() || (
+                    $trainerPositionId == Position::TRAINER_UBER ||
+                    $trainerPositionId == Position::TRAINER
+                    ))
             ];
         }
 

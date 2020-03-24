@@ -61,6 +61,8 @@ USER www-data
 
 # Run composer to get dependencies
 # Optimize for production and don't install development dependencies
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH $COMPOSER_AUTH
 RUN php composer.phar install       \
     --no-plugins --no-scripts       \
     --optimize-autoloader --no-dev  \
@@ -89,6 +91,8 @@ USER www-data
 COPY --from=build /var/www/composer_cache /var/www/composer_cache
 
 # Run composer to get dependencies
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH $COMPOSER_AUTH
 RUN php composer.phar install --no-plugins --no-scripts;
 
 

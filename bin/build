@@ -8,6 +8,11 @@
 
 stages="";
 
+if [ "${1-}" != "" ]; then
+    auth="{\"github-oauth\":{\"github.com\":\"${1}\"}}"
+else
+    auth=""
+fi
 
 #
 # Build a stage and tag it
@@ -25,6 +30,7 @@ build() {
     docker build             \
         --target="${stage}"  \
         --tag="${name}"      \
+        --build-arg COMPOSER_AUTH="${auth}" \
         $(cache_flags)       \
         "${wd}";
 
