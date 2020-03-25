@@ -3,13 +3,18 @@
 namespace App\Lib;
 
 use App\Models\Person;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonStatus;
 use App\Models\PersonMentor;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
+use App\Models\PersonPhoto;
 use App\Models\Position;
 use App\Models\Training;
 use App\Models\Timesheet;
+use App\Models\Slot;
+use App\Models\PersonSlot;
+use App\Models\TraineeStatus;
 
 use Carbon\Carbon;
 
@@ -38,6 +43,171 @@ class Intake
             ->pluck('person_id')->toArray();
 
         return self::retrieveIdsForYear($pnvIds, $year);
+    }
+
+    /**
+     * Build up the counts for a given year and day.
+     * @param int $year
+     * @return array
+     */
+
+    public static function retrieveSpigotFlowForYear(int $year) : array
+    {
+        $dates = [];
+        // Find any PNVs in a given year
+        $pnvStatus = PersonStatus::select('person_id', 'created_at')
+            ->whereYear('created_at', $year)
+            ->where('created_at', '>=', "$year-02-01")
+            ->where('new_status', Person::PROSPECTIVE)
+            ->orderBy('created_at')
+            ->with('person:id,callsign')
+            ->get()
+            ->groupBy('person_id');
+
+        if ($pnvStatus->isEmpty()) {
+            // Too soon?
+            return $dates;
+        }
+
+        foreach ($pnvStatus as $personId => $rows) {
+            self::setSpigotDate($dates, 'imported', $rows[0]->created_at, $rows[0]->person);
+        }
+
+        $pnvIds = $pnvStatus->keys()->toArray();
+
+        $droppedStatus = PersonStatus::select('person_id', 'created_at', 'new_status')
+            ->whereYear('created_at', $year)
+            ->where('created_at', '>=', "$year-02-01")
+            ->where('new_status', Person::PAST_PROSPECTIVE)
+            ->whereIn('person_id', $pnvIds)
+            ->orderBy('created_at')
+            ->with('person:id,callsign')
+            ->get()
+            ->groupBy('person_id');
+
+        foreach ($droppedStatus as $personId => $rows) {
+            self::setSpigotDate($dates, 'dropped', $rows[0]->created_at, $rows[0]->person);
+        }
+
+
+        // Retrieve photo approval
+        $photos = PersonPhoto::select('person_id', 'uploaded_at', 'reviewed_at')
+            ->where('person_photo.status', PersonPhoto::APPROVED)
+            ->join('person', 'person.person_photo_id', 'person_photo.id')
+            ->whereYear('person_photo.uploaded_at', $year)
+            ->whereIn('person_photo.person_id', $pnvIds)
+            ->with('person:id,callsign')
+            ->get();
+
+        foreach ($photos as $photo) {
+            // photos prior to 2020 will not have a review_at date because the information could not be
+            // gotten out of Lambase.
+            self::setSpigotDate($dates, 'photo_approved', $photo->reviewed_at ?? $photo->uploaded_at, $photo->person);
+        }
+
+        $onlineTraining = PersonOnlineTraining::whereIn('person_id', $pnvIds)
+            ->whereYear('completed_at', $year)
+            ->with('person:id,callsign')
+            ->get();
+
+        foreach ($onlineTraining as $ot) {
+            self::setSpigotDate($dates, 'online_trained', $ot->completed_at, $ot->person);
+        }
+
+        // Grab the training slots
+        $trainingSlotIds = Slot::select('id')
+            ->where('position_id', Position::TRAINING)
+            ->whereYear('begins', $year)
+            ->get()
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($trainingSlotIds)) {
+            $trainingSignups = PersonSlot::whereIn('person_id', $pnvIds)
+                ->whereIn('slot_id', $trainingSlotIds)
+                ->with('person:id,callsign')
+                ->get()
+                ->groupBy('person_id');
+
+            foreach ($trainingSignups as $personId => $rows) {
+                self::setSpigotDate($dates, 'training_signups', $rows[0]->timestamp, $rows[0]->person);
+            }
+
+            // Grab the passing PNVs
+            $trainingPass = TraineeStatus::select('trainee_status.*', 'slot.begins')
+                ->join('slot', 'slot.id', 'trainee_status.slot_id')
+                ->whereIn('person_id', $pnvIds)
+                ->whereIn('slot_id', $trainingSlotIds)
+                ->where('passed', true)
+                ->with('person:id,callsign')
+                ->get()
+                ->groupBy('person_id');
+
+            foreach ($trainingPass as $personId => $rows) {
+                self::setSpigotDate($dates, 'training_passed', $rows[0]->begins, $rows[0]->person);
+            }
+        }
+
+        // Grab the Alpha slots
+        $alphaSlotIds = Slot::select('id')
+            ->where('position_id', Position::ALPHA)
+            ->whereYear('begins', $year)
+            ->get()
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($alphaSlotIds)) {
+            $alphaSignups = PersonSlot::whereIn('person_id', $pnvIds)
+                ->whereIn('slot_id', $alphaSlotIds)
+                ->with('person:id,callsign')
+                ->get()
+                ->groupBy('person_id');
+
+            foreach ($alphaSignups as $personId => $rows) {
+                self::setSpigotDate($dates, 'alpha_signups', $rows[0]->timestamp, $rows[0]->person);
+            }
+        }
+
+        $days = [];
+        foreach ($dates as $day => $stats) {
+            $stats['day'] = $day;
+            $days[] = $stats;
+        }
+
+        foreach ($days as &$row) {
+            foreach ($row as $key => &$people) {
+                if ($key == 'day') {
+                    continue;
+                }
+                usort($people, function ($a, $b) {
+                    return strcasecmp($a['callsign'], $b['callsign']);
+                });
+            }
+            unset($people);
+        }
+
+        usort($days, function ($a, $b) {
+            return strcmp($a['day'], $b['day']);
+        });
+
+
+        return $days;
+    }
+
+    private static function setSpigotDate(&$dates, string $type, $date, $person)
+    {
+        if (is_numeric($date)) {
+            $date = new Carbon($date);
+        } else if (is_string($date)) {
+            $date = Carbon::parse($date);
+        }
+
+        $day = $date->format('Y-m-d');
+        if (!isset($dates[$day][$type])) {
+            $dates[$day][$type] = [];
+        }
+
+        $dates[$day][$type][] = $person;
     }
 
     /**
@@ -107,7 +277,7 @@ class Intake
             if (isset($mentors[$personId])) {
                 foreach ($mentors[$personId] as $mentorYear => $mentorship) {
                     $status = $mentorship['status'];
-                    $pnvHistory[(int) $mentorYear] = (object)[
+                    $pnvHistory[(int)$mentorYear] = (object)[
                         'mentor_status' => $mentorship['status'] ?? 'none',
                         'mentors' => $mentorship['mentors'],
                         'training_status' => 'none',
@@ -223,7 +393,6 @@ class Intake
             }
 
 
-
             $pnv['pnv_history'] = $pnvHistory;
 
             $pnvs[] = $pnv;
@@ -265,7 +434,7 @@ class Intake
                     continue;
                 }
 
-                $teamYears[$r->year] = [ 'rank' => $rank ];
+                $teamYears[$r->year] = ['rank' => $rank];
 
                 if ($rank >= self::BELOW_AVERAGE) {
                     $haveFlag = true;
@@ -293,7 +462,9 @@ class Intake
             $result[] = $info;
         }
 
-        usort($result, function ($a, $b) { return $a['year'] <=> $b['year']; });
+        usort($result, function ($a, $b) {
+            return $a['year'] <=> $b['year'];
+        });
         return $result;
     }
 }
