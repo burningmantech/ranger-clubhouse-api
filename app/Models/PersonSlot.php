@@ -18,7 +18,7 @@ class PersonSlot extends ApiModel
     ];
 
     protected $casts = [
-        'timestamp' => 'timestamp'
+        'timestamp' => 'datetime'
     ];
 
     public function person() {

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
-use App\Mdoels\Person;
+use App\Models\Person;
 
 class PersonOnlineTraining extends ApiModel
 {

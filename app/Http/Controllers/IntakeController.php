@@ -32,6 +32,16 @@ class IntakeController extends ApiController
     }
 
     /**
+     * Volu
+     */
+    public function spigot()
+    {
+        $this->roleCheck();
+
+        return response()->json([ 'days' => Intake::retrieveSpigotFlowForYear($this->getYear()) ]);
+    }
+
+    /**
      * Retrieve the PNV intake history for a given year.
      * (similar to IntakeController::index but for a specific person)
      *

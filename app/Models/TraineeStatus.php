@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
+use App\Models\Person;
+use App\Models\Slot;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +26,14 @@ class TraineeStatus extends ApiModel
         'begins' => 'date',
         'ends' => 'date'
     ];
+
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function slot() {
+        return $this->belongsTo(Slot::class);
+    }
 
     /**
      * Find trainee_status records with joined slot for a person & year.
