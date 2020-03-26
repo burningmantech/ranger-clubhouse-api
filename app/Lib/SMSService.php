@@ -54,7 +54,7 @@ class SMSService
         }
         $serviceIds = explode(',', $serviceIds);
 
-        $callbackUrl = config('TwilioStatusCallbackUrl');
+        $callbackUrl = setting('TwilioStatusCallbackUrl');
 
         $bindings = [];
         // Build up request - normalize the numbers

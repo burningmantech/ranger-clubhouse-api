@@ -546,6 +546,8 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $personId = $this->user->id;
 
+        $this->setting('TAS_WAPDateRange', '3-28');
+
         factory(AccessDocument::class)->create([
             'person_id' => $personId,
             'type'      => 'work_access_pass',
@@ -610,6 +612,8 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $personId = $this->user->id;
 
+        $this->setting('TAS_WAPDateRange', '3-28');
+
         $response = $this->json('POST', 'bulk-upload', [
             'action'   => 'wap',
             'records'  => "$callsign,$year-08-25",
@@ -627,7 +631,7 @@ class BulkUploadControllerTest extends TestCase
         $this->assertDatabaseMissing(
             'access_document',
             [
-                'person_id' => $this->user->id,
+                'person_id' => $personId,
                 'type' => 'work_access_pass',
                 'access_date' => "$year-08-25",
             ]
