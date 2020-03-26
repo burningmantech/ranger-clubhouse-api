@@ -431,7 +431,7 @@ class BulkUploadController extends ApiController
         $year = current_year();
         $low = 5;
         $high = 26;
-        $wapDate = config('TAS_WAPDateRange');
+        $wapDate = setting('TAS_WAPDateRange', true);
         if (!empty($wapDate)) {
             list($low, $high) = explode("-", $wapDate);
         }
