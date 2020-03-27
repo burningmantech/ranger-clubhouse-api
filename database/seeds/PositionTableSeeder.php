@@ -31,6 +31,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             1 => 
             array (
@@ -46,6 +48,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Dirt',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             2 => 
             array (
@@ -61,6 +65,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             3 => 
             array (
@@ -76,6 +82,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GD',
                 'type' => 'Frontline',
                 'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             4 => 
             array (
@@ -91,6 +99,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Int',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             5 => 
             array (
@@ -106,6 +116,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'IntDsp',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             6 => 
             array (
@@ -121,6 +133,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'LEAL',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             7 => 
             array (
@@ -136,6 +150,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'LEALTr',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             8 => 
             array (
@@ -151,6 +167,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             9 => 
             array (
@@ -166,6 +184,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'OOD',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             10 => 
             array (
@@ -181,6 +201,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'RNR',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             11 => 
             array (
@@ -196,6 +218,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'RSL',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             12 => 
             array (
@@ -211,6 +235,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => 'ranger-trainingacademy-list@example.com',
+                'prevent_multiple_enrollments' => 1,
             ),
             13 => 
             array (
@@ -226,6 +252,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GDLead',
                 'type' => 'Command',
                 'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             14 => 
             array (
@@ -241,6 +269,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             15 => 
             array (
@@ -256,6 +286,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'ArtSaf',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             16 => 
             array (
@@ -271,6 +303,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             17 => 
             array (
@@ -286,6 +320,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             18 => 
             array (
@@ -298,9 +334,11 @@ class PositionTableSeeder extends Seeder
                 'max' => 0,
                 'auto_signout' => 1,
                 'on_sl_report' => NULL,
-                'short_title' => NULL,
+                'short_title' => 'BP',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             19 => 
             array (
@@ -316,6 +354,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Tow',
                 'type' => 'Frontline',
                 'training_position_id' => 102,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             20 => 
             array (
@@ -331,6 +371,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => '007',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             21 => 
             array (
@@ -346,6 +388,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             22 => 
             array (
@@ -361,6 +405,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             23 => 
             array (
@@ -376,6 +422,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'RSCI',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             24 => 
             array (
@@ -391,6 +439,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'SpcBrn',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             25 => 
             array (
@@ -406,6 +456,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GDL',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             26 => 
             array (
@@ -413,7 +465,7 @@ class PositionTableSeeder extends Seeder
                 'title' => 'HQ Training',
                 'new_user_eligible' => 0,
                 'all_rangers' => 1,
-                'count_hours' => 1,
+                'count_hours' => 0,
                 'min' => 1,
                 'max' => 0,
                 'auto_signout' => 1,
@@ -421,6 +473,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => 'ranger-hq-cadre-list@example.com',
+                'prevent_multiple_enrollments' => 0,
             ),
             27 => 
             array (
@@ -436,6 +490,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             28 => 
             array (
@@ -451,6 +507,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             29 => 
             array (
@@ -466,6 +524,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             30 => 
             array (
@@ -481,6 +541,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             31 => 
             array (
@@ -496,6 +558,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'ROM',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             32 => 
             array (
@@ -511,6 +575,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Other',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             33 => 
             array (
@@ -526,6 +592,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'HSP',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             34 => 
             array (
@@ -541,6 +609,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GDMntr',
                 'type' => 'Frontline',
                 'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             35 => 
             array (
@@ -556,6 +626,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             36 => 
             array (
@@ -571,6 +643,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             37 => 
             array (
@@ -586,6 +660,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             38 => 
             array (
@@ -601,6 +677,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             39 => 
             array (
@@ -616,6 +694,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             40 => 
             array (
@@ -631,6 +711,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GDMnte',
                 'type' => 'Frontline',
                 'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             41 => 
             array (
@@ -645,7 +727,9 @@ class PositionTableSeeder extends Seeder
                 'on_sl_report' => NULL,
                 'short_title' => NULL,
                 'type' => 'HQ',
-                'training_position_id' => 31,
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             42 => 
             array (
@@ -661,6 +745,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'DrtPre',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             43 => 
             array (
@@ -676,6 +762,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Sanc',
                 'type' => 'Frontline',
                 'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             44 => 
             array (
@@ -691,6 +779,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Opr',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             45 => 
             array (
@@ -706,6 +796,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             46 => 
             array (
@@ -721,6 +813,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             47 => 
             array (
@@ -736,6 +830,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Sndman',
                 'type' => 'Frontline',
                 'training_position_id' => 80,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             48 => 
             array (
@@ -751,6 +847,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             49 => 
             array (
@@ -766,6 +864,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'PM',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             50 => 
             array (
@@ -781,6 +881,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             51 => 
             array (
@@ -796,6 +898,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Orange',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             52 => 
             array (
@@ -811,6 +915,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'IntOpr',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             53 => 
             array (
@@ -826,6 +932,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             54 => 
             array (
@@ -840,7 +948,9 @@ class PositionTableSeeder extends Seeder
                 'on_sl_report' => 0,
                 'short_title' => 'SancLd',
                 'type' => 'Frontline',
-                'training_position_id' => 101,
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             55 => 
             array (
@@ -855,7 +965,9 @@ class PositionTableSeeder extends Seeder
                 'on_sl_report' => NULL,
                 'short_title' => 'TowMnt',
                 'type' => 'Frontline',
-                'training_position_id' => 102,
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             56 => 
             array (
@@ -871,6 +983,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             57 => 
             array (
@@ -886,6 +1000,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Dspch',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             58 => 
             array (
@@ -901,6 +1017,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             59 => 
             array (
@@ -916,6 +1034,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'LNT',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             60 => 
             array (
@@ -931,6 +1051,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             61 => 
             array (
@@ -946,6 +1068,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GerPat',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             62 => 
             array (
@@ -961,6 +1085,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'GerLd',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             63 => 
             array (
@@ -976,6 +1102,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Resdnt',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             64 => 
             array (
@@ -991,6 +1119,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'SC',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             65 => 
             array (
@@ -1006,6 +1136,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => 'ranger-sandman-cadre-list@example.com',
+                'prevent_multiple_enrollments' => 0,
             ),
             66 => 
             array (
@@ -1021,6 +1153,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             67 => 
             array (
@@ -1033,14 +1167,16 @@ class PositionTableSeeder extends Seeder
                 'max' => 0,
                 'auto_signout' => 0,
                 'on_sl_report' => NULL,
-                'short_title' => NULL,
+                'short_title' => 'PI',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             68 => 
             array (
                 'id' => 83,
-                'title' => 'RSC Shift Lead -Pre-event',
+                'title' => 'RSC Shift Lead - Pre-event',
                 'new_user_eligible' => 0,
                 'all_rangers' => 0,
                 'count_hours' => 1,
@@ -1051,6 +1187,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'RSLPre',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             69 => 
             array (
@@ -1066,6 +1204,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             70 => 
             array (
@@ -1081,6 +1221,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'LEALMn',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             71 => 
             array (
@@ -1096,6 +1238,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Mentoring',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             72 => 
             array (
@@ -1111,6 +1255,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'DOOD',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             73 => 
             array (
@@ -1126,6 +1272,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             74 => 
             array (
@@ -1141,6 +1289,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             75 => 
             array (
@@ -1156,6 +1306,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             76 => 
             array (
@@ -1171,6 +1323,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'TShoot',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             77 => 
             array (
@@ -1186,6 +1340,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             78 => 
             array (
@@ -1201,6 +1357,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'RSCIM',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             79 => 
             array (
@@ -1216,6 +1374,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             80 => 
             array (
@@ -1231,6 +1391,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             81 => 
             array (
@@ -1246,6 +1408,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             82 => 
             array (
@@ -1261,6 +1425,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             83 => 
             array (
@@ -1276,6 +1442,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             84 => 
             array (
@@ -1288,9 +1456,11 @@ class PositionTableSeeder extends Seeder
                 'max' => 0,
                 'auto_signout' => 0,
                 'on_sl_report' => NULL,
-                'short_title' => NULL,
+                'short_title' => 'BCT',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             85 => 
             array (
@@ -1298,7 +1468,7 @@ class PositionTableSeeder extends Seeder
                 'title' => 'Green Dot Trainer',
                 'new_user_eligible' => 0,
                 'all_rangers' => 0,
-                'count_hours' => 0,
+                'count_hours' => 1,
                 'min' => 1,
                 'max' => 0,
                 'auto_signout' => 0,
@@ -1306,6 +1476,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             86 => 
             array (
@@ -1321,6 +1493,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => 'ranger-greendotcadre-list@example.com',
+                'prevent_multiple_enrollments' => 1,
             ),
             87 => 
             array (
@@ -1336,6 +1510,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => 'ranger-tow-truck-cadre-list@example.com',
+                'prevent_multiple_enrollments' => 0,
             ),
             88 => 
             array (
@@ -1351,6 +1527,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             89 => 
             array (
@@ -1366,6 +1544,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'HQ',
                 'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             90 => 
             array (
@@ -1381,6 +1561,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'DPW',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             91 => 
             array (
@@ -1396,6 +1578,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'DepMgr',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             92 => 
             array (
@@ -1411,6 +1595,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'Penny',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             93 => 
             array (
@@ -1426,6 +1612,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => 'SndTrg',
                 'type' => 'Training',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             94 => 
             array (
@@ -1438,9 +1626,11 @@ class PositionTableSeeder extends Seeder
                 'max' => 0,
                 'auto_signout' => 0,
                 'on_sl_report' => NULL,
-                'short_title' => NULL,
+                'short_title' => 'WESL',
                 'type' => 'Command',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             95 => 
             array (
@@ -1453,9 +1643,11 @@ class PositionTableSeeder extends Seeder
                 'max' => 0,
                 'auto_signout' => 0,
                 'on_sl_report' => NULL,
-                'short_title' => NULL,
+                'short_title' => '007',
                 'type' => 'Frontline',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             96 => 
             array (
@@ -1471,6 +1663,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             97 => 
             array (
@@ -1486,6 +1680,8 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Other',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
             98 => 
             array (
@@ -1501,6 +1697,280 @@ class PositionTableSeeder extends Seeder
                 'short_title' => NULL,
                 'type' => 'Logistics',
                 'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            99 => 
+            array (
+                'id' => 114,
+                'title' => 'Burn Quad Lead',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 0,
+                'on_sl_report' => NULL,
+                'short_title' => NULL,
+                'type' => 'Frontline',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            100 => 
+            array (
+                'id' => 115,
+                'title' => 'RNR - Ride Along',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 0,
+                'on_sl_report' => NULL,
+                'short_title' => 'RNRmnt',
+                'type' => 'Frontline',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            101 => 
+            array (
+                'id' => 116,
+                'title' => 'LEAL Partner',
+                'new_user_eligible' => 0,
+                'all_rangers' => 1,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 1,
+                'on_sl_report' => NULL,
+                'short_title' => 'LEALpt',
+                'type' => 'Frontline',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            102 => 
+            array (
+                'id' => 117,
+                'title' => 'HQ Window - Pre-event',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 0,
+                'max' => 10,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => '',
+                'type' => 'HQ',
+                'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            103 => 
+            array (
+                'id' => 118,
+                'title' => 'HQ Lead - Pre-event',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 0,
+                'max' => 1,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => NULL,
+                'type' => 'HQ',
+                'training_position_id' => 31,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            104 => 
+            array (
+                'id' => 119,
+                'title' => 'LEAL - Pre-event',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'LEAL',
+                'type' => 'Command',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            105 => 
+            array (
+                'id' => 120,
+                'title' => 'Dirt - Post-event',
+                'new_user_eligible' => 0,
+                'all_rangers' => 1,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'Dirt',
+                'type' => 'Frontline',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            106 => 
+            array (
+                'id' => 121,
+                'title' => 'Tow Truck Trainer',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => NULL,
+                'type' => 'Training',
+                'training_position_id' => 102,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            107 => 
+            array (
+                'id' => 122,
+                'title' => 'Gerlach Patrol - Green Dot',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 1,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'GPGD',
+                'type' => 'Frontline',
+                'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            108 => 
+            array (
+                'id' => 123,
+                'title' => 'Sanctuary Mentee',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => 'SncMte',
+                'type' => 'Frontline',
+                'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            109 => 
+            array (
+                'id' => 124,
+                'title' => 'Vehicle Maintenance Lead',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 1,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'VMLead',
+                'type' => 'Logistics',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            110 => 
+            array (
+                'id' => 125,
+                'title' => 'Art Car Wrangler',
+                'new_user_eligible' => 0,
+                'all_rangers' => 1,
+                'count_hours' => 1,
+                'min' => 4,
+                'max' => 18,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'ArtCar',
+                'type' => 'Frontline',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            111 => 
+            array (
+                'id' => 126,
+                'title' => 'Green Dot Lead Intern',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 1,
+                'auto_signout' => 1,
+                'on_sl_report' => 0,
+                'short_title' => 'GDLI',
+                'type' => 'Command',
+                'training_position_id' => 101,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            112 => 
+            array (
+                'id' => 127,
+                'title' => 'Troubleshooter Mentee',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 1,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => 'TSmnte',
+                'type' => 'Command',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            113 => 
+            array (
+                'id' => 128,
+                'title' => 'Troubleshooter Mentor',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 0,
+                'min' => 1,
+                'max' => 1,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => 'TSmntr',
+                'type' => 'Command',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
+            ),
+            114 => 
+            array (
+                'id' => 129,
+                'title' => 'Troubleshooter Trainer',
+                'new_user_eligible' => 0,
+                'all_rangers' => 0,
+                'count_hours' => 1,
+                'min' => 1,
+                'max' => 0,
+                'auto_signout' => 0,
+                'on_sl_report' => 0,
+                'short_title' => '',
+                'type' => 'Training',
+                'training_position_id' => NULL,
+                'contact_email' => NULL,
+                'prevent_multiple_enrollments' => 0,
             ),
         ));
         

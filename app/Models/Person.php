@@ -255,6 +255,38 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'formerly_known_as'
     ];
 
+    // Various associated person tables
+    const ASSOC_TABLES = [
+        //'access_document_changes',
+        'access_document_delivery',
+        'access_document',
+        'action_logs',
+        'alert_person',
+        'asset_person',
+        'bmid',
+        'broadcast_message',
+        //'contact_log',
+        'manual_review',
+        'mentee_status',
+        'person_intake',
+        'person_intake_note',
+        'person_language',
+        'person_mentor',
+        'person_message',
+        'person_online_training',
+        'person_position',
+        'person_role',
+        'person_slot',
+        'radio_eligible',
+        'timesheet',
+        'timesheet_log',
+        'timesheet_missing',
+        'trainee_note',
+        'trainee_status',
+        'trainer_status'
+    ];
+
+
     protected $appends = [
         'roles',
     ];
