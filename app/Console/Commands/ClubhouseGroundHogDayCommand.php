@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use App\Models\Motd;
 
-use App\Models\Person;
-use App\Models\Setting;
+use App\Lib\RedactDatabase;
 
-class GroundhogDay extends Command
+class ClubhouseGroundHogDayCommand extends Command
 {
     const GROUNDHOG_DATETIME = "2018-08-30 18:00:00";
     const GROUNDHOG_DATABASE = "rangers_ghd";
@@ -18,11 +18,7 @@ class GroundhogDay extends Command
      *
      * @var string
      */
-    protected $signature = 'db:groundhogday
-                    {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-groundhog-day-YYYY-MM-DD.sql}
-                    {--tempdb=ranger_ghd : temporary database name}
-                    {--day=2018-08-30 18:00:00 : ground hog day date/time}
-                    ';
+    protected $signature = '';
 
     /**
      * The console command description.
@@ -38,6 +34,12 @@ class GroundhogDay extends Command
      */
     public function __construct()
     {
+
+        $this->signature = 'clubhouse:groundhog-day
+                    {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-groundhog-day-YYYY-MM-DD.sql}
+                    {--tempdb=ranger_ghd : temporary database name}
+                    {--day='.(date('Y') - 1).'-08-30 18:00:00 : ground hog day date/time}
+                    ';
         parent::__construct();
     }
 
@@ -56,6 +58,7 @@ class GroundhogDay extends Command
         $user = config('database.connections.mysql.username');
         $pwd = config('database.connections.mysql.password');
         $db = config('database.connections.mysql.database');
+        putenv("MYSQL_PWD=$pwd");
 
         $this->info("Creating groundhog day database from $db for day $groundHogDay");
 
@@ -64,13 +67,15 @@ class GroundhogDay extends Command
         DB::statement("CREATE DATABASE $ghdname");
 
         $this->info("Cloning $db to $ghdname");
-        if (shell_exec("mysqldump -u $user --password=$pwd $db | mysql -u $user --password=$pwd $ghdname")) {
+        if (shell_exec("mysqldump -u $user $db | mysql -u $user $ghdname")) {
             $this->fatal("Cannot clone database");
         }
 
         // Switch databases
         config([ 'database.connections.mysql.database' => $ghdname ]);
         DB::purge('mysql');
+
+        RedactDatabase::execute($year);
 
         // Kill anytime sheets in the future
         DB::table('timesheet')->where('on_duty', '>', $groundHogDay)->delete();
@@ -94,8 +99,6 @@ class GroundhogDay extends Command
         // Remove all future training info
         DB::table('trainee_status')->whereIn('slot_id', $slotIds)->delete();
 
-        // Zap training notes
-        DB::table('trainee_status')->update([ 'notes' => '']);
 
         // Kill all assets
         DB::table('asset')->whereYear('created_at', '>', $year);
@@ -103,76 +106,6 @@ class GroundhogDay extends Command
         // Mark some assets as being checked out
         DB::table('asset_person')->whereYear('checked_in', '>=', $groundHogDay)->delete();
         DB::table('asset_person')->where('checked_out', '>=', $groundHogDay)->update([ 'checked_in' => null ]);
-
-        // And nuke a bunch of tables
-        $tables = [
-            'access_document_changes',
-            'access_document_delivery',
-            'access_document',
-            'action_logs',
-            'broadcast_message',
-            'broadcast',
-            'contact_log',
-            'feedback',
-            'log',
-            'motd',
-            'mentee_status',
-            'sessions',
-            'ticket'
-        ];
-
-        foreach ($tables as $table) {
-            DB::statement("TRUNCATE $table");
-        }
-
-        // Zap all the Clubhouse message archives including the current table
-        $rows = DB::select('SHOW TABLES LIKE "person_message%"');
-        foreach($rows as $row)
-        {
-            foreach ($row as $col => $name) {
-              DB::statement("TRUNCATE $name");
-          }
-        }
-
-        $settings = [
-            'BroadcastClubhouseNotify'         => false,
-            'BroadcastClubhouseSandbox'        => true,
-            'LambaseJumpinUrl'                 => 'https://example.com',
-            'OnlineTrainingEnabled'           => false,
-            'OnlineTrainingDisabledAllowSignups' => true,
-            'MealInfoAvailable'                => true,
-            'RadioInfoAvailable'               => true,
-            'SFprdClientId'                    => '',
-            'TicketingPeriod'                  => 'offseason',
-            'TimesheetCorrectionEnable'        => true,
-            'TimesheetCorrectionYear'          => $year,
-            'TwilioAccountSID'                 => 'deadbeef',
-            'TwilioAuthToken'                  => 'deadbeef',
-        ];
-
-        foreach ($settings as $name => $value) {
-            Setting::where('name', $name)->update([ 'value' => $value ]);
-        }
-
-        // No fruit-cup.. err.. Personal Information for you tonight!
-        DB::table('person')->update([
-            'on_site'    => false,
-            'home_phone' => '123-456-7890',
-            'alt_phone' => '123-456-7890',
-            'sms_on_playa' => '',
-            'sms_off_playa' => '',
-            'street1' => '123 Any St.',
-            'street2' => '',
-            'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),
-            'asset_authorized' => false,
-            'vehicle_paperwork' => false,
-            'timesheet_confirmed' => false,
-            'behavioral_agreement' => false,
-            'message'   => '',
-            'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
-        ]);
-
-        DB::table('setting')->where('is_credential', true)->update([ 'value' => '' ]);
 
         // Mark everyone on site who has a timesheet or is schedule to work as on site and signed paperwork
         DB::table('person')
@@ -189,21 +122,22 @@ class GroundhogDay extends Command
               ]);
         // Setup an announcement
 
-        Motd::create([
+        DB::table('motd')->insert([
             'message'    => "Welcome to the Training Server where the date is always ".date('l, F jS Y', strtotime($groundHogDay)).".",
             'person_id' => 4594,
+            'for_rangers' => true,
+            'for_pnvs' => true,
+            'for_auditors' => true
         ]);
 
         $this->info("Creating mysql dump of groundhog database");
         $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-".date('Y-m-d').".sql";
 
-        if (shell_exec("mysqldump -u $user --password=$pwd $ghdname > $dump")) {
+        if (shell_exec("mysqldump -u $user $ghdname > $dump")) {
             $this->info("Failed to dump database - $ghdname has not been deleted.");
         } else {
             DB::statement("DROP DATABASE IF EXISTS $ghdname");
             $this->info("** Done! Database has been successfully created and dumped to $dump");
         }
-
-        // Clean up
     }
 }

@@ -113,11 +113,6 @@ class Setting extends ApiModel
             'type' => 'string',
         ],
 
-        'MaintenanceToken' => [
-            'description' => 'Security Token used to initiate nightly maintenance tasks',
-            'type' => 'string',
-        ],
-
         'MealDates' => [
             'description' => 'Commissary dates and hours',
             'type' => 'string',
