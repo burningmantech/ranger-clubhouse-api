@@ -35,7 +35,7 @@ class PersonControllerTest extends TestCase
      * have each test have a fresh user that is logged in.
      */
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
         $this->signInUser();
@@ -64,7 +64,7 @@ class PersonControllerTest extends TestCase
 
     public function testNoSearchPrivileges()
     {
-        $response = $this->json('GET', 'person', [ 'statuses' => 'active' ]);
+        $response = $this->json('GET', 'person', ['statuses' => 'active']);
         $response->assertStatus(403);
     }
 
@@ -79,17 +79,17 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $auditor     = factory(Person::class)->create([ 'status' => 'auditor' ]);
-        $prospective = factory(Person::class)->create([ 'status' => 'prospective' ]);
+        $auditor = factory(Person::class)->create(['status' => 'auditor']);
+        $prospective = factory(Person::class)->create(['status' => 'prospective']);
 
         $response = $this->actingAs($this->user)->json(
             'GET',
             'person',
-            [ 'statuses' => 'auditor,prospective' ]
+            ['statuses' => 'auditor,prospective']
         );
 
         $response->assertStatus(200);
-        $response->assertJsonStructure([ 'person' ]);
+        $response->assertJsonStructure(['person']);
         $json = $response->json();
 
         // Should have two people
@@ -120,7 +120,7 @@ class PersonControllerTest extends TestCase
 
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
-        $response->assertJsonStructure([ 'person' ]);
+        $response->assertJsonStructure(['person']);
     }
 
 
@@ -132,7 +132,7 @@ class PersonControllerTest extends TestCase
     {
         $response = $this->json('GET', "person/{$this->user->id}");
         $response->assertStatus(200);
-        $response->assertJsonStructure([ 'person' ]);
+        $response->assertJsonStructure(['person']);
     }
 
 
@@ -143,7 +143,7 @@ class PersonControllerTest extends TestCase
 
     public function testShowOtherFail()
     {
-        $person   = factory(Person::class)->create();
+        $person = factory(Person::class)->create();
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(403);
     }
@@ -155,13 +155,13 @@ class PersonControllerTest extends TestCase
     public function testUpdatePersonBasic()
     {
         $newFirstName = 'Plan 9';
-        $response     = $this->putPerson($this->user, [ 'first_name' => $newFirstName ]);
+        $response = $this->putPerson($this->user, ['first_name' => $newFirstName]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person',
             [
-                'id'         => $this->user->id,
+                'id' => $this->user->id,
                 'first_name' => $newFirstName,
             ]
         );
@@ -175,20 +175,20 @@ class PersonControllerTest extends TestCase
     public function testUpdatePersonLanguage()
     {
         $personId = $this->user->id;
-        $response = $this->putPerson($this->user, [ 'languages' => 'sumarian,19th century victorian burner' ]);
+        $response = $this->putPerson($this->user, ['languages' => 'sumarian,19th century victorian burner']);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person_language',
             [
-                'person_id'     => $personId,
+                'person_id' => $personId,
                 'language_name' => 'sumarian',
             ]
         );
         $this->assertDatabaseHas(
             'person_language',
             [
-                'person_id'     => $personId,
+                'person_id' => $personId,
                 'language_name' => '19th century victorian burner',
             ]
         );
@@ -203,13 +203,13 @@ class PersonControllerTest extends TestCase
     public function testFailStatusUpdate()
     {
         $personId = $this->user->id;
-        $response = $this->putPerson($this->user, [ 'status' => 'auditor' ]);
+        $response = $this->putPerson($this->user, ['status' => 'auditor']);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person',
             [
-                'id'     => $personId,
+                'id' => $personId,
                 'status' => 'active',
             ]
         );
@@ -224,13 +224,13 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
         $personId = $this->user->id;
-        $response = $this->putPerson($this->user, [ 'status' => 'auditor' ]);
+        $response = $this->putPerson($this->user, ['status' => 'auditor']);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person',
             [
-                'id'     => $personId,
+                'id' => $personId,
                 'status' => 'auditor',
             ]
         );
@@ -272,16 +272,16 @@ class PersonControllerTest extends TestCase
     public function testCallsignApprovalSuccess()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create([ 'status' => 'alpha', 'callsign_approved' => false ]);
+        $person = factory(Person::class)->create(['status' => 'alpha', 'callsign_approved' => false]);
 
         $personId = $person->id;
-        $response = $this->putPerson($person, [ 'callsign_approved' => true ]);
+        $response = $this->putPerson($person, ['callsign_approved' => true]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person',
             [
-                'id'                => $personId,
+                'id' => $personId,
                 'callsign_approved' => true,
             ]
         );
@@ -299,16 +299,16 @@ class PersonControllerTest extends TestCase
 
         $oldCallsign = $person->callsign;
         $personId = $person->id;
-        $response = $this->putPerson($person, [ 'status' => Person::PAST_PROSPECTIVE ]);
+        $response = $this->putPerson($person, ['status' => Person::PAST_PROSPECTIVE]);
 
-        $newCallsign = $person->last_name . substr($person->first_name, 0,1) . (current_year() % 100);
+        $newCallsign = $person->last_name . substr($person->first_name, 0, 1) . (current_year() % 100);
         $response->assertStatus(200);
         $this->assertDatabaseHas(
             'person',
             [
-                'id'                => $personId,
+                'id' => $personId,
                 'callsign_approved' => false,
-                'callsign'          => $newCallsign,
+                'callsign' => $newCallsign,
                 'formerly_known_as' => $oldCallsign
             ]
         );
@@ -324,13 +324,13 @@ class PersonControllerTest extends TestCase
         $person = factory(Person::class)->create();
 
         $oldCallsign = $person->callsign;
-        $response = $this->putPerson($person, [ 'callsign' => 'Irregular Apocalypse']);
+        $response = $this->putPerson($person, ['callsign' => 'Irregular Apocalypse']);
         $response->assertStatus(200);
         $person->refresh();
         $this->assertEquals($oldCallsign, $person->formerly_known_as);
 
         // change one more time to verify a comma was added..
-        $response = $this->putPerson($person, [ 'callsign' => 'Zero Gravitas']);
+        $response = $this->putPerson($person, ['callsign' => 'Zero Gravitas']);
         $response->assertStatus(200);
         $person->refresh();
         $this->assertEquals("$oldCallsign,Irregular Apocalypse", $person->formerly_known_as);
@@ -343,13 +343,11 @@ class PersonControllerTest extends TestCase
 
     public function testAlertVCAboutEmailChange()
     {
-        $this->user->status = 'prospective';
-        $this->user->save();
-        $personId = $this->user->id;
+        $person = factory(Person::class)->create(['status' => Person::PROSPECTIVE]);
+        $this->actingAs($person); // login
 
         Mail::fake();
-
-        $response = $this->putPerson($this->user, [ 'email' => 'forkyourburn@shirtballs.badplace' ]);
+        $response = $this->putPerson($person, ['email' => 'forkyourburn@shirtballs.badplace']);
 
         $response->assertStatus(200);
 
@@ -374,7 +372,7 @@ class PersonControllerTest extends TestCase
 
         $response = $this->json('DELETE', "person/{$person->id}");
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('person', [ 'id' => $person->id]);
+        $this->assertDatabaseMissing('person', ['id' => $person->id]);
     }
 
 
@@ -386,7 +384,7 @@ class PersonControllerTest extends TestCase
     public function testYearInfo()
     {
         $response = $this->json('GET', "person/{$this->user->id}", [
-            'year'  => date('Y')
+            'year' => date('Y')
         ]);
 
         // TODO: add more factories & verify results
@@ -404,8 +402,8 @@ class PersonControllerTest extends TestCase
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'password_old'          => 'ineedashower!',
-                'password'              => 'abcdef',
+                'password_old' => 'ineedashower!',
+                'password' => 'abcdef',
                 'password_confirmation' => 'abcdef',
             ]
         );
@@ -424,8 +422,8 @@ class PersonControllerTest extends TestCase
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'password_old'          => 'ineedashower! maybe',
-                'password'              => 'abcdef',
+                'password_old' => 'ineedashower! maybe',
+                'password' => 'abcdef',
                 'password_confirmation' => 'abcdef',
             ]
         );
@@ -446,7 +444,7 @@ class PersonControllerTest extends TestCase
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'password'              => 'abcdef',
+                'password' => 'abcdef',
                 'password_confirmation' => 'abcdef',
             ]
         );
@@ -466,8 +464,8 @@ class PersonControllerTest extends TestCase
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'password_old'          => 'ineedashower!',
-                'password'              => 'abcdef',
+                'password_old' => 'ineedashower!',
+                'password' => 'abcdef',
                 'password_confirmation' => 'abcdef12',
             ]
         );
@@ -486,7 +484,7 @@ class PersonControllerTest extends TestCase
             $position = factory(Position::class)->create();
             factory(PersonPosition::class)->create(
                 [
-                    'person_id'   => $this->user->id,
+                    'person_id' => $this->user->id,
                     'position_id' => $position->id,
                 ]
             );
@@ -495,7 +493,7 @@ class PersonControllerTest extends TestCase
         $response = $this->json('GET', "person/{$this->user->id}/positions");
 
         $response->assertStatus(200);
-        $response->assertJsonStructure([ 'positions' ]);
+        $response->assertJsonStructure(['positions']);
         $json = $response->json();
         $this->assertCount(3, $json['positions']);
     }
@@ -508,7 +506,7 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        factory(Position::class)->create([ 'id' => Position::DIRT, 'title' => 'Dirt' ]);
+        factory(Position::class)->create(['id' => Position::DIRT, 'title' => 'Dirt']);
 
         factory(PersonPosition::class)->create([
             'person_id' => $personId,
@@ -524,7 +522,7 @@ class PersonControllerTest extends TestCase
         $response->assertJsonCount(1, 'positions.*.id');
         $response->assertJson([
             'positions' => [[
-                'id'    => Position::DIRT,
+                'id' => Position::DIRT,
                 'is_untrained' => true
             ]]
         ]);
@@ -538,7 +536,7 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        factory(Position::class)->create([ 'id' => Position::DIRT, 'title' => 'Dirt' ]);
+        factory(Position::class)->create(['id' => Position::DIRT, 'title' => 'Dirt']);
         factory(PersonPosition::class)->create([
             'person_id' => $personId,
             'position_id' => Position::DIRT
@@ -549,8 +547,8 @@ class PersonControllerTest extends TestCase
         ]);
 
         $slot = factory(Slot::class)->create([
-            'begins'    => date('Y-08-25 10:00:00'),
-            'ends'      => date('Y-08-25 11:00:00'),
+            'begins' => date('Y-08-25 10:00:00'),
+            'ends' => date('Y-08-25 11:00:00'),
             'position_id' => Position::TRAINING
         ]);
 
@@ -596,14 +594,14 @@ class PersonControllerTest extends TestCase
         ]);
 
         $trainerSlot = factory(Slot::class)->create([
-            'begins'    => date('Y-08-26 10:00:00'),
-            'ends'      => date('Y-08-26 11:00:00'),
+            'begins' => date('Y-08-26 10:00:00'),
+            'ends' => date('Y-08-26 11:00:00'),
             'position_id' => Position::GREEN_DOT_TRAINER
         ]);
 
         $traineeSlot = factory(Slot::class)->create([
-            'begins'    => date('Y-08-26 10:00:00'),
-            'ends'      => date('Y-08-26 11:00:00'),
+            'begins' => date('Y-08-26 10:00:00'),
+            'ends' => date('Y-08-26 11:00:00'),
             'position_id' => Position::GREEN_DOT_TRAINING
         ]);
 
@@ -645,7 +643,7 @@ class PersonControllerTest extends TestCase
         $keepPosition = factory(Position::class)->create();
         factory(PersonPosition::class)->create(
             [
-                'person_id'   => $personId,
+                'person_id' => $personId,
                 'position_id' => $keepPosition->id,
             ]
         );
@@ -653,7 +651,7 @@ class PersonControllerTest extends TestCase
         $oldPosition = factory(Position::class)->create();
         factory(PersonPosition::class)->create(
             [
-                'person_id'   => $personId,
+                'person_id' => $personId,
                 'position_id' => $oldPosition->id,
             ]
         );
@@ -675,7 +673,7 @@ class PersonControllerTest extends TestCase
         $this->assertDatabaseHas(
             'person_position',
             [
-                'person_id'   => $personId,
+                'person_id' => $personId,
                 'position_id' => $keepPosition->id,
             ]
         );
@@ -683,14 +681,14 @@ class PersonControllerTest extends TestCase
         $this->assertDatabaseHas(
             'person_position',
             [
-                'person_id'   => $personId,
+                'person_id' => $personId,
                 'position_id' => $newPosition->id,
             ]
         );
         $this->assertDatabaseMissing(
             'person_position',
             [
-                'person_id'   => $personId,
+                'person_id' => $personId,
                 'position_id' => $oldPosition->id,
             ]
         );
@@ -705,10 +703,10 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        $role       = factory(Role::class)->create();
+        $role = factory(Role::class)->create();
         $personRole = factory(PersonRole::class)->create(
             [
-                'role_id'   => $role->id,
+                'role_id' => $role->id,
                 'person_id' => $personId,
             ]
         );
@@ -721,7 +719,7 @@ class PersonControllerTest extends TestCase
                 'roles' => [
                     [
                         'title' => $role->title,
-                        'id'    => $role->id,
+                        'id' => $role->id,
                     ],
                 ],
             ]
@@ -742,7 +740,7 @@ class PersonControllerTest extends TestCase
         factory(PersonRole::class)->create(
             [
                 'person_id' => $personId,
-                'role_id'   => $keepRole->id,
+                'role_id' => $keepRole->id,
             ]
         );
 
@@ -750,7 +748,7 @@ class PersonControllerTest extends TestCase
         factory(PersonRole::class)->create(
             [
                 'person_id' => $personId,
-                'role_id'   => $oldRole->id,
+                'role_id' => $oldRole->id,
             ]
         );
 
@@ -772,7 +770,7 @@ class PersonControllerTest extends TestCase
             'person_role',
             [
                 'person_id' => $personId,
-                'role_id'   => $keepRole->id,
+                'role_id' => $keepRole->id,
             ]
         );
 
@@ -780,7 +778,7 @@ class PersonControllerTest extends TestCase
             'person_role',
             [
                 'person_id' => $personId,
-                'role_id'   => $newRole->id,
+                'role_id' => $newRole->id,
             ]
         );
 
@@ -788,7 +786,7 @@ class PersonControllerTest extends TestCase
             'person_role',
             [
                 'person_id' => $personId,
-                'role_id'   => $oldRole->id,
+                'role_id' => $oldRole->id,
             ]
         );
     }
@@ -806,8 +804,8 @@ class PersonControllerTest extends TestCase
             $p = factory(Timesheet::class)->create(
                 [
                     'person_id' => $personId,
-                    'on_duty'   => date("201$i-08-25 16:00:00"),
-                    'off_duty'  => date("201$i-08-25 18:00:00"),
+                    'on_duty' => date("201$i-08-25 16:00:00"),
+                    'off_duty' => date("201$i-08-25 18:00:00"),
                     'position_id' => Position::DIRT,
                 ]
             );
@@ -816,16 +814,16 @@ class PersonControllerTest extends TestCase
         $p = factory(Timesheet::class)->create([
             'person_id' => $personId,
             'position_id' => Position::ALPHA,
-            'on_duty'   => date("2009-08-25 16:00:00"),
-            'off_duty'  => date("2009-08-25 18:00:00"),
+            'on_duty' => date("2009-08-25 16:00:00"),
+            'off_duty' => date("2009-08-25 18:00:00"),
         ]);
 
         $response = $this->json('GET', "person/$personId/user-info");
         $response->status(200);
         $response->assertJson([
             'user_info' => [
-                'years' => [ 2010, 2011, 2012 ],
-                'all_years' => [ 2009, 2010, 2011, 2012 ]
+                'years' => [2010, 2011, 2012],
+                'all_years' => [2009, 2010, 2011, 2012]
             ]
         ]);
     }
@@ -840,7 +838,7 @@ class PersonControllerTest extends TestCase
         $personId = $this->user->id;
         $response = $this->json('GET', "person/$personId/user-info");
         $response->status(200);
-        $response->assertJson([ 'user_info' => [ 'years' => [  ]]]);
+        $response->assertJson(['user_info' => ['years' => []]]);
     }
 
 
@@ -860,7 +858,7 @@ class PersonControllerTest extends TestCase
 
         $response = $this->json('GET', "person/{$this->user->id}/unread-message-count");
         $response->assertStatus(200);
-        $response->assertJson([ 'unread_message_count' => 3]);
+        $response->assertJson(['unread_message_count' => 3]);
     }
 
 
@@ -870,11 +868,11 @@ class PersonControllerTest extends TestCase
 
     public function testUserInfoForTeacherSuccess()
     {
-        $this->addRole([ Role::TRAINER, Role::MENTOR, Role::ART_TRAINER]);
+        $this->addRole([Role::TRAINER, Role::MENTOR, Role::ART_TRAINER]);
         factory(PersonMentor::class)->create(
             [
-                'mentor_id'   => $this->user->id,
-                'person_id'   => 1,
+                'mentor_id' => $this->user->id,
+                'person_id' => 1,
                 'mentor_year' => date('Y'),
             ]
         );
@@ -886,8 +884,8 @@ class PersonControllerTest extends TestCase
             [
                 'user_info' => [
                     'teacher' => [
-                        'is_trainer'    => true,
-                        'is_mentor'     => true,
+                        'is_trainer' => true,
+                        'is_mentor' => true,
                         'have_mentored' => true,
                     ]
                 ]
@@ -909,8 +907,8 @@ class PersonControllerTest extends TestCase
             [
                 'user_info' => [
                     'teacher' => [
-                        'is_trainer'    => false,
-                        'is_mentor'     => false,
+                        'is_trainer' => false,
+                        'is_mentor' => false,
                         'have_mentored' => false,
                     ]
                 ]
@@ -925,33 +923,33 @@ class PersonControllerTest extends TestCase
 
     public function testCreditsSuccess()
     {
-        $personId  = $this->user->id;
+        $personId = $this->user->id;
         $startTime = date('Y-m-d 10:00:00');
-        $endTime   = date('Y-m-d 12:00:00');
-        $year      = date('Y');
+        $endTime = date('Y-m-d 12:00:00');
+        $year = date('Y');
 
         $position = factory(Position::class)->create();
         factory(PositionCredit::class)->create(
             [
-                'position_id'      => $position->id,
-                'start_time'       => $startTime,
-                'end_time'         => $endTime,
+                'position_id' => $position->id,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'credits_per_hour' => 12.05,
             ]
         );
 
         factory(Timesheet::class)->create(
             [
-                'person_id'   => $personId,
-                'on_duty'     => $startTime,
-                'off_duty'    => $endTime,
+                'person_id' => $personId,
+                'on_duty' => $startTime,
+                'off_duty' => $endTime,
                 'position_id' => $position->id,
             ]
         );
 
-        $response = $this->json('GET', "person/{$personId}/credits", [ 'year' => $year ]);
+        $response = $this->json('GET', "person/{$personId}/credits", ['year' => $year]);
         $response->assertStatus(200);
-        $response->assertJson([ 'credits' => 24.10 ]);
+        $response->assertJson(['credits' => 24.10]);
     }
 
 
@@ -962,13 +960,13 @@ class PersonControllerTest extends TestCase
     public function testMenteesSuccess()
     {
         $mentee = factory(Person::class)->create();
-        $year   = date('Y');
+        $year = date('Y');
         factory(PersonMentor::class)->create(
             [
-                'person_id'   => $mentee->id,
-                'mentor_id'   => $this->user->id,
+                'person_id' => $mentee->id,
+                'mentor_id' => $this->user->id,
                 'mentor_year' => $year,
-                'status'      => 'pass',
+                'status' => 'pass',
             ]
         );
 
@@ -985,13 +983,13 @@ class PersonControllerTest extends TestCase
     public function testMenteeMentorsSuccess()
     {
         $mentor = factory(Person::class)->create();
-        $year   = date('Y');
+        $year = date('Y');
         factory(PersonMentor::class)->create(
             [
-                'person_id'   => $this->user->id,
-                'mentor_id'   => $mentor->id,
+                'person_id' => $this->user->id,
+                'mentor_id' => $mentor->id,
                 'mentor_year' => $year,
-                'status'      => 'pass',
+                'status' => 'pass',
             ]
         );
 
@@ -1001,11 +999,11 @@ class PersonControllerTest extends TestCase
             [
                 'mentors' => [
                     [
-                        'year'      => (int) $year,
-                        'status'    => 'pass',
+                        'year' => (int)$year,
+                        'status' => 'pass',
                         'mentors' => [[
                             'id' => $mentor->id,
-                            'callsign'  => $mentor->callsign,
+                            'callsign' => $mentor->callsign,
                         ]]
                     ]
                 ],
@@ -1018,16 +1016,16 @@ class PersonControllerTest extends TestCase
     {
         $faker = $this->faker;
         return [
-            'email'      => $faker->email,
-            'password'   => '12345',
+            'email' => $faker->email,
+            'password' => '12345',
             'first_name' => $faker->firstName,
-            'last_name'  => $faker->lastName,
-            'street1'    => substr($faker->address, 20),
-            'city'       => $faker->city,
-            'state'      => $faker->stateAbbr,
-            'zip'        => $faker->postcode,
-            'country'    => 'USA',
-            'status'     => 'auditor',
+            'last_name' => $faker->lastName,
+            'street1' => substr($faker->address, 20),
+            'city' => $faker->city,
+            'state' => $faker->stateAbbr,
+            'zip' => $faker->postcode,
+            'country' => 'USA',
+            'status' => 'auditor',
             'home_phone' => $faker->phoneNumber,
 
         ];
@@ -1041,7 +1039,7 @@ class PersonControllerTest extends TestCase
     public function testRegisterSuccess()
     {
         $faker = $this->faker;
-        $data  = [
+        $data = [
             'intent' => 'Sitin',
             'person' => $this->buildRegisterData(),
         ];
@@ -1050,7 +1048,7 @@ class PersonControllerTest extends TestCase
 
         $response = $this->json('POST', 'person/register', $data);
         $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
+        $response->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas(
             'person',
@@ -1076,9 +1074,9 @@ class PersonControllerTest extends TestCase
 
     public function testRegisterStatusFailure()
     {
-        $person           = $this->buildRegisterData();
+        $person = $this->buildRegisterData();
         $person['status'] = 'active';
-        $data             = [
+        $data = [
             'intent' => 'Sitin',
             'person' => $person,
         ];
@@ -1097,9 +1095,9 @@ class PersonControllerTest extends TestCase
 
     public function testRegisterDuplicateEmailFailure()
     {
-        $person          = $this->buildRegisterData();
+        $person = $this->buildRegisterData();
         $person['email'] = $this->user->email;
-        $data            = [
+        $data = [
             'intent' => 'Sitin',
             'person' => $person,
         ];
@@ -1107,8 +1105,12 @@ class PersonControllerTest extends TestCase
         Mail::fake();
 
         $response = $this->json('POST', 'person/register', $data);
-        $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'email-exists']);
+        $response->assertStatus(422);
+        $response->assertJson(['errors' => [
+            [
+                'source' => ['pointer' => '/data/attributes/email']
+            ]
+        ]]);
 
         Mail::assertSent(
             AccountCreationMail::class,
@@ -1131,51 +1133,51 @@ class PersonControllerTest extends TestCase
         ]);
 
         factory(Timesheet::class)->create([
-            'person_id'   => $personUS->id,
-            'on_duty'     => date('Y-m-d 10:00:00'),
-            'off_duty'    => date('Y-m-d 11:00:00'),
+            'person_id' => $personUS->id,
+            'on_duty' => date('Y-m-d 10:00:00'),
+            'off_duty' => date('Y-m-d 11:00:00'),
             'position_id' => Position::DIRT
         ]);
 
         $slot = factory(Slot::class)->create([
-            'position_id'   => Position::DIRT_GREEN_DOT,
-            'begins'        => date('Y-m-d 13:00:00'),
-            'ends'          => date('Y-m-d 14:00:00'),
-            'max'           => 10
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'begins' => date('Y-m-d 13:00:00'),
+            'ends' => date('Y-m-d 14:00:00'),
+            'max' => 10
         ]);
 
         factory(PersonSlot::class)->create([
             'person_id' => $personUS->id,
-            'slot_id'   => $slot->id,
+            'slot_id' => $slot->id,
         ]);
 
         $personCA = factory(Person::class)->create([
             'country' => 'CA'
         ]);
 
-        $response = $this->json('GET', 'person/by-location', [ 'year' => date('Y')]);
+        $response = $this->json('GET', 'person/by-location', ['year' => date('Y')]);
         $response->assertStatus(200);
 
         $response->assertJson([
-            'people'    => [
+            'people' => [
                 [
-                    'id'        => $personCA->id,
-                    'callsign'  => $personCA->callsign,
-                    'status'    => $personCA->status,
-                    'city'      => $personCA->city,
-                    'state'     => $personCA->state,
-                    'country'   => 'CA',
-                    'worked'    => 0,
+                    'id' => $personCA->id,
+                    'callsign' => $personCA->callsign,
+                    'status' => $personCA->status,
+                    'city' => $personCA->city,
+                    'state' => $personCA->state,
+                    'country' => 'CA',
+                    'worked' => 0,
                     'signed_up' => 0,
                 ],
                 [
-                    'id'        => $personUS->id,
-                    'callsign'  => $personUS->callsign,
-                    'status'    => $personUS->status,
-                    'city'      => $personUS->city,
-                    'state'     => $personUS->state,
-                    'country'   => 'US',
-                    'worked'    => 1,
+                    'id' => $personUS->id,
+                    'callsign' => $personUS->callsign,
+                    'status' => $personUS->status,
+                    'city' => $personUS->city,
+                    'state' => $personUS->state,
+                    'country' => 'US',
+                    'worked' => 1,
                     'signed_up' => 1,
                 ]
             ]
@@ -1196,7 +1198,7 @@ class PersonControllerTest extends TestCase
         ]);
 
         $manageRole = factory(Role::class)->create([
-            'id'    => Role::MANAGE,
+            'id' => Role::MANAGE,
             'title' => 'Manage'
         ]);
 
@@ -1204,7 +1206,7 @@ class PersonControllerTest extends TestCase
 
         factory(PersonRole::class)->create([
             'person_id' => $adminPerson->id,
-            'role_id'   => Role::ADMIN
+            'role_id' => Role::ADMIN
         ]);
 
         $response = $this->json('GET', 'person/by-role');
@@ -1213,7 +1215,7 @@ class PersonControllerTest extends TestCase
         $response->assertJson([
             'roles' => [
                 [
-                    'id'    => Role::ADMIN,
+                    'id' => Role::ADMIN,
                     'title' => 'Admin',
                     'people' => [
                         [
@@ -1223,7 +1225,7 @@ class PersonControllerTest extends TestCase
                     ]
                 ],
                 [
-                    'id'    => Role::MANAGE,
+                    'id' => Role::MANAGE,
                     'title' => 'Manage',
                     'people' => [
                         [
@@ -1244,15 +1246,15 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::MANAGE);
 
-        $deceased = factory(Person::class)->create([ 'status' => 'deceased' ]);
-        $inactive = factory(Person::class)->create([ 'status' => 'inactive' ]);
+        $deceased = factory(Person::class)->create(['status' => 'deceased']);
+        $inactive = factory(Person::class)->create(['status' => 'inactive']);
         $response = $this->json('GET', 'person/by-status');
         $response->assertStatus(200);
 
         $response->assertJson([
             'statuses' => [
                 [
-                    'status'    => 'active',
+                    'status' => 'active',
                     'people' => [
                         [
                             'id' => $this->user->id,
@@ -1261,7 +1263,7 @@ class PersonControllerTest extends TestCase
                     ]
                 ],
                 [
-                    'status'    => 'deceased',
+                    'status' => 'deceased',
                     'people' => [
                         [
                             'id' => $deceased->id,
@@ -1270,7 +1272,7 @@ class PersonControllerTest extends TestCase
                     ]
                 ],
                 [
-                    'status'    => 'inactive',
+                    'status' => 'inactive',
                     'people' => [
                         [
                             'id' => $inactive->id,
@@ -1290,13 +1292,13 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::MANAGE);
 
-        $personEnglish = factory(Person::class)->create([ 'on_site' => 1 ]);
+        $personEnglish = factory(Person::class)->create(['on_site' => 1]);
         factory(PersonLanguage::class)->create([
             'person_id' => $personEnglish->id,
             'language_name' => 'English'
         ]);
 
-        $personFrench = factory(Person::class)->create([ 'on_site' => 1 ]);
+        $personFrench = factory(Person::class)->create(['on_site' => 1]);
         factory(PersonLanguage::class)->create([
             'person_id' => $personFrench->id,
             'language_name' => 'French'
@@ -1308,20 +1310,20 @@ class PersonControllerTest extends TestCase
         $response->assertJson([
             'languages' => [
                 [
-                    'language'  => 'English',
-                    'people'    => [
+                    'language' => 'English',
+                    'people' => [
                         [
-                            'id'    => $personEnglish->id,
+                            'id' => $personEnglish->id,
                             'callsign' => $personEnglish->callsign
                         ]
                     ]
                 ],
 
                 [
-                    'language'  => 'French',
-                    'people'    => [
+                    'language' => 'French',
+                    'people' => [
                         [
-                            'id'    => $personFrench->id,
+                            'id' => $personFrench->id,
                             'callsign' => $personFrench->callsign
                         ]
                     ]
@@ -1340,55 +1342,55 @@ class PersonControllerTest extends TestCase
 
         // Create a current timesheet so test account does not appear in any list.
         factory(Timesheet::class)->create([
-            'person_id'   => $this->user->id,
+            'person_id' => $this->user->id,
             'position_id' => Position::DIRT,
-            'on_duty'     => date('Y-01-01 10:00:00'),
-            'off_duty'    => date('Y-01-01 11:00:00')
+            'on_duty' => date('Y-01-01 10:00:00'),
+            'off_duty' => date('Y-01-01 11:00:00')
         ]);
 
         $year = date('Y');
 
         // Inactive recommendation - an active account who has not worked in the last 3 years but may have worked in the last 5.
         $inactive = factory(Person::class)->create([
-            'status'    => Person::ACTIVE
+            'status' => Person::ACTIVE
         ]);
 
         $inactiveYear = $year - 5;
         factory(Timesheet::class)->create([
-            'person_id'   => $inactive->id,
+            'person_id' => $inactive->id,
             'position_id' => Position::DIRT,
-            'on_duty'     => date("$inactiveYear-09-01 10:00:00"),
-            'off_duty'    => date("$inactiveYear-09-01 11:00:00"),
+            'on_duty' => date("$inactiveYear-09-01 10:00:00"),
+            'off_duty' => date("$inactiveYear-09-01 11:00:00"),
         ]);
 
         // Retirement recommendation - an inactive account who has not worked in the last 5 years.
         $retired = factory(Person::class)->create([
-            'status'    => Person::INACTIVE
+            'status' => Person::INACTIVE
         ]);
 
         $retiredYear = $year - 6;
         factory(Timesheet::class)->create([
-            'person_id'   => $retired->id,
+            'person_id' => $retired->id,
             'position_id' => Position::DIRT,
-            'on_duty'     => date("$retiredYear-09-01 10:00:00"),
-            'off_duty'    => date("$retiredYear-09-01 11:00:00"),
+            'on_duty' => date("$retiredYear-09-01 10:00:00"),
+            'off_duty' => date("$retiredYear-09-01 11:00:00"),
         ]);
 
         // Active recommendation - an inactive account that worked this last year.
         $active = factory(Person::class)->create([
-            'status'    => Person::INACTIVE
+            'status' => Person::INACTIVE
         ]);
 
         factory(Timesheet::class)->create([
-            'person_id'   => $active->id,
+            'person_id' => $active->id,
             'position_id' => Position::DIRT,
-            'on_duty'     => date('Y-09-01 10:00:00'),
-            'off_duty'    => date('Y-09-01 11:00:00'),
+            'on_duty' => date('Y-09-01 10:00:00'),
+            'off_duty' => date('Y-09-01 11:00:00'),
         ]);
 
         // Past Prospective recommendation - any bonked, alpha, prospective account
         $pastProspective = factory(Person::class)->create([
-                'status'     => 'prospective'
+            'status' => 'prospective'
         ]);
 
         $vintage = factory(Person::class)->create();
@@ -1396,20 +1398,20 @@ class PersonControllerTest extends TestCase
             factory(Timesheet::class)->create([
                 'person_id' => $vintage->id,
                 'position_id' => Position::DIRT,
-                'on_duty'   => date("$workYear-01-01 10:00:00"),
-                'off_duty'   => date("$workYear-01-01 11:00:00")
+                'on_duty' => date("$workYear-01-01 10:00:00"),
+                'off_duty' => date("$workYear-01-01 11:00:00")
             ]);
         }
 
         // Mark callsign as vintage - any active who has worked for
-        $response = $this->json('GET', 'person/by-status-change', [ 'year' => $year ]);
+        $response = $this->json('GET', 'person/by-status-change', ['year' => $year]);
 
         $response->assertJson([
-            'inactives' => [[ 'id' => $inactive->id, 'last_year' => $inactiveYear ]],
-            'retired' => [[ 'id' => $retired->id, 'last_year' => $retiredYear ]],
-            'actives' => [[ 'id' => $active->id, 'last_year' => $year ]],
-            'past_prospectives' => [[ 'id' => $pastProspective->id ]],
-            'vintage'   => [[ 'id' => $vintage->id ]]
+            'inactives' => [['id' => $inactive->id, 'last_year' => $inactiveYear]],
+            'retired' => [['id' => $retired->id, 'last_year' => $retiredYear]],
+            'actives' => [['id' => $active->id, 'last_year' => $year]],
+            'past_prospectives' => [['id' => $pastProspective->id]],
+            'vintage' => [['id' => $vintage->id]]
         ]);
     }
 }

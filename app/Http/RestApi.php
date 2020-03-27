@@ -26,7 +26,9 @@ class RestApi
                 foreach ($messages as $message) {
                     $errorRows[] = [
                         'title' => $message,
-                        'source' => "/data/attributes/$field",
+                        'source' => [
+                            'pointer' => "/data/attributes/$field"
+                        ],
                         'code'  => 422,
                     ];
                 }

@@ -136,7 +136,6 @@ class ActionLog extends Model
                 $row->position = Position::where('id', $data['position_id'])->first();
             }
 
-            error_log("ROLES ".$row->id);
             if (isset($data['role_ids']) && is_array($data['role_ids'])) {
                 $row->roles = Role::whereIn('id', array_values($data['role_ids']))->orderBy('title')->get(['id', 'title']);
             }

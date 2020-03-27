@@ -141,7 +141,7 @@ class SlotControllerTest extends TestCase
                 [
                     'title' => 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.',
                     'source' => [
-                        'pointer' => 'data/attributes/begins'
+                        'pointer' => '/data/attributes/begins'
                     ]
                 ]
             ]

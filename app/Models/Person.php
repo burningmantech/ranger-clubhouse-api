@@ -20,6 +20,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
+use InvalidArgumentException;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 use App\Helpers\SqlHelper;
@@ -135,29 +136,29 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $casts = [
-        'active_next_event'           => 'boolean',
-        'asset_authorized'            => 'boolean',
-        'behavioral_agreement'         => 'boolean',
-        'callsign_approved'           => 'boolean',
-        'has_note_on_file'            => 'boolean',
-        'on_site'                     => 'boolean',
-        'osha10'                      => 'boolean',
-        'osha30'                      => 'boolean',
-        'sandman_affidavit'           => 'boolean',
-        'user_authorized'             => 'boolean',
-        'vehicle_blacklisted'         => 'boolean',
+        'active_next_event' => 'boolean',
+        'asset_authorized' => 'boolean',
+        'behavioral_agreement' => 'boolean',
+        'callsign_approved' => 'boolean',
+        'has_note_on_file' => 'boolean',
+        'on_site' => 'boolean',
+        'osha10' => 'boolean',
+        'osha30' => 'boolean',
+        'sandman_affidavit' => 'boolean',
+        'user_authorized' => 'boolean',
+        'vehicle_blacklisted' => 'boolean',
         'vehicle_insurance_paperwork' => 'boolean',
-        'vehicle_paperwork'           => 'boolean',
+        'vehicle_paperwork' => 'boolean',
 
 
-        'create_date'                 => 'datetime',
-        'date_verified'               => 'date',
-        'status_date'                 => 'date',
-        'message_updated_at'          => 'datetime',
-        'timestamp'                   => 'timestamp',
-        'logged_in_at'                => 'datetime',
-        'last_seen_at'                => 'datetime',
-        'lms_course_expiry'           => 'datetime'
+        'create_date' => 'datetime',
+        'date_verified' => 'date',
+        'status_date' => 'date',
+        'message_updated_at' => 'datetime',
+        'timestamp' => 'timestamp',
+        'logged_in_at' => 'datetime',
+        'last_seen_at' => 'datetime',
+        'lms_course_expiry' => 'datetime'
     ];
 
     /*
@@ -213,7 +214,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'vehicle_paperwork',
         'vehicle_insurance_paperwork',
 
-         // various external services identifiers
+        // various external services identifiers
         'bpguid',
         'sfuid',
         'lms_id',
@@ -227,22 +228,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'known_pnvs',
 
         // 'meta' objects
-       'languages',
+        'languages',
 
-       // SMS fields
-       'sms_on_playa',
-       'sms_off_playa',
-       'sms_on_playa_verified',
-       'sms_off_playa_verified',
-       'sms_on_playa_stopped',
-       'sms_off_playa_stopped',
-       'sms_on_playa_code',
-       'sms_off_playa_code',
+        // SMS fields
+        'sms_on_playa',
+        'sms_off_playa',
+        'sms_on_playa_verified',
+        'sms_off_playa_verified',
+        'sms_on_playa_stopped',
+        'sms_off_playa_stopped',
+        'sms_on_playa_code',
+        'sms_off_playa_code',
 
-       // Certifications
-       'osha10',
-       'osha30',
-       'sandman_affidavit'
+        // Certifications
+        'osha10',
+        'osha30',
+        'sandman_affidavit'
     ];
 
     const SEARCH_FIELDS = [
@@ -259,32 +260,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $rules = [
-        'callsign'   => 'required|string|max:64',
+        'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',
-        'status'     => 'required|string',
+        'status' => 'required|string',
         'formerly_known_as' => 'sometimes|string|nullable|max:200',
 
         'first_name' => 'required|string|max:25',
-        'mi'         => 'sometimes|string|nullable|max:10',
-        'last_name'  => 'required|string|max:25',
+        'mi' => 'sometimes|string|nullable|max:10',
+        'last_name' => 'required|string|max:25',
 
-        'email'      => 'required|string|max:50',
+        'email' => 'required|string|max:50',
 
-        'street1'    => 'required|string|nullable|max:128',
-        'street2'    => 'sometimes|string|nullable|max:128',
-        'apt'        => 'sometimes|string|nullable|max:10',
-        'city'       => 'required|string|max:50',
+        'street1' => 'required|string|nullable|max:128',
+        'street2' => 'sometimes|string|nullable|max:128',
+        'apt' => 'sometimes|string|nullable|max:10',
+        'city' => 'required|string|max:50',
 
-        'state'      => 'state_for_country:live_only',
-        'country'    => 'required|string|max:25',
+        'state' => 'state_for_country:live_only',
+        'country' => 'required|string|max:25',
 
         'has_reviewed_pi' => 'sometimes|boolean',
 
         'home_phone' => 'sometimes|string|max:25',
-        'alt_phone'  => 'sometimes|string|nullable|max:25',
+        'alt_phone' => 'sometimes|string|nullable|max:25',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
-        'gender'    => 'sometimes|string|nullable|max:32',
+        'gender' => 'sometimes|string|nullable|max:32',
 
     ];
 
@@ -315,10 +316,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         parent::boot();
 
         self::creating(function ($model) {
-            // TODO - adjust person schema to default to current timestamp
-            if ($model->attributes == null || empty($model->attributes['create_date'])) {
-                $model->create_date = SqlHelper::now();
-            }
+            $model->create_date = SqlHelper::now();
         });
 
         self::saving(function ($model) {
@@ -341,8 +339,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
              */
 
             if ($model->isDirty('status')
-            && $model->status == Person::PAST_PROSPECTIVE
-            && !$model->isDirty('callsign')) {
+                && $model->status == Person::PAST_PROSPECTIVE
+                && !$model->isDirty('callsign')) {
                 $model->resetCallsign();
                 $model->callsign_approved = false;
             }
@@ -350,10 +348,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-      * Get the identifier that will be stored in the subject claim of the JWT.
-      *
-      * @return mixed
-      */
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
 
     public function getJWTIdentifier(): string
     {
@@ -375,7 +373,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->hasMany(PersonPosition::class);
     }
 
-    public function person_photo() {
+    public function person_photo()
+    {
         return $this->belongsTo(PersonPhoto::class);
     }
 
@@ -397,6 +396,35 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         return null;
+    }
+
+    public function save($options = [])
+    {
+        $isNew = !$this->id;
+        if ($isNew) {
+            // Creating record = require callsign & email
+            $this->rules['callsign'] = 'required|string|unique:person,callsign';
+            $this->rules['email'] = 'required|string|unique:person,email';
+        } else {
+            if ($this->isDirty('callsign')) {
+                // updating a callsign on an existing record
+                $this->rules['callsign'] = 'required|string|unique:person,callsign,' . $this->id;
+            }
+            if ($this->isDirty('email')) {
+                $this->rules['email'] = 'required|string|unique:person,email,' . $this->id;
+            }
+        }
+
+        $result = parent::save($options);
+
+        if ($isNew) {
+            // Kill the rules in case the newly recreated record is updated further, otherwise
+            // the callsign & email rules will be acted upon and always fail.
+            unset($this->rules['callsign']);
+            unset($this->rules['email']);
+        }
+
+        return $result;
     }
 
     /*
@@ -442,12 +470,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     $total = $limit = 0;
                 }
                 return [
-                    'people'   => $person ? [ $person ] : [],
-                    'total'    => $total,
-                    'limit'    => $limit
+                    'people' => $person ? [$person] : [],
+                    'total' => $total,
+                    'limit' => $limit
                 ];
             }
-            $likeQuery = '%'.$q.'%';
+            $likeQuery = '%' . $q . '%';
 
             $emailOnly = (stripos($q, '@') !== false);
             if ($emailOnly) {
@@ -462,7 +490,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
-                            throw new \InvalidArgumentException("Search field '$field' is not allowed.");
+                            throw new InvalidArgumentException("Search field '$field' is not allowed.");
                         }
 
                         if ($field == 'name') {
@@ -473,14 +501,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                                 $name = explode(' ', $q);
                                 $sql->orWhere(function ($cond) use ($name) {
                                     $cond->where([
-                                            [ 'first_name', 'like', '%'.$name[0].'%' ],
-                                            [ 'last_name', 'like', '%'.$name[1].'%' ]
-                                        ]);
+                                        ['first_name', 'like', '%' . $name[0] . '%'],
+                                        ['last_name', 'like', '%' . $name[1] . '%']
+                                    ]);
                                 });
                             }
                         } elseif ($field == 'callsign') {
                             $sql->orWhere('callsign_normalized', $normalized);
-                            $sql->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
+                            $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
                             $sql->orWhere('callsign_soundex', $metaphone);
                         } else {
                             $sql->orWhere($field, 'like', $likeQuery);
@@ -493,11 +521,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             $orderBy = "CASE";
             if ($emailOnly) {
-                $orderBy .= " WHEN email=".SqlHelper::quote($q)." THEN CONCAT('00', callsign)";
-                $orderBy .= " WHEN email like ".SqlHelper::quote($likeQuery)." THEN CONCAT('03', callsign)";
+                $orderBy .= " WHEN email=" . SqlHelper::quote($q) . " THEN CONCAT('00', callsign)";
+                $orderBy .= " WHEN email like " . SqlHelper::quote($likeQuery) . " THEN CONCAT('03', callsign)";
             }
-            $orderBy .= " WHEN callsign_normalized=".SqlHelper::quote($normalized)." THEN CONCAT('01', callsign)";
-            $orderBy .= " WHEN callsign_soundex=".SqlHelper::quote($metaphone)." THEN CONCAT('02', callsign)";
+            $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
+            $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
@@ -529,9 +557,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $sql->limit($limit);
 
         return [
-            'people'   => $sql->get(),
-            'total'    => $total,
-            'limit'    => $limit
+            'people' => $sql->get(),
+            'total' => $total,
+            'limit' => $limit
         ];
     }
 
@@ -551,7 +579,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function searchCallsigns($query, $type, $limit)
     {
-        $like = '%'.$query.'%';
+        $like = '%' . $query . '%';
 
         $normalized = self::normalizeCallsign($query);
         $metaphone = metaphone($normalized);
@@ -562,33 +590,33 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $orderBy .= " ELSE callsign END";
 
         $sql = DB::table('person')
-                ->where(function ($q) use ($query, $like, $normalized, $metaphone) {
-                    $q->orWhere('callsign_soundex', $metaphone);
-                    $q->orWhere('callsign_normalized', $normalized);
-                    $q->orWhere('callsign_normalized', 'like', '%'.$normalized.'%');
-                })->limit($limit)
-                ->orderBy(DB::raw($orderBy));
+            ->where(function ($q) use ($query, $like, $normalized, $metaphone) {
+                $q->orWhere('callsign_soundex', $metaphone);
+                $q->orWhere('callsign_normalized', $normalized);
+                $q->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
+            })->limit($limit)
+            ->orderBy(DB::raw($orderBy));
 
         switch ($type) {
             case 'contact':
                 return $sql->select('person.id', 'callsign', DB::raw('IF(person.status="inactive", true,false) as is_inactive'), DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
-                        ->whereIn('status', [ 'active', 'inactive' ])
-                        ->where('user_authorized', true)
-                        ->leftJoin('alert_person', function ($join) {
-                            $join->whereRaw('alert_person.person_id=person.id');
-                            $join->where('alert_person.alert_id', '=', Alert::RANGER_CONTACT);
-                        })->get()->toArray();
+                    ->whereIn('status', ['active', 'inactive'])
+                    ->where('user_authorized', true)
+                    ->leftJoin('alert_person', function ($join) {
+                        $join->whereRaw('alert_person.person_id=person.id');
+                        $join->where('alert_person.alert_id', '=', Alert::RANGER_CONTACT);
+                    })->get()->toArray();
 
             // Trying to send a clubhouse message
             case 'message':
-                return $sql->whereIn('status', [ 'active', 'inactive', 'alpha' ])->get(['id', 'callsign']);
+                return $sql->whereIn('status', ['active', 'inactive', 'alpha'])->get(['id', 'callsign']);
 
             // Search all users
             case 'all':
                 return $sql->get(['id', 'callsign']);
         }
 
-        throw new \InvalidArgumentException("Unknown type [$type]");
+        throw new InvalidArgumentException("Unknown type [$type]");
     }
 
     public static function retrievePeopleByLocation($year)
@@ -605,7 +633,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'zip',
             'country',
             DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
-            DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != ".Position::ALPHA." WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
+            DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != " . Position::ALPHA . " WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
         )
             ->orderBy('country')
             ->orderBy('state')
@@ -617,21 +645,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public static function retrievePeopleByRole()
     {
         $roleGroups = DB::table('role')
-                ->select('role.id as role_id', 'role.title', 'person.id as person_id', 'person.callsign')
-                ->join('person_role', 'person_role.role_id', 'role.id')
-                ->join('person', 'person.id', 'person_role.person_id')
-                ->orderBy('callsign')
-                ->get()
-                ->groupBy('role_id');
+            ->select('role.id as role_id', 'role.title', 'person.id as person_id', 'person.callsign')
+            ->join('person_role', 'person_role.role_id', 'role.id')
+            ->join('person', 'person.id', 'person_role.person_id')
+            ->orderBy('callsign')
+            ->get()
+            ->groupBy('role_id');
 
         $roles = [];
         foreach ($roleGroups as $roleId => $group) {
             $roles[] = [
-                    'id'    => $roleId,
-                    'title' => $group[0]->title,
-                    'people' => $group->map(function ($row) {
-                        return [ 'id' => $row->person_id, 'callsign' => $row->callsign ];
-                    })->values()
+                'id' => $roleId,
+                'title' => $group[0]->title,
+                'people' => $group->map(function ($row) {
+                    return ['id' => $row->person_id, 'callsign' => $row->callsign];
+                })->values()
             ];
         }
 
@@ -644,15 +672,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public static function retrievePeopleByStatus()
     {
         $statusGroups = self::select('id', 'callsign', 'status')
-                ->orderBy('status')
-                ->orderBy('callsign')
-                ->get()
-                ->groupBy('status');
+            ->orderBy('status')
+            ->orderBy('callsign')
+            ->get()
+            ->groupBy('status');
 
         return $statusGroups->sortKeys()->map(function ($group, $status) {
             return [
-                'status'    => $status,
-                'people'    => $group->map(function ($row) {
+                'status' => $status,
+                'people' => $group->map(function ($row) {
                     return [
                         'id' => $row->id,
                         'callsign' => $row->callsign
@@ -683,11 +711,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $lastYear,
             $yearsRangered
         )->where('status', 'active')
-                ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year ])
-                ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 5, $year - 4])
-                ->orderBy('callsign')
-                ->get()
-                ->filter($filterTestAccounts)->values();
+            ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 3, $year])
+            ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 5, $year - 4])
+            ->orderBy('callsign')
+            ->get()
+            ->filter($filterTestAccounts)->values();
 
         // Retired means that you have not rangered in any of the last 5 events
         $retired = Person::select(
@@ -698,33 +726,33 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'vintage',
             $lastYear,
             $yearsRangered
-        )->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ])
-                ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 5, $year ])
-                ->orderBy('callsign')
-                ->get()
-                ->filter($filterTestAccounts)->values();
+        )->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION])
+            ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 5, $year])
+            ->orderBy('callsign')
+            ->get()
+            ->filter($filterTestAccounts)->values();
 
 
         // Mark as vintage are people who have been active for 10 years or more.
         $vintage = DB::table('timesheet')
-                ->select(
-                    'person_id as id',
-                    'callsign',
-                    'status',
-                    'email',
-                    'vintage',
-                    DB::raw('YEAR(MAX(on_duty)) AS last_year'),
-                    DB::raw('count(distinct(YEAR(on_duty))) as years')
-                )
-                ->join('person', 'person.id', 'timesheet.person_id')
-                ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE ])
-                ->whereNotIn('position_id', [ Position::ALPHA, Position::TRAINING ])
-                ->where('vintage', false)
-                ->groupBy([ 'person_id', 'callsign', 'status', 'email', 'vintage' ])
-                ->havingRaw('count(distinct(YEAR(on_duty))) >= 10')
-                ->orderBy('callsign')
-                ->get()
-                ->filter($filterTestAccounts)->values();
+            ->select(
+                'person_id as id',
+                'callsign',
+                'status',
+                'email',
+                'vintage',
+                DB::raw('YEAR(MAX(on_duty)) AS last_year'),
+                DB::raw('count(distinct(YEAR(on_duty))) as years')
+            )
+            ->join('person', 'person.id', 'timesheet.person_id')
+            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
+            ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
+            ->where('vintage', false)
+            ->groupBy(['person_id', 'callsign', 'status', 'email', 'vintage'])
+            ->havingRaw('count(distinct(YEAR(on_duty))) >= 10')
+            ->orderBy('callsign')
+            ->get()
+            ->filter($filterTestAccounts)->values();
 
         // People who have been active in the last three events yet are listed as inactive
         $actives = Person::select(
@@ -735,24 +763,24 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             'vintage',
             $lastYear,
             $yearsRangered
-        )->whereIn('status', [ Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED ])
-                ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [ $year - 3, $year])
-                ->orderBy('callsign')
-                ->get()
-                ->filter($filterTestAccounts)->values();
+        )->whereIn('status', [Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
+            ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 3, $year])
+            ->orderBy('callsign')
+            ->get()
+            ->filter($filterTestAccounts)->values();
 
         $pastProspectives = Person::select('id', 'callsign', 'status', 'email')
-                    ->whereIn('status', [ Person::BONKED, Person::ALPHA, Person::PROSPECTIVE ])
-                    ->orderBy('callsign')
-                    ->get()
-                    ->filter($filterTestAccounts)->values();
+            ->whereIn('status', [Person::BONKED, Person::ALPHA, Person::PROSPECTIVE])
+            ->orderBy('callsign')
+            ->get()
+            ->filter($filterTestAccounts)->values();
 
         return [
-            'inactives'         => $inactives,
-            'retired'           => $retired,
-            'actives'           => $actives,
+            'inactives' => $inactives,
+            'retired' => $retired,
+            'actives' => $actives,
             'past_prospectives' => $pastProspectives,
-            'vintage'           => $vintage
+            'vintage' => $vintage
         ];
     }
 
@@ -776,7 +804,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         list($salt, $sha) = explode(':', $encyptedPw);
-        $hashedPw = sha1($salt.$password);
+        $hashedPw = sha1($salt . $password);
 
         return ($hashedPw == $sha);
     }
@@ -784,7 +812,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function changePassword(string $password): bool
     {
         $salt = self::generateRandomString();
-        $sha = sha1($salt.$password);
+        $sha = sha1($salt . $password);
 
         $this->password = "$salt:$sha";
         $this->tpassword = '';
@@ -796,7 +824,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     {
         $resetPassword = self::generateRandomString();
         $salt = self::generateRandomString();
-        $sha = sha1($salt.$resetPassword);
+        $sha = sha1($salt . $resetPassword);
 
         $this->tpassword = "$salt:$sha";
         $this->tpassword_expire = time() + self::RESET_PASSWORD_EXPIRE;
@@ -842,19 +870,19 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->hasRole(Role::ADMIN);
     }
 
-    public function isPNV() : bool
+    public function isPNV(): bool
     {
         $status = $this->status;
 
         return ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
     }
 
-    public function isAuditor() : bool
+    public function isAuditor(): bool
     {
         return ($this->status == Person::AUDITOR);
     }
 
-    public function isInactive() : bool
+    public function isInactive(): bool
     {
         $status = $this->status;
 
@@ -870,7 +898,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     {
         $length = 10;
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $max = strlen($characters)-1;
+        $max = strlen($characters) - 1;
         $token = '';
         for ($i = 0; $i < $length; $i++) {
             $token .= $characters[mt_rand(0, $max)];
@@ -945,13 +973,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
                 // First-year Alphas get the Dirt - Shiny Penny position
                 if ($oldStatus == Person::ALPHA) {
-                    PersonPosition::addIdsToPerson($personId, [ Position::DIRT_SHINY_PENNY ], $changeReason);
+                    PersonPosition::addIdsToPerson($personId, [Position::DIRT_SHINY_PENNY], $changeReason);
                 }
                 break;
 
             case Person::ALPHA:
                 // grant the alpha the alpha position
-                PersonPosition::addIdsToPerson($personId, [ Position::ALPHA ], $changeReason);
+                PersonPosition::addIdsToPerson($personId, [Position::ALPHA], $changeReason);
                 break;
 
             case Person::UBERBONKED:
@@ -974,13 +1002,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
                 break;
 
-        // Note that it used to be that changing status to INACTIVE
-        // removed all of your positions other than "Training."  We decided
-        // in 2015 not to do this anymore because we lose too much historical
-        // information.
+            // Note that it used to be that changing status to INACTIVE
+            // removed all of your positions other than "Training."  We decided
+            // in 2015 not to do this anymore because we lose too much historical
+            // information.
 
-        // If you are one of the below, the only role you get is login
-        // and position is Training
+            // If you are one of the below, the only role you get is login
+            // and position is Training
             case Person::RETIRED:
             case Person::AUDITOR:
             case Person::PROSPECTIVE:
@@ -996,7 +1024,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         if ($oldStatus == Person::ALPHA) {
             // if you're no longer an alpha, you can't sign up for alpha shifts
-            PersonPosition::removeIdsFromPerson($personId, [ Position::ALPHA ], $reason . ' no longer alpha');
+            PersonPosition::removeIdsFromPerson($personId, [Position::ALPHA], $reason . ' no longer alpha');
         }
     }
 
@@ -1022,7 +1050,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             if ($tries > 0) {
                 $newCallsign .= $tries + 1;
             }
-            $newCallsign .= substr($this->first_name, 0, 1) .  $year;
+            $newCallsign .= substr($this->first_name, 0, 1) . $year;
             if ($this->status == Person::BONKED) {
                 $newCallsign .= 'B';
             } else if ($this->status == Person::AUDITOR) {
@@ -1057,7 +1085,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 if (empty($fka)) {
                     $this->formerly_known_as = $oldCallsign;
                 } elseif (strpos($fka, $oldCallsign) === false) {
-                    $this->formerly_known_as = $fka.','.$oldCallsign;
+                    $this->formerly_known_as = $fka . ',' . $oldCallsign;
                 }
             }
         }
@@ -1119,31 +1147,34 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $gender;
     }
 
-    public function formerlyKnownAsArray($filter=false) {
+    public function formerlyKnownAsArray($filter = false)
+    {
         return self::splitCommas($this->formerly_known_as, $filter);
     }
 
-    public function knownPnvsArray() {
+    public function knownPnvsArray()
+    {
         return self::splitCommas($this->known_pnvs);
     }
 
-    public function knownRangersArray() {
+    public function knownRangersArray()
+    {
         return self::splitCommas($this->known_rangers);
     }
 
-    public static function splitCommas($str, $filter=false)
+    public static function splitCommas($str, $filter = false)
     {
         if (empty($str)) {
             return [];
         }
 
-        $names =  preg_split('/\s*,\s*/', trim($str));
+        $names = preg_split('/\s*,\s*/', trim($str));
         if (!$filter) {
             return $names;
         }
 
         return array_values(array_filter($names, function ($name) {
-           return !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name);
+            return !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name);
         }));
     }
 

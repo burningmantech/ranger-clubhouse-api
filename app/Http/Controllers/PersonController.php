@@ -153,15 +153,6 @@ class PersonController extends ApiController
     {
         $this->authorize('update', $person);
 
-        $params = request()->validate(
-            [
-                'person.email' => 'sometimes|email|unique:person,email,' . $person->id . ',id'
-            ],
-            [
-                'person.email.unique' => 'The email address is already used by another account'
-            ]
-        );
-
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
 
@@ -602,19 +593,11 @@ class PersonController extends ApiController
             throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
-        if (Person::emailExists($person->email)) {
-            // An account already exists with the same email..
-            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'duplicate email', $person, $intent));
-            $this->log('person-create-fail', 'duplicate email', ['person' => $params['person']]);
-            return response()->json(['status' => 'email-exists']);
-        }
 
         // make the callsign for an auditor.
         if ($person->status == 'auditor') {
             $person->resetCallsign();
         }
-
-        $person->create_date = SqlHelper::now();
 
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
@@ -646,7 +629,7 @@ class PersonController extends ApiController
     }
 
     /*
-     * Prospecitve / Alpha estimated shirts report
+     * Prospective / Alpha estimated shirts report
      */
 
     public function alphaShirts()
