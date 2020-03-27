@@ -32,7 +32,7 @@ class TicketingController extends ApiController
                 'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_WAPDateRange', 'TAS_DefaultAlphaWAPDate',
                 'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
                 'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
-                'RpTicketThreshold', 'ScTicketThreshold', 'YrTicketThreshold', 'YrTicketThreshold',
+                'RpTicketThreshold', 'ScTicketThreshold',
                 'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
                 'TAS_Pickup_Locations'
             ]);
@@ -62,8 +62,6 @@ class TicketingController extends ApiController
 
                 'rpt_credits'            => $settings['RpTicketThreshold'],
                 'sc_credits'             => $settings['ScTicketThreshold'],
-                'earned_year'            => $settings['YrTicketThreshold'] - 1,
-                'upcoming_year'          => $settings['YrTicketThreshold'],
 
                 'pickup_locations'       => $settings['TAS_Pickup_Locations'],
 
@@ -149,7 +147,7 @@ class TicketingController extends ApiController
             return $this->buildSOWAPEntry($so);
         })->values()->all();
 
-        $year = setting('YrTicketThreshold') - 1;
+        $year = event_year() - 1;
         $credits = Timesheet::earnedCreditsForYear($person->id, $year);
 
         $package = [
