@@ -822,15 +822,19 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    private function setupPhotoStatus($status)
+    private function setupPhotoStatus($status, $person=null)
     {
+        if ($person == null) {
+            $person = $this->user;
+        }
+
         $photo = factory(PersonPhoto::class)->create([
-            'person_id' => $this->user->id,
+            'person_id' => $person->id,
             'status' => $status,
         ]);
 
-        $this->user->person_photo_id = $photo->id;
-        $this->user->saveWithoutValidation();
+        $person->person_photo_id = $photo->id;
+        $person->saveWithoutValidation();
     }
 
     private function mockOnlineTrainingPass($result)
@@ -941,10 +945,13 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
-        $photoMock = $this->setupPhotoStatus('approved');
+        $person = factory(Person::class)->create([ 'behavioral_agreement' => false ]);
+        $this->actingAs($person); // login
+
+        $photoMock = $this->setupPhotoStatus('approved', $person);
         $mrMock = $this->mockOnlineTrainingPass(true);
-        $this->user->update(['behavioral_agreement' => false]);
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+
+        $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year
         ]);
 
@@ -963,11 +970,12 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
-        $this->user->update(['status' => 'auditor']);
+        $person = factory(Person::class)->create([ 'status' => Person::AUDITOR ]);
+        $this->actingAs($person);
 
         $mrMock = $this->mockOnlineTrainingPass(true);
 
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
+        $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year
         ]);
 
@@ -1064,17 +1072,18 @@ class PersonScheduleControllerTest extends TestCase
      * Do NOT recommend working a Burn Weekend shift is none is present in the schedule for a non ranger
      */
 
-    public function testRecommendBurnWeekendShiftForNonRanger()
+    public function testDoNotRecommendBurnWeekendShiftForNonRanger()
     {
         $year = $this->year;
 
-        $photoMock = $this->setupPhotoStatus('approved');
-        $this->user->update(['status' => Person::NON_RANGER]);
+        $person = factory(Person::class)->create([ 'status' => Person::NON_RANGER]);
+        $this->actingAs($person);
+        $photoMock = $this->setupPhotoStatus('approved', $person);
 
         $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
 
         // Check for scheduling
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
+        $response = $this->json('GET', "person/{$person->id}/schedule/permission", ['year' => $year]);
 
         $response->assertStatus(200);
         $response->assertJson([
@@ -1084,7 +1093,7 @@ class PersonScheduleControllerTest extends TestCase
         ]);
 
         // And the HQ interface
-        $response = $this->json('GET', "person/{$this->user->id}/schedule/recommendations");
+        $response = $this->json('GET', "person/{$person->id}/schedule/recommendations");
 
         $response->assertStatus(200);
         $response->assertJson(['burn_weekend_shift' => false]);

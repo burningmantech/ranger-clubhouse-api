@@ -181,7 +181,7 @@ class ApiController extends Controller
                     $payload[] = [
                         'title'   => $message,
                         'source'  => [
-                            'pointer' => "data/attributes/${column}",
+                            'pointer' => "/data/attributes/${column}",
                         ],
                         'status'  => $status,
                     ];
