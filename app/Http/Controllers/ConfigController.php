@@ -29,8 +29,7 @@ class ConfigController extends Controller
         'RpTicketThreshold',
         'ScTicketThreshold',
         'TrainingAcademyEmail',
-        'VCEmail',
-        'YrTicketThreshold',
+        'VCEmail'
     ];
 
     public function show() {

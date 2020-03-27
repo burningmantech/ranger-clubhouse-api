@@ -72,7 +72,7 @@ if (!function_exists('mail_to')) {
  */
 
 if (!function_exists('current_year')) {
-    function current_year()
+    function current_year() : int
     {
         static $year;
 
@@ -85,5 +85,23 @@ if (!function_exists('current_year')) {
             return $year;
         }
         return date('Y');
+    }
+}
+
+if (!function_exists('event_year')) {
+    function event_year() : int
+    {
+        $now = now();
+        if ($now->month >= 9) {
+            // September or later.
+            $eventEnd = (new Carbon("first Monday of September"))->addDays(7);
+
+            if ($now->gte($eventEnd)) {
+                // A week past Labor Day until the end of the year is really next year.
+                return $now->year + 1;
+            }
+        }
+
+        return $now->year;
     }
 }

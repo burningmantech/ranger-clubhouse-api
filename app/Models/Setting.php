@@ -558,11 +558,6 @@ class Setting extends ApiModel
             'description' => 'Ranger Volunteer Coordinator Address',
             'type' => 'email',
         ],
-
-        'YrTicketThreshold' => [
-            'description' => 'Event year shown in combination with RpTicketThreshold and ScTicketThreshold settings on the Schedule and Ticket Announce page. (Note: year - 1 will be shown as earned year on Ticket Announce)',
-            'type' => 'integer',
-        ],
     ];
 
     /*
