@@ -351,12 +351,16 @@ class PersonControllerTest extends TestCase
 
         $response->assertStatus(200);
 
-        Mail::assertSent(
+        Mail::assertQueued(NotifyVCEmailChangeMail::class, 1);
+        Mail::assertQueued(NotifyVCEmailChangeMail::class, function ($mail) use ($person) {
+            return $mail->person->id === $person->id;
+        });
+/*        Mail::assertSent(
             NotifyVCEmailChangeMail::class,
             function ($mail) {
                 return $mail->hasTo(setting('VCEmail'));
             }
-        );
+        );*/
     }
 
 
@@ -1057,14 +1061,10 @@ class PersonControllerTest extends TestCase
             ]
         );
 
-        Mail::assertSent(
-            AccountCreationMail::class,
-            function ($mail) {
-                return $mail->hasTo(setting('AccountCreationEmail'));
-            }
-        );
-
-        Mail::assertNotSent(WelcomeMail::class);
+        Mail::assertQueued(AccountCreationMail::class, 1);
+        Mail::assertQueued(AccountCreationMail::class, function ($mail) use ($data) {
+            return $mail->person->email === $data['person']['email'];
+        });
     }
 
 
@@ -1086,7 +1086,7 @@ class PersonControllerTest extends TestCase
         $response = $this->json('POST', 'person/register', $data);
         $response->assertStatus(422);
 
-        Mail::assertNothingSent();
+        Mail::assertNotQueued(AccountCreationMail::class);
     }
 
     /*
@@ -1112,12 +1112,7 @@ class PersonControllerTest extends TestCase
             ]
         ]]);
 
-        Mail::assertSent(
-            AccountCreationMail::class,
-            function ($mail) {
-                return $mail->hasTo(setting('AccountCreationEmail'));
-            }
-        );
+        Mail::assertQueued(AccountCreationMail::class, 1);
     }
 
     /*

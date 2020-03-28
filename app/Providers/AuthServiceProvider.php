@@ -103,7 +103,7 @@ class AuthServiceProvider extends ServiceProvider
         Training::class => TrainingPolicy::class,
         TrainingSession::class => TrainingSessionPolicy::class,
 
-        'App\Model' => 'App\Policies\ModelPolicy',
+       // 'App\Model' => 'App\Policies\ModelPolicy',
     ];
 
     /**

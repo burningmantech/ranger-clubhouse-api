@@ -60,7 +60,7 @@ class ContactController extends ApiController
          }
 
          $mail = new ContactMail($sender, $recipient, $subject,  $message);
-         if (!mail_to($recipient->email, $mail)) {
+         if (!mail_to($recipient->email, $mail, true)) {
              return $this->error('Failed to send email');
          }
 

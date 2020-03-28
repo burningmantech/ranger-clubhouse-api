@@ -223,7 +223,7 @@ class SalesforceController extends ApiController
 
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
-            mail_to($person->email, new WelcomeMail($person));
+            mail_to($person->email, new WelcomeMail($person), true);
         }
 
         $pca->chuid = $person->id;

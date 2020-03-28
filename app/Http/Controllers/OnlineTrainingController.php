@@ -87,7 +87,7 @@ class OnlineTrainingController extends ApiController
         }
 
         if (!$exists) {
-            mail_to($person->email, new OnlineTrainingEnrollmentMail($person, $type, $password));
+            mail_to($person->email, new OnlineTrainingEnrollmentMail($person, $type, $password), true);
         }
 
         return response()->json([

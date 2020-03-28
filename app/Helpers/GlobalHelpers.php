@@ -44,10 +44,11 @@ if (!function_exists('mail_to')) {
         }
 
         try {
-            if ($queueMail) {
-                Mail::to($email)->queue($message);
+            $to = Mail::to($email);
+            if ($queueMail && !env('APP_DEBUG')) {
+                $to->queue($message);
             } else {
-                Mail::to($email)->send($message);
+               $to->send($message);
             }
             return true;
         } catch (\Swift_TransportException $e) {
