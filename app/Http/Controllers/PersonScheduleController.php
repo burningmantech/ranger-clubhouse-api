@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\ApiController;
 
+use App\Jobs\TrainingSignupEmailJob;
+
 use App\Helpers\SqlHelper;
 
 use App\Models\Person;
@@ -18,7 +20,6 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
 
-use App\Mail\TrainingSignup;
 use App\Mail\TrainingSessionFullMail;
 use Illuminate\Http\Response;
 
@@ -180,8 +181,7 @@ class PersonScheduleController extends ApiController
 
         // Notify the person about the Training signing up
         if ($slot->isTraining() && !$slot->has_started) {
-            $message = new TrainingSignup($slot, setting('TrainingSignupFromEmail'));
-            mail_to($person->email, $message);
+            TrainingSignupEmailJob::dispatch($person, $slot)->delay(now()->addMinutes(5));
         }
 
         $signedUp = $result['signed_up'];
@@ -192,7 +192,7 @@ class PersonScheduleController extends ApiController
             && !$slot->has_started
             && !empty($slot->position->contact_email)) {
             // fire off an email letting the TA or ART team know a session has become full.
-            mail_to($slot->position->contact_email, new TrainingSessionFullMail($slot, $signedUp));
+            mail_to($slot->position->contact_email, new TrainingSessionFullMail($slot, $signedUp), true);
         }
 
         $response = [

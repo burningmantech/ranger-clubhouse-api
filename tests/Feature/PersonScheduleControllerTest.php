@@ -3,24 +3,22 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
-use App\Models\PositionCredit;
 use App\Models\Role;
-use App\Models\Schedule;
 use App\Models\Slot;
 
-use App\Mail\SlotSignup;
+use Illuminate\Support\Facades\Queue;
+
 use App\Mail\TrainingSessionFullMail;
-use App\Mail\TrainingSignup;
+use App\Jobs\TrainingSignupEmailJob;
 
 class PersonScheduleControllerTest extends TestCase
 {
@@ -290,10 +288,13 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
+        $personId  = $this->user->id;
+
+        Queue::fake();
 
         $response = $this->json(
             'POST',
-            "person/{$this->user->id}/schedule",
+            "person/{$personId}/schedule",
             [
                 'slot_id' => $shift->id,
             ]
@@ -305,20 +306,17 @@ class PersonScheduleControllerTest extends TestCase
         $this->assertDatabaseHas(
             'person_slot',
             [
-                'person_id' => $this->user->id,
+                'person_id' => $personId,
                 'slot_id' => $shift->id,
             ]
         );
 
-        $to = $this->user->email;
-
         // Training should not be overcapacity
-        Mail::assertNotSent(TrainingSessionFullMail::class);
+        Mail::assertNotQueued(TrainingSessionFullMail::class);
 
-        Mail::assertSent(
-            TrainingSignup::class,
-            function ($mail) use ($to) {
-                return $mail->hasTo($to);
+        Queue::assertPushed(TrainingSignupEmailJob::class,
+            function ($job) use ($personId, $shift) {
+                return $job->person->id == $personId && $job->slot->id = $shift->id;
             }
         );
     }
@@ -344,7 +342,8 @@ class PersonScheduleControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson(['status' => 'success']);
-        Mail::assertSent(TrainingSessionFullMail::class);
+
+        Mail::assertQueued(TrainingSessionFullMail::class, 1);
     }
 
 

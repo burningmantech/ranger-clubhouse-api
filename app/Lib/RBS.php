@@ -230,7 +230,6 @@ class RBS
     {
         $sandbox = setting('BroadcastMailSandbox');
 
-
         if (!$sandbox) {
             // Wrap the message in an HTML email template
             $body = (new RBSMail($subject, $message, $alert))->render();
@@ -860,7 +859,7 @@ class RBS
             $email = $person->email;
             try {
                 if (!$emailSandboxed) {
-                    mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message));
+                    mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message), true);
                 }
                 $status = Broadcast::STATUS_SENT;
             } catch (\Exception $e) {

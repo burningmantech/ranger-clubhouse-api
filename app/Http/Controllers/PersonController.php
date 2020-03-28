@@ -187,7 +187,7 @@ class PersonController extends ApiController
             if ($emailChanged
                 && $person->status == Person::PROSPECTIVE
                 && $person->id == $this->user->id) {
-                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail));
+                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
             }
 
             if ($statusChanged) {
@@ -572,13 +572,13 @@ class PersonController extends ApiController
 
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
-            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent));
+            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent), true);
             $this->log('person-create-fail', 'database creation error', ['person' => $person, 'errors' => $person->getErrors()]);
             return $this->restError($person);
         }
 
         // Log account creation
-        mail_to($accountCreateEmail, new AccountCreationMail('success', 'account created', $person, $intent));
+        mail_to($accountCreateEmail, new AccountCreationMail('success', 'account created', $person, $intent), true);
         $this->log('person-create', 'registration', null, $person->id);
 
         // Set the password
@@ -593,7 +593,7 @@ class PersonController extends ApiController
 
         // Send a welcome email to the person if not an auditor
         if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
-            mail_to($person->email, new WelcomeMail($person));
+            mail_to($person->email, new WelcomeMail($person), true);
         }
 
         return response()->json(['status' => 'success']);
