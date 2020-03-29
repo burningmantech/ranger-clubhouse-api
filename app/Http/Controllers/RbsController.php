@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
+
 use App\Http\Controllers\ApiController;
 
 use App\Lib\RBS;
+
+use App\Jobs\RBSTransmitEmailJob;
+use App\Jobs\RBSTransmitClubhouseMessageJob;
 
 use App\Models\Alert;
 use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
 use App\Models\Person;
 use App\Models\Position;
-use App\Models\Role;
 use App\Models\Slot;
-
-use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class RbsController extends ApiController
 {
@@ -25,23 +28,23 @@ class RbsController extends ApiController
     public function config()
     {
         return response()->json([
-            'config'    => [
+            'config' => [
                 // Is the event happening?
-                'is_during_event'                => RBS::isDuringEvent(),
+                'is_during_event' => RBS::isDuringEvent(),
                 // Are emails sandboxed?
-                'email_sandbox'                  => setting('BroadcastMailSandbox'),
+                'email_sandbox' => setting('BroadcastMailSandbox'),
                 // Alert users about new Clubhouse messages via email/sms?
-                'clubhouse_message_notify'       => setting('BroadcastClubhouseNotify'),
+                'clubhouse_message_notify' => setting('BroadcastClubhouseNotify'),
                 // Are Clubhouse messages sandboxed?
-                'clubhouse_message_sandbox'      => setting('BroadcastClubhouseSandbox'),
+                'clubhouse_message_sandbox' => setting('BroadcastClubhouseSandbox'),
                 // Are SMS messages sandboxed?
-                'sms_sandbox'                    => setting('BroadcastSMSSandbox'),
+                'sms_sandbox' => setting('BroadcastSMSSandbox'),
                 // Allowed SMS message size (max SMS size - sms_prefix+sms_suffix)
-                'sms_limit'                      => RBS::SMS_LIMIT,
+                'sms_limit' => RBS::SMS_LIMIT,
                 // The string prefixed to all SMS messages
-                'sms_prefix'                     => RBS::SMS_PREFIX,
+                'sms_prefix' => RBS::SMS_PREFIX,
                 // The string appeneded to all SMS messages
-                'sms_suffix'                     => RBS::SMS_SUFFIX
+                'sms_suffix' => RBS::SMS_SUFFIX
             ]
         ]);
     }
@@ -87,8 +90,8 @@ class RbsController extends ApiController
         })->get();
 
         return response()->json([
-            'unverified'    => $unverified,
-            'stopped'       => $stopped
+            'unverified' => $unverified,
+            'stopped' => $stopped
         ]);
     }
 
@@ -100,7 +103,7 @@ class RbsController extends ApiController
     {
 
         $params = request()->validate([
-            'type'  => 'required|string',
+            'type' => 'required|string',
             'count_only' => 'sometimes|boolean'
         ]);
 
@@ -110,7 +113,7 @@ class RbsController extends ApiController
         $countOnly = $params['count_only'] ?? false;
         $criteria = $this->grabCriteria($type);
 
-        return response()->json([ 'people' => RBS::retrieveRecipients($type, $criteria, $countOnly) ]);
+        return response()->json(['people' => RBS::retrieveRecipients($type, $criteria, $countOnly)]);
     }
 
     /*
@@ -121,7 +124,7 @@ class RbsController extends ApiController
     public function details()
     {
         $params = request()->validate([
-            'type'          => 'required|string'
+            'type' => 'required|string'
         ]);
 
         $type = $params['type'];
@@ -129,7 +132,7 @@ class RbsController extends ApiController
 
         // Copy over the attributes
         $info = [];
-        foreach ([ 'is_simple', 'has_status', 'has_slot', 'has_restrictions', 'has_position', 'has_muster_position'] as $attr) {
+        foreach (['is_simple', 'has_status', 'has_slot', 'has_restrictions', 'has_position', 'has_muster_position'] as $attr) {
             if (isset($attrs[$attr])) {
                 $info[$attr] = true;
             }
@@ -139,23 +142,23 @@ class RbsController extends ApiController
         if (isset($attrs['has_muster_position'])) {
             $info['muster_positions'] = [
                 'frequent' => Position::find(RBS::FREQUENT_MUSTER_POSITIONS)
-                            ->sortBy('title', SORT_NATURAL|SORT_FLAG_CASE)
-                            ->values()
-                            ->map(function ($row) {
-                                return [ 'id' => $row->id, 'title' => $row->title ];
-                            }),
+                    ->sortBy('title', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values()
+                    ->map(function ($row) {
+                        return ['id' => $row->id, 'title' => $row->title];
+                    }),
 
                 'in_progress' => Position::findAllWithInProgressSlots()
-                            ->map(function ($row) {
-                                return [ 'id' => $row->id, 'title' => $row->title ];
-                            })
+                    ->map(function ($row) {
+                        return ['id' => $row->id, 'title' => $row->title];
+                    })
             ];
         }
 
         // Return all positions
         if (isset($attrs['has_position'])) {
             $info['positions'] = Position::findAll()->map(function ($p) {
-                return [ 'id' => $p->id, 'title' => $p->title, 'type' => $p->type ];
+                return ['id' => $p->id, 'title' => $p->title, 'type' => $p->type];
             })->values();
         }
 
@@ -169,10 +172,10 @@ class RbsController extends ApiController
                     'title' => $title,
                     'slots' => $slots->map(function ($s) {
                         return [
-                            'id'          => $s->id,
+                            'id' => $s->id,
                             'description' => $s->description,
-                            'begins'      => (string) $s->begins,
-                            'signed_up'   => $s->signed_up
+                            'begins' => (string)$s->begins,
+                            'signed_up' => $s->signed_up
                         ];
                     })->values()->toArray()
                 ];
@@ -187,7 +190,7 @@ class RbsController extends ApiController
         $alerts = null;
         // And alert types
         if (isset($attrs['alerts'])) {
-            $alerts  = Alert::find($attrs['alerts']);
+            $alerts = Alert::find($attrs['alerts']);
         } elseif (!isset($attrs['alert_id'])) {
             $alerts = Alert::findAll();
         }
@@ -201,20 +204,20 @@ class RbsController extends ApiController
                     && $a->id != Alert::MENTOR_CONTACT;
             });
             $info['alerts'] = $alerts->map(function ($a) {
-                return [ 'id' => $a->id, 'title' => $a->title, 'on_playa' => $a->on_playa ];
+                return ['id' => $a->id, 'title' => $a->title, 'on_playa' => $a->on_playa];
             })->values();
         }
 
         switch ($type) {
-        case Broadcast::TYPE_ONSHIFT:
-        case Broadcast::TYPE_EMERGENCY:
-        case Broadcast::TYPE_RECRUIT_DIRT:
-            // Estimate how many people the broadcast might reach.
-            $info['receivers'] = RBS::retrieveRecipients($type, [], true);
-            break;
+            case Broadcast::TYPE_ONSHIFT:
+            case Broadcast::TYPE_EMERGENCY:
+            case Broadcast::TYPE_RECRUIT_DIRT:
+                // Estimate how many people the broadcast might reach.
+                $info['receivers'] = RBS::retrieveRecipients($type, [], true);
+                break;
         }
 
-        return response()->json([ 'details' => $info ]);
+        return response()->json(['details' => $info]);
     }
 
     /*
@@ -226,10 +229,10 @@ class RbsController extends ApiController
         $this->authorize('unknownPhones', Broadcast::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer'
+            'year' => 'required|integer'
         ]);
 
-        return response()->json([ 'phones' => BroadcastMessage::findUnknownPhonesForYear($params['year']) ]);
+        return response()->json(['phones' => BroadcastMessage::findUnknownPhonesForYear($params['year'])]);
     }
 
     /*
@@ -244,60 +247,60 @@ class RbsController extends ApiController
             $sql = DB::table('person')->where('status', $status);
 
             $sameVerified = (clone $sql)->whereRaw('sms_on_playa=sms_off_playa')
-                            ->where('sms_on_playa_verified', true)
-                            ->count();
+                ->where('sms_on_playa_verified', true)
+                ->count();
 
             $diffVerified = (clone $sql)->where('sms_on_playa', '!=', '')
-                            ->where('sms_off_playa', '!=', '')
-                            ->whereRaw('sms_on_playa != sms_off_playa')
-                            ->where('sms_off_playa_verified', true)
-                            ->where('sms_on_playa_verified', true)
-                            ->count();
+                ->where('sms_off_playa', '!=', '')
+                ->whereRaw('sms_on_playa != sms_off_playa')
+                ->where('sms_off_playa_verified', true)
+                ->where('sms_on_playa_verified', true)
+                ->count();
 
             $onPlayaVerified = (clone $sql)->whereRaw('sms_on_playa != sms_off_playa')
-                            ->where('sms_on_playa', '!=', '')
-                            ->where('sms_on_playa_verified', true)
-                            ->count();
+                ->where('sms_on_playa', '!=', '')
+                ->where('sms_on_playa_verified', true)
+                ->count();
 
 
             $offPlayaVerified = (clone $sql)->whereRaw('sms_on_playa != sms_off_playa')
-                            ->where('sms_off_playa', '!=', '')
-                            ->where('sms_off_playa_verified', true)
-                            ->count();
+                ->where('sms_off_playa', '!=', '')
+                ->where('sms_off_playa_verified', true)
+                ->count();
 
             $onPlayaStopped = (clone $sql)->where('sms_on_playa', '!=', '')
-                            ->where('sms_on_playa_verified', true)
-                            ->where('sms_on_playa_stopped', true)
-                            ->count();
+                ->where('sms_on_playa_verified', true)
+                ->where('sms_on_playa_stopped', true)
+                ->count();
 
             $offPlayaStopped = (clone $sql)->where('sms_off_playa', '!=', '')
-                            ->where('sms_off_playa_verified', true)
-                            ->where('sms_off_playa_stopped', true)
-                            ->count();
+                ->where('sms_off_playa_verified', true)
+                ->where('sms_off_playa_stopped', true)
+                ->count();
 
             $onPlayaUnverified = (clone $sql)->where('sms_on_playa', '!=', '')
-                            ->where('sms_on_playa_verified', false)
-                            ->count();
+                ->where('sms_on_playa_verified', false)
+                ->count();
 
             $offPlayaUnverified = (clone $sql)->where('sms_on_playa', '!=', '')
-                            ->where('sms_on_playa_verified', false)
-                            ->count();
+                ->where('sms_on_playa_verified', false)
+                ->count();
 
 
             $stats[] = [
-                'status'               => $status,
-                'same_verified'        => $sameVerified,
-                'diff_verified'        => $diffVerified,
-                'on_playa_verified'    => $onPlayaVerified,
-                'off_playa_verified'   => $offPlayaVerified,
-                'on_playa_stopped'     => $onPlayaStopped,
-                'off_playa_stopped'    => $offPlayaStopped,
-                'on_playa_unverified'  => $onPlayaUnverified,
+                'status' => $status,
+                'same_verified' => $sameVerified,
+                'diff_verified' => $diffVerified,
+                'on_playa_verified' => $onPlayaVerified,
+                'off_playa_verified' => $offPlayaVerified,
+                'on_playa_stopped' => $onPlayaStopped,
+                'off_playa_stopped' => $offPlayaStopped,
+                'on_playa_unverified' => $onPlayaUnverified,
                 'off_playa_unverified' => $offPlayaUnverified,
             ];
         }
 
-        return response()->json([ 'stats' => $stats ]);
+        return response()->json(['stats' => $stats]);
     }
 
     /*
@@ -307,14 +310,14 @@ class RbsController extends ApiController
     public function transmit()
     {
         $params = request()->validate([
-            'type'          => 'required|string',
-            'send_sms'      => 'sometimes|boolean',
-            'send_email'    => 'sometimes|boolean',
+            'type' => 'required|string',
+            'send_sms' => 'sometimes|boolean',
+            'send_email' => 'sometimes|boolean',
             'send_clubhouse' => 'sometimes|boolean',
-            'from'          => 'sometimes|string|required_if:send_email,1',
-            'sms_message'   => 'sometimes|string|required_if:send_sms,1',
-            'message'       => 'sometimes|string|required_if:send_email,1',
-            'subject'       => 'sometimes|string|required_if:send_email,1|required_if:send_clubhouse,1'
+            'from' => 'sometimes|string|required_if:send_email,1',
+            'sms_message' => 'sometimes|string|required_if:send_sms,1',
+            'message' => 'sometimes|string|required_if:send_email,1',
+            'subject' => 'sometimes|string|required_if:send_email,1|required_if:send_clubhouse,1'
         ]);
 
         $type = $params['type'];
@@ -335,7 +338,7 @@ class RbsController extends ApiController
         $alertId = $attrs['alert_id'] ?? ($criteria['alert_id'] ?? null);
 
         if (empty($alertId)) {
-            throw new \InvalidArgumentException("Alert id must be supplied.");
+            throw new InvalidArgumentException("Alert id must be supplied.");
         }
 
         $alert = Alert::findOrFail($alertId);
@@ -353,84 +356,67 @@ class RbsController extends ApiController
 
         $userId = $this->user->id;
         $broadcast = Broadcast::create([
-            'sender_id'       => $this->user->id,
-            'alert_id'        => $alertId,
-            'sms_message'     => $smsMessage,
-            'email_message'   => $message,
-            'subject'         => $subject,
-            'sender_address'  => $from,
+            'sender_id' => $userId,
+            'alert_id' => $alertId,
+            'sms_message' => $smsMessage,
+            'email_message' => $message,
+            'subject' => $subject,
+            'sender_address' => $from,
             'recipient_count' => count($people),
-            'sent_sms'        => $sendSMS,
-            'sent_email'      => $sendEmail,
-            'sent_clubhouse'  => $sendClubhouse,
+            'sent_sms' => $sendSMS,
+            'sent_email' => $sendEmail,
+            'sent_clubhouse' => $sendClubhouse,
         ]);
         $broadcastId = $broadcast->id;
 
-        $smsSuccess = 0;
-        $smsFails = 0;
-        $emailSuccess = 0;
-        $emailFails = 0;
-
         // Send the texts
+        $smsSuccesses = 0;
+        $smsFails = 0;
         if ($sendSMS) {
             // Add a prefix and suffix to message.
             $smsMessage = RBS::SMS_PREFIX . $smsMessage . RBS::SMS_SUFFIX;
-            RBS::broadcastSMS($alert, $broadcastId, $userId, $people, $smsMessage);
+            list ($smsSuccesses, $smsFails) = RBS::broadcastSMS($alert, $broadcastId, $userId, $people, $smsMessage);
+        }
+
+        // Send the Clubhouse messages
+        $clubhouseMessages = 0;
+        if ($sendClubhouse) {
+            RBSTransmitClubhouseMessageJob::dispatch($alert, $broadcastId, $userId, $people, 'The Ranger Broadcasting System', $subject, $message);
+            $clubhouseMessages = $people->count();
         }
 
         // Send out the emails
+        $emailsQueued = 0;
         if ($sendEmail) {
-            RBS::broadcastEmail($alert, $broadcastId, $userId, $people, $from, $subject, $message);
+            RBSTransmitEmailJob::dispatch($alert, $broadcastId, $userId, $people, $from, $subject, $message);
+            foreach ($people as $person) {
+                if ($person->use_email) {
+                    $emailsQueued++;
+                }
+            }
         }
 
-        // And send the Clubhouse messages
-        if ($sendClubhouse) {
-            RBS::broadcastClubhouse($alert, $broadcastId, $userId, $people, 'The Ranger Broadcasting System', $subject, $message);
-        }
-
-        $recipients = [];
-        foreach ($people as $person) {
-            $recipient = (object) [
-                'id'    => $person->id,
+        $recipients = $people->map(function ($person) use ($sendSMS) {
+            $p = [
+                'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
             ];
-            $recipients[] = $recipient;
-
             if ($sendSMS) {
-                $recipient->sms_status = $person->sms_status;
-                if ($person->sms_status == Broadcast::STATUS_SENT) {
-                    $smsSuccess++;
-                } elseif ($person->sms_status == Broadcast::STATUS_SERVICE_FAIL) {
-                    $smsFails++;
-                }
+                $p['sms_status'] = $person->sms_status;
             }
+            return $p;
+        })->values();
 
-            if ($sendEmail) {
-                $recipient->email_status = $person->email_status;
-                if ($person->email_status == Broadcast::STATUS_SENT) {
-                    $emailSuccess++;
-                } elseif ($person->email_status == Broadcast::STATUS_SERVICE_FAIL) {
-                    $emailFails++;
-                }
-            }
-        }
-
-        // Update the failed counters if need be
-        if ($smsFails || $emailFails) {
-            $broadcast->update([ 'sms_failed' => $smsFails, 'email_failed' => $emailFails]);
-        }
-
-        // Response should match retry()
         return response()->json([
-            'people'         => $recipients,
-            'sms_success'    => $smsSuccess,
-            'sms_failed'     => $smsFails,
-            'email_success'  => $emailSuccess,
-            'email_failed'   => $emailFails,
+            'people' => $recipients,
+            'emails_queued' => $emailsQueued,
+            'clubhouse_messages' => $clubhouseMessages,
+            'sms_successes' => $smsSuccesses,
+            'sms_fails' => $smsFails,
+            'sent_sms' => $sendSMS,
             'sent_clubhouse' => $sendClubhouse,
-            'sent_email'     => $sendEmail,
-            'sent_sms'       => $sendSMS,
+            'sent_email' => $sendEmail,
         ]);
     }
 
@@ -445,16 +431,16 @@ class RbsController extends ApiController
 
         $validations = [
             'send_clubhouse' => 'sometimes|boolean',
-            'send_email'     => 'sometimes|boolean',
-            'send_sms'       => 'sometimes|boolean'
+            'send_email' => 'sometimes|boolean',
+            'send_sms' => 'sometimes|boolean'
         ];
 
         if (empty($attrs['alert_id'])) {
-            $validations['alert_id']  = 'required|integer|exists:alert,id';
+            $validations['alert_id'] = 'required|integer|exists:alert,id';
         }
 
         if (isset($attrs['has_position']) || isset($attrs['has_muster_position'])) {
-            $validations['position_id'] =  'required|integer|exists:position,id';
+            $validations['position_id'] = 'required|integer|exists:position,id';
             $validations['position_signed_up'] = 'required|string';
         }
 
@@ -487,7 +473,7 @@ class RbsController extends ApiController
     public function retry()
     {
         $params = request()->validate([
-            'broadcast_id'  => 'required|integer',
+            'broadcast_id' => 'required|integer',
         ]);
 
         $this->authorize('retry', Broadcast::class);
@@ -533,17 +519,18 @@ class RbsController extends ApiController
         }
 
         $people = array_values($peopleByIds);
-        usort($people, function ($a, $b) { return strcasecmp($a->callsign, $b->callsign); });
+        usort($people, function ($a, $b) {
+            return strcasecmp($a->callsign, $b->callsign);
+        });
 
         // Response should match transmit()
         return response()->json([
-            'people'        => $people,
-            'sms_success'   => $smsSuccess,
-            'sms_failed'    => $smsFails,
-            'email_success' => $emailSuccess,
-            'email_failed'  => $emailFails,
-            'sent_sms'      => !$sms->isEmpty(),
-            'sent_email'    => !$emails->isEmpty(),
+            'people' => $people,
+            'sms_successes' => $smsSuccess,
+            'sms_fails' => $smsFails,
+            'email_queued' => $emailSuccess,
+            'sent_sms' => !$sms->isEmpty(),
+            'sent_email' => !$emails->isEmpty(),
         ]);
     }
 
@@ -551,7 +538,8 @@ class RbsController extends ApiController
      * Find a person transmit record already built up or built a new one
      */
 
-    private function findOrBuildPerson(& $peopleByIds, $message)
+    private
+    function findOrBuildPerson(&$peopleByIds, $message)
     {
         $person = $peopleByIds[$message->person_id] ?? null;
         if ($person) {
@@ -560,11 +548,11 @@ class RbsController extends ApiController
 
         $pm = $message->person;
 
-        $person = (object) [
-            'id'           => $pm->id,
-            'callsign'     => $pm->callsign,
-            'status'       => $pm->status,
-            'sms_status'   => 'none',
+        $person = (object)[
+            'id' => $pm->id,
+            'callsign' => $pm->callsign,
+            'status' => $pm->status,
+            'sms_status' => 'none',
             'email_status' => 'none',
         ];
         $peopleByIds[$person->id] = $person;
@@ -576,14 +564,16 @@ class RbsController extends ApiController
      * Verify the broadcast type exists, and if the user is allowed to use it.
      */
 
-    private function verifyType($type) {
+    private
+    function verifyType($type)
+    {
 
         $attrs = RBS::ATTRIBUTES[$type] ?? null;
         if (!$attrs) {
-            throw new \InvalidArgumentException("Unknown broadcast type");
+            throw new InvalidArgumentException("Unknown broadcast type");
         }
 
-        $this->authorize('typeAllowed', [ Broadcast::class, $type ]);
+        $this->authorize('typeAllowed', [Broadcast::class, $type]);
 
         return $attrs;
     }
