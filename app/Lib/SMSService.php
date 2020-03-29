@@ -8,6 +8,8 @@
 
 namespace App\Lib;
 
+use Twilio\TwiML\MessagingResponse;
+
 class SMSException extends \Exception
 {
 }
@@ -196,7 +198,7 @@ class SMSService
             return response('', 200);
         }
 
-        $response = new \Twilio\Twiml();
+        $response = new MessagingResponse();
         $response->message($reply);
         return response((string) $response, 200)->header('Content-Type', 'text/xml');
     }

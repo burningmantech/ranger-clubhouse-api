@@ -127,12 +127,12 @@ class RBS
     /*
      * Send an SMS message to list of people
      *
-     * @param array $alert the alert row
+     * @param Alert $alert the alert row
      * @param int $broadcastId the broadcast identifier
      * @param int $senderId person who sending
      * @param array $people list to send to
      * @param string $message SMS text
-     * @return array list of results
+     * @return array [ success count, fail count ]
      */
 
     public static function broadcastSMS($alert, $broadcastId, $senderId, $people, $message)
@@ -151,6 +151,9 @@ class RBS
         $recipients = [];
 
         $isEmergency = ($alert->id == Alert::EMEREGENCY_BROADCAST);
+
+        $fails = 0;
+        $sent = 0;
 
         // Find the phone numbers to broadcast to
         foreach ($people as $person) {
@@ -192,6 +195,11 @@ class RBS
             if (!setting('BroadcastSMSSandbox')) {
                 try {
                     $status = SMSService::broadcast($phoneNumbers, $message);
+                    if ($status == Broadcast::STATUS_SENT) {
+                        $sent++;
+                    } else {
+                        $fails++;
+                    }
                 } catch (SMSException $e) {
                     // meh - usually the Internet is spotty
                     ErrorLog::recordException($e, 'sms-exception', [
@@ -200,6 +208,7 @@ class RBS
                             'phone_numbers' => $phoneNumbers
                      ]);
                     $status = Broadcast::STATUS_SERVICE_FAIL;
+                    $fails++;
                 }
             } else {
                 $status = Broadcast::STATUS_SENT;
@@ -211,6 +220,10 @@ class RBS
                 $recipient->person->sms_status = $status;
             }
         }
+
+        Broadcast::where('id', $broadcastId)->update([ 'sms_failed' => $fails ]);
+
+        return [ $sent, $fails ];
     }
 
     /*
@@ -223,7 +236,7 @@ class RBS
      * @param string $from email address of sender (usually do-not-reply@burningman.org)
      * @param string $subject email subject
      * @param string $message email body
-     * @return array list of results
+     * @return array [ success count, failed count ]
      */
 
     public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $from, $subject, $message)
@@ -236,12 +249,13 @@ class RBS
             list($mailer, $emailMessage) = self::setupSMTP($from, $subject, $body);
         }
 
-        $results = [];
-        $hasFailed = false;
         $force = ($alert->id == Alert::EMEREGENCY_BROADCAST);
 
+        $fails = 0;
+        $sent = 0;
+
         foreach ($people as $person) {
-            // Skip if user has not set email as a delivery mechansim
+            // Skip if user has not set email as a delivery mechanism
             if (!$person->use_email && !$force) {
                 $person->email_status = 'no-contact';
                 continue;
@@ -253,6 +267,7 @@ class RBS
             if ($sandbox) {
                 // In sandbox mode.. don't send anything.
                 $status = 'sent';
+                $sent++;
             } else {
                 // Sender format is "Callsign (Real Name)"
                 $to = [ $email => $person->callsign.' ('.$person->first_name.' '.$person->last_name.')'];
@@ -260,10 +275,13 @@ class RBS
                 try {
                     if ($mailer->send($emailMessage)) {
                         $status = Broadcast::STATUS_SENT;
+                        $sent++;
                     } else {
                         $status = Broadcast::STATUS_SERVICE_FAIL;
+                        $fails++;
                     }
                 } catch (\Swift_TransportException $e) {
+                    $fails++;
                     $status = Broadcast::STATUS_SERVICE_FAIL;
                     ErrorLog::recordException($e, 'email-exception', [
                             'type'                 => 'broadcast',
@@ -278,10 +296,14 @@ class RBS
             BroadcastMessage::record($broadcastId, $status, $personId, 'email', $email, 'outbound');
         }
 
+        Broadcast::where('id', $broadcastId)->update([ 'email_failed' => $fails ]);
+
         if (!$sandbox) {
             // Close the SMTP connection
             $mailer->getTransport()->stop();
         }
+
+        return [ $sent, $fails ];
     }
 
     /*
