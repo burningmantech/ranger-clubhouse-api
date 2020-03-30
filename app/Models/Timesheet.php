@@ -71,9 +71,7 @@ class Timesheet extends ApiModel
         'verified' => 'boolean',
         'is_incorrect' => 'boolean'
     ];
-
-    public $_is_incorrect;
-
+    
     const RELATIONSHIPS = [ 'reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title,count_hours' ];
 
     public function person()

@@ -511,11 +511,6 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'TimesheetCorrectionYear' => [
-            'description' => 'Timesheet Corrections for year',
-            'type' => 'string',
-        ],
-
         'TrainingAcademyEmail' => [
             'description' => 'Training Academy Email',
             'type' => 'email',

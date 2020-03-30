@@ -49,14 +49,6 @@ class SettingTableSeeder extends Seeder
                     'created_at' => NULL,
                     'updated_at' => NULL,
                 ),
-            6 =>
-                array(
-                    'id' => 14,
-                    'name' => 'TimesheetCorrectionYear',
-                    'value' => '2019',
-                    'created_at' => NULL,
-                    'updated_at' => NULL,
-                ),
             7 =>
                 array(
                     'id' => 15,
