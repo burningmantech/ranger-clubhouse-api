@@ -419,7 +419,7 @@ class TimesheetControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
              'info' => [
-                 'correction_year'  => 2010,
+                 'correction_year'  => current_year(),
                  'correction_enabled' => true,
                  'timesheet_confirmed'  => true,
                  'timesheet_confirmed_at' => $now

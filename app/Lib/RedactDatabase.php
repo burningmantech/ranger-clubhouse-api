@@ -97,7 +97,6 @@ class RedactDatabase {
             'RadioInfoAvailable'               => 'true',
             'TicketingPeriod'                  => 'offseason',
             'TimesheetCorrectionEnable'        => 'true',
-            'TimesheetCorrectionYear'          => $year,
         ];
 
         foreach ($settings as $name => $value) {
