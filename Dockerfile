@@ -23,7 +23,7 @@ RUN docker-php-ext-install pdo_mysql;
 RUN docker-php-ext-install tokenizer;
 RUN docker-php-ext-install xml;
 
-# Remove development bits for libraries, and reinstall the runtime bits
+# Remove development versions of libraries, and install the runtime versions
 RUN apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
 RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
 
