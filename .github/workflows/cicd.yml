@@ -60,7 +60,7 @@ jobs:
     steps:
 
       - name: Checkout source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax;
@@ -79,7 +79,7 @@ jobs:
     steps:
 
       - name: Checkout source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Build Docker image
         run: ./bin/build ${{ secrets.GITHUB_TOKEN }}
@@ -109,7 +109,7 @@ jobs:
     steps:
 
       - name: Checkout source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v1
@@ -129,7 +129,7 @@ jobs:
 
     name: Test Docker image
 
-    needs: [check-syntax, unit, docker]
+    needs: [check-syntax, docker, unit]
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -137,7 +137,7 @@ jobs:
     steps:
 
       - name: Checkout source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v1
@@ -163,7 +163,7 @@ jobs:
     steps:
 
       - name: Checkout source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v1
