@@ -3,9 +3,37 @@
 # -----------------------------------------------------------------------------
 FROM burningman/php-nginx:7.4.4-alpine3.11 as php
 
-# Copy the install script, run it, delete it
-COPY ./docker/install_php /docker_install/install
-RUN /docker_install/install && rm -rf /docker_install;
+# Install the timezone database
+RUN apk add --no-cache tzdata;
+
+# Libraries needed to build PHP extensions
+RUN apk add --no-cache libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
+
+# Configure GD
+RUN docker-php-ext-configure gd --with-webp --with-jpeg;
+
+# Install extensions
+RUN docker-php-ext-install ctype;
+RUN docker-php-ext-install exif;
+RUN docker-php-ext-install gd;
+RUN docker-php-ext-install json;
+RUN docker-php-ext-install mbstring;
+RUN docker-php-ext-install pdo;
+RUN docker-php-ext-install pdo_mysql;
+RUN docker-php-ext-install tokenizer;
+RUN docker-php-ext-install xml;
+
+# Remove development bits for libraries, and reinstall the runtime bits
+RUN apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
+RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
+
+# Set storage directory permissions
+RUN install -d -o www-data -g www-data -m 775  \
+    ./storage/framework/cache                  \
+    ./storage/framework/sessions               \
+    ./storage/framework/views                  \
+    ./storage/logs                             \
+    ;
 
 
 # -----------------------------------------------------------------------------
