@@ -608,4 +608,31 @@ class AccessDocumentControllerTest extends TestCase
         $this->assertDatabaseHas('access_document', [ 'id' => $expire->id, 'status' => 'expired' ]);
         $this->assertDatabaseHas('access_document', [ 'id' => $ignore->id, 'status' => 'qualified' ]);
     }
+
+    /*
+     * Test bump expiration
+     */
+
+    public function testBumpTicketExpiration()
+    {
+        $this->addAdminRole();
+        $person = factory(Person::class)->create();
+        $year = current_year();
+        $expireYear = $year + 3;
+        $ad = factory(AccessDocument::class)->create([
+            'person_id'   => $person->id,
+            'source_year' => $year,
+            'type'        => 'staff_credential',
+            'status'      => 'qualified',
+            'expiry_date'   => "$expireYear-09-15"
+        ]);
+
+        $response = $this->json('POST', 'access-document/bump-expiration');
+        $response->assertStatus(200);
+        $response->assertJson([ 'count' => 1 ]);
+
+        $ad->refresh();
+        $expireYear++;
+        $this->assertEquals("$expireYear-09-15 00:00:00", (string) $ad->expiry_date);
+    }
 }

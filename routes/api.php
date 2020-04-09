@@ -57,6 +57,7 @@ Route::group([
     Route::post('auth/logout', 'AuthController@logout');
     Route::post('auth/refresh', 'AuthController@refresh');
 
+    Route::post('access-document/bump-expiration', 'AccessDocumentController@bumpExpiration');
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
