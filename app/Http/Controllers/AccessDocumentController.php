@@ -550,6 +550,41 @@ class AccessDocumentController extends ApiController
         return response()->json([ 'access_documents' => $documents ]);
     }
 
+    /**
+     * Bump all banked and qualified tickets' expiration by 1 year.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
+
+    public function bumpExpiration()
+    {
+        $this->authorize('bumpExpiration', AccessDocument::class);
+        $params = request()->validate([
+            'reason' => 'sometimes|string'
+        ]);
+
+        $reason = $params['reason'] ?? null;
+
+        $callsign = $this->user->callsign;
+
+        $rows = AccessDocument::whereIn('status', [ 'banked', 'qualified'])
+                ->get();
+
+        foreach ($rows as $row) {
+            $row->expiry_date = $row->expiry_date->addYear();
+            if ($reason) {
+                $row->addComment($reason, $callsign);
+            }
+
+            $changes = $row->getChangedValues();
+            $row->save();
+            AccessDocumentChanges::log($row, $this->user->id, $changes);
+        }
+
+        return response()->json([ 'count' => $rows->count() ]);
+    }
+
     /*
      * Save the access document, log the changes, and build a response.
      */

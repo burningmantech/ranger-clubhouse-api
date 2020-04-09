@@ -29,6 +29,12 @@ class AccessDocumentChanges extends Model
             $id = $record->id;
         }
 
+        unset($changes['comments']); // Don't track comment changes
+
+        if (empty($changes)) {
+            return;
+        }
+
         $row = new AccessDocumentChanges([
             'table_name' => 'access_document',
             'record_id' => $id,

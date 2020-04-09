@@ -51,6 +51,15 @@ class AccessDocumentPolicy
     }
 
     /**
+     * Is the person allowed to bump the expiration dates in mass?
+     * @param Person $user
+     * @return bool
+     */
+    public function bumpExpiration(Person $user) {
+        return false;
+    }
+
+    /**
      * Determine whether the user can view the AccessDocument.
      *
      */

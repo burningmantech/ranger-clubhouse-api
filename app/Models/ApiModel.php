@@ -17,6 +17,8 @@ use App\Http\RestApi\DeserializeRecord;
 
 use DateTimeInterface;
 
+use Carbon\Carbon;
+
 /**
  * Class ApiModel
  * @package App\Models
@@ -218,8 +220,15 @@ abstract class ApiModel extends Model
     public function getChangedValues()
     {
         $changes = [];
-        foreach ($this->getDirty() as $field => $newData) {
-            $changes[$field] = [ $this->getOriginal($field), $newData ];
+        foreach ($this->getDirty() as $field => $newValue) {
+            $oldValue = $this->getOriginal($field);
+            if ($oldValue instanceof Carbon) {
+                $oldValue = (string) $oldValue;
+            }
+            if ($newValue instanceof Carbon) {
+                $newValue = (string) $newValue;
+            }
+            $changes[$field] = [ $oldValue , $newValue ];
         }
 
         return $changes;
