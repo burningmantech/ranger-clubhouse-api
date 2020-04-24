@@ -8,6 +8,7 @@
 
 namespace App\Lib;
 
+use Twilio\Exceptions\RestException;
 use Twilio\TwiML\MessagingResponse;
 
 class SMSException extends \Exception
@@ -112,8 +113,16 @@ class SMSService
 
          $twilio = new \Twilio\Rest\Client($accountSid, $authToken);
 
+         try {
          $info = $twilio->lookups->v1->phoneNumbers($phoneNumber)
-                                ->fetch([ "type" => "carrier" ]);
+             ->fetch(["type" => "carrier"]);
+         } catch (RestException $e) {
+             if ($e->getStatusCode() == 404) {
+                 return false; // Not a valid phone number
+             }
+
+             throw $e; // Not sure what's going on.
+         }
 
          $type = $info->carrier['type'];
          // In case there's no line type, allow it to pass. The verification
