@@ -8,17 +8,20 @@ RUN apk add --no-cache tzdata;
 
 # Libraries needed to build PHP extensions
 RUN apk add --no-cache libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
+RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
 
 # Configure GD
-RUN docker-php-ext-configure gd    \
+RUN docker-php-ext-configure gd \
+    --with-gd \
+    --with-jpeg-dir=/usr/include/ \
+    --with-png-dir=/usr/include/ \
     --with-webp-dir=/usr/include/  \
-    --with-jpeg-dir=/usr/include/  \
     ;
 
 # Install extensions
+RUN docker-php-ext-install gd;
 RUN docker-php-ext-install ctype;
 RUN docker-php-ext-install exif;
-RUN docker-php-ext-install gd;
 RUN docker-php-ext-install json;
 RUN docker-php-ext-install mbstring;
 RUN docker-php-ext-install pdo;
@@ -26,9 +29,8 @@ RUN docker-php-ext-install pdo_mysql;
 RUN docker-php-ext-install tokenizer;
 RUN docker-php-ext-install xml;
 
-# Remove development versions of libraries, and install the runtime versions
+# Remove development versions of libraries
 RUN apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
-RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
 
 # Set storage directory permissions
 RUN install -d -o www-data -g www-data -m 775  \
