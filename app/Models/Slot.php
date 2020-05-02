@@ -433,12 +433,15 @@ class Slot extends ApiModel
         $this->load(self::WITH_POSITION_TRAINER);
     }
 
-    public function getCreditsAttribute()
+    public function getCreditsAttribute() : float
     {
-        return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
+        if ($this->position_id ?? null) {
+            return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
+        }
+        return 0.0;
     }
 
-    public function isTraining()
+    public function isTraining() : bool
     {
         $position = $this->position;
         if ($position == null) {
@@ -448,7 +451,7 @@ class Slot extends ApiModel
         return $position->type == "Training" && stripos($position->title, "trainer") === false;
     }
 
-    public function isArt()
+    public function isArt() : bool
     {
         return ($this->position_id != Position::TRAINING);
     }
@@ -457,12 +460,12 @@ class Slot extends ApiModel
      * Humanized datetime formats - for sending emails
      */
 
-    public function getBeginsHumanFormatAttribute()
+    public function getBeginsHumanFormatAttribute() : string
     {
         return $this->begins->format('l M d Y @ H:i');
     }
 
-    public function getEndsHumanFormatAttribute()
+    public function getEndsHumanFormatAttribute() : string
     {
         return $this->ends->format('l M d Y @ H:i');
     }
@@ -472,7 +475,7 @@ class Slot extends ApiModel
       * is not a training slot
       */
 
-    public function isPreEventRestricted()
+    public function isPreEventRestricted() : bool
     {
         if (!$this->begins || !$this->position_id) {
             return false;

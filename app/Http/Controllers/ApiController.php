@@ -1,9 +1,9 @@
 <?php
 
-namespace app\Http\Controllers;
+namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
-use \Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Database\Eloquent\Collection;
 
@@ -18,6 +18,9 @@ use App\Http\RestApi\DeserializeRecord;
 
 class ApiController extends Controller
 {
+    /**
+     * @var Person
+     */
     protected $user;
 
     public function __construct()

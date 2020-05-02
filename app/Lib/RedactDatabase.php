@@ -62,7 +62,8 @@ class RedactDatabase {
             'motd',
             'mentee_status',
             'person_intake',
-            'person_intake_note'
+            'person_intake_note',
+            'survey_answer',
         ];
 
         foreach ($tables as $table) {

@@ -228,6 +228,11 @@ Route::group([
 
     Route::resource('setting', 'SettingController');
 
+    Route::get('sms', 'SmsController@getNumbers');
+    Route::post('sms', 'SmsController@updateNumbers');
+    Route::post('sms/send-code', 'SmsController@sendNewCode');
+    Route::post('sms/confirm-code', 'SmsController@confirmCode');
+
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
     Route::post('slot/copy', 'SlotController@copy');
     Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
@@ -243,16 +248,25 @@ Route::group([
     Route::get('slot/{slot}/people', 'SlotController@people');
     Route::resource('slot', 'SlotController');
 
-    Route::get('sms', 'SmsController@getNumbers');
-    Route::post('sms', 'SmsController@updateNumbers');
-    Route::post('sms/send-code', 'SmsController@sendNewCode');
-    Route::post('sms/confirm-code', 'SmsController@confirmCode');
+
+    Route::get('survey/questionnaire', 'SurveyController@questionnaire');
+    Route::post('survey/submit', 'SurveyController@submit');
+    Route::get('survey/trainer-surveys', 'SurveyController@trainerSurveys');
+    Route::get('survey/trainer-report', 'SurveyController@trainerReport');
+    Route::get('survey/{survey}/all-trainers-report', 'SurveyController@allTrainersReport');
+    Route::post('survey/{survey}/duplicate', 'SurveyController@duplicate');
+    Route::get('survey/{survey}/report', 'SurveyController@report');
+    Route::resource('survey', 'SurveyController');
+
+    Route::resource('survey-group', 'SurveyGroupController');
+    Route::resource('survey-question', 'SurveyQuestionController');
 
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
-    Route::get('training-session/{id}', 'TrainingSessionController@show');
     Route::post('training-session/{id}/score-student', 'TrainingSessionController@scoreStudent');
     Route::post('training-session/{id}/trainer-status', 'TrainingSessionController@trainerStatus');
+    Route::get('training-session/{id}/trainers', 'TrainingSessionController@trainers');
+    Route::get('training-session/{id}', 'TrainingSessionController@show');
 
     Route::get('training/{id}/multiple-enrollments', 'TrainingController@multipleEnrollmentsReport');
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');

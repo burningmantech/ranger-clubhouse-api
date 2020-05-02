@@ -30,7 +30,7 @@ class SettingController extends ApiController
 
     public function store()
     {
-        throw new InvalidArgumentException('Settings cannot be dynamically created');
+        throw new \InvalidArgumentException('Settings cannot be dynamically created');
     }
 
     /*
@@ -72,6 +72,6 @@ class SettingController extends ApiController
     public
     function destroy(Setting $setting)
     {
-        throw new InvalidArgumentException('Settings cannot be destroyed');
+        throw new \InvalidArgumentException('Settings cannot be destroyed');
     }
 }

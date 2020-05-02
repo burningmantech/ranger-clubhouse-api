@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\ApiModel;
 use App\Models\Slot;
+use App\Models\Person;
+
 use Illuminate\Support\Facades\DB;
 
 class TrainerStatus extends ApiModel
@@ -17,10 +19,22 @@ class TrainerStatus extends ApiModel
 
     protected $guarded = [];
 
+    public function slot() {
+        return $this->belongsTo(Slot::class);
+    }
+
+    public function trainer_slot() {
+        return $this->belongsTo(Slot::class);
+    }
+
+    public function person() {
+        return $this->belongsTo(Person::class);
+    }
+
     /*
-     * trainer_slot_id refers to the Trainer sign up (Trainer / Trainer Associate / Trainer Uber /etc)
-     * slot_id refers to the training session (trainee)
-     */
+      * trainer_slot_id refers to the Trainer sign up (Trainer / Trainer Associate / Trainer Uber /etc)
+      * slot_id refers to the training session (trainee)
+      */
 
     public static function firstOrNewForSession($sessionId, $personId) {
         return self::firstOrNew([ 'person_id' => $personId, 'slot_id' => $sessionId]);
@@ -56,13 +70,13 @@ class TrainerStatus extends ApiModel
     /**
      * Retrieve all the sessions the person may have taught
      *
-     * @param integer $personId the person to check
+     * @param int $personId the person to check
      * @param array $positionIds the positions to check (Trainer / Trainer Assoc. / Uber /etc)
-     * @param integer $year the year to check
-     * @return array the slots the person signed up for with optional trainer status
+     * @param int $year the year to check
+     * @return \Illuminate\Support\Collection
      */
 
-    public static function retrieveSessionsForPerson($personId, $positionIds, $year)
+    public static function retrieveSessionsForPerson(int $personId, $positionIds, int $year)
     {
         return DB::table('slot')
                 ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', 'trainer_status.status')

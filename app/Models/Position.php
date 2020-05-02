@@ -224,9 +224,17 @@ class Position extends ApiModel
      * Find all positions
      */
 
-    public static function findAll()
+    public static function findForQuery($query)
     {
-        return self::orderBy('title')->get();
+        $type = $query['type'] ?? null;
+
+        $sql = self::orderBy('title');
+
+        if (!empty($type)) {
+            $sql->where('type', $type);
+        }
+
+        return $sql->get();
     }
 
     /*

@@ -77,7 +77,7 @@ class Schedule extends ApiModel
     public static function findForQuery($query)
     {
         if (empty($query['year'])) {
-            throw new InvalidArgumentException('Missing year parameter');
+            throw new \InvalidArgumentException('Missing year parameter');
         }
 
         $year = $query['year'];

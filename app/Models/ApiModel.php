@@ -22,7 +22,8 @@ use Carbon\Carbon;
 /**
  * Class ApiModel
  * @package App\Models
- * @mixin Model
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ * @mixin \Illuminate\Database\Query\Builder
  */
 
 abstract class ApiModel extends Model

@@ -19,8 +19,12 @@ class PositionController extends ApiController
      */
     public function index()
     {
+        $params = request()->validate([
+           'type'   => 'sometimes|string'
+        ]);
+
         //$this->authorize('view');
-        return $this->success(Position::findAll(), null);
+        return $this->success(Position::findForQuery($params), null);
     }
 
     /**

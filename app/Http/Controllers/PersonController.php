@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 use App\Http\Controllers\ApiController;
 
@@ -26,9 +24,11 @@ use App\Models\Position;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
+use App\Models\SurveyAnswer;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\Training;
+use App\Models\Survey;
 
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
@@ -63,7 +63,7 @@ class PersonController extends ApiController
 
         if ($params['basic'] ?? false) {
             if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
-                throw new InvalidArgumentException("Not authorized for basic search.");
+                throw new \InvalidArgumentException("Not authorized for basic search.");
             }
 
             $rows = [];
@@ -450,7 +450,8 @@ class PersonController extends ApiController
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_art_trainer' => $isArtTrainer,
                 'is_mentor' => $person->hasRole([Role::MENTOR, Role::ADMIN]),
-                'have_mentored' => PersonMentor::haveMentees($person->id)
+                'have_mentored' => PersonMentor::haveMentees($person->id),
+                'have_feedback' => SurveyAnswer::haveTrainerFeedback($person->id),
             ],
             'unread_message_count' => PersonMessage::countUnread($person->id),
             'years' => Timesheet::years($person->id),
@@ -561,7 +562,7 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != 'auditor') {
-            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
 
@@ -735,7 +736,8 @@ class PersonController extends ApiController
             'has_reviewed_pi' => $person->has_reviewed_pi,
             'photo_upload_enabled' => setting('PhotoUploadEnable'),
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
-            'alpha_shift_prep_link' => setting('OnboardAlphaShiftPrepLink')
+            'alpha_shift_prep_link' => setting('OnboardAlphaShiftPrepLink'),
+            'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year)
         ];
 
 
@@ -842,12 +844,13 @@ class PersonController extends ApiController
         return response()->json(['milestones' => $milestones]);
     }
 
-    /*
-     *  Is the given time within a grace period?
-     *  Is the given time within a grace period?
+    /**
+     * Is the given time within a grace period?
+     * @param Carbon|string $time
+     * @param $now
+     * @return bool
      */
-
-    private function isTimeWithinGracePeriod($time, $now)
+    private function isTimeWithinGracePeriod($time, $now) : bool
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
 
@@ -864,13 +867,13 @@ class PersonController extends ApiController
         $year = current_year();
 
         if (config('clubhouse.DeploymentEnvironment') != 'Staging' && !app()->isLocal()) {
-            throw new InvalidArgumentException('Onboard debugging is only available in the staging server');
+            throw new \InvalidArgumentException('Onboard debugging is only available in the staging server');
         }
 
         $photoStatus = request()->input('photo_status');
 
         if (!empty($photoStatus)) {
-            $photo = PersonPhoto::where('person_id', $person->id)->first();
+            $photo = PersonPhoto::where('person_id', $person->id)->where('status', PersonPhoto::SUBMITTED)->first();
             if (!$photo) {
                 $photo = new PersonPhoto;
                 $photo->person_id = $person->id;
@@ -971,7 +974,7 @@ class PersonController extends ApiController
                         ->delete();
                     return $this->success();
                 default:
-                    throw new InvalidArgumentException("Unknown training command");
+                    throw new \InvalidArgumentException("Unknown training command");
             }
         }
 
@@ -1020,7 +1023,7 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new InvalidArgumentException("Unknown alpha command [$status]");
+                    throw new \InvalidArgumentException("Unknown alpha command [$status]");
             }
             return $this->success();
         }
@@ -1044,13 +1047,13 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new InvalidArgumentException("Unknown training command");
+                    throw new \InvalidArgumentException("Unknown training command");
             }
 
             return $this->success();
         }
 
-        throw new InvalidArgumentException("Unknown onboard debugging command");
+        throw new \InvalidArgumentException("Unknown onboard debugging command");
     }
 
     /**
