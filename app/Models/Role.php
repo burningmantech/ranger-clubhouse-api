@@ -25,6 +25,7 @@ class Role extends ApiModel
     const ART_TRAINER      = 104; // ART trainer
     const MEGAPHONE        = 105; // RBS access
     const TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
+    const SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
 
     protected $casts = [
         'new_user_eligible' => 'bool'

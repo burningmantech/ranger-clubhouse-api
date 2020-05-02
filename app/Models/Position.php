@@ -220,13 +220,23 @@ class Position extends ApiModel
         return $this->hasMany(Position::class, 'training_position_id');
     }
 
-    /*
-     * Find all positions
-     */
 
-    public static function findAll()
+     /**
+     * Find  positions based on criteria
+     * @param $query
+     * @return Position[]|\Illuminate\Database\Eloquent\Collection
+     */
+    public static function findForQuery($query)
     {
-        return self::orderBy('title')->get();
+        $type = $query['type'] ?? null;
+
+        $sql = self::orderBy('title');
+
+        if (!empty($type)) {
+            $sql->where('type', $type);
+        }
+
+        return $sql->get();
     }
 
     /*

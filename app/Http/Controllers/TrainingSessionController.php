@@ -150,4 +150,30 @@ class TrainingSessionController extends ApiController
 
         return response()->json(['trainers' => $session->retrieveTrainers()]);
     }
+
+    /**
+     * Retrieve the trainers
+     */
+
+    public function trainers($id)
+    {
+        $session = TrainingSession::findOrFail($id);
+        $trainerGroups = $session->retrieveTrainers();
+
+        $trainers = [];
+        foreach ($trainerGroups as $group) {
+            foreach ($group['trainers'] as $trainer) {
+                $trainers[] = [
+                    'id' => $trainer['id'],
+                    'callsign' => $trainer['callsign']
+                ];
+            }
+        }
+
+        usort($trainers, function ($a, $b) {
+            return strcasecmp($a['callsign'], $b['callsign']);
+        });
+
+        return response()->json(['trainers' => $trainers]);
+    }
 }

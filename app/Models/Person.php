@@ -522,7 +522,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
-                            throw new InvalidArgumentException("Search field '$field' is not allowed.");
+                            throw new \InvalidArgumentException("Search field '$field' is not allowed.");
                         }
 
                         if ($field == 'name') {
@@ -648,7 +648,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 return $sql->get(['id', 'callsign']);
         }
 
-        throw new InvalidArgumentException("Unknown type [$type]");
+        throw new \InvalidArgumentException("Unknown type [$type]");
     }
 
     public static function retrievePeopleByLocation($year)

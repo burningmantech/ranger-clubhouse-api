@@ -599,7 +599,7 @@ class Setting extends ApiModel
                 $row = $rows[$setting] ?? null;
                 $desc = self::DESCRIPTIONS[$setting] ?? null;
                 if (!$desc) {
-                    throw new InvalidArgumentException("'$setting' is an unknown setting.");
+                    throw new \InvalidArgumentException("'$setting' is an unknown setting.");
                 }
 
 
@@ -613,7 +613,7 @@ class Setting extends ApiModel
         } else {
             $desc = self::DESCRIPTIONS[$name] ?? null;
             if (!$desc) {
-                throw new InvalidArgumentException("'$name' is an unknown setting.");
+                throw new \InvalidArgumentException("'$name' is an unknown setting.");
             }
 
             if (isset(self::$cache[$name])) {

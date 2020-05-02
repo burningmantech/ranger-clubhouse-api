@@ -198,7 +198,7 @@ class Training extends Position
         }
 
         if ($position->type != "Training" || stripos($position->title, "trainer") !== false) {
-            throw new InvalidArgumentException("Position is not a training position");
+            throw new \InvalidArgumentException("Position is not a training position");
         }
 
         return $position;

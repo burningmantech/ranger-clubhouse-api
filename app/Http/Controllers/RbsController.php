@@ -157,7 +157,7 @@ class RbsController extends ApiController
 
         // Return all positions
         if (isset($attrs['has_position'])) {
-            $info['positions'] = Position::findAll()->map(function ($p) {
+            $info['positions'] = Position::all()->map(function ($p) {
                 return ['id' => $p->id, 'title' => $p->title, 'type' => $p->type];
             })->values();
         }
@@ -338,7 +338,7 @@ class RbsController extends ApiController
         $alertId = $attrs['alert_id'] ?? ($criteria['alert_id'] ?? null);
 
         if (empty($alertId)) {
-            throw new InvalidArgumentException("Alert id must be supplied.");
+            throw new \InvalidArgumentException("Alert id must be supplied.");
         }
 
         $alert = Alert::findOrFail($alertId);
@@ -570,7 +570,7 @@ class RbsController extends ApiController
 
         $attrs = RBS::ATTRIBUTES[$type] ?? null;
         if (!$attrs) {
-            throw new InvalidArgumentException("Unknown broadcast type");
+            throw new \InvalidArgumentException("Unknown broadcast type");
         }
 
         $this->authorize('typeAllowed', [Broadcast::class, $type]);

@@ -30,6 +30,10 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Slot;
+use App\Models\Survey;
+use App\Models\SurveyAnswer;
+use App\Models\SurveyGroup;
+use App\Models\SurveyQuestion;
 use App\Models\Timesheet;
 use App\Models\TimesheetMissing;
 use App\Models\Training;
@@ -60,6 +64,10 @@ use App\Policies\RolePolicy;
 use App\Policies\SchedulePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SlotPolicy;
+use App\Policies\SurveyPolicy;
+use App\Policies\SurveyAnswerPolicy;
+use App\Policies\SurveyGroupPolicy;
+use App\Policies\SurveyQuestionPolicy;
 use App\Policies\TimesheetMissingPolicy;
 use App\Policies\TimesheetPolicy;
 use App\Policies\TrainingPolicy;
@@ -98,6 +106,10 @@ class AuthServiceProvider extends ServiceProvider
         Schedule::class => SchedulePolicy::class,
         Setting::class => SettingPolicy::class,
         Slot::class => SlotPolicy::class,
+        Survey::class => SurveyPolicy::class,
+        SurveyAnswer::class => SurveyAnswerPolicy::class,
+        SurveyGroup::class => SurveyGroupPolicy::class,
+        SurveyQuestion::class => SurveyQuestionPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,
         Training::class => TrainingPolicy::class,

@@ -41,10 +41,11 @@ class TraineeStatus extends ApiModel
      *
      * @param integer $personId person id to find
      * @param integer $year year to look up
-     * @return Illuminate\Database\Eloquent\Collection
+     * @param integer $positionId
+     * @return TraineeStatus[]|Collection
      */
 
-    public static function findForPersonYear($personId, $year, $positionId = null)
+    public static function findForPersonYear(int $personId, int $year, ?int $positionId = null)
     {
         // Find the first training that passed
         $sql = self::join('slot', 'slot.id', 'trainee_status.slot_id')
@@ -66,7 +67,15 @@ class TraineeStatus extends ApiModel
 
     }
 
-    public static function didPersonPassForYear($personId, $positionId, $year)
+    /**
+     * Did the person pass training in a given year?
+     * @param int $personId
+     * @param int $positionId
+     * @param int $year
+     * @return bool
+     */
+
+    public static function didPersonPassForYear(int $personId, int $positionId, int $year) : bool
     {
         $positionIds = [$positionId];
 
@@ -87,12 +96,27 @@ class TraineeStatus extends ApiModel
         return self::firstOrNew(['person_id' => $personId, 'slot_id' => $sessionId]);
     }
 
-
-    /*
-     * Delete all records refering to a slot. Used by slot deletion.
+    /**
+     * Did the person pass a specific training?
+     *
+     * @param int $personId
+     * @param int $slotId
+     * @return bool
      */
 
-    public static function deleteForSlot($slotId)
+    public static function didPersonPassSession(int $personId, int $slotId) : bool {
+        return self::where('person_id', $personId)
+                    ->where('passed', true)
+                    ->where('slot_id', $slotId)
+                    ->exists();
+    }
+
+    /**
+     * Delete all records refering to a slot. Used by slot deletion.
+     * @param int $slotId
+     */
+
+    public static function deleteForSlot(int $slotId) : void
     {
         self::where('slot_id', $slotId)->delete();
     }

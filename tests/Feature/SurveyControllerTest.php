@@ -1,0 +1,334 @@
+<?php
+
+namespace Tests\Feature;
+
+use http\Exception\InvalidArgumentException;
+use Tests\TestCase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use App\Models\Person;
+use App\Models\PersonSlot;
+use App\Models\Position;
+use App\Models\Slot;
+use App\Models\Survey;
+use App\Models\SurveyGroup;
+use App\Models\SurveyQuestion;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
+
+class SurveyControllerTest extends TestCase
+{
+    use RefreshDatabase;
+    use WithFaker;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        $this->signInUser();
+        $this->addAdminRole();
+    }
+
+    /*
+     * Get the survey documents
+     */
+
+    public function testIndexSurvey()
+    {
+        $year = 2018;
+        factory(Survey::class)->create(['year' => $year]);
+
+        $response = $this->json('GET', 'survey', ['year' => $year]);
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json()['survey']);
+    }
+
+    /*
+     * Create a survey document
+     */
+
+    public function testCreateSurvey()
+    {
+        $data = [
+            'year' => 2020,
+            'type' => Survey::TRAINER,
+            'title' => 'My Awesome Survey',
+            'prologue' => 'Take the survey',
+            'epilogue' => 'Did you take it?'
+        ];
+
+        $response = $this->json('POST', 'survey', [
+            'survey' => $data
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('survey', $data);
+    }
+
+    /*
+     * Update a survey document
+     */
+
+    public function testUpdateSurvey()
+    {
+        $survey = factory(Survey::class)->create();
+
+        $response = $this->json('PATCH', "survey/{$survey->id}", [
+            'survey' => ['epilogue' => 'epilogue your behind']
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('survey', ['id' => $survey->id, 'epilogue' => 'epilogue your behind']);
+    }
+
+    /*
+     * Delete a slot
+     */
+
+    public function testDeleteSurvey()
+    {
+        $survey = factory(Survey::class)->create();
+        $surveyId = $survey->id;
+
+        $response = $this->json('DELETE', "survey/{$surveyId}");
+
+        $response->assertStatus(204);
+        $this->assertDatabaseMissing('survey', ['id' => $surveyId]);
+    }
+
+    /*
+     * Test duplicate a survey
+     */
+
+    public function testDuplicateSurvey()
+    {
+        $year = 2018;
+        $currentYear = current_year();
+        $origSurvey = factory(Survey::class)->create(['year' => $year, 'title' => "$year Survey Title"]);
+        $origGroup = factory(SurveyGroup::class)->create(['survey_id' => $origSurvey->id]);
+        $origQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $origSurvey->id, 'survey_group_id' => $origGroup->id]);
+
+        $response = $this->json('POST', "survey/{$origSurvey->id}/duplicate");
+        $response->assertStatus(200);
+        $newId = $response->json('survey_id');
+
+        $this->assertDatabaseHas('survey', ['id' => $newId, 'title' => "$currentYear Survey Title"]);
+        $this->assertDatabaseHas('survey_group', ['survey_id' => $newId, 'title' => $origGroup->title]);
+        $this->assertDatabaseHas('survey_question', ['survey_id' => $newId, 'description' => $origQuestion->description]);
+    }
+
+
+    /*
+     * Test prepare a training venue questionnaire
+     */
+
+
+    public function testVenueQuestionnaire()
+    {
+        $this->buildVenueSurvey();
+
+        $response = $this->json('GET', "survey/questionnaire", ['slot_id' => $this->slot->id, 'type' => Survey::TRAINING]);
+        $response->assertStatus(200);
+
+        $survey = $this->survey;
+        $venueGroup = $this->venueGroup;
+        $venueQ = $this->venueQuestion;
+        $trainerGroup = $this->trainerGroup;
+        $trainerQ = $this->trainerQuestion;
+
+        $response->assertJson([
+            'survey' => [
+                'id' => $survey->id,
+                'type' => Survey::TRAINING,
+                'year' => $survey->year,
+                'title' => $survey->title,
+            ]
+        ]);
+
+        $response->assertJson([
+            'survey' => [
+                'survey_groups' => [
+                    [
+                        'id' => $venueGroup->id,
+                        'title' => $venueGroup->title,
+                        'description' => $venueGroup->description,
+                        'is_trainer_group' => false,
+                        'survey_questions' => [
+                            [
+                                'id' => $venueQ->id,
+                                'sort_index' => $venueQ->sort_index,
+                                'type' => $venueQ->type,
+                                'code' => $venueQ->code,
+                                'description' => $venueQ->description,
+                            ]
+                        ]
+                    ],
+
+                    [
+                        'id' => $trainerGroup->id,
+                        'title' => $trainerGroup->title,
+                        'description' => $trainerGroup->description,
+                        'is_trainer_group' => true,
+                        'survey_questions' => [
+                            [
+                                'id' => $trainerQ->id,
+                                'sort_index' => $trainerQ->sort_index,
+                                'type' => $trainerQ->type,
+                                'code' => $trainerQ->code,
+                                'description' => $trainerQ->description,
+                            ]
+                        ]
+
+                    ]
+                ]
+            ]
+        ]);
+
+        $trainer = $this->trainer;
+
+        $response->assertJson([
+            'trainers' => [
+                [
+                    'id' => $trainer->id,
+                    'callsign' => $trainer->callsign,
+                    'position_id' => Position::TRAINER
+                ]
+            ]
+        ]);
+
+        $slot = $this->slot;
+        $response->assertJson([
+            'slot' => [
+                'id' => $slot->id,
+                'begins' => $slot->begins
+            ]
+        ]);
+        //return response()->json(['survey' => $survey, 'trainers' => $trainers, 'slot' => $slot]);
+
+    }
+
+    /*
+     * Test submitting a survey response
+     */
+
+    private function buildVenueSurvey()
+    {
+        $this->year = current_year();
+
+        $this->trainer = factory(Person::class)->create();
+
+        $this->survey = factory(Survey::class)->create(['year' => $this->year, 'position_id' => Position::TRAINING]);
+        $surveyId = $this->survey->id;
+
+        $this->venueGroup = factory(SurveyGroup::class)->create(['survey_id' => $surveyId, 'sort_index' => 1]);
+        $this->venueQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $surveyId, 'survey_group_id' => $this->venueGroup->id]);
+
+        $this->trainerGroup = factory(SurveyGroup::class)->create(['survey_id' => $surveyId, 'is_trainer_group' => true, 'sort_index' => 2]);
+        $this->trainerQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $surveyId, 'survey_group_id' => $this->trainerGroup->id]);
+
+        $this->slot = factory(Slot::class)->create([
+            'description' => 'Venue 1',
+            'position_id' => Position::TRAINING,
+            'begins' => "{$this->year}-01-01 00:00",
+            'ends' => "{$this->year}-01-01 00:01"
+        ]);
+        factory(PersonSlot::class)->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id]);
+        factory(TraineeStatus::class)->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id, 'passed' => true]);
+        $this->trainerSlot = factory(Slot::class)->create([
+            'description' => 'Venue 1',
+            'position_id' => Position::TRAINER,
+            'begins' => "{$this->year}-01-01 00:00",
+            'ends' => "{$this->year}-01-01 00:01"
+        ]);
+        factory(PersonSlot::class)->create(['person_id' => $this->trainer->id, 'slot_id' => $this->trainerSlot->id]);
+        factory(TrainerStatus::class)->create([
+            'person_id' => $this->trainer->id,
+            'slot_id' => $this->slot->id,
+            'trainer_slot_id' => $this->trainerSlot->id,
+            'status' => TrainerStatus::ATTENDED
+        ]);
+    }
+
+    private function buildTrainerResponses() {
+        $this->trainerAnswer = factory(SurveyAnswer::class)->create([
+            'id'
+        ]);
+    }
+
+    /*
+     * Test a venue questionnaire submission
+     */
+
+    public function testVenueSubmitSurvey()
+    {
+        $this->buildVenueSurvey();
+
+        $venueG = $this->venueGroup;
+        $venueQ = $this->venueQuestion;
+
+        $response = $this->json('POST', 'survey/submit', [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING,
+            'survey' => [
+                [
+                    'survey_group_id' => $venueG->id,
+                    'answers' => [
+                        [
+                            'survey_question_id' => $venueQ->id,
+                            'response' => 'a response'
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('survey_answer', [
+            'person_id' => $this->user->id,
+            'slot_id' => $this->slot->id,
+            'survey_question_id' => $venueQ->id,
+            'response' => 'a response'
+        ]);
+    }
+
+    /*
+    * Test a trainer venue questionnaire submission
+    */
+
+    public function testTrainerGroupSubmitSurvey()
+    {
+        $this->buildVenueSurvey();
+
+        $trainer = $this->trainer;
+        $trainerG = $this->trainerGroup;
+        $trainerQ = $this->trainerQuestion;
+
+        $response = $this->json('POST', 'survey/submit', [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING,
+            'survey' => [
+                [
+                    'survey_group_id' => $trainerG->id,
+                    'trainer_id' => $trainer->id,
+                    'answers' => [
+                        [
+                            'survey_question_id' => $trainerQ->id,
+                            'response' => 'a response'
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('survey_answer', [
+            'person_id' => $this->user->id,
+            'slot_id' => $this->slot->id,
+            'survey_question_id' => $trainerQ->id,
+            'trainer_id' => $trainer->id,
+            'response' => 'a response'
+        ]);
+    }
+}
