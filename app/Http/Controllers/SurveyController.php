@@ -425,7 +425,10 @@ class SurveyController extends ApiController
         if ($trainerIds->isEmpty()) {
             $trainers = [];
         } else {
-            $trainers = Person::select('id', 'callsign')->whereIn('id', $trainerIds)->get();
+            $trainers = Person::select('id', 'callsign', 'person_photo_id')
+                        ->whereIn('id', $trainerIds)
+                        ->with('person_photo')
+                        ->get();
         }
 
         /*
@@ -452,7 +455,11 @@ class SurveyController extends ApiController
             }
 
             $trainersById[$t->id] = [
-                'person' => (object)[ 'id' => $t->id,  'callsign' => $t->callsign ],
+                'person' => (object)[
+                    'id' => $t->id,
+                    'callsign' => $t->callsign,
+                    'photo_url' => $t->person_photo->image_url ?? null,
+                ],
                 'questions' => $questionResponses
             ];
         }
@@ -581,7 +588,8 @@ class SurveyController extends ApiController
             $trainers[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
-                'responses' => $trainerResponses
+                'responses' => $trainerResponses,
+                'photo_url' => $person->photo_url
             ];
         }
 
