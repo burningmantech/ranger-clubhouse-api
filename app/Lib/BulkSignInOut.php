@@ -32,7 +32,7 @@ class BulkSignInOut
     public static function parse($lines)
     {
         $lines = explode("\n", $lines);
-        $positions = Position::findAll();
+        $positions = Position::all();
         $positionTitles = [];
         foreach ($positions as $p) {
             $positionTitles[strtolower($p['title'])] = $p;

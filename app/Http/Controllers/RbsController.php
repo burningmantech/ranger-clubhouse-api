@@ -157,7 +157,7 @@ class RbsController extends ApiController
 
         // Return all positions
         if (isset($attrs['has_position'])) {
-            $info['positions'] = Position::findAll()->map(function ($p) {
+            $info['positions'] = Position::all()->map(function ($p) {
                 return ['id' => $p->id, 'title' => $p->title, 'type' => $p->type];
             })->values();
         }

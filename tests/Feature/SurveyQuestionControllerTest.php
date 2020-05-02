@@ -35,7 +35,7 @@ class SurveyQuestionControllerTest extends TestCase
             'survey_group_id' => $surveyGroup->id,
         ]);
 
-        $response = $this->json('GET', 'survey-question', ['survey_group_id' => $surveyGroup->id]);
+        $response = $this->json('GET', 'survey-question', ['survey_id' => $survey->id]);
         $response->assertStatus(200);
         $this->assertCount(1, $response->json()['survey_question']);
         $response->assertJson([
@@ -63,7 +63,8 @@ class SurveyQuestionControllerTest extends TestCase
             'description' => 'This is a question',
             'is_required' => true,
             'type' => 'options',
-            'options' => '1. Option'
+            'options' => '1. Option',
+            'code' => 'good'
         ];
 
         $response = $this->json('POST', 'survey-question', [
