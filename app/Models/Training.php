@@ -731,13 +731,13 @@ class Training extends Position
     /**
      * Retrieve all trainings up to the given year and position for ids
      *
-     * @param array $peopleIds people to look up
+     * @param $peopleIds people to look up
      * @param int $positionId position to find (usually Training)
      * @param int $year find trainings upto and including the year
      * @return Collection
      */
 
-    public static function retrieveTrainingHistoryForIds(array $peopleIds, int $positionId, int $year) : \Illuminate\Support\Collection
+    public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year) : \Illuminate\Support\Collection
     {
         // Find the sign ups
         $rows = DB::table('slot')
