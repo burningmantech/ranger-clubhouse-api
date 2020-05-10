@@ -30,11 +30,6 @@ class ClubhousePhotoPendingCommand extends Command
      */
     public function handle()
     {
-        if (TaskLog::attemptToStart($this->signature) == false) {
-            $this->info("command has been run already");
-            return;
-        }
-
         $pendingPhotos = PersonPhoto::findAllPending();
 
         if ($pendingPhotos->isNotEmpty()){

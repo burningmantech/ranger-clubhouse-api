@@ -46,11 +46,6 @@ class ClubhouseDailyReportCommand extends Command
      */
     public function handle()
     {
-        if (TaskLog::attemptToStart($this->signature) == false) {
-            $this->info("Too soon to run again");
-            return;
-        }
-
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
         $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 20])['error_logs'];
 
