@@ -35,11 +35,6 @@ class ClubhouseDoceboCompletion extends Command
             return;
         }
 
-        if (TaskLog::attemptToStart($this->signature) == false) {
-            $this->info("Too soon to run again");
-            return;
-        }
-
         $courses = [ setting('DoceboHalfCourseId'), setting('DoceboFullCourseId') ];
 
         $this->info('Connecting to Decebo.');
