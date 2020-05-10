@@ -16,6 +16,7 @@ use Carbon\Carbon;
 class Slot extends ApiModel
 {
     protected $table = 'slot';
+    protected $auditModel = true;
 
     protected $fillable = [
         'active',

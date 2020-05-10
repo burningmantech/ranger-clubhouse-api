@@ -54,7 +54,6 @@ class TimesheetMissingController extends ApiController
         }
 
         if ($timesheetMissing->save()) {
-            $this->log('timesheet-missing-create', '', $timesheetMissing, $timesheetMissing->person_id);
             $timesheetMissing->loadRelationships();
             $person = $this->findPerson($timesheetMissing->person_id);
             if ($person->timesheet_confirmed) {
@@ -102,7 +101,6 @@ class TimesheetMissingController extends ApiController
 
         try {
             DB::beginTransaction();
-            $changes = $timesheetMissing->getChangedValues();
             if (!$timesheetMissing->save()) {
                 DB::rollback();
                 return $this->restError($timesheetMissing);
@@ -138,17 +136,12 @@ class TimesheetMissingController extends ApiController
                 );
 
                 if ($person->timesheet_confirmed) {
+                    $person->auditReason = 'unconfirmed - new (missing) entry created';
                     $person->timesheet_confirmed = false;
                     $person->saveWithoutValidation();
                     TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new (missing) entry created');
                 }
             }
-
-            if (!empty($changes)) {
-                $changes['id'] = $timesheetMissing->id;
-                $this->log('timesheet-missing-update', '', $changes, $timesheetMissing->person_id);
-            }
-
             DB::commit();
         } catch (\Exception $e) {
             DB::rollback();
@@ -177,7 +170,6 @@ class TimesheetMissingController extends ApiController
     {
         $this->authorize('destroy', $timesheetMissing);
         $timesheetMissing->delete();
-        $this->log('timesheet-missing-delete', '', [ 'timesheet_missing' => $timesheetMissing ], $timesheetMissing->person_id);
         return $this->restDeleteSuccess();
     }
 }

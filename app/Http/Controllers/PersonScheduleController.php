@@ -222,7 +222,7 @@ class PersonScheduleController extends ApiController
      *
      * @param int $personId slot to delete for person
      * @param int $slotId to delete
-     * @return Response
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function destroy(Person $person, $slotId)

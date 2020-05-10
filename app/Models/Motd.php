@@ -8,6 +8,7 @@ use App\Models\Person;
 class Motd extends ApiModel
 {
     protected $table = 'motd';
+    protected $auditModel = true;
     public $timestamps = true;
 
     protected $guarded = [

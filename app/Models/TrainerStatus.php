@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 class TrainerStatus extends ApiModel
 {
     protected $table = 'trainer_status';
+    protected $auditModel = true;
     public $timestamps = true;
 
     const ATTENDED = 'attended';

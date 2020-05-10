@@ -90,14 +90,13 @@ class PositionCreditController extends ApiController
         $this->authorize('store', PositionCredit::class);
         $params = request()->validate([
             'ids' => 'required|array',
+            'ids.*' => 'required|integer',
             'deltaDays' => 'sometimes|integer',
             'deltaHours' => 'sometimes|integer',
             'deltaMinutes' => 'sometimes|integer',
             'newPositionId' => 'sometimes|exists:position,id',
         ]);
-        if (empty($params['ids'])) {
-            return $this->restError('Must specify credits to copy', 400);
-        }
+
         $deltaDays = $params['deltaDays'] ?? 0;
         $deltaHours = $params['deltaHours'] ?? 0;
         $deltaMinutes = $params['deltaMinutes'] ?? 0;
@@ -110,7 +109,7 @@ class PositionCreditController extends ApiController
         if (!$delta && !$position) {
             return $this->restError('Must specify new position or a day/time delta');
         }
-        $sourceCredits = PositionCredit::whereIn('id', $params['ids'])->get();
+        $sourceCredits = PositionCredit::find($params['ids']);
         $results = array();
         DB::transaction(function () use ($sourceCredits, $delta, $position, &$results) {
             // TODO add a unique index on (position_id, start_time, end_time) so it's hard to double-copy
@@ -123,6 +122,7 @@ class PositionCreditController extends ApiController
                 if (!empty($position)) {
                     $target->position_id = $position;
                 }
+                $target->auditReason = 'position credit copy';
                 $target->saveOrThrow();
                 array_push($results, $target);
             }

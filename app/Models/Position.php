@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\DB;
 
 class Position extends ApiModel
 {
+    protected $table = 'position';
+    protected $auditModel = true;
+
     const ALPHA = 1;
 
     const DIRT = 2;
@@ -181,7 +184,6 @@ class Position extends ApiModel
         Position::HOT_SPRINGS_PATROL_DRIVER => 15,
     ];
 
-    protected $table = 'position';
 
     protected $fillable = [
         'all_rangers',

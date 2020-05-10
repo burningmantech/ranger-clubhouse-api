@@ -8,6 +8,7 @@ use App\Models\PersonRole;
 class Role extends ApiModel
 {
     protected $table = 'role';
+    protected $auditModel = true;
 
     const ADMIN            = 1;   // Super user! Change anything
     const VIEW_PII         = 2;   // See email, address, phone

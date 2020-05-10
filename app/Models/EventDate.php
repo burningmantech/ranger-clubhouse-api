@@ -9,6 +9,7 @@ use Carbon\Carbon;
 class EventDate extends ApiModel
 {
     protected $table = 'event_dates';
+    protected $auditModel = true;
 
     // All other table names are singular, and this one had to be pural. deal with it.
     protected $resourceSingle = 'event_date';

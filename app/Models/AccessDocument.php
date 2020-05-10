@@ -16,6 +16,7 @@ use Carbon\Carbon;
 class AccessDocument extends ApiModel
 {
     protected $table = 'access_document';
+    protected $auditModel = true;
 
     const ACTIVE_STATUSES = [
         'qualified',

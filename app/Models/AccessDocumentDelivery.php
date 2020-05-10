@@ -12,6 +12,7 @@ class AccessDocumentDelivery extends ApiModel
     use HasCompositePrimaryKey;
 
     protected $table = 'access_document_delivery';
+    protected $auditModel = true;
 
     protected $primaryKey = [ 'person_id', 'year' ];
 
@@ -90,15 +91,4 @@ class AccessDocumentDelivery extends ApiModel
                     'year'      => $year,
                 ]);
     }
-
-    public function save($options = [])
-    {
-        /*if ($this->method == 'mail' && !$this->validate($this->mailRules)) {
-            return false;
-        }*/
-
-        return parent::save($options);
-    }
-
-
 }

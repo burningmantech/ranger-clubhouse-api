@@ -248,10 +248,6 @@ class TicketingController extends ApiController
             }
         }
 
-        if (!empty($documents)) {
-            $this->log('access-document-wap-so', 'Updated list', $documents, $personId);
-        }
-
         $rows = AccessDocument::findSOWAPsForPerson($personId, $year);
         // Send back the updated list
         return response()->json([ 'names' => $rows->map(function ($row) { return $this->buildSOWAPEntry($row); }) ]);

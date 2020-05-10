@@ -13,20 +13,20 @@ class HelpController extends ApiController
     /**
      * Display a listing of the helps.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
         return $this->success(Help::findAll(), null, 'help');
     }
 
-    /**
+    /***
      * Store a newly created help in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
-    public function store(Request $request)
+
+    public function store()
     {
         $this->authorize('store', [ Help::class ]);
         $help = new Help;
@@ -41,9 +41,8 @@ class HelpController extends ApiController
 
     /**
      * Display the specified help.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param Help $help
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Help $help)
     {
@@ -56,6 +55,9 @@ class HelpController extends ApiController
     /**
      * Update the specified help in storage.
      *
+     * @param Help $help
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function update(Help $help)
     {
@@ -70,11 +72,11 @@ class HelpController extends ApiController
     }
 
     /**
-     * Remove the specified help from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param Help $help
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
+
     public function destroy(Help $help)
     {
         $this->authorize('destroy', $help);

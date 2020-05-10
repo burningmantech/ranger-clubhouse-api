@@ -16,7 +16,7 @@ if (!function_exists('setting')) {
      * Retrieve a configuration variable possibly stored in the database.
      * Alias for Setting::get().
      *
-     * @param string $name - setting name
+     * @param mixed $name - setting name
      * @param bool $throwOnEmpty - throw an exception if the value is empty. (false is ignored.)
      * @return mixed setting value
      */

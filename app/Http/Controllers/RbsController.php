@@ -120,6 +120,68 @@ class RbsController extends ApiController
      * Return the items needed (slots, positions, alerts) needed to setup a broadcast form.
      */
 
+    private
+    function verifyType($type)
+    {
+
+        $attrs = RBS::ATTRIBUTES[$type] ?? null;
+        if (!$attrs) {
+            throw new InvalidArgumentException("Unknown broadcast type");
+        }
+
+        $this->authorize('typeAllowed', [Broadcast::class, $type]);
+
+        return $attrs;
+    }
+
+    /*
+     * Retrieve unknown phone numbers for a year
+     */
+
+    private static function grabCriteria($type)
+    {
+        $attrs = RBS::ATTRIBUTES[$type];
+
+        $validations = [
+            'send_clubhouse' => 'sometimes|boolean',
+            'send_email' => 'sometimes|boolean',
+            'send_sms' => 'sometimes|boolean'
+        ];
+
+        if (empty($attrs['alert_id'])) {
+            $validations['alert_id'] = 'required|integer|exists:alert,id';
+        }
+
+        if (isset($attrs['has_position']) || isset($attrs['has_muster_position'])) {
+            $validations['position_id'] = 'required|integer|exists:position,id';
+            $validations['position_signed_up'] = 'required|string';
+        }
+
+        if (isset($attrs['has_restrictions'])) {
+            $validations['on_site'] = 'required|boolean';
+            $validations['attending'] = 'required|boolean';
+            $validations['training'] = 'required|string';
+        }
+
+        if (isset($attrs['has_status'])) {
+            $validations['statuses'] = 'required|array';
+            $validations['statuses.*'] = 'sometimes|string';
+        }
+
+        if (isset($attrs['has_slot'])) {
+            $validations['slot_id'] = 'required|integer|exists:slot,id';
+        }
+
+        if (empty($validations)) {
+            return [];
+        }
+
+        return request()->validate($validations);
+    }
+
+    /*
+     * Retrieve basic statistics  (verified, unverified, stopped, etc.)
+     */
 
     public function details()
     {
@@ -221,7 +283,7 @@ class RbsController extends ApiController
     }
 
     /*
-     * Retrieve unknown phone numbers for a year
+     * Transmit a message to the world
      */
 
     public function unknownPhones()
@@ -236,7 +298,8 @@ class RbsController extends ApiController
     }
 
     /*
-     * Retrieve basic statistics  (verified, unverified, stopped, etc.)
+     * Setup a validation array to grab and verify the query parameters needed
+     * for the given broadcast type.
      */
 
     public function stats()
@@ -304,7 +367,7 @@ class RbsController extends ApiController
     }
 
     /*
-     * Transmit a message to the world
+     * Attempt to resend a failed broadcast
      */
 
     public function transmit()
@@ -338,7 +401,7 @@ class RbsController extends ApiController
         $alertId = $attrs['alert_id'] ?? ($criteria['alert_id'] ?? null);
 
         if (empty($alertId)) {
-            throw new \InvalidArgumentException("Alert id must be supplied.");
+            throw new InvalidArgumentException("Alert id must be supplied.");
         }
 
         $alert = Alert::findOrFail($alertId);
@@ -421,53 +484,7 @@ class RbsController extends ApiController
     }
 
     /*
-     * Setup a validation array to grab and verify the query parameters needed
-     * for the given broadcast type.
-     */
-
-    private static function grabCriteria($type)
-    {
-        $attrs = RBS::ATTRIBUTES[$type];
-
-        $validations = [
-            'send_clubhouse' => 'sometimes|boolean',
-            'send_email' => 'sometimes|boolean',
-            'send_sms' => 'sometimes|boolean'
-        ];
-
-        if (empty($attrs['alert_id'])) {
-            $validations['alert_id'] = 'required|integer|exists:alert,id';
-        }
-
-        if (isset($attrs['has_position']) || isset($attrs['has_muster_position'])) {
-            $validations['position_id'] = 'required|integer|exists:position,id';
-            $validations['position_signed_up'] = 'required|string';
-        }
-
-        if (isset($attrs['has_restrictions'])) {
-            $validations['on_site'] = 'required|boolean';
-            $validations['attending'] = 'required|boolean';
-            $validations['training'] = 'required|string';
-        }
-
-        if (isset($attrs['has_status'])) {
-            $validations['statuses'] = 'required|array';
-            $validations['statuses.*'] = 'sometimes|string';
-        }
-
-        if (isset($attrs['has_slot'])) {
-            $validations['slot_id'] = 'required|integer|exists:slot,id';
-        }
-
-        if (empty($validations)) {
-            return [];
-        }
-
-        return request()->validate($validations);
-    }
-
-    /*
-     * Attempt to resend a failed broadcast
+     * Find a person transmit record already built up or built a new one
      */
 
     public function retry()
@@ -535,11 +552,10 @@ class RbsController extends ApiController
     }
 
     /*
-     * Find a person transmit record already built up or built a new one
+     * Verify the broadcast type exists, and if the user is allowed to use it.
      */
 
-    private
-    function findOrBuildPerson(&$peopleByIds, $message)
+    private function findOrBuildPerson(&$peopleByIds, $message)
     {
         $person = $peopleByIds[$message->person_id] ?? null;
         if ($person) {
@@ -558,23 +574,5 @@ class RbsController extends ApiController
         $peopleByIds[$person->id] = $person;
 
         return $person;
-    }
-
-    /*
-     * Verify the broadcast type exists, and if the user is allowed to use it.
-     */
-
-    private
-    function verifyType($type)
-    {
-
-        $attrs = RBS::ATTRIBUTES[$type] ?? null;
-        if (!$attrs) {
-            throw new \InvalidArgumentException("Unknown broadcast type");
-        }
-
-        $this->authorize('typeAllowed', [Broadcast::class, $type]);
-
-        return $attrs;
     }
 }

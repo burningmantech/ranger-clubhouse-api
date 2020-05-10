@@ -14,11 +14,14 @@ use Illuminate\Support\Facades\DB;
 
 class Survey extends ApiModel
 {
+    protected $table = 'survey';
+    protected $auditModel = true;
+    public $timestamps = true;
+
     const TRAINER = 'trainer';
     const TRAINING = 'training';
     const SLOT = 'slot';
-    public $timestamps = true;
-    protected $table = 'survey';
+
     protected $fillable = [
         'year',
         'type',

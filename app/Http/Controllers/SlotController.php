@@ -55,7 +55,7 @@ class SlotController extends ApiController
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -72,8 +72,6 @@ class SlotController extends ApiController
             return $this->restError($slot);
         }
 
-        $this->log('slot-create', 'create', [ 'slot' => $slot ]);
-
         // Return the position & trainer_slot info
         $slot->loadRelationships();
 
@@ -83,7 +81,7 @@ class SlotController extends ApiController
     /**
      * Display the specified resource.
      *
-     * @param  \App\Slot  $slot
+     * @return \Illuminate\Http\JsonResponse
      * @return \Illuminate\Http\Response
      */
     public function show(Slot $slot)
@@ -94,8 +92,8 @@ class SlotController extends ApiController
     /**
      * Update the specified resource in storage.
      *
-     * @param  \App\Slot  $slot
-     * @return \Illuminate\Http\Response
+     * @param Slot  $slot
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Slot $slot)
     {
@@ -106,14 +104,8 @@ class SlotController extends ApiController
             return $this->restError($slot);
         }
 
-        $changes = $slot->getChangedValues();
         if (!$slot->save()) {
             return $this->restError($slot);
-        }
-
-        if (!empty($changes)) {
-            $changes['slot_id'] = $slot->id;
-            $this->log('slot-update', 'update', $changes);
         }
 
         // In case position or trainer_slot changed.
@@ -137,12 +129,8 @@ class SlotController extends ApiController
         DB::transaction(function () use ($slots, $attributes) {
             foreach ($slots as $slot) {
                 $slot->fill($attributes);
-                $changes = $slot->getChangedValues();
+                $slot->auditReason = 'bulk update';
                 $slot->save();
-                if (!empty($changes)) {
-                    $changes['slot_id'] = $slot->id;
-                    $this->log('slot-update', 'bulk update', $changes);
-                }
             }
         });
 
@@ -172,7 +160,7 @@ class SlotController extends ApiController
             'attributes' => 'sometimes|array',
         ]);
         if (empty($params['ids'])) {
-            return $this->restError('Must specify credits to copy', 400);
+            return $this->restError('Must specify credits to copy', 422);
         }
         $activate = $params['activate'] ?? false;
         $attributes = $params['attributes'] ?? array();
@@ -182,9 +170,9 @@ class SlotController extends ApiController
         if ($deltaDays != 0 || $deltaHours != 0 || $deltaMinutes != 0) {
             $delta = "$deltaDays day $deltaHours hour $deltaMinutes minute";
         } else {
-            $delta = NULL;
+            $delta = null;
         }
-        $position = $params['newPositionId'] ?? NULL;
+        $position = $params['newPositionId'] ?? null;
         if (!$delta && !$position) {
             return $this->restError('Must specify new position or a day/time delta');
         }
@@ -194,9 +182,10 @@ class SlotController extends ApiController
             DB::transaction(function () use ($sourceSlots, $delta, $position, $activate, $attributes, &$results) {
                 foreach ($sourceSlots as $source) {
                     if ($source->training_id || $source->trainer_slot_id || $source->trainee_slot_id) {
+                        $title = $source->position()->title;
                         throw new \UnexpectedValueException(
                             "Clubhouse server doesn't yet know how to bulk-copy training or mentor/mentee shift pairs:"
-                            . " ${$source->position()->title}: {$source->description}: {$source->begins}");
+                            . " ${title}: {$source->description}: {$source->begins}");
                     }
                     $target = $source->replicate();
                     $target->fill($attributes);
@@ -209,6 +198,7 @@ class SlotController extends ApiController
                     }
                     $target->signed_up = 0;
                     $target->active = $activate;
+                    $target->auditReason = 'slot copy';
                     $target->saveOrThrow();
                     array_push($results, $target);
                 }
@@ -222,8 +212,8 @@ class SlotController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Slot  $slot
-     * @return \Illuminate\Http\Response
+     * @param  Slot  $slot
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Slot $slot)
     {
@@ -236,13 +226,12 @@ class SlotController extends ApiController
         TraineeNote::deleteForSlot($slot->id);
         SurveyAnswer::deleteForSlot($slot->id);
 
-        $this->log('slot-delete', 'delete', [ 'slot' => $slot ]);
-
         return $this->restDeleteSuccess();
     }
 
-    /*
+    /**
      * Return people signed up for a given Slot
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function people(Slot $slot)
@@ -251,23 +240,24 @@ class SlotController extends ApiController
         return response()->json([ 'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false)]);
     }
 
-    /*
+    /**
      * Return how many years the slots span
-     */
+      * @return \Illuminate\Http\JsonResponse
+      */
 
     public function years()
     {
         return response()->json([ 'years' => Slot::findYears() ]);
     }
 
-    /*
+    /**
      * Partially validate a slot based on restrictions
      *
      * - If the slot is time restricted (begins within pre-event period, and not
      * an approved position, then only an Admin may be allowed to create or update.
      */
 
-    private function validateRestrictions($slot)
+    private function validateRestrictions(Slot $slot)
     {
         if (!$slot->isPreEventRestricted()) {
             // Either falls outside the pre-event period, or has an approved position

@@ -31,7 +31,7 @@ class PositionController extends ApiController
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -41,7 +41,6 @@ class PositionController extends ApiController
         $this->fromRest($position);
 
         if ($position->save()) {
-            $this->log('position-create', 'position create', [ 'position' => $position ]);
             return $this->success($position);
         }
 
@@ -52,7 +51,7 @@ class PositionController extends ApiController
      * Display the specified resource.
      *
      * @param  \App\Models\Position  $position
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Position $position)
     {
@@ -64,19 +63,14 @@ class PositionController extends ApiController
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \App\Models\Position  $position
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, Position $position)
     {
         $this->authorize('update', Position::class);
         $this->fromRest($position);
 
-        $changes = $position->getChangedValues();
         if ($position->save()) {
-            if (!empty($changes)) {
-                $changes['position_id'] = $position->id;
-                $this->log('position-update', 'position update', $changes);
-            }
             return $this->success($position);
         }
 
@@ -87,13 +81,12 @@ class PositionController extends ApiController
      * Remove the specified resource from storage.
      *
      * @param  \App\Models\Position  $position
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Position $position)
     {
         $this->authorize('delete', Position::class);
         $position->delete();
-        $this->log('position-delete', 'position delete', [ 'position' => $position ]);
         return $this->restDeleteSuccess();
     }
 

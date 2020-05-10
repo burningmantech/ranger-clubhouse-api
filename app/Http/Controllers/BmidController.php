@@ -25,10 +25,10 @@ class BmidController extends ApiController
         $this->authorize('index', Bmid::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer'
+            'year' => 'required|integer'
         ]);
 
-        return response()->json([ 'bmids' => Bmid::findForQuery($params)]);
+        return response()->json(['bmids' => Bmid::findForQuery($params)]);
     }
 
     /*
@@ -40,15 +40,15 @@ class BmidController extends ApiController
         $this->authorize('index', Bmid::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer',
-            'filter'   => [
+            'year' => 'required|integer',
+            'filter' => [
                 'required',
                 'string',
-                Rule::in([ 'special', 'alpha', 'signedup', 'submitted', 'printed', 'nonprint', 'no-shifts' ])
+                Rule::in(['special', 'alpha', 'signedup', 'submitted', 'printed', 'nonprint', 'no-shifts'])
             ]
         ]);
 
-        return response()->json([ 'bmids' => Bmid::findForManage($params['year'], $params['filter']) ]);
+        return response()->json(['bmids' => Bmid::findForManage($params['year'], $params['filter'])]);
     }
 
     /*
@@ -61,10 +61,10 @@ class BmidController extends ApiController
 
         $params = request()->validate([
             'person_id' => 'required|integer|exists:person,id',
-            'year'      => 'required|integer',
+            'year' => 'required|integer',
         ]);
 
-        return response()->json([ 'bmid' => Bmid::findForPersonManage($params['person_id'], $params['year'])]);
+        return response()->json(['bmid' => Bmid::findForPersonManage($params['person_id'], $params['year'])]);
     }
 
     /*
@@ -76,10 +76,10 @@ class BmidController extends ApiController
         $this->authorize('lambase', Bmid::class);
 
         $params = request()->validate([
-            'year'         => 'required|integer',
-            'person_ids'   => 'required|array',
+            'year' => 'required|integer',
+            'person_ids' => 'required|array',
             'person_ids.*' => 'required|integer',
-            'batch_info'   => 'sometimes|string',
+            'batch_info' => 'sometimes|string',
         ]);
 
         $bmids = Bmid::findForPersonIds($params['year'], $params['person_ids']);
@@ -105,7 +105,7 @@ class BmidController extends ApiController
         } catch (LambaseBMIDException $e) {
             $message = $e->getMessage();
             ErrorLog::recordException($e, 'lambase-bmid-exception', [
-                    'lambase_result'    => $e->lambaseResult
+                'lambase_result' => $e->lambaseResult
             ]);
             return RestApi::error(response(), 500, "Lambase upload failed: {$message}");
         }
@@ -115,22 +115,24 @@ class BmidController extends ApiController
             if (!$bmid->uploadedToLambase) {
                 $results[] = [
                     'person_id' => $bmid->person_id,
-                    'status'    => 'failed'
+                    'status' => 'failed'
                 ];
                 continue;
             }
             $bmid->status = 'submitted';
             $bmid->notes = "$uploadDate $user: Uploaded to Lambase\n$bmid->notes";
+            $bmid->auditReason = 'upload to print';
             $bmid->save();
 
             $results[] = [
                 'person_id' => $bmid->person_id,
-                'status'    => 'submitted'
+                'status' => 'submitted'
             ];
         }
 
-        return response()->json([ 'bmids' => $results ]);
+        return response()->json(['bmids' => $results]);
     }
+
     /*
      * Sanity Check the BMIDs
      */
@@ -139,7 +141,7 @@ class BmidController extends ApiController
         $this->authorize('index', Bmid::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer'
+            'year' => 'required|integer'
         ]);
 
         return response()->json(Bmid::sanityCheckForYear($params['year']));
@@ -155,7 +157,7 @@ class BmidController extends ApiController
 
         $params = request()->validate([
             'bmid.person_id' => 'required|integer',
-            'bmid.year'      => 'required|integer',
+            'bmid.year' => 'required|integer',
         ]);
         $params = $params['bmid'];
 
@@ -167,9 +169,7 @@ class BmidController extends ApiController
             return $this->restError($bmid);
         }
 
-        $this->log('bmid-create', 'bmid create', $bmid->getAttributes(), $bmid->person_id);
-
-        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
         return $this->success($bmid);
     }
 
@@ -181,7 +181,7 @@ class BmidController extends ApiController
     {
         $this->authorize('show', $bmid);
 
-        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
 
         return $this->success($bmid);
     }
@@ -195,19 +195,12 @@ class BmidController extends ApiController
         $this->authorize('update', $bmid);
 
         // load up additional info
-        Bmid::bulkLoadRelationships(new EloquentCollection([ $bmid ]), [ $bmid->person_id ]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
         $this->fromRest($bmid);
 
-        $changes = $bmid->getChangedValues();
         if (!$bmid->save()) {
             return $this->restError($bmid);
         }
-
-        if (!empty($changes)) {
-            $changes['id'] = $bmid->id;
-            $this->log('bmid-update', 'bmid update', $changes, $bmid->person_id);
-        }
-
 
         return $this->success($bmid);
     }
@@ -220,7 +213,6 @@ class BmidController extends ApiController
     {
         $this->authorize('delete', $bmid);
         $bmid->delete();
-        $this->log('bmid-delete', 'bmid delete', $bmid, $bmid->person_id);
         return $this->restDeleteSuccess();
     }
 
@@ -230,18 +222,18 @@ class BmidController extends ApiController
 
     public function setBMIDTitles()
     {
-        $this->authorize('setBMIDTitles', [ Bmid::class ]);
+        $this->authorize('setBMIDTitles', [Bmid::class]);
 
         $titles = [
             // Title 1
-            Position::RSC_SHIFT_LEAD => [ 'title1', 'Shift Lead' ],
-            Position::DEPARTMENT_MANAGER => [ 'title1', 'Department Manager' ],
-            Position::OPERATIONS_MANAGER => [ 'title1', 'Operations Manager' ],
-            Position::OOD => [ 'title1', 'Officer of the Day' ],
+            Position::RSC_SHIFT_LEAD => ['title1', 'Shift Lead'],
+            Position::DEPARTMENT_MANAGER => ['title1', 'Department Manager'],
+            Position::OPERATIONS_MANAGER => ['title1', 'Operations Manager'],
+            Position::OOD => ['title1', 'Officer of the Day'],
             // Title 2
-            Position::LEAL => [ 'title2', 'LEAL' ],
+            Position::LEAL => ['title2', 'LEAL'],
             // Title 3
-            Position::DOUBLE_OH_7 => [ 'title3', '007']
+            Position::DOUBLE_OH_7 => ['title3', '007']
         ];
 
         $year = current_year();
@@ -273,29 +265,18 @@ class BmidController extends ApiController
         $badges = [];
 
         foreach ($bmids as $bmid) {
-            if ($bmid->id) {
-                $changes = $bmid->getChangedValues();
-                if (empty($changes)) {
-                    // Nothing changed - Skip this one.
-                    continue;
-                }
-                $changes['id'] = $bmid->id;
-                $isNew = false;
-            } else {
-                $isNew = true;
-            }
+            $bmid->auditReason = 'maintenance - set BMID titles';
             $bmid->saveWithoutValidation();
-            $this->log($isNew ? 'bmid-create' : 'bmid-update', 'maintenance - set BMID titles', $isNew ? $bmid : $changes, $bmid->person_id);
 
             $person = $bmid->person;
             $title = $bmidTitles[$bmid->person_id];
             $badges[] = [
-                'id'       => $personId,
+                'id' => $personId,
                 'callsign' => $person->callsign,
-                'status'   => $person->status,
-                'title1'   => $title['title1'] ?? null,
-                'title2'   => $title['title2'] ?? null,
-                'title3'   => $title['title3'] ?? null,
+                'status' => $person->status,
+                'title1' => $title['title1'] ?? null,
+                'title2' => $title['title2'] ?? null,
+                'title3' => $title['title3'] ?? null,
             ];
         }
 
@@ -303,6 +284,6 @@ class BmidController extends ApiController
             return strcasecmp($a['callsign'], $b['callsign']);
         });
 
-        return response()->json([ 'bmids' => $badges ]);
+        return response()->json(['bmids' => $badges]);
     }
 }

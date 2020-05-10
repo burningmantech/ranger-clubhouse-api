@@ -12,6 +12,7 @@ use App\Helpers\SqlHelper;
 class Bmid extends ApiModel
 {
     protected $table = 'bmid';
+    protected $auditModel = true;
 
     const MEALS_TYPES = [
         'all',

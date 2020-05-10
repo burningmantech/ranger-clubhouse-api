@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 class TraineeStatus extends ApiModel
 {
     protected $table = 'trainee_status';
+    protected $auditModel = true;
 
     protected $fillable = [
         'person_id',

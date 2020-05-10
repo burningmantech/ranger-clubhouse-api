@@ -67,13 +67,8 @@ class MentorController extends ApiController
             $person->mentors_flag = $potential['mentors_flag'];
             $person->mentors_flag_note = $potential['mentors_flag_note'] ?? '';
             $person->mentors_notes = $potential['mentors_notes'] ?? '';
-            $changes = $person->getChangedValues();
-
-            if (!empty($changes)) {
-                // Track changes
-                $person->saveWithoutValidation();
-                $this->log('person-update', 'mentor update', $changes, $person->id);
-            }
+            $person->auditReason = 'mentor update';
+            $person->saveWithoutValidation();
         }
 
         return $this->success();
@@ -230,8 +225,8 @@ class MentorController extends ApiController
             if ($person->status != $status) {
                 $oldStatus = $person->status;
                 $person->status = $status;
+                $person->reason = 'mentor conversion';
                 $person->saveWithoutValidation();
-                $this->log('person-update', 'mentor conversion', [ 'status' => [ $oldStatus, $status ]], $person->id);
                 $person->changeStatus($status, $oldStatus, 'mentor conversion');
             }
 

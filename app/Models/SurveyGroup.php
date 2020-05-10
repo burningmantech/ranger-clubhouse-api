@@ -8,6 +8,7 @@ use App\Models\SurveyQuestion;
 class SurveyGroup extends ApiModel
 {
     protected $table = 'survey_group';
+    protected $auditModel = true;
     public $timestamps = true;
 
     protected $fillable = [

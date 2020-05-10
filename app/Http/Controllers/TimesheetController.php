@@ -128,7 +128,6 @@ class TimesheetController extends ApiController
 
         if ($timesheet->save()) {
             $timesheet->loadRelationships();
-            $this->log('timesheet-create', '', $timesheet, $timesheet->person_id);
             $person = $this->findPerson($timesheet->person_id);
             if ($person->timesheet_confirmed) {
                 $person->timesheet_confirmed = false;
@@ -203,7 +202,6 @@ class TimesheetController extends ApiController
             }
         }
 
-        $changes = $timesheet->getChangedValues();
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
@@ -228,11 +226,6 @@ class TimesheetController extends ApiController
         // Load up position title, reviewer callsigns in case of change.
         $timesheet->loadRelationships();
 
-        if (!empty($changes)) {
-            $chanages['id'] = $timesheet->id;
-            $this->log('timesheet-update', '', $changes, $timesheet->person_id);
-        }
-
         return $this->success($timesheet);
     }
 
@@ -252,8 +245,6 @@ class TimesheetController extends ApiController
             $timesheet->id,
             "{$positionTitle} {$timesheet->on_duty} - {$timesheet->off_duty}"
         );
-
-        $this->log('timesheet-delete', '', $timesheet, $timesheet->person_id);
 
         return $this->restDeleteSuccess();
     }
@@ -329,12 +320,10 @@ class TimesheetController extends ApiController
         }
 
         $timesheet->setOnDutyToNow();
-
+        $timesheet->auditReason = 'sign in';
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
-
-        $this->log('timesheet-create', 'sign in', $timesheet, $timesheet->person_id);
 
         $timesheet->loadRelationships();
 
@@ -381,10 +370,9 @@ class TimesheetController extends ApiController
         }
 
         $timesheet->setOffDutyToNow();
-        $changes = $timesheet->getChangedValues();
+        $timesheet->auditReason = 'signout';
         $timesheet->save();
         $timesheet->loadRelationships();
-        $this->log('timesheet-update', 'signout', $timesheet, $timesheet->person_id);
         TimesheetLog::record(
             'signoff',
             $timesheet->person_id,
@@ -433,6 +421,7 @@ class TimesheetController extends ApiController
         $person = $this->findPerson($params['person_id']);
         $this->authorize('confirm', [Timesheet::class, $person->id]);
 
+        $person->auditReason = 'timesheet confirm';
         $person->timesheet_confirmed = $params['confirmed'];
 
         // Only log the confirm/unconfirm if the flag changed.
@@ -674,18 +663,8 @@ class TimesheetController extends ApiController
                 $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
             }
 
-            $isExisting = $timesheet->id ? true : false;
-            if ($isExisting) {
-                $changes = $timesheet->getChangedValues();
-            }
-
+            $timesheet->auditReason = 'bulk sign in/out';
             if ($timesheet->save()) {
-                if ($isExisting) {
-                    $changes['id'] = $timesheet->id;
-                    $this->log('timesheet-update', 'bulk sign in/out', $changes, $timesheet->person_id);
-                } else {
-                    $this->log('timesheet-create', 'bulk sign in/out', $timesheet, $timesheet->person_id);
-                }
                 TimesheetLog::record($event, $personId, $userId, $timesheet->id, $message);
             } else {
                 $entry->errors = [ "timesheet entry save failure ".json_encode($timesheet->getErrors()) ];

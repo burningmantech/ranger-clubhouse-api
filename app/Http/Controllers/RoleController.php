@@ -24,13 +24,13 @@ class RoleController extends ApiController
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         $this->authorize('store', Role::class);
 
-        $role = new \App\Models\Role;
+        $role = new Role;
         $this->fromRest($role);
 
         if ($role->save()) {
@@ -44,7 +44,7 @@ class RoleController extends ApiController
      * Display the specified resource.
      *
      * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Role $role)
     {
@@ -56,7 +56,7 @@ class RoleController extends ApiController
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, Role $role)
     {
@@ -74,13 +74,12 @@ class RoleController extends ApiController
      * Remove the specified resource from storage.
      *
      * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Role $role)
     {
         $this->authorize('delete', Role::class);
         $role->delete();
-        $this->log('role-delete', 'Role Deleted', [ 'id' => $role->id]);
         return $this->restDeleteSuccess();
     }
 }

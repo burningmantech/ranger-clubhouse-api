@@ -217,14 +217,11 @@ class BulkUploadController extends ApiController
             }
 
             $oldValue = $person->$action;
-            $newValue = $person->$action = 1;
+            $person->$action = 1;
             $record->status = 'success';
 
             if ($commit) {
-                $changes = $person->getChangedValues();
-                if ($this->saveModel($person, $record)) {
-                    $this->log('person-update', $reason, $changes, $person->id);
-                } else {
+                if (!$this->saveModel($person, $record)) {
                     continue;
                 }
             }
@@ -294,19 +291,7 @@ class BulkUploadController extends ApiController
 
             $record->status = 'success';
             if ($commit) {
-                $exists = $bmid->exists;
-                if ($exists) {
-                    $changes = $bmid->getChangedValues();
-                }
                 $this->saveModel($bmid, $record);
-                if ($record->status == 'success') {
-                    if ($exists) {
-                        $changes['id'] = $bmid->id;
-                        $this->log('bmid-update', $reason, $changes, $bmid->person_id);
-                    } else {
-                        $this->log('bmid-create', $reason, $bmid->getAttributes(), $bmid->person_id);
-                    }
-                }
             }
 
             $record->changes = [ $oldValue, $newValue ];

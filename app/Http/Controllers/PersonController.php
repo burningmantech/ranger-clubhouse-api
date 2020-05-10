@@ -36,6 +36,7 @@ use App\Mail\WelcomeMail;
 
 use Carbon\Carbon;
 use InvalidArgumentException;
+use RuntimeException;
 
 class PersonController extends ApiController
 {
@@ -63,7 +64,7 @@ class PersonController extends ApiController
 
         if ($params['basic'] ?? false) {
             if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
-                throw new \InvalidArgumentException("Not authorized for basic search.");
+                throw new InvalidArgumentException("Not authorized for basic search.");
             }
 
             $rows = [];
@@ -126,6 +127,7 @@ class PersonController extends ApiController
     public function store(Request $request)
     {
         $this->authorize('store');
+        throw new RuntimeException('unimplemented');
     }
 
     /*
@@ -139,8 +141,6 @@ class PersonController extends ApiController
         $person->retrieveRoles();
 
         $person->languages = PersonLanguage::retrieveForPerson($personId);
-
-        $personId = $this->user->id;
 
         return $this->toRestFiltered($person);
     }
@@ -169,8 +169,7 @@ class PersonController extends ApiController
             $oldEmail = $person->getOriginal('email');
         }
 
-        $changes = $person->getChangedValues();
-
+        $person->auditReason = 'person update';
         if (!$person->save()) {
             return $this->restError($person);
         }
@@ -179,21 +178,16 @@ class PersonController extends ApiController
             PersonLanguage::updateForPerson($person->id, $person->languages);
         }
 
-        // Track changes
-        if (!empty($changes)) {
-            $this->log('person-update', 'person update', $changes, $person->id);
+        // Alert VCs when the email address changes for a prospective.
+        if ($emailChanged
+            && $person->status == Person::PROSPECTIVE
+            && $person->id == $this->user->id) {
+            mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
+        }
 
-            // Alert VCs when the email address changes for a prospective.
-            if ($emailChanged
-                && $person->status == Person::PROSPECTIVE
-                && $person->id == $this->user->id) {
-                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
-            }
-
-            if ($statusChanged) {
-                $person->changeStatus($newStatus, $oldStatus, 'person update');
-                $person->save();
-            }
+        if ($statusChanged) {
+            $person->changeStatus($newStatus, $oldStatus, 'person update');
+            $person->saveWithoutValidation();
         }
 
         $person->languages = PersonLanguage::retrieveForPerson($person->id);
@@ -226,8 +220,6 @@ class PersonController extends ApiController
                 $person->delete();
             }
         );
-
-        $this->log('person-delete', 'Person delete', ['person' => $person], $person->id);
 
         return $this->restDeleteSuccess();
     }
@@ -562,7 +554,7 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != 'auditor') {
-            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
 
@@ -571,6 +563,7 @@ class PersonController extends ApiController
             $person->resetCallsign();
         }
 
+        $person->auditReason = 'registration';
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
             mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent), true);
@@ -580,7 +573,6 @@ class PersonController extends ApiController
 
         // Log account creation
         mail_to($accountCreateEmail, new AccountCreationMail('success', 'account created', $person, $intent), true);
-        $this->log('person-create', 'registration', null, $person->id);
 
         // Set the password
         $person->changePassword($params['person']['password']);
@@ -850,7 +842,7 @@ class PersonController extends ApiController
      * @param $now
      * @return bool
      */
-    private function isTimeWithinGracePeriod($time, $now) : bool
+    private function isTimeWithinGracePeriod($time, $now): bool
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
 
@@ -867,7 +859,7 @@ class PersonController extends ApiController
         $year = current_year();
 
         if (config('clubhouse.DeploymentEnvironment') != 'Staging' && !app()->isLocal()) {
-            throw new \InvalidArgumentException('Onboard debugging is only available in the staging server');
+            throw new InvalidArgumentException('Onboard debugging is only available in the staging server');
         }
 
         $photoStatus = request()->input('photo_status');
@@ -974,7 +966,7 @@ class PersonController extends ApiController
                         ->delete();
                     return $this->success();
                 default:
-                    throw new \InvalidArgumentException("Unknown training command");
+                    throw new InvalidArgumentException("Unknown training command");
             }
         }
 
@@ -1023,7 +1015,7 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new \InvalidArgumentException("Unknown alpha command [$status]");
+                    throw new InvalidArgumentException("Unknown alpha command [$status]");
             }
             return $this->success();
         }
@@ -1047,13 +1039,13 @@ class PersonController extends ApiController
                         ->delete();
                     break;
                 default:
-                    throw new \InvalidArgumentException("Unknown training command");
+                    throw new InvalidArgumentException("Unknown training command");
             }
 
             return $this->success();
         }
 
-        throw new \InvalidArgumentException("Unknown onboard debugging command");
+        throw new InvalidArgumentException("Unknown onboard debugging command");
     }
 
     /**

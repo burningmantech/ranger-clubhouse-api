@@ -90,24 +90,19 @@ class TrainingSessionController extends ApiController
             $traineeStatus->feedback_delivered = $params['feedback_delivered'];
         }
         $traineeStatus->passed = $params['passed'];
-        $changes = $traineeStatus->getChangedValues();
-        $isNew = !$traineeStatus->exists;
+
         if ($traineeStatus->isDirty('rank')) {
             $rankUpdated = true;
             $oldRank = $traineeStatus->getOriginal('rank');
         } else {
             $rankUpdated = false;
         }
-        $traineeStatus->save();
 
-        if (!empty($changes)) {
-            if (!$isNew) {
-                $changes['id'] = $traineeStatus->id;
-            }
-            $this->log($isNew ? 'trainee-status-create' : 'trainee-status-update', '', $isNew ? $traineeStatus : $changes, $personId);
+        if (!$traineeStatus->save()) {
+            return $this->restError($traineeStatus);
         }
 
-        if ($rankUpdated) {
+         if ($rankUpdated) {
             TraineeNote::record($personId, $session->id, "rank change [" . ($oldRank ?? 'no rank') . "] -> [" . ($traineeStatus->rank ?? 'no rank') . "]", true);
         }
 
@@ -139,13 +134,7 @@ class TrainingSessionController extends ApiController
             $trainerStatus = TrainerStatus::firstOrNewForSession($session->id, $personId);
             $trainerStatus->status = $trainer['status'];
             $trainerStatus->trainer_slot_id = $trainer['trainer_slot_id'];
-            $changes = $trainerStatus->getChangedValues();
             $trainerStatus->save();
-            if (!empty($changes)) {
-                $changes['slot_id'] = $id;
-                $changes['trainer_slot_id'] = $trainer['trainer_slot_id'];
-                $this->log('trainer-status-update', '', $changes, $personId);
-            }
         }
 
         return response()->json(['trainers' => $session->retrieveTrainers()]);

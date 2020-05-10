@@ -1,13 +1,15 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Helpers\ReservedCallsigns;
+use App\Lib\ReservedCallsigns;
 use Illuminate\Support\Facades\DB;
+use App\Models\Person;
 
 /** HTTP controller for handles (person callsigns and reserved words), used by the handle checker. */
 class HandleController extends ApiController
 {
-    const EXCLUDE_STATUSES = ['past prospective', 'auditor'];
+    const EXCLUDE_STATUSES = [ Person::PAST_PROSPECTIVE, Person::AUDITOR ];
+
     /**
      * List all handles.
      * @return \Illuminate\Http\Response
@@ -27,22 +29,22 @@ class HandleController extends ApiController
                 ['id' => $ranger->id, 'status' => $ranger->status, 'vintage' => $ranger->vintage]
             );
         }
-        foreach (ReservedCallsigns::$PHONETIC as $handle) {
+        foreach (ReservedCallsigns::PHONETIC as $handle) {
             $result[] = $this->jsonHandle($handle, 'phonetic-alphabet');
         }
-        foreach (ReservedCallsigns::$LOCATIONS as $handle) {
+        foreach (ReservedCallsigns::LOCATIONS as $handle) {
             $result[] = $this->jsonHandle($handle, 'location');
         }
-        foreach (ReservedCallsigns::$RADIO_JARGON as $handle) {
+        foreach (ReservedCallsigns::RADIO_JARGON as $handle) {
             $result[] = $this->jsonHandle($handle, 'jargon');
         }
-        foreach (ReservedCallsigns::$RANGER_JARGON as $handle) {
+        foreach (ReservedCallsigns::RANGER_JARGON as $handle) {
             $result[] = $this->jsonHandle($handle, 'jargon');
         }
         foreach (ReservedCallsigns::twiiVips() as $handle) {
             $result[] = $this->jsonHandle($handle, 'VIP');
         }
-        foreach (ReservedCallsigns::$RESERVED as $handle) {
+        foreach (ReservedCallsigns::RESERVED as $handle) {
             $result[] = $this->jsonHandle($handle, 'reserved');
         }
         return response()->json(['data' => $result]);
