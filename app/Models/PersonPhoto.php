@@ -30,6 +30,7 @@ class PersonPhoto extends ApiModel
 {
     protected $table = 'person_photo';
     public $timestamps = true;
+    protected $auditModel = true;
 
     const STORAGE_DIR = 'photos/';
     const STORAGE_STAGING_DIR = 'staging/';

@@ -1,5 +1,5 @@
 <?php
-namespace App\Helpers;
+namespace App\Lib;
 
 /**
  * This here is your master list of reserved callsigns.  They come in several
@@ -27,7 +27,7 @@ namespace App\Helpers;
 class ReservedCallsigns
 {
     /** NATO phonetic alphabet */
-    public static $PHONETIC = array(
+    const PHONETIC = array(
         'Alfa',
         'Bravo',
         'Charlie',
@@ -58,7 +58,7 @@ class ReservedCallsigns
     /**
      * Places, camps, locations
      */
-    public static $LOCATIONS = array(
+    const LOCATIONS = array(
         'Arctica',
         'Artery',
         'Berlin',
@@ -94,7 +94,7 @@ class ReservedCallsigns
     /**
      * Radio terms
      */
-    public static $RADIO_JARGON = array(
+    const RADIO_JARGON = array(
         'Affirmative',
         'Affirm',
         'Allcom',
@@ -126,7 +126,7 @@ class ReservedCallsigns
     /**
      * Other Burning Man or Ranger terms
      */
-    public static $RANGER_JARGON = array(
+    const RANGER_JARGON = array(
         '007',
         'Alpha',
         'BLM',
@@ -178,7 +178,7 @@ class ReservedCallsigns
     /**
      * Callsigns from the 2017 TWII Radio Directory.  Remove when adding 2020 TWII handles.
      */
-    public static $TWII_2017 = array(
+    const TWII_2017 = array(
         'Alipato',
         'Alpha1',
         'Athibat',
@@ -327,7 +327,7 @@ class ReservedCallsigns
     /**
      * Callsigns from the 2018 TWII Radio Directory.  Remove when adding 2021 TWII handles.
      */
-    public static $TWII_2018 = array(
+    const TWII_2018 = array(
         'Admin 10',
         'Alipato',
         'Alpha1',
@@ -471,7 +471,7 @@ class ReservedCallsigns
      * sort.
      */
     public static function twiiVips() {
-        $result = array_merge(ReservedCallsigns::$TWII_2018, ReservedCallsigns::$TWII_2017);
+        $result = array_merge(ReservedCallsigns::TWII_2018, ReservedCallsigns::TWII_2017);
         sort($result);
         return array_unique($result);
     }
@@ -481,7 +481,7 @@ class ReservedCallsigns
      * department (e.g., Gate, ESD) or who were involved in an incident of
      * some sort long ago and thus their handle is bad juju in some way.
      */
-    public static $RESERVED = array(
+    const RESERVED = array(
         'Joshua', // Crow  9/2015: Moved to ESD
         'Golddust', // Gone to Gate
         'Mr. E', 'Mister E', // Crow  9/2015: Bad handle / incident

@@ -21,6 +21,9 @@ use App\Models\Slot;
 
 class Timesheet extends ApiModel
 {
+    protected $table = 'timesheet';
+    protected $auditModel = true;
+
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
@@ -29,8 +32,6 @@ class Timesheet extends ApiModel
       Position::ALPHA,
       Position::TRAINING,
     ];
-
-    protected $table = 'timesheet';
 
     protected $fillable = [
         'notes',

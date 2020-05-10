@@ -5,7 +5,7 @@
 namespace App\Lib;
 
 use App\Models\Person;
-use App\Helpers\ReservedCallsigns;
+use App\Lib\ReservedCallsigns;
 
 class PotentialClubhouseAccountFromSalesforce
 {
@@ -352,11 +352,11 @@ class PotentialClubhouseAccountFromSalesforce
     public static function getReservedCallsigns($style = "raw")
     {
         $reservedCallsigns = array_merge(
-            ReservedCallsigns::$LOCATIONS,
-            ReservedCallsigns::$RADIO_JARGON,
-            ReservedCallsigns::$RANGER_JARGON,
+            ReservedCallsigns::LOCATIONS,
+            ReservedCallsigns::RADIO_JARGON,
+            ReservedCallsigns::RANGER_JARGON,
             ReservedCallsigns::twiiVips(),
-            ReservedCallsigns::$RESERVED
+            ReservedCallsigns::RESERVED
         );
         if ($style == 'cooked') {
             $reservedCallsigns = array_map(function ($callsign) {

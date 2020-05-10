@@ -181,12 +181,11 @@ class SalesforceController extends ApiController
         if ($isNew) {
             $person->password = 'abcdef';
         } else {
-            $changes = $person->getChangedValues();
-            $changes['id'] = $person->id;
             $oldStatus = $person->status;
         }
 
         $person->status = Person::PROSPECTIVE;
+        $person->auditReason = 'salesforce import';
 
         try {
             if (!$person->save()) {
@@ -208,8 +207,6 @@ class SalesforceController extends ApiController
             ErrorLog::recordException($e, 'salesforce-import-fail', [ 'person' => $person ]);
             return false;
         }
-
-        $this->log($isNew ? 'person-create' : 'person-update', 'salesforce import', $isNew ? $person : $changes, $person->id);
 
         if ($isNew) {
             // Record the initial status for tracking through the Unified Flagging View

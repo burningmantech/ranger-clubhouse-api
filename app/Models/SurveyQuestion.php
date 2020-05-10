@@ -7,6 +7,7 @@ use App\Models\ApiModel;
 class SurveyQuestion extends ApiModel
 {
     protected $table = 'survey_question';
+    protected $auditModel = true;
     public $timestamps = true;
 
     protected $fillable = [

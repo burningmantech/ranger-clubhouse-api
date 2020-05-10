@@ -66,7 +66,6 @@ class AssetAttachmentController extends ApiController
     {
         $this->authorize('delete', $asset_attachment);
         $asset->delete();
-        $this->log('asset-attachment-delete', 'Asset Attachment Deleted', [ 'id' => $asset_attachment->id]);
         return $this->restDeleteSuccess();
     }
 }

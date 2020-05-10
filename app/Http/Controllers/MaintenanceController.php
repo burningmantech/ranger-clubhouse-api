@@ -161,14 +161,16 @@ class MaintenanceController extends ApiController
 
         // Log what was done
         foreach ($people as $person) {
-            $this->log('person-update', 'maintenance - marked off site', ['on_site' => [true, false]], $person->id);
+            $this->log('person-update', 'maintenance - marked off site', [ 'id' => $person->id, 'on_site' => [true, false]], $person->id);
         }
 
         return response()->json(['count' => $people->count()]);
     }
 
-    /*
+    /**
      * Deauthorize all assets, motorpolicy, Sandman Affidavit, etc
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function deauthorizeAssets()
@@ -195,10 +197,8 @@ class MaintenanceController extends ApiController
             $person->vehicle_paperwork = false;
             $person->vehicle_insurance_paperwork = false;
             $person->sandman_affidavit = false;
-            $changes = $person->getChangedValues();
-            if ($person->saveWithoutValidation()) {
-                $this->log('person-update', 'maintenance - deauthorized assets', $changes, $person->id);
-            }
+            $person->auditReason = 'maintenance - deauthorized assets';
+            $person->saveWithoutValidation();
         }
 
         return response()->json(['count' => $people->count()]);
@@ -228,9 +228,8 @@ class MaintenanceController extends ApiController
                 $person->callsign_approved = false;
                 $oldStatus = $person->status;
                 $person->status = Person::PAST_PROSPECTIVE;
-                $changes = $person->getChangedValues();
+                $person->auditReason = 'maintenance - pnv reset';
                 $person->saveWithoutValidation();
-                $this->log('person-update', 'maintenance - pnv reset', $changes, $person->id);
                 $person->changeStatus(Person::PAST_PROSPECTIVE, $oldStatus, 'maintenance - pnv reset');
                 $result['callsign_reset'] = $person->callsign;
             } else {
@@ -266,8 +265,8 @@ class MaintenanceController extends ApiController
             if ($person->resetCallsign()) {
                 $person->callsign_approved = false;
                 $changes = $person->getChangedValues();
+                $person->auditReason = 'maintenance - past prospective reset';
                 $person->saveWithoutValidation();
-                $this->log('person-update', 'maintenance - past prospective reset', $changes, $person->id);
                 $result['callsign_reset'] = $person->callsign;
             } else {
                 $result['error'] = 'Cannot reset callsign';
@@ -298,6 +297,8 @@ class MaintenanceController extends ApiController
 
         DB::statement("CREATE TABLE $table AS SELECT * FROM person_message");
         DB::statement("DELETE FROM person_message WHERE YEAR(timestamp) < $year");
+
+        $this->log('archive-messages', "archive messages $prevYear into table $table", null);
 
         return response()->json(['status' => 'success', 'year' => $prevYear]);
     }

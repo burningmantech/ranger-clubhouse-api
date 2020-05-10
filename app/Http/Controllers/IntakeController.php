@@ -140,26 +140,4 @@ class IntakeController extends ApiController
             $this->notPermitted('Must have the Intake role');
         }
     }
-
-    /**
-     * Log any changes to an intake record
-     *
-     * @param Person $person person to log
-     * @param array $changes the changes to record
-     * @param bool $isNew true if the intake record was created
-     * @param PersonIntake $intake record itself
-     */
-
-    private function logIntakeChanges(Person $person, array $changes, bool $isNew, PersonIntake $intake)
-    {
-        if (empty($changes)) {
-            return;
-        }
-
-        if (!$isNew) {
-            $changes['id'] = $intake->id;
-        }
-
-        $this->log($isNew ? 'person-intake-create' : 'person-intake-update', '', $isNew ? $intake : $changes, $person->id);
-    }
 }

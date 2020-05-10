@@ -30,7 +30,7 @@ class SettingController extends ApiController
 
     public function store()
     {
-        throw new \InvalidArgumentException('Settings cannot be dynamically created');
+        throw new InvalidArgumentException('Settings cannot be dynamically created');
     }
 
     /*
@@ -39,25 +39,19 @@ class SettingController extends ApiController
     public function update(Setting $setting)
     {
         $this->authorize('update', $setting);
-
         $this->fromRest($setting);
 
-        $changes = $setting->getChangedValues();
+        $setting->auditReason = "setting update $setting->name";
         if (!$setting->save()) {
             return $this->restError($setting);
         }
 
-        if (!empty($changes)) {
-            $changes['name'] = $setting->name;
-            $this->log('setting-update', "setting update $setting->name", $changes);
-
-            if (!app()->isLocal()) {
-                try {
-                    // Kick the queue workers to pick up the new settings
-                    Artisan::call('queue:restart');
-                } catch (\Exception $e) {
-                    ErrorLog::recordException($e, 'setting-queue-restart-exception');
-                }
+        if (!app()->isLocal()) {
+            try {
+                // Kick the queue workers to pick up the new settings
+                Artisan::call('queue:restart');
+            } catch (Exception $e) {
+                ErrorLog::recordException($e, 'setting-queue-restart-exception');
             }
         }
 
@@ -66,11 +60,10 @@ class SettingController extends ApiController
 
     /**
      * Remove a setting
-     *
+     * @param Setting $setting
+     * @throws \InvalidArgumentException
      */
-
-    public
-    function destroy(Setting $setting)
+    public function destroy(Setting $setting)
     {
         throw new \InvalidArgumentException('Settings cannot be destroyed');
     }

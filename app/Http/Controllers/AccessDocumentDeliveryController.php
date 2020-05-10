@@ -31,9 +31,12 @@ class AccessDocumentDeliveryController extends ApiController
 
     /**
      * Show a single Access Document Delivery
+     *
+     * @param AccessDocumentDelivery $add
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
-
-   public function show(AccessDocumentDelivery $add)
+    public function show(AccessDocumentDelivery $add)
    {
        $this->authorize('show', $add);
 
@@ -64,7 +67,7 @@ class AccessDocumentDeliveryController extends ApiController
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\AccessDocumentDelivery  $accessDocumentDelivery
+     * @param  \App\Models\AccessDocumentDelivery  $accessDocumentDelivery
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, AccessDocumentDelivery $add)
@@ -83,7 +86,7 @@ class AccessDocumentDeliveryController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\AccessDocumentDelivery  $accessDocumentDelivery
+     * @param  \App\Models\AccessDocumentDelivery  $accessDocumentDelivery
      * @return \Illuminate\Http\Response
      */
     public function destroy(AccessDocumentDelivery $add)

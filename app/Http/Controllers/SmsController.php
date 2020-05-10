@@ -252,7 +252,7 @@ class SmsController extends ApiController
     {
         try {
             $incoming = SMSService::processIncoming(request());
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             ErrorLog::recordException($e, 'sms-inbound-exception');
             return response()->json([ 'status' => 'error' ], 500);
         }

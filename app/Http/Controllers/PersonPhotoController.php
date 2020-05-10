@@ -114,8 +114,6 @@ class PersonPhotoController extends ApiController
 
         $this->fromRest($personPhoto);
 
-        $changes = $personPhoto->getChangedValues();
-
         $reviewed = false;
         if ($personPhoto->isDirty('status')) {
             // Setting the status means the record has been reviewed.
@@ -126,11 +124,6 @@ class PersonPhotoController extends ApiController
 
         if (!$personPhoto->save()) {
             return $this->restError($personPhoto);
-        }
-
-        if (!empty($changes)) {
-            $changes['person_photo_id'] = $personPhoto->id;
-            $this->log('person-photo-update', 'update', $changes, $personPhoto->person_id);
         }
 
         /*
@@ -184,12 +177,8 @@ class PersonPhotoController extends ApiController
              return response()->json([ 'status' => 'storage-fail' ], 500);
         }
 
+        $personPhoto->auditReason = 'photo replace';
         $personPhoto->saveWithoutValidation();
-
-        $this->log('person-photo-replace', '', [
-            'person_photo_id' => $personPhoto->id,
-            'filename'        => [ $oldFilename, $personPhoto->image_filename ]
-        ], $personPhoto->person_id);
 
         // Delete the old (cropped) photo
         try {
@@ -221,11 +210,8 @@ class PersonPhotoController extends ApiController
 
         $oldPhotoId = $person->person_photo_id;
         $person->person_photo_id = $personPhoto->id;
+        $person->auditReason = 'photo activate';
         $person->saveWithoutValidation();
-
-        $this->log('person-photo-activate', '', [
-            'person_photo_id' => [ $oldPhotoId, $personPhoto->id ]
-        ], $personPhoto->person_id);
 
         return $this->success();
     }
@@ -254,7 +240,6 @@ class PersonPhotoController extends ApiController
         }
 
         $personPhoto->delete();
-        $this->log('person-photo-delete', 'delete', [ 'person_photo' => $personPhoto ], $personPhoto->person_id);
 
         $person = $personPhoto->person;
         if ($person && $personPhoto->id == $person->person_photo_id) {
@@ -348,8 +333,6 @@ class PersonPhotoController extends ApiController
         $person->person_photo_id = $photo->id;
         $person->saveWithoutValidation();
 
-        $this->log('person-photo-create', 'upload', [ 'person_photo'  => $photo ], $personId);
-
         /*
          * Remove any previously submitted un-reviewed photos
          */
@@ -372,8 +355,8 @@ class PersonPhotoController extends ApiController
                 ]);
             }
 
+            $submitted->auditReason = 'upload replacement';
             $submitted->delete();
-            $this->log('person-photo-delete', 'upload replace', [ 'person_photo' => $photo ], $personId);
         }
 
         return $this->success();

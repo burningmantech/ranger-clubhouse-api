@@ -7,6 +7,7 @@ use App\Models\Person;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,14 +19,15 @@ use App\Http\RestApi\DeserializeRecord;
 use DateTimeInterface;
 
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 /**
  * Class ApiModel
  * @package App\Models
  * @mixin \Illuminate\Database\Eloquent\Builder
- * @mixin \Illuminate\Database\Query\Builder
+ * @mixin Builder
  */
-
 abstract class ApiModel extends Model
 {
 
@@ -35,20 +37,20 @@ abstract class ApiModel extends Model
      * @var bool
      */
     public $timestamps = false;
-
+    public $auditIsNew = false;
+    public $auditChanges = null;
+    public $auditExclude = [];
+    /**
+     * The reason the record is being created or updated. Works with $auditModel
+     * @var string
+     */
+    public $auditReason;
     /**
      * Audit the changes to the record?
      * @var bool
      */
 
     protected $auditModel = false;
-
-    /**
-     * The reason the record is being created or updated. Works with $auditModel
-     * @var string
-     */
-    public $auditReason;
-
     protected $errors;
 
     protected $rules;
@@ -59,15 +61,20 @@ abstract class ApiModel extends Model
     protected $resourceSingle;
     protected $resourceCollection;
 
-    public static function boot() {
+    public static function boot()
+    {
         parent::boot();
         self::saving(function ($model) {
             $model->_prepAudit();
         });
 
         self::saved(function ($model) {
-            $model->_recordAudit();
-         });
+            $model->_recordAudit(false);
+        });
+
+        self::deleted(function ($model) {
+            $model->_recordAudit(true);
+        });
     }
 
     /**
@@ -75,18 +82,39 @@ abstract class ApiModel extends Model
      * before the save happens. Otherwise, the entire record will be logged.
      */
 
-    public function _prepAudit() {
+    public function _prepAudit()
+    {
         if (!$this->auditModel) {
             return;
         }
 
+        $this->auditIsNew = !$this->exists;
         if ($this->exists) {
             // Existing record -- grab the changes
             $this->auditChanges = $this->getChangedValues();
-            $this->auditIsNew = false;
-        } else {
-            $this->auditIsNew = true;
         }
+    }
+
+    /**
+     * Grab the changed values. Used for auditing.
+     *
+     * @return array [ 'column-name' => [ 'oldValue', 'newValue' ]]
+     */
+    public function getChangedValues()
+    {
+        $changes = [];
+        foreach ($this->getDirty() as $field => $newValue) {
+            $oldValue = $this->getOriginal($field);
+            if ($oldValue instanceof Carbon) {
+                $oldValue = (string)$oldValue;
+            }
+            if ($newValue instanceof Carbon) {
+                $newValue = (string)$newValue;
+            }
+            $changes[$field] = [$oldValue, $newValue];
+        }
+
+        return $changes;
     }
 
     /**
@@ -95,31 +123,56 @@ abstract class ApiModel extends Model
      * The changes are logged as the event 'table-name-{create,update}'.
      */
 
-    public function _recordAudit() {
+    public function _recordAudit($deleted = false)
+    {
         if (!$this->auditModel) {
             return;
         }
 
         $table = str_replace('_', '-', $this->getTable());
-        if ($model->auditIsNew) {
+        if ($deleted) {
             $data = $this->attributes;
-            $event = $table .'-create';
+            $event = $table . '-delete';
+        } else if ($this->auditIsNew) {
+            $data = $this->attributes;
+            $event = $table . '-create';
         } else {
-            $values = $this->auditChanges;
-            if (empty($values)) {
+            $data = $this->auditChanges;
+            if (empty($data)) {
                 return; // Nothing to record
             }
-            $data['id'] = $this->id;
-            $event = $table .'-update';
+            $keyName = $this->getKeyName();
+            if (is_array($keyName)) {
+                // composite key, combine into a single string key1:key2:key3
+                $keyName = implode(':', $keyName);
+            }
+            $data[$keyName] = $this->getKey();
+            $event = $table . '-update';
+        }
+
+        if (!empty($this->auditExclude)) {
+            // exclude any columns
+            foreach ($this->auditExclude as $column) {
+                unset($data[$column]);
+            }
         }
 
         if ($this instanceof Person) {
             $personId = $this->id;
         } else {
-            $personId = ($this->attributes['person_id'] ?? null);
+            $personId = ($this->getAttribute('person_id') ?? null);
         }
 
         ActionLog::record(Auth::user(), $event, $this->auditReason, $data, $personId);
+    }
+
+    public function save($options = [])
+    {
+        if (!$this->validate()) {
+            return false;
+        }
+
+        return parent::save($options);
     }
 
     public function validate($rules = null, $throwOnFailure = false)
@@ -154,7 +207,7 @@ abstract class ApiModel extends Model
         if ($validator->fails()) {
             $this->errors = $validator->errors();
             if ($throwOnFailure) {
-                throw new \Illuminate\Validation\ValidationException($validator);
+                throw new ValidationException($validator);
             }
             return false;
         }
@@ -162,20 +215,11 @@ abstract class ApiModel extends Model
         return true;
     }
 
-    public function save($options = [])
-    {
-        if (!$this->validate()) {
-            return false;
-        }
-
-        return parent::save($options);
-    }
-
     public function saveOrThrow($options = [])
     {
         $this->validate(null, true); // throws if validation fails
         if (!parent::save($options)) {
-            throw new \RuntimeException("Could not save $this");
+            throw new RuntimeException("Could not save $this");
         }
     }
 
@@ -194,7 +238,7 @@ abstract class ApiModel extends Model
         return $this->errors ? $this->errors->getMessages() : null;
     }
 
-    public function addError(string $column, string $message):void
+    public function addError(string $column, string $message): void
     {
         if (!$this->errors) {
             $this->errors = new MessageBag();
@@ -213,35 +257,14 @@ abstract class ApiModel extends Model
         return $this->appends;
     }
 
-    /**
-     * Grab the changed values. Used for auditing.
-     *
-     * @return array [ 'column-name' => [ 'oldValue', 'newValue' ]]
-     */
-    public function getChangedValues()
-    {
-        $changes = [];
-        foreach ($this->getDirty() as $field => $newValue) {
-            $oldValue = $this->getOriginal($field);
-            if ($oldValue instanceof Carbon) {
-                $oldValue = (string) $oldValue;
-            }
-            if ($newValue instanceof Carbon) {
-                $newValue = (string) $newValue;
-            }
-            $changes[$field] = [ $oldValue , $newValue ];
-        }
-
-        return $changes;
-    }
-
     /*
      * Return the name of the root resource for a collection when building a REST response or
      * filling a record from a REST request.
      */
 
-    public function getResourceCollection() {
-        return (empty($this->resourceCollection) ?  $this->getTable() : $this->resourceCollection);
+    public function getResourceCollection()
+    {
+        return (empty($this->resourceCollection) ? $this->getTable() : $this->resourceCollection);
     }
 
     /*
@@ -249,7 +272,8 @@ abstract class ApiModel extends Model
      * filling a record from a REST request.
      */
 
-    public function getResourceSingle() {
+    public function getResourceSingle()
+    {
         return (empty($this->resourceSingle) ? $this->getTable() : $this->resourceSingle);
     }
 
@@ -257,7 +281,7 @@ abstract class ApiModel extends Model
     /**
      * Prepare a date for array / JSON serialization.
      *
-     * @param  \DateTimeInterface  $date
+     * @param DateTimeInterface $date
      * @return string
      */
 

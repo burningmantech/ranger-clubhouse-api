@@ -12,6 +12,7 @@ use DB;
 class PositionCredit extends ApiModel
 {
     protected $table = 'position_credit';
+    protected $auditModel = true;
 
     protected $fillable = [
         'position_id',
