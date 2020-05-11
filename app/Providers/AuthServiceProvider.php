@@ -127,6 +127,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+        Gate::define('isAdmin', function (Person $user) {
+            return $user->isAdmin();
+        });
+
         Gate::resource('person', 'PersonPolicy');
     }
 }

@@ -11,7 +11,8 @@ class TimesheetMissingPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user) {
+
+    private function hasRoles(Person $user) {
         if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::MANAGE, Role::ADMIN])) {
             return true;
         }
@@ -22,7 +23,15 @@ class TimesheetMissingPolicy
      */
     public function view(Person $user, $personId)
     {
-        return ($user->id == $personId);
+        return ($this->hasRoles($user) || $user->id == $personId);
+    }
+
+    /*
+     * Can the user see all the timesheet missing requests in the database
+     */
+
+    public function viewAll(Person $user) {
+        return $this->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]);
     }
 
     /*
@@ -31,7 +40,7 @@ class TimesheetMissingPolicy
 
     public function store(Person $user, TimesheetMissing $timesheetMissing)
     {
-        return ($user->id == $timesheetMissing->person_id);
+        return ($this->hasRoles($user) ||$user->id == $timesheetMissing->person_id);
     }
 
     /*
@@ -40,7 +49,7 @@ class TimesheetMissingPolicy
 
     public function update(Person $user, TimesheetMissing $timesheetMissing)
     {
-        return ($user->id == $timesheetMissing->person_id);
+        return ($this->hasRoles($user) ||$user->id == $timesheetMissing->person_id);
     }
 
     /*
@@ -49,7 +58,7 @@ class TimesheetMissingPolicy
 
     public function destroy(Person $user, TimesheetMissing $timesheetMissing)
     {
-        return ($user->id == $timesheetMissing->person_id);
+        return ($this->hasRoles($user) ||$user->id == $timesheetMissing->person_id);
     }
 
 }

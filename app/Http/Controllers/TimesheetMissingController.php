@@ -22,10 +22,12 @@ class TimesheetMissingController extends ApiController
             'year'      => 'required|integer',
         ]);
 
-        if (isset($params['person_id'])) {
-            $this->authorize('view', [ TimesheetMissing::class, $params['person_id'] ]);
-        } elseif ($this->user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ])) {
-            $this->notPermitted('You are not permitted to view all the timesheet missing requests.');
+        $personId = $params['person_id'] ?? null;
+
+        if ($personId) {
+            $this->authorize('view', [ TimesheetMissing::class, $personId ]);
+        } else {
+            $this->authorize('viewAll', TimesheetMissing::class);
         }
 
         $rows = TimesheetMissing::findForQuery($params);

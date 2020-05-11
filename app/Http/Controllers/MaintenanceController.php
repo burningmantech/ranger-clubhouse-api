@@ -23,6 +23,17 @@ use RuntimeException;
 
 class MaintenanceController extends ApiController
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (app()->runningInConsole()) {
+            return;
+        }
+
+        $this->authorize('isAdmin');
+    }
+
     /*
      * Add any missing positions  to "active" Rangers, and to Prospectives
      *
@@ -31,8 +42,6 @@ class MaintenanceController extends ApiController
 
     public function updatePositions()
     {
-        $this->checkForAdmin();
-
         $allRangersPositions = Position::where('all_rangers', true)
             ->orderBy('title')
             ->get()
@@ -151,8 +160,6 @@ class MaintenanceController extends ApiController
 
     public function markOffSite()
     {
-        $this->checkForAdmin();
-
         // Grab the folks who are going to be marked as off site
         $people = Person::select('id', 'callsign')->where('on_site', true)->get();
 
@@ -175,8 +182,6 @@ class MaintenanceController extends ApiController
 
     public function deauthorizeAssets()
     {
-        $this->checkForAdmin();
-
         /*
          * Grab the folks who are:
          * - asset_authorized
@@ -210,8 +215,6 @@ class MaintenanceController extends ApiController
 
     public function resetPNVs()
     {
-        $this->checkForAdmin();
-
         $pnvs = Person::whereIn('status', [Person::ALPHA, Person::BONKED, Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST])
             ->orderBy('callsign')
             ->get();
@@ -247,8 +250,6 @@ class MaintenanceController extends ApiController
 
     public function resetPassProspectives()
     {
-        $this->checkForAdmin();
-
         $pp = Person::where('status', Person::PAST_PROSPECTIVE)
             ->where('callsign_approved', true)
             ->orderBy('callsign')
@@ -283,8 +284,6 @@ class MaintenanceController extends ApiController
 
     public function archiveMessages()
     {
-        $this->checkForAdmin();
-
         $year = current_year();
         $prevYear = $year - 1;
         $table = "person_message_$prevYear";
@@ -301,13 +300,5 @@ class MaintenanceController extends ApiController
         $this->log('archive-messages', "archive messages $prevYear into table $table", null);
 
         return response()->json(['status' => 'success', 'year' => $prevYear]);
-    }
-
-
-    private function checkForAdmin()
-    {
-        if (!$this->userHasRole(Role::ADMIN)) {
-            $this->notPermitted('User is not admin');
-        }
     }
 }

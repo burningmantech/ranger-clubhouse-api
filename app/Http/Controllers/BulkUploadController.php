@@ -93,9 +93,7 @@ class BulkUploadController extends ApiController
             'reason'    => 'sometimes|string',
         ]);
 
-        if (!$this->userHasRole(Role::ADMIN)) {
-            $this->notPermitted('User must have the Admin role.');
-        }
+        $this->authorize('isAdmin');
 
         $action = $params['action'];
         $commit = $params['commit'] ?? false;

@@ -160,7 +160,6 @@ class ApiController extends Controller
         }
 
         return response()->json($result);
-
     }
 
     public function error($message, $status = 400)

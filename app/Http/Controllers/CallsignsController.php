@@ -21,8 +21,8 @@ class CallsignsController extends ApiController
             throw new \InvalidArgumentException('type parameter is invalid');
         }
 
-        if ($type == 'all' && !$this->userHasRole(Role::ADMIN)) {
-            $this->notPermitted('Type all can only be used by an Admin.');
+        if ($type == 'all') {
+            $this->authorize('isAdmin');
         }
 
         return response()->json([ 'callsigns' => Person::searchCallsigns($params['query'], $type, $params['limit']) ]);
