@@ -17,9 +17,7 @@ class DebugController extends ApiController
             return;
         }
 
-        if (!$this->userHasRole(Role::ADMIN)) {
-            $this->notPermitted('Not allowed');
-        }
+        $this->authorize('isAdmin');
     }
 
     /*

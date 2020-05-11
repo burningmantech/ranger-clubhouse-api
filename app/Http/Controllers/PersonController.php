@@ -40,10 +40,12 @@ use RuntimeException;
 
 class PersonController extends ApiController
 {
-    /*
+    /**
      * Search and display person rows.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
-
     public function index()
     {
         $this->authorize('index', Person::class);
@@ -64,7 +66,7 @@ class PersonController extends ApiController
 
         if ($params['basic'] ?? false) {
             if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
-                throw new InvalidArgumentException("Not authorized for basic search.");
+                $this->notPermitted("Not authorized for basic search.");
             }
 
             $rows = [];

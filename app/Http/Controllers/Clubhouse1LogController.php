@@ -22,9 +22,7 @@ class Clubhouse1LogController extends ApiController
 
      public function index()
      {
-         if (!$this->userHasRole(Role::ADMIN)) {
-             $this->notPermitted('Only Admins may view the Clubhouse 1 Log');
-         }
+         $this->authorize('isAdmin');
 
          $params = request()->validate([
              'sort'       => 'sometimes|string',

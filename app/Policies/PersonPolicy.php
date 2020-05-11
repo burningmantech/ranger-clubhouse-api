@@ -152,4 +152,8 @@ class PersonPolicy
     public function statusHistory(Person $user) {
         return $user->hasRole([ Role::ADMIN, Role::VC, Role::INTAKE ]);
     }
+
+    public function isAdmin(Person $user) {
+        return $user->isAdmin();
+    }
 }

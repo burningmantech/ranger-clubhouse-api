@@ -129,25 +129,18 @@ abstract class ApiModel extends Model
             return;
         }
 
+        $isExisting = false;
         $table = str_replace('_', '-', $this->getTable());
         if ($deleted) {
             $data = $this->attributes;
-            $event = $table . '-delete';
+            $event = 'delete';
         } else if ($this->auditIsNew) {
             $data = $this->attributes;
-            $event = $table . '-create';
+            $event = 'create';
         } else {
+            $isExisting = true;
+            $event = 'update';
             $data = $this->auditChanges;
-            if (empty($data)) {
-                return; // Nothing to record
-            }
-            $keyName = $this->getKeyName();
-            if (is_array($keyName)) {
-                // composite key, combine into a single string key1:key2:key3
-                $keyName = implode(':', $keyName);
-            }
-            $data[$keyName] = $this->getKey();
-            $event = $table . '-update';
         }
 
         if (!empty($this->auditExclude)) {
@@ -157,13 +150,27 @@ abstract class ApiModel extends Model
             }
         }
 
+        if (empty($data)) {
+            return; // nothing to record, punt.
+        }
+
+        if ($isExisting) {
+            $keyName = $this->getKeyName();
+            if (is_array($keyName)) {
+                // composite key, combine into a single string key1:key2:key3
+                $keyName = implode(':', $keyName);
+            }
+            $data[$keyName] = $this->getKey();
+        }
+
+        // Figure out the target.
         if ($this instanceof Person) {
             $personId = $this->id;
         } else {
             $personId = ($this->getAttribute('person_id') ?? null);
         }
 
-        ActionLog::record(Auth::user(), $event, $this->auditReason, $data, $personId);
+        ActionLog::record(Auth::user(), $table .'-'.$event, $this->auditReason, $data, $personId);
     }
 
     public function save($options = [])

@@ -79,13 +79,10 @@ class ContactController extends ApiController
               'year'        => 'required|integer',
           ]);
 
-          if (!$this->userHasRole( Role::ADMIN)) {
-              $this->notPermitted('User is not an admin.');
-          }
+          $this->authorize('isAdmin');
 
           $personId = $params['person_id'];
           $year = $params['year'];
-
 
           return response()->json([
                 'sent_logs' => ContactLog::findForSenderYear($personId, $year),
