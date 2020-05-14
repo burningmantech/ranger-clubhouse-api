@@ -23,7 +23,6 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
         'home_phone'    => '415-555-1212',
         'alt_phone'     => '',
         'password'      => $salt.":".sha1($salt."ineedashower!"),
-        'user_authorized' => true,
         'create_date'   => '2019-01-01 00:00:00',
         'bpguid'        => $uuid,
         'behavioral_agreement' => true,

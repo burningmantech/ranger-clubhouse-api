@@ -131,6 +131,14 @@ class AuthServiceProvider extends ServiceProvider
             return $user->isAdmin();
         });
 
+        Gate::define('isMentor', function (Person $user) {
+            return $user->hasRole([ Role::ADMIN, Role::MENTOR ]);
+        });
+
+        Gate::define('isIntake', function (Person $user) {
+            return $user->hasRole(Role::INTAKE);
+        });
+
         Gate::resource('person', 'PersonPolicy');
     }
 }

@@ -99,9 +99,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const LOCKED_STATUSES = [
         Person::DECEASED,
         Person::DISMISSED,
-        Person::UBERBONKED,
         Person::RESIGNED,
-        Person::SUSPENDED
+        Person::SUSPENDED,
+        Person::UBERBONKED,
     ];
 
     /*
@@ -148,7 +148,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'osha10' => 'boolean',
         'osha30' => 'boolean',
         'sandman_affidavit' => 'boolean',
-        'user_authorized' => 'boolean',
         'vehicle_blacklisted' => 'boolean',
         'vehicle_insurance_paperwork' => 'boolean',
         'vehicle_paperwork' => 'boolean',
@@ -185,7 +184,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'status',
         'status_date',
         'timestamp',
-        'user_authorized',
 
         'message',
 
@@ -635,8 +633,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         switch ($type) {
             case 'contact':
                 return $sql->select('person.id', 'callsign', DB::raw('IF(person.status="inactive", true,false) as is_inactive'), DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
-                    ->whereIn('status', ['active', 'inactive'])
-                    ->where('user_authorized', true)
+                    ->whereIn('status', [Person::ACTIVE, Person::INACTIVE ])
                     ->leftJoin('alert_person', function ($join) {
                         $join->whereRaw('alert_person.person_id=person.id');
                         $join->where('alert_person.alert_id', '=', Alert::RANGER_CONTACT);
@@ -644,7 +641,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             // Trying to send a clubhouse message
             case 'message':
-                return $sql->whereIn('status', ['active', 'inactive', 'alpha'])->get(['id', 'callsign']);
+                return $sql->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::ALPHA])->get(['id', 'callsign']);
 
             // Search all users
             case 'all':
@@ -1029,7 +1026,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
                 // Remove asset authorization and lock user out of system
                 $this->asset_authorized = 0;
-                $this->user_authorized = 0;
                 break;
 
             case Person::BONKED:

@@ -7,80 +7,51 @@ use App\Models\Person;
 use App\Models\PersonMentor;
 
 use App\Lib\Alpha;
+use http\Exception\RuntimeException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class MentorController extends ApiController
 {
-    /*
-     * Retrieve all Mentees for a given year
+    /**
+     * Retrieve all potential alphas
+     * @return JsonResponse
      */
-
     public function mentees()
     {
-        $this->authorize('mentees', [ PersonMentor::class ]);
-
-        $year = $this->getYear();
-
-        return response()->json([ 'mentees' => PersonMentor::findMenteesForYear($year, $this->userCanViewEmail()) ]);
-    }
-
-    /*
-     * Retrieve all potential alphas
-     *
-     * exclude_bonks: do no include people who have already been bonked
-     */
-
-    public function potentials()
-    {
+        $this->authorize('isMentor');
         $params = request()->validate([
-            'exclude_bonks'     => 'sometimes|boolean',
+            'exclude_bonks' => 'sometimes|boolean',
+            'have_training' => 'sometimes|boolean',
+            'year' => 'sometimes|integer',
+            'person_id' => 'sometimes|integer'
         ]);
 
-        return response()->json(['potentials' => Alpha::retrievePotentials($params['exclude_bonks'] ?? false)]);
-    }
+        $excludeBonks = $params['exclude_bonks'] ?? false;
+        $year = $params['year'] ?? current_year();
+        $haveTraining = $params['have_training'] ?? false;
 
-    /*
-     * Update the mentors_{flag,flag_note,notes} columns for potential alphas
-     *
-     * TODO: REMOVE THIS AFTER MENTOR PAGES HAVE BEEN CONVERTED OVER TO THE UFV
-     */
-
-    public function updatePotentials()
-    {
-        $params = request()->validate([
-            'potentials.*.id' => 'required|integer',
-            'potentials.*.mentors_flag' => 'required|boolean',
-            'potentials.*.mentors_flag_note' => 'present|string|nullable',
-            'potentials.*.mentors_notes' => 'present|string|nullable'
-        ]);
-
-        $potentials = $params['potentials'];
-        $ids = array_column($potentials, 'id');
-
-        $people = Person::findOrFail($ids)->keyBy('id');
-
-        foreach ($potentials as $potential) {
-            $person = $people[$potential['id']] ?? null;
-            if (!$person) {
-                continue;
-            }
-
-            $person->mentors_flag = $potential['mentors_flag'];
-            $person->mentors_flag_note = $potential['mentors_flag_note'] ?? '';
-            $person->mentors_notes = $potential['mentors_notes'] ?? '';
-            $person->auditReason = 'mentor update';
-            $person->saveWithoutValidation();
+        $personId = $params['person_id'] ?? null;
+        if ($personId) {
+            $person = Person::findOrFail($personId);
+            return response()->json(['mentee' => Alpha::buildAlphaInformation(collect([$person]), $year)[0]]);
         }
 
-        return $this->success();
+        return response()->json(['mentees' => Alpha::retrieveMentees($excludeBonks, $year, $haveTraining)]);
     }
 
-    /*
-     * Find all the people who are status alpha
+    /**
+     * Retrieve all the Alphas in the current year
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function alphas()
     {
-        return response()->json([ 'alphas' => Alpha::retrieveAllAlphas() ]);
+        $this->authorize('isMentor');
+        return response()->json(['alphas' => Alpha::retrieveAllAlphas()]);
     }
 
     /*
@@ -89,9 +60,10 @@ class MentorController extends ApiController
 
     public function alphaSchedule()
     {
+        $this->authorize('isMentor');
         $year = $this->getYear();
 
-        return response()->json([ 'slots' => Alpha::retrieveAlphaScheduleForYear($year) ]);
+        return response()->json(['slots' => Alpha::retrieveAlphaScheduleForYear($year)]);
     }
 
     /*
@@ -100,7 +72,8 @@ class MentorController extends ApiController
 
     public function mentors()
     {
-        return response()->json([ 'mentors' => Alpha::retrieveMentors() ]);
+        $this->authorize('isMentor');
+        return response()->json(['mentors' => Alpha::retrieveMentors()]);
     }
 
     /*
@@ -109,15 +82,19 @@ class MentorController extends ApiController
 
     public function mentorAssignment()
     {
+        $this->authorize('isMentor');
         $params = request()->validate([
-             'assignments.*.person_id' => 'required|integer',
-             'assignments.*.status' => 'required|string',
-             'assignments.*.mentors.*.mentor_id' => 'present|integer|exists:person,id',
-         ]);
+            'assignments.*.person_id' => 'required|integer',
+            'assignments.*.status' => [
+                'required',
+                'string',
+                Rule::in([PersonMentor::PASS, PersonMentor::PENDING, PersonMentor::BONK])
+            ],
+            'assignments.*.mentor_ids' => 'present|array',
+            'assignments.*.mentor_ids.*' => 'present|integer|exists:person,id'
+        ]);
 
         $alphas = $params['assignments'];
-
-        $result = [];
 
         $ids = array_column($alphas, 'person_id');
         $year = current_year();
@@ -125,11 +102,12 @@ class MentorController extends ApiController
         $people = Person::findOrFail($ids)->keyBy('id');
         $allMentors = PersonMentor::whereIn('person_id', $ids)->where('mentor_year', $year)->get()->groupBy('person_id');
 
-        $mentorCache = [];
+        $results = [];
         foreach ($alphas as $alpha) {
             $personId = $alpha['person_id'];
             $person = $people[$personId];
             $status = $alpha['status'];
+            $desiredMentorIds = $alpha['mentor_ids'];
 
             if (isset($allMentors[$personId])) {
                 $currentMentors = $allMentors[$personId]->pluck('mentor_id')->toArray();
@@ -138,8 +116,7 @@ class MentorController extends ApiController
             }
 
             $mentorCount = 0;
-            foreach ($alpha['mentors'] as $mentor) {
-                $mentorId = $mentor['mentor_id'];
+            foreach ($desiredMentorIds as $mentorId) {
                 if (in_array($mentorId, $currentMentors)) {
                     $mentorCount++;
                 }
@@ -147,32 +124,31 @@ class MentorController extends ApiController
 
             $mentors = [];
             $mentorIds = [];
-            if ($mentorCount > 0 && $mentorCount == count($currentMentors)) {
+            if ($mentorCount == count($desiredMentorIds) && $mentorCount == count($currentMentors)) {
                 // Simple status update
-                PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->update([ 'status' => $status ]);
+                PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->update(['status' => $status]);
                 foreach ($allMentors[$personId] as $mentor) {
                     $mentorIds[] = $mentor->mentor_id;
                     $mentors[] = [
                         'person_mentor_id' => $mentor->id,
-                        'mentor_id'        => $mentor->mentor_id
+                        'mentor_id' => $mentor->mentor_id
                     ];
                 }
             } else {
                 // Rebuild the mentors
                 PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->delete();
-                foreach ($alpha['mentors'] as $mentor) {
-                    $mentorId = $mentor['mentor_id'];
+                foreach ($alpha['mentor_ids'] as $mentorId) {
                     $mentor = PersonMentor::create([
-                         'person_id'   => $person->id,
-                         'mentor_id'   => $mentorId,
-                         'status'      => $status,
-                         'mentor_year' => $year
+                        'person_id' => $person->id,
+                        'mentor_id' => $mentorId,
+                        'status' => $status,
+                        'mentor_year' => $year
                     ]);
                     $mentorIds[] = $mentor->mentor_id;
                     $mentors[] = [
-                         'person_mentor_id' => $mentor->id,
-                         'mentor_id'        => $mentor->mentor_id
-                     ];
+                        'person_mentor_id' => $mentor->id,
+                        'mentor_id' => $mentor->mentor_id
+                    ];
                 }
             }
 
@@ -182,33 +158,44 @@ class MentorController extends ApiController
             });
 
             $results[] = [
-                 'person_id' => $person->id,
-                 'mentors'   => $mentors,
-                 'status'    => $status
-             ];
+                'person_id' => $person->id,
+                'mentors' => $mentors,
+                'status' => $status
+            ];
         }
 
-        return response()->json([ 'assignments' => $results ]);
+        return response()->json(['assignments' => $results]);
     }
 
-    /*
+    /**
      * Find the alphas and what their mentor results are
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-
     public function verdicts()
     {
-        return response()->json([ 'alphas' => Alpha::retrieveVerdicts() ]);
+        $this->authorize('isMentor');
+
+        return response()->json(['alphas' => Alpha::retrieveVerdicts()]);
     }
 
-    /*
+    /**
      *  Mint Shiny Pennies, Bonk Alphas for fun and profit!
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function convert()
     {
+        $this->authorize('isMentor');
+
         $params = request()->validate([
-            'alphas.*.id'     => 'required|integer',
-            'alphas.*.status' => 'required|string'
+            'alphas.*.id' => 'required|integer',
+            'alphas.*.status' => [
+                'required',
+                'string',
+                Rule::in([Person::ACTIVE, Person::BONKED])
+            ]
         ]);
 
         $alphas = $params['alphas'];
@@ -221,21 +208,19 @@ class MentorController extends ApiController
             $status = $alpha['status'];
 
             $person = $people[$alphaId];
-
             if ($person->status != $status) {
                 $oldStatus = $person->status;
-                $person->status = $status;
-                $person->reason = 'mentor conversion';
-                $person->saveWithoutValidation();
                 $person->changeStatus($status, $oldStatus, 'mentor conversion');
+                $person->auditReason = 'mentor conversion';
+                $person->saveWithoutValidation();
             }
 
             $results[] = [
-                'id'    => $person->id,
+                'id' => $person->id,
                 'status' => $person->status
             ];
         }
 
-        return response()->json([ 'alphas' => $results ]);
+        return response()->json(['alphas' => $results]);
     }
 }

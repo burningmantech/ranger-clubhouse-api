@@ -33,13 +33,13 @@ class ContactController extends ApiController
 
          // The sender has to be active or inactive
          $status = $sender->status;
-         if ($status != 'active' && $status != 'inactive') {
+         if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
              $this->notPermitted('sender is not active status');
          }
 
          // The recipient has to be not suspended, and active or inactive
          $status = $recipient->status;
-         if (!$recipient->user_authorized || ($status != 'active' && $status != 'inactive')) {
+         if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
              $this->notPermitted('recipient is not active status');
          }
 

@@ -40,23 +40,6 @@ class AuthControllerTest extends TestCase
     }
 
     /**
-     * test for disabled account
-     */
-
-    public function testDisabledPerson()
-    {
-        $user = factory(\App\Models\Person::class)->create([ 'user_authorized' => false]);
-
-        $response = $this->json(
-            'POST', 'auth/login',
-            [ 'identification' => $user->email, 'password'   => 'ineedashower!' ]
-        );
-
-        $response->assertStatus(401);
-        $response->assertJson([ 'status' => 'account-disabled' ]);
-    }
-
-    /**
      * test for suspended account
      */
 
@@ -143,7 +126,7 @@ class AuthControllerTest extends TestCase
 
     public function testResetPasswordForDisabledUser()
     {
-        $user = factory(\App\Models\Person::class)->create([ 'user_authorized' => false]);
+        $user = factory(\App\Models\Person::class)->create([ 'status' => Person::SUSPENDED ]);
 
         Mail::fake();
 

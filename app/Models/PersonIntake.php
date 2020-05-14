@@ -51,19 +51,19 @@ class PersonIntake extends ApiModel
     }
 
     public function setRrnRankAttribute($value) {
-        $this->attributes['rrn_rank'] = ($value == '') ? null : $value;
+        $this->attributes['rrn_rank'] = empty($value) ? null : $value;
     }
 
     public function setMentorRankAttribute($value) {
-        $this->attributes['mentor_rank'] = ($value == '') ? null : $value;
+        $this->attributes['mentor_rank'] = empty($value) ? null : $value;
     }
 
     public function setVcRankAttribute($value) {
-        $this->attributes['vc_rank'] = ($value == '') ? null : $value;
+        $this->attributes['vc_rank'] = empty($value) ? null : $value;
     }
 
     public function setPersonnelRankAttribute($value) {
-        $this->attributes['personnel_rank'] = ($value == '') ? null : $value;
+        $this->attributes['personnel_rank'] = empty($value) ? null : $value;
     }
 
 }

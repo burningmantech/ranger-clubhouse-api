@@ -147,8 +147,6 @@ Route::group([
     Route::get('mentor/mentees', 'MentorController@mentees');
     Route::get('mentor/mentors', 'MentorController@mentors');
     Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
-    Route::get('mentor/potentials', 'MentorController@potentials');
-    Route::post('mentor/potentials', 'MentorController@updatePotentials');
     Route::post('mentor/convert', 'MentorController@convert');
     Route::get('mentor/verdicts', 'MentorController@verdicts');
 

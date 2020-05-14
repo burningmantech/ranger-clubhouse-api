@@ -60,9 +60,7 @@ class PersonMentor extends ApiModel
             person_mentor.person_id,
             person.callsign,
             person.status,
-            person.user_authorized,
             person.formerly_known_as,
-            person.user_authorized,
             mentor.callsign as mentor_callsign,
             person_mentor.mentor_id,
             person_mentor.status as mentor_status,
@@ -101,8 +99,7 @@ class PersonMentor extends ApiModel
                  */
 
                 $status = $row->status;
-                if (!$row->user_authorized
-                    || ($status != Person::ACTIVE && $status != Person::INACTIVE)) {
+                if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
                     $status = 'not active';
                     $canContact = 'none';
                 } else {
@@ -196,7 +193,7 @@ class PersonMentor extends ApiModel
     }
 
     /*
-     * Find all mentees for year
+     * Find all possible mentees for year
      */
 
     public static function findMenteesForYear($year, $includeEmail)

@@ -88,7 +88,6 @@ class PersonController extends ApiController
                     'status' => $person->status,
                     'first_name' => $person->first_name,
                     'last_name' => $person->last_name,
-                    'user_authorized' => $person->user_authorized,
                 ];
 
                 if ($canViewEmail) {
@@ -612,8 +611,7 @@ class PersonController extends ApiController
             'longsleeveshirt_size_style',
             'teeshirt_size_style'
         )
-            ->whereIn('status', ['alpha', 'prospective'])
-            ->where('user_authorized', true)
+            ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE ])
             ->orderBy('callsign')
             ->get();
 
@@ -630,7 +628,6 @@ class PersonController extends ApiController
 
         $rows = DB::table('person')
             ->select('id', 'callsign', 'status', 'vehicle_paperwork', 'vehicle_insurance_paperwork')
-            ->where('user_authorized', true)
             ->where(function ($q) {
                 $q->where('vehicle_paperwork', true);
                 $q->orWhere('vehicle_insurance_paperwork', true);

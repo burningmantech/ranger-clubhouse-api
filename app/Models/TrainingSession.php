@@ -150,8 +150,10 @@ class TrainingSession extends Slot
                 $info['scored'] = true;
                 $info['rank'] = $traineeStatus->rank;
                 $info['passed'] = $traineeStatus->passed;
+                $info['feedback_delivered'] = $traineeStatus->feedback_delivered;
             } else {
                 $info['scored'] = false;
+                $info['feedback_delivered'] = false;
             }
 
             $students[] = $info;
