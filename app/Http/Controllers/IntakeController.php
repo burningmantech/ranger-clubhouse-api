@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 
 use App\Lib\Intake;
@@ -20,15 +21,15 @@ class IntakeController extends ApiController
     /**
      * Retrieve all the PNVs and their intake history for a given year
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
     public function index()
     {
-        $this->roleCheck();
+        $this->authorize('isIntake');
         $year = $this->getYear();
 
-        return response()->json([ 'people' => Intake::retrieveAllForYear($year) ]);
+        return response()->json(['people' => Intake::retrieveAllForYear($year)]);
     }
 
     /**
@@ -36,9 +37,9 @@ class IntakeController extends ApiController
      */
     public function spigot()
     {
-        $this->roleCheck();
+        $this->authorize('isIntake');
 
-        return response()->json([ 'days' => Intake::retrieveSpigotFlowForYear($this->getYear()) ]);
+        return response()->json(['days' => Intake::retrieveSpigotFlowForYear($this->getYear())]);
     }
 
     /**
@@ -46,13 +47,13 @@ class IntakeController extends ApiController
      * (similar to IntakeController::index but for a specific person)
      *
      * @param Person $person
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
     public function history(Person $person)
     {
-        $this->roleCheck();
+        $this->authorize('isIntake');
         $year = $this->getYear();
 
         return response()->json(['person' => Intake::retrieveIdsForYear([$person->id], $year, false)[0]]);
@@ -62,7 +63,7 @@ class IntakeController extends ApiController
      * Append a note and/or set a ranking for a type & year
      *
      * @param Person $person
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
@@ -109,35 +110,26 @@ class IntakeController extends ApiController
         }
 
         if (isset($params['ranking'])) {
-            $rank = $params['ranking'];
             $rankAttr = $type . "_rank";
             $intake = PersonIntake::findForPersonYearOrNew($personId, $year);
-            $intake->{$rankAttr} = $rank;
+            $intake->{$rankAttr} = $params['ranking'];
             if ($intake->isDirty($rankAttr)) {
                 $rankUpdated = true;
-                $oldRank = $intake->getOriginal($rank);
+                $oldRank = $intake->getOriginal($rankAttr);
             } else {
                 $rankUpdated = false;
             }
-            $intake->save();
+
+            if (!$intake->save()) {
+                return $this->restError($intake);
+            }
+
             if ($rankUpdated) {
-                PersonIntakeNote::record($personId, $year, $type, "rank change [". ($oldRank ?? 'no rank')."] -> [".($rank ?? 'no rank')."]", true);
+                PersonIntakeNote::record($personId, $year, $type,
+                    "rank change [" . ($oldRank ?? 'no rank') . "] -> [" . ($intake->{$rankAttr} ?? 'no rank') . "]", true);
             }
         }
 
         return $this->success();
-    }
-
-     /**
-     * Check for the INTAKE role.
-     *
-     * @return void
-     * @throws \Illuminate\Auth\Access\AuthorizationException
-     */
-
-    private function roleCheck() : void {
-        if (!$this->userHasRole(Role::INTAKE)) {
-            $this->notPermitted('Must have the Intake role');
-        }
     }
 }

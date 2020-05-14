@@ -447,8 +447,7 @@ class Timesheet extends ApiModel
 
         $people = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'longsleeveshirt_size_style', 'teeshirt_size_style')
                 ->whereIn('id', $personIds)
-                ->where('status', 'active')
-                ->where('user_authorized', true)
+                ->where('status', Person::ACTIVE)
                 ->orderBy('callsign')
                 ->get();
 
@@ -539,8 +538,7 @@ class Timesheet extends ApiModel
     {
         // Find all eligible candidates
         $people = Person::select('id', 'callsign', 'status', 'email')
-                    ->whereIn('status', [ 'active', 'inactive' ])
-                    ->where('user_authorized', true)
+                    ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE ])
                     ->get();
 
         $cadidates = collect([]);
@@ -1155,7 +1153,6 @@ class Timesheet extends ApiModel
     public static function retrievePeopleToThank($year)
     {
         $people = Person::whereNotIn('status', [ Person::ALPHA, Person::AUDITOR, Person::BONKED, Person::PAST_PROSPECTIVE, Person::PROSPECTIVE, Person::SUSPENDED, Person::UBERBONKED ])
-            ->where('user_authorized', true)
             ->whereRaw('EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty)=? LIMIT 1)', [ $year ])
             ->orderBy('callsign')
             ->get();

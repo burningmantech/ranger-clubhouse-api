@@ -9,6 +9,7 @@ use App\Models\PersonMentor;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
+use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
@@ -18,6 +19,11 @@ use Illuminate\Support\Facades\DB;
 
 class Alpha
 {
+    /**
+     * Find all mentors and indicate if they are on duty.
+     *
+     * @return \Illuminate\Support\Collection
+     */
     public static function retrieveMentors()
     {
         $year = current_year();
@@ -37,32 +43,53 @@ class Alpha
     }
 
     /**
-     * Retrieve Potential Alphas
+     * Retrieve Mentees (anyone who had the alpha, prospective, or bonked status) in a given year.
      *
-     * @param bool $noBonks true if Bonked status are to be included
+     * @param bool $noBonks if true bonked status is to be excluded
+     * @param int $year the year to find the potentials
+     * @param bool $haveTraining if true the person needs to be signed up (not necessarily pass) for training.
      * @return array
      */
 
-    public static function retrievePotentials($noBonks = false)
+    public static function retrieveMentees($noBonks, $year, $haveTraining)
     {
-        $year = current_year();
+        $sql = PersonStatus::whereIn('new_status', [Person::ALPHA, Person::PROSPECTIVE])
+            ->whereYear('created_at', $year)
+            ->orderBy('person_id')
+            ->orderBy('created_at');
 
-        // Find potential alphas who signed up for training this year.
-        $statuses = $noBonks ? [Person::ALPHA, Person::PROSPECTIVE] : [Person::ALPHA, Person::PROSPECTIVE, Person::BONKED];
-        $sql = Person::whereIn('status', $statuses)
-            ->where('user_authorized', true)
-            ->whereRaw("EXISTS
+        if ($noBonks) {
+            $sql->whereRaw("NOT EXISTS (SELECT 1 FROM person_status ps WHERE ps.person_id=person_status.person_id AND YEAR(created_at)=? AND new_status=? LIMIT 1)",
+                [$year, Person::BONKED]
+            );
+        }
+
+        $potentialIds = $sql->get()->groupBy('person_id')->keys();
+
+        $sql = Person::whereIn('id', $potentialIds)->with('person_photo')->orderBy('callsign');
+        if ($haveTraining) {
+            $sql->whereRaw("EXISTS
                 (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id
                     AND slot.position_id=? AND YEAR(slot.begins)=?
-                WHERE person_slot.person_id=person.id LIMIT 1)", [Position::TRAINING, $year])
-            ->orderBy('callsign');
+                WHERE person_slot.person_id=person.id LIMIT 1)", [Position::TRAINING, $year]);
+        }
 
         $rows = $sql->get();
 
         return self::buildAlphaInformation($rows, $year);
     }
 
-    public static function buildAlphaInformation($people, $year)
+    /**
+     * Build up info on the given Alphas.
+     * - find all Alpha slot sign ups for each Alpha
+     * - build up the intake history
+     *
+     * @param $people
+     * @param int $year
+     * @return array
+     */
+
+    public static function buildAlphaInformation($people, int $year)
     {
         if ($people->isEmpty()) {
             return [];
@@ -106,10 +133,148 @@ class Alpha
         return $potentials;
     }
 
+    /**
+     * Retrieve the intake history - {vc,rrn,mentor, trainings} notes & rankings for the given ids
+     *
+     * @param mixed $pnvIds ids to retrieve the intake history for
+     * @return array
+     */
+    public static function retrieveIntakeHistory($pnvIds)
+    {
+        $year = current_year();
+
+        $intakeHistory = PersonIntake::whereIn('person_id', $pnvIds)
+            ->orderBy('person_id')
+            ->orderBy('year')
+            ->get()
+            ->groupBy('person_id');
+
+        $intakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year);
+
+        $trainings = Training::retrieveTrainingHistoryForIds($pnvIds, Position::TRAINING, $year);
+
+        return [$intakeHistory, $intakeNotes, $trainings];
+    }
+
+    /**
+     * Build up the info on a PNV.
+     * - Return personal info (callsign, fkas, name, email, etc.)
+     * - Find all mentors
+     * - Find all the intake notes and rankings
+     * - Figure out if person was trained
+     * - Determine if the person is eligible to be granted the Alpha status and/or position.
+     *
+     * @param Person $person person to build
+     * @param int $year the year
+     * @param $intakeHistory the intake history keyed by person.id
+     * @param $intakeNotes
+     * @param $trainings
+     * @return object
+     */
+
+    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings)
+    {
+        $personId = $person->id;
+        $photoApproved = $person->person_photo && $person->person_photo->status == PersonPhoto::APPROVED;
+
+        $potential = (object)[
+            'id' => $personId,
+            'callsign' => $person->callsign,
+            'callsign_approved' => $person->callsign_approved,
+            'fkas' => $person->formerlyKnownAsArray(true),
+            'known_rangers' => $person->knownRangersArray(),
+            'known_pnvs' => $person->knownPnvsArray(),
+            'first_name' => $person->first_name,
+            'last_name' => $person->last_name,
+            'email' => $person->email,
+            'status' => $person->status,
+            'gender' => $person->gender,
+            'mentor_history' => PersonMentor::retrieveMentorHistory($person->id),
+            'photo_approved' => $photoApproved,
+            'has_note_on_file' => $person->has_note_on_file,
+            'city' => $person->city,
+            'state' => $person->state,
+            'country' => $person->country,
+            'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
+            'teeshirt_size_style' => $person->teeshirt_size_style,
+            'trained' => false,
+            'trainings' => $trainings[$personId] ?? [],
+            'on_alpha_shift' => Timesheet::isPersonSignIn($personId, Position::ALPHA)
+        ];
+
+        if ($photoApproved) {
+            $potential->photo_url = $person->person_photo->image_url ?? null;
+        }
+
+        $rrnRanks = [];
+        $vcRanks = [];
+
+        $teamHistory = $intakeHistory[$personId] ?? null;
+        if (!empty($teamHistory)) {
+            foreach ($teamHistory as $r) {
+                if ($r->year == $year && $r->personnel_rank == Intake::FLAG) {
+                    $potential->personnel_issue = true;
+                }
+
+                if ($r->rrn_rank > 0 && $r->rrn_rank != Intake::AVERAGE) {
+                    $rrnRanks[] = ['year' => $r->year, 'rank' => $r->rrn_rank];
+                }
+
+                if ($r->vc_rank > 0 && $r->vc_rank != Intake::AVERAGE) {
+                    $vcRanks[] = ['year' => $r->year, 'rank' => $r->vc_rank];
+                }
+            }
+        }
+
+        $potential->rrn_ranks = $rrnRanks;
+        $potential->vc_ranks = $vcRanks;
+        $potential->mentor_team = Intake::buildIntakeTeam('mentor', $teamHistory, $intakeNotes[$personId] ?? null, $haveFlag);
+
+        $ignoreFlag = false;
+        $potential->rrn_team = Intake::buildIntakeTeam('rrn', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
+        $potential->vc_team = Intake::buildIntakeTeam('vc', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
+
+        if (!empty($teamHistory)) {
+            foreach ($teamHistory as $history) {
+                if ($history->mentor_rank >= Intake::BELOW_AVERAGE) {
+                    $potential->have_mentor_flags = true;
+                }
+
+                if ($history->year == $year && $history->personnel_rank == Intake::FLAG) {
+                    $potential->personnel_issue = true;
+                }
+            }
+        }
+
+        foreach ($potential->trainings as $training) {
+            if ($training->slot_year == $year && $training->training_passed) {
+                $potential->trained = true;
+            }
+        }
+
+        if ($potential->status == Person::PROSPECTIVE && $potential->callsign_approved && $photoApproved) {
+            $potential->alpha_status_eligible = true;
+        } else if ($potential->status == Person::ALPHA) {
+            $potential->alpha_status_eligible = true;
+        }
+
+        if ($potential->trained && $potential->callsign_approved && $photoApproved) {
+            $potential->alpha_position_eligible = true;
+        }
+
+        return $potential;
+    }
+
+    /**
+     * Retrieve all Alphas (anyone who has the Alpha position) in the current year.
+     *
+     * @return array
+     */
+
     public static function retrieveAllAlphas()
     {
         $rows = PersonPosition::where('position_id', Position::ALPHA)
-            ->with('person')
+            ->with(['person', 'person.person_photo'])
             ->get()
             ->filter(function ($r) {
                 return $r->person != null;
@@ -121,7 +286,14 @@ class Alpha
         return self::buildAlphaInformation($rows, current_year());
     }
 
-    public static function retrieveAlphaScheduleForYear($year)
+    /**
+     * Retrieve all the Alpha slots in a given year with sign ups and their intake data.
+     *
+     * @param int $year
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public static function retrieveAlphaScheduleForYear(int $year)
     {
         // Find the Alpha slots
         $slots = Slot::whereYear('begins', $year)
@@ -130,7 +302,7 @@ class Alpha
 
         // Next, find the Alpha sign ups
         $rows = PersonSlot::whereIn('slot_id', $slots->pluck('id')->toArray())
-            ->with('person')
+            ->with([ 'person', 'person.person_photo' ])
             ->get()
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
@@ -156,86 +328,12 @@ class Alpha
         return $slotInfo;
     }
 
-    public static function buildPerson($person, $year, $intakeHistory, $intakeNotes, $trainings)
-    {
-        $personId = $person->id;
-        $potential = (object)[
-            'id' => $personId,
-            'callsign' => $person->callsign,
-            'callsign_approved' => $person->callsign_approved,
-            'fkas' => $person->formerlyKnownAsArray(true),
-            'first_name' => $person->first_name,
-            'last_name' => $person->last_name,
-            'email' => $person->email,
-            'status' => $person->status,
-            'gender' => $person->gender,
-            'mentor_history' => PersonMentor::retrieveMentorHistory($person->id),
-            'photo_approved' => PersonPhoto::retrieveStatus($person) == PersonPhoto::APPROVED,
-            'has_note_on_file' => $person->has_note_on_file,
-            'city' => $person->city,
-            'state' => $person->state,
-            'country' => $person->country,
-            'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
-            'teeshirt_size_style' => $person->teeshirt_size_style,
-            'trained' => false,
-            'trainings' => $trainings[$personId] ?? [],
-            'on_alpha_shift' => Timesheet::isPersonSignIn($personId, Position::ALPHA)
-        ];
-
-        $rrnRanks = [];
-        $vcRanks = [];
-
-        $teamHistory = $intakeHistory[$personId] ?? null;
-        if (!empty($teamHistory)) {
-            foreach ($teamHistory as $r) {
-                if ($r->year == $year && $r->personnel_rank == Intake::FLAG) {
-                    $potential->personnel_issue = true;
-                }
-
-                if ($r->rrn_rank > 0 && $r->rrn_rank != Intake::AVERAGE) {
-                    $rrnRanks[] = ['year' => $r->year, 'rank' => $r->rrn_rank];
-                }
-
-                if ($r->vc_rank > 0 && $r->vc_rank != Intake::AVERAGE) {
-                    $vcRanks[$r->year] = ['year' => $r->year, 'rank' => $r->vc_rank];
-                }
-            }
-        }
-
-        $potential->rrn_ranks = $rrnRanks;
-        $potential->vc_ranks = $vcRanks;
-        $potential->mentor_team = Intake::buildIntakeTeam('mentor', $teamHistory, $intakeNotes[$personId] ?? null, $haveFlag);
-
-        if (!empty($teamHistory)) {
-            foreach ($teamHistory as $history) {
-                if ($history->mentor_rank >= Intake::BELOW_AVERAGE) {
-                    $potential->have_mentor_flags = true;
-                }
-
-                if ($history->year == $year && $history->personnel_rank == Intake::FLAG) {
-                    $potential->personnel_issue = true;
-                }
-            }
-        }
-
-        foreach ($potential->trainings as $training) {
-            if ($training->slot_year == $year && $training->training_passed) {
-                $potential->trained = true;
-            }
-        }
-
-        if ($potential->status == Person::PROSPECTIVE && $potential->callsign_approved && $potential->photo_approved) {
-            $potential->alpha_status_eligible = true;
-        } else if ($potential->status == Person::ALPHA) {
-            $potential->alpha_status_eligible = true;
-        }
-
-        if ($potential->trained && $potential->callsign_approved && $potential->photo_approved) {
-            $potential->alpha_position_eligible = true;
-        }
-
-        return $potential;
-    }
+    /**
+     * Retrieval all Alphas who had a mentor with a verdict (passed, bonked) in the current year.
+     * Pending status is filtered out.
+     *
+     * @return \Illuminate\Support\Collection
+     */
 
     public static function retrieveVerdicts()
     {
@@ -248,25 +346,9 @@ class Alpha
             ->where('status', Person::ALPHA)
             ->orderBy('person.callsign')
             ->get();
+
         return $people->filter(function ($p) {
-            return $p->mentor_status != 'pending';
+            return $p->mentor_status != PersonMentor::PENDING;
         })->values();
-    }
-
-    public static function retrieveIntakeHistory($pnvIds)
-    {
-        $year = current_year();
-
-        $intakeHistory = PersonIntake::whereIn('person_id', $pnvIds)
-            ->orderBy('person_id')
-            ->orderBy('year')
-            ->get()
-            ->groupBy('person_id');
-
-        $intakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year);
-
-        $trainings = Training::retrieveTrainingHistoryForIds($pnvIds, Position::TRAINING, $year);
-
-        return [$intakeHistory, $intakeNotes, $trainings];
     }
 }

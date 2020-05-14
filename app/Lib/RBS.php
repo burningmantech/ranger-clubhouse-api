@@ -639,8 +639,6 @@ class RBS
         // Safety check: These statuses should never, ever receive a broadcast
         $sql->whereNotIn('status', Person::NO_MESSAGES_STATUSES);
 
-        $sql->where('person.user_authorized', true);
-
         self::addAlertPrefJoin($sql, $alert->id);
 
         if ($attending) {
@@ -808,7 +806,7 @@ class RBS
             return;
         }
 
-        if (!in_array($person->status, Person::LIVE_STATUSES) || $person->user_authorized == false) {
+        if (in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
             // Person is not qualified or account is locked.
             return;
         }

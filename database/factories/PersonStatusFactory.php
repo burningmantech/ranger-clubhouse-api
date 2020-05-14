@@ -7,5 +7,7 @@ use Faker\Generator as Faker;
 
 $factory->define(PersonStatus::class, function (Faker $faker) {
     return [
+        'new_status' => '',
+        'old_status' => ''
     ];
 });

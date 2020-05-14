@@ -25,7 +25,6 @@ class PersonFilter
 
     const ACCOUNT_FIELDS = [
         'vintage',
-        'user_authorized',
         'date_verified',
         'create_date',
         'timestamp',

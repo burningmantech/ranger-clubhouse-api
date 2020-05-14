@@ -88,8 +88,7 @@ class AuthController extends Controller
             return response()->json([ 'status' => 'account-suspended'], 401);
         }
 
-        if ($person->user_authorized == false
-        || in_array($status, Person::LOCKED_STATUSES)) {
+        if (in_array($status, Person::LOCKED_STATUSES)) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
             return response()->json([ 'status' => 'account-disabled'], 401);
         }
@@ -128,7 +127,7 @@ class AuthController extends Controller
     public function refresh()
     {
         // TODO - test this
-        return $this->respondWithToken(auth()->refresh());
+        return $this->respondWithToken(Auth::guard()->refresh());
     }
 
     /**
@@ -154,7 +153,7 @@ class AuthController extends Controller
             return response()->json([ 'status' => 'not-found' ], 400);
         }
 
-        if (!$person->user_authorized) {
+        if (in_array($person->status, Person::LOCKED_STATUSES)) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Account disabled', $action);
             return response()->json([ 'status' => 'account-disabled' ], 403);
         }

@@ -130,7 +130,7 @@ class PersonPhotoController extends ApiController
          * Only email an approved or rejection message if the account is not locked
          */
 
-        if ($reviewed && $person->user_authorized && !in_array($person->status, Person::LOCKED_STATUSES)) {
+        if ($reviewed && !in_array($person->status, Person::LOCKED_STATUSES)) {
             $status = $personPhoto->status;
             if ($status == PersonPhoto::APPROVED) {
                 mail_to($person->email, new PhotoApprovedMail($person), true);

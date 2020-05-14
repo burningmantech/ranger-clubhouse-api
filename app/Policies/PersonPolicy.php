@@ -7,6 +7,8 @@ use App\Models\Role;
 
 use Illuminate\Auth\Access\HandlesAuthorization;
 
+use Illuminate\Auth\Access\Response;
+
 class PersonPolicy
 {
     use HandlesAuthorization;
@@ -48,26 +50,17 @@ class PersonPolicy
      * Determine whether the user can update the person.
      *
      * @param  \App\Models\Person $user
-     * @param  \App\Person        $person
+     * @param  \App\Models\Person $person
      * @return mixed
      */
     public function update(Person $user, Person $person)
     {
-        $status = $person->status;
-
         /*
-         * Do not allow a person to be updated by a non-Admin
-         * when the status is problematic.
+         * Do not allow a person to be updated when the status is problematic.
          */
 
-        if (($person->user_authorized == false
-        || $status == Person::DECEASED
-        || $status == Person::DISMISSED
-        || $status == Person::UBERBONKED
-        || $status == Person::SUSPENDED
-        || $status == Person::RESIGNED)
-        && !$user->isAdmin())  {
-            return false;
+        if (in_array($person->status, Person::LOCKED_STATUSES) && !$user->hasRole([ Role::ADMIN, Role::MENTOR, Role::VC ]))  {
+            return Response::deny('Person has a locked status. Only Admins, Mentors and VCs may update the record.');
         }
 
         if ($user->id == $person->id) {

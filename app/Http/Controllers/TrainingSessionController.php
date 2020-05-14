@@ -88,6 +88,7 @@ class TrainingSessionController extends ApiController
         $traineeStatus->rank = $params['rank'];
         if (!$session->isArt() && isset($params['feedback_delivered'])) {
             $traineeStatus->feedback_delivered = $params['feedback_delivered'];
+
         }
         $traineeStatus->passed = $params['passed'];
 
@@ -102,12 +103,13 @@ class TrainingSessionController extends ApiController
             return $this->restError($traineeStatus);
         }
 
-         if ($rankUpdated) {
+        if ($rankUpdated) {
             TraineeNote::record($personId, $session->id, "rank change [" . ($oldRank ?? 'no rank') . "] -> [" . ($traineeStatus->rank ?? 'no rank') . "]", true);
         }
 
-        if (isset($params['note'])) {
-            TraineeNote::record($personId, $session->id, $params['note']);
+        $note = trim($params['note'] ?? '');
+        if (!empty($note)) {
+            TraineeNote::record($personId, $session->id, $note);
         }
 
         return response()->json(['students' => $session->retrieveStudents()]);
