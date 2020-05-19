@@ -10,15 +10,17 @@ use App\Mail\ContactMail;
 use App\Models\Alert;
 use App\Models\AlertPerson;
 use App\Models\ContactLog;
-use App\Models\Role;
+use App\Models\Person;
 
 class ContactController extends ApiController
 {
-    /*
+     /**
      * Send a contact message
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
 
-     public function send()
+    public function send()
      {
          $params = request()->validate([
             'recipient_id' => 'required|integer',
@@ -69,17 +71,20 @@ class ContactController extends ApiController
          return $this->success();
      }
 
-     /*
-      * Retrieve a contact log
-      */
+     /**
+     * Retrieve the contact logs for a person and year
+      *
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
 
-      public function showLog() {
-          $params = request()->validate([
+    public function showLog() {
+        $this->authorize('isAdmin');
+
+        $params = request()->validate([
               'person_id'   => 'required|integer',
               'year'        => 'required|integer',
           ]);
-
-          $this->authorize('isAdmin');
 
           $personId = $params['person_id'];
           $year = $params['year'];
