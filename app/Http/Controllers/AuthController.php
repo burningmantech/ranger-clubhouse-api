@@ -65,10 +65,15 @@ class AuthController extends Controller
         ];
 
         $screenSize = request()->input('screen_size');
+        $buildTimestamp = request()->input('build_timestamp');
 
         // Analytics to help figure out how our users interact with the site.
         if (!empty($screenSize)) {
             $actionData['screen_size'] = $screenSize;
+        }
+
+        if (!empty($buildTimestamp)) {
+            $actionData['build_timestamp'] = $buildTimestamp;
         }
 
         return $actionData;
