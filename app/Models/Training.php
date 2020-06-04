@@ -108,16 +108,6 @@ class Training extends Position
 
             $personPositions[] = $info;
 
-            $trainer = null;
-            if ($position->training_position_id) {
-                $teachingPositions = Position::TRAINERS[$position->training_position_id] ?? null;
-                if ($teachingPositions) {
-                    $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
-                    // Find the session the person taught and was marked present.
-                    $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
-                }
-            }
-
             /*
              * Assume the person is trained unless indicated otherwise
              */
@@ -134,6 +124,18 @@ class Training extends Position
                     $trainingId = $position->training_position_id;
                     break;
             }
+
+            // See if the person taught a training session required by the position
+            $trainer = null;
+            if ($trainingId) {
+                $teachingPositions = Position::TRAINERS[$trainingId] ?? null;
+                if ($teachingPositions) {
+                    $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
+                    // Find the session the person taught and was marked present.
+                    $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
+                }
+            }
+
 
             if ($positionId == Position::SANDMAN) {
                 $unqualifiedReason = null;

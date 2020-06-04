@@ -152,6 +152,7 @@ class SlotController extends ApiController
         $this->authorize('store', Slot::class);
         $params = request()->validate([
             'ids' => 'required|array',
+            'ids.*' => 'required|integer',
             'deltaDays' => 'sometimes|integer',
             'deltaHours' => 'sometimes|integer',
             'deltaMinutes' => 'sometimes|integer',
@@ -159,9 +160,7 @@ class SlotController extends ApiController
             'activate' => 'sometimes|boolean',
             'attributes' => 'sometimes|array',
         ]);
-        if (empty($params['ids'])) {
-            return $this->restError('Must specify credits to copy', 422);
-        }
+
         $activate = $params['activate'] ?? false;
         $attributes = $params['attributes'] ?? array();
         $deltaDays = $params['deltaDays'] ?? 0;
@@ -182,7 +181,7 @@ class SlotController extends ApiController
             DB::transaction(function () use ($sourceSlots, $delta, $position, $activate, $attributes, &$results) {
                 foreach ($sourceSlots as $source) {
                     if ($source->training_id || $source->trainer_slot_id || $source->trainee_slot_id) {
-                        $title = $source->position()->title;
+                        $title = $source->position->title;
                         throw new \UnexpectedValueException(
                             "Clubhouse server doesn't yet know how to bulk-copy training or mentor/mentee shift pairs:"
                             . " ${title}: {$source->description}: {$source->begins}");
