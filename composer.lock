@@ -4447,16 +4447,16 @@
         },
         {
             "name": "twilio/sdk",
-            "version": "6.6.0",
+            "version": "6.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/twilio/twilio-php.git",
-                "reference": "eba44af458c63227acc9a2449f21733a6f72ce86"
+                "reference": "73fdd7e25547910ed339b6a8e7eef9e91a2deb41"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/eba44af458c63227acc9a2449f21733a6f72ce86",
-                "reference": "eba44af458c63227acc9a2449f21733a6f72ce86",
+                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/73fdd7e25547910ed339b6a8e7eef9e91a2deb41",
+                "reference": "73fdd7e25547910ed339b6a8e7eef9e91a2deb41",
                 "shasum": ""
             },
             "require": {
@@ -4493,7 +4493,7 @@
                 "sms",
                 "twilio"
             ],
-            "time": "2020-05-27T19:28:33+00:00"
+            "time": "2020-06-10T21:28:38+00:00"
         },
         {
             "name": "tymon/jwt-auth",
