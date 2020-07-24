@@ -174,41 +174,6 @@ class MaintenanceController extends ApiController
         return response()->json(['count' => $people->count()]);
     }
 
-    /**
-     * Deauthorize all assets, motorpolicy, Sandman Affidavit, etc
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-
-    public function deauthorizeAssets()
-    {
-        /*
-         * Grab the folks who are:
-         * - asset_authorized
-         * - signed motorpool agreement (vehicle_paperwork)
-         * - have Motor Vehicle Record aka BM Insurance (vehicle_insurance_paperwork)
-         * - signed the Sandman Affividat
-        */
-
-        $people = Person::where('asset_authorized', true)
-            ->orWhere('vehicle_paperwork', true)
-            ->orWhere('vehicle_insurance_paperwork', true)
-            ->orWhere('sandman_affidavit', true)
-            ->get();
-
-        // Clear the logs, and log the action
-        foreach ($people as $person) {
-            $person->asset_authorized = false;
-            $person->vehicle_paperwork = false;
-            $person->vehicle_insurance_paperwork = false;
-            $person->sandman_affidavit = false;
-            $person->auditReason = 'maintenance - deauthorized assets';
-            $person->saveWithoutValidation();
-        }
-
-        return response()->json(['count' => $people->count()]);
-    }
-
     /*
      * Reset all PNVs (Alphas/Bonks/Prospecitves) to Past Prospective status, reset callsign, and marked unapproved.
      */

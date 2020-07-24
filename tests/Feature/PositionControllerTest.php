@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonMentor;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
@@ -140,8 +141,13 @@ class PositionControllerTest extends TestCase
         //
         $personQualified = factory(Person::class)->create([
             'callsign'  => 'A Qualified',
-            'sandman_affidavit' => true,
          ]);
+
+        factory(PersonEvent::class)->create([
+            'person_id' => $personQualified->id,
+            'year' => current_year(),
+            'sandman_affidavit' => true
+        ]);
 
         factory(PersonPosition::class)->create([
              'person_id'    => $personQualified->id,

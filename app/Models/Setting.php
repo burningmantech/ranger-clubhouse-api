@@ -3,9 +3,7 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
-use http\Exception\RuntimeException;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
-use InvalidArgumentException;
 
 class Setting extends ApiModel
 {
@@ -547,6 +545,11 @@ class Setting extends ApiModel
         'VCEmail' => [
             'description' => 'Ranger Volunteer Coordinator Address',
             'type' => 'email',
+        ],
+
+        'VehiclePendingEmail' => [
+            'description' => 'Email(s) to notify when vehicle requests are queued up for review. (nightly mail)',
+            'type' => 'email'
         ],
     ];
 

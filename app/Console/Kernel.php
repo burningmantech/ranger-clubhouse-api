@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         'App\Console\Commands\ClubhouseDailyReportCommand',
         'App\Console\Commands\ClubhousePhotoPendingCommand',
+        'App\Console\Commands\ClubhouseVehiclePendingCommand',
         'App\Console\Commands\ClubhouseDoceboCompletion',
     ];
 
@@ -32,6 +33,9 @@ class Kernel extends ConsoleKernel
 
             // Let the photo reviewers know if photos are queued up.
             $schedule->command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
+
+            // Let the vehicle request reviewers know if vehicles are queued up.
+            $schedule->command('clubhouse:vehicle-pending')->dailyAt('19:00')->onOneServer();
 
             // Talk with Docebo to see who completed online training
             // Runs every 15 mins March thru September

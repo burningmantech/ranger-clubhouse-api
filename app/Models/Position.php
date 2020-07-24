@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
+use App\Models\PersonEvent;
 
 use Illuminate\Support\Facades\DB;
 
@@ -310,7 +311,8 @@ class Position extends ApiModel
 
     public static function isSandmanQualified($person, & $reason)
     {
-        if (!$person->sandman_affidavit) {
+        $event = PersonEvent::findForPersonYear($person->id, current_year());
+        if (!$event || !$event->sandman_affidavit) {
             $reason = 'Sandman affidavit not signed';
             return false;
         }
@@ -338,12 +340,16 @@ class Position extends ApiModel
                     ->select(
                         'id',
                         'callsign',
-                        'sandman_affidavit',
+                        DB::raw('IFNULL(person_event.sandman_affidavit, FALSE) as sandman_affidavit'),
                         DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty) >= $cutoff AND position_id IN ($positionIds) LIMIT 1) AS has_experience"),
                         DB::raw("EXISTS (SELECT 1 FROM trainee_status JOIN slot ON slot.id=trainee_status.slot_id WHERE trainee_status.person_id=person.id AND slot.position_id=".Position::SANDMAN_TRAINING." AND YEAR(slot.begins)=$year AND passed=1 LIMIT 1) as is_trained"),
                         DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id WHERE person_slot.person_id=person.id AND slot.position_id=".Position::SANDMAN." AND YEAR(slot.begins)=$year LIMIT 1) as is_signed_up")
                      )
-                    ->where('status', 'active')
+                    ->leftJoin('person_event', function ($j) use ($year) {
+                        $j->on('person_event.person_id', 'person.id');
+                        $j->where('year', $year);
+                    })
+                    ->where('status', Person::ACTIVE)
                     ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id=?)', [ Position::SANDMAN ])
                     ->orderBy('callsign')
                     ->get();

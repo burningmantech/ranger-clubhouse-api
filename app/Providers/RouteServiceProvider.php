@@ -8,6 +8,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use App\Models\AccessDocumentDelivery;
 use App\Models\Bmid;
 use App\Models\Help;
+use App\Models\PersonEvent;
 use App\Models\Setting;
 
 class RouteServiceProvider extends ServiceProvider
@@ -28,8 +29,6 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
-
         parent::boot();
 
         Route::bind('access-document-delivery', function($id) {
@@ -48,6 +47,9 @@ class RouteServiceProvider extends ServiceProvider
             return Setting::find($id) ?? abort(404);
         });
 
+        Route::bind('person-event', function ($id) {
+            return PersonEvent::findForRoute($id) ?? abort(404);
+        });
     }
 
     /**

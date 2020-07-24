@@ -853,7 +853,7 @@ class PersonControllerTest extends TestCase
     public function testUnreadMessageCountSuccess()
     {
         for ($i = 0; $i < 3; $i++) {
-            factory(PersonMessage::class)->create(
+          $m = factory(PersonMessage::class)->create(
                 [
                     'recipient_callsign' => $this->user->callsign,
                 ]

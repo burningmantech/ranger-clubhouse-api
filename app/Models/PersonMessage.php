@@ -46,7 +46,6 @@ class PersonMessage extends ApiModel
     ];
 
     protected $createRules = [
-        'recipient_callsign'    => 'required',
         'message_from'          => 'required',
         'subject'               => 'required',
         'body'                  => 'required',
@@ -97,7 +96,7 @@ class PersonMessage extends ApiModel
             }
 
             if (in_array($recipient->status, Person::NO_MESSAGES_STATUSES)) {
-                $this->addError('recipient_callsign', "Person has the status {$recipient->status} and may not be sent a message.");
+                $this->addError('recipient_callsign', "Person is status {$recipient->status} and may not be sent a message.");
                 return false;
             }
 

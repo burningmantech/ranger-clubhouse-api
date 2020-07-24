@@ -11,6 +11,7 @@ use App\Models\Bmid;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonPosition;
+use App\Models\PersonEvent;
 use App\Models\RadioEligible;
 
 class BulkUploadControllerTest extends TestCase
@@ -166,14 +167,14 @@ class BulkUploadControllerTest extends TestCase
      * Test setting a person column without commiting
      */
 
-    public function testUpdatePersonColumnWithoutCommit()
+    public function testUpdatePersonEventColumnWithoutCommit()
     {
-        $person = factory(Person::class)->create([
-            'vehicle_insurance_paperwork' => 0,
-        ]);
+        $year = current_year();
+        $person = factory(Person::class)->create([]);
+        $personEvent = factory(PersonEvent::class)->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'vehicle_insurance_paperwork',
+            'action'    => 'org_vehicle_insurance',
             'records'   => $person->callsign,
         ]);
 
@@ -185,22 +186,21 @@ class BulkUploadControllerTest extends TestCase
             ]
         ]]);
 
-        $person->refresh();
-        $this->assertEquals(0, $person->vehicle_insurance_paperwork);
+        $this->assertDatabaseHas('person_event', [ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
     }
 
     /*
      * Test setting a person column and commit
      */
 
-    public function testUpdatePersonColumnWithCommit()
+    public function testUpdatePersonEventColumnWithCommit()
     {
-        $person = factory(Person::class)->create([
-            'vehicle_insurance_paperwork' => 0,
-        ]);
+        $year = current_year();
+        $person = factory(Person::class)->create([]);
+        $personEvent = factory(PersonEvent::class)->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'vehicle_insurance_paperwork',
+            'action'    => 'org_vehicle_insurance',
             'records'   => $person->callsign,
             'commit'    => 1,
         ]);
@@ -214,9 +214,10 @@ class BulkUploadControllerTest extends TestCase
             ]
         ]]);
 
-        $this->assertDatabaseHas('person', [
-            'id' => $person->id,
-            'vehicle_insurance_paperwork'     => 1
+        $this->assertDatabaseHas('person_event', [
+            'year' => $year,
+            'person_id' => $person->id,
+            'org_vehicle_insurance'     => 1
         ]);
     }
 
