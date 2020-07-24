@@ -116,8 +116,6 @@ class ClubhouseGroundHogDayCommand extends Command
                 $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
             })->update([
                 'on_site'              => true,
-                'asset_authorized'     => true,
-                'vehicle_paperwork'    => true,
                 'behavioral_agreement' => true,
               ]);
         // Setup an announcement

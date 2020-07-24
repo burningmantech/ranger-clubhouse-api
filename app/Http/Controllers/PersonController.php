@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -11,6 +13,7 @@ use App\Helpers\SqlHelper;
 
 use App\Models\PersonOnlineTraining;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
@@ -43,8 +46,8 @@ class PersonController extends ApiController
     /**
      * Search and display person rows.
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
     public function index()
     {
@@ -438,11 +441,13 @@ class PersonController extends ApiController
 
         $isArtTrainer = $person->hasRole([Role::ART_TRAINER, Role::ADMIN]);
 
+        $event = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
+
         $data = [
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_art_trainer' => $isArtTrainer,
-                'is_mentor' => $person->hasRole([Role::MENTOR, Role::ADMIN]),
+                'is_mentor' => $person->hasRole([Role::ADMIN, Role::MENTOR]),
                 'have_mentored' => PersonMentor::haveMentees($person->id),
                 'have_feedback' => SurveyAnswer::haveTrainerFeedback($person->id),
             ],
@@ -450,12 +455,13 @@ class PersonController extends ApiController
             'years' => Timesheet::years($person->id),
             'all_years' => Timesheet::years($person->id, true),
             'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
-            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD])
+            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [Position::HQ_WINDOW_PRE_EVENT, Position::HQ_LEAD_PRE_EVENT, Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD]),
+            'may_request_stickers' => $event->may_request_stickers
         ];
 
         /*
          * In the future the ART training positions might be limited to
-         * a specific set intead of everything for all ART_TRAINERs.
+         * a specific set instead of everything for all ART_TRAINERs.
          */
 
         if ($isArtTrainer) {
@@ -611,7 +617,7 @@ class PersonController extends ApiController
             'longsleeveshirt_size_style',
             'teeshirt_size_style'
         )
-            ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE ])
+            ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
             ->orderBy('callsign')
             ->get();
 
@@ -627,10 +633,19 @@ class PersonController extends ApiController
         $this->authorize('vehiclePaperwork', [Person::class]);
 
         $rows = DB::table('person')
-            ->select('id', 'callsign', 'status', 'vehicle_paperwork', 'vehicle_insurance_paperwork')
-            ->where(function ($q) {
-                $q->where('vehicle_paperwork', true);
-                $q->orWhere('vehicle_insurance_paperwork', true);
+            ->select(
+                'id',
+                'callsign',
+                'status',
+                DB::raw('IFNULL(person_event.signed_motorpool_agreement, false) AS signed_motorpool_agreement'),
+                DB::raw('IFNULL(person_event.org_vehicle_insurance, false) AS org_vehicle_insurance')
+            )->join('person_event', function ($j) {
+                $j->on('person_event.person_id', 'person.id');
+                $j->where('person_event.year', current_year());
+                $j->where(function ($q) {
+                    $q->where('signed_motorpool_agreement', true);
+                    $q->orWhere('org_vehicle_insurance', true);
+                });
             })
             ->orderBy('callsign')
             ->get();

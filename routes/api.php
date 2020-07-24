@@ -193,11 +193,15 @@ Route::group([
 
     Route::resource('person', 'PersonController', ['only' => ['index', 'show', 'store', 'update', 'destroy']]);
 
+    Route::resource('person-event', 'PersonEventController');
+
     Route::get('person-photo/review-config', 'PersonPhotoController@reviewConfig');
     Route::post('person-photo/{person_photo}/replace', 'PersonPhotoController@replace');
     Route::post('person-photo/{person_photo}/activate', 'PersonPhotoController@activate');
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
+
+    Route::resource('vehicle', 'VehicleController');
 
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');

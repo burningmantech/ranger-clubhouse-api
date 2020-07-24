@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\PersonPhoto;
 use App\Mail\PhotoPendingMail;
-use App\Models\TaskLog;
 
 class ClubhousePhotoPendingCommand extends Command
 {

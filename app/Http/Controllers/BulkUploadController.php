@@ -2,27 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Bmid;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\RadioEligible;
-use App\Models\Role;
 
 use Carbon\Carbon;
 
 class BulkUploadController extends ApiController
 {
     const SET_COLUMN_UPDATE_ACTIONS = [
-        // Columns to be set to 1/true
-        "vehicle_insurance_paperwork",
-        "vehicle_paperwork",
         "vintage",
         "osha10",
         "osha30",
+    ];
+
+    const SET_EVENT_COLUMN_ACTIONS = [
+        // Columns to be set to 1/true
+        "org_vehicle_insurance",
+        "signed_motorpool_agreement",
+        "may_request_stickers",
         "sandman_affidavit"
     ];
 
@@ -87,10 +91,10 @@ class BulkUploadController extends ApiController
     public function update()
     {
         $params = request()->validate([
-            'action'    => 'required|string',
-            'records'   => 'required|string',
-            'commit'    => 'sometimes|boolean',
-            'reason'    => 'sometimes|string',
+            'action' => 'required|string',
+            'records' => 'required|string',
+            'commit' => 'sometimes|boolean',
+            'reason' => 'sometimes|string',
         ]);
 
         $this->authorize('isAdmin');
@@ -114,14 +118,14 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
-            $records[] = (object) [
-                'callsign'  => $callsign,
-                'data'      => $columns,
-                'id'        => null,
-                'person'    => null,
-                'status'    => null,
-                'details'   => null,
-                'changes'    => null,
+            $records[] = (object)[
+                'callsign' => $callsign,
+                'data' => $columns,
+                'id' => null,
+                'person' => null,
+                'status' => null,
+                'details' => null,
+                'changes' => null,
             ];
 
             $callsigns[] = $callsign;
@@ -139,6 +143,8 @@ class BulkUploadController extends ApiController
 
         if (in_array($action, self::SET_COLUMN_UPDATE_ACTIONS)) {
             $this->changePersonColumn($records, $action, $commit, $reason);
+        } else if (in_array($action, self::SET_EVENT_COLUMN_ACTIONS)) {
+            $this->changeEventColumn($records, $action, $commit, $reason);
         } elseif (in_array($action, self::STATUS_UPDATE_ACTIONS)) {
             $this->changePersonStatus($records, $action, $commit, $reason);
         } elseif (in_array($action, self::BMID_ACTIONS)) {
@@ -156,13 +162,13 @@ class BulkUploadController extends ApiController
         $results = array_map(function ($record) {
             $person = $record->person;
             if (!$person) {
-                return [ 'status' => 'callsign-not-found', 'callsign' => $record->callsign ];
+                return ['status' => 'callsign-not-found', 'callsign' => $record->callsign];
             }
 
             $result = [
-                'id'        => $record->person->id,
-                'callsign'  => $record->person->callsign,
-                'status'    => $record->status,
+                'id' => $record->person->id,
+                'callsign' => $record->person->callsign,
+                'status' => $record->status,
             ];
 
             if ($record->changes) {
@@ -177,33 +183,14 @@ class BulkUploadController extends ApiController
 
         if ($commit) {
             $this->log('bulk-upload', 'bulk upload commit', [
-                'action'  => $action,
-                'reason'  => $reason,
+                'action' => $action,
+                'reason' => $reason,
                 'records' => $recordsParam,
                 'results' => $results
             ]);
         }
 
-        return response()->json([ 'results' => $results, 'commit' => $commit ? true : false ]);
-    }
-
-    private function changePersonStatus($records, $action, $commit, $reason)
-    {
-        foreach ($records as $record) {
-            $person = $record->person;
-            if (!$person) {
-                continue;
-            }
-
-            $oldValue = $person->status;
-            $newValue = $person->status = $action;
-            $record->status = 'success';
-            if ($commit) {
-                $person->changeStatus($newValue, $oldValue, $reason);
-                $this->saveModel($person, $record);
-            }
-            $record->changes = [ $oldValue, $newValue ];
-        }
+        return response()->json(['results' => $results, 'commit' => $commit ? true : false]);
     }
 
     private function changePersonColumn($records, $action, $commit, $reason)
@@ -223,7 +210,66 @@ class BulkUploadController extends ApiController
                     continue;
                 }
             }
-            $record->changes = [ $oldValue, 1 ];
+            $record->changes = [$oldValue, 1];
+        }
+    }
+
+    private function changeEventColumn($records, $action, $commit, $reason)
+    {
+        $year = current_year();
+        foreach ($records as $record) {
+            $person = $record->person;
+            if (!$person) {
+                continue;
+            }
+
+            $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
+            $oldValue = $event->$action;
+            $event->$action = 1;
+            $event->auditReason = $reason;
+
+            $record->status = 'success';
+
+            if ($commit) {
+                if (!$this->saveModel($event, $record)) {
+                    continue;
+                }
+            }
+            $record->changes = [$oldValue, 1];
+        }
+    }
+
+
+    private function saveModel($model, $record)
+    {
+        try {
+            $model->saveWithoutValidation();
+            return true;
+        } catch (QueryException $e) {
+            $record->status = 'failed';
+            $record->details = 'SQL Failure ' . $e->getMessage();
+            return false;
+        }
+    }
+
+    private function changePersonStatus($records, $action, $commit, $reason)
+    {
+        foreach ($records as $record) {
+            $person = $record->person;
+            if (!$person) {
+                continue;
+            }
+
+            $oldValue = $person->status;
+            $newValue = $person->status = $action;
+            $person->auditReason = $reason;
+
+            $record->status = 'success';
+            if ($commit) {
+                $person->changeStatus($newValue, $oldValue, $reason);
+                $this->saveModel($person, $record);
+            }
+            $record->changes = [$oldValue, $newValue];
         }
     }
 
@@ -256,7 +302,7 @@ class BulkUploadController extends ApiController
                 case 'meals':
                     $meals = trim($data[0]);
                     if ($meals[0] == "+") {
-                        $meals = substr($meals, 1, strlen($meals)-1);
+                        $meals = substr($meals, 1, strlen($meals) - 1);
                         if ($meals == "pre") {
                             $meals = self::MAP_PRE_MEALS[$bmid->meals];
                         } elseif ($meals == "event") {
@@ -288,11 +334,12 @@ class BulkUploadController extends ApiController
             }
 
             $record->status = 'success';
+            $bmid->auditReason = $reason;
             if ($commit) {
                 $this->saveModel($bmid, $record);
             }
 
-            $record->changes = [ $oldValue, $newValue ];
+            $record->changes = [$oldValue, $newValue];
         }
     }
 
@@ -387,12 +434,12 @@ class BulkUploadController extends ApiController
 
             $ad = new AccessDocument(
                 [
-                    'person_id'   => $person->id,
-                    'type'        => $type,
+                    'person_id' => $person->id,
+                    'type' => $type,
                     'source_year' => $sourceYear,
                     'expiry_date' => $expiryYear,
-                    'comments'    => "$uploadDate {$this->user->callsign}: $reason",
-                    'status'      => 'qualified',
+                    'comments' => "$uploadDate {$this->user->callsign}: $reason",
+                    'status' => 'qualified',
                 ]
             );
 
@@ -446,9 +493,9 @@ class BulkUploadController extends ApiController
                 }
 
                 if ($accessDateCleaned->year != $year
-                || $accessDateCleaned->month != 8
-                || $accessDateCleaned->day < $low
-                || $accessDateCleaned->day > $high) {
+                    || $accessDateCleaned->month != 8
+                    || $accessDateCleaned->day < $low
+                    || $accessDateCleaned->day > $high) {
                     $record->status = 'failed';
                     $record->details = "Date is outside of $year-08-$low and 08-$high";
                     continue;
@@ -471,7 +518,7 @@ class BulkUploadController extends ApiController
                     $accessDate = $accessDateCleaned;
                     $accessAnyTime = false;
                 }
-                $oldValue = (string) $wap->access_date;
+                $oldValue = (string)$wap->access_date;
                 if ($commit) {
                     AccessDocument::updateWAPsForPerson($person->id, $accessDate, $accessAnyTime);
                 }
@@ -493,7 +540,7 @@ class BulkUploadController extends ApiController
             if (empty($record->data)) {
                 $maxRadios = 1;
             } else {
-                $maxRadios = (int) $record->data[0];
+                $maxRadios = (int)$record->data[0];
             }
 
             $radio = RadioEligible::firstOrNewForPersonYear($person->id, $year);
@@ -501,24 +548,12 @@ class BulkUploadController extends ApiController
             $newValue = $radio->max_radios = $maxRadios;
 
             $record->status = 'success';
-            $record->changes = [ $oldValue, $newValue ];
+            $record->changes = [$oldValue, $newValue];
 
             if ($commit) {
                 $this->saveModel($radio, $record);
             }
 
-        }
-    }
-
-    private function saveModel($model, $record)
-    {
-        try {
-            $model->saveWithoutValidation();
-            return true;
-        } catch (\Illuminate\Database\QueryException $e) {
-            $record->status = 'failed';
-            $record->details = 'SQL Failure '.$e->getMessage();
-            return false;
         }
     }
 }

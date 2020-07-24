@@ -86,19 +86,15 @@ class PersonFilter
     ];
 
     const AGREEMENT_FIELDS = [
-        'vehicle_paperwork',
         'behavioral_agreement',
     ];
 
     const RANGER_ADMIN_FIELDS = [
-        'vehicle_insurance_paperwork',
         'vehicle_blacklisted',
-        'sandman_affidavit'
     ];
 
     const EVENT_FIELDS = [
         'active_next_event',
-        'asset_authorized',
         'on_site',
     ];
 

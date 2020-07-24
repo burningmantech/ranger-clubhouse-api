@@ -41,31 +41,6 @@ class MaintenanceControllerTest extends TestCase
     }
 
     /*
-     * test Deauthorize assets (clear annual agreements, authorizations, etc)
-     */
-
-    public function testDeauthorizeAssets()
-    {
-        $person = factory(Person::class)->create([
-              'vehicle_paperwork'           => true,
-              'vehicle_insurance_paperwork' => true,
-              'sandman_affidavit'           => true,
-              'asset_authorized'            => true
-          ]);
-
-        $response = $this->json('POST', 'maintenance/deauthorize-assets');
-        $response->assertStatus(200);
-        $response->assertJson([ 'count' => 1]);
-        $this->assertDatabaseHas('person', [
-              'id'  => $person->id,
-              'vehicle_paperwork'           => false,
-              'vehicle_insurance_paperwork' => false,
-              'sandman_affidavit'           => false,
-              'asset_authorized'            => false
-          ]);
-    }
-
-    /*
      * test reset PNVs to past prospectives
      */
 

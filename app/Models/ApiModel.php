@@ -200,16 +200,7 @@ abstract class ApiModel extends Model
             return true;
         }
 
-        if ($this->fillable) {
-            $attributes = [];
-            foreach ($this->fillable as $column) {
-                $attributes[$column] = $this->$column;
-            }
-        } else {
-            $attributes = $this->getAttributes();
-        }
-
-        $validator = \Validator::make($attributes, $rules);
+        $validator = \Validator::make($this->getAttributes(), $rules);
 
         if ($validator->fails()) {
             $this->errors = $validator->errors();

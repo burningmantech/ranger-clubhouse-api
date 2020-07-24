@@ -10,9 +10,9 @@ use App\Models\RadioEligible;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 
-use App\Helpers\DateHelper;
 use App\Helpers\SqlHelper;
 
+use App\Policies\VehiclePolicy;
 use Carbon\Carbon;
 
 class PersonEventInfo extends ApihouseResult
@@ -29,6 +29,8 @@ class PersonEventInfo extends ApihouseResult
 
     public $online_training_passed;
     public $online_training_date;
+
+    public $vehicles;
 
     /*
      * Gather all information related to a given year for a person
@@ -233,13 +235,13 @@ class PersonEventInfo extends ApihouseResult
         $info->radio_max = $radio ? $radio->max_radios : 0;
         $info->radio_eligible = $info->radio_max > 0 ? true : false;
 
-        $info->meals = '';
-        $info->showers = false;
-
         $bmid = Bmid::findForPersonYear($personId, $year);
         if ($bmid) {
             $info->meals = $bmid->meals;
             $info->showers = $bmid->showers;
+        } else {
+            $info->meals = '';
+            $info->showers = false;
         }
 
         if (current_year() == $year && !setting('MealInfoAvailable')) {
@@ -255,6 +257,18 @@ class PersonEventInfo extends ApihouseResult
             $info->online_training_passed = false;
         }
 
+        $info->vehicles = Vehicle::findForPersonYear($personId, $year);
+        $event = PersonEvent::findForPersonYear($personId, $year);
+
+        if ($event) {
+            $info->may_request_stickers = $event->may_request_stickers;
+            $info->org_vehicle_insurance = $event->org_vehicle_insurance;
+            $info->signed_motorpool_agreement = $event->signed_motorpool_agreement;
+        } else {
+            $info->may_request_stickers = false;
+            $info->org_vehicle_insurance = false;
+            $info->signed_motorpool_agreement = false;
+        }
         return $info;
     }
 }

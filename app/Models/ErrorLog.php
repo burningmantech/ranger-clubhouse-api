@@ -76,6 +76,7 @@ class ErrorLog extends ApiModel
         if ($req) {
             $data['method'] = $req->method();
             $data['parameters'] = $req->all();
+            $data['url'] = $req->fullUrl();
         }
 
         $data = array_merge($data, $extra);

@@ -29,6 +29,7 @@ use Carbon\Carbon;
 
 use App\Models\Alert;
 use App\Models\ApiModel;
+use App\Models\PersonEvent;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
@@ -55,14 +56,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const INACTIVE = 'inactive';
     const INACTIVE_EXTENSION = 'inactive extension';
     const NON_RANGER = 'non ranger';
-    const PAST_PROSPECTIVE = 'past prospective'; // No longer used - retained for archival proposes
+    const PAST_PROSPECTIVE = 'past prospective';
     const PROSPECTIVE = 'prospective';
-    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
     const RESIGNED = 'resigned';
     const RETIRED = 'retired';
     const SUSPENDED = 'suspended';
     const UBERBONKED = 'uberbonked';
-    const VINTAGE = 'vintage'; // No longer used -- retained for archival proposes
+
+    // Deprecated statuses - no longer used, retained for historical purposes
+    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
+    const VINTAGE = 'vintage';
 
     /*
      * Statuses consider 'live' or still active account allowed
@@ -77,10 +80,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         Person::INACTIVE_EXTENSION,
         Person::NON_RANGER,
         Person::PAST_PROSPECTIVE,
-//        Person::PROSPECTIVE_WAITLIST,
         Person::PROSPECTIVE,
         Person::RETIRED,
-//        Person::VINTAGE
     ];
 
     const ACTIVE_STATUSES = [
@@ -136,22 +137,19 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
     protected $hidden = [
         'password',
+        'tpassword',
+        'tpassword_expire'
     ];
 
     protected $casts = [
         'active_next_event' => 'boolean',
-        'asset_authorized' => 'boolean',
         'behavioral_agreement' => 'boolean',
         'callsign_approved' => 'boolean',
         'has_note_on_file' => 'boolean',
         'on_site' => 'boolean',
         'osha10' => 'boolean',
         'osha30' => 'boolean',
-        'sandman_affidavit' => 'boolean',
         'vehicle_blacklisted' => 'boolean',
-        'vehicle_insurance_paperwork' => 'boolean',
-        'vehicle_paperwork' => 'boolean',
-
 
         'create_date' => 'datetime',
         'date_verified' => 'date',
@@ -209,11 +207,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'teeshirt_size_style',
         'emergency_contact',
 
-        'asset_authorized',
 
         'vehicle_blacklisted',
-        'vehicle_paperwork',
-        'vehicle_insurance_paperwork',
 
         // various external services identifiers
         'bpguid',
@@ -244,7 +239,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         // Certifications
         'osha10',
         'osha30',
-        'sandman_affidavit'
     ];
 
     const SEARCH_FIELDS = [
@@ -269,6 +263,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         //'contact_log',
         'manual_review',
         'mentee_status',
+        'person_event',
         'person_intake',
         'person_intake_note',
         'person_language',
@@ -1025,7 +1020,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
 
                 // Remove asset authorization and lock user out of system
-                $this->asset_authorized = 0;
                 break;
 
             case Person::BONKED:
@@ -1056,6 +1050,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         if ($oldStatus == Person::ALPHA) {
             // if you're no longer an alpha, you can't sign up for alpha shifts
             PersonPosition::removeIdsFromPerson($personId, [Position::ALPHA], $reason . ' no longer alpha');
+        }
+
+        if (in_array($newStatus, self::LOCKED_STATUSES)) {
+            $event = PersonEvent::findForPersonYear($this->id, current_year());
+            if ($event) {
+                $event->asset_authorized = false;
+                $event->auditReason = 'locked status ' . $newStatus;
+                $event->saveWithoutValidation();
+            }
         }
     }
 
