@@ -3,14 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Vehicle;
+
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class VehicleController extends ApiController
 {
     /**
      * Display a listing of the person vehicles.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function index()
     {
@@ -24,7 +27,7 @@ class VehicleController extends ApiController
         ]);
 
         if (isset($params['person_id'])) {
-            $this->authorize('indexForPerson', [Vehicle::class, $params['person_id'] ]);
+            $this->authorize('indexForPerson', [Vehicle::class, $params['person_id']]);
         } else {
             $this->authorize('index', Vehicle::class);
         }
@@ -35,7 +38,7 @@ class VehicleController extends ApiController
     /**
      * Create a person vehicle
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
     public function store()
@@ -55,7 +58,7 @@ class VehicleController extends ApiController
     /**
      * Display the specified resource.
      * @param Vehicle $vehicle
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
@@ -69,7 +72,7 @@ class VehicleController extends ApiController
     /**
      * Update the specified resource in storage.
      * @param Vehicle $vehicle
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
@@ -88,9 +91,9 @@ class VehicleController extends ApiController
 
     /**
      * Delete a person vehicle record.
-     * 
+     *
      * @param Vehicle $vehicle
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
     public function destroy(Vehicle $vehicle)
@@ -98,5 +101,34 @@ class VehicleController extends ApiController
         $this->authorize('delete', $vehicle);
         $vehicle->delete();
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Vehicle Paperwork Report
+     */
+
+    public function paperwork()
+    {
+        $this->authorize('paperwork', [Vehicle::class]);
+
+        $rows = DB::table('person')
+            ->select(
+                'id',
+                'callsign',
+                'status',
+                DB::raw('IFNULL(person_event.signed_motorpool_agreement, false) AS signed_motorpool_agreement'),
+                DB::raw('IFNULL(person_event.org_vehicle_insurance, false) AS org_vehicle_insurance')
+            )->join('person_event', function ($j) {
+                $j->on('person_event.person_id', 'person.id');
+                $j->where('person_event.year', current_year());
+                $j->where(function ($q) {
+                    $q->where('signed_motorpool_agreement', true);
+                    $q->orWhere('org_vehicle_insurance', true);
+                });
+            })
+            ->orderBy('callsign')
+            ->get();
+
+        return response()->json(['people' => $rows]);
     }
 }

@@ -151,6 +151,7 @@ Route::group([
     Route::get('mentor/verdicts', 'MentorController@verdicts');
 
     Route::get('motd/bulletin', 'MotdController@bulletin');
+    Route::post('motd/{motd}/markread', 'MotdController@markRead');
     Route::resource('motd', 'MotdController');
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
@@ -159,7 +160,6 @@ Route::group([
     Route::get('person/by-role', 'PersonController@peopleByRole');
     Route::get('person/by-status', 'PersonController@peopleByStatus');
     Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
-    Route::get('person/vehicle-paperwork', 'PersonController@vehiclePaperwork');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
@@ -201,6 +201,7 @@ Route::group([
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
 
+    Route::get('vehicle/paperwork', 'VehicleController@paperwork');
     Route::resource('vehicle', 'VehicleController');
 
     Route::post('position-credit/copy', 'PositionCreditController@copy');

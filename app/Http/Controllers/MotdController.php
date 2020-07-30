@@ -5,21 +5,54 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ApiController;
 
 use App\Models\Motd;
-use App\Models\Person;
+use App\Models\PersonMotd;
+
+use Illuminate\Support\Facades\DB;
 
 class MotdController extends ApiController
 {
+    /**
+     * Retrieve all announcements based on the given criteria
+     *
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
+
     public function index()
     {
         $this->authorize('index', Motd::class);
+        $params = request()->validate([
+            'audience' => 'sometimes|string',
+            'type' => 'sometimes|string',
+            'expired' => 'sometimes|boolean',
+            'page' => 'sometimes|integer',
+            'page_size' => 'sometimes|integer',
+            'sort' => 'sometimes|string',
+        ]);
 
-        return $this->success(Motd::findAll(), null, 'motd');
+        $result = Motd::findForQuery($params);
+        return $this->success($result['motd'], $result['meta'], 'motd');
     }
+
+    /**
+     * Retrieve the announcements for the current user.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
 
     public function bulletin()
     {
         $this->authorize('bulletin', Motd::class);
-        return $this->success(Motd::findForStatus($this->user->status), null, 'motd');
+        $params = request()->validate([
+            'type' => 'sometimes|string',
+            'page' => 'sometimes|integer',
+            'page_size' => 'sometimes|integer'
+        ]);
+
+        $result = Motd::findForBulletin($this->user->id, $this->user->status, $params);
+
+        return $this->success($result['motd'], $result['meta'], 'motd');
     }
 
     public function show(Motd $motd)
@@ -65,7 +98,6 @@ class MotdController extends ApiController
 
     /**
      * Remove a MOTD
-     *
      */
 
     public function destroy(Motd $motd)
@@ -73,7 +105,21 @@ class MotdController extends ApiController
         $this->authorize('destroy', $motd);
 
         $motd->delete();
+        DB::table('person_motd')->where('motd_id', $motd->id)->delete();
 
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Mark the motd as read by the current user
+     *
+     * @param Motd $motd
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function markRead(Motd $motd)
+    {
+        PersonMotd::markAsRead($this->user->id, $motd->id);
+        return $this->success();
     }
 }

@@ -18,6 +18,7 @@ use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
 use App\Models\TraineeStatus;
+use App\Models\PersonEvent;
 
 use App\Helpers\SqlHelper;
 
@@ -407,22 +408,26 @@ class TimesheetControllerTest extends TestCase
     {
         $person = $this->targetPerson;
 
-        $this->setting('TimesheetCorrectionYear', 2010);
+        $year = current_year();
+        $this->setting('TimesheetCorrectionYear', $year);
         $this->setting('TimesheetCorrectionEnable', true);
 
-        $now = SqlHelper::now();
-        $person->timesheet_confirmed = true;
-        $person->timesheet_confirmed_at = $now;
-        $person->saveWithoutValidation();
+        $now = now();
+        factory(PersonEvent::class)->create([
+            'person_id' => $person->id,
+            'year' => $year,
+            'timesheet_confirmed' => true,
+            'timesheet_confirmed_at' => $now
+        ]);
 
-        $response = $this->json('GET', 'timesheet/info', [ 'person_id' => $this->targetPerson->id ]);
+        $response = $this->json('GET', 'timesheet/info', [ 'person_id' => $person->id ]);
         $response->assertStatus(200);
         $response->assertJson([
              'info' => [
-                 'correction_year'  => current_year(),
+                 'correction_year'  => $year,
                  'correction_enabled' => true,
                  'timesheet_confirmed'  => true,
-                 'timesheet_confirmed_at' => $now
+                 'timesheet_confirmed_at' => (string)$now
              ]
          ]);
     }
@@ -441,10 +446,12 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $person->refresh();
 
-        $this->assertTrue($person->timesheet_confirmed == 1);
-        $this->assertTrue($person->timesheet_confirmed_at != null);
+        $this->assertDatabaseHas('person_event', [
+            'person_id' => $person->id,
+            'year' => current_year(),
+            'timesheet_confirmed' => true
+        ]);
 
         $this->assertDatabaseHas('timesheet_log', [
             'person_id' => $person->id,
@@ -460,9 +467,13 @@ class TimesheetControllerTest extends TestCase
     public function testUnconfirmTimesheet()
     {
         $person = $this->targetPerson;
-        $person->timesheet_confirmed = 1;
-        $person->timesheet_confirmed_at = SqlHelper::now();
-        $person->saveWithoutValidation();
+
+        factory(PersonEvent::class)->create([
+            'person_id' => $person->id,
+            'year' => current_year(),
+            'timesheet_confirmed' => true,
+            'timesheet_confirmed_at' => now()
+        ]);
 
         $response = $this->json('POST', 'timesheet/confirm', [
             'person_id' => $person->id,
@@ -470,11 +481,11 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $person->refresh();
-
-        $this->assertTrue($person->timesheet_confirmed == 0);
-        $this->assertTrue($person->timesheet_confirmed_at == null);
-
+        $this->assertDatabaseHas('person_event', [
+            'person_id' => $person->id,
+            'year' => current_year(),
+            'timesheet_confirmed' => false
+        ]);
         $this->assertDatabaseHas('timesheet_log', [
             'person_id' => $person->id,
             'action'    => 'confirmed',

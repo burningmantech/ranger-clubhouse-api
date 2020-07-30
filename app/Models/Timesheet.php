@@ -415,17 +415,18 @@ class Timesheet extends ApiModel
     public static function retrieveUnconfirmedPeopleForYear($year)
     {
         return DB::select(
-                "SELECT
-                    person.id, callsign,
-                    first_name, last_name,
-                    email, home_phone,
-                    (SELECT count(*) FROM timesheet WHERE person.id=timesheet.person_id AND YEAR(timesheet.on_duty)=? AND timesheet.verified IS FALSE AND (timesheet.notes is null OR timesheet.notes='') AND timesheet.review_status='pending') as unverified_count
+                "SELECT person.id, callsign, first_name, last_name, email, home_phone,
+                    (SELECT count(*) FROM timesheet
+                        WHERE person.id=timesheet.person_id
+                          AND YEAR(timesheet.on_duty)=?
+                          AND timesheet.verified IS FALSE) as unverified_count
                FROM person
-               WHERE status='active'
-                 AND timesheet_confirmed IS FALSE
+               LEFT JOIN person_event ON person_event.person_id=person.id AND person_event.year=?
+               WHERE status in ('active', 'inactive', 'inactive extension', 'retired')
+                 AND IFNULL(person_event.timesheet_confirmed, FALSE) != TRUE
                  AND EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(timesheet.on_duty)=?)
                ORDER BY callsign",
-             [ $year, $year ]
+             [ $year, $year, $year ]
          );
     }
 
