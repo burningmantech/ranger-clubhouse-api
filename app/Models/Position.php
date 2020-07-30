@@ -27,6 +27,9 @@ class Position extends ApiModel
     const MENTOR_KHAKI = 86;
     const MENTOR_RADIO_TRAINER = 72;
 
+    const CHEETAH = 45;
+    const CHEETAH_CUB = 46;
+
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
     const GREEN_DOT_LEAD_INTERN = 126;

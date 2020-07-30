@@ -4,14 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
 
-use App\Helpers\SqlHelper;
+use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\PositionCredit;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
+use App\Models\Schedule;
 
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class TimesheetMissingController extends ApiController
 {
@@ -19,13 +20,13 @@ class TimesheetMissingController extends ApiController
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
-            'year'      => 'required|integer',
+            'year' => 'required|integer',
         ]);
 
         $personId = $params['person_id'] ?? null;
 
         if ($personId) {
-            $this->authorize('view', [ TimesheetMissing::class, $personId ]);
+            $this->authorize('view', [TimesheetMissing::class, $personId]);
         } else {
             $this->authorize('viewAll', TimesheetMissing::class);
         }
@@ -57,12 +58,6 @@ class TimesheetMissingController extends ApiController
 
         if ($timesheetMissing->save()) {
             $timesheetMissing->loadRelationships();
-            $person = $this->findPerson($timesheetMissing->person_id);
-            if ($person->timesheet_confirmed) {
-                $person->timesheet_confirmed = false;
-                $person->saveWithoutValidation();
-                TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new missing request created');
-            }
             return $this->success($timesheetMissing);
         }
 
@@ -82,12 +77,12 @@ class TimesheetMissingController extends ApiController
         $this->fromRestFiltered($timesheetMissing);
 
         if ($timesheetMissing->isDirty('review_status')
-        || $timesheetMissing->isDirty('reviewer_notes')) {
-            $timesheetMissing->reviewed_at = SqlHelper::now();
+            || $timesheetMissing->isDirty('reviewer_notes')) {
+            $timesheetMissing->reviewed_at = now();
         }
 
         if ($timesheetMissing->isDirty('notes')
-        && $timesheetMissing->review_status != 'pending') {
+            && $timesheetMissing->review_status != 'pending') {
             $timesheetMissing->review_status = 'pending';
         }
 
@@ -113,9 +108,9 @@ class TimesheetMissingController extends ApiController
 
             if ($createNew) {
                 $timesheet = new Timesheet([
-                    'person_id'   => $person->id,
-                    'on_duty'     => $timesheetMissing->new_on_duty,
-                    'off_duty'    => $timesheetMissing->new_off_duty,
+                    'person_id' => $person->id,
+                    'on_duty' => $timesheetMissing->new_on_duty,
+                    'off_duty' => $timesheetMissing->new_off_duty,
                     'position_id' => $timesheetMissing->new_position_id,
                 ]);
 
@@ -134,14 +129,18 @@ class TimesheetMissingController extends ApiController
                     $person->id,
                     $this->user->id,
                     $timesheet->id,
-                         "missing entry ".$timesheet->position->title." ".(string) $timesheet->on_duty
+                    "missing entry " . $timesheet->position->title . " " . (string)$timesheet->on_duty
                 );
 
-                if ($person->timesheet_confirmed) {
-                    $person->auditReason = 'unconfirmed - new (missing) entry created';
-                    $person->timesheet_confirmed = false;
-                    $person->saveWithoutValidation();
-                    TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new (missing) entry created');
+                $year = $timesheet->on_duty->year;
+                if ($year == current_year()) {
+                    $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
+                    if ($event->timesheet_confirmed) {
+                        $event->auditReason = 'unconfirmed - new (missing) entry created';
+                        $event->timesheet_confirmed = false;
+                        $event->saveWithoutValidation();
+                        TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new (missing) entry created');
+                    }
                 }
             }
             DB::commit();
@@ -159,7 +158,7 @@ class TimesheetMissingController extends ApiController
 
     public function show(TimesheetMissing $timesheetMissing)
     {
-        $this->authorize('view', [ TimesheetMissing::class, $timesheetMissing->person_id ]);
+        $this->authorize('view', [TimesheetMissing::class, $timesheetMissing->person_id]);
         $timesheetMissing->loadRelationships();
         return $this->success($timesheetMissing);
     }

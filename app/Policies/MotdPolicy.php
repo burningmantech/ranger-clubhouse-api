@@ -13,7 +13,7 @@ class MotdPolicy
     use HandlesAuthorization;
 
     public function before(Person $user) {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([ Role::ADMIN, Role::MEGAPHONE ])) {
             return true;
         }
     }

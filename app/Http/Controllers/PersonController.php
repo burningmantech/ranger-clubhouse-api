@@ -9,15 +9,14 @@ use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\ApiController;
 
-use App\Helpers\SqlHelper;
-
-use App\Models\PersonOnlineTraining;
+use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
@@ -27,11 +26,12 @@ use App\Models\Position;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
+use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\Training;
-use App\Models\Survey;
+use App\Models\Vehicle;
 
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
@@ -624,36 +624,7 @@ class PersonController extends ApiController
         return response()->json(['alphas' => $rows]);
     }
 
-    /*
-     * Vehicle Paperwork Report
-     */
-
-    public function vehiclePaperwork()
-    {
-        $this->authorize('vehiclePaperwork', [Person::class]);
-
-        $rows = DB::table('person')
-            ->select(
-                'id',
-                'callsign',
-                'status',
-                DB::raw('IFNULL(person_event.signed_motorpool_agreement, false) AS signed_motorpool_agreement'),
-                DB::raw('IFNULL(person_event.org_vehicle_insurance, false) AS org_vehicle_insurance')
-            )->join('person_event', function ($j) {
-                $j->on('person_event.person_id', 'person.id');
-                $j->where('person_event.year', current_year());
-                $j->where(function ($q) {
-                    $q->where('signed_motorpool_agreement', true);
-                    $q->orWhere('org_vehicle_insurance', true);
-                });
-            })
-            ->orderBy('callsign')
-            ->get();
-
-        return response()->json(['people' => $rows]);
-    }
-
-    /*
+     /*
      * People By Location report
      */
 
@@ -725,14 +696,10 @@ class PersonController extends ApiController
 
         $status = $person->status;
 
-        /*
-                if (!in_array($status, [ Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST, Person::ALPHA, Person::AUDITOR ])) {
-                    throw new \InvalidArgumentException('Person status does not have milestone');
-                }
-        */
+        $now = now();
+        $year = $now->year;
 
-        $year = current_year();
-        $now = SqlHelper::now();
+        $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
 
         $milestones = [
             'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
@@ -742,13 +709,13 @@ class PersonController extends ApiController
             'has_reviewed_pi' => $person->has_reviewed_pi,
             'photo_upload_enabled' => setting('PhotoUploadEnable'),
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
-            'alpha_shift_prep_link' => setting('OnboardAlphaShiftPrepLink'),
-            'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year)
+            'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year),
+            'period' => EventDate::calculatePeriod(),
         ];
-
 
         $trainings = TraineeStatus::findForPersonYear($person->id, $year, Position::TRAINING);
         $trainingSignups = Schedule::findEnrolledSlots($person->id, $year, Position::TRAINING);
+
 
         /*
          * Find a training sign up OR attendance record.
@@ -774,7 +741,8 @@ class PersonController extends ApiController
                 $lastSignup = $trainingSignups->last();
 
                 if ($lastSignup
-                    && (!$lastTraining || ($lastSignup->slot_id != $lastTraining->slot_id || Carbon::parse($lastSignup->begins)->gt($lastTraining->begins)))
+                    && (!$lastTraining ||
+                        ($lastSignup->slot_id != $lastTraining->slot_id || Carbon::parse($lastSignup->begins)->gt($lastTraining->begins)))
                     && self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
                     $milestoneTraining = [
                         'status' => 'pending',
@@ -795,22 +763,12 @@ class PersonController extends ApiController
         } elseif (!$trainingSignups->isEmpty()) {
             // No attendance found yet they are signed up
             $lastSignup = $trainingSignups->last();
-
-            if (self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
-                $milestoneTraining = [
-                    'status' => 'pending',
-                    'slot_id' => $lastSignup->id,
-                    'begins' => (string)$lastSignup->begins,
-                    'description' => $lastSignup->description
-                ];
-            } else {
-                $milestoneTraining = [
-                    'status' => 'failed',
-                    'slot_id' => $lastSignup->id,
-                    'begins' => (string)$lastSignup->begins,
-                    'description' => $lastSignup->description
-                ];
-            }
+            $milestoneTraining = [
+                'status' => self::isTimeWithinGracePeriod($lastSignup->ends, $now) ? 'pending' : 'failed',
+                'slot_id' => $lastSignup->id,
+                'begins' => (string)$lastSignup->begins,
+                'description' => $lastSignup->description
+            ];
         } else {
             // Person has done nada.. y u no sign up?
             $milestoneTraining = ['status' => 'missing'];
@@ -818,25 +776,36 @@ class PersonController extends ApiController
 
         $milestones['training'] = $milestoneTraining;
 
-        if ($status == Person::BONKED) {
-            $milestones['bonked'] = true;
-        } elseif ($status == Person::ALPHA || $status == Person::PROSPECTIVE) {
-            $milestones['alpha_shifts_available'] = Slot::haveActiveForPosition(Position::ALPHA);
-            if ($milestones['alpha_shifts_available']) {
-                $alphaShift = Schedule::findEnrolledSlots($person->id, $year, Position::ALPHA)->last();
-                if ($alphaShift) {
-                    if (Carbon::parse($alphaShift->begins)->addHours(24)->lte($now)) {
-                        $alphaStatus = 'no-show';
-                    } else {
-                        $alphaStatus = 'pending';
+        switch ($status) {
+            case  Person::BONKED:
+                $milestones['bonked'] = true;
+                break;
+            case Person::ALPHA:
+            case Person::PROSPECTIVE:
+                $milestones['alpha_shift_prep_link'] = setting('OnboardAlphaShiftPrepLink');
+                $milestones['alpha_shifts_available'] = $haveAlphaShifts = Slot::haveActiveForPosition(Position::ALPHA);
+                if ($haveAlphaShifts) {
+                    $alphaShift = Schedule::findEnrolledSlots($person->id, $year, Position::ALPHA)->last();
+                    if ($alphaShift) {
+                         $milestones['alpha_shift'] = [
+                            'slot_id' => $alphaShift->id,
+                            'begins' => (string)$alphaShift->begins,
+                            'status' => Carbon::parse($alphaShift->begins)->addHours(24)->lte($now) ? 'no-show' : 'pending',
+                        ];
                     }
-                    $milestones['alpha_shift'] = [
-                        'slot_id' => $alphaShift->id,
-                        'begins' => (string)$alphaShift->begins,
-                        'status' => $alphaStatus,
+                }
+                break;
+            case Person::INACTIVE_EXTENSION:
+            case Person::RETIRED:
+            case Person::RESIGNED:
+                $cheetah = Schedule::findEnrolledSlotIds($person->id, $year, Position::CHEETAH_CUB)->last();
+                if ($cheetah) {
+                    $milestones['cheetah_shift'] = [
+                        'slot_id' => $cheetah->id,
+                        'begins' => (string)$cheetah->begins,
                     ];
                 }
-            }
+                break;
         }
 
         if ($status != Person::AUDITOR) {
@@ -845,6 +814,11 @@ class PersonController extends ApiController
             }
 
             $milestones['photo_status'] = PersonPhoto::retrieveStatus($person);
+        }
+
+        if ($event->may_request_stickers) {
+            $milestones['may_request_stickers'] = true;
+            $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
         }
 
         return response()->json(['milestones' => $milestones]);

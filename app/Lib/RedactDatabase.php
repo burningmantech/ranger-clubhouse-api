@@ -30,7 +30,6 @@ class RedactDatabase {
             'street1' => '123 Any St.',
             'street2' => '',
             'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),
-            'timesheet_confirmed' => false,
             'behavioral_agreement' => false,
             'message'   => '',
             'bpguid' => 'DEAD-BEEF',

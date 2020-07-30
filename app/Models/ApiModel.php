@@ -287,4 +287,8 @@ abstract class ApiModel extends Model
     {
         return $date->format('Y-m-d H:i:s');
     }
+
+    public function setAuditModel($audit) {
+        $this->auditModel = $audit;
+    }
 }

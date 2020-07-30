@@ -77,4 +77,8 @@ class VehiclePolicy
     {
         return ($vehicle->person_id == $user->id && $vehicle->status == Vehicle::PENDING);
     }
- }
+
+    public function paperwork(Person $user) {
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
+    }
+}

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
-use Illuminate\Support\Facades\DB;
+
 use Carbon\Carbon;
 
 class EventDate extends ApiModel
@@ -47,5 +47,32 @@ class EventDate extends ApiModel
 
     public static function findForYear($year) {
         return self::whereYear('event_start', $year)->first();
+    }
+
+    /**
+     * Calculate what event period we're in.
+     *
+     * - before-event: start of the year til before gate opening
+     * - event: the event week from gate opening til end of Labor Day
+     * - after-event: Tuesday after Labor Day til the end of the year.
+     *
+     * @return string
+     */
+    public static function calculatePeriod() {
+        $year = current_year();
+        $now = now();
+
+        $laborDay = (new Carbon("September $year first monday"))->setTime(23,59,59);
+
+        if ($laborDay->lte($now)) {
+            return 'after-event';
+        }
+
+        $gateOpen = $laborDay->clone()->subDays(8)->setTime(0,0,1);
+        if ($gateOpen->lte($now) && $laborDay->gte($now)) {
+            return 'event';
+        }
+
+        return 'before-event';
     }
 }

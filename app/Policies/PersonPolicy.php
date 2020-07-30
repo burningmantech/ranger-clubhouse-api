@@ -122,10 +122,6 @@ class PersonPolicy
         return $user->hasRole([ Role::ADMIN, Role::VC ]);
     }
 
-    public function vehiclePaperwork(Person $user) {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
-    }
-
     public function peopleByLocation(Person $user) {
         return $user->hasRole([ Role::ADMIN, Role::VIEW_PII, Role::MANAGE ]);
     }
