@@ -16,7 +16,16 @@ You will need the following things properly installed on your computer.
 * `cd ranger-clubhouse-api`
 * `composer install`
 * Copy `.env.clubhouse` to `.env` and set the configuration appropriately
+* Create `rangers` database and user
+  ```console
+  mysql> create database rangers;
+  mysql> create user 'rangers'@'%' identified by 'donothing';
+  mysql> grant all privileges on rangers.* to 'rangers'@'%';
+  mysql> flush privileges;
+  ```
 * `php artisan migrate` (needed to have database auditing)
+* `php artisan db:seed` (Optional) Seed the db
+* `php artisan db:seed --class=AdminPersonTableSeeder` (Optional) Adds an admin user with email `admin@example.com` and password `forkyourburn`
 
 ## Running / Development
 
