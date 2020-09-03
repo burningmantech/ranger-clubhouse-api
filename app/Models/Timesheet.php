@@ -431,48 +431,6 @@ class Timesheet extends ApiModel
     }
 
     /*
-     * Retrieve folks who earned a t-shirt
-     */
-
-
-    public static function retrieveEarnedShirts($year, $thresholdSS, $thresholdLS)
-    {
-        $hoursEarned = DB::select(
-        "SELECT person_id, SUM(TIMESTAMPDIFF(second, on_duty,off_duty)) as seconds FROM timesheet JOIN position ON position.id=timesheet.position_id WHERE YEAR(off_duty)=? AND position.count_hours IS TRUE AND position_id != ? GROUP BY person_id HAVING (SUM(TIMESTAMPDIFF(second, on_duty,off_duty))/3600) >= ?", [ $year, Position::ALPHA, $thresholdSS ]);
-        if (empty($hoursEarned)) {
-            return [];
-        }
-
-        $hoursEarned = collect($hoursEarned);
-        $personIds = $hoursEarned->pluck('person_id');
-        $hoursByPerson = $hoursEarned->keyBy('person_id');
-
-        $people = Person::select('id', 'callsign', 'status', 'first_name', 'last_name', 'longsleeveshirt_size_style', 'teeshirt_size_style')
-                ->whereIn('id', $personIds)
-                ->where('status', Person::ACTIVE)
-                ->orderBy('callsign')
-                ->get();
-
-        return $people->map(function ($person) use ($thresholdSS, $thresholdLS, $hoursByPerson) {
-            $hours  = $hoursByPerson[$person->id]->seconds / 3600.00;
-
-            return [
-                'id'    => $person->id,
-                'callsign'  => $person->callsign,
-                'first_name' => $person->first_name,
-                'last_name' => $person->last_name,
-                'status'    => $person->status,
-                'email'     => $person->email,
-                'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
-                'earned_ls' => ($hours >= $thresholdLS),
-                'teeshirt_size_style' => $person->teeshirt_size_style,
-                'earned_ss' => ($hours >= $thresholdSS), // gonna be true always, but just in case the selection above changes.
-                'hours'   => round($hours, 2),
-            ];
-        });
-    }
-
-    /*
      * Retrieve folks who potentially earned a t-shirt
      */
 
