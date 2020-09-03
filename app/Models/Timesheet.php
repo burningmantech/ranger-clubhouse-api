@@ -436,62 +436,63 @@ class Timesheet extends ApiModel
 
     public static function retrievePotentialEarnedShirts($year, $thresholdSS, $thresholdLS)
     {
+      $active_statuses = implode("','", Person::ACTIVE_STATUSES);
       $report = DB::select(
-				"SELECT
-					person.id, person.callsign, person.status, person.first_name, person.mi, person.last_name,
-					eh.estimated_hours,
-					ah.actual_hours,
-					person.teeshirt_size_style, person.longsleeveshirt_size_style
-				FROM
-					person
+       "SELECT
+          person.id, person.callsign, person.status, person.first_name, person.mi, person.last_name,
+          eh.estimated_hours,
+          ah.actual_hours,
+          person.teeshirt_size_style, person.longsleeveshirt_size_style
+        FROM
+          person
+        LEFT JOIN (
+          SELECT
+            person_slot.person_id,
+            round(sum(((TIMESTAMPDIFF(MINUTE, slot.begins, slot.ends))/60)),2) AS estimated_hours
+          FROM
+            slot
+          JOIN
+            person_slot ON person_slot.slot_id = slot.id
+          JOIN
+            position ON position.id = slot.position_id
+          WHERE
+            YEAR(slot.begins) = ?
+            AND position.count_hours IS TRUE
+          GROUP BY person_id
+        ) eh ON eh.person_id = person.id
 
-				LEFT JOIN (
-					SELECT
-						person_slot.person_id,
-						round(sum(((TIMESTAMPDIFF(MINUTE, slot.begins, slot.ends))/60)),2) AS estimated_hours
-					FROM
-						slot
-					JOIN
-						person_slot ON person_slot.slot_id = slot.id
-					JOIN
-						position ON position.id = slot.position_id
-					WHERE
-						YEAR(slot.begins) = ?
-						AND position.count_hours IS TRUE
-					GROUP BY person_id
-				) eh ON eh.person_id = person.id
+        LEFT JOIN (
+          SELECT
+            timesheet.person_id,
+            round(sum(((TIMESTAMPDIFF(MINUTE, timesheet.on_duty, timesheet.off_duty))/60)),2) AS actual_hours
+          FROM
+            timesheet
+          JOIN
+            position ON position.id = timesheet.position_id
+          WHERE
+            YEAR(timesheet.on_duty) = ?
+            AND position.count_hours IS TRUE
+          GROUP BY person_id
+        ) ah ON ah.person_id = person.id
 
-				LEFT JOIN (
-					SELECT
-						timesheet.person_id,
-						round(sum(((TIMESTAMPDIFF(MINUTE, timesheet.on_duty, timesheet.off_duty))/60)),2) AS actual_hours
-					FROM
-						timesheet
-					JOIN
-						position ON position.id = timesheet.position_id
-					WHERE
-						YEAR(timesheet.on_duty) = ?
-						AND position.count_hours IS TRUE
-					GROUP BY person_id
-				) ah ON ah.person_id = person.id
-
-				WHERE
-					( actual_hours >= ? OR estimated_hours >= ? )
-					AND person.id NOT IN (
-						SELECT
-							timesheet.person_id
-						FROM
-							timesheet
-						JOIN
-							position ON position.id = timesheet.position_id
-						WHERE
-							YEAR(timesheet.on_duty) = ?
-							AND position_id = ?
-					)
-				ORDER BY
-					person.callsign
+        WHERE
+          ( actual_hours >= ? OR estimated_hours >= ? )
+          AND person.id NOT IN (
+            SELECT
+              timesheet.person_id
+            FROM
+              timesheet
+            JOIN
+              position ON position.id = timesheet.position_id
+            WHERE
+              YEAR(timesheet.on_duty) = ?
+              AND position_id = ?
+          )
+          AND person.status IN ('" . $active_statuses . "')
+        ORDER BY
+          person.callsign
         "
-				, [$year, $year, $thresholdSS, $thresholdSS, $year, Position::ALPHA]
+        , [$year, $year, $thresholdSS, $thresholdSS, $year, Position::ALPHA]
       );
 
       if (empty($report)) {
