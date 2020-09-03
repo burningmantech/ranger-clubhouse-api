@@ -5,8 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 use App\Models\ApiModel;
-use App\Helpers\DateHelper;
 use App\Models\Person;
+use App\Models\PersonPhoto;
+
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PersonMessage extends ApiModel
 {
@@ -35,6 +37,8 @@ class PersonMessage extends ApiModel
 
     protected $appends = [
         'sent_at',
+        'sender_photo_url',
+        'is_rbs'
     ];
 
     public $recipient_callsign;
@@ -46,12 +50,18 @@ class PersonMessage extends ApiModel
     ];
 
     protected $createRules = [
-        'message_from'          => 'required',
-        'subject'               => 'required',
-        'body'                  => 'required',
+        'message_from' => 'required',
+        'subject' => 'required',
+        'body' => 'required',
     ];
 
-    public static function findForPerson($personId) {
+    public function sender()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public static function findForPerson($personId)
+    {
         return self::where('person_id', $personId)
             ->leftJoin('person as creator', 'creator.id', '=', 'person_message.creator_person_id')
             ->leftJoin('person as sender', 'sender.callsign', '=', 'person_message.message_from')
@@ -59,7 +69,8 @@ class PersonMessage extends ApiModel
             ->get(['person_message.*', 'creator.callsign as creator_callsign', 'sender.id as sender_person_id']);
     }
 
-    public function person() {
+    public function person()
+    {
         return $this->belongsTo(Person::class);
     }
 
@@ -78,7 +89,8 @@ class PersonMessage extends ApiModel
      * @param return bool true if model is valid
      */
 
-    public function validate($rules = null, $throwOnFailure = false): bool {
+    public function validate($rules = null, $throwOnFailure = false): bool
+    {
         if (!parent::validate($rules, $throwOnFailure)) {
             return false;
         }
@@ -89,7 +101,7 @@ class PersonMessage extends ApiModel
             $recipient = Person::findByCallsign($this->recipient_callsign);
             if (!$recipient) {
                 if ($throwOnFailure) {
-                    throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
+                    throw new ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
                 }
                 $this->addError('recipient_callsign', 'Callsign does not exist');
                 return false;
@@ -110,33 +122,50 @@ class PersonMessage extends ApiModel
      * Mark a message as read
      */
 
-     public function markRead() {
-         $this->delivered = true;
-         return $this->saveWithoutValidation();
-     }
+    public function markRead()
+    {
+        $this->delivered = true;
+        return $this->saveWithoutValidation();
+    }
 
-     public function setRecipientCallsignAttribute($value) {
-         $this->recipient_callsign = $value;
-     }
+    public function setRecipientCallsignAttribute($value)
+    {
+        $this->recipient_callsign = $value;
+    }
 
-     /*
-      * Timestamp is in UTC, need to send back back with the right
-      * format with timezone offset.
-      */
+    /*
+     * Timestamp is in UTC, need to send back back with the right
+     * format with timezone offset.
+     */
 
-      public function getSentAtAttribute() {
-          return $this->timestamp ? $this->timestamp->toIso8601String() : '';
-      }
+    public function getSentAtAttribute()
+    {
+        return $this->timestamp ? $this->timestamp->toIso8601String() : '';
+    }
 
-/*      public function getSenderPersonIdAttribute() {
-          return isset($this->attributes['sender_person_id']) ? $this->attributes['sender_person_id'] : null;
-      }
+    /**
+     * Retrieve the sender's approved mugshot.
+     *
+     * @return string
+     */
 
-      public function getSenderPersonIdAttribute() {
-          return isset($this->attributes['']) ? $this->attributes['sender_person_id'] : null;
-      }
+    public function getSenderPhotoUrlAttribute() : string
+    {
+        $id = $this->sender_person_id ?? null;
+        if (!$id) {
+            return '';
+        }
 
-      public function getRecipientCallsign() {
-          return $this->recipient_callsign;
-      }*/
+       return PersonPhoto::retrieveImageUrlForPerson($id);
+    }
+
+    /**
+     * Is this message from the RBS?
+     *
+     * @return bool
+     */
+
+    public function getIsRbsAttribute() : bool {
+        return stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
+    }
 }
