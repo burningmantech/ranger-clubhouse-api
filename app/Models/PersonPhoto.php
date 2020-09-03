@@ -61,7 +61,7 @@ class PersonPhoto extends ApiModel
     const SUBMITTED = 'submitted';
     const MISSING = 'missing';
 
-    const NOT_REQUIRED = 'not-required'; // Not stored within the database, used by sign up gatekeeping logic
+    const NOT_REQUIRED = 'not-required'; // Not stored within the database, used by scheduling gate keeping logic
 
     // Image ratio is 7 by 9 for 350px by 450px
     const BMID_WIDTH = 350;
@@ -305,6 +305,23 @@ class PersonPhoto extends ApiModel
     }
 
     /**
+     * Retrieve the (approved) image url for the given person
+     *
+     * @param $personId
+     * @return string
+     */
+
+    public static function retrieveImageUrlForPerson(int $personId) : string
+    {
+        $photo = self::join('person', function ($j) use ($personId) {
+            $j->on('person.id', 'person_photo.person_id');
+            $j->where('person.id', $personId);
+        })->where('person_photo.status', self::APPROVED)->first();
+
+        return $photo ? $photo->image_url : '';
+    }
+
+    /**
      * Find all photos queued up for review.
      *
      * @return Collection
@@ -317,6 +334,12 @@ class PersonPhoto extends ApiModel
             ->with('person:id,callsign,status')
             ->get();
     }
+
+    /**
+     * Delete all the photos on file for the given person
+     *
+     * @param $personId
+     */
 
     public static function deleteAllForPerson($personId)
     {
@@ -345,7 +368,7 @@ class PersonPhoto extends ApiModel
 
     public function setUploadedAtToNow()
     {
-        $this->uploaded_at = SqlHelper::now();
+        $this->uploaded_at = now();
     }
 
     public function getImageUrlAttribute()
@@ -358,14 +381,28 @@ class PersonPhoto extends ApiModel
         return self::storage()->url(self::storagePath($this->orig_filename));
     }
 
-    public static function retrieveStatus($person)
+    /**
+     * Retrieve the photo status for the given person
+     *
+     * @param Person $person
+     * @return string
+     */
+
+    public static function retrieveStatus(Person $person)
     {
         $photo = $person->person_photo;
 
         return $photo ? $photo->status : self::MISSING;
     }
 
-    public static function retrieveInfo($person)
+    /**
+     * Retrieve the person's photo, status, and any rejection messages (if rejected)
+     *
+     * @param Person $person
+     * @return array
+     */
+
+    public static function retrieveInfo(Person $person) : array
     {
         $photo = $person->person_photo;
 
@@ -405,6 +442,12 @@ class PersonPhoto extends ApiModel
         return $info;
     }
 
+    /**
+     * Obtain the photo storage object
+     *
+     * @return \Illuminate\Contracts\Filesystem\Filesystem
+     */
+
     public static function storage()
     {
         $storage = config('clubhouse.PhotoStorage');
@@ -413,6 +456,15 @@ class PersonPhoto extends ApiModel
         }
         return Storage::disk($storage);
     }
+
+    /**
+     * Store/upload the photo image to photo storage
+     *
+     * @param $contents - raw image
+     * @param $timestamp - timestamp image was uploaded
+     * @param $isOrig - is this the original image or one that was resized
+     * @return bool - true if succesful
+     */
 
     public function storeImage($contents, $timestamp, $isOrig)
     {
@@ -427,10 +479,18 @@ class PersonPhoto extends ApiModel
         return self::storage()->put(self::storagePath($file), $contents);
     }
 
+    /**
+     * Delete the photo from storage
+     */
+
     public function deleteImage()
     {
         self::storage()->delete(self::storagePath($this->image_filename));
     }
+
+    /**
+     * Delete the original photo from storage
+     */
 
     public function deleteOrigImage()
     {
@@ -472,6 +532,12 @@ class PersonPhoto extends ApiModel
         return $this->reject_history;
     }
 
+    /**
+     * Get the AWS Rekognition analysis details
+     *
+     * @return array|string[]
+     */
+
     public function getAnalysisDetailsAttribute()
     {
         $status = $this->analysis_status;
@@ -490,21 +556,25 @@ class PersonPhoto extends ApiModel
         }
 
         if (empty($data->FaceDetails)) {
+            // No face was detected
             return ['status' => 'success', 'issues' => ['no-face'], 'sharpness' => 0];
         }
 
         $issues = [];
 
         if (count($data->FaceDetails) > 1) {
+            // Multiple people are in the image
             $issues = ['multiple-people'];
         }
 
         $face = $data->FaceDetails[0];
         if ($face->Sunglasses->Value && $face->Sunglasses->Confidence >= 0.9) {
+            // Wearing sunglasses.
             $issues[] = 'sunglasses';
         }
 
         if (!$face->EyesOpen->Value || $face->EyesOpen->Confidence < 0.9) {
+            // Their eyes are closed
             $issues[] = 'eyes-closed';
         }
 
@@ -515,6 +585,7 @@ class PersonPhoto extends ApiModel
             'issues' => $issues,
             'sharpness' => (int)$face->Quality->Sharpness,
             'bounding' => [
+                // The face's location within the image
                 'height' => $box->Height,
                 'left' => $box->Left,
                 'top' => $box->Top,
@@ -522,6 +593,12 @@ class PersonPhoto extends ApiModel
             ]
         ];
     }
+
+    /**
+     * Take an image, and run it through AWS' Rekognition service.
+     *
+     * @param $contents
+     */
 
     public function analyzeImage($contents)
     {
@@ -552,6 +629,13 @@ class PersonPhoto extends ApiModel
             $this->analysis_status = 'failed';
         }
     }
+
+    /**
+     * Create a (local filesystem not url) path to where the image is stored
+     *
+     * @param string $filename
+     * @return string
+     */
 
     public static function storagePath(string $filename): string
     {
