@@ -476,7 +476,7 @@ class Timesheet extends ApiModel
         ) ah ON ah.person_id = person.id
 
         WHERE
-          ( actual_hours >= ? OR estimated_hours >= ? )
+          ( actual_hours > 0 OR estimated_hours > 0 )
           AND person.id NOT IN (
             SELECT
               timesheet.person_id

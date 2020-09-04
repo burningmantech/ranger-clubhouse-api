@@ -577,12 +577,14 @@ class TimesheetControllerTest extends TestCase
         $this->setting('ShirtShortSleeveHoursThreshold', 8);
         $this->setting('ShirtLongSleeveHoursThreshold', 12);
 
-        // $estimatedPerson = factory(Person::class)->create();
+        // Clear out timesheets created by setup
+        // TODO Refactor reports into separate classes(?)
+        DB::delete("delete from timesheet");
 
         // Person only worked 4 hours
-        $unworkedPerson = factory(Person::class)->create();
+        $fourHourPerson = factory(Person::class)->create();
         factory(Timesheet::class)->create([
-            'person_id' => $unworkedPerson->id,
+            'person_id' => $fourHourPerson->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$year-08-25 00:00:00",
             'off_duty'  => "$year-08-25 04:00:00"
@@ -648,7 +650,7 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $people = $response->json()['people'];
-        $this->assertCount(3, $people);
+        $this->assertCount(4, $people);
 
         foreach ($people as $person) {
             if ($person['id'] == $lsPerson->id) {
@@ -663,6 +665,10 @@ class TimesheetControllerTest extends TestCase
                 $this->assertFalse($person['earned_ls']);
                 $this->assertFalse($person['earned_ss']);
                 $this->assertEquals($person['estimated_hours'], 10);
+            } elseif ($person['id'] == $fourHourPerson->id) {
+                $this->assertFalse($person['earned_ls']);
+                $this->assertFalse($person['earned_ss']);
+                $this->assertEquals($person['actual_hours'], 4);
             } else {
                 $this->assertFalse(true, "Unknown id");
             }
