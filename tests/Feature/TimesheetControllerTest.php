@@ -567,32 +567,34 @@ class TimesheetControllerTest extends TestCase
     }
 
     /*
-     * Shirt Earned Report
+     * Potential Shirt Earned Report
      */
 
-    public function testShirtEarnedReport()
+    public function testPotentialShirtEarnedReport()
     {
         $year = $this->year;
 
         $this->setting('ShirtShortSleeveHoursThreshold', 8);
         $this->setting('ShirtLongSleeveHoursThreshold', 12);
 
-        $ssPerson = factory(Person::class)->create([
-            'longsleeveshirt_size_style' => 'Womens M',
-            'teeshirt_size_style'        => 'Womens V-Neck M'
-        ]);
-        $lsPerson = factory(Person::class)->create();
-        $unworkedPerson = factory(Person::class)->create();
+        // Clear out timesheets created by setup
+        // TODO Refactor reports into separate classes(?)
+        DB::delete("delete from timesheet");
 
         // Person only worked 4 hours
+        $fourHourPerson = factory(Person::class)->create();
         factory(Timesheet::class)->create([
-            'person_id' => $unworkedPerson->id,
+            'person_id' => $fourHourPerson->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$year-08-25 00:00:00",
             'off_duty'  => "$year-08-25 04:00:00"
         ]);
 
         // Person should have earned enough for a short slevee
+        $ssPerson = factory(Person::class)->create([
+            'longsleeveshirt_size_style' => 'Womens M',
+            'teeshirt_size_style'        => 'Womens V-Neck M'
+        ]);
         factory(Timesheet::class)->create([
             'person_id'   => $ssPerson->id,
             'position_id' => Position::DIRT,
@@ -601,6 +603,7 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         // Person should have earned enough for a long slevee
+        $lsPerson = factory(Person::class)->create();
         factory(Timesheet::class)->create([
             'person_id' => $lsPerson->id,
             'position_id' => Position::DIRT,
@@ -608,7 +611,43 @@ class TimesheetControllerTest extends TestCase
             'off_duty'  => "$year-08-25 12:00:00"
         ]);
 
-        $response = $this->json('GET', 'timesheet/shirts-earned', [ 'year' => $year ]);
+        // Shiny Penny should not appear in report
+        $shinyPenny = factory(Person::class)->create();
+        factory(Timesheet::class)->create([
+            'person_id' => $shinyPenny->id,
+            'position_id' => Position::ALPHA,
+            'on_duty'   => "$year-08-25 00:00:00",
+            'off_duty'  => "$year-08-25 12:00:00"
+        ]);
+
+        factory(Timesheet::class)->create([
+            'person_id' => $shinyPenny->id,
+            'position_id' => Position::DIRT_SHINY_PENNY,
+            'on_duty'   => "$year-08-26 00:00:00",
+            'off_duty'  => "$year-08-26 12:00:00"
+        ]);
+
+        factory(Timesheet::class)->create([
+            'person_id' => $shinyPenny->id,
+            'position_id' => Position::BURN_PERIMETER,
+            'on_duty'   => "$year-08-26 00:00:00",
+            'off_duty'  => "$year-08-26 5:00:00"
+        ]);
+
+        // Person with potentail hours
+        $potentialPerson = factory(Person::class)->create();
+        $slot = factory(Slot::class)->create([
+            'position_id' => Position::DIRT,
+            'begins'   => "$year-08-25 00:00:00",
+            'ends'  => "$year-08-25 10:00:00"
+        ]);
+
+        factory(PersonSlot::class)->create([
+          'person_id' => $potentialPerson->id,
+          'slot_id' => $slot->id
+        ]);
+
+        $response = $this->json('GET', 'timesheet/potential-shirts-earned', [ 'year' => $year ]);
         $response->assertStatus(200);
 
         // Should return the settings
@@ -618,17 +657,25 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $people = $response->json()['people'];
-        $this->assertCount(2, $people);
+        $this->assertCount(4, $people);
 
         foreach ($people as $person) {
             if ($person['id'] == $lsPerson->id) {
                 $this->assertTrue($person['earned_ls']);
                 $this->assertTrue($person['earned_ss']);
-                $this->assertEquals($person['hours'], 12);
+                $this->assertEquals($person['actual_hours'], 12);
             } elseif ($person['id'] == $ssPerson->id) {
                 $this->assertFalse($person['earned_ls']);
                 $this->assertTrue($person['earned_ss']);
-                $this->assertEquals($person['hours'], 8);
+                $this->assertEquals($person['actual_hours'], 8);
+            } elseif ($person['id'] == $potentialPerson->id) {
+                $this->assertFalse($person['earned_ls']);
+                $this->assertFalse($person['earned_ss']);
+                $this->assertEquals($person['estimated_hours'], 10);
+            } elseif ($person['id'] == $fourHourPerson->id) {
+                $this->assertFalse($person['earned_ls']);
+                $this->assertFalse($person['earned_ss']);
+                $this->assertEquals($person['actual_hours'], 4);
             } else {
                 $this->assertFalse(true, "Unknown id");
             }

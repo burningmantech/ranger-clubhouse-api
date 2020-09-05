@@ -136,6 +136,15 @@ class TimesheetPolicy
     }
 
     /**
+     * Can the user run a potential shirts earned report?
+     */
+
+    public function potentialShirtsEarnedReport(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /**
      * Can the user run a radio eligibility report?
      */
 

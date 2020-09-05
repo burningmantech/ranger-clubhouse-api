@@ -538,6 +538,37 @@ class TimesheetController extends ApiController
     }
 
     /*
+     * Potential T-Shirts Earned Report
+     */
+
+    public function potentialShirtsEarnedReport()
+    {
+        $this->authorize('potentialShirtsEarnedReport', [Timesheet::class]);
+
+        $params = request()->validate([
+            'year' => 'required|integer'
+        ]);
+
+        $year = $params['year'];
+        $thresholdLS = setting('ShirtLongSleeveHoursThreshold');
+        $thresholdSS = setting('ShirtShortSleeveHoursThreshold');
+
+        if (!$thresholdSS) {
+            throw new \RuntimeException("ShirtShortSleeveHoursThreshold is not set");
+        }
+
+        if (!$thresholdLS) {
+            throw new \RuntimeException("ShirtLongSleeveHoursThreshold is not set");
+        }
+
+        return response()->json([
+            'people' => Timesheet::retrievePotentialEarnedShirts($year, $thresholdSS, $thresholdLS),
+            'threshold_ss' => $thresholdSS,
+            'threshold_ls' => $thresholdLS,
+        ]);
+    }
+
+    /*
      * Freaking years report!
      */
 
