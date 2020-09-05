@@ -492,7 +492,7 @@ class Timesheet extends ApiModel
         ORDER BY
           person.callsign
         "
-        , [$year, $year, $thresholdSS, $thresholdSS, $year, Position::ALPHA]
+        , [$year, $year, $year, Position::ALPHA]
       );
 
       if (empty($report)) {
