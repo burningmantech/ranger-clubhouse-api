@@ -570,7 +570,7 @@ class TimesheetControllerTest extends TestCase
      * Potential Shirt Earned Report
      */
 
-    public function testPotenetialShirtEarnedReport()
+    public function testPotentialShirtEarnedReport()
     {
         $year = $this->year;
 
@@ -625,6 +625,13 @@ class TimesheetControllerTest extends TestCase
             'position_id' => Position::DIRT_SHINY_PENNY,
             'on_duty'   => "$year-08-26 00:00:00",
             'off_duty'  => "$year-08-26 12:00:00"
+        ]);
+
+        factory(Timesheet::class)->create([
+            'person_id' => $shinyPenny->id,
+            'position_id' => Position::BURN_PERIMETER,
+            'on_duty'   => "$year-08-26 00:00:00",
+            'off_duty'  => "$year-08-26 5:00:00"
         ]);
 
         // Person with potentail hours
