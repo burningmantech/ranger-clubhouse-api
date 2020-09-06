@@ -24,6 +24,7 @@ class ConfigController extends Controller
         'PersonnelEmail',
         'RadioCheckoutFormUrl',
         'RangerFeedbackFormUrl',
+        'RangerManualUrl',
         'RangerPoliciesUrl',
         'ReadOnly',
         'RpTicketThreshold',
