@@ -269,7 +269,7 @@ class SmsController extends ApiController
         $person = Person::where('sms_on_playa', $number)->orWhere('sms_off_playa', $number)->first();
         if (!$person) {
             // Who are you?
-            $reply = "Hello from the Ranger Clubhouse. Sorry, your phone number cannot be found. Contact rangers@burningman.org for help.";
+            $reply = "Hello from the Ranger Clubhouse Bot. Sorry, your phone number cannot be found in our database. Contact rangers@burningman.org for help.";
             BroadcastMessage::record(null, Broadcast::STATUS_UNKNOWN_PHONE, null, 'sms', $number, 'inbound', $message);
             return SMSService::replyResponse($reply);
         }

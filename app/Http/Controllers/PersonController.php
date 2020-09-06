@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -9,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\ApiController;
 
-use App\Models\EventDate;
+use App\Lib\Milestones;
+
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
@@ -24,14 +26,11 @@ use App\Models\PersonSlot;
 use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\Role;
-use App\Models\Schedule;
 use App\Models\Slot;
-use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\Training;
-use App\Models\Vehicle;
 
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
@@ -174,6 +173,11 @@ class PersonController extends ApiController
         }
 
         $person->auditReason = 'person update';
+
+        if ($person->has_reviewed_pi) {
+            $person->reviewed_pi_at = now();
+        }
+
         if (!$person->save()) {
             return $this->restError($person);
         }
@@ -211,7 +215,6 @@ class PersonController extends ApiController
                 $personId = $person->id;
 
                 DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
-
 
                 foreach (Person::ASSOC_TABLES as $table) {
                     DB::table($table)->where('person_id', $personId)->delete();
@@ -285,7 +288,7 @@ class PersonController extends ApiController
      * Retrieve the positions held
      */
 
-    public function positions(Request $request, Person $person)
+    public function positions(Person $person)
     {
         $params = request()->validate([
             'include_training' => 'sometimes|boolean',
@@ -311,7 +314,7 @@ class PersonController extends ApiController
      * Update the positions held
      */
 
-    public function updatePositions(Request $request, Person $person)
+    public function updatePositions(Person $person)
     {
         $this->authorize('updatePositions', $person);
         $params = request()->validate(
@@ -366,7 +369,7 @@ class PersonController extends ApiController
     * Retrieve the roles held, and return a list of role ids
     */
 
-    public function roles(Request $request, Person $person)
+    public function roles(Person $person)
     {
         $this->authorize('view', $person);
 
@@ -377,7 +380,7 @@ class PersonController extends ApiController
      * Update the roles held
      */
 
-    public function updateRoles(Request $request, Person $person)
+    public function updateRoles(Person $person)
     {
         $this->authorize('updateRoles', $person);
         $params = request()->validate(
@@ -564,7 +567,6 @@ class PersonController extends ApiController
             throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
-
         // make the callsign for an auditor.
         if ($person->status == 'auditor') {
             $person->resetCallsign();
@@ -624,9 +626,9 @@ class PersonController extends ApiController
         return response()->json(['alphas' => $rows]);
     }
 
-     /*
-     * People By Location report
-     */
+    /*
+    * People By Location report
+    */
 
     public function peopleByLocation()
     {
@@ -682,358 +684,22 @@ class PersonController extends ApiController
     {
         $this->authorize('peopleByStatusChange', [Person::class]);
         $year = $this->getYear();
-
         return response()->json(Person::retrieveRecommendedStatusChanges($year));
     }
 
-    /*
-     * milestone a PNV / auditor has meet various milestones
+    /**
+     * Return the milestones a person has hits or needs to hit.
+     * (signed up for training, have photo, taken surveys, etc.)
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function milestones(Person $person)
     {
         $this->authorize('view', $person);
-
-        $status = $person->status;
-
-        $now = now();
-        $year = $now->year;
-
-        $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
-
-        $milestones = [
-            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
-            'online_training_enabled' => setting('OnlineTrainingEnabled'),
-            'online_training_url' => setting('OnlineTrainingUrl'),
-            'behavioral_agreement' => $person->behavioral_agreement,
-            'has_reviewed_pi' => $person->has_reviewed_pi,
-            'photo_upload_enabled' => setting('PhotoUploadEnable'),
-            'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
-            'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year),
-            'period' => EventDate::calculatePeriod(),
-        ];
-
-        $trainings = TraineeStatus::findForPersonYear($person->id, $year, Position::TRAINING);
-        $trainingSignups = Schedule::findEnrolledSlots($person->id, $year, Position::TRAINING);
-
-
-        /*
-         * Find a training sign up OR attendance record.
-         *
-         * A 12 hour window is allowed from the end of the session to be considered
-         * pending if no attendance was found, otherwise fail it.
-         */
-
-        if (!$trainings->isEmpty()) {
-            // Attendance records found
-            $passed = $trainings->firstWhere('passed', true);
-            if ($passed) {
-                // Yay, they passed!
-                $milestoneTraining = [
-                    'status' => 'passed',
-                    'slot_id' => $passed->id,
-                    'begins' => $passed->begins,
-                    'description' => $passed->description
-                ];
-            } else {
-                // Not passed.. but has the person signed up for a later training?
-                $lastTraining = $trainings->last();
-                $lastSignup = $trainingSignups->last();
-
-                if ($lastSignup
-                    && (!$lastTraining ||
-                        ($lastSignup->slot_id != $lastTraining->slot_id || Carbon::parse($lastSignup->begins)->gt($lastTraining->begins)))
-                    && self::isTimeWithinGracePeriod($lastSignup->ends, $now)) {
-                    $milestoneTraining = [
-                        'status' => 'pending',
-                        'slot_id' => $lastSignup->id,
-                        'begins' => $lastSignup->begins,
-                        'description' => $lastSignup->description
-                    ];
-                } else {
-                    $slot = $lastSignup ?? $lastTraining;
-                    $milestoneTraining = [
-                        'status' => 'failed',
-                        'slot_id' => $slot->id,
-                        'begins' => (string)$slot->begins,
-                        'description' => $slot->description
-                    ];
-                }
-            }
-        } elseif (!$trainingSignups->isEmpty()) {
-            // No attendance found yet they are signed up
-            $lastSignup = $trainingSignups->last();
-            $milestoneTraining = [
-                'status' => self::isTimeWithinGracePeriod($lastSignup->ends, $now) ? 'pending' : 'failed',
-                'slot_id' => $lastSignup->id,
-                'begins' => (string)$lastSignup->begins,
-                'description' => $lastSignup->description
-            ];
-        } else {
-            // Person has done nada.. y u no sign up?
-            $milestoneTraining = ['status' => 'missing'];
-        }
-
-        $milestones['training'] = $milestoneTraining;
-
-        switch ($status) {
-            case  Person::BONKED:
-                $milestones['bonked'] = true;
-                break;
-            case Person::ALPHA:
-            case Person::PROSPECTIVE:
-                $milestones['alpha_shift_prep_link'] = setting('OnboardAlphaShiftPrepLink');
-                $milestones['alpha_shifts_available'] = $haveAlphaShifts = Slot::haveActiveForPosition(Position::ALPHA);
-                if ($haveAlphaShifts) {
-                    $alphaShift = Schedule::findEnrolledSlots($person->id, $year, Position::ALPHA)->last();
-                    if ($alphaShift) {
-                         $milestones['alpha_shift'] = [
-                            'slot_id' => $alphaShift->id,
-                            'begins' => (string)$alphaShift->begins,
-                            'status' => Carbon::parse($alphaShift->begins)->addHours(24)->lte($now) ? 'no-show' : 'pending',
-                        ];
-                    }
-                }
-                break;
-            case Person::INACTIVE_EXTENSION:
-            case Person::RETIRED:
-            case Person::RESIGNED:
-                $cheetah = Schedule::findEnrolledSlotIds($person->id, $year, Position::CHEETAH_CUB)->last();
-                if ($cheetah) {
-                    $milestones['cheetah_shift'] = [
-                        'slot_id' => $cheetah->id,
-                        'begins' => (string)$cheetah->begins,
-                    ];
-                }
-                break;
-        }
-
-        if ($status != Person::AUDITOR) {
-            if (empty($person->bpguid)) {
-                $milestones['missing_bpguid'] = true;
-            }
-
-            $milestones['photo_status'] = PersonPhoto::retrieveStatus($person);
-        }
-
-        if ($event->may_request_stickers) {
-            $milestones['may_request_stickers'] = true;
-            $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
-        }
-
-        return response()->json(['milestones' => $milestones]);
-    }
-
-    /**
-     * Is the given time within a grace period?
-     * @param Carbon|string $time
-     * @param $now
-     * @return bool
-     */
-    private function isTimeWithinGracePeriod($time, $now): bool
-    {
-        $time = is_string($time) ? Carbon::parse($time) : $time->clone();
-
-        return $time->addHours(12)->gt($now);
-    }
-
-    /*
-     *  Onboard debugging endpoint. Only available on a staging or local development
-     * server.
-     */
-
-    public function onboardDebug(Person $person)
-    {
-        $year = current_year();
-
-        if (config('clubhouse.DeploymentEnvironment') != 'Staging' && !app()->isLocal()) {
-            throw new InvalidArgumentException('Onboard debugging is only available in the staging server');
-        }
-
-        $photoStatus = request()->input('photo_status');
-
-        if (!empty($photoStatus)) {
-            $photo = PersonPhoto::where('person_id', $person->id)->where('status', PersonPhoto::SUBMITTED)->first();
-            if (!$photo) {
-                $photo = new PersonPhoto;
-                $photo->person_id = $person->id;
-                $photo->image_filename = 'test.jpg';
-                $photo->orig_filename = 'test-orig.jpg';
-            }
-
-            $photo->status = $photoStatus;
-            $photo->save();
-
-            return $this->success();
-        }
-
-        $status = request()->input('online_training');
-        if (!empty($status)) {
-            $mr = PersonOnlineTraining::findForPersonYear($person->id, $year);
-            if (!$mr) {
-                if ($status == 'missing') {
-                    return $this->success();
-                }
-                PersonOnlineTraining::create([
-                    'person_id' => $person->id,
-                    'completed_at' => "$year-01-01 10:00:00",
-                    'type' => PersonOnlineTraining::DOCEBO
-                ]);
-            } elseif ($status == 'missing') {
-                $mr->delete();
-            }
-
-            return $this->success();
-        }
-
-        $status = request()->input('training');
-
-        if (!empty($status)) {
-            switch ($status) {
-                case 'signup':
-                    $slot = Slot::create([
-                        'position_id' => Position::TRAINING,
-                        'begins' => now()->addHours(24),
-                        'ends' => now()->addHours(25),
-                        'description' => 'Testing Slot',
-                        'active' => true,
-                        'max' => 10
-                    ]);
-                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
-                    return $this->success();
-                case 'signup-past':
-                    $slot = Slot::create([
-                        'position_id' => Position::TRAINING,
-                        'begins' => now()->subHours(24),
-                        'ends' => now()->subHours(23),
-                        'description' => 'Past Testing Slot',
-                        'active' => true,
-                        'max' => 10
-                    ]);
-                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
-                    return $this->success();
-                case 'signup-now':
-                    $slot = Slot::create([
-                        'position_id' => Position::TRAINING,
-                        'begins' => now(),
-                        'ends' => now()->addHours(6),
-                        'description' => 'Now Testing Slot',
-                        'active' => true,
-                        'max' => 10
-                    ]);
-                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
-                    return $this->success();
-
-                case 'pass':
-                case 'fail':
-                    $rows = PersonSlot::where('person_id', $person->id)
-                        ->select('person_slot.*', 'slot.id as slot_id')
-                        ->join('slot', 'slot.id', 'person_slot.slot_id')
-                        ->where('position_id', Position::TRAINING)
-                        ->whereYear('begins', $year)
-                        ->get();
-
-                    $pass = ($status == 'pass');
-                    foreach ($rows as $r) {
-                        $p = TraineeStatus::where('person_id', $person->id)
-                            ->where('slot_id', $r->slot_id)
-                            ->first();
-                        if (!$p) {
-                            TraineeStatus::create(['person_id' => $person->id, 'slot_id' => $r->slot_id, 'passed' => $pass]);
-                        } else {
-                            $p->update(['passed' => $pass]);
-                        }
-                    }
-                    return $this->success();
-
-                case 'remove':
-                    $rows = PersonSlot::where('person_id', $person->id)
-                        ->join('slot', 'slot.id', 'person_slot.slot_id')
-                        ->where('position_id', Position::TRAINING)
-                        ->whereYear('begins', $year)
-                        ->delete();
-                    return $this->success();
-                default:
-                    throw new InvalidArgumentException("Unknown training command");
-            }
-        }
-
-
-        $status = request()->input('alpha');
-
-        if (!empty($status)) {
-            switch ($status) {
-                case 'signup':
-                    $slot = Slot::create([
-                        'position_id' => Position::ALPHA,
-                        'begins' => now()->addHours(24),
-                        'ends' => now()->addHours(25),
-                        'description' => 'Alpha Test Slot',
-                        'active' => true,
-                        'max' => 10
-                    ]);
-                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
-                    break;
-                case 'signup-past':
-                    $slot = Slot::create([
-                        'position_id' => Position::ALPHA,
-                        'begins' => now()->subHours(25),
-                        'ends' => now()->subHours(24),
-                        'description' => 'Past Alpha Test Slot',
-                        'active' => true,
-                        'max' => 10
-                    ]);
-                    PersonSlot::create(['person_id' => $person->id, 'slot_id' => $slot->id]);
-                    break;
-                case 'pass':
-                    // Convert to Active
-                    $person->changeStatus('active', $person->status, 'onboard debugging');
-                    $person->save();
-                    break;
-
-                case 'bonk':
-                    $person->changeStatus('bonked', $person->status, 'onboard debugging');
-                    $person->save();
-                    return $this->success();
-                case 'remove':
-                    $rows = PersonSlot::where('person_id', $person->id)
-                        ->join('slot', 'slot.id', 'person_slot.slot_id')
-                        ->where('position_id', Position::ALPHA)
-                        ->whereYear('begins', $year)
-                        ->delete();
-                    break;
-                default:
-                    throw new InvalidArgumentException("Unknown alpha command [$status]");
-            }
-            return $this->success();
-        }
-
-        $action = request()->input('action');
-        if (!empty($action)) {
-            switch ($action) {
-                case 'remove-trainings':
-                    $rows = Slot::whereYear('begins', $year)
-                        ->where('position_id', Position::TRAINING)
-                        ->get();
-                    foreach ($rows as $r) {
-                        TraineeStatus::where('slot_id', $r->id)->delete();
-                        $r->delete();
-                    }
-                    break;
-
-                case 'remove-alphas':
-                    Slot::whereYear('begins', $year)
-                        ->where('position_id', Position::ALPHA)
-                        ->delete();
-                    break;
-                default:
-                    throw new InvalidArgumentException("Unknown training command");
-            }
-
-            return $this->success();
-        }
-
-        throw new InvalidArgumentException("Unknown onboard debugging command");
+        return response()->json(['milestones' => Milestones::buildForPerson($person)]);
     }
 
     /**
@@ -1043,7 +709,6 @@ class PersonController extends ApiController
     public function statusHistory(Person $person)
     {
         $this->authorize('statusHistory', Person::class);
-
         return response()->json(['history' => PersonStatus::retrieveAllForId($person->id)]);
     }
 }

@@ -10,12 +10,10 @@ use App\Helpers\SqlHelper;
 
 use App\Lib\WorkSummary;
 
-use App\Helpers\DateHelper;
-
 use App\Models\ApiModel;
 use App\Models\Person;
 use App\Models\Position;
-use App\Models\PositionCredits;
+use App\Models\PositionCredit;
 use App\Models\Slot;
 
 
@@ -154,7 +152,7 @@ class Timesheet extends ApiModel
             $sql->whereRaw('IFNULL(off_duty, NOW()) >= ?', [ $dutyDate ]);
         }
 
-        $rows = $sql->orderBy('on_duty', 'asc', 'off_duty', 'asc')->get();
+        $rows = $sql->orderBy('on_duty', 'asc')->get();
 
         if (!$personId) {
             $rows = $rows->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
@@ -366,6 +364,16 @@ class Timesheet extends ApiModel
         return $rows->sortBy(function ($p) {
             return $p->person->callsign;
         }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+    }
+
+    public static function countUnverifiedForPersonYear($personId, $year)
+    {
+        // Find all the unverified timesheets
+        return self::where('person_id', $personId)
+            ->whereYear('on_duty', $year)
+            ->where('verified', false)
+            ->whereNotNull('off_duty')
+            ->count();
     }
 
     public static function retrieveCombinedCorrectionRequestsForYear($year)
@@ -866,6 +874,23 @@ class Timesheet extends ApiModel
             ->where('person_id', $personId)
             ->whereYear('on_duty', '>=', $cutoff)
             ->whereIn('position_id', $positionIds)
+            ->limit(1)
+            ->exists();
+    }
+
+    /**
+     * Did the given person work in a given year?
+     *
+     * @param int $personId
+     * @param int $year
+     * @return bool
+     */
+    public static function didPersonWork(int $personId, int $year) : bool
+    {
+        return DB::table('timesheet')
+            ->where('person_id', $personId)
+            ->whereYear('on_duty', $year)
+            ->whereNotIn('position_id', [ Position::TRAINING, Position::ALPHA])
             ->limit(1)
             ->exists();
     }

@@ -27,6 +27,5 @@ $factory->define(App\Models\Person::class, function (Faker $faker) {
         'bpguid'        => $uuid,
         'behavioral_agreement' => true,
         'on_site'       => false,
-        'has_reviewed_pi' => true
     ];
 });

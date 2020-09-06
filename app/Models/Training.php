@@ -200,7 +200,7 @@ class Training extends Position
         }
 
         if ($position->type != "Training" || stripos($position->title, "trainer") !== false) {
-            throw new \InvalidArgumentException("Position is not a training position");
+            throw new InvalidArgumentException("Position is not a training position");
         }
 
         return $position;
@@ -406,6 +406,188 @@ class Training extends Position
     }
 
     /**
+     * Find out the education status for a given person, position and year
+     *
+     * @param int $personId
+     * @param \App\Models\Position $position
+     * @param int $year
+     * @param $trained
+     * @return object
+     */
+    public static function retrieveEducation(int $personId, Position $position, int $year)
+    {
+        $now = now();
+
+        $trainingPositionId = $position->id;
+        $ed = (object)[
+            'status' => null,
+            'date' => null,
+            'location' => null,
+            'position_id' => $trainingPositionId,
+            'position_title' => $position->title,
+        ];
+
+        $trainings = TraineeStatus::findForPersonYear($personId, $year, $trainingPositionId);
+        $training = $trainings->firstWhere('passed', true);
+        if (!$training) {
+            $training = $trainings->sortBy('begins')->last();
+        }
+
+        $teachingPositions = Position::TRAINERS[$trainingPositionId] ?? null;
+        if ($teachingPositions) {
+            $taught = TrainerStatus::retrieveSessionsForPerson($personId, $teachingPositions, $year);
+            $trainer = $taught->firstWhere('status', TrainerStatus::ATTENDED);
+        } else {
+            $taught = [];
+            $trainer = null;
+        }
+
+        if (!$training || !$training->passed) {
+            $ids = [$trainingPositionId];
+
+            // TODO: Support multiple ART training positions
+            if ($trainingPositionId == Position::HQ_FULL_TRAINING) {
+                $ids[] = Position::HQ_REFRESHER_TRAINING;
+            }
+            $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                ->whereIn('position_id', $ids)
+                ->whereYear('begins', $year)
+                ->where('person_slot.person_id', $personId)
+                ->orderBy('begins', 'desc')
+                ->first();
+        } else {
+            $slot = null;
+        }
+
+        /*
+         * The order of precedence is:
+         *
+         * 1. A training where the person was a trainer, and marked as attended
+         * 2. A passed training.
+         * 3. If a training wasn't passed but there's a later session signed up use that
+         * 4. A future training as student
+         * 5. A future training as trainer
+         */
+
+        if ($trainer) {
+            // Person taught the course
+            $ed->location = $trainer->description;
+            $ed->date = $trainer->begins;
+            $ed->slot_id = $trainer->slot_id;
+            $ed->is_trainer = true;
+            $ed->status = 'pass';
+        } elseif ($training) {
+            // If the person did not pass, BUT there is a later sign up use the later sign up.
+            if (!$training->passed && $slot && $slot->ends->gt($training->ends)) {
+                $ed->location = $slot->description;
+                $ed->date = $slot->begins;
+                $ed->slot_id = $slot->id;
+                $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? 'pending' : 'failed';
+            } else {
+                $ed->slot_id = $training->id;
+                $ed->location = $training->description;
+                $ed->date = $training->begins;
+                if (!$training->passed && self::isTimeWithinGracePeriod($training->ends, $now)) {
+                    $ed->status = 'pending';
+                } else {
+                    $ed->status = ($training->passed ? 'pass' : 'fail');
+                }
+            }
+        } elseif ($slot) {
+            $ed->slot_id = $slot->id;
+            $ed->location = $slot->description;
+            $ed->date = $slot->begins;
+            // Training signed up and no trainee status
+            $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? 'pending' : 'fail';
+        } elseif ($teachingPositions && !$taught->isEmpty()) {
+            // find the first pending session
+            $slot = $taught->firstWhere('status', null);
+            if (!$slot) {
+                // nothing found - try to use a no-show
+                $slot = $taught->firstWhere('status', 'no-show');
+                if (!$slot) {
+                    // okay, try the first session
+                    $slot = $taught->first();
+                }
+            }
+
+            $ed->slot_id = $slot->id;
+            $ed->location = $slot->description;
+            $ed->date = $slot->begins;
+            $ed->status = $slot->status ?? 'pending';
+            $ed->is_trainer = true;
+        } else {
+            // Nothing found.
+            $ed->status = 'no-shift';
+        }
+
+        if ($ed->date) {
+            $ed->date = (string)$ed->date;
+        }
+
+        $ed->required_by = $position->training_positions->map(function ($r) {
+            return ['id' => $r->id, 'title' => $r->title];
+        })->sortBy('title')->values();
+
+        if ($trainingPositionId == Position::GREEN_DOT_TRAINING
+            && $ed->status != 'missing') {
+            // Is a person a GD PNV? (i.e. does *not* have the GD position)
+            $ed->is_green_dot_pnv = !PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
+            // Perhaps a GD mentee?
+            $ed->is_green_dot_mentee = PersonPosition::havePosition($personId, Position::GREEN_DOT_MENTEE);
+            if ($ed->is_green_dot_mentee) {
+                // Check to see if the person has signed up for or worked a GD mentee shift.
+                $ed->mentee_slot = Slot::findFirstSignUp($personId, Position::GREEN_DOT_MENTEE, $year);
+                $ed->mentee_timesheet = Timesheet::findLatestForPersonPosition($personId, Position::GREEN_DOT_MENTEE, $year);
+            }
+        }
+
+        if ($ed->required_by->isEmpty()) {
+            /*
+             * Person could be a prospective ART ranger. An ART training is available, yet
+             * holds no ART positions which requires training.
+             * Let the user know which positions might require training
+             */
+
+            $requires = null;
+            switch ($trainingPositionId) {
+                case Position::GREEN_DOT_TRAINING:
+                    $requires = ['id' => Position::GREEN_DOT_MENTEE, 'title' => 'Green Dot Mentee'];
+                    break;
+                case Position::SANDMAN_TRAINING:
+                    $requires = ['id' => Position::SANDMAN, 'title' => 'Sandman'];
+                    break;
+                case Position::TOW_TRUCK_TRAINING:
+                    $requires = ['id' => Position::TOW_TRUCK_MENTEE, 'title' => 'Tow Truck Mentee'];
+                    break;
+                case Position::HQ_FULL_TRAINING:
+                    $requires = ['id' => Position::HQ_WINDOW, 'title' => 'HQ Window'];
+                    break;
+            }
+
+            if ($requires) {
+                $requires['not_granted'] = true;
+                $ed->required_by = [$requires];
+            }
+        }
+
+        return $ed;
+    }
+
+    /**
+     * Is the given time within a grace period?
+     * @param Carbon|string $time
+     * @param $now
+     * @return bool
+     */
+    private static function isTimeWithinGracePeriod($time, $now): bool
+    {
+        $time = is_string($time) ? Carbon::parse($time) : $time->clone();
+
+        return $time->addHours(12)->gt($now);
+    }
+
+    /**
      * Find people who hold a training positions but not the trained positions
      *
      * @param int $positionId training position
@@ -456,7 +638,7 @@ class Training extends Position
      * @return array people who have completed training.
      */
 
-    public function retrievePeopleForTrainingCompleted(int $year) : array
+    public function retrievePeopleForTrainingCompleted(int $year): array
     {
         // TODO: extend to support multiple training positions
 
@@ -531,7 +713,7 @@ class Training extends Position
      *       - if the position has no slots associated with it for a given year.
      */
 
-    public function retrieveUntrainedPeople(int $year) : array
+    public function retrieveUntrainedPeople(int $year): array
     {
         $trainedPositionIds = Position::where('training_position_id', $this->id)->pluck('id');
 
@@ -705,7 +887,7 @@ class Training extends Position
      * @param int $year year to look
      * @return Collection the slots & training status found
      */
-    public static function retrieveDirtTrainingsForPersonYear(int $personId, int $year) : \Illuminate\Support\Collection
+    public static function retrieveDirtTrainingsForPersonYear(int $personId, int $year): Collection
     {
         return DB::table('person_slot')
             ->select(
@@ -739,7 +921,7 @@ class Training extends Position
      * @return Collection
      */
 
-    public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year) : \Illuminate\Support\Collection
+    public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year): Collection
     {
         // Find the sign ups
         $rows = DB::table('slot')
@@ -786,7 +968,7 @@ class Training extends Position
      * @param int $year
      * @return array
      */
-    public function retrieveTrainerAttendanceForYear(int $year) : array
+    public function retrieveTrainerAttendanceForYear(int $year): array
     {
 
         $teachingPositions = Position::TRAINERS[$this->id] ?? null;
@@ -848,7 +1030,7 @@ class Training extends Position
      *
      * @return bool
      */
-    public function getIsArtAttribute() : bool
+    public function getIsArtAttribute(): bool
     {
         return ($this->id != Position::TRAINING);
     }
@@ -859,7 +1041,7 @@ class Training extends Position
      * @return string "dirt" or title slug
      */
 
-    public function getSlugAttribute() : string
+    public function getSlugAttribute(): string
     {
         return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
     }

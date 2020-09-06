@@ -322,7 +322,8 @@ class PersonScheduleController extends ApiController
         // Per Roslyn and Threepio 2/23/2017, we require people to have
         // a BMID photo before they can take Online Training
         if (!$canSignUpForShifts
-            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED) && !$otPassed) {
+            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED)
+            && !$otPassed) {
             $showOtLink = true;
         }
 
@@ -343,7 +344,8 @@ class PersonScheduleController extends ApiController
         */
 
 
-        if (($isAuditor || $status == Person::PROSPECTIVE || $status == Person::ALPHA) && !$person->has_reviewed_pi) {
+        if (($isAuditor || $status == Person::PROSPECTIVE || $status == Person::ALPHA)
+            && !$person->hasReviewedPi()) {
             // PNV & Auditors must review their personal info first
             $canSignUpForShifts = false;
         }
@@ -370,7 +372,7 @@ class PersonScheduleController extends ApiController
             // Not a hard requirement, just a suggestion
             'recommend_burn_weekend_shift' => $recommendWeekendShift,
 
-            'has_reviewed_pi' => $person->has_reviewed_pi,
+            'has_reviewed_pi' => $person->hasReviewedPi(),
         ];
 
         return response()->json(['permission' => $results]);

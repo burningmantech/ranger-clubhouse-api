@@ -61,7 +61,11 @@ class TraineeStatus extends ApiModel
             ->orderBy('slot.begins');
 
         if ($positionId) {
-            $sql->where('slot.position_id', $positionId);
+            $ids = [ $positionId ];
+            if ($positionId == Position::HQ_FULL_TRAINING) {
+                $ids[] = Position::HQ_REFRESHER_TRAINING;
+            }
+            $sql->whereIn('slot.position_id', $ids);
         }
 
         return $sql->get();

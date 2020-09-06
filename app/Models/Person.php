@@ -158,7 +158,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'timestamp' => 'timestamp',
         'logged_in_at' => 'datetime',
         'last_seen_at' => 'datetime',
-        'lms_course_expiry' => 'datetime'
+        'lms_course_expiry' => 'datetime',
+
+        'reviewed_pi_at' => 'datetime',
     ];
 
     /*
@@ -195,7 +197,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state',
         'zip',
         'country',
-        'has_reviewed_pi',
+        'reviewed_pi_at',
+        'has_reviewed_pi',  // Pseudo field
 
         'home_phone',
         'alt_phone',
@@ -307,19 +310,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state' => 'state_for_country:live_only',
         'country' => 'required|string|max:25',
 
-        'has_reviewed_pi' => 'sometimes|boolean',
-
         'home_phone' => 'sometimes|string|max:25',
         'alt_phone' => 'sometimes|string|nullable|max:25',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
         'gender' => 'sometimes|string|nullable|max:32',
 
+        'has_reviewed_pi' => 'sometimes|boolean',
     ];
 
-    protected $attributes = [
-        'has_reviewed_pi' => false
-    ];
+    public $has_reviewed_pi;
 
     /*
      * The roles the person holds
@@ -886,9 +886,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return in_array($role, $this->roles);
         }
 
-//     if ($role != Role::ADMIN)
-//        return in_array(Role::ADMIN, $this->roles);
-
         return false;
     }
 
@@ -907,13 +904,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function isAuditor(): bool
     {
         return ($this->status == Person::AUDITOR);
-    }
-
-    public function isInactive(): bool
-    {
-        $status = $this->status;
-
-        return ($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED);
     }
 
     /*
@@ -942,6 +932,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function setLanguagesAttribute($value)
     {
         $this->languages = $value;
+    }
+
+    public function setHasReviewedPiAttribute($value) {
+        $this->has_reviewed_pi = $value;
     }
 
     /*
@@ -1172,7 +1166,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         // Gender, yes? what does that even mean?
-
         if ($check == 'yes') {
             return '';
         }
@@ -1194,6 +1187,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function knownRangersArray()
     {
         return self::splitCommas($this->known_rangers);
+    }
+
+    public function hasReviewedPi() {
+        return ($this->reviewed_pi_at && $this->reviewed_pi_at->year == current_year());
     }
 
     public static function splitCommas($str, $filter = false)

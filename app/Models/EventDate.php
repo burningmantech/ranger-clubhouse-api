@@ -59,20 +59,64 @@ class EventDate extends ApiModel
      * @return string
      */
     public static function calculatePeriod() {
-        $year = current_year();
         $now = now();
-
-        $laborDay = (new Carbon("September $year first monday"))->setTime(23,59,59);
-
-        if ($laborDay->lte($now)) {
+        if ($now->month <= 2) {
             return 'after-event';
         }
 
-        $gateOpen = $laborDay->clone()->subDays(8)->setTime(0,0,1);
-        if ($gateOpen->lte($now) && $laborDay->gte($now)) {
+        $year = current_year();
+
+        $ed = self::findForYear($year);
+
+        if ($ed && $ed->event_start && $ed->event_end) {
+            if ($now->lt($ed->event_start)) {
+                return 'before-event';
+            }
+
+            if ($now->gt($ed->event_end)) {
+                return 'after-event';
+            }
+
             return 'event';
+        } else {
+            $laborDay = (new Carbon("September $year first monday"))->setTime(23, 59, 59);
+
+            if ($laborDay->lte($now)) {
+                return 'after-event';
+            }
+
+            $gateOpen = $laborDay->clone()->subDays(8)->setTime(0, 0, 1);
+            if ($gateOpen->lte($now) && $laborDay->gte($now)) {
+                return 'event';
+            }
+            return 'before-event';
+        }
+    }
+
+    /**
+     * Retrieve the burn weekend date range if set.
+     *
+     * @param $start - starting datetime
+     * @param $end - ending datetime
+     * @return bool true if have a date range
+     */
+
+    public static function retrieveBurnWeekendPeriod(&$start, &$end)
+    {
+/*        $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
+        if (empty($burnWeekendPeriod)) {
+            return false; // Not set, don't bother
         }
 
-        return 'before-event';
+        list($start, $end) = explode('/', $burnWeekendPeriod);
+        $start = Carbon::parse(trim($start));
+        $end = Carbon::parse(trim($end));
+*/
+        $year = current_year();
+        $laborDay = (new Carbon("September $year first monday"));
+        $start = $laborDay->clone()->subDays(3)->setTime(18,0,0);
+        $end = $laborDay->clone()->subDays(1)->setTime(18,0,0);
+
+        return true;
     }
 }

@@ -76,7 +76,8 @@ class PersonFilter
         'teeshirt_size_style',
 
         'languages',
-        'has_reviewed_pi'
+        'reviewed_pi_at',
+        'has_reviewed_pi', // psuedo field
     ];
 
     const HQ_INFO = [
