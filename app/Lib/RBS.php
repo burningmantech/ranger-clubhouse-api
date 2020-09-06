@@ -595,7 +595,7 @@ class RBS
             break;
 
         default:
-            throw new \InvalidArgumentException("Unknown type [$broadcastTyp]");
+            throw new \InvalidArgumentException("Unknown type [$broadcastType]");
         }
 
         $isSimple = $attrs['is_simple'] ?? false;

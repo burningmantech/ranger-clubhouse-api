@@ -81,102 +81,10 @@ class TicketingController extends ApiController
 
     public function package(Person $person)
     {
-        $period  = setting('TicketingPeriod');
 
         $this->authorize('index', [ AccessDocument::class, $person->id ]);
 
-        $rows = AccessDocument::findForQuery([ 'person_id' => $person->id ]);
-
-        // Filter for the tickets
-        $filtered = $rows->filter(function ($row) {
-            return in_array($row->type, AccessDocument::TICKET_TYPES);
-        });
-
-        $tickets = [];
-        $chosen = null;
-        foreach ($filtered as $row) {
-            $ticket = (object) [
-                'id'          => $row->id,
-                'type'        => $row->type,
-                'status'      => $row->status,
-                'source_year' => $row->source_year,
-                'expiry_date' => (string)$row->expiry_date,
-                'access_any_time' => $row->access_any_time,
-                'access_date' => (string)$row->access_date,
-            ];
-
-            $tickets[] = $ticket;
-
-            if ($row->status == 'claimed') {
-                $chosen = $ticket;
-            } elseif ($chosen == null ||
-                    ($chosen->type != 'claimed' && $chosen->source_year > $row->source_year)) {
-                $chosen = $ticket;
-            }
-        }
-
-        if ($chosen) {
-            $chosen->selected = 1;
-        }
-
-        $row = $rows->firstWhere('type', 'vehicle_pass');
-        if ($row) {
-            $vp = [
-                'id'     => $row->id,
-                'type'  => $row->type,
-                'status' => $row->status,
-             ];
-        } else {
-            $vp = null;
-        }
-
-        $row = $rows->firstWhere('type', 'work_access_pass');
-        if ($row) {
-            $wap = [
-                'id'              => $row->id,
-                'type'             => $row->type,
-                'status'          => $row->status,
-                'access_any_time' => $row->access_any_time,
-                'access_date'     => (string)$row->access_date,
-            ];
-        } else {
-            $wap = null;
-        }
-
-        $wapso = $rows->where('type', 'work_access_pass_so')->map(function ($so) {
-            return $this->buildSOWAPEntry($so);
-        })->values()->all();
-
-        $year = event_year() - 1;
-        $credits = Timesheet::earnedCreditsForYear($person->id, $year);
-
-        $package = [
-            'tickets'        => $tickets,
-            'vehicle_pass'   => $vp,
-            'wap'            => $wap,
-            'wapso'          => $wapso,
-            'year_earned'    => $year,
-            'credits_earned' => $credits,
-        ];
-
-        if ($period == 'open' || $period == 'closed') {
-            $row = AccessDocumentDelivery::findForPersonYear($person->id, current_year());
-
-            if ($row) {
-                $package['delivery'] = [
-                    'method'      => $row->method,
-                    'street'      => $row->street,
-                    'city'        => $row->city,
-                    'state'       => $row->state,
-                    'postal_code' => $row->postal_code,
-                    'country'     => $row->country,
-                ];
-            } else {
-                $package['delivery'] = [ 'method' => 'none' ];
-            }
-        }
-
-        return response()->json([ 'package' => $package ]);
+        return response()->json([ 'package' => AccessDocument::buildPackageForPerson($person->id) ]);
     }
 
     /*
@@ -250,7 +158,7 @@ class TicketingController extends ApiController
 
         $rows = AccessDocument::findSOWAPsForPerson($personId, $year);
         // Send back the updated list
-        return response()->json([ 'names' => $rows->map(function ($row) { return $this->buildSOWAPEntry($row); }) ]);
+        return response()->json([ 'names' => $rows->map(function ($row) { return AccessDocument::buildSOWAPEntry($row); }) ]);
     }
 
     /*
@@ -278,17 +186,5 @@ class TicketingController extends ApiController
         }
 
         return $this->success();
-    }
-
-    private function buildSOWAPEntry($row)
-    {
-        return [
-           'id'              => $row->id,
-           'type'            => $row->type,
-           'status'          => $row->status,
-           'name'            => $row->name,
-           'access_date'     => (string) $row->access_date,
-           'access_any_time' => $row->access_any_time,
-        ];
     }
 }

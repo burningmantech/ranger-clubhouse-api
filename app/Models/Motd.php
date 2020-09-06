@@ -140,7 +140,7 @@ class Motd extends ApiModel
                 $sql->where('expires_at', '<', now());
                 break;
 
-            case 'visible':
+            case 'unread':
                 $sql->where('expires_at', '>', now());
                 $sql->whereNull('person_motd.read_at');
                 break;

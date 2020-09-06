@@ -34,10 +34,9 @@ class PersonMessageController extends ApiController
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store()
     {
         $this->authorize('store', [ PersonMessage::class ]);
 
@@ -61,7 +60,7 @@ class PersonMessageController extends ApiController
      *  Delete a message
      *
      * @param  PersonMessage $person_message the message to delete
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(PersonMessage $person_message)
     {

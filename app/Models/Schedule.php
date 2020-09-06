@@ -77,7 +77,7 @@ class Schedule extends ApiModel
     public static function findForQuery($query)
     {
         if (empty($query['year'])) {
-            throw new \InvalidArgumentException('Missing year parameter');
+            throw new InvalidArgumentException('Missing year parameter');
         }
 
         $year = $query['year'];
@@ -249,11 +249,15 @@ class Schedule extends ApiModel
         }
     }
 
-    //
-    // Remove a person from a slot
-    //
-
-    public static function deleteFromSchedule($personId, $personSlotId): array
+    /**
+     * Remove a sign up for a person
+     *
+     * @param int $personId
+     * @param int $personSlotId
+     * @return array
+     * @throws Exception
+     */
+    public static function deleteFromSchedule(int $personId, int $personSlotId): array
     {
         $personSlot = PersonSlot::where([
             ['person_id', $personId],
@@ -376,7 +380,7 @@ class Schedule extends ApiModel
     }
 
     /**
-     * Find the (probable) slot sign up for a person based on the posiiton and time.
+     * Find the (probable) slot sign up for a person based on the position and time.
      *
      * @param integer $personId the person in question
      * @param integer $positionId the position to search for
@@ -397,35 +401,98 @@ class Schedule extends ApiModel
         return $signUp ? $signUp->slot_id : null;
     }
 
-    /*
-     * Does the person need to be motivated to work a weekend shift?
+    /**
+     * Should a burn weekend shift be recommended to the person?
+     * @param Person $person
+     * @return bool true if the person does not have any weekend shift signups.
      */
-
-    public static function recommendBurnWeekendShift($person)
+    public static function recommendBurnWeekendShift(Person $person)
     {
         $status = $person->status;
         if ($status == Person::ALPHA
             || $status == Person::AUDITOR
             || $status == Person::PROSPECTIVE
             || $status == Person::NON_RANGER) {
+            // Do not recommend to PNVs, Auditors, and Non Rangers
             return false;
         }
 
-        $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
-        if (empty($burnWeekendPeriod)) {
-            return false; // Not set, don't bother
+        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
+            return false;
         }
 
-        list($start, $end) = explode('/', $burnWeekendPeriod);
-        $start = trim($start);
-        $end = trim($end);
-
-        $now = SqlHelper::now();
-        if ($now->gt(Carbon::parse($end))) {
+        if (now()->gt($end)) {
+            // The current time is past the burn weekend.
             return false;
         }
 
         return !Schedule::hasSignupInPeriod($person->id, $start, $end);
+    }
+
+    public static function haveBurnWeekendSignup(Person $person)
+    {
+        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
+            return false;
+        }
+
+        return Schedule::hasSignupInPeriod($person->id, $start, $end);
+    }
+
+    /**
+     * Are there burn weekend shifts available for the person?
+     *
+     * @param Person $person
+     * @return bool true if shifts are available
+     */
+    public static function haveAvailableBurnWeekendShiftsForPerson(Person $person)
+    {
+        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
+            return false;
+        }
+
+        return DB::table('slot')
+            ->join('person_position', function ($j) use ($person) {
+                $j->on('person_position.position_id', 'slot.position_id');
+                $j->where('person_position.person_id', $person->id);
+            })
+            ->where('slot.active', true)
+            ->where(function ($q) use ($start, $end) {
+                $q->whereBetween('slot.begins', [$start, $end]);
+                $q->orWhereBetween('slot.ends', [$start, $end]);
+            })
+            ->exists();
+    }
+
+
+    /**
+     * Have dirt shifts opened up?
+     *
+     * @return bool true if shifts are available
+     */
+    public static function areDirtShiftsAvailable()
+    {
+        return DB::table('slot')
+            ->where('slot.active', true)
+            ->whereYear('slot.begins', current_year())
+            ->where('slot.position_id', Position::DIRT)
+            ->exists();
+    }
+
+
+    /**
+     * Count the number of working (i.e. non-training) signups the person has in the current year.
+     * @param Person $person
+     * @return int
+     */
+    public static function countWorkingShiftSignups(Person $person)
+    {
+        return DB::table('slot')
+            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+            ->join('position', 'position.id', 'slot.position_id')
+            ->where('person_slot.person_id', $person->id)
+            ->where('position.type', '!=', 'Training')
+            ->whereYear('slot.begins', current_year())
+            ->count();
     }
 
     /*
@@ -499,17 +566,17 @@ class Schedule extends ApiModel
         ];
     }
 
-    public function getSlotDurationAttribute() : int
+    public function getSlotDurationAttribute(): int
     {
         return $this->slot_ends_time - $this->slot_begins_time;
     }
 
-    public function getYearAttribute() : int
+    public function getYearAttribute(): int
     {
         return $this->slot_begins->year;
     }
 
-    public function getCreditsAttribute() : float
+    public function getCreditsAttribute(): float
     {
         return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
     }

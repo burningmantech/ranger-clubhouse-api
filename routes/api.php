@@ -189,7 +189,6 @@ Route::group([
     Route::get('person/{person}/user-info', 'PersonController@userInfo');
     Route::get('person/{person}/unread-message-count', 'PersonController@UnreadMessageCount');
     Route::get('person/{person}/event-info', 'PersonController@eventInfo');
-    Route::post('person/{person}/onboard-debug', 'PersonController@onboardDebug');
 
     Route::resource('person', 'PersonController', ['only' => ['index', 'show', 'store', 'update', 'destroy']]);
 

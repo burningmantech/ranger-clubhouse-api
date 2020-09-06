@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Models\ApiModel;
 use App\Models\PersonEvent;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class Position extends ApiModel
 {
@@ -128,32 +130,44 @@ class Position extends ApiModel
 
     const QUARTERMASTER = 84;
 
+
+    /*
+     * Position types
+     */
+    const TYPE_COMMAND = 'Command';
+    const TYPE_FRONTLINE = 'Frontline';
+    const TYPE_HQ = 'HQ';
+    const TYPE_LOGISTICS = 'Logistics';
+    const TYPE_MENTORING = 'Mentoring';
+    const TYPE_OTHER = 'Other';
+    const TYPE_TRAINING = 'Training';
+
     const TYPES = [
-        'Command',
-        'Frontline',
-        'HQ',
-        'Logistics',
-        'Mentoring',
-        'Other',
-        'Training',
+        self::TYPE_COMMAND,
+        self::TYPE_FRONTLINE,
+        self::TYPE_HQ,
+        self::TYPE_LOGISTICS,
+        self::TYPE_MENTORING,
+        self::TYPE_OTHER,
+        self::TYPE_TRAINING,
     ];
 
     //
     // List of training positions with their associated trainers
-    // TODO: create a join table to enclapse this so this is not hard coded.
+    // TODO: create a join table to encapsulate this so this is not hard coded.
     //
 
     const TRAINERS = [
         Position::TRAINING => [
-             Position::TRAINER,
-             Position::TRAINER_ASSOCIATE,
-             Position::TRAINER_UBER
+            Position::TRAINER,
+            Position::TRAINER_ASSOCIATE,
+            Position::TRAINER_UBER
         ],
-        Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_TRAINER ],
-        Position::HQ_FULL_TRAINING => [ Position::HQ_TRAINER ],
-        Position::HQ_REFRESHER_TRAINING => [ Position::HQ_TRAINER ],
-        Position::SANDMAN_TRAINING => [ Position::SANDMAN_TRAINER ],
-        Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER ],
+        Position::GREEN_DOT_TRAINING => [Position::GREEN_DOT_TRAINER],
+        Position::HQ_FULL_TRAINING => [Position::HQ_TRAINER],
+        Position::HQ_REFRESHER_TRAINING => [Position::HQ_TRAINER],
+        Position::SANDMAN_TRAINING => [Position::SANDMAN_TRAINER],
+        Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER],
     ];
 
 
@@ -206,19 +220,19 @@ class Position extends ApiModel
     ];
 
     protected $casts = [
-        'all_rangers'       => 'bool',
-        'auto_signout'      => 'bool',
+        'all_rangers' => 'bool',
+        'auto_signout' => 'bool',
         'new_user_eligible' => 'bool',
-        'on_sl_report'      => 'bool',
+        'on_sl_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool'
     ];
 
     protected $rules = [
         'title' => 'required|string|max:40',
         'short_title' => 'sometimes|string|max:6|nullable',
-        'min'   => 'integer',
-        'max'   => 'integer',
-        'training_position_id'  => 'nullable|exists:position,id'
+        'min' => 'integer',
+        'max' => 'integer',
+        'training_position_id' => 'nullable|exists:position,id'
     ];
 
     public function training_positions()
@@ -227,10 +241,10 @@ class Position extends ApiModel
     }
 
 
-     /**
+    /**
      * Find  positions based on criteria
      * @param $query
-     * @return Position[]|\Illuminate\Database\Eloquent\Collection
+     * @return Position[]|Collection
      */
     public static function findForQuery($query)
     {
@@ -254,7 +268,7 @@ class Position extends ApiModel
     public static function findAllTrainings($excludeDirt = false)
     {
         $sql = self::select('id', 'title')
-            ->where('type', '=', 'Training')
+            ->where('type', Position::TYPE_TRAINING)
             ->where('title', 'not like', '%trainer%')
             ->orderBy('title');
 
@@ -300,19 +314,19 @@ class Position extends ApiModel
     public static function findAllWithInProgressSlots()
     {
         return self::where('type', '!=', 'Training')
-                ->whereRaw("EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
+            ->whereRaw("EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
                 AND slot.position_id=position.id
                 AND NOW() >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
                 AND NOW() < slot.ends LIMIT 1)")
-                ->orderBy("title")
-                ->get();
+            ->orderBy("title")
+            ->get();
     }
 
     /*
      * Is the person qualified for the Sandpeople?
      */
 
-    public static function isSandmanQualified($person, & $reason)
+    public static function isSandmanQualified($person, &$reason)
     {
         $event = PersonEvent::findForPersonYear($person->id, current_year());
         if (!$event || !$event->sandman_affidavit) {
@@ -335,27 +349,27 @@ class Position extends ApiModel
     public static function retrieveSandPeopleQualifications()
     {
         $year = current_year();
-        $cutoff =  $year - self::SANDMAN_YEAR_CUTOFF;
+        $cutoff = $year - self::SANDMAN_YEAR_CUTOFF;
 
         $positionIds = implode(',', self::SANDMAN_QUALIFIED_POSITIONS);
 
         $sandPeople = DB::table('person')
-                    ->select(
-                        'id',
-                        'callsign',
-                        DB::raw('IFNULL(person_event.sandman_affidavit, FALSE) as sandman_affidavit'),
-                        DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty) >= $cutoff AND position_id IN ($positionIds) LIMIT 1) AS has_experience"),
-                        DB::raw("EXISTS (SELECT 1 FROM trainee_status JOIN slot ON slot.id=trainee_status.slot_id WHERE trainee_status.person_id=person.id AND slot.position_id=".Position::SANDMAN_TRAINING." AND YEAR(slot.begins)=$year AND passed=1 LIMIT 1) as is_trained"),
-                        DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id WHERE person_slot.person_id=person.id AND slot.position_id=".Position::SANDMAN." AND YEAR(slot.begins)=$year LIMIT 1) as is_signed_up")
-                     )
-                    ->leftJoin('person_event', function ($j) use ($year) {
-                        $j->on('person_event.person_id', 'person.id');
-                        $j->where('year', $year);
-                    })
-                    ->where('status', Person::ACTIVE)
-                    ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id=?)', [ Position::SANDMAN ])
-                    ->orderBy('callsign')
-                    ->get();
+            ->select(
+                'id',
+                'callsign',
+                DB::raw('IFNULL(person_event.sandman_affidavit, FALSE) as sandman_affidavit'),
+                DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty) >= $cutoff AND position_id IN ($positionIds) LIMIT 1) AS has_experience"),
+                DB::raw("EXISTS (SELECT 1 FROM trainee_status JOIN slot ON slot.id=trainee_status.slot_id WHERE trainee_status.person_id=person.id AND slot.position_id=" . Position::SANDMAN_TRAINING . " AND YEAR(slot.begins)=$year AND passed=1 LIMIT 1) as is_trained"),
+                DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id WHERE person_slot.person_id=person.id AND slot.position_id=" . Position::SANDMAN . " AND YEAR(slot.begins)=$year LIMIT 1) as is_signed_up")
+            )
+            ->leftJoin('person_event', function ($j) use ($year) {
+                $j->on('person_event.person_id', 'person.id');
+                $j->where('year', $year);
+            })
+            ->where('status', Person::ACTIVE)
+            ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id=?)', [Position::SANDMAN])
+            ->orderBy('callsign')
+            ->get();
 
         return [
             'sandpeople' => $sandPeople,
@@ -370,7 +384,7 @@ class Position extends ApiModel
      *  & peroxide enthusiast.
      */
 
-    public static function sanityChecker() : array
+    public static function sanityChecker(): array
     {
         $year = current_year();
 
@@ -380,7 +394,7 @@ class Position extends ApiModel
             "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_sanctuary, " .
             "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_gp_gd " .
             "FROM person p) t1 WHERE has_dirt_green_dot != has_sanctuary OR has_dirt_green_dot != has_gp_gd ORDER BY callsign",
-            [ Position::DIRT_GREEN_DOT, Position::SANCTUARY, Position::GERLACH_PATROL_GREEN_DOT ]
+            [Position::DIRT_GREEN_DOT, Position::SANCTUARY, Position::GERLACH_PATROL_GREEN_DOT]
         );
 
         // All HQ, Operators, Shift Leads, etc. should have the "Management Mode" role
@@ -405,42 +419,42 @@ class Position extends ApiModel
         ];
 
         $personIds = PersonPosition::whereIn('position_id', $positionIds)
-                    ->groupBy('person_id')
-                    ->pluck('person_id');
+            ->groupBy('person_id')
+            ->pluck('person_id');
 
-        $rows = Person::select('id', 'callsign', 'status', DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(on_duty)=$year AND person_id=person.id AND position_id=".Position::ALPHA." LIMIT 1) AS is_shiny_penny"))
-                    ->whereIn('id', $personIds)
-                    ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ])
-                    ->whereRaw('NOT EXISTS (SELECT 1 FROM person_role WHERE person_role.person_id=person.id AND person_role.role_id=?)', [ Role::MANAGE ])
-                    ->orderBy('callsign')
-                    ->with([ 'person_position' => function ($q) use ($positionIds) {
-                        $q->whereIn('position_id', $positionIds);
-                    }])
-                    ->get();
+        $rows = Person::select('id', 'callsign', 'status', DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(on_duty)=$year AND person_id=person.id AND position_id=" . Position::ALPHA . " LIMIT 1) AS is_shiny_penny"))
+            ->whereIn('id', $personIds)
+            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION])
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM person_role WHERE person_role.person_id=person.id AND person_role.role_id=?)', [Role::MANAGE])
+            ->orderBy('callsign')
+            ->with(['person_position' => function ($q) use ($positionIds) {
+                $q->whereIn('position_id', $positionIds);
+            }])
+            ->get();
 
         $insanity['management_role'] = [];
         foreach ($rows as $row) {
             $positions = Position::select('id', 'title')->whereIn('id', $row->person_position->pluck('position_id'))->orderBy('title')->get();
 
             $insanity['management_role'][] = [
-                'id'             => $row->id,
-                'callsign'       => $row->callsign,
-                'status'         => $row->status,
+                'id' => $row->id,
+                'callsign' => $row->callsign,
+                'status' => $row->status,
                 'is_shiny_penny' => $row->is_shiny_penny,
-                'positions'      => $positions
+                'positions' => $positions
             ];
         }
 
         $insanity['shiny_pennies'] = DB::select(
             "SELECT * FROM (SELECT p.id AS id, callsign, status, year, " .
-                        "EXISTS(SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_shiny_penny " .
-                        "FROM person p INNER JOIN " .
-                        "(SELECT person_id, MAX(mentor_year) as year FROM person_mentor " .
-                        "  WHERE status = 'pass' GROUP BY person_id) pm " .
-                        "ON pm.person_id = p.id) t1 ".
-                        "WHERE (NOT has_shiny_penny AND year = $year) OR (has_shiny_penny AND year != $year) ".
-                        "ORDER BY year desc, callsign",
-                        [ Position::DIRT_SHINY_PENNY ]
+            "EXISTS(SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_shiny_penny " .
+            "FROM person p INNER JOIN " .
+            "(SELECT person_id, MAX(mentor_year) as year FROM person_mentor " .
+            "  WHERE status = 'pass' GROUP BY person_id) pm " .
+            "ON pm.person_id = p.id) t1 " .
+            "WHERE (NOT has_shiny_penny AND year = $year) OR (has_shiny_penny AND year != $year) " .
+            "ORDER BY year desc, callsign",
+            [Position::DIRT_SHINY_PENNY]
         );
 
         $insanity['shiny_penny_year'] = $year;
@@ -456,83 +470,83 @@ class Position extends ApiModel
      * @return array
      */
 
-    public static function repair(string $repair, array $peopleIds) : array
+    public static function repair(string $repair, array $peopleIds): array
     {
         $results = [];
 
         switch ($repair) {
-        case 'green-dot':
-            foreach ($peopleIds as $personId) {
-                $messages = [];
-                $errors = [];
+            case 'green-dot':
+                foreach ($peopleIds as $personId) {
+                    $messages = [];
+                    $errors = [];
 
-                $hasDirt = PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
-                $hasSanctuary = PersonPosition::havePosition($personId, Position::SANCTUARY);
-                $hasGPGD = PersonPosition::havePosition($personId, Position::GERLACH_PATROL_GREEN_DOT);
+                    $hasDirt = PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
+                    $hasSanctuary = PersonPosition::havePosition($personId, Position::SANCTUARY);
+                    $hasGPGD = PersonPosition::havePosition($personId, Position::GERLACH_PATROL_GREEN_DOT);
 
-                if (!$hasDirt && !$hasSanctuary) {
-                    $errors[] = 'not a Green Dot';
-                } else {
-                    $positionIds = [];
+                    if (!$hasDirt && !$hasSanctuary) {
+                        $errors[] = 'not a Green Dot';
+                    } else {
+                        $positionIds = [];
 
-                    if (!$hasDirt) {
-                        $positionIds[] = Position::DIRT_GREEN_DOT;
-                        $messages[] = 'added Dirt - Green Dot';
+                        if (!$hasDirt) {
+                            $positionIds[] = Position::DIRT_GREEN_DOT;
+                            $messages[] = 'added Dirt - Green Dot';
+                        }
+
+                        if (!$hasSanctuary) {
+                            $positionIds[] = Position::SANCTUARY;
+                            $messages[] = 'added Sanctuary';
+                        }
+                        if (!$hasGPGD) {
+                            $positionIds[] = Position::GERLACH_PATROL_GREEN_DOT;
+                            $messages[] = 'added Gerlach Patrol - Green Dot';
+                        }
+                        PersonPosition::addIdsToPerson($personId, $positionIds, 'position sanity checker repair');
                     }
 
-                    if (!$hasSanctuary) {
-                        $positionIds[] = Position::SANCTUARY;
-                        $messages[] = 'added Sanctuary';
+                    $result = [
+                        'id' => $personId,
+                        'messages' => $messages
+                    ];
+
+                    if (!empty($errors)) {
+                        $result['errors'] = $errors;
                     }
-                    if (!$hasGPGD) {
-                        $positionIds[] = Position::GERLACH_PATROL_GREEN_DOT;
-                        $messages[] = 'added Gerlach Patrol - Green Dot';
+
+                    $results[] = $result;
+                }
+                return $results;
+
+            case 'management-role':
+                foreach ($peopleIds as $personId) {
+                    PersonRole::addIdsToPerson($personId, [Role::MANAGE], 'position sanity checker repair');
+                    $results[] = ['id' => $personId];
+                }
+                return $results;
+
+            case 'shiny-penny':
+                $year = current_year();
+
+                foreach ($peopleIds as $personId) {
+                    $hasPenny = PersonPosition::havePosition($personId, Position::DIRT_SHINY_PENNY);
+                    $isPenny = PersonMentor::retrieveYearPassed($personId) == $year;
+
+                    if ($hasPenny && !$isPenny) {
+                        PersonPosition::removeIdsFromPerson($personId, [Position::DIRT_SHINY_PENNY], 'position sanity checker repair');
+                        $message = 'not a Shiny Penny, position removed';
+                    } elseif (!$hasPenny && $isPenny) {
+                        PersonPosition::addIdsToPerson($personId, [Position::DIRT_SHINY_PENNY], 'position sanity checker repair');
+                        $message = 'is a Shiny Penny, position added';
+                    } else {
+                        $message = 'Shiny Penny already has position. no repair needed.';
                     }
-                    PersonPosition::addIdsToPerson($personId, $positionIds, 'position sanity checker repair');
+                    $results[] = ['id' => $personId, 'messages' => [$message]];
                 }
+                return $results;
 
-                $result = [
-                    'id' => $personId,
-                    'messages' => $messages
-                ];
-
-                if (!empty($errors)) {
-                    $result['errors'] = $errors;
-                }
-
-                $results[] = $result;
-            }
-            return $results;
-
-        case 'management-role':
-            foreach ($peopleIds as $personId) {
-                PersonRole::addIdsToPerson($personId, [ Role::MANAGE ], 'position sanity checker repair');
-                $results[] = [ 'id' => $personId ];
-            }
-            return $results;
-
-        case 'shiny-penny':
-            $year = current_year();
-
-            foreach ($peopleIds as $personId) {
-                $hasPenny = PersonPosition::havePosition($personId, Position::DIRT_SHINY_PENNY);
-                $isPenny = PersonMentor::retrieveYearPassed($personId) == $year;
-
-                if ($hasPenny && !$isPenny) {
-                    PersonPosition::removeIdsFromPerson($personId, [ Position::DIRT_SHINY_PENNY ], 'position sanity checker repair');
-                    $message = 'not a Shiny Penny, position removed';
-                } elseif (!$hasPenny && $isPenny) {
-                    PersonPosition::addIdsToPerson($personId, [ Position::DIRT_SHINY_PENNY ], 'position sanity checker repair');
-                    $message = 'is a Shiny Penny, position added';
-                } else {
-                    $message = 'Shiny Penny already has position. no repair needed.';
-                }
-                $results[] = [ 'id' => $personId, 'messages' => [ $message ]];
-            }
-            return $results;
-
-        default:
-            throw new \InvalidArgumentException("Unknown repair action [$repair]");
-         }
+            default:
+                throw new InvalidArgumentException("Unknown repair action [$repair]");
+        }
     }
 }

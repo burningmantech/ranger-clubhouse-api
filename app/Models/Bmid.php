@@ -250,7 +250,7 @@ class Bmid extends ApiModel
         switch ($filter) {
             case 'alpha':
                 // Find all alphas & prospective
-                $ids = Person::whereIn('status', ['alpha', 'prospective'])
+                $ids = Person::whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
                     ->get('id')
                     ->pluck('id');
                 break;
@@ -264,7 +264,7 @@ class Bmid extends ApiModel
                 $signedUpIds = PersonSlot::whereIn('slot_id', $slotIds)
                     ->join('person', function ($j) {
                         $j->whereRaw('person.id=person_slot.person_id');
-                        $j->whereIn('person.status', ['active', 'inactive', 'inactive extension', 'retired']);
+                        $j->whereIn('person.status', Person::ACTIVE_STATUSES);
                     })
                     ->distinct('person_slot.person_id')
                     ->pluck('person_id')
@@ -272,14 +272,14 @@ class Bmid extends ApiModel
 
                 $slotIds = Slot::join('position', 'position.id', '=', 'slot.position_id')
                     ->whereYear('begins', $year)
-                    ->where('position.type', 'Training')
+                    ->where('position.type', Position::TYPE_TRAINING)
                     ->get(['slot.id'])
                     ->pluck('id')
                     ->toArray();
 
                 $trainedIds = TraineeStatus::join('person', function ($j) {
                     $j->whereRaw('person.id=trainee_status.person_id');
-                    $j->whereIn('person.status', ['active', 'inactive', 'inactive extension', 'retired']);
+                    $j->whereIn('person.status', Person::ACTIVE_STATUSES);
                 })
                     ->whereIn('slot_id', $slotIds)
                     ->where('passed', 1)
@@ -378,7 +378,7 @@ class Bmid extends ApiModel
             GROUP BY ps.person_id");
 
         $shiftsBeforeWap = Person::whereIn('id', array_column($ids, 'id'))
-            ->where('status', '!=', 'alpha')
+            ->where('status', '!=', Person::ALPHA)
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
         /*
@@ -402,7 +402,7 @@ class Bmid extends ApiModel
                 GROUP BY ps.person_id");
 
         $shiftsNoWap = Person::whereIn('id', array_column($ids, 'id'))
-            ->where('status', '!=', 'alpha')
+            ->where('status', '!=', Person::ALPHA)
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
 
@@ -410,7 +410,8 @@ class Bmid extends ApiModel
 
         $ids = DB::select("SELECT wap.person_id AS id
                 FROM access_document wap
-                JOIN access_document rpt ON wap.person_id=rpt.person_id AND rpt.type='reduced_price_ticket' AND rpt.status in ('qualified', 'claimed')
+                JOIN access_document rpt ON wap.person_id=rpt.person_id
+                    AND rpt.type='reduced_price_ticket' AND rpt.status in ('qualified', 'claimed')
                 JOIN person p ON p.id = wap.person_id AND p.status != 'alpha'
                 WHERE
                     wap.type='work_access_pass'

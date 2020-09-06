@@ -7,6 +7,7 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
+use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
@@ -969,7 +970,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
-        $person = factory(Person::class)->create([ 'status' => Person::AUDITOR ]);
+        $person = factory(Person::class)->create([ 'status' => Person::AUDITOR, 'reviewed_pi_at' => now() ]);
         $this->actingAs($person);
 
         $mrMock = $this->mockOnlineTrainingPass(true);
@@ -1048,8 +1049,6 @@ class PersonScheduleControllerTest extends TestCase
         $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockOnlineTrainingPass(true);
 
-        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
-
         // Check for scheduling
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
 
@@ -1079,8 +1078,6 @@ class PersonScheduleControllerTest extends TestCase
         $this->actingAs($person);
         $photoMock = $this->setupPhotoStatus('approved', $person);
 
-        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
-
         // Check for scheduling
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", ['year' => $year]);
 
@@ -1109,12 +1106,12 @@ class PersonScheduleControllerTest extends TestCase
         $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockOnlineTrainingPass(true);
 
-        $this->setting('BurnWeekendSignUpMotivationPeriod', "$year-08-25 18:00/$year-08-26 18:00:00");
+        EventDate::retrieveBurnWeekendPeriod($start, $end);
 
         $shift = factory(Slot::class)->create(
             [
-                'begins' => date("$year-08-25 18:45:00"),
-                'ends' => date("$year-08-25 23:45:00"),
+                'begins' => (string) $start,
+                'ends' => (string) $start->addHours(6),
                 'position_id' => Position::DIRT,
                 'description' => "BURN WEEKEND BABY!",
                 'signed_up' => 0,
