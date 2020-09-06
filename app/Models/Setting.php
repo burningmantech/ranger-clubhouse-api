@@ -247,6 +247,11 @@ class Setting extends ApiModel
             'type' => 'string',
         ],
 
+        'RangerManualUrl' => [
+            'description' => 'The current Ranger Manual document',
+            'type' => 'string'
+        ],
+
         'RangerPoliciesUrl' => [
             'description' => 'Rnager Policy Document URL',
             'type' => 'string',
