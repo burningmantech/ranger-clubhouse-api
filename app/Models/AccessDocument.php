@@ -89,14 +89,12 @@ class AccessDocument extends ApiModel
     {
         parent::boot();
 
-        self::creating(function ($model) {
+        self::saving(function ($model) {
             // TODO - adjust access_document schema to default to current timestamp
             if ($model->create_date == null) {
                 $model->create_date = now();
             }
-        });
 
-        self::saving(function ($model) {
             // Certain things always expire this year
             if (in_array($model->type, [self::WAP, self::WAPSO, self::VEHICLE_PASS])) {
                 $model->expiry_date = current_year();
@@ -135,16 +133,24 @@ class AccessDocument extends ApiModel
     {
         $sql = self::orderBy('source_year')->orderBy('type');
 
-        if (empty($query['all'])) {
-            $sql = $sql->whereNotIn('status', self::INVALID_STATUSES);
+        $status = $query['status'] ?? null;
+        $personId = $query['person_id'] ?? null;
+        $year = $query['year'] ?? null;
+
+        if ($status != 'all') {
+            if (!$status) {
+                $sql->whereNotIn('status', self::INVALID_STATUSES);
+            } else {
+                $sql = $sql->whereIn('status', explode(',', $status));
+            }
         }
 
-        if (isset($query['person_id'])) {
-            $sql = $sql->where('person_id', $query['person_id']);
+        if ($personId) {
+            $sql->where('person_id', $personId);
         }
 
-        if (isset($query['year'])) {
-            $sql = $sql->where('source_year', $query['year']);
+        if ($year) {
+            $sql->where('source_year', $year);
         }
 
         return $sql->get();

@@ -27,11 +27,10 @@ class AccessDocumentController extends ApiController
         $query = request()->validate([
             'year'      => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
+            'status' => 'sometimes|string'
         ]);
 
-        $personId = isset($query['person_id']) ? $query['person_id'] : 0;
-
-        $this->authorize('index', [ AccessDocument::class, $personId ]);
+        $this->authorize('index', [ AccessDocument::class, $query['person_id'] ?? 0 ]);
 
         return $this->success(AccessDocument::findForQuery($query), null, 'access_document');
     }
@@ -189,25 +188,25 @@ class AccessDocumentController extends ApiController
         $adType = $accessDocument->type;
 
         switch ($status) {
-            case 'banked':
-                if (!in_array($adType, [ 'staff_credential', 'reduced_price_ticket', 'gift_ticket'])
-                || !in_array($adStatus, [ 'qualified', 'claimed', 'banked'])) {
+            case AccessDocument::BANKED:
+                if (!in_array($adType, AccessDocument::TICKET_TYPES)
+                || !in_array($adStatus,AccessDocument::ACTIVE_STATUSES)) {
                     throw new \InvalidArgumentException('Illegal type and status combination');
                 }
                 break;
 
-            case 'claimed':
-                if ($adStatus != 'qualified' && $adStatus != 'banked') {
+            case AccessDocument::CLAIMED:
+                if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
                     throw new \InvalidArgumentException('Document is not banked or qualified');
                 }
                 break;
 
-            case 'qualified':
-                if ($adType != 'work_access_pass' && $adType != 'vehicle_pass') {
+            case AccessDocument::QUALIFIED:
+                if ($adType != AccessDocument::WAP && $adType != AccessDocument::VEHICLE_PASS) {
                     throw new \InvalidArgumentException('Document is not a WAP or vehicle pass');
                 }
 
-                if ($adStatus != 'claimed') {
+                if ($adStatus != AccessDocument::CLAIMED) {
                     throw new \InvalidArgumentException('Document is not claimed.');
                 }
                 break;
