@@ -417,9 +417,7 @@ class Schedule extends ApiModel
             return false;
         }
 
-        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
-            return false;
-        }
+        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
 
         if (now()->gt($end)) {
             // The current time is past the burn weekend.
@@ -431,10 +429,7 @@ class Schedule extends ApiModel
 
     public static function haveBurnWeekendSignup(Person $person)
     {
-        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
-            return false;
-        }
-
+        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
         return Schedule::hasSignupInPeriod($person->id, $start, $end);
     }
 
@@ -446,9 +441,7 @@ class Schedule extends ApiModel
      */
     public static function haveAvailableBurnWeekendShiftsForPerson(Person $person)
     {
-        if (EventDate::retrieveBurnWeekendPeriod($start, $end) == false) {
-            return false;
-        }
+        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
 
         return DB::table('slot')
             ->join('person_position', function ($j) use ($person) {

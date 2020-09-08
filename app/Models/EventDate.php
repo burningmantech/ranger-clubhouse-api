@@ -96,12 +96,10 @@ class EventDate extends ApiModel
     /**
      * Retrieve the burn weekend date range if set.
      *
-     * @param $start - starting datetime
-     * @param $end - ending datetime
-     * @return bool true if have a date range
+     * @return array start and ending time
      */
 
-    public static function retrieveBurnWeekendPeriod(&$start, &$end)
+    public static function retrieveBurnWeekendPeriod()
     {
 /*        $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
         if (empty($burnWeekendPeriod)) {
@@ -117,6 +115,6 @@ class EventDate extends ApiModel
         $start = $laborDay->clone()->subDays(3)->setTime(18,0,0);
         $end = $laborDay->clone()->subDays(1)->setTime(18,0,0);
 
-        return true;
+        return [ $start, $end ];
     }
 }
