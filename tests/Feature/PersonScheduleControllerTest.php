@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Mockery;
 use Tests\TestCase;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,6 +39,10 @@ class PersonScheduleControllerTest extends TestCase
 
     public $year;
 
+    public static function  setUpBeforeClass() : void
+    {
+
+    }
     /*
      * have each test have a fresh user that is logged in,
      * and a set of positions.
@@ -289,7 +294,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
-        $personId  = $this->user->id;
+        $personId = $this->user->id;
 
         Queue::fake();
 
@@ -489,7 +494,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'has-started' ]);
+        $response->assertJson(['status' => 'has-started']);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -822,7 +827,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    private function setupPhotoStatus($status, $person=null)
+    private function setupPhotoStatus($status, $person = null)
     {
         if ($person == null) {
             $person = $this->user;
@@ -945,7 +950,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
-        $person = factory(Person::class)->create([ 'behavioral_agreement' => false ]);
+        $person = factory(Person::class)->create(['behavioral_agreement' => false]);
         $this->actingAs($person); // login
 
         $photoMock = $this->setupPhotoStatus('approved', $person);
@@ -970,7 +975,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
-        $person = factory(Person::class)->create([ 'status' => Person::AUDITOR, 'reviewed_pi_at' => now() ]);
+        $person = factory(Person::class)->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
         $this->actingAs($person);
 
         $mrMock = $this->mockOnlineTrainingPass(true);
@@ -1038,12 +1043,30 @@ class PersonScheduleControllerTest extends TestCase
         );
     }
 
-    /*
+    /**
+     * Make sure the two annotations
+     *   @runInSeparateProcess
+     *   @preserveGlobalState disabled
+     * are used when calling this mock.
+     */
+
+    private function mockBurnWeekend()
+    {
+        $mock = Mockery::mock('alias:App\Models\EventDate');
+        $mock->shouldReceive('retrieveBurnWeekendPeriod')
+            ->andReturn([now(), now()->addHours(6)]);
+    }
+
+    /**
      * Recommend working a Burn Weekend shift is none is present in the schedule
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      */
 
     public function testRecommendBurnWeekendShift()
     {
+        $this->mockBurnWeekend();
+
         $year = $this->year;
 
         $photoMock = $this->setupPhotoStatus('approved');
@@ -1066,15 +1089,18 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson(['burn_weekend_shift' => true]);
     }
 
-    /*
+    /**
      * Do NOT recommend working a Burn Weekend shift is none is present in the schedule for a non ranger
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      */
 
     public function testDoNotRecommendBurnWeekendShiftForNonRanger()
     {
+        $this->mockBurnWeekend();
         $year = $this->year;
 
-        $person = factory(Person::class)->create([ 'status' => Person::NON_RANGER]);
+        $person = factory(Person::class)->create(['status' => Person::NON_RANGER]);
         $this->actingAs($person);
         $photoMock = $this->setupPhotoStatus('approved', $person);
 
@@ -1095,23 +1121,24 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson(['burn_weekend_shift' => false]);
     }
 
-    /*
+    /**
      * Do not recommend working a Burn Weekend shift because the person is signed up for a Burn Weekend shift.
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      */
 
     public function testDoNotRecommendBurnWeekendShift()
     {
+        $this->mockBurnWeekend();
         $year = $this->year;
 
         $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockOnlineTrainingPass(true);
 
-        EventDate::retrieveBurnWeekendPeriod($start, $end);
-
         $shift = factory(Slot::class)->create(
             [
-                'begins' => (string) $start,
-                'ends' => (string) $start->addHours(6),
+                'begins' => (string)now(),
+                'ends' => (string)now()->addHours(6),
                 'position_id' => Position::DIRT,
                 'description' => "BURN WEEKEND BABY!",
                 'signed_up' => 0,
