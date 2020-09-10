@@ -29,7 +29,7 @@ class VehicleControllerTest extends TestCase
     {
         $year = current_year();
 
-        factory(Vehicle::class)->create(['person_id' => $this->user->id, 'event_year' => $year]);
+        Vehicle::factory()->create(['person_id' => $this->user->id, 'event_year' => $year]);
         $response = $this->json('GET', 'vehicle', ['event_year' => $year]);
         $response->assertStatus(200);
         $this->assertCount(1, $response->json()['vehicle']);
@@ -65,7 +65,7 @@ class VehicleControllerTest extends TestCase
 
     public function testUpdateVehicle()
     {
-        $vehicle = factory(Vehicle::class)->create(['person_id' => $this->user->id]);
+        $vehicle = Vehicle::factory()->create(['person_id' => $this->user->id]);
 
         $response = $this->json('PATCH', "vehicle/{$vehicle->id}", [
             'vehicle' => ['license_number' => 'YODAWG!']
@@ -81,7 +81,7 @@ class VehicleControllerTest extends TestCase
 
     public function testDeleteVehicle()
     {
-        $vehicle = factory(Vehicle::class)->create();
+        $vehicle = Vehicle::factory()->create();
         $vehicleId = $vehicle->id;
 
         $response = $this->json('DELETE', "vehicle/{$vehicleId}");
@@ -92,7 +92,7 @@ class VehicleControllerTest extends TestCase
 
     public function testPreventDuplicateLicense()
     {
-        $existing = factory(Vehicle::class)->create(['person_id' => $this->user->id]);
+        $existing = Vehicle::factory()->create(['person_id' => $this->user->id]);
 
         $duplicate = [
             'person_id' => $this->user->id,

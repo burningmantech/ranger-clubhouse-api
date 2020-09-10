@@ -1,10 +1,20 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\Role;
 
-$factory->define(Role::class, function (Faker $faker) {
-    return [
-        'title'  => substr($faker->name, 0, 10),
+
+class RoleFactory extends Factory
+{
+    protected $model = Role::class;
+
+    public function definition()
+    {
+return [
+        'title'  => substr($this->faker->name, 0, 10),
     ];
-});
+}
+}

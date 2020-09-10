@@ -1,8 +1,18 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\PersonLanguage;
 
-$factory->define(PersonLanguage::class, function (Faker $faker) {
-    return [ ];
-});
+
+class PersonLanguageFactory extends Factory
+{
+    protected $model = PersonLanguage::class;
+
+    public function definition()
+    {
+return [ ];
+}
+}

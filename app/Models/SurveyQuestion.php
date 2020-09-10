@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+
 use App\Models\ApiModel;
 
 class SurveyQuestion extends ApiModel

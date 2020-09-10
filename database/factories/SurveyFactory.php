@@ -1,16 +1,22 @@
 <?php
 
-/** @var \Illuminate\Database\Eloquent\Factory $factory */
+namespace Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Survey;
-use Faker\Generator as Faker;
 
-$factory->define(Survey::class, function (Faker $faker) {
-    return [
-        'title' => $faker->text(20),
-        'type' => Survey::TRAINING,
-        'year' => date('Y'),
-        'prologue' => $faker->text,
-        'epilogue' => $faker->text,
-    ];
-});
+class SurveyFactory extends Factory
+{
+    protected $model = Survey::class;
+
+    public function definition()
+    {
+       return [
+            'title' => $this->faker->text(20),
+            'type' => Survey::TRAINING,
+            'year' => date('Y'),
+            'prologue' => $this->faker->text,
+            'epilogue' => $this->faker->text,
+        ];
+    }
+}

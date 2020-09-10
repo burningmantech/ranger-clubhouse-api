@@ -1,10 +1,20 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\PersonMentor;
 
-$factory->define(PersonMentor::class, function (Faker $faker) {
-    return [
+
+class PersonMentorFactory extends Factory
+{
+    protected $model = PersonMentor::class;
+
+    public function definition()
+    {
+return [
         'status' => 'pending',
     ];
-});
+}
+}

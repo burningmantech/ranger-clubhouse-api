@@ -40,7 +40,7 @@ class TimesheetControllerTest extends TestCase
         $year = $this->year = date('Y');
 
         // Setup default (real world) positions
-        factory(Position::class)->create(
+        Position::factory()->create(
             [
                 'id'    => Position::DIRT,
                 'title' => 'Dirt',
@@ -48,7 +48,7 @@ class TimesheetControllerTest extends TestCase
             ]
         );
 
-        factory(Position::class)->create(
+        Position::factory()->create(
             [
                 'id'    => Position::TRAINING,
                 'title' => 'Training',
@@ -57,7 +57,7 @@ class TimesheetControllerTest extends TestCase
         );
 
         // Setup default (real world) positions
-        $this->hqWindow = factory(Position::class)->create(
+        $this->hqWindow = Position::factory()->create(
             [
                 'id'    => Position::HQ_WINDOW,
                 'title' => 'HQ Window',
@@ -65,7 +65,7 @@ class TimesheetControllerTest extends TestCase
             ]
         );
 
-        factory(PositionCredit::class)->create([
+        PositionCredit::factory()->create([
             'position_id'   => Position::DIRT,
             'start_time'    => date("$year-08-15 00:00:00"),
             'end_time'      => date("$year-09-02 00:00:00"),
@@ -73,9 +73,9 @@ class TimesheetControllerTest extends TestCase
             'description'   => 'All Dirt All The Time',
         ]);
 
-        $this->targetPerson = factory(Person::class)->create();
+        $this->targetPerson = Person::factory()->create();
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $this->targetPerson->id,
             'position_id'   => Position::DIRT,
         ]);
@@ -83,14 +83,14 @@ class TimesheetControllerTest extends TestCase
         $onDuty = date("$year-08-25 06:00:00");
         $offDuty = date("$year-08-25 12:00:00");
 
-        $this->timesheet = factory(Timesheet::class)->create([
+        $this->timesheet = Timesheet::factory()->create([
             'person_id' => $this->targetPerson->id,
             'on_duty'   => $onDuty,
             'off_duty'  => $offDuty,
             'position_id'   => Position::DIRT,
         ]);
 
-        factory(TimesheetLog::class)->create([
+        TimesheetLog::factory()->create([
             'person_id'        => $this->targetPerson->id,
             'timesheet_id'     => $this->timesheet->id,
             'create_person_id' => $this->user->id,
@@ -99,7 +99,7 @@ class TimesheetControllerTest extends TestCase
             'message'          => 'Dirt '.$onDuty
         ]);
 
-        factory(TimesheetLog::class)->create([
+        TimesheetLog::factory()->create([
             'person_id'        => $this->targetPerson->id,
             'timesheet_id'     => $this->timesheet->id,
             'create_person_id' => $this->user->id,
@@ -115,18 +115,18 @@ class TimesheetControllerTest extends TestCase
 
     public function createTrainingSession($passed)
     {
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'begins'    => date("Y-01-01 00:00:00"),
             'ends'      => date('Y-01-01 01:00:00'),
             'position_id'  => Position::TRAINING,
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $this->targetPerson->id,
             'slot_id'   => $slot->id
         ]);
 
-        factory(TraineeStatus::class)->create([
+        TraineeStatus::factory()->create([
             'person_id'   => $this->targetPerson->id,
             'slot_id'     => $slot->id,
             'passed'      => $passed
@@ -363,7 +363,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testSignoutPerson()
     {
-        $timesheet = factory(Timesheet::class)->create([
+        $timesheet = Timesheet::factory()->create([
             'person_id'   => $this->targetPerson->id,
             'on_duty'     => SqlHelper::now(),
             'position_id' => Position::DIRT,
@@ -413,7 +413,7 @@ class TimesheetControllerTest extends TestCase
         $this->setting('TimesheetCorrectionEnable', true);
 
         $now = now();
-        factory(PersonEvent::class)->create([
+        PersonEvent::factory()->create([
             'person_id' => $person->id,
             'year' => $year,
             'timesheet_confirmed' => true,
@@ -468,7 +468,7 @@ class TimesheetControllerTest extends TestCase
     {
         $person = $this->targetPerson;
 
-        factory(PersonEvent::class)->create([
+        PersonEvent::factory()->create([
             'person_id' => $person->id,
             'year' => current_year(),
             'timesheet_confirmed' => true,
@@ -509,7 +509,7 @@ class TimesheetControllerTest extends TestCase
 
         $person = $this->targetPerson;
 
-        factory(TimesheetMissing::class)->create([
+        TimesheetMissing::factory()->create([
              'on_duty'          => $onDuty,
              'off_duty'         => $offDuty,
              'person_id'        => $person->id,
@@ -582,8 +582,8 @@ class TimesheetControllerTest extends TestCase
         DB::delete("delete from timesheet");
 
         // Person only worked 4 hours
-        $fourHourPerson = factory(Person::class)->create();
-        factory(Timesheet::class)->create([
+        $fourHourPerson = Person::factory()->create();
+        Timesheet::factory()->create([
             'person_id' => $fourHourPerson->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$year-08-25 00:00:00",
@@ -591,11 +591,11 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         // Person should have earned enough for a short slevee
-        $ssPerson = factory(Person::class)->create([
+        $ssPerson = Person::factory()->create([
             'longsleeveshirt_size_style' => 'Womens M',
             'teeshirt_size_style'        => 'Womens V-Neck M'
         ]);
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id'   => $ssPerson->id,
             'position_id' => Position::DIRT,
             'on_duty'     => "$year-08-25 00:00:00",
@@ -603,8 +603,8 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         // Person should have earned enough for a long slevee
-        $lsPerson = factory(Person::class)->create();
-        factory(Timesheet::class)->create([
+        $lsPerson = Person::factory()->create();
+        Timesheet::factory()->create([
             'person_id' => $lsPerson->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$year-08-25 00:00:00",
@@ -612,22 +612,22 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         // Shiny Penny should not appear in report
-        $shinyPenny = factory(Person::class)->create();
-        factory(Timesheet::class)->create([
+        $shinyPenny = Person::factory()->create();
+        Timesheet::factory()->create([
             'person_id' => $shinyPenny->id,
             'position_id' => Position::ALPHA,
             'on_duty'   => "$year-08-25 00:00:00",
             'off_duty'  => "$year-08-25 12:00:00"
         ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $shinyPenny->id,
             'position_id' => Position::DIRT_SHINY_PENNY,
             'on_duty'   => "$year-08-26 00:00:00",
             'off_duty'  => "$year-08-26 12:00:00"
         ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $shinyPenny->id,
             'position_id' => Position::BURN_PERIMETER,
             'on_duty'   => "$year-08-26 00:00:00",
@@ -635,14 +635,14 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         // Person with potentail hours
-        $potentialPerson = factory(Person::class)->create();
-        $slot = factory(Slot::class)->create([
+        $potentialPerson = Person::factory()->create();
+        $slot = Slot::factory()->create([
             'position_id' => Position::DIRT,
             'begins'   => "$year-08-25 00:00:00",
             'ends'  => "$year-08-25 10:00:00"
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
           'person_id' => $potentialPerson->id,
           'slot_id' => $slot->id
         ]);
@@ -691,7 +691,7 @@ class TimesheetControllerTest extends TestCase
         $prevYear = $this->year - 1;
         $person = $this->targetPerson;
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$prevYear-08-25 00:00:00",
@@ -730,7 +730,7 @@ class TimesheetControllerTest extends TestCase
         $prevYear = $this->year - 2;
         $person = $this->targetPerson;
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$lastYear-08-25 00:00:00",
@@ -738,7 +738,7 @@ class TimesheetControllerTest extends TestCase
         ]);
 
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'   => "$prevYear-08-25 00:00:00",
@@ -766,14 +766,14 @@ class TimesheetControllerTest extends TestCase
 
     public function createBulkPeople()
     {
-        $person1 = factory(Person::class)->create();
-        factory(PersonPosition::class)->create([
+        $person1 = Person::factory()->create();
+        PersonPosition::factory()->create([
              'person_id'    => $person1->id,
              'position_id'  => Position::DIRT,
          ]);
 
-        $person2 = factory(Person::class)->create();
-        factory(PersonPosition::class)->create([
+        $person2 = Person::factory()->create();
+        PersonPosition::factory()->create([
              'person_id'    => $person2->id,
              'position_id'  => Position::HQ_WINDOW,
          ]);
@@ -946,15 +946,15 @@ class TimesheetControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $year = current_year();
 
-        $person = factory(Person::class)->create();
-        $onDuty = factory(Timesheet::class)->create([
+        $person = Person::factory()->create();
+        $onDuty = Timesheet::factory()->create([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'     => date("Y-m-d 00:00:00")
         ]);
 
         $ymd = "$year-08-15";
-        $endBeforeStart = factory(Timesheet::class)->make([
+        $endBeforeStart = Timesheet::factory()->make([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'     => date("$ymd 03:00:00"),
@@ -963,13 +963,13 @@ class TimesheetControllerTest extends TestCase
         $endBeforeStart->saveWithoutValidation();
 
         $ymd = "$year-08-16";
-        $overlapFirst = factory(Timesheet::class)->create([
+        $overlapFirst = Timesheet::factory()->create([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'     => date("$ymd 04:00:00"),
             'off_duty'    => date("$ymd 05:00:00")
         ]);
-        $overlapSecond = factory(Timesheet::class)->create([
+        $overlapSecond = Timesheet::factory()->create([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT_GREEN_DOT,
             'on_duty'     => date("$ymd 04:30:00"),
@@ -977,7 +977,7 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $ymd = "$year-08-17";
-        $tooLong = factory(Timesheet::class)->create([
+        $tooLong = Timesheet::factory()->create([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT_GREEN_DOT,
             'on_duty'     => date("$year-08-17 04:30:00"),
@@ -1052,8 +1052,8 @@ class TimesheetControllerTest extends TestCase
 
         DB::table('timesheet')->delete();
 
-        $person = factory(Person::class)->create();
-        $timesheet = factory(Timesheet::class)->create([
+        $person = Person::factory()->create();
+        $timesheet = Timesheet::factory()->create([
             'person_id'   => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'     => date("$year-m-d 01:00:00"),
@@ -1097,9 +1097,9 @@ class TimesheetControllerTest extends TestCase
     {
         $year = 2010;
 
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
-        $entry = factory(Timesheet::class)->create([
+        $entry = Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
             'on_duty'   => date("$year-08-25 00:00:00"),
@@ -1138,20 +1138,20 @@ class TimesheetControllerTest extends TestCase
     {
         $year = date('Y');
 
-        $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
-        $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
+        $personA = Person::factory()->create([ 'callsign' => 'A' ]);
+        $personB = Person::factory()->create([ 'callsign' => 'B' ]);
 
         // Clear out the default timesheets created in setUp()
         Timesheet::query()->delete();
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id'    => $personA->id,
             'on_duty'      => date('Y-08-20 10:00:00'),
             'off_duty'     => date('Y-08-20 11:00:00'),
             'position_id'  => Position::DIRT
         ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id'    => $personB->id,
             'on_duty'      => date('Y-08-20 10:00:00'),
             'off_duty'     => date('Y-08-20 12:00:00'),
@@ -1199,20 +1199,20 @@ class TimesheetControllerTest extends TestCase
     {
         $year = date('Y');
 
-        $personA = factory(Person::class)->create([ 'callsign' => 'A' ]);
-        $personB = factory(Person::class)->create([ 'callsign' => 'B' ]);
+        $personA = Person::factory()->create([ 'callsign' => 'A' ]);
+        $personB = Person::factory()->create([ 'callsign' => 'B' ]);
 
         // Clear out the default timesheets created in setUp()
         Timesheet::query()->delete();
 
-        $entryA = factory(Timesheet::class)->create([
+        $entryA = Timesheet::factory()->create([
             'person_id'    => $personA->id,
             'on_duty'      => date('Y-08-20 10:00:00'),
             'off_duty'     => date('Y-08-20 11:00:00'),
             'position_id'  => Position::DIRT
         ]);
 
-        $entryB = factory(Timesheet::class)->create([
+        $entryB = Timesheet::factory()->create([
             'person_id'    => $personB->id,
             'on_duty'      => date('Y-08-20 10:00:00'),
             'off_duty'     => date('Y-08-20 12:00:00'),

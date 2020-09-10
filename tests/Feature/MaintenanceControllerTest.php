@@ -32,7 +32,7 @@ class MaintenanceControllerTest extends TestCase
 
     public function testMarkOffSite()
     {
-        $person = factory(Person::class)->create([ 'on_site' => true ]);
+        $person = Person::factory()->create([ 'on_site' => true ]);
 
         $response = $this->json('POST', 'maintenance/mark-off-site');
         $response->assertStatus(200);
@@ -46,7 +46,7 @@ class MaintenanceControllerTest extends TestCase
 
     public function testResetPNVs()
     {
-        $prospective = factory(Person::class)->create([
+        $prospective = Person::factory()->create([
              'status'   => 'prospective',
              'first_name'   => 'Alfred',
              'last_name'    => 'Newman',
@@ -78,7 +78,7 @@ class MaintenanceControllerTest extends TestCase
 
     public function testResetPastProspectives()
     {
-        $pp = factory(Person::class)->create([
+        $pp = Person::factory()->create([
               'status'   => 'past prospective',
               'first_name'   => 'Jabber',
               'last_name'    => 'Wocky',
@@ -122,7 +122,7 @@ causing the remaining tests to fail.
 
          $archiveYear = date('Y') - 1;
 
-         $archiveMessage = factory(PersonMessage::class)->create([
+         $archiveMessage = PersonMessage::factory()->create([
              'person_id'          => $user->id,
              'recipient_callsign' => $user->callsign,
              'creator_person_id'  => $user->id,
@@ -131,7 +131,7 @@ causing the remaining tests to fail.
              'timestamp'          => "$archiveYear-01-01 10:00:00",
          ]);
 
-         $ignoreMessage = factory(PersonMessage::class)->create([
+         $ignoreMessage = PersonMessage::factory()->create([
              'person_id'          => $user->id,
              'recipient_callsign' => $user->callsign,
              'creator_person_id'  => $user->id,

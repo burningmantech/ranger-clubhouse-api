@@ -1,10 +1,20 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\TimesheetLog;
 
-$factory->define(TimesheetLog::class, function (Faker $faker) {
-    return [
+
+class TimesheetLogFactory extends Factory
+{
+    protected $model = TimesheetLog::class;
+
+    public function definition()
+    {
+return [
         //
     ];
-});
+}
+}

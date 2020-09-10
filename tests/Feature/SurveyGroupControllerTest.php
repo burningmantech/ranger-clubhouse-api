@@ -27,7 +27,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testIndexSurveyGroup()
     {
-        factory(SurveyGroup::class)->create();
+        SurveyGroup::factory()->create();
 
         $response = $this->json('GET', 'survey-group', [ 'survey_id' => 1]);
         $response->assertStatus(200);
@@ -40,7 +40,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testCreateSurveyGroup()
     {
-        $survey = factory(Survey::class)->create();
+        $survey = Survey::factory()->create();
 
         $data = [
             'survey_id' => $survey->id,
@@ -64,7 +64,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testUpdateSurveyGroup()
     {
-        $surveyGroup = factory(SurveyGroup::class)->create();
+        $surveyGroup = SurveyGroup::factory()->create();
 
         $response = $this->json('PATCH', "survey-group/{$surveyGroup->id}", [
             'survey_group' => [ 'title' => 'Fork Your Survey' ]
@@ -80,7 +80,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testDeleteSurveyGroup()
     {
-        $surveyGroup = factory(SurveyGroup::class)->create();
+        $surveyGroup = SurveyGroup::factory()->create();
         $surveyGroupId = $surveyGroup->id;
 
         $response = $this->json('DELETE', "survey-group/{$surveyGroupId}");

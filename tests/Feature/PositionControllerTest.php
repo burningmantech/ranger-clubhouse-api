@@ -33,7 +33,7 @@ class PositionControllerTest extends TestCase
 
     public function testIndexPosition()
     {
-        $position = factory(Position::class)->create([
+        $position = Position::factory()->create([
             'min'   => 1,
             'max'   => 10,
             'count_hours' => true,
@@ -89,7 +89,7 @@ class PositionControllerTest extends TestCase
     public function testUpdatePosition()
     {
         $this->addRole(Role::ADMIN);
-        $position = factory(Position::class)->create();
+        $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
             'position' => [ 'title' => 'Something Title' ]
@@ -106,7 +106,7 @@ class PositionControllerTest extends TestCase
     public function testDeletePosition()
     {
         $this->addRole(Role::ADMIN);
-        $position = factory(Position::class)->create();
+        $position = Position::factory()->create();
         $positionId = $position->id;
 
         $response = $this->json('DELETE', "position/{$positionId}");
@@ -122,14 +122,14 @@ class PositionControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $sandmanTraining = factory(Slot::class)->create([
+        $sandmanTraining = Slot::factory()->create([
             'description'  => 'Stop that runner',
             'position_id'  => Position::SANDMAN_TRAINING,
             'begins'       => date('Y-01-01 00:00:00'),
             'ends'         => date('Y-01-01 00:10:00')
          ]);
 
-        $sandmanShift = factory(Slot::class)->create([
+        $sandmanShift = Slot::factory()->create([
             'description'   => 'Burn All The Things',
             'position_id'   => Position::SANDMAN,
             'begins'        => date('Y-12-31 00:00:00'),
@@ -139,42 +139,42 @@ class PositionControllerTest extends TestCase
         // Create a person who is fully qualified
         // trained, has Sandman position, worked BP, signed affidavit, signed up to work this year.
         //
-        $personQualified = factory(Person::class)->create([
+        $personQualified = Person::factory()->create([
             'callsign'  => 'A Qualified',
          ]);
 
-        factory(PersonEvent::class)->create([
+        PersonEvent::factory()->create([
             'person_id' => $personQualified->id,
             'year' => current_year(),
             'sandman_affidavit' => true
         ]);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
              'person_id'    => $personQualified->id,
              'position_id'  => Position::SANDMAN,
          ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id'    => $personQualified->id,
             'position_id'  => Position::BURN_PERIMETER,
             'on_duty'   => date('Y-08-20 23:00:00'),
             'off_duty'  => date('Y-08-20 23:30:00')
          ]);
 
-        factory(TraineeStatus::class)->create([
+        TraineeStatus::factory()->create([
              'slot_id'   => $sandmanTraining->id,
              'person_id' => $personQualified->id,
              'passed'    => true
          ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
              'person_id' => $personQualified->id,
              'slot_id'   => $sandmanShift->id
          ]);
 
         // .. and a person who is not at all qualified
-        $personUnqualified = factory(Person::class)->create([ 'callsign' => 'B Unqualified' ]);
-        factory(PersonPosition::class)->create([
+        $personUnqualified = Person::factory()->create([ 'callsign' => 'B Unqualified' ]);
+        PersonPosition::factory()->create([
              'person_id'    => $personUnqualified->id,
              'position_id'  => Position::SANDMAN
          ]);
@@ -211,22 +211,22 @@ class PositionControllerTest extends TestCase
      */
 
     private function setupPositionSanityChecker() {
-        $person = $this->person = factory(Person::class)->create([ 'callsign' => 'A Callsign' ]);
+        $person = $this->person = Person::factory()->create([ 'callsign' => 'A Callsign' ]);
         $personYear = $this->personYear = (int)date('Y') - 2;
 
         // person is green dot and doesn't have the other GD positions
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
              'person_id' => $person->id,
              'position_id' => Position::DIRT_GREEN_DOT
          ]);
 
         // person isn't a shiny penny and has the position
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
              'person_id' => $person->id,
              'position_id' => Position::DIRT_SHINY_PENNY
          ]);
 
-        factory(PersonMentor::class)->create([
+        PersonMentor::factory()->create([
              'person_id'   => $person->id,
              'mentor_id'   => $this->user->id,
              'mentor_year' => $personYear,
@@ -234,19 +234,19 @@ class PositionControllerTest extends TestCase
          ]);
 
         // person has a Login Management position but no LM role
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
              'person_id'    => $person->id,
              'position_id'  => Position::OPERATOR
          ]);
 
-        factory(Position::class)->create([
+        Position::factory()->create([
              'id'   => Position::OPERATOR,
              'title' => 'Operator'
          ]);
 
         // Shiny Penny without the Dirt Shiny Position
-        $this->shinyPenny = factory(Person::class)->create([ 'callsign' => 'B Callsign' ]);
-        factory(PersonMentor::class)->create([
+        $this->shinyPenny = Person::factory()->create([ 'callsign' => 'B Callsign' ]);
+        PersonMentor::factory()->create([
              'person_id'   => $this->shinyPenny->id,
              'mentor_id'   => $this->user->id,
              'mentor_year' => date('Y'),

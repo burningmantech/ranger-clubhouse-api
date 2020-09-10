@@ -1,15 +1,25 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\Help;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
-$factory->define(Help::class, function (Faker $faker) {
-    return [
+
+class HelpFactory extends Factory
+{
+    protected $model = Help::class;
+
+    public function definition()
+    {
+return [
         'slug'  => Str::random(10),
-        'title' => $faker->uuid,
-        'body'  => $faker->text(10),
+        'title' => $this->faker->uuid,
+        'body'  => $this->faker->text(10),
         'tags'  => '',
     ];
-});
+}
+}

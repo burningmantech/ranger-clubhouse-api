@@ -2,18 +2,17 @@
 
 namespace Database\Factories;
 
-use App\Models\PersonStatus;
+use App\Models\PersonIntake;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
-class PersonStatusFactory extends Factory
+class PersonIntakeFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = PersonStatus::class;
+    protected $model = PersonIntake::class;
 
     /**
      * Define the model's default state.
@@ -23,8 +22,7 @@ class PersonStatusFactory extends Factory
     public function definition()
     {
         return [
-            'old_status' => '',
-            'new_status' => ''
+            //
         ];
     }
 }

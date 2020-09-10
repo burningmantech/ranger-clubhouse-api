@@ -1,8 +1,18 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use \App\Models\EventDate;
 
-$factory->define(EventDate::class, function (Faker $faker) {
-    return [ ];
-});
+
+class EventDateFactory extends Factory
+{
+    protected $model = EventDate::class;
+
+    public function definition()
+    {
+return [ ];
+}
+}

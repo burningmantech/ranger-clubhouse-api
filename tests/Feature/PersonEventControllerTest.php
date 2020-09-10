@@ -29,7 +29,7 @@ class PersonEventControllerTest extends TestCase
     {
         $year = current_year();
 
-        $p = factory(PersonEvent::class)->create(['year' => $year, 'person_id' => $this->user->id]);
+        $p = PersonEvent::factory()->create(['year' => $year, 'person_id' => $this->user->id]);
 
         $response = $this->json('GET', 'person-event', ['year' => $year]);
         $response->assertStatus(200);
@@ -62,7 +62,7 @@ class PersonEventControllerTest extends TestCase
         $personId = $this->user->id;
         $year = current_year();
 
-        $personEvent = factory(PersonEvent::class)->create([
+        $personEvent = PersonEvent::factory()->create([
             'year' => $year,
             'person_id' => $personId,
         ]);
@@ -84,7 +84,7 @@ class PersonEventControllerTest extends TestCase
     {
         $personId = $this->user->id;
         $year = current_year();
-        factory(PersonEvent::class)->create(['year' => $year, 'person_id' => $personId]);
+        PersonEvent::factory()->create(['year' => $year, 'person_id' => $personId]);
 
         $response = $this->json('DELETE', "person-event/{$personId}-{$year}");
 

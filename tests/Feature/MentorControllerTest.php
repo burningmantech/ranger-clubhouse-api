@@ -35,13 +35,13 @@ class MentorControllerTest extends TestCase
     public function testMenteesForAllPNVs()
     {
         // don't find this person
-        $dontFind = factory(Person::class)->create(['callsign' => 'persona1', 'status' => Person::ACTIVE]);
-        factory(PersonStatus::class)->create(['person_id' => $dontFind->id, 'new_status' => Person::ACTIVE, 'created_at' => now()]);
+        $dontFind = Person::factory()->create(['callsign' => 'persona1', 'status' => Person::ACTIVE]);
+        PersonStatus::factory()->create(['person_id' => $dontFind->id, 'new_status' => Person::ACTIVE, 'created_at' => now()]);
 
-        $alpha = factory(Person::class)->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
-        factory(PersonStatus::class)->create(['person_id' => $alpha->id, 'new_status' => Person::ALPHA, 'created_at' => now()]);
-        $prospective = factory(Person::class)->create(['callsign' => 'personb', 'status' => Person::PROSPECTIVE]);
-        factory(PersonStatus::class)->create(['person_id' => $prospective->id, 'new_status' => Person::PROSPECTIVE, 'created_at' => now()]);
+        $alpha = Person::factory()->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
+        PersonStatus::factory()->create(['person_id' => $alpha->id, 'new_status' => Person::ALPHA, 'created_at' => now()]);
+        $prospective = Person::factory()->create(['callsign' => 'personb', 'status' => Person::PROSPECTIVE]);
+        PersonStatus::factory()->create(['person_id' => $prospective->id, 'new_status' => Person::PROSPECTIVE, 'created_at' => now()]);
 
         $response = $this->json('GET', 'mentor/mentees', ['year' => current_year()]);
 
@@ -67,8 +67,8 @@ class MentorControllerTest extends TestCase
 
     public function testAlphas()
     {
-        $alpha = factory(Person::class)->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
-        factory(PersonPosition::class)->create(['person_id' => $alpha->id, 'position_id' => Position::ALPHA]);
+        $alpha = Person::factory()->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
+        PersonPosition::factory()->create(['person_id' => $alpha->id, 'position_id' => Position::ALPHA]);
 
         $response = $this->json('GET', 'mentor/alphas');
         $response->assertStatus(200);
@@ -89,15 +89,15 @@ class MentorControllerTest extends TestCase
 
     public function testAlphaSchedule()
     {
-        $alpha = factory(Person::class)->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
-        factory(PersonPosition::class)->create(['person_id' => $alpha->id, 'position_id' => Position::ALPHA]);
+        $alpha = Person::factory()->create(['callsign' => 'persona', 'status' => Person::ALPHA]);
+        PersonPosition::factory()->create(['person_id' => $alpha->id, 'position_id' => Position::ALPHA]);
 
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'position_id' => Position::ALPHA,
             'begins' => '2020-01-01 10:00:00',
             'ends' => '2020-01-01 11:00:00',
         ]);
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $alpha->id,
             'slot_id' => $slot->id
         ]);
@@ -126,19 +126,19 @@ class MentorControllerTest extends TestCase
     {
         $time = now();
 
-        $offDutyMentor = factory(Person::class)->create(['callsign' => 'persona']);
-        factory(PersonPosition::class)->create([
+        $offDutyMentor = Person::factory()->create(['callsign' => 'persona']);
+        PersonPosition::factory()->create([
             'person_id' => $offDutyMentor->id,
             'position_id' => Position::MENTOR
         ]);
 
-        $onDutyMentor = factory(Person::class)->create(['callsign' => 'personb']);
-        factory(PersonPosition::class)->create([
+        $onDutyMentor = Person::factory()->create(['callsign' => 'personb']);
+        PersonPosition::factory()->create([
             'person_id' => $onDutyMentor->id,
             'position_id' => Position::MENTOR
         ]);
 
-        $timesheet = factory(Timesheet::class)->create([
+        $timesheet = Timesheet::factory()->create([
             'on_duty' => now(),
             'position_id' => Position::MENTOR,
             'person_id' => $onDutyMentor->id
@@ -169,12 +169,12 @@ class MentorControllerTest extends TestCase
     {
         $year = current_year();
 
-        $noMentors = factory(Person::class)->create([ 'status' => Person::ALPHA ]);
+        $noMentors = Person::factory()->create([ 'status' => Person::ALPHA ]);
 
-        $haveMentors = factory(Person::class)->create([ 'status' => Person::ALPHA ]);
-        $mentor1 = factory(Person::class)->create();
-        $mentor2 = factory(Person::class)->create();
-        factory(PersonMentor::class)->create([
+        $haveMentors = Person::factory()->create([ 'status' => Person::ALPHA ]);
+        $mentor1 = Person::factory()->create();
+        $mentor2 = Person::factory()->create();
+        PersonMentor::factory()->create([
             'person_id' => $haveMentors->id,
             'mentor_id' => $mentor1->id,
             'mentor_year' => $year,
@@ -226,18 +226,18 @@ class MentorControllerTest extends TestCase
     public function testVerdict()
     {
         $year = current_year();
-        $mentor = factory(Person::class)->create();
+        $mentor = Person::factory()->create();
 
-        $passed = factory(Person::class)->create([ 'status' => 'alpha']);
-        factory(PersonMentor::class)->create([
+        $passed = Person::factory()->create([ 'status' => 'alpha']);
+        PersonMentor::factory()->create([
             'person_id' => $passed->id,
             'mentor_id' => $mentor->id,
             'mentor_year' => $year,
             'status' => PersonMentor::PASS
         ]);
 
-        $pending = factory(Person::class)->create([ 'status' => 'alpha']);
-        factory(PersonMentor::class)->create([
+        $pending = Person::factory()->create([ 'status' => 'alpha']);
+        PersonMentor::factory()->create([
             'person_id' => $pending->id,
             'mentor_id' => $mentor->id,
             'mentor_year' => $year,
@@ -261,8 +261,8 @@ class MentorControllerTest extends TestCase
 
     public function testConvert()
     {
-        $toActive = factory(Person::class)->create([ 'status' => Person::ALPHA ]);
-        $toBonked = factory(Person::class)->create([ 'status' => Person::ALPHA ]);
+        $toActive = Person::factory()->create([ 'status' => Person::ALPHA ]);
+        $toBonked = Person::factory()->create([ 'status' => Person::ALPHA ]);
 
         $response = $this->json('POST', 'mentor/convert', [
             'alphas' => [

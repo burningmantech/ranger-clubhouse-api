@@ -38,61 +38,61 @@ class TrainingControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        factory(Position::class)->create([
+        Position::factory()->create([
             'id'    => Position::GREEN_DOT_TRAINER,
             'title' => 'Green Dot Trainer'
         ]);
 
-        factory(Position::class)->create([
+        Position::factory()->create([
             'id'    => Position::GREEN_DOT_TRAINING,
             'title' => 'Green Dot Training',
             'type' => 'Training'
         ]);
 
-        $traineeSlot = factory(Slot::class)->create([
+        $traineeSlot = Slot::factory()->create([
             'begins' => date('Y-07-20 11:00:00'),
             'ends'   => date('Y-07-20 12:00:00'),
             'position_id'   => Position::GREEN_DOT_TRAINING,
             'description' => 'GD Training'
         ]);
 
-        $trainerSlot = factory(Slot::class)->create([
+        $trainerSlot = Slot::factory()->create([
             'begins' => date('Y-07-20 11:00:00'),
             'ends'   => date('Y-07-20 12:00:00'),
             'position_id'   => Position::GREEN_DOT_TRAINER,
             'description' => 'GD Training'
         ]);
 
-        $futureTraineeSlot = factory(Slot::class)->create([
+        $futureTraineeSlot = Slot::factory()->create([
             'begins' => date('Y-12-31 23:00:00'),
             'ends'   => date('Y-12-31 23:01:00'),
             'position_id'   => Position::GREEN_DOT_TRAINING,
             'description' => 'New Years Training'
         ]);
 
-        $futureTrainerSlot = factory(Slot::class)->create([
+        $futureTrainerSlot = Slot::factory()->create([
             'begins' => date('Y-12-31 23:00:00'),
             'ends'   => date('Y-12-31 23:01:00'),
             'position_id'   => Position::GREEN_DOT_TRAINER,
             'description' => 'New Years Training'
         ]);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::GREEN_DOT_TRAINER
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $personId,
             'slot_id' => $trainerSlot->id,
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $personId,
             'slot_id' => $futureTrainerSlot->id,
         ]);
 
-        factory(TrainerStatus::class)->create([
+        TrainerStatus::factory()->create([
             'person_id' => $personId,
             'slot_id'   => $traineeSlot->id,
             'trainer_slot_id' => $trainerSlot->id,
