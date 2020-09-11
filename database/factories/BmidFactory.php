@@ -1,12 +1,22 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\Bmid;
 
-$factory->define(Bmid::class, function (Faker $faker) {
-    return [
+
+class BmidFactory extends Factory
+{
+    protected $model = Bmid::class;
+
+    public function definition()
+    {
+return [
         'status'    => 'in_prep',
         'showers'   => false,
         'meals'     => null,
     ];
-});
+}
+}

@@ -62,7 +62,7 @@ class PersonScheduleControllerTest extends TestCase
         $year = $this->year = date('Y') + 1;
 
         // Setup default (real world) positions
-        $this->trainingPosition = factory(Position::class)->create(
+        $this->trainingPosition = Position::factory()->create(
             [
                 'id' => Position::TRAINING,
                 'title' => 'Training',
@@ -72,7 +72,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-        $this->dirtPosition = factory(Position::class)->create(
+        $this->dirtPosition = Position::factory()->create(
             [
                 'id' => Position::DIRT,
                 'title' => 'Dirt',
@@ -81,7 +81,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         // Used for ART training & signups
-        $this->greenDotTrainingPosition = factory(Position::class)->create(
+        $this->greenDotTrainingPosition = Position::factory()->create(
             [
                 'id' => Position::GREEN_DOT_TRAINING,
                 'title' => 'Green Dot - Training',
@@ -91,7 +91,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-        $this->greenDotDirtPosition = factory(Position::class)->create(
+        $this->greenDotDirtPosition = Position::factory()->create(
             [
                 'id' => Position::DIRT_GREEN_DOT,
                 'title' => 'Green Dot - Dirt',
@@ -103,7 +103,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->trainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day = (25 + $i);
-            $this->trainingSlots[] = factory(Slot::class)->create(
+            $this->trainingSlots[] = Slot::factory()->create(
                 [
                     'begins' => date("$year-05-$day 09:45:00"),
                     'ends' => date("$year-05-$day 17:45:00"),
@@ -119,7 +119,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->dirtSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day = (25 + $i);
-            $this->dirtSlots[] = factory(Slot::class)->create(
+            $this->dirtSlots[] = Slot::factory()->create(
                 [
                     'begins' => date("$year-08-$day 09:45:00"),
                     'ends' => date("$year-08-$day 17:45:00"),
@@ -135,7 +135,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->greenDotTrainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day = (25 + $i);
-            $this->greenDotTrainingSlots[] = factory(Slot::class)->create(
+            $this->greenDotTrainingSlots[] = Slot::factory()->create(
                 [
                     'begins' => date("$year-06-$day 09:45:00"),
                     'ends' => date("$year-06-$day 17:45:00"),
@@ -151,7 +151,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->greenDotSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day = (25 + $i);
-            $this->greenDotSlots[] = factory(Slot::class)->create(
+            $this->greenDotSlots[] = Slot::factory()->create(
                 [
                     'begins' => date("$year-08-$day 09:45:00"),
                     'ends' => date("$year-08-$day 17:45:00"),
@@ -167,8 +167,8 @@ class PersonScheduleControllerTest extends TestCase
 
     public function createPerson()
     {
-        $person = factory(Person::class)->create();
-        factory(PersonPosition::class)->create([
+        $person = Person::factory()->create();
+        PersonPosition::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::TRAINING
         ]);
@@ -190,7 +190,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $slotId = $this->dirtSlots[0]->id;
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $slotId,
@@ -219,7 +219,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $slotId = $this->dirtSlots[0]->id;
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $slotId,
@@ -450,7 +450,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $this->addPosition(Position::DIRT, $person);
         $shift = $this->dirtSlots[0];
         $err = $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
@@ -511,7 +511,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testMayForceSignupForFullShiftIfAdmin()
     {
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
 
@@ -544,7 +544,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowSignupForFullShiftIfAdmin()
     {
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
 
@@ -584,7 +584,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $previousTraining = $this->trainingSlots[0];
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $previousTraining->id,
@@ -624,21 +624,21 @@ class PersonScheduleControllerTest extends TestCase
 
         $year = date('Y') + 1;
 
-        $part1 = factory(Slot::class)->create([
+        $part1 = Slot::factory()->create([
             'description' => 'Elysian Fields - Part 1',
             'position_id' => Position::TRAINING,
             'begins' => date("$year-08-30 12:00:00"),
             'ends' => date("$year-08-30 18:00:00")
         ]);
 
-        $part2 = factory(Slot::class)->create([
+        $part2 = Slot::factory()->create([
             'description' => 'Elysian Fields - Part 2',
             'position_id' => Position::TRAINING,
             'begins' => date("$year-08-31 12:00:00"),
             'ends' => date("$year-08-31 18:00:00")
         ]);
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $part1->id,
@@ -671,13 +671,13 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $this->addPosition(Position::TRAINING, $person);
         $personId = $person->id;
 
         $previousTraining = $this->trainingSlots[0];
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $previousTraining->id,
@@ -721,7 +721,7 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $person->id;
         $previousTraining = $this->trainingSlots[0];
 
-        factory(PersonSlot::class)->create(
+        PersonSlot::factory()->create(
             [
                 'person_id' => $personId,
                 'slot_id' => $previousTraining->id,
@@ -761,7 +761,7 @@ class PersonScheduleControllerTest extends TestCase
             'slot_id' => $shift->id,
         ];
 
-        factory(PersonSlot::class)->create($personSlot);
+        PersonSlot::factory()->create($personSlot);
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
@@ -782,7 +782,7 @@ class PersonScheduleControllerTest extends TestCase
             'slot_id' => $shift->id,
         ];
 
-        factory(PersonSlot::class)->create($personSlot);
+        PersonSlot::factory()->create($personSlot);
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
@@ -804,7 +804,7 @@ class PersonScheduleControllerTest extends TestCase
             'slot_id' => $shift->id,
         ];
 
-        factory(PersonSlot::class)->create($personSlot);
+        PersonSlot::factory()->create($personSlot);
 
         $this->addRole(Role::ADMIN);
 
@@ -833,7 +833,7 @@ class PersonScheduleControllerTest extends TestCase
             $person = $this->user;
         }
 
-        $photo = factory(PersonPhoto::class)->create([
+        $photo = PersonPhoto::factory()->create([
             'person_id' => $person->id,
             'status' => $status,
         ]);
@@ -950,7 +950,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
-        $person = factory(Person::class)->create(['behavioral_agreement' => false]);
+        $person = Person::factory()->create(['behavioral_agreement' => false]);
         $this->actingAs($person); // login
 
         $photoMock = $this->setupPhotoStatus('approved', $person);
@@ -975,7 +975,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
-        $person = factory(Person::class)->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
+        $person = Person::factory()->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
         $this->actingAs($person);
 
         $mrMock = $this->mockOnlineTrainingPass(true);
@@ -1004,7 +1004,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->addPosition(Position::TRAINING);
 
         $shift = $this->trainingSlots[0];
-        $trainerSlot = factory(Slot::class)->create(
+        $trainerSlot = Slot::factory()->create(
             [
                 'begins' => date($shift->begins),
                 'ends' => date($shift->ends),
@@ -1016,10 +1016,10 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-        $trainer1 = factory(Person::class)->create();
-        factory(PersonSlot::class)->create(['person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
-        $trainer2 = factory(Person::class)->create();
-        factory(PersonSlot::class)->create(['person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
+        $trainer1 = Person::factory()->create();
+        PersonSlot::factory()->create(['person_id' => $trainer1->id, 'slot_id' => $trainerSlot->id]);
+        $trainer2 = Person::factory()->create();
+        PersonSlot::factory()->create(['person_id' => $trainer2->id, 'slot_id' => $trainerSlot->id]);
 
         $shift->update(['signed_up' => 1, 'max' => 1, 'trainer_slot_id' => $trainerSlot->id]);
 
@@ -1100,7 +1100,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->mockBurnWeekend();
         $year = $this->year;
 
-        $person = factory(Person::class)->create(['status' => Person::NON_RANGER]);
+        $person = Person::factory()->create(['status' => Person::NON_RANGER]);
         $this->actingAs($person);
         $photoMock = $this->setupPhotoStatus('approved', $person);
 
@@ -1135,7 +1135,7 @@ class PersonScheduleControllerTest extends TestCase
         $photoMock = $this->setupPhotoStatus('approved');
         $mrMock = $this->mockOnlineTrainingPass(true);
 
-        $shift = factory(Slot::class)->create(
+        $shift = Slot::factory()->create(
             [
                 'begins' => (string)now(),
                 'ends' => (string)now()->addHours(6),
@@ -1147,7 +1147,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $this->user->id,
             'slot_id' => $shift->id
         ]);

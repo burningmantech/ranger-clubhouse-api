@@ -36,7 +36,7 @@ class SurveyControllerTest extends TestCase
     public function testIndexSurvey()
     {
         $year = 2018;
-        factory(Survey::class)->create(['year' => $year]);
+        Survey::factory()->create(['year' => $year]);
 
         $response = $this->json('GET', 'survey', ['year' => $year]);
         $response->assertStatus(200);
@@ -71,7 +71,7 @@ class SurveyControllerTest extends TestCase
 
     public function testUpdateSurvey()
     {
-        $survey = factory(Survey::class)->create();
+        $survey = Survey::factory()->create();
 
         $response = $this->json('PATCH', "survey/{$survey->id}", [
             'survey' => ['epilogue' => 'epilogue your behind']
@@ -87,7 +87,7 @@ class SurveyControllerTest extends TestCase
 
     public function testDeleteSurvey()
     {
-        $survey = factory(Survey::class)->create();
+        $survey = Survey::factory()->create();
         $surveyId = $survey->id;
 
         $response = $this->json('DELETE', "survey/{$surveyId}");
@@ -104,9 +104,9 @@ class SurveyControllerTest extends TestCase
     {
         $year = 2018;
         $currentYear = current_year();
-        $origSurvey = factory(Survey::class)->create(['year' => $year, 'title' => "$year Survey Title"]);
-        $origGroup = factory(SurveyGroup::class)->create(['survey_id' => $origSurvey->id]);
-        $origQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $origSurvey->id, 'survey_group_id' => $origGroup->id]);
+        $origSurvey = Survey::factory()->create(['year' => $year, 'title' => "$year Survey Title"]);
+        $origGroup = SurveyGroup::factory()->create(['survey_id' => $origSurvey->id]);
+        $origQuestion = SurveyQuestion::factory()->create(['survey_id' => $origSurvey->id, 'survey_group_id' => $origGroup->id]);
 
         $response = $this->json('POST', "survey/{$origSurvey->id}/duplicate");
         $response->assertStatus(200);
@@ -215,33 +215,33 @@ class SurveyControllerTest extends TestCase
     {
         $this->year = current_year();
 
-        $this->trainer = factory(Person::class)->create();
+        $this->trainer = Person::factory()->create();
 
-        $this->survey = factory(Survey::class)->create(['year' => $this->year, 'position_id' => Position::TRAINING]);
+        $this->survey = Survey::factory()->create(['year' => $this->year, 'position_id' => Position::TRAINING]);
         $surveyId = $this->survey->id;
 
-        $this->venueGroup = factory(SurveyGroup::class)->create(['survey_id' => $surveyId, 'sort_index' => 1]);
-        $this->venueQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $surveyId, 'survey_group_id' => $this->venueGroup->id]);
+        $this->venueGroup = SurveyGroup::factory()->create(['survey_id' => $surveyId, 'sort_index' => 1]);
+        $this->venueQuestion = SurveyQuestion::factory()->create(['survey_id' => $surveyId, 'survey_group_id' => $this->venueGroup->id]);
 
-        $this->trainerGroup = factory(SurveyGroup::class)->create(['survey_id' => $surveyId, 'is_trainer_group' => true, 'sort_index' => 2]);
-        $this->trainerQuestion = factory(SurveyQuestion::class)->create(['survey_id' => $surveyId, 'survey_group_id' => $this->trainerGroup->id]);
+        $this->trainerGroup = SurveyGroup::factory()->create(['survey_id' => $surveyId, 'is_trainer_group' => true, 'sort_index' => 2]);
+        $this->trainerQuestion = SurveyQuestion::factory()->create(['survey_id' => $surveyId, 'survey_group_id' => $this->trainerGroup->id]);
 
-        $this->slot = factory(Slot::class)->create([
+        $this->slot = Slot::factory()->create([
             'description' => 'Venue 1',
             'position_id' => Position::TRAINING,
             'begins' => "{$this->year}-01-01 00:00",
             'ends' => "{$this->year}-01-01 00:01"
         ]);
-        factory(PersonSlot::class)->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id]);
-        factory(TraineeStatus::class)->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id, 'passed' => true]);
-        $this->trainerSlot = factory(Slot::class)->create([
+        PersonSlot::factory()->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id]);
+        TraineeStatus::factory()->create(['person_id' => $this->user->id, 'slot_id' => $this->slot->id, 'passed' => true]);
+        $this->trainerSlot = Slot::factory()->create([
             'description' => 'Venue 1',
             'position_id' => Position::TRAINER,
             'begins' => "{$this->year}-01-01 00:00",
             'ends' => "{$this->year}-01-01 00:01"
         ]);
-        factory(PersonSlot::class)->create(['person_id' => $this->trainer->id, 'slot_id' => $this->trainerSlot->id]);
-        factory(TrainerStatus::class)->create([
+        PersonSlot::factory()->create(['person_id' => $this->trainer->id, 'slot_id' => $this->trainerSlot->id]);
+        TrainerStatus::factory()->create([
             'person_id' => $this->trainer->id,
             'slot_id' => $this->slot->id,
             'trainer_slot_id' => $this->trainerSlot->id,
@@ -250,7 +250,7 @@ class SurveyControllerTest extends TestCase
     }
 
     private function buildTrainerResponses() {
-        $this->trainerAnswer = factory(SurveyAnswer::class)->create([
+        $this->trainerAnswer = SurveyAnswer::factory()->create([
             'id'
         ]);
     }

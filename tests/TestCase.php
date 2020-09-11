@@ -30,7 +30,7 @@ abstract class TestCase extends BaseTestCase
 
     public function createUser()
     {
-        $this->user = factory(Person::class)->create();
+        $this->user = Person::factory()->create();
         if (!$this->user->id) {
             throw new \RuntimeException("Failed to create signed in user.".json_encode($this->user->getErrors()));
         }
@@ -78,7 +78,7 @@ abstract class TestCase extends BaseTestCase
         }
 
         foreach ($positions as $p) {
-            factory(PersonPosition::class)->create(
+            PersonPosition::factory()->create(
                 [
                     'person_id'   => $user->id,
                     'position_id' => $p,

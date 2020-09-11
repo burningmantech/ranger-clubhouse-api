@@ -30,7 +30,7 @@ class SlotControllerTest extends TestCase
         $year = $this->year = date('Y');
 
         // Setup default (real world) positions
-        $this->trainingPosition = factory(Position::class)->create(
+        $this->trainingPosition = Position::factory()->create(
             [
                 'id'    => Position::TRAINING,
                 'title' => 'Training',
@@ -41,7 +41,7 @@ class SlotControllerTest extends TestCase
         $this->trainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day                   = (25 + $i);
-            $this->trainingSlots[] = factory(Slot::class)->create(
+            $this->trainingSlots[] = Slot::factory()->create(
                 [
                     'begins'      => date("$year-05-$day 09:45:00"),
                     'ends'        => date("$year-05-$day 17:45:00"),
@@ -54,7 +54,7 @@ class SlotControllerTest extends TestCase
             );
         }
 
-        factory(EventDate::class)->create([
+        EventDate::factory()->create([
             'event_start'   => '2019-08-25 00:00:00',
             'event_end'     => '2019-09-02 23:59:00',
             'pre_event_start' => '2019-01-01 00:00:00',
@@ -264,9 +264,9 @@ class SlotControllerTest extends TestCase
     {
         $slotId = $this->trainingSlots[0]->id;
 
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
              'person_id'    => $person->id,
              'slot_id'      => $slotId,
          ]);
@@ -299,7 +299,7 @@ class SlotControllerTest extends TestCase
 
             // No workers on the first day
             if ($i == 0) {
-                $shift = factory(Slot::class)->create(
+                $shift = Slot::factory()->create(
                     [
                         'begins'      => $begins,
                         'ends'        => $ends,
@@ -315,7 +315,7 @@ class SlotControllerTest extends TestCase
 
             // No short on the second day
             if ($i != 1) {
-                $shift = factory(Slot::class)->create(
+                $shift = Slot::factory()->create(
                     [
                         'begins'      => $begins,
                         'ends'        => $ends,
@@ -330,7 +330,7 @@ class SlotControllerTest extends TestCase
 
             // No lead on the third day
             if ($i != 2) {
-                $shift = factory(Slot::class)->create(
+                $shift = Slot::factory()->create(
                     [
                         'begins'      => $begins,
                         'ends'        => $ends,
@@ -346,7 +346,7 @@ class SlotControllerTest extends TestCase
             // Add some sign ups
             $people = ($i + 1) * 4;
 
-            $dirt = factory(Slot::class)->create(
+            $dirt = Slot::factory()->create(
                 [
                     'begins'      => $begins,
                     'ends'        => $ends,
@@ -438,25 +438,25 @@ class SlotControllerTest extends TestCase
         $this->addRole(Role::MANAGE);
 
         $year = date('Y');
-        $person = factory(Person::class)->create();
-        $position = factory(Position::class)->create([
+        $person = Person::factory()->create();
+        $position = Position::factory()->create([
             'id'    => Position::DIRT_GREEN_DOT,
             'title' => 'Dirt - Green Dot'
         ]);
 
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
             'begins'      => date("$year-m-d 10:00:00"),
             'ends'        => date("$year-m-d 11:00:00"),
             'max'         => 10,
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $person->id,
             'slot_id'   => $slot->id
         ]);
 
-        $emptySlot = factory(Slot::class)->create([
+        $emptySlot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
             'begins'      => date("$year-m-d 13:00:00"),
             'ends'        => date("$year-m-d 14:00:00"),
@@ -504,20 +504,20 @@ class SlotControllerTest extends TestCase
         $this->addRole(Role::MANAGE);
 
         $year = date('Y');
-        $person = factory(Person::class)->create();
-        $position = factory(Position::class)->create([
+        $person = Person::factory()->create();
+        $position = Position::factory()->create([
             'id'    => Position::DIRT_GREEN_DOT,
             'title' => 'Dirt - Green Dot'
         ]);
 
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
             'begins'      => date("$year-m-d 10:00:00"),
             'ends'        => date("$year-m-d 11:00:00"),
             'max'         => 10,
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $person->id,
             'slot_id'   => $slot->id
         ]);

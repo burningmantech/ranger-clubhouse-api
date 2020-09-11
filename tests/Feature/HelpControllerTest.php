@@ -26,7 +26,7 @@ class HelpControllerTest extends TestCase
 
     public function testIndexHelp()
     {
-        factory(Help::class)->create();
+        Help::factory()->create();
 
         $response = $this->json('GET', 'help');
         $response->assertStatus(200);
@@ -61,7 +61,7 @@ class HelpControllerTest extends TestCase
     public function testUpdateHelp()
     {
         $this->addRole(Role::ADMIN);
-        $help = factory(Help::class)->create();
+        $help = Help::factory()->create();
 
         $response = $this->json('PATCH', "help/{$help->id}", [
             'help' => [ 'slug' => 'slugger-the-slug' ]
@@ -78,7 +78,7 @@ class HelpControllerTest extends TestCase
     public function testDeleteHelp()
     {
         $this->addRole(Role::ADMIN);
-        $help = factory(Help::class)->create();
+        $help = Help::factory()->create();
         $helpId = $help->id;
 
         $response = $this->json('DELETE', "help/{$helpId}");

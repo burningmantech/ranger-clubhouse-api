@@ -6,6 +6,7 @@ use App\Models\ActionLog;
 use App\Models\Person;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\MessageBag;
@@ -30,6 +31,7 @@ use RuntimeException;
  */
 abstract class ApiModel extends Model
 {
+    use HasFactory;
 
     /**
      * Don't use created_at/updated_at.

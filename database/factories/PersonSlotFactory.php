@@ -1,10 +1,20 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\PersonSlot;
 
-$factory->define(PersonSlot::class, function (Faker $faker) {
-    return [
+
+class PersonSlotFactory extends Factory
+{
+    protected $model = PersonSlot::class;
+
+    public function definition()
+    {
+return [
         //
     ];
-});
+}
+}

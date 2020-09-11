@@ -71,7 +71,7 @@ class BulkUploadControllerTest extends TestCase
 
     public function testUpdatePersonStatusWithoutCommit()
     {
-        $person = factory(Person::class)->create([
+        $person = Person::factory()->create([
             'status'    => 'prospective'
         ]);
 
@@ -98,7 +98,7 @@ class BulkUploadControllerTest extends TestCase
 
     public function testUpdatePersonStatusWithCommit()
     {
-        $person = factory(Person::class)->create([
+        $person = Person::factory()->create([
             'status'    => 'prospective'
         ]);
 
@@ -131,11 +131,11 @@ class BulkUploadControllerTest extends TestCase
 
     public function testUpdatePersonStatusAlphaToActive()
     {
-        $person = factory(Person::class)->create([
+        $person = Person::factory()->create([
             'status'    => 'alpha'
         ]);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::ALPHA
         ]);
@@ -170,8 +170,8 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonEventColumnWithoutCommit()
     {
         $year = current_year();
-        $person = factory(Person::class)->create([]);
-        $personEvent = factory(PersonEvent::class)->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
+        $person = Person::factory()->create([]);
+        $personEvent = PersonEvent::factory()->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
             'action'    => 'org_vehicle_insurance',
@@ -196,8 +196,8 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonEventColumnWithCommit()
     {
         $year = current_year();
-        $person = factory(Person::class)->create([]);
-        $personEvent = factory(PersonEvent::class)->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
+        $person = Person::factory()->create([]);
+        $personEvent = PersonEvent::factory()->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
             'action'    => 'org_vehicle_insurance',
@@ -284,7 +284,7 @@ class BulkUploadControllerTest extends TestCase
     {
         $callsign = $this->user->callsign;
 
-        factory(Bmid::class)->create([
+        Bmid::factory()->create([
             'person_id' => $this->user->id,
             'year'      => date('Y'),
             'showers'   => 1,
@@ -375,7 +375,7 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $year = date('Y');
 
-        factory(Bmid::class)->create([
+        Bmid::factory()->create([
             'person_id' => $this->user->id,
             'year'      => $year,
             'meals'     => 'pre+event'
@@ -410,7 +410,7 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $year = date('Y');
 
-        factory(Bmid::class)->create([
+        Bmid::factory()->create([
             'person_id' => $this->user->id,
             'year'      => $year,
             'status'    => 'ready_to_print'
@@ -549,7 +549,7 @@ class BulkUploadControllerTest extends TestCase
 
         $this->setting('TAS_WAPDateRange', '3-28');
 
-        factory(AccessDocument::class)->create([
+        AccessDocument::factory()->create([
             'person_id' => $personId,
             'type'      => 'work_access_pass',
         ]);

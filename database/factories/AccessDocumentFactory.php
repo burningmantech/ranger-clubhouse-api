@@ -1,10 +1,19 @@
 <?php
 
-use Faker\Generator as Faker;
-use App\Models\AccessDocument;
+namespace Database\Factories;
 
-$factory->define(AccessDocument::class, function (Faker $faker) {
-    return [
-        'create_date' => date('Y-m-d H:i:s'),
-    ];
-});
+use App\Models\AccessDocument;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+
+class AccessDocumentFactory extends Factory
+{
+    protected $model = AccessDocument::class;
+
+    public function definition()
+    {
+        return [
+            'create_date' => date('Y-m-d H:i:s'),
+        ];
+    }
+}

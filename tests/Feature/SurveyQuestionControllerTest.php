@@ -28,9 +28,9 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testIndexSurveyQuestion()
     {
-        $survey = factory(Survey::class)->create();
-        $surveyGroup = factory(SurveyGroup::class)->create(['survey_id' => $survey->id]);
-        $surveyQuestion = factory(SurveyQuestion::class)->create([
+        $survey = Survey::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
         ]);
@@ -53,8 +53,8 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testCreateSurveyQuestion()
     {
-        $survey = factory(Survey::class)->create();
-        $surveyGroup = factory(SurveyGroup::class)->create(['survey_id' => $survey->id]);
+        $survey = Survey::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
 
         $data = [
             'survey_id' => $survey->id,
@@ -81,9 +81,9 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testUpdateSurveyQuestion()
     {
-        $survey = factory(Survey::class)->create();
-        $surveyGroup = factory(SurveyGroup::class)->create(['survey_id' => $survey->id]);
-        $surveyQuestion = factory(SurveyQuestion::class)->create([
+        $survey = Survey::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
 
@@ -103,9 +103,9 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testDeleteSurveyQuestion()
     {
-        $survey = factory(Survey::class)->create();
-        $surveyGroup = factory(SurveyGroup::class)->create(['survey_id' => $survey->id]);
-        $surveyQuestion = factory(SurveyQuestion::class)->create([
+        $survey = Survey::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
 

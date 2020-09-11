@@ -45,7 +45,7 @@ class AuthControllerTest extends TestCase
 
     public function testSuspendedPerson()
     {
-        $user = factory(\App\Models\Person::class)->create([ 'status' => 'suspended']);
+        $user =Person::factory()->create([ 'status' => 'suspended']);
 
         $response = $this->json(
             'POST', 'auth/login',
@@ -63,7 +63,7 @@ class AuthControllerTest extends TestCase
 
     public function testWrongPassword()
     {
-        $user = factory(\App\Models\Person::class)->create();
+        $user =Person::factory()->create();
 
         $response = $this->json(
             'POST', 'auth/login',
@@ -80,7 +80,7 @@ class AuthControllerTest extends TestCase
 
     public function testResetPassword()
     {
-        $user = factory(\App\Models\Person::class)->create();
+        $user =Person::factory()->create();
 
         Mail::fake();
 
@@ -106,7 +106,7 @@ class AuthControllerTest extends TestCase
 
     public function testResetPasswordForUnknownUser()
     {
-        $user = factory(\App\Models\Person::class)->create();
+        $user =Person::factory()->create();
 
         Mail::fake();
 
@@ -126,7 +126,7 @@ class AuthControllerTest extends TestCase
 
     public function testResetPasswordForDisabledUser()
     {
-        $user = factory(\App\Models\Person::class)->create([ 'status' => Person::SUSPENDED ]);
+        $user =Person::factory()->create([ 'status' => Person::SUSPENDED ]);
 
         Mail::fake();
 

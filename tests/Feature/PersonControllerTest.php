@@ -79,8 +79,8 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $auditor = factory(Person::class)->create(['status' => 'auditor']);
-        $prospective = factory(Person::class)->create(['status' => 'prospective']);
+        $auditor = Person::factory()->create(['status' => 'auditor']);
+        $prospective = Person::factory()->create(['status' => 'prospective']);
 
         $response = $this->actingAs($this->user)->json(
             'GET',
@@ -116,7 +116,7 @@ class PersonControllerTest extends TestCase
     public function testShowForAdmin()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
@@ -143,7 +143,7 @@ class PersonControllerTest extends TestCase
 
     public function testShowOtherFail()
     {
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(403);
     }
@@ -247,7 +247,7 @@ class PersonControllerTest extends TestCase
         public function testChangeCallsignApprovalFailure()
         {
             $this->addRole(Role::ADMIN);
-            $person = factory(Person::class)->create();
+            $person = Person::factory()->create();
 
             $personId = $person->id;
             $response = $this->putPerson($person, [ 'callsign_approved' => false ]);
@@ -272,7 +272,7 @@ class PersonControllerTest extends TestCase
     public function testCallsignApprovalSuccess()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create(['status' => 'alpha', 'callsign_approved' => false]);
+        $person = Person::factory()->create(['status' => 'alpha', 'callsign_approved' => false]);
 
         $personId = $person->id;
         $response = $this->putPerson($person, ['callsign_approved' => true]);
@@ -295,7 +295,7 @@ class PersonControllerTest extends TestCase
     public function testPastProspectiveStatus()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
         $oldCallsign = $person->callsign;
         $personId = $person->id;
@@ -321,7 +321,7 @@ class PersonControllerTest extends TestCase
     public function testUpdateFormerlyKnownAsWhenCallsignChanges()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
         $oldCallsign = $person->callsign;
         $response = $this->putPerson($person, ['callsign' => 'Irregular Apocalypse']);
@@ -343,7 +343,7 @@ class PersonControllerTest extends TestCase
 
     public function testAlertVCAboutEmailChange()
     {
-        $person = factory(Person::class)->create(['status' => Person::PROSPECTIVE]);
+        $person = Person::factory()->create(['status' => Person::PROSPECTIVE]);
         $this->actingAs($person); // login
 
         Mail::fake();
@@ -372,7 +372,7 @@ class PersonControllerTest extends TestCase
     public function testPersonDelete()
     {
         $this->addRole(Role::ADMIN);
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
 
         $response = $this->json('DELETE', "person/{$person->id}");
         $response->assertStatus(204);
@@ -485,8 +485,8 @@ class PersonControllerTest extends TestCase
     public function testPersonPositionsSuccess()
     {
         for ($i = 0; $i < 3; $i++) {
-            $position = factory(Position::class)->create();
-            factory(PersonPosition::class)->create(
+            $position = Position::factory()->create();
+            PersonPosition::factory()->create(
                 [
                     'person_id' => $this->user->id,
                     'position_id' => $position->id,
@@ -510,9 +510,9 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        factory(Position::class)->create(['id' => Position::DIRT, 'title' => 'Dirt']);
+        Position::factory()->create(['id' => Position::DIRT, 'title' => 'Dirt']);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::DIRT
         ]);
@@ -540,28 +540,28 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        factory(Position::class)->create(['id' => Position::DIRT, 'title' => 'Dirt']);
-        factory(PersonPosition::class)->create([
+        Position::factory()->create(['id' => Position::DIRT, 'title' => 'Dirt']);
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::DIRT
         ]);
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::TRAINING
         ]);
 
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'begins' => date('Y-08-25 10:00:00'),
             'ends' => date('Y-08-25 11:00:00'),
             'position_id' => Position::TRAINING
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $personId,
             'slot_id' => $slot->id
         ]);
 
-        factory(TraineeStatus::class)->create([
+        TraineeStatus::factory()->create([
             'person_id' => $personId,
             'slot_id' => $slot->id,
             'passed' => true
@@ -571,50 +571,50 @@ class PersonControllerTest extends TestCase
          * Setup a person to be a Green Dot Trainer who taught a session
          */
 
-        factory(Position::class)->create([
+        Position::factory()->create([
             'id' => Position::DIRT_GREEN_DOT,
             'title' => 'Dirt - Green Dot',
             'training_position_id' => Position::GREEN_DOT_TRAINING,
         ]);
 
-        factory(Position::class)->create([
+        Position::factory()->create([
             'id' => Position::GREEN_DOT_TRAINING,
             'title' => 'Green Dot Training',
         ]);
 
-        factory(Position::class)->create([
+        Position::factory()->create([
             'id' => Position::GREEN_DOT_TRAINER,
             'title' => 'Green Dot Trainer',
         ]);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::DIRT_GREEN_DOT
         ]);
 
-        factory(PersonPosition::class)->create([
+        PersonPosition::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::GREEN_DOT_TRAINER
         ]);
 
-        $trainerSlot = factory(Slot::class)->create([
+        $trainerSlot = Slot::factory()->create([
             'begins' => date('Y-08-26 10:00:00'),
             'ends' => date('Y-08-26 11:00:00'),
             'position_id' => Position::GREEN_DOT_TRAINER
         ]);
 
-        $traineeSlot = factory(Slot::class)->create([
+        $traineeSlot = Slot::factory()->create([
             'begins' => date('Y-08-26 10:00:00'),
             'ends' => date('Y-08-26 11:00:00'),
             'position_id' => Position::GREEN_DOT_TRAINING
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $personId,
             'slot_id' => $trainerSlot->id
         ]);
 
-        factory(TrainerStatus::class)->create([
+        TrainerStatus::factory()->create([
             'person_id' => $personId,
             'slot_id' => $traineeSlot->id,
             'trainer_slot_id' => $trainerSlot->id,
@@ -644,23 +644,23 @@ class PersonControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $personId = $this->user->id;
 
-        $keepPosition = factory(Position::class)->create();
-        factory(PersonPosition::class)->create(
+        $keepPosition = Position::factory()->create();
+        PersonPosition::factory()->create(
             [
                 'person_id' => $personId,
                 'position_id' => $keepPosition->id,
             ]
         );
 
-        $oldPosition = factory(Position::class)->create();
-        factory(PersonPosition::class)->create(
+        $oldPosition = Position::factory()->create();
+        PersonPosition::factory()->create(
             [
                 'person_id' => $personId,
                 'position_id' => $oldPosition->id,
             ]
         );
 
-        $newPosition = factory(Position::class)->create();
+        $newPosition = Position::factory()->create();
 
         $response = $this->json(
             'POST',
@@ -707,8 +707,8 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
 
-        $role = factory(Role::class)->create();
-        $personRole = factory(PersonRole::class)->create(
+        $role = Role::factory()->create();
+        $personRole = PersonRole::factory()->create(
             [
                 'role_id' => $role->id,
                 'person_id' => $personId,
@@ -740,23 +740,23 @@ class PersonControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $personId = $this->user->id;
 
-        $keepRole = factory(Role::class)->create();
-        factory(PersonRole::class)->create(
+        $keepRole = Role::factory()->create();
+        PersonRole::factory()->create(
             [
                 'person_id' => $personId,
                 'role_id' => $keepRole->id,
             ]
         );
 
-        $oldRole = factory(Role::class)->create();
-        factory(PersonRole::class)->create(
+        $oldRole = Role::factory()->create();
+        PersonRole::factory()->create(
             [
                 'person_id' => $personId,
                 'role_id' => $oldRole->id,
             ]
         );
 
-        $newRole = factory(Role::class)->create();
+        $newRole = Role::factory()->create();
 
         $response = $this->json(
             'POST',
@@ -805,7 +805,7 @@ class PersonControllerTest extends TestCase
         $personId = $this->user->id;
 
         for ($i = 0; $i < 3; $i++) {
-            $p = factory(Timesheet::class)->create(
+            $p = Timesheet::factory()->create(
                 [
                     'person_id' => $personId,
                     'on_duty' => date("201$i-08-25 16:00:00"),
@@ -815,7 +815,7 @@ class PersonControllerTest extends TestCase
             );
         }
 
-        $p = factory(Timesheet::class)->create([
+        $p = Timesheet::factory()->create([
             'person_id' => $personId,
             'position_id' => Position::ALPHA,
             'on_duty' => date("2009-08-25 16:00:00"),
@@ -853,7 +853,7 @@ class PersonControllerTest extends TestCase
     public function testUnreadMessageCountSuccess()
     {
         for ($i = 0; $i < 3; $i++) {
-          $m = factory(PersonMessage::class)->create(
+          $m = PersonMessage::factory()->create(
                 [
                     'recipient_callsign' => $this->user->callsign,
                 ]
@@ -873,7 +873,7 @@ class PersonControllerTest extends TestCase
     public function testUserInfoForTeacherSuccess()
     {
         $this->addRole([Role::TRAINER, Role::MENTOR, Role::ART_TRAINER]);
-        factory(PersonMentor::class)->create(
+        PersonMentor::factory()->create(
             [
                 'mentor_id' => $this->user->id,
                 'person_id' => 1,
@@ -932,8 +932,8 @@ class PersonControllerTest extends TestCase
         $endTime = date('Y-m-d 12:00:00');
         $year = date('Y');
 
-        $position = factory(Position::class)->create();
-        factory(PositionCredit::class)->create(
+        $position = Position::factory()->create();
+        PositionCredit::factory()->create(
             [
                 'position_id' => $position->id,
                 'start_time' => $startTime,
@@ -942,7 +942,7 @@ class PersonControllerTest extends TestCase
             ]
         );
 
-        factory(Timesheet::class)->create(
+        Timesheet::factory()->create(
             [
                 'person_id' => $personId,
                 'on_duty' => $startTime,
@@ -963,9 +963,9 @@ class PersonControllerTest extends TestCase
 
     public function testMenteesSuccess()
     {
-        $mentee = factory(Person::class)->create();
+        $mentee = Person::factory()->create();
         $year = date('Y');
-        factory(PersonMentor::class)->create(
+        PersonMentor::factory()->create(
             [
                 'person_id' => $mentee->id,
                 'mentor_id' => $this->user->id,
@@ -986,9 +986,9 @@ class PersonControllerTest extends TestCase
 
     public function testMenteeMentorsSuccess()
     {
-        $mentor = factory(Person::class)->create();
+        $mentor = Person::factory()->create();
         $year = date('Y');
-        factory(PersonMentor::class)->create(
+        PersonMentor::factory()->create(
             [
                 'person_id' => $this->user->id,
                 'mentor_id' => $mentor->id,
@@ -1123,30 +1123,30 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
 
-        $personUS = factory(Person::class)->create([
+        $personUS = Person::factory()->create([
             'country' => 'US'
         ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $personUS->id,
             'on_duty' => date('Y-m-d 10:00:00'),
             'off_duty' => date('Y-m-d 11:00:00'),
             'position_id' => Position::DIRT
         ]);
 
-        $slot = factory(Slot::class)->create([
+        $slot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
             'begins' => date('Y-m-d 13:00:00'),
             'ends' => date('Y-m-d 14:00:00'),
             'max' => 10
         ]);
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'person_id' => $personUS->id,
             'slot_id' => $slot->id,
         ]);
 
-        $personCA = factory(Person::class)->create([
+        $personCA = Person::factory()->create([
             'country' => 'CA'
         ]);
 
@@ -1187,19 +1187,19 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::MANAGE);
 
-        $adminRole = factory(Role::class)->create([
+        $adminRole = Role::factory()->create([
             'id' => Role::ADMIN,
             'title' => 'Admin',
         ]);
 
-        $manageRole = factory(Role::class)->create([
+        $manageRole = Role::factory()->create([
             'id' => Role::MANAGE,
             'title' => 'Manage'
         ]);
 
-        $adminPerson = factory(Person::class)->create();
+        $adminPerson = Person::factory()->create();
 
-        factory(PersonRole::class)->create([
+        PersonRole::factory()->create([
             'person_id' => $adminPerson->id,
             'role_id' => Role::ADMIN
         ]);
@@ -1241,8 +1241,8 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::MANAGE);
 
-        $deceased = factory(Person::class)->create(['status' => 'deceased']);
-        $inactive = factory(Person::class)->create(['status' => 'inactive']);
+        $deceased = Person::factory()->create(['status' => 'deceased']);
+        $inactive = Person::factory()->create(['status' => 'inactive']);
         $response = $this->json('GET', 'person/by-status');
         $response->assertStatus(200);
 
@@ -1287,14 +1287,14 @@ class PersonControllerTest extends TestCase
     {
         $this->addRole(Role::MANAGE);
 
-        $personEnglish = factory(Person::class)->create(['on_site' => 1]);
-        factory(PersonLanguage::class)->create([
+        $personEnglish = Person::factory()->create(['on_site' => 1]);
+        PersonLanguage::factory()->create([
             'person_id' => $personEnglish->id,
             'language_name' => 'English'
         ]);
 
-        $personFrench = factory(Person::class)->create(['on_site' => 1]);
-        factory(PersonLanguage::class)->create([
+        $personFrench = Person::factory()->create(['on_site' => 1]);
+        PersonLanguage::factory()->create([
             'person_id' => $personFrench->id,
             'language_name' => 'French'
         ]);
@@ -1336,7 +1336,7 @@ class PersonControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         // Create a current timesheet so test account does not appear in any list.
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $this->user->id,
             'position_id' => Position::DIRT,
             'on_duty' => date('Y-01-01 10:00:00'),
@@ -1346,12 +1346,12 @@ class PersonControllerTest extends TestCase
         $year = date('Y');
 
         // Inactive recommendation - an active account who has not worked in the last 3 years but may have worked in the last 5.
-        $inactive = factory(Person::class)->create([
+        $inactive = Person::factory()->create([
             'status' => Person::ACTIVE
         ]);
 
         $inactiveYear = $year - 5;
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $inactive->id,
             'position_id' => Position::DIRT,
             'on_duty' => date("$inactiveYear-09-01 10:00:00"),
@@ -1359,12 +1359,12 @@ class PersonControllerTest extends TestCase
         ]);
 
         // Retirement recommendation - an inactive account who has not worked in the last 5 years.
-        $retired = factory(Person::class)->create([
+        $retired = Person::factory()->create([
             'status' => Person::INACTIVE
         ]);
 
         $retiredYear = $year - 6;
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $retired->id,
             'position_id' => Position::DIRT,
             'on_duty' => date("$retiredYear-09-01 10:00:00"),
@@ -1372,11 +1372,11 @@ class PersonControllerTest extends TestCase
         ]);
 
         // Active recommendation - an inactive account that worked this last year.
-        $active = factory(Person::class)->create([
+        $active = Person::factory()->create([
             'status' => Person::INACTIVE
         ]);
 
-        factory(Timesheet::class)->create([
+        Timesheet::factory()->create([
             'person_id' => $active->id,
             'position_id' => Position::DIRT,
             'on_duty' => date('Y-09-01 10:00:00'),
@@ -1384,13 +1384,13 @@ class PersonControllerTest extends TestCase
         ]);
 
         // Past Prospective recommendation - any bonked, alpha, prospective account
-        $pastProspective = factory(Person::class)->create([
+        $pastProspective = Person::factory()->create([
             'status' => 'prospective'
         ]);
 
-        $vintage = factory(Person::class)->create();
+        $vintage = Person::factory()->create();
         for ($workYear = $year - 10; $workYear <= $year; $workYear++) {
-            factory(Timesheet::class)->create([
+            Timesheet::factory()->create([
                 'person_id' => $vintage->id,
                 'position_id' => Position::DIRT,
                 'on_duty' => date("$workYear-01-01 10:00:00"),

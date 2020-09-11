@@ -1,9 +1,19 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 use App\Models\Timesheet;
 
-$factory->define(Timesheet::class, function (Faker $faker) {
-    return [
+
+class TimesheetFactory extends Factory
+{
+    protected $model = Timesheet::class;
+
+    public function definition()
+    {
+return [
     ];
-});
+}
+}

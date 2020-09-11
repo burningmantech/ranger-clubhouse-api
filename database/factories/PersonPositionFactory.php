@@ -1,11 +1,20 @@
 <?php
 
-use Faker\Generator as Faker;
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 use App\Models\PersonPosition;
 
-$factory->define(PersonPosition::class, function (Faker $faker) {
-    return [
+
+class PersonPositionFactory extends Factory
+{
+    protected $model = PersonPosition::class;
+
+    public function definition()
+    {
+return [
         //
     ];
-});
+}
+}

@@ -1,12 +1,19 @@
 <?php
 
-/** @var \Illuminate\Database\Eloquent\Factory $factory */
+namespace Database\Factories;
 
 use App\Models\PersonEvent;
-use Faker\Generator as Faker;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
-$factory->define(PersonEvent::class, function (Faker $faker) {
-    return [
-        'year' => current_year(),
-    ];
-});
+
+class PersonEventFactory extends Factory
+{
+    protected $model = PersonEvent::class;
+
+    public function definition()
+    {
+        return [
+            'year' => current_year(),
+        ];
+    }
+}

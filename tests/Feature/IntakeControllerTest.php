@@ -44,13 +44,13 @@ class IntakeControllerTest extends TestCase
     {
         $this->addRole(Role::INTAKE);
 
-        $personLastYear = factory(Person::class)->create(['status' => Person::ACTIVE]);
-        $personThisYear = factory(Person::class)->create(['status' => Person::ACTIVE]);
+        $personLastYear = Person::factory()->create(['status' => Person::ACTIVE]);
+        $personThisYear = Person::factory()->create(['status' => Person::ACTIVE]);
 
         $year = $this->year - 1;
 
         // Should pick up this person - was a PNV in the requested year.
-        factory(PersonStatus::class)->create([
+        PersonStatus::factory()->create([
             'person_id' => $personLastYear->id,
             'old_status' => Person::AUDITOR,
             'new_status' => Person::ALPHA,
@@ -58,14 +58,14 @@ class IntakeControllerTest extends TestCase
             'created_at' => "$year-01-01 00:00:00",
         ]);
 
-        factory(PersonIntake::class)->create([
+        PersonIntake::factory()->create([
             'person_id' => $personLastYear->id,
             'mentor_rank' => Intake::BELOW_AVERAGE,
             'year' => $year,
         ]);
 
         // Should not pick up this person.. wasn't a PNV in the current year.
-        factory(PersonStatus::class)->create([
+        PersonStatus::factory()->create([
             'person_id' => $personThisYear->id,
             'old_status' => Person::AUDITOR,
             'new_status' => Person::ALPHA,
@@ -73,7 +73,7 @@ class IntakeControllerTest extends TestCase
             'created_at' => "{$this->year}-01-01 00:00:00",
         ]);
 
-        factory(PersonIntake::class)->create([
+        PersonIntake::factory()->create([
             'person_id' => $personThisYear->id,
             'mentor_rank' => Intake::BELOW_AVERAGE,
             'year' => $this->year,
@@ -99,15 +99,15 @@ class IntakeControllerTest extends TestCase
         $this->addRole(Role::INTAKE);
         $year = $this->year;
 
-        $person = factory(Person::class)->create(['status' => Person::ACTIVE]);
+        $person = Person::factory()->create(['status' => Person::ACTIVE]);
 
-        factory(PersonIntake::class)->create([
+        PersonIntake::factory()->create([
             'person_id' => $person->id,
             'mentor_rank' => Intake::BELOW_AVERAGE,
             'year' => $year,
         ]);
 
-        $training = factory(Slot::class)->create(
+        $training = Slot::factory()->create(
             [
                 'begins' => date("$year-01-01 09:45:00"),
                 'ends' => date("$year-01-01 17:45:00"),
@@ -119,21 +119,21 @@ class IntakeControllerTest extends TestCase
             ]
         );
 
-        factory(PersonSlot::class)->create([
+        PersonSlot::factory()->create([
             'slot_id' => $training->id,
             'person_id' => $person->id
 
         ]);
 
-        factory(TraineeStatus::class)->create([
+        TraineeStatus::factory()->create([
             'slot_id' => $training->id,
             'person_id' => $person->id,
             'passed' => true,
             'rank' => Intake::ABOVE_AVERAGE
         ]);
 
-        $mentor = factory(Person::class)->create();
-        factory(PersonMentor::class)->create([
+        $mentor = Person::factory()->create();
+        PersonMentor::factory()->create([
             'person_id' => $person->id,
             'mentor_id' => $mentor->id,
             'mentor_year' => $year,
@@ -174,7 +174,7 @@ class IntakeControllerTest extends TestCase
     {
         $this->addRole(Role::INTAKE);
 
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $year = $this->year;
         $note = 'Prospectiveses brings us tasty, tasty treats, my precious!';
 

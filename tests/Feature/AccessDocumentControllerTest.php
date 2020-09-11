@@ -30,7 +30,7 @@ class AccessDocumentControllerTest extends TestCase
 
     private function createAccessDocument()
     {
-        return factory(AccessDocument::class)->create([
+        return AccessDocument::factory()->create([
             'type'        => 'staff_credential',
             'status'      => 'qualified',
             'person_id'   => $this->user->id,
@@ -187,7 +187,7 @@ class AccessDocumentControllerTest extends TestCase
 
         $lastYear = date('Y') - 1;
 
-        $expiring = factory(AccessDocument::class)->create([
+        $expiring = AccessDocument::factory()->create([
              'person_id'   => $this->user->id,
              'type'        => 'staff_credential',
              'status'      => 'qualified',
@@ -240,8 +240,8 @@ class AccessDocumentControllerTest extends TestCase
         $this->setting('TAS_DefaultWAPDate', date('Y-08-20'));
 
         $year = date('Y') - 2;
-        $active = factory(Person::class)->create([ 'callsign' => 'A' ]);
-        $timesheet = factory(Timesheet::class)->create([
+        $active = Person::factory()->create([ 'callsign' => 'A' ]);
+        $timesheet = Timesheet::factory()->create([
               'person_id'   => $active->id,
               'position_id' => Position::DIRT,
               'on_duty'     => date("$year-08-25 12:00:00"),
@@ -249,29 +249,29 @@ class AccessDocumentControllerTest extends TestCase
           ]);
 
         // Person should not be granted a second WAP.
-        $noWap = factory(Person::class)->create([ 'callsign' => 'No Wap' ]);
-        $timesheet = factory(Timesheet::class)->create([
+        $noWap = Person::factory()->create([ 'callsign' => 'No Wap' ]);
+        $timesheet = Timesheet::factory()->create([
               'person_id'   => $active->id,
               'position_id' => Position::DIRT,
               'on_duty'     => date("$year-08-25 12:00:00"),
               'off_duty'    => date("$year-08-25 13:00:00")
           ]);
-        factory(AccessDocument::class)->create([
+        AccessDocument::factory()->create([
               'source_year' => date('Y'),
               'person_id'   => $noWap->id,
               'type'        => 'work_access_pass',
               'status'      => 'qualified'
           ]);
 
-        $retired = factory(Person::class)->create([ 'status' => 'retired', 'callsign' => 'B' ]);
-        $slot = factory(Slot::class)->create([
+        $retired = Person::factory()->create([ 'status' => 'retired', 'callsign' => 'B' ]);
+        $slot = Slot::factory()->create([
               'position_id' => Position::TRAINING,
               'begins'  => date('Y-04-01 10:00:00'),
               'ends'    => date('Y-04-01 12:00:00'),
               'max' => 2,
               'description' => 'A Training'
           ]);
-        factory(PersonSlot::class)->create([ 'person_id' => $retired->id, 'slot_id' => $slot->id ]);
+        PersonSlot::factory()->create([ 'person_id' => $retired->id, 'slot_id' => $slot->id ]);
 
         $response = $this->json('POST', 'access-document/grant-waps');
         $response->assertStatus(200);
@@ -313,26 +313,26 @@ class AccessDocumentControllerTest extends TestCase
         $this->addAdminRole();
 
         $this->setting('TAS_DefaultAlphaWAPDate', date('Y-08-20'));
-        $alpha = factory(Person::class)->create([ 'status' => 'alpha', 'callsign' => 'A' ]);
+        $alpha = Person::factory()->create([ 'status' => 'alpha', 'callsign' => 'A' ]);
 
         // Alpha should not be granted a second WAP.
-        $noWap = factory(Person::class)->create([ 'status' => 'alpha', 'callsign' => 'No Wap' ]);
-        factory(AccessDocument::class)->create([
+        $noWap = Person::factory()->create([ 'status' => 'alpha', 'callsign' => 'No Wap' ]);
+        AccessDocument::factory()->create([
                'source_year' => date('Y'),
                'person_id'   => $noWap->id,
                'type'        => 'work_access_pass',
                'status'      => 'claimed'
            ]);
 
-        $prospective = factory(Person::class)->create([ 'status' => 'prospective', 'callsign' => 'B' ]);
-        $slot = factory(Slot::class)->create([
+        $prospective = Person::factory()->create([ 'status' => 'prospective', 'callsign' => 'B' ]);
+        $slot = Slot::factory()->create([
                'position_id' => Position::TRAINING,
                'begins'  => date('Y-12-31 23:00:00'),
                'ends'    => date('Y-12-31 23:00:01'),
                'max' => 2,
                'description' => 'A Training'
            ]);
-        factory(PersonSlot::class)->create([ 'person_id' => $prospective->id, 'slot_id' => $slot->id ]);
+        PersonSlot::factory()->create([ 'person_id' => $prospective->id, 'slot_id' => $slot->id ]);
 
         $response = $this->json('POST', 'access-document/grant-alpha-waps');
         $response->assertStatus(200);
@@ -374,8 +374,8 @@ class AccessDocumentControllerTest extends TestCase
         $this->addAdminRole();
 
         // Person who should be granted a VP
-        $person = factory(Person::class)->create();
-        $t = factory(AccessDocument::class)->create([
+        $person = Person::factory()->create();
+        $t = AccessDocument::factory()->create([
                 'person_id'   => $person->id,
                 'source_year' => date('Y'),
                 'type'        => 'reduced_price_ticket',
@@ -384,15 +384,15 @@ class AccessDocumentControllerTest extends TestCase
 
 
         // Person should not be granted a (second) VP
-        $noVP = factory(Person::class)->create();
-        factory(AccessDocument::class)->create([
+        $noVP = Person::factory()->create();
+        AccessDocument::factory()->create([
                 'person_id'   => $noVP->id,
                 'source_year' => date('Y'),
                 'type'        => 'reduced_price_ticket',
                 'status'      => 'qualified'
             ]);
 
-        factory(AccessDocument::class)->create([
+        AccessDocument::factory()->create([
                 'person_id'   => $noVP->id,
                 'source_year' => date('Y'),
                 'type'        => 'vehicle_pass',
@@ -430,15 +430,15 @@ class AccessDocumentControllerTest extends TestCase
 
         $this->setting('TAS_DefaultWAPDate', $accessDate);
 
-        $person = factory(Person::class)->create();
-        $setSC = factory(AccessDocument::class)->create([
+        $person = Person::factory()->create();
+        $setSC = AccessDocument::factory()->create([
              'person_id' => $person->id,
              'type' => 'staff_credential',
              'status' => 'qualified',
              'access_date'  => null,
              'access_any_time' => false,
          ]);
-        $ignoreSC = factory(AccessDocument::class)->create([
+        $ignoreSC = AccessDocument::factory()->create([
              'person_id' => $person->id,
              'type' => 'staff_credential',
              'status' => 'qualified',
@@ -478,22 +478,22 @@ class AccessDocumentControllerTest extends TestCase
 
         $year = date('Y');
 
-        $person = factory(Person::class)->create();
-        $qualified = factory(AccessDocument::class)->create([
+        $person = Person::factory()->create();
+        $qualified = AccessDocument::factory()->create([
               'person_id'   => $person->id,
               'source_year' => $year,
               'type' => 'vehicle_pass',
               'status' => 'qualified',
           ]);
 
-        $submitted = factory(AccessDocument::class)->create([
+        $submitted = AccessDocument::factory()->create([
               'person_id'   => $person->id,
               'source_year' => $year,
               'type' => 'staff_credential',
               'status' => 'submitted',
           ]);
 
-        $banked = factory(AccessDocument::class)->create([
+        $banked = AccessDocument::factory()->create([
               'person_id'   => $person->id,
               'source_year' => $year,
               'type' => 'reduced_price_ticket',
@@ -530,8 +530,8 @@ class AccessDocumentControllerTest extends TestCase
 
         $year = date('Y');
 
-        $person = factory(Person::class)->create();
-        $qualified = factory(AccessDocument::class)->create([
+        $person = Person::factory()->create();
+        $qualified = AccessDocument::factory()->create([
                'person_id'   => $person->id,
                'source_year' => $year,
                'type'        => 'staff_credential',
@@ -539,7 +539,7 @@ class AccessDocumentControllerTest extends TestCase
            ]);
 
         // Should not bank this.
-        $vp = factory(AccessDocument::class)->create([
+        $vp = AccessDocument::factory()->create([
                'person_id'   => $person->id,
                'source_year' => $year,
                'type'        => 'vehicle_pass',
@@ -571,8 +571,8 @@ class AccessDocumentControllerTest extends TestCase
         $lastYear = $year - 1;
         $nextYear = $year + 1;
 
-        $person = factory(Person::class)->create();
-        $expire = factory(AccessDocument::class)->create([
+        $person = Person::factory()->create();
+        $expire = AccessDocument::factory()->create([
                 'person_id'   => $person->id,
                 'source_year' => $year,
                 'type'        => 'staff_credential',
@@ -581,7 +581,7 @@ class AccessDocumentControllerTest extends TestCase
             ]);
 
         // Should not bank this.
-        $ignore = factory(AccessDocument::class)->create([
+        $ignore = AccessDocument::factory()->create([
                 'person_id'   => $person->id,
                 'source_year' => $year,
                 'type'        => 'staff_credential',
@@ -616,10 +616,10 @@ class AccessDocumentControllerTest extends TestCase
     public function testBumpTicketExpiration()
     {
         $this->addAdminRole();
-        $person = factory(Person::class)->create();
+        $person = Person::factory()->create();
         $year = current_year();
         $expireYear = $year + 3;
-        $ad = factory(AccessDocument::class)->create([
+        $ad = AccessDocument::factory()->create([
             'person_id'   => $person->id,
             'source_year' => $year,
             'type'        => 'staff_credential',
