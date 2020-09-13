@@ -101,6 +101,8 @@ Route::group([
 
     Route::post('bulk-upload', 'BulkUploadController@update');
 
+    Route::resource('document', 'DocumentController');
+
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
 

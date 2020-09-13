@@ -24,7 +24,7 @@ if (!function_exists('setting')) {
 
     function setting($name, $throwOnEmpty=false)
     {
-        return Setting::get($name, $throwOnEmpty);
+        return Setting::getValue($name, $throwOnEmpty);
     }
 }
 

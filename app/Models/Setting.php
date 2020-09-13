@@ -91,14 +91,14 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'BurnWeekendSignUpMotivationPeriod' => [
-            'description' => 'Nag the person to sign up for Burn Weekend shifts. Format: YYYY-MM-DD HH:MM/YYYY-MM-DD HH:MM',
-            'type' => 'string',
-        ],
-
         'DailyReportEmail' => [
             'description' => 'Email address to send the Clubhouse Daily Report',
             'type' => 'email',
+        ],
+
+        'EditorUrl' => [
+            'description' => 'The script URL of the WYSIWYG editor (currently TinyMCE)',
+            'type' => 'url'
         ],
 
         'GeneralSupportEmail' => [
@@ -131,12 +131,7 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'OnPlaya' => [
-            'description' => 'Enable server relocated to playa notification (unsupported currently)',
-            'type' => 'bool',
-        ],
-
-        'OnboardAlphaShiftPrepLink' => [
+         'OnboardAlphaShiftPrepLink' => [
             'description' => 'Used by the Onboarding Checklist for PNVs. Link to how to prep for your Alpha Shift in the Ranger Manual',
             'type' => 'string'
         ],
@@ -193,11 +188,6 @@ class Setting extends ApiModel
         'DoceboFullCourseId' => [
             'description' => 'Docebo full Ranger course id (record id, not course code) for PNVs, Auditors, Binaries, and Inactive Rangers',
             'type' => 'integer',
-        ],
-
-        'PNVWaitList' => [
-            'description' => 'Enable Prospecitve Waitlisting',
-            'type' => 'bool',
         ],
 
         'PersonnelEmail' => [
@@ -257,11 +247,6 @@ class Setting extends ApiModel
             'type' => 'string',
         ],
 
-        'ReadOnly' => [
-            'description' => 'Set the Clubhouse into Read Only mode (unsupported currently)',
-            'type' => 'bool',
-        ],
-
         'RpTicketThreshold' => [
             'description' => 'Credit threshold for a reduced price ticket. Shown on the Schedule and Ticket announce pages',
             'type' => 'float',
@@ -298,36 +283,6 @@ class Setting extends ApiModel
 
         'SFprdUsername' => [
             'description' => 'Salesforce Production Username',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'SFsbxAuthUrl' => [
-            'description' => 'Salesforce Sandbox Authentication URL',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'SFsbxClientId' => [
-            'description' => 'Salesforce Sandbox Client ID',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'SFsbxClientSecret' => [
-            'description' => 'Salesforce Sandbox Client Secret',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'SFsbxPassword' => [
-            'description' => 'Salesforce Sandbox Password',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'SFsbxUsername' => [
-            'description' => 'Salesforce Sandbox Username',
             'type' => 'string',
             'is_credential' => true,
         ],
@@ -497,10 +452,10 @@ class Setting extends ApiModel
             'description' => 'Ticketing Period / Season',
             'type' => 'string',
             'options' => [
-                ['offseason', 'Post-event'],
-                ['announce', 'tickets have been awarded but ticketing window is not open'],
-                ['open', 'tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play'],
-                ['closed', 'ticketing is closed changes are not directly allowed'],
+                ['offseason', 'off season - show banked tickets'],
+                ['announce', 'announce - tickets have been awarded but ticketing window is not open'],
+                ['open', 'open - tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play'],
+                ['closed', 'closed - show claims and banks. Changes not directly allowed'],
             ]
         ],
 
@@ -598,7 +553,7 @@ class Setting extends ApiModel
         return $settings->sortBy('name')->values();
     }
 
-    public static function get($name, $throwOnEmpty = false)
+    public static function getValue($name, $throwOnEmpty = false)
     {
         if (is_array($name)) {
             $rows = self::select('name', 'value')->whereIn('name', $name)->get()->keyBy('name');
