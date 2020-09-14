@@ -28,6 +28,18 @@ class Document extends ApiModel
         'body' => 'required|string'
     ];
 
+    public function save($options = [])
+    {
+        if (!$this->exists || $this->isDirty('tag')) {
+            $this->rules['tag'] = [
+                'required',
+                'string',
+                'unique:document,tag'
+            ];
+        }
+        return parent::save($options);
+    }
+
     public static function findIdOrTag($idOrTag)
     {
         return self::where('id', $idOrTag)->orWhere('tag', $idOrTag)->first();
