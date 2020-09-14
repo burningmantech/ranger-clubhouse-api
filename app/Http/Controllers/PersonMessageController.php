@@ -15,7 +15,7 @@ class PersonMessageController extends ApiController
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function index(Request $request)
@@ -73,8 +73,7 @@ class PersonMessageController extends ApiController
     /**
      * Mark message as read.
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function markread(PersonMessage $person_message)

@@ -28,7 +28,7 @@ class SlotController extends ApiController
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function index()
@@ -36,16 +36,18 @@ class SlotController extends ApiController
         $this->authorize('index', Slot::class);
 
         $query = request()->validate([
-            'year'        => 'required|digits:4',
+            'year'        => 'required_without:for_rollcall|digits:4',
             'type'        => 'sometimes|string',
-            'position_id' => 'sometimes|digits'
+            'position_id' => 'sometimes|digits',
+            'for_rollcall' => 'sometimes|boolean',
         ]);
 
         $rows = Slot::findForQuery($query);
 
+        $year = $query['year'] ?? current_year();
         if (!$rows->isEmpty()) {
             // Warm the position credit cache
-            PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
         return $this->success($rows, null, 'slot');
@@ -82,7 +84,6 @@ class SlotController extends ApiController
      * Display the specified resource.
      *
      * @return \Illuminate\Http\JsonResponse
-     * @return \Illuminate\Http\Response
      */
     public function show(Slot $slot)
     {
@@ -235,8 +236,13 @@ class SlotController extends ApiController
 
     public function people(Slot $slot)
     {
-        $params = request()->validate([ 'is_onduty' => 'sometimes|boolean' ]);
-        return response()->json([ 'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false)]);
+        $params = request()->validate([
+            'is_onduty' => 'sometimes|boolean',
+            'include_photo' => 'sometimes|boolean'
+        ]);
+        return response()->json([
+            'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false, $params['include_photo'] ?? false)
+        ]);
     }
 
     /**
