@@ -38,6 +38,7 @@ class Slot extends ApiModel
         'has_started',
         'has_ended'
     ];
+
     protected $appends = [
         'credits'
     ];
@@ -60,21 +61,26 @@ class Slot extends ApiModel
     public static function findForQuery($query)
     {
         $sql = self::baseSql();
+        $year = $query['year'] ?? null;
+        $type = $query['type'] ?? null;
+        $positionId = $query['position_id'] ?? null;
+        $forRollcall = $query['for_rollcall'] ?? null;
 
-        if (isset($query['year'])) {
-            $sql->whereYear('begins', $query['year']);
+        if ($year) {
+            $sql->whereYear('begins', $year);
         }
 
-        if (isset($query['type'])) {
-            $sql->where('type', $query['type']);
+        if ($type) {
+            $sql->where('type', $type);
         }
 
-        if (isset($query['position_id'])) {
-            $sql->where('position_id', $query['position_id']);
+        if ($positionId) {
+            $sql->where('position_id', $positionId);
         }
 
-        if (isset($query['has_ended'])) {
-            $sql->where('has_ended', $query['has_ended']);
+        if ($forRollcall) {
+            $sql->whereDate('begins',Carbon::today());
+            $sql->whereRaw('begins > DATE_SUB(NOW(), INTERVAL 4 HOUR)');
         }
 
         return $sql->orderBy('begins')->get();
@@ -87,8 +93,7 @@ class Slot extends ApiModel
             DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
             DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'),
             DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
-        )
-            ->with(self::WITH_POSITION_TRAINER);
+        )->with(self::WITH_POSITION_TRAINER);
     }
 
     public static function find($slotId)
@@ -110,7 +115,7 @@ class Slot extends ApiModel
             ->get();
     }
 
-    public static function findSignUps($slotId, $includeOnDuty = false)
+    public static function findSignUps($slotId, $includeOnDuty = false, $includePhoto = false)
     {
         $rows = DB::table('person_slot')
             ->select('person.id', 'person.callsign')
@@ -137,6 +142,13 @@ class Slot extends ApiModel
                 'on_duty' => (string)$entry->on_duty,
                 'duration' => $entry->duration,
             ];
+        }
+
+        if ($includePhoto) {
+            foreach ($rows as $row) {
+                $row->photo_url = PersonPhoto::retrieveImageUrlForPerson($row->id);
+            }
+
         }
 
         return $rows;
