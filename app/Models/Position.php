@@ -205,7 +205,6 @@ class Position extends ApiModel
 
     protected $fillable = [
         'all_rangers',
-        'auto_signout',
         'count_hours',
         'max',
         'min',
@@ -221,7 +220,6 @@ class Position extends ApiModel
 
     protected $casts = [
         'all_rangers' => 'bool',
-        'auto_signout' => 'bool',
         'new_user_eligible' => 'bool',
         'on_sl_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool'
