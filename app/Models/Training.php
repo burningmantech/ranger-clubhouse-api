@@ -104,6 +104,7 @@ class Training extends Position
             $info = (object)[
                 'id' => $position->id,
                 'title' => $position->title,
+                'active' => $position->active,
             ];
 
             $personPositions[] = $info;

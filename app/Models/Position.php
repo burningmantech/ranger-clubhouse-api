@@ -216,13 +216,15 @@ class Position extends ApiModel
         'title',
         'training_position_id',
         'type',
+        'active',
     ];
 
     protected $casts = [
         'all_rangers' => 'bool',
         'new_user_eligible' => 'bool',
         'on_sl_report' => 'bool',
-        'prevent_multiple_enrollments' => 'bool'
+        'prevent_multiple_enrollments' => 'bool',
+        'active' => 'bool'
     ];
 
     protected $rules = [

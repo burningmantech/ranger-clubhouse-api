@@ -92,11 +92,12 @@ class PositionControllerTest extends TestCase
         $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
-            'position' => [ 'title' => 'Something Title' ]
+            'position' => [ 'title' => 'Something Title', 'active' => false ]
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('position', [ 'id' => $position->id, 'title' => 'Something Title' ]);
+        $this->assertDatabaseHas('position',
+            [ 'id' => $position->id, 'title' => 'Something Title', 'active' => false ]);
     }
 
     /*
