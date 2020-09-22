@@ -433,8 +433,8 @@ class PersonPhotoController extends ApiController
             $contents = $image->stream('jpg', 75)->getContents();
             $width = $image->width();
             $height = $image->height();
-
-            $image = null;
+            $image->destroy();  // free up memory
+            $image = null; // and kill the object
             gc_collect_cycles();     // Images can be huge, garbage collect.
 
             return [ $contents, $width, $height ];
