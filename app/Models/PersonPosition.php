@@ -19,6 +19,10 @@ class PersonPosition extends ApiModel
         'position_id'
     ];
 
+    protected $casts = [
+        'active' => 'bool'
+    ];
+
     public function person()
     {
         return $this->belongsTo(Person::class);
@@ -88,7 +92,7 @@ class PersonPosition extends ApiModel
 
     public static function findForPerson(int $personId, bool $includeMentee = false)
     {
-        $rows = self::select('position.id', 'position.title', 'position.training_position_id')
+        $rows = self::select('position.id', 'position.title', 'position.training_position_id', 'position.active')
             ->join('position', 'position.id', '=', 'person_position.position_id')
             ->where('person_id', $personId)
             ->orderBy('position.title')
