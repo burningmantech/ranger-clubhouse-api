@@ -365,7 +365,7 @@ class TimesheetControllerTest extends TestCase
     {
         $timesheet = Timesheet::factory()->create([
             'person_id'   => $this->targetPerson->id,
-            'on_duty'     => SqlHelper::now(),
+            'on_duty'     => now(),
             'position_id' => Position::DIRT,
         ]);
 

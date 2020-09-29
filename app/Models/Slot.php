@@ -79,8 +79,8 @@ class Slot extends ApiModel
         }
 
         if ($forRollcall) {
-            $sql->whereDate('begins',Carbon::today());
-            $sql->whereRaw('begins > DATE_SUB(NOW(), INTERVAL 4 HOUR)');
+            $sql->whereRaw('begins < DATE_ADD(?, INTERVAL 2 HOUR)', [now()]);
+            $sql->whereRaw('begins > DATE_SUB(?, INTERVAL 4 HOUR)', [now()]);
         }
 
         return $sql->orderBy('begins')->get();
@@ -88,12 +88,13 @@ class Slot extends ApiModel
 
     public static function baseSql()
     {
+        $now = now();
         return self::select(
             'slot.*',
-            DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
-            DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'),
+            DB::raw('IF(slot.begins < ?, TRUE, FALSE) as has_started'),
+            DB::raw('IF(slot.ends < ?, TRUE, FALSE) as has_ended'),
             DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
-        )->with(self::WITH_POSITION_TRAINER);
+        )->setBindings([$now, $now])->with(self::WITH_POSITION_TRAINER);
     }
 
     public static function find($slotId)
@@ -221,12 +222,13 @@ class Slot extends ApiModel
 
     public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin)
     {
+        $now = (string)now();
         $sql = DB::table('slot')
             ->select(
                 'slot.begins AS slot_begins',
                 'slot.ends AS slot_ends',
                 DB::raw('TIMESTAMPDIFF(second,slot.begins,slot.ends) as slot_duration'),
-                DB::raw('IF(slot.begins < NOW() AND slot.ends > NOW(), TIMESTAMPDIFF(second, NOW(), ends),0) as remaining'),
+                DB::raw("IF(slot.begins < '$now' AND slot.ends > '$now', TIMESTAMPDIFF(second, '$now', ends),0) as remaining"),
                 'slot.description AS description',
                 'slot.signed_up AS signed_up',
                 'slot.min AS min',
@@ -240,10 +242,10 @@ class Slot extends ApiModel
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
 
         if ($belowMin) {
-            $sql->whereIn('position.type', ['Frontline', 'Command']);
+            $sql->whereIn('position.type', [Position::TYPE_FRONTLINE, Position::TYPE_COMMAND]);
             $sql->whereRaw('slot.signed_up < slot.min');
         } else {
-            $sql->where('position.type', 'Frontline');
+            $sql->where('position.type', Position::TYPE_FRONTLINE);
         }
 
         return $sql->get();

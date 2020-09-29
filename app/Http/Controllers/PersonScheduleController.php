@@ -230,7 +230,7 @@ class PersonScheduleController extends ApiController
         $this->authorize('delete', [Schedule::class, $person]);
 
         $slot = Slot::findOrFail($slotId);
-        $now = SqlHelper::now();
+        $now = now();
 
         list($canForce, $isTrainer) = $this->canForceScheduleChange($slot, false);
 
@@ -415,7 +415,7 @@ class PersonScheduleController extends ApiController
     {
         $this->authorize('view', [Schedule::class, $person]);
 
-        $now = SqlHelper::now();
+        $now = now();
         $year = current_year();
 
         $rows = Schedule::findForQuery([

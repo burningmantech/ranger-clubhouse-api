@@ -890,6 +890,7 @@ class Training extends Position
      */
     public static function retrieveDirtTrainingsForPersonYear(int $personId, int $year): Collection
     {
+        $now = (string)now();
         return DB::table('person_slot')
             ->select(
                 'slot.id as slot_id',
@@ -898,7 +899,7 @@ class Training extends Position
                 DB::raw('IFNULL(trainee_status.passed, FALSE) as passed'),
                 'trainee_status.notes',
                 'trainee_status.rank',
-                DB::raw('(NOW() >= slot.begins) as has_started')
+                DB::raw("('$now' >= slot.begins) as has_started")
             )->join('slot', function ($j) use ($year) {
                 $j->on('slot.id', 'person_slot.slot_id');
                 $j->whereYear('slot.begins', $year);
@@ -924,6 +925,7 @@ class Training extends Position
 
     public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year): Collection
     {
+        $now = (string) now();
         // Find the sign ups
         $rows = DB::table('slot')
             ->select(
@@ -932,7 +934,7 @@ class Training extends Position
                 'slot.description as slot_description',
                 'slot.begins as slot_begins',
                 DB::raw('YEAR(slot.begins) as slot_year'),
-                DB::raw('IF(slot.ends < NOW(), true, false) as slot_has_ended'),
+                DB::raw("IF(slot.ends < '$now', true, false) as slot_has_ended"),
                 DB::raw('IFNULL(trainee_status.passed, FALSE) as training_passed'),
                 'trainee_status.rank as training_rank',
                 'trainee_status.feedback_delivered as feedback_delivered'

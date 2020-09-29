@@ -154,7 +154,7 @@ class AssetController extends ApiController
         $row = new AssetPerson([
             'asset_id' => $asset->id,
             'attachment_id' => $params['attachment_id'] ?? null,
-            'checked_out' => SqlHelper::now(),
+            'checked_out' => now(),
             'person_id' => $params['person_id'],
         ]);
 

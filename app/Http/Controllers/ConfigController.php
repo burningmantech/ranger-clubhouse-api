@@ -36,7 +36,7 @@ class ConfigController extends Controller
         $configs = setting(self::CLIENT_CONFIGS);
 
         if (config('clubhouse.GroundhogDayServer')) {
-            $configs['GroundhogDayTime'] = (string) SqlHelper::now();
+            $configs['GroundhogDayTime'] = (string) now();
         }
 
         $configs['DeploymentEnvironment'] = config('clubhouse.DeploymentEnvironment');

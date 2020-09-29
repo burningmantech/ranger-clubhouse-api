@@ -50,7 +50,7 @@ class ClubhouseDailyReportCommand extends Command
         $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 20])['error_logs'];
 
         $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
-        $statusLogs = PersonStatus::where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'))->with(['person:id,callsign', 'person_source:id,callsign'])->get();
+        $statusLogs = PersonStatus::whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)',[now()])->with(['person:id,callsign', 'person_source:id,callsign'])->get();
 
         $settings = setting([
             'OnlineTrainingEnabled',

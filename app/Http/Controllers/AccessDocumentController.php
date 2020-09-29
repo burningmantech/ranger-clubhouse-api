@@ -120,7 +120,7 @@ class AccessDocumentController extends ApiController
             $accessDocument->person_id = $this->user->id;
         }
 
-        $accessDocument->create_date = $accessDocument->modified_date = SqlHelper::now();
+        $accessDocument->create_date = $accessDocument->modified_date = now();
         if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
         }
@@ -531,7 +531,7 @@ class AccessDocumentController extends ApiController
         $user = $this->user->callsign;
 
         $rows = AccessDocument::whereIn('status', [ 'banked', 'claimed', 'qualified' ])
-                ->whereRaw('expiry_date < NOW()')
+                ->whereRaw('expiry_date < ?', [now()])
                 ->with('person:id,callsign,status,email')
                 ->get();
 

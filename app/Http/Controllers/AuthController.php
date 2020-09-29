@@ -104,7 +104,7 @@ class AuthController extends Controller
         }
 
         $lastLoggedIn = $person->logged_in_at;
-        $person->logged_in_at = SqlHelper::now();
+        $person->logged_in_at = now();
         $person->saveWithoutValidation();
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);

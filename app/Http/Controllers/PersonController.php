@@ -446,6 +446,20 @@ class PersonController extends ApiController
 
         $event = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
 
+        $timesheet = Timesheet::findPersonOnDuty($person->id);
+        if ($timesheet) {
+            $positionId = $timesheet->position_id;
+            $onduty = [
+                'id' => $timesheet->position_id,
+                'title' => $timesheet->position->title,
+                'type' => $timesheet->position->type,
+                'subtype' => $timesheet->position->subtype,
+            ];
+        } else {
+            $onduty = null;
+            $positionId = 0;
+        }
+
         $data = [
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
@@ -457,9 +471,9 @@ class PersonController extends ApiController
             'unread_message_count' => PersonMessage::countUnread($person->id),
             'years' => Timesheet::years($person->id),
             'all_years' => Timesheet::years($person->id, true),
-            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WINDOW),
-            'is_on_duty_at_hq' => Timesheet::isPersonSignIn($person->id, [Position::HQ_WINDOW_PRE_EVENT, Position::HQ_LEAD_PRE_EVENT, Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD]),
-            'may_request_stickers' => $event->may_request_stickers
+            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WORKERS),
+            'may_request_stickers' => $event->may_request_stickers,
+            'onduty_position' => $onduty
         ];
 
         /*

@@ -85,6 +85,7 @@ class Schedule extends ApiModel
         $personId = $query['person_id'] ?? null;
         $shiftsAvailable = $query['shifts_available'] ?? false;
         $remaining = $query['remaining'] ?? false;
+        $now = (string) now();
 
         $selectColumns = [
             'slot.id as id',
@@ -104,8 +105,8 @@ class Schedule extends ApiModel
             'trainer_slot.signed_up AS trainer_count',
             DB::raw('UNIX_TIMESTAMP(slot.begins) as slot_begins_time'),
             DB::raw('UNIX_TIMESTAMP(slot.ends) as slot_ends_time'),
-            DB::raw('IF(slot.begins < NOW(), TRUE, FALSE) as has_started'),
-            DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended')
+            DB::raw("IF(slot.begins < '$now', TRUE, FALSE) as has_started"),
+            DB::raw("IF(slot.ends < '$now', TRUE, FALSE) as has_ended")
         ];
 
         // Is this a simple schedule find for a person?
@@ -114,7 +115,7 @@ class Schedule extends ApiModel
                 ->where('person_slot.person_id', $personId)
                 ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
             if ($remaining) {
-                $sql->whereRaw('slot.ends > NOW()');
+                $sql->where('slot.ends', '>', $now);
             }
         } else {
             // Retrieve all slots
@@ -160,7 +161,7 @@ class Schedule extends ApiModel
             ->select('position.title', 'slot.description', 'begins')
             ->join('slot', function ($j) {
                 $j->on('slot.id', '=', 'person_slot.slot_id');
-                $j->whereRaw('slot.begins > NOW()');
+                $j->where('slot.begins', '>', now());
             })->join('position', 'position.id', '=', 'slot.position_id')
             ->where('person_slot.person_id', $personId)
             ->orderBy('slot.begins')
@@ -358,10 +359,11 @@ class Schedule extends ApiModel
     public static function retrieveStartingSlotsForPerson($personId)
     {
         $rows = PersonSlot::join('slot', function ($query) {
+            $now = (string) now();
             $query->whereRaw('slot.id=person_slot.slot_id');
             $query->whereRaw(
-                'slot.begins BETWEEN DATE_SUB(NOW(), INTERVAL ? MINUTE) AND DATE_ADD(NOW(), INTERVAL ? MINUTE)',
-                [self::SHIFT_STARTS_WITHIN, self::SHIFT_STARTS_WITHIN]
+                'slot.begins BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
+                [$now, self::SHIFT_STARTS_WITHIN, $now, self::SHIFT_STARTS_WITHIN]
             );
         })
             ->where('person_id', $personId)

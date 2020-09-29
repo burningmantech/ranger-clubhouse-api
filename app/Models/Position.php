@@ -43,15 +43,16 @@ class Position extends ApiModel
     const SANCTUARY_HOST = 68;
     const SANCTUARY_MENTEE = 123;
 
-    const HQ_WINDOW = 3;
-    const HQ_WINDOW_PRE_EVENT = 117;
-    const HQ_TRAINER = 34;
     const HQ_FULL_TRAINING = 31;
-    const HQ_REFRESHER_TRAINING = 49;
     const HQ_LEAD = 32;
     const HQ_LEAD_PRE_EVENT = 118;
-    const HQ_SHORT = 33;
+    const HQ_REFRESHER_TRAINING = 49;
     const HQ_RUNNER = 18;
+    const HQ_SHORT = 33;
+    const HQ_SUPERVISOR = 51;
+    const HQ_TRAINER = 34;
+    const HQ_WINDOW = 3;
+    const HQ_WINDOW_PRE_EVENT = 117;
 
     const DOUBLE_OH_7 = 21;
 
@@ -130,7 +131,6 @@ class Position extends ApiModel
 
     const QUARTERMASTER = 84;
 
-
     /*
      * Position types
      */
@@ -202,6 +202,14 @@ class Position extends ApiModel
         Position::HOT_SPRINGS_PATROL_DRIVER => 15,
     ];
 
+    const HQ_WORKERS = [
+        Position::HQ_LEAD,
+        Position::HQ_LEAD_PRE_EVENT,
+        Position::HQ_SHORT,
+        Position::HQ_WINDOW,
+        Position::HQ_WINDOW_PRE_EVENT,
+        Position::HQ_SUPERVISOR,
+    ];
 
     protected $fillable = [
         'all_rangers',
@@ -313,11 +321,12 @@ class Position extends ApiModel
 
     public static function findAllWithInProgressSlots()
     {
-        return self::where('type', '!=', 'Training')
-            ->whereRaw("EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
+        $now = (string) now();
+        return self::where('type', '!=', self::TYPE_TRAINING)
+            ->whereRaw('EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
                 AND slot.position_id=position.id
-                AND NOW() >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
-                AND NOW() < slot.ends LIMIT 1)")
+                AND ? >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
+                AND ? < slot.ends LIMIT 1)', [ $now, $now ])
             ->orderBy("title")
             ->get();
     }
@@ -547,6 +556,24 @@ class Position extends ApiModel
 
             default:
                 throw new InvalidArgumentException("Unknown repair action [$repair]");
+        }
+    }
+
+    /*
+     * Subtype is similar to 'position.type'
+     */
+
+    public function getSubTypeAttribute()
+    {
+        $id = $this->id;
+
+        if ($this->type == self::TYPE_MENTORING) {
+            if ($id == Position::ALPHA || $id == Position::CHEETAH_CUB) {
+                return 'mentee';
+            }
+            return 'mentor';
+        } else {
+            return $this->type;
         }
     }
 }
