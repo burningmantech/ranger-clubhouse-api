@@ -344,12 +344,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         parent::boot();
 
         self::creating(function ($model) {
-            $model->create_date = SqlHelper::now();
+            $model->create_date = now();
         });
 
         self::saving(function ($model) {
             if ($model->isDirty('message')) {
-                $model->message_updated_at = SqlHelper::now();
+                $model->message_updated_at = now();
             }
 
             // Ensure shirts are always set correctly
@@ -975,7 +975,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         $personId = $this->id;
-        $this->status_date = SqlHelper::now();
+        $this->status_date = now();
         $this->status = $newStatus;
 
         PersonStatus::record($this->id, $oldStatus, $newStatus, $reason, Auth::id());

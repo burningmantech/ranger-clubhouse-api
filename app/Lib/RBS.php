@@ -366,7 +366,7 @@ class RBS
         // Update the fail counters
         $broadcast->sms_failed = BroadcastMessage::countFail($broadcast->id, 'sms');
         $broadcast->email_failed = BroadcastMessage::countFail($broadcast->id, 'email');
-        $broadcast->retry_at = SqlHelper::now();
+        $broadcast->retry_at = now();
         $broadcast->retry_person_id = $retryPersonId;
         $broadcast->save();
     }

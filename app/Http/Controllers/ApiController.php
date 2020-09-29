@@ -34,7 +34,7 @@ class ApiController extends Controller
             }
 
             $this->user->retrieveRoles();
-            DB::select("UPDATE person SET last_seen_at=NOW() WHERE id=?", [ $this->user->id ]);
+            DB::select("UPDATE person SET last_seen_at=? WHERE id=?", [ now(), $this->user->id ]);
         }
     }
 

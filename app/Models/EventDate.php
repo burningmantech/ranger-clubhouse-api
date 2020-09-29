@@ -94,26 +94,18 @@ class EventDate extends ApiModel
     }
 
     /**
-     * Retrieve the burn weekend date range if set.
+     * Retrieve the burn weekend date range.
      *
      * @return array start and ending time
      */
 
     public static function retrieveBurnWeekendPeriod()
     {
-/*        $burnWeekendPeriod = setting('BurnWeekendSignUpMotivationPeriod');
-        if (empty($burnWeekendPeriod)) {
-            return false; // Not set, don't bother
-        }
-
-        list($start, $end) = explode('/', $burnWeekendPeriod);
-        $start = Carbon::parse(trim($start));
-        $end = Carbon::parse(trim($end));
-*/
         $year = current_year();
         $laborDay = (new Carbon("September $year first monday"));
+        // Burn weekend is Friday @ 18:00 til Monday @ 00:00 (late Sunday night)
         $start = $laborDay->clone()->subDays(3)->setTime(18,0,0);
-        $end = $laborDay->clone()->subDays(1)->setTime(18,0,0);
+        $end = $laborDay->clone()->setTime(0,0,0);
 
         return [ $start, $end ];
     }

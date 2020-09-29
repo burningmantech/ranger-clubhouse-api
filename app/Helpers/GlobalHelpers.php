@@ -83,7 +83,7 @@ if (!function_exists('current_year')) {
                 return $year;
             }
 
-            $year = SqlHelper::now()->year;
+            $year = now()->year;
             return $year;
         }
         return date('Y');

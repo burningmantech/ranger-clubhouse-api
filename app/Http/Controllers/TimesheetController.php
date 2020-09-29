@@ -662,7 +662,7 @@ class TimesheetController extends ApiController
                 case 'in':
                     // Sign in - create timesheet
                     if (empty($signin)) {
-                        $signin = SqlHelper::now();
+                        $signin = now();
                     }
 
                     $timesheet = new Timesheet([
@@ -687,7 +687,7 @@ class TimesheetController extends ApiController
                     }
 
                     if (empty($signout)) {
-                        $signout = SqlHelper::now();
+                        $signout = now();
                     }
                     $timesheet->off_duty = $signout;
                     $event = 'signoff';

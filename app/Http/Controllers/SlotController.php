@@ -411,7 +411,7 @@ class SlotController extends ApiController
             'date'  => 'sometimes|date'
         ]);
 
-        $date = $params['date'] ?? SqlHelper::now();
+        $date = $params['date'] ?? now();
 
         return response()->json([
             'positions' => ShiftReporting::retrieveFlakeReport($date),

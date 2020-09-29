@@ -115,7 +115,8 @@ class Timesheet extends ApiModel
 
     public static function selectBase()
     {
-        return self::select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
+        $now = (string) now();
+        return self::select('timesheet.*', DB::raw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) as duration"))
             ->with(self::RELATIONSHIPS);
     }
 
@@ -143,13 +144,13 @@ class Timesheet extends ApiModel
         if ($onDuty) {
             $sql->whereNull('off_duty');
             if ($overHours) {
-                $sql->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, now()) >= ?", [ $overHours ]);
+                $sql->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, ?) >= ?", [ now(), $overHours ]);
             }
         }
 
         if ($dutyDate) {
             $sql->where('on_duty', '<=', $dutyDate);
-            $sql->whereRaw('IFNULL(off_duty, NOW()) >= ?', [ $dutyDate ]);
+            $sql->whereRaw('IFNULL(off_duty, ?) >= ?', [ now(), $dutyDate ]);
         }
 
         $rows = $sql->orderBy('on_duty', 'asc')->get();
@@ -166,7 +167,7 @@ class Timesheet extends ApiModel
         return self::where('person_id', $personId)
                 ->whereYear('on_duty', current_year())
                 ->whereNull('off_duty')
-                ->with([ 'position:id,title' ])
+                ->with([ 'position:id,title,type' ])
                 ->first();
     }
 
@@ -191,7 +192,7 @@ class Timesheet extends ApiModel
         return self::where('person_id', $personId)
             ->whereNull('off_duty')
             ->whereYear('on_duty', $year)
-            ->with('position:id,title')
+            ->with('position:id,title,type')
             ->first();
     }
 
@@ -769,7 +770,7 @@ class Timesheet extends ApiModel
     public static function retrieveAllForYearByCallsign($year)
     {
         $rows = self::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status', 'position:id,title,count_hours' ])
+                ->with([ 'person:id,callsign,status', 'position:id,title,type,count_hours' ])
                 ->orderBy('on_duty')
                 ->get();
 
@@ -945,7 +946,7 @@ class Timesheet extends ApiModel
             $summary->computeTotals(
                     $row->position_id,
                     $row->on_duty->timestamp,
-                    ($row->off_duty ?? SqlHelper::now())->timestamp,
+                    ($row->off_duty ?? now())->timestamp,
                     $row->position->count_hours
                 );
         }
@@ -1004,7 +1005,7 @@ class Timesheet extends ApiModel
             ->groupBy('person_id');
 
         $results = [];
-        $now = SqlHelper::now()->timestamp;
+        $now = now()->timestamp;
 
         foreach ($people as $person) {
             $entries = $entriesByPerson[$person->id] ?? null;
@@ -1181,9 +1182,10 @@ class Timesheet extends ApiModel
             }
         }
 
-        $rows = self:: select('timesheet.*', DB::raw('TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,now())) as duration'))
+        $now = now();
+        $rows = self:: select('timesheet.*', DB::raw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) as duration"))
                 ->whereYear('on_duty', $year)
-                ->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, IFNULL(off_duty,now())) >= $minHour")
+                ->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, IFNULL(off_duty,'$now')) >= $minHour")
                 ->with($withBase)
                 ->orderBy('duration', 'desc')
                 ->get();
@@ -1331,7 +1333,7 @@ class Timesheet extends ApiModel
         }
 
         // Still on duty - return how many seconds have elasped so far
-        return Carbon::parse(SqlHelper::now())->diffInSeconds($this->on_duty);
+        return Carbon::parse(now())->diffInSeconds($this->on_duty);
     }
 
     public function getPositionTitleAttribute()
@@ -1354,7 +1356,7 @@ class Timesheet extends ApiModel
         $credits = PositionCredit::computeCredits(
             $this->position_id,
             $this->on_duty->timestamp,
-            ($this->off_duty ?? SqlHelper::now())->timestamp,
+            ($this->off_duty ?? now())->timestamp,
             $this->on_duty->year
         );
 
@@ -1365,16 +1367,20 @@ class Timesheet extends ApiModel
 
     public function setOnDutyToNow()
     {
-        $this->on_duty = SqlHelper::now();
+        $this->on_duty = now();
     }
 
     public function setOffDutyToNow()
     {
-        $this->off_duty = SqlHelper::now();
+        $this->off_duty = now();
     }
 
     public function setVerifiedAtToNow()
     {
-        $this->verified_at = SqlHelper::now();
+        $this->verified_at = now();
+    }
+
+    public function getPositionSubtypeAttribute() {
+        return $this->position->subtype;
     }
 }

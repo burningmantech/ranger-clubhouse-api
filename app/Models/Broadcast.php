@@ -108,7 +108,7 @@ class Broadcast extends ApiModel {
         if ($year) {
             $sql->whereYear('created_at', $year);
         } else if ($lastDay) {
-            $sql->where('created_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'));
+            $sql->whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)', [ now() ]);
         }
 
         if ($failedOnly) {

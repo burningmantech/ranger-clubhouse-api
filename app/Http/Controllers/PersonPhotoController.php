@@ -117,7 +117,7 @@ class PersonPhotoController extends ApiController
         $reviewed = false;
         if ($personPhoto->isDirty('status')) {
             // Setting the status means the record has been reviewed.
-            $personPhoto->reviewed_at = SqlHelper::now();
+            $personPhoto->reviewed_at = now();
             $personPhoto->review_person_id = $this->user->id;
             $reviewed = true;
         }
@@ -161,7 +161,7 @@ class PersonPhotoController extends ApiController
         list ($image, $width, $height) = $this->processImage($params['image'], $personPhoto->person_id);
 
         $personPhoto->edit_person_id = $this->user->id;
-        $personPhoto->edited_at = SqlHelper::now();
+        $personPhoto->edited_at = now();
         $personPhoto->width = $width;
         $personPhoto->height = $height;
 
@@ -291,7 +291,7 @@ class PersonPhotoController extends ApiController
         $photo = new PersonPhoto;
         $photo->person_id = $personId;
         $photo->status = PersonPhoto::SUBMITTED;
-        $photo->uploaded_at = SqlHelper::now();
+        $photo->uploaded_at = now();
         $photo->upload_person_id = $this->user->id;
 
         $photo->width = $imageWidth;

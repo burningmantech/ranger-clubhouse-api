@@ -142,7 +142,8 @@ class Survey extends ApiModel
             'description',
             'signed_up',
             DB::raw('EXISTS (SELECT 1 FROM survey_answer WHERE slot_id=slot.id LIMIT 1) AS has_responses'),
-            DB::raw('IF(slot.ends < NOW(), TRUE, FALSE) as has_ended'))
+            DB::raw('IF(slot.ends < ? , TRUE, FALSE) as has_ended'),
+            )->setBindings([now()])
             ->whereYear('begins', $this->year)
             ->where('position_id', $this->position_id)
             ->orderBy('begins')

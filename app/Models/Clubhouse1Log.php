@@ -72,7 +72,7 @@ class Clubhouse1Log extends Model
         }
 
         if ($lastDay) {
-            $sql->where('occurred', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 25 HOUR)'));
+            $sql->whereRaw('occurred >= DATE_SUB(?, INTERVAL 1 DAY)', [now()]);
         }
 
         // How many total for the query

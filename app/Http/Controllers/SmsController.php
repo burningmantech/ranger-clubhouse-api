@@ -324,7 +324,7 @@ class SmsController extends ApiController
             $isAdmin = $person->hasRole(Role::ADMIN);
             if ($isAdmin) {
                 $status = Broadcast::STATUS_STATS;
-                $rows = Broadcast::whereRaw("created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)")->get();
+                $rows = Broadcast::whereRaw("created_at >= DATE_SUB(?, INTERVAL 1 DAY)",[now()])->get();
                 $broadcastCount = $rows->count();
                 $smsFails = 0;
                 $emailFails = 0;
@@ -343,7 +343,7 @@ class SmsController extends ApiController
                     $reply = "Broadcasts $broadcastCount Recipients $totalRecipients SMS fails $smsFails Email fails $emailFails Last broadcast @ $lastDate";
                 }
 
-                $inboundCount = BroadcastMessage::where('direction', 'inbound')->whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)')->count();
+                $inboundCount = BroadcastMessage::where('direction', 'inbound')->whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)', [ now() ])->count();
 
                 $reply .= " Inbound msgs $inboundCount";
             } else {
