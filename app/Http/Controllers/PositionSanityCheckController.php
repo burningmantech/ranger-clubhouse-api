@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Position;
 
+use App\Lib\PositionSanityChecker;
+
 use Illuminate\Http\Request;
 
 class PositionSanityCheckController extends Controller
@@ -16,7 +18,7 @@ class PositionSanityCheckController extends Controller
     public function sanityChecker()
     {
         $this->authorize('sanityChecker', [ Position::class ]);
-        return response()->json(Position::sanityChecker());
+        return response()->json(PositionSanityChecker::sanityChecker());
     }
 
     /**
@@ -35,6 +37,6 @@ class PositionSanityCheckController extends Controller
             'people_ids.*' => 'required|integer|exists:person,id',
         ]);
 
-        return response()->json(Position::repair($params['repair'], $params['people_ids']));
+        return response()->json(PositionSanityChecker::repair($params['repair'], $params['people_ids']));
     }
 }
