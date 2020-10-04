@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+//TODO Remove these?
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonPosition;
@@ -11,7 +12,7 @@ use App\Models\PersonMentor;
 
 use Illuminate\Support\Facades\DB;
 
-class PositionSanityChecker
+class PositionSanityCheck
 {
     /*
      * Report on problematic position assignments and roles
@@ -20,80 +21,20 @@ class PositionSanityChecker
      *  & peroxide enthusiast.
      */
 
-    public static function sanityChecker(): array
+    // TODO Have these implement an abstract class?
+    const CHECKERS = [
+        'green_dot'       => 'App\Lib\PositionSanityCheck\GreenDotCheck',
+        'management_role' => 'App\Lib\PositionSanityCheck\ManagementCheck',
+        'shiny_pennies'   => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+    ];
+
+    public static function issues(): array
     {
-        $year = current_year();
-
-        $insanity['green_dot'] = DB::select(
-            "SELECT * FROM (SELECT p.id AS id, callsign, status, " .
-            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_dirt_green_dot, " .
-            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_sanctuary, " .
-            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_gp_gd " .
-            "FROM person p) t1 WHERE has_dirt_green_dot != has_sanctuary OR has_dirt_green_dot != has_gp_gd ORDER BY callsign",
-            [Position::DIRT_GREEN_DOT, Position::SANCTUARY, Position::GERLACH_PATROL_GREEN_DOT]
-        );
-
-        // All HQ, Operators, Shift Leads, etc. should have the "Management Mode" role
-        $positionIds = [
-            Position::GREEN_DOT_LEAD_INTERN,
-            Position::GREEN_DOT_LEAD,
-            Position::HQ_LEAD,
-            Position::HQ_SHORT,
-            Position::HQ_WINDOW,
-            Position::INTERCEPT_DISPATCH,
-            Position::MENTOR_LEAD,
-            Position::OPERATOR,
-            Position::PERSONNEL_INVESTIGATOR,
-            Position::QUARTERMASTER,
-            Position::RSC_SHIFT_LEAD_PRE_EVENT,
-            Position::RSC_SHIFT_LEAD,
-            Position::RSC_WESL,
-            Position::RSCI_MENTEE,
-            Position::RSCI,
-            Position::TECH_ON_CALL,
-            Position::TRAINER,
-        ];
-
-        $personIds = PersonPosition::whereIn('position_id', $positionIds)
-            ->groupBy('person_id')
-            ->pluck('person_id');
-
-        $rows = Person::select('id', 'callsign', 'status', DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(on_duty)=$year AND person_id=person.id AND position_id=" . Position::ALPHA . " LIMIT 1) AS is_shiny_penny"))
-            ->whereIn('id', $personIds)
-            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION])
-            ->whereRaw('NOT EXISTS (SELECT 1 FROM person_role WHERE person_role.person_id=person.id AND person_role.role_id=?)', [Role::MANAGE])
-            ->orderBy('callsign')
-            ->with(['person_position' => function ($q) use ($positionIds) {
-                $q->whereIn('position_id', $positionIds);
-            }])
-            ->get();
-
-        $insanity['management_role'] = [];
-        foreach ($rows as $row) {
-            $positions = Position::select('id', 'title')->whereIn('id', $row->person_position->pluck('position_id'))->orderBy('title')->get();
-
-            $insanity['management_role'][] = [
-                'id' => $row->id,
-                'callsign' => $row->callsign,
-                'status' => $row->status,
-                'is_shiny_penny' => $row->is_shiny_penny,
-                'positions' => $positions
-            ];
+        foreach(self::CHECKERS as $name => $checker) {
+            $insanity[$name] = $checker::issues();
         }
 
-        $insanity['shiny_pennies'] = DB::select(
-            "SELECT * FROM (SELECT p.id AS id, callsign, status, year, " .
-            "EXISTS(SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_shiny_penny " .
-            "FROM person p INNER JOIN " .
-            "(SELECT person_id, MAX(mentor_year) as year FROM person_mentor " .
-            "  WHERE status = 'pass' GROUP BY person_id) pm " .
-            "ON pm.person_id = p.id) t1 " .
-            "WHERE (NOT has_shiny_penny AND year = $year) OR (has_shiny_penny AND year != $year) " .
-            "ORDER BY year desc, callsign",
-            [Position::DIRT_SHINY_PENNY]
-        );
-
-        $insanity['shiny_penny_year'] = $year;
+        $insanity['shiny_penny_year'] = current_year();
 
         return $insanity;
     }
