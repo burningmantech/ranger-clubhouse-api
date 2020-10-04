@@ -136,7 +136,7 @@ class PositionSanityCheckControllerTest extends TestCase
         $personYear = $this->personYear;
         $shinyPenny = $this->shinyPenny;
 
-        $response = $this->json('POST', 'position/repair', [ 'repair' => 'green-dot', 'people_ids' => [ $person->id ]]);
+        $response = $this->json('POST', 'position/repair', [ 'repair' => 'green_dot', 'people_ids' => [ $person->id ]]);
         $response->assertStatus(200);
         $response->assertJsonCount(1, '*.id');
         $response->assertJson([
@@ -156,12 +156,12 @@ class PositionSanityCheckControllerTest extends TestCase
             'position_id' => Position::GERLACH_PATROL_GREEN_DOT
         ]);
 
-        $response = $this->json('POST', 'position/repair', [ 'repair' => 'management-role', 'people_ids' => [ $person->id ]]);
+        $response = $this->json('POST', 'position/repair', [ 'repair' => 'management_role', 'people_ids' => [ $person->id ]]);
         $response->assertStatus(200);
         $response->assertJsonCount(1, '*.id');
         $response->assertJson([[ 'id'   => $person->id ]]);
 
-        $response = $this->json('POST', 'position/repair', [ 'repair' => 'shiny-penny', 'people_ids' => [ $person->id, $shinyPenny->id ]]);
+        $response = $this->json('POST', 'position/repair', [ 'repair' => 'shiny_pennies', 'people_ids' => [ $person->id, $shinyPenny->id ]]);
         $response->assertStatus(200);
         $response->assertJsonCount(2, '*.id');
         $response->assertJson([

@@ -6,6 +6,7 @@ use App\Models\Position;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Role;
+use App\Models\PersonRole;
 
 use Illuminate\Support\Facades\DB;
 
@@ -64,5 +65,15 @@ class ManagementCheck extends SanityCheck
         }
 
         return $issues;
+    }
+
+    public static function repair($peopleIds): array
+    {
+        $results = [];
+        foreach ($peopleIds as $personId) {
+            PersonRole::addIdsToPerson($personId, [Role::MANAGE], 'position sanity checker repair');
+            $results[] = ['id' => $personId];
+        }
+        return $results;
     }
 }
