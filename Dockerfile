@@ -149,6 +149,7 @@ COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
 
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
+COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.conf
 
 # Laravel task scheduler and queue worker
 COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
