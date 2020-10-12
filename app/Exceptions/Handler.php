@@ -29,9 +29,8 @@ class Handler extends ExceptionHandler
         \Illuminate\Database\Eloquent\ModelNotFoundException::class,
         \Illuminate\Validation\ValidationException::class,
         \InvalidArgumentException::class,
-        \Symfony\Component\HttpKernel\Exception\HttpException::class,
         \Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
-
+        CommandRuntimeException::class,
     ];
 
     /**
@@ -56,14 +55,8 @@ class Handler extends ExceptionHandler
             }
         }
 
-        if ($exception instanceof CommandRuntimeException) {
-            if (Str::contains($exception->getMessage(), ['Not enough arguments'])) {
-                return;
-            }
-        }
-
-        // Report the exception on the console if running in development or testing.
-        if (app()->isLocal() || app()->runningUnitTests()) {
+        // Report the exception on the console if running in development
+        if (app()->isLocal()) {
             parent::report($exception);
             return;
         }
@@ -76,7 +69,7 @@ class Handler extends ExceptionHandler
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  Throwable  $e
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function render($request, Throwable $e)
     {
@@ -84,9 +77,9 @@ class Handler extends ExceptionHandler
          * Handle JWT exceptions.
          */
 
-        if ($e instanceof Tymon\JWTAuth\Exceptions\TokenExpiredException) {
+        if ($e instanceof \Tymon\JWTAuth\Exceptions\TokenExpiredException) {
             return response()->json(['token_expired'], $e->getStatusCode());
-        } elseif ($e instanceof Tymon\JWTAuth\Exceptions\TokenInvalidException) {
+        } elseif ($e instanceof \Tymon\JWTAuth\Exceptions\TokenInvalidException) {
             return response()->json(['token_invalid'], $e->getStatusCode());
         }
 
@@ -127,34 +120,36 @@ class Handler extends ExceptionHandler
          * - Something, something, something, bad.
          */
         if ($this->isHttpException($e)) {
-            $statusCode = $e->getStatusCode();
+            $statusCode = (int) $e->getStatusCode();
 
-            switch ($e->getStatusCode()) {
-                case '404':
+            switch ($statusCode) {
+                case 404:
                     return RestApi::error(response(), 404, 'Endpoint not found');
-                case '405':
+                case 405:
                     return RestApi::error(response(), 405, 'Method not allowed');
                 default:
                     return RestApi::error(response(), $statusCode, 'Unknown status.');
             }
         }
 
-        $className = class_basename($e);
-        $file = $e->getFile();
-        $line = $e->getLine();
-        $message = $e->getMessage();
 
         // Bad SQL statement, no biscuit!
         if ($e instanceof \Illuminate\Database\QueryException) {
             if (app()->isLocal() || app()->runningUnitTests()) {
                 // For development return the full SQL statement
-                return RestApi::error(response(), 500, "SQL Exception $file:$line - $message");
+                $className = class_basename($e);
+                $file = $e->getFile();
+                $line = $e->getLine();
+                $message = $e->getMessage();
+                $error = "SQL Exception [$className] $file:$line - $message";
             } else {
                 // Otherwise say where it happened and don't leak potentially harmful data
-                return RestApi::error(response(), 500, "An unrecoverable database failure occured at $file:$line");
+                $error = 'An unrecoverable database failure occurred.';
             }
+        } else {
+            $error = 'An unrecoverable server error occurred.';
         }
 
-        return RestApi::error(response(), 500, "An unrecoverable server error occured. Exception $className at $file:$line - ".$e->getMessage());
+        return RestApi::error(response(), 500, $error);
     }
 }
