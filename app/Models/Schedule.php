@@ -56,6 +56,7 @@ class Schedule extends ApiModel
     /*
      * Sign up statuses
      */
+
     const SUCCESS = 'success'; // person was successfully signed up for a slot
     const FULL = 'full'; // slot is at capacity
     const MULTIPLE_ENROLLMENT = 'multiple-enrollment'; // person is already enrolled in another slot with same position (i.e. training)
@@ -64,6 +65,7 @@ class Schedule extends ApiModel
     const NO_SLOT = 'no-slot'; // slot does not exist
     const HAS_STARTED = 'has-started'; // slot has already started
     const EXISTS = 'exists'; // person is already signed up for the slot.
+    const MISSING_REQUIREMENTS  = 'missing-requirements'; // person has not meet all the requirements to sign up
 
     /*
      * Failed sign up statuses that are allowed to be forced if the user has the appropriate
@@ -254,15 +256,15 @@ class Schedule extends ApiModel
      * Remove a sign up for a person
      *
      * @param int $personId
-     * @param int $personSlotId
+     * @param int $slotId
      * @return array
      * @throws Exception
      */
-    public static function deleteFromSchedule(int $personId, int $personSlotId): array
+    public static function deleteFromSchedule(int $personId, int $slotId): array
     {
         $personSlot = PersonSlot::where([
             ['person_id', $personId],
-            ['slot_id', $personSlotId]
+            ['slot_id', $slotId]
         ])->firstOrFail();
 
         try {
@@ -277,12 +279,12 @@ class Schedule extends ApiModel
             }
 
             DB::commit();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             DB::rollback();
             throw $e;
         }
 
-        return ['status' => 'success', 'signed_up' => $slot->signed_up];
+        return ['status' => self::SUCCESS, 'signed_up' => $slot->signed_up];
     }
 
     /*
@@ -401,32 +403,6 @@ class Schedule extends ApiModel
             ->first();
 
         return $signUp ? $signUp->slot_id : null;
-    }
-
-    /**
-     * Should a burn weekend shift be recommended to the person?
-     * @param Person $person
-     * @return bool true if the person does not have any weekend shift signups.
-     */
-    public static function recommendBurnWeekendShift(Person $person)
-    {
-        $status = $person->status;
-        if ($status == Person::ALPHA
-            || $status == Person::AUDITOR
-            || $status == Person::PROSPECTIVE
-            || $status == Person::NON_RANGER) {
-            // Do not recommend to PNVs, Auditors, and Non Rangers
-            return false;
-        }
-
-        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
-
-        if (now()->gt($end)) {
-            // The current time is past the burn weekend.
-            return false;
-        }
-
-        return !Schedule::hasSignupInPeriod($person->id, $start, $end);
     }
 
     public static function haveBurnWeekendSignup(Person $person)

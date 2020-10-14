@@ -36,6 +36,7 @@ class Milestones
             'online_training_url' => setting('OnlineTrainingUrl'),
             'behavioral_agreement' => $person->behavioral_agreement,
             'has_reviewed_pi' => $person->hasReviewedPi(),
+            'asset_authorized' => $event->asset_authorized,
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
             'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year),
             'period' => $period,

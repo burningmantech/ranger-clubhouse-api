@@ -2,23 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\ApiController;
 
 use App\Jobs\TrainingSignupEmailJob;
 
-use App\Helpers\SqlHelper;
-
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
-use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
+
+use App\Lib\Scheduling;
 
 use App\Mail\TrainingSessionFullMail;
 use Illuminate\Http\Response;
@@ -96,6 +95,23 @@ class PersonScheduleController extends ApiController
             $confirmForce = $params['force'] ?? false;
         } else {
             $confirmForce = false;
+        }
+
+        $permission = Scheduling::retrieveSignUpPermission($person, current_year());
+
+        if (!$confirmForce) {
+            /*
+             * Person must meet various requirements before being allowed to sign up
+             */
+            $isTraining = ($slot->position_id == Position::TRAINING);
+            if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed']) {
+                return response()->json([
+                    'status' => Schedule::MISSING_REQUIREMENTS,
+                    'signed_up' => $slot->signed_up,
+                    'may_force' => $canForce,
+                    'requirements' => $permission['requirements']
+                ]);
+            }
         }
 
         $preventMultipleEnrollments = $slot->position->prevent_multiple_enrollments;
@@ -196,9 +212,9 @@ class PersonScheduleController extends ApiController
         }
 
         $response = [
-            'recommend_burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person),
             'status' => 'success',
             'signed_up' => $signedUp,
+            'recommend_burn_weekend_shift' => Scheduling::recommendBurnWeekendShift($person),
         ];
 
         if ($result['overcapacity']) {
@@ -222,7 +238,7 @@ class PersonScheduleController extends ApiController
      *
      * @param int $personId slot to delete for person
      * @param int $slotId to delete
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     public function destroy(Person $person, $slotId)
@@ -249,8 +265,6 @@ class PersonScheduleController extends ApiController
 
         $result = Schedule::deleteFromSchedule($person->id, $slotId);
         if ($result['status'] == 'success') {
-            $result['recommend_burn_weekend_shift'] = Schedule::recommendBurnWeekendShift($person);
-
             $data = ['slot_id' => $slotId];
             if ($forced) {
                 $data['forced'] = true;
@@ -258,6 +272,7 @@ class PersonScheduleController extends ApiController
 
             $this->log('person-slot-remove', 'removed', $data, $person->id);
         }
+
         return response()->json($result);
     }
 
@@ -267,115 +282,9 @@ class PersonScheduleController extends ApiController
 
     public function permission(Person $person)
     {
-        $params = request()->validate(['year' => 'required|integer']);
-
         $this->authorize('view', [Schedule::class, $person]);
 
-        $year = $params['year'];
-        $personId = $person->id;
-        $status = $person->status;
-        $callsignApproved = $person->callsign_approved;
-
-        if ($status == Person::PAST_PROSPECTIVE) {
-            return response()->json(['permission' => ['signup_allowed' => false]]);
-        }
-
-        $canSignUpForShifts = false;
-        $isAuditor = ($status == Person::AUDITOR);
-
-        $missingBpguid = false;
-
-        if ($isAuditor || setting('AllowSignupsWithoutPhoto')) {
-            $photoStatus = PersonPhoto::NOT_REQUIRED;
-        } else {
-            $photoStatus = PersonPhoto::retrieveStatus($person);
-        }
-
-        $otDisabledAllowSignups = setting('OnlineTrainingDisabledAllowSignups');
-
-        if ($otDisabledAllowSignups || $status == Person::NON_RANGER) {
-            // Online training is disabled, or the person is a non ranger
-            $otPassed = true;
-        } else {
-            $otPassed = PersonOnlineTraining::didCompleteForYear($personId, $year);
-        }
-
-        if ($isAuditor) {
-            // Auditors don't require BMID photo
-            if ($otPassed) {
-                $canSignUpForShifts = true;
-            }
-            $callsignApproved = true;
-        } else {
-            if ($callsignApproved && ($photoStatus == PersonPhoto::APPROVED) && $otPassed) {
-                $canSignUpForShifts = true;
-            }
-
-            // Everyone except Auditors and non rangers need to have BPGUID on file.
-            if ($status != Person::NON_RANGER && empty($person->bpguid)) {
-                $missingBpguid = true;
-                $canSignUpForShifts = false;
-            }
-        }
-
-        $showOtLink = false;
-        // Per Roslyn and Threepio 2/23/2017, we require people to have
-        // a BMID photo before they can take Online Training
-        if (!$canSignUpForShifts
-            && ($photoStatus == PersonPhoto::NOT_REQUIRED || $photoStatus == PersonPhoto::APPROVED)
-            && !$otPassed) {
-            $showOtLink = true;
-        }
-
-
-        if (setting('OnlineTrainingEnabled')) {
-            $otUrl = setting('OnlineTrainingUrl');
-        } else {
-            $otUrl = '';
-        }
-
-        // New for 2019, everyone has to agree to the org's behavioral standards agreement.
-        $missingBehaviorAgreement = !$person->behavioral_agreement;
-        /*
-                 July 5th, 2019 - agreement language is slightly broken. Agreement is optional.
-                if ($missingBehaviorAgreement) {
-                    $canSignUpForShifts = false;
-                }
-        */
-
-
-        if (($isAuditor || $status == Person::PROSPECTIVE || $status == Person::ALPHA)
-            && !$person->hasReviewedPi()) {
-            // PNV & Auditors must review their personal info first
-            $canSignUpForShifts = false;
-        }
-        // 2019 Council request - encourage weekend sign ups
-        $recommendWeekendShift = Schedule::recommendBurnWeekendShift($person);
-
-        $results = [
-            'signup_allowed' => $canSignUpForShifts,
-            'callsign_approved' => $callsignApproved,
-            'photo_status' => $photoStatus,
-            // is the online training link allowed to be shown (if link is enabled)
-            'online_training_allowed' => $showOtLink,
-            // was online training taken/passed?
-            'online_training_passed' => $otPassed,
-
-            // Online training page link - if enabled
-            'online_training_url' => $otUrl,
-
-            // Everyone except Auditors & Non Rangers should have a BPGUID (aka Burner Profile ID)
-            'missing_bpguid' => $missingBpguid,
-
-            'missing_behavioral_agreement' => $missingBehaviorAgreement,
-
-            // Not a hard requirement, just a suggestion
-            'recommend_burn_weekend_shift' => $recommendWeekendShift,
-
-            'has_reviewed_pi' => $person->hasReviewedPi(),
-        ];
-
-        return response()->json(['permission' => $results]);
+        return response()->json(['permission' => Scheduling::retrieveSignUpPermission($person, $this->getYear())]);
     }
 
     /*
@@ -389,7 +298,7 @@ class PersonScheduleController extends ApiController
         $this->authorize('view', [Schedule::class, $person]);
 
         return response()->json([
-            'burn_weekend_shift' => Schedule::recommendBurnWeekendShift($person)
+            'burn_weekend_shift' => Scheduling::recommendBurnWeekendShift($person)
         ]);
     }
 
