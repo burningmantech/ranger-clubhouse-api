@@ -577,12 +577,12 @@ class PersonController extends ApiController
         $person = new Person;
         $person->fill($params['person']);
 
-        if ($person->status != 'auditor') {
+        if ($person->status != Person::AUDITOR) {
             throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
         // make the callsign for an auditor.
-        if ($person->status == 'auditor') {
+        if ($person->status == Person::AUDITOR) {
             $person->resetCallsign();
         }
 
@@ -608,7 +608,7 @@ class PersonController extends ApiController
         PersonStatus::record($person->id, '', Person::AUDITOR, 'registration', $person->id);
 
         // Send a welcome email to the person if not an auditor
-        if ($person->status != 'auditor' && setting('SendWelcomeEmail')) {
+        if ($person->status != Person::AUDITOR && setting('SendWelcomeEmail')) {
             mail_to($person->email, new WelcomeMail($person), true);
         }
 

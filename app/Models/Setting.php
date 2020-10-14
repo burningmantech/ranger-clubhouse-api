@@ -222,9 +222,9 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'RadioCheckoutFormUrl' => [
-            'description' => 'Radio Checkout Form URL',
-            'type' => 'string',
+        'RadioCheckoutAgreementEnabled' => [
+            'description' => 'Allows the Radio Checkout Agreement to be signed',
+            'type' => 'bool',
         ],
 
         'RadioInfoAvailable' => [
@@ -243,7 +243,7 @@ class Setting extends ApiModel
         ],
 
         'RangerPoliciesUrl' => [
-            'description' => 'Rnager Policy Document URL',
+            'description' => 'Ranger Policy Document URL',
             'type' => 'string',
         ],
 
@@ -253,7 +253,7 @@ class Setting extends ApiModel
         ],
 
         'SFEnableWritebacks' => [
-            'description' => 'Enable Saleforce Object Update',
+            'description' => 'Enable Salesforce Object Update',
             'type' => 'bool',
         ],
 

@@ -21,14 +21,11 @@ class PersonEventFilter
         'may_request_stickers',
         'org_vehicle_insurance',
         'sandman_affidavit',
-    ];
-
-    const AGREEMENT_FIELDS = [
         'signed_motorpool_agreement',
         'signed_personal_vehicle_agreement',
     ];
 
-    const TIMESHEET_FIELDS = [
+     const TIMESHEET_FIELDS = [
         'timesheet_confirmed',
     ];
 
@@ -48,14 +45,12 @@ class PersonEventFilter
     const FIELDS_SERIALIZE = [
         [self::KEY_FIELDS],
         [self::ADMIN_FIELDS],
-        [self::AGREEMENT_FIELDS],
         [self::READONLY_FIELDS],
         [self::HQ_FIELDS],
         [self::TIMESHEET_FIELDS],
     ];
     const FIELDS_DESERIALIZE = [
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
-        [self::AGREEMENT_FIELDS, true, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
         [self::READONLY_FIELDS, false, [Role::ADMIN]],
         [self::HQ_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
         [self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT]]

@@ -17,19 +17,19 @@ class ConfigController extends Controller
         'EditorUrl',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',
-        'MentorEmail',
         'MealDates',
         'MealInfoAvailable',
+        'MentorEmail',
         'MotorpoolPolicyEnable',
         'PersonnelEmail',
-        'RadioCheckoutFormUrl',
+        'RadioCheckoutAgreementEnabled',
         'RangerFeedbackFormUrl',
         'RangerManualUrl',
         'RangerPoliciesUrl',
         'RpTicketThreshold',
         'ScTicketThreshold',
         'TrainingAcademyEmail',
-        'VCEmail'
+        'VCEmail',
     ];
 
     public function show() {

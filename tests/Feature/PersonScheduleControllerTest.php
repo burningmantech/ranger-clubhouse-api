@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\PersonOnlineTraining;
+use http\Exception\RuntimeException;
 use Mockery;
 use Tests\TestCase;
 
@@ -58,7 +60,6 @@ class PersonScheduleControllerTest extends TestCase
         // scheduling ends up sending lots of emails..
         Mail::fake();
 
-        // set the signups in the furture
         $year = $this->year = date('Y') + 1;
 
         // Setup default (real world) positions
@@ -176,6 +177,36 @@ class PersonScheduleControllerTest extends TestCase
         return $person;
     }
 
+    public function setupRequirements($person)
+    {
+        $this->mockOnlineTrainingPass($person);
+        $this->setupPhotoStatus(PersonPhoto::APPROVED, $person);
+    }
+
+    private function setupPhotoStatus($status, $person = null)
+    {
+        if ($person == null) {
+            $person = $this->user;
+        }
+
+        $photo = PersonPhoto::factory()->create([
+            'person_id' => $person->id,
+            'status' => $status,
+        ]);
+
+        $person->person_photo_id = $photo->id;
+        $person->saveWithoutValidation();
+    }
+
+    private function mockOnlineTrainingPass($person)
+    {
+        $ot = new PersonOnlineTraining;
+        $ot->person_id = $person->id;
+        $ot->completed_at = now();
+        $ot->type = PersonOnlineTraining::DOCEBO;
+        $ot->saveWithoutValidation();
+    }
+
 
     /*
      * Find only the signups for a year.
@@ -254,10 +285,13 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::DIRT);
         $shift = $this->dirtSlots[0];
+        $personId = $this->user->id;
+
+        $this->setupRequirements($this->user);
 
         $response = $this->json(
             'POST',
-            "person/{$this->user->id}/schedule",
+            "person/$personId/schedule",
             [
                 'slot_id' => $shift->id,
             ]
@@ -269,7 +303,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->assertDatabaseHas(
             'person_slot',
             [
-                'person_id' => $this->user->id,
+                'person_id' => $personId,
                 'slot_id' => $shift->id,
             ]
         );
@@ -295,6 +329,8 @@ class PersonScheduleControllerTest extends TestCase
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
         $personId = $this->user->id;
+
+        $this->setupRequirements($this->user);
 
         Queue::fake();
 
@@ -334,6 +370,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAlertTrainingAcademyWhenTrainingSessionIsFull()
     {
+        $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
         $shift->update(['max' => 1]);
@@ -359,6 +396,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDoNotAllowShiftSignupWithNoPosition()
     {
+        $this->setupRequirements($this->user);
         $shift = $this->greenDotSlots[0];
 
         $response = $this->json(
@@ -388,6 +426,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testPreventSignupForFullShift()
     {
+        $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1]);
@@ -418,6 +457,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testPreventSignupForStartedShift()
     {
+        $this->setupRequirements($this->user);
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
         $this->addPosition(Position::TRAINING);
@@ -448,6 +488,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowSignupForStartedShiftIfAdmin()
     {
+        $this->setupRequirements($this->user);
         $this->addRole(Role::ADMIN);
 
         $person = Person::factory()->create();
@@ -482,6 +523,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->addRole(Role::TRAINER);
 
         $person = $this->createPerson();
+        $this->setupRequirements($person);
         $personId = $person->id;
 
         $training = $this->trainingSlots[0];
@@ -512,6 +554,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testMayForceSignupForFullShiftIfAdmin()
     {
         $person = Person::factory()->create();
+        $this->setupRequirements($person);
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
 
@@ -545,11 +588,12 @@ class PersonScheduleControllerTest extends TestCase
     public function testAllowSignupForFullShiftIfAdmin()
     {
         $person = Person::factory()->create();
+        $this->setupRequirements($person);
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
 
         $shift = $this->trainingSlots[0];
-        $shift->update(['signed_up' => 1, 'max' => 1,]);
+        $shift->update(['signed_up' => 1, 'max' => 1]);
 
         $response = $this->json(
             'POST',
@@ -580,6 +624,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testPreventMultipleEnrollmentsForTrainingSessions()
     {
         $personId = $this->user->id;
+        $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
 
         $previousTraining = $this->trainingSlots[0];
@@ -620,6 +665,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testAllowMultiplePartTrainingSessionsSignup()
     {
         $personId = $this->user->id;
+        $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
 
         $year = date('Y') + 1;
@@ -672,6 +718,8 @@ class PersonScheduleControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $person = Person::factory()->create();
+        $this->setupRequirements($person);
+
         $this->addPosition(Position::TRAINING, $person);
         $personId = $person->id;
 
@@ -714,10 +762,11 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDenyMultipleEnrollmentsForTrainingSessionsForTrainers()
     {
-
         $this->addRole(Role::TRAINER);
 
         $person = $this->createPerson();
+        $this->setupRequirements($person);
+
         $personId = $person->id;
         $previousTraining = $this->trainingSlots[0];
 
@@ -827,29 +876,6 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    private function setupPhotoStatus($status, $person = null)
-    {
-        if ($person == null) {
-            $person = $this->user;
-        }
-
-        $photo = PersonPhoto::factory()->create([
-            'person_id' => $person->id,
-            'status' => $status,
-        ]);
-
-        $person->person_photo_id = $photo->id;
-        $person->saveWithoutValidation();
-    }
-
-    private function mockOnlineTrainingPass($result)
-    {
-        $mock = $this->mock('alias:\App\Models\PersonOnlineTraining');
-        $mock->shouldReceive('didCompleteForYear')->andReturn($result);
-
-        return $mock;
-    }
-
     /*
      * Allow an active, who completed Online Training, and has a photo to sign up.
      */
@@ -857,7 +883,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testAllowActiveWhoCompletedOnlineTrainingAndHasPhoto()
     {
         $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $mrMock = $this->mockOnlineTrainingPass($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -866,9 +892,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'permission' => [
-                'signup_allowed' => true,
-                'callsign_approved' => true,
-                'online_training_passed' => true,
+                'all_signups_allowed' => true,
             ]
         ]);
     }
@@ -877,9 +901,9 @@ class PersonScheduleControllerTest extends TestCase
      * Deny an active, who completed Online Training, and has no photo.
      */
 
-    public function testDenyActiveWithPhoto()
+    public function testDenyActiveWithNoPhoto()
     {
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $mrMock = $this->mockOnlineTrainingPass($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -888,10 +912,8 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'permission' => [
-                'signup_allowed' => false,
-                'callsign_approved' => true,
-                'online_training_passed' => true,
-                'photo_status' => 'missing',
+                'all_signups_allowed' => false,
+                'requirements' => [ 'photo-unapproved' ]
             ]
         ]);
     }
@@ -902,8 +924,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDenyActiveWhoDidNotCompleteOnlineTraining()
     {
-        $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockOnlineTrainingPass(false);
+        $this->setupPhotoStatus('approved');
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -912,10 +933,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'permission' => [
-                'signup_allowed' => false,
-                'callsign_approved' => true,
-                'online_training_passed' => false,
-                'photo_status' => 'approved',
+                'training_signups_allowed' => false,
             ]
         ]);
     }
@@ -948,13 +966,14 @@ class PersonScheduleControllerTest extends TestCase
      * Warn user the behavioral agreement was not agreed to but allow sign ups.
      */
 
+    /*
+
+    TODO: uncomment when agreement language has been updated.
     public function testMarkActiveWhoDidNotSignBehavioralAgreement()
     {
         $person = Person::factory()->create(['behavioral_agreement' => false]);
         $this->actingAs($person); // login
-
-        $photoMock = $this->setupPhotoStatus('approved', $person);
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $this->setupRequirements($person);
 
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year
@@ -968,6 +987,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         ]);
     }
+    */
 
     /*
      * Allow an auditor, who completed Online Training, and has no photo to sign up.
@@ -977,8 +997,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $person = Person::factory()->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
         $this->actingAs($person);
-
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $this->mockOnlineTrainingPass($person);
 
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year
@@ -987,9 +1006,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'permission' => [
-                'signup_allowed' => true,
-                'callsign_approved' => true,
-                'online_training_passed' => true,
+                'all_signups_allowed' => true,
             ]
         ]);
     }
@@ -1001,6 +1018,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testSignUpLimitWithTrainingSlot()
     {
+        $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
 
         $shift = $this->trainingSlots[0];
@@ -1069,8 +1087,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $year = $this->year;
 
-        $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $this->setupRequirements($this->user);
 
         // Check for scheduling
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
@@ -1132,8 +1149,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->mockBurnWeekend();
         $year = $this->year;
 
-        $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockOnlineTrainingPass(true);
+        $this->setupRequirements($this->user);
 
         $shift = Slot::factory()->create(
             [
