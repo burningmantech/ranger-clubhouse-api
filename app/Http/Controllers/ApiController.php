@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,19 @@ class ApiController extends Controller
 
     public function __construct()
     {
-        if (Auth::check()) {
+        /*
+         * The JWT token has an expiry timestamp - do the authentication check
+         * before setting up the ground hog day time, otherwise the JWT token will be invalidated
+         */
+        $check = Auth::check();
+
+        $ghdTime = config('clubhouse.GroundhogDayServer');
+        if (!empty($ghdTime)) {
+            // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
+            Carbon::setTestNow($ghdTime);
+        }
+
+        if ($check) {
             $this->user = Auth::user();
             if (in_array($this->user->status, Person::LOCKED_STATUSES)) {
                 // A user should not be able to login when not authorized.

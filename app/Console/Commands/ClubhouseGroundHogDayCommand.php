@@ -10,7 +10,7 @@ use App\Lib\RedactDatabase;
 
 class ClubhouseGroundHogDayCommand extends Command
 {
-    const GROUNDHOG_DATETIME = "2018-08-30 18:00:00";
+    const GROUNDHOG_DATETIME = "2019-08-30 19:00:00";
     const GROUNDHOG_DATABASE = "rangers_ghd";
 
     /**
@@ -121,11 +121,13 @@ class ClubhouseGroundHogDayCommand extends Command
         // Setup an announcement
 
         DB::table('motd')->insert([
-            'message'    => "Welcome to the Training Server where the date is always ".date('l, F jS Y', strtotime($groundHogDay)).".",
+            'subject' => 'Welcome to '.date('l, F jS Y', strtotime($groundHogDay)).'!',
+            'message'    => 'Remember the temporal prime directive, do not muck up the timeline by killing your own grandparent in the past.',
             'person_id' => 4594,
             'for_rangers' => true,
             'for_pnvs' => true,
-            'for_auditors' => true
+            'for_auditors' => true,
+            'expires_at' => '2099-09-01 12:00:00'
         ]);
 
         $this->info("Creating mysql dump of groundhog database");
