@@ -2,29 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\Controller;
 
-use App\Models\Person;
-use App\Models\Role;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
-use App\Http\RestApi;
+use App\Models\Person;
+use App\Models\Role;
+
 use App\Mail\ResetPassword;
-use App\Helpers\SqlHelper;
+
+use Carbon\Carbon;
 
 use GuzzleHttp;
 use GuzzleHttp\Exception\RequestException;
+use Okta\JwtVerifier\JwtVerifierBuilder;
 
 class AuthController extends Controller
 {
     /**
      * Get a JWT via given credentials.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     public function login()
@@ -37,7 +39,7 @@ class AuthController extends Controller
 
         $credentials = request()->validate([
             'identification' => 'required|string',
-            'password'       => 'required|string',
+            'password' => 'required|string',
         ]);
 
         $actionData = $this->buildLogInfo();
@@ -46,21 +48,22 @@ class AuthController extends Controller
         if (!$person) {
             $actionData['email'] = $credentials['identification'];
             ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
-            return response()->json([ 'status' => 'invalid-credentials'], 401);
+            return response()->json(['status' => 'invalid-credentials'], 401);
         }
 
         if (!$person->isValidPassword($credentials['password'])) {
             ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
-            return response()->json([ 'status' => 'invalid-credentials'], 401);
+            return response()->json(['status' => 'invalid-credentials'], 401);
         }
 
         return $this->attemptLogin($person, $actionData);
 
     }
 
-    private function buildLogInfo() {
+    private function buildLogInfo()
+    {
         $actionData = [
-            'ip'         => request()->ip(),
+            'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ];
 
@@ -85,22 +88,23 @@ class AuthController extends Controller
      * Handles the common checks for both username/password and SSO logins.
      */
 
-    private function attemptLogin(Person $person, $actionData) {
+    private function attemptLogin(Person $person, $actionData)
+    {
         $status = $person->status;
 
         if ($status == Person::SUSPENDED) {
             ActionLog::record($person, 'auth-failed', 'Account suspended', $actionData);
-            return response()->json([ 'status' => 'account-suspended'], 401);
+            return response()->json(['status' => 'account-suspended'], 401);
         }
 
         if (in_array($status, Person::LOCKED_STATUSES)) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
-            return response()->json([ 'status' => 'account-disabled'], 401);
+            return response()->json(['status' => 'account-disabled'], 401);
         }
 
         if (!$person->hasRole(Role::LOGIN)) {
             ActionLog::record($person, 'auth-failed', 'Login disabled', $actionData);
-            return response()->json([ 'status' => 'login-disabled' ], 401);
+            return response()->json(['status' => 'login-disabled'], 401);
         }
 
         $lastLoggedIn = $person->logged_in_at;
@@ -108,13 +112,17 @@ class AuthController extends Controller
         $person->saveWithoutValidation();
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
-        return $this->respondWithToken(auth()->login($person), $person, $lastLoggedIn);
+
+        $token = $this->groundHogDayWrap(function () use ($person) {
+            return auth()->login($person);
+        });
+        return $this->respondWithToken($token, $person, $lastLoggedIn);
     }
 
     /**
      * Log the user out (Invalidate the token).
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function logout()
     {
@@ -127,7 +135,7 @@ class AuthController extends Controller
     /**
      * Refresh a token.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function refresh()
     {
@@ -146,21 +154,21 @@ class AuthController extends Controller
         ]);
 
         $action = [
-            'ip'            => request()->ip(),
-            'user_agent'    => request()->userAgent(),
-            'email'         => $data['identification']
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'email' => $data['identification']
         ];
 
         $person = Person::findByEmail($data['identification']);
 
         if (!$person) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Password reset failed', $action);
-            return response()->json([ 'status' => 'not-found' ], 400);
+            return response()->json(['status' => 'not-found'], 400);
         }
 
         if (in_array($person->status, Person::LOCKED_STATUSES)) {
             ActionLog::record(null, 'auth-password-reset-fail', 'Account disabled', $action);
-            return response()->json([ 'status' => 'account-disabled' ], 403);
+            return response()->json(['status' => 'account-disabled'], 403);
         }
 
         $resetPassword = $person->createResetPassword();
@@ -168,10 +176,10 @@ class AuthController extends Controller
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
         if (!mail_to($person->email, new ResetPassword($resetPassword, setting('GeneralSupportEmail')))) {
-            return response()->json([ 'status' => 'mail-fail' ]);
+            return response()->json(['status' => 'mail-fail']);
         }
 
-        return response()->json([ 'status' => 'success' ]);
+        return response()->json(['status' => 'success']);
     }
 
     /**
@@ -188,7 +196,7 @@ class AuthController extends Controller
         $issuer = config('okta.issuer');
         $authHeaderSecret = base64_encode($clientId . ':' . config('okta.client_secret'));
 
-        $url =  $issuer . '/v1/token';
+        $url = $issuer . '/v1/token';
         $client = new GuzzleHttp\Client();
 
         $actionData = $this->buildLogInfo();
@@ -211,20 +219,20 @@ class AuthController extends Controller
             ]);
         } catch (RequestException $e) {
             ErrorLog::recordException($e, 'auth-sso-connect-failure');
-            return response()->json([ 'status' => 'sso-server-failure' ], 401);
+            return response()->json(['status' => 'sso-server-failure'], 401);
         }
 
         $body = $res->getBody()->getContents();
 
         if ($res->getStatusCode() != 200) {
-            ErrorLog::record('sso-server-failure', [ 'status' => $res->getStatusCode(), 'body' => $res->getBody() ]);
-            return response()->json([ 'status' => 'sso-server-failure' ], 401);
+            ErrorLog::record('sso-server-failure', ['status' => $res->getStatusCode(), 'body' => $res->getBody()]);
+            return response()->json(['status' => 'sso-server-failure'], 401);
         }
 
         try {
             // Try to decode the token
             $json = json_decode($body);
-            $jwtVerifier = (new \Okta\JwtVerifier\JwtVerifierBuilder())
+            $jwtVerifier = (new JwtVerifierBuilder())
                 ->setIssuer($issuer)
                 ->setAudience('api://default')
                 ->setClientId($clientId)
@@ -232,14 +240,14 @@ class AuthController extends Controller
 
             $jwt = $jwtVerifier->verify($json->access_token);
             if (!$jwt) {
-                ErrorLog::record('sso-malformed-token', [ 'body' => $body, 'jwt' => $jwt ]);
-                return response()->json([ 'status' => 'sso-token-failure' ], 401);
+                ErrorLog::record('sso-malformed-token', ['body' => $body, 'jwt' => $jwt]);
+                return response()->json(['status' => 'sso-token-failure'], 401);
             }
 
             $claims = $jwt->claims;
-        } catch (\Exception $e) {
-            ErrorLog::recordException($e, 'sso-decode-failure', [ 'body' => $body ]);
-            return response()->json([ 'status' => 'sso-token-failure' ], 401);
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'sso-decode-failure', ['body' => $body]);
+            return response()->json(['status' => 'sso-token-failure'], 401);
         }
 
         /*
@@ -254,7 +262,7 @@ class AuthController extends Controller
         if (!$person) {
             $actionData['email'] = $email;
             ActionLog::record(null, 'auth-sso-failed', 'Email not found', $actionData);
-            return response()->json([ 'status' => 'invalid-credentials'], 401);
+            return response()->json(['status' => 'invalid-credentials'], 401);
         }
 
         // Everything looks good so far.. perform some validation checks and
@@ -267,18 +275,36 @@ class AuthController extends Controller
      *
      * @param string $token
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     protected function respondWithToken($token, $person, $lastLoggedIn)
     {
         // TODO does a 'refresh_token' need to be provided?
         return response()->json([
-            'token'      => $token,
-            'person_id'  => $person->id,
-            'last_logged_in' => (string) $lastLoggedIn,
+            'token' => $token,
+            'person_id' => $person->id,
+            'last_logged_in' => (string)$lastLoggedIn,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60
+            'expires_in' => $this->groundHogDayWrap(function() { return auth()->factory()->getTTL() * 60; })
         ]);
+    }
+
+    /**
+     * Deal with Ground Hog Day server timing
+     */
+
+    private function groundHogDayWrap($closure)
+    {
+        $ghd = config('clubhouse.GroundhogDayServer');
+        if (!empty($ghd)) {
+            Carbon::setTestNow();
+            $result = $closure();
+            Carbon::setTestNow($ghd);
+        } else {
+            $result = $closure();
+        }
+
+        return $result;
     }
 }
