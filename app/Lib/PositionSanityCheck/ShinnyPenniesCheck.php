@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class ShinnyPenniesCheck extends SanityCheck
 {
-    public static function issues(...$options): array
+    public static function issues(): array
     {
         $year = current_year();
 
