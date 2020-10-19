@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Feature;
+namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -62,6 +62,7 @@ class PositionSanityCheckControllerTest extends TestCase
             'mentor_year' => date('Y'),
             'status'      => 'pass'
         ]);
+
     }
 
     /*
@@ -119,6 +120,67 @@ class PositionSanityCheckControllerTest extends TestCase
                     'callsign' => $person->callsign,
                     'has_shiny_penny' => 1,
                     'year' => $personYear,
+                ]
+            ]
+        ]);
+    }
+
+    public function testDeactivatedPositionsInspection()
+    {
+        $person = $this->person;
+
+        Position::factory()->create([
+            'id'     => Position::HQ_LEAD,
+            'title'  => 'HQ Lead',
+            'active' => 0
+        ]);
+
+        Position::factory()->create([
+            'id'     => Position::HQ_RUNNER,
+            'title'  => 'HQ Runner',
+            'active' => 0
+        ]);
+
+        PersonPosition::factory()->create([
+            'person_id'    => $person->id,
+            'position_id'  => Position::HQ_LEAD
+        ]);
+
+        PersonPosition::factory()->create([
+            'person_id'    => $person->id,
+            'position_id'  => Position::HQ_RUNNER
+        ]);
+
+        $this->addRole(Role::MANAGE);
+
+        $person = $this->person;
+
+        $response = $this->json('GET', 'position/sanity-checker');
+        $response->assertStatus(200);
+        $response->assertJsonCount(2, 'deactivated_positions.*');
+        $response->assertJson([
+            'deactivated_positions' => [
+                [
+                    "id" => Position::HQ_LEAD,
+                    "title" => "HQ Lead",
+                    "people" => [
+                        [
+                            "id" => $person->id,
+                            "callsign" => "A Callsign",
+                            "status" => "active"
+                        ]
+                    ]
+                ],
+                [
+                    "id" => Position::HQ_RUNNER,
+                    "title" => "HQ Runner",
+                    "people" => [
+                        [
+                            "id" => $person->id,
+                            "callsign" => "A Callsign",
+                            "status" => "active"
+                        ]
+                    ]
                 ]
             ]
         ]);

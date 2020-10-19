@@ -2,14 +2,6 @@
 
 namespace App\Lib;
 
-//TODO Remove these?
-use App\Models\Person;
-use App\Models\Position;
-use App\Models\PersonPosition;
-use App\Models\Role;
-use App\Models\PersonRole;
-use App\Models\PersonMentor;
-
 use Illuminate\Support\Facades\DB;
 
 class PositionSanityCheck
@@ -21,11 +13,11 @@ class PositionSanityCheck
      *  & peroxide enthusiast.
      */
 
-    // TODO Have these implement an abstract class?
     const CHECKERS = [
-        'green_dot'       => 'App\Lib\PositionSanityCheck\GreenDotCheck',
-        'management_role' => 'App\Lib\PositionSanityCheck\ManagementCheck',
-        'shiny_pennies'   => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+        'green_dot'             => 'App\Lib\PositionSanityCheck\GreenDotCheck',
+        'management_role'       => 'App\Lib\PositionSanityCheck\ManagementCheck',
+        'shiny_pennies'         => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+        'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
     ];
 
     public static function issues(): array
