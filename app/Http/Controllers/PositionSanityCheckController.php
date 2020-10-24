@@ -35,8 +35,16 @@ class PositionSanityCheckController extends Controller
             'repair'       => 'required|string',
             'people_ids'   => 'required|array',
             'people_ids.*' => 'required|integer|exists:person,id',
+            'repair_params' => 'nullable'
         ]);
 
-        return response()->json(PositionSanityCheck::repair($params['repair'], $params['people_ids']));
+        if (!array_key_exists('repair_params', $params)) {
+            $params['repair_params'] = [];
+        }
+
+        return response()->json(PositionSanityCheck::repair(
+            $params['repair'],
+            $params['people_ids'],
+            $params['repair_params']));
     }
 }

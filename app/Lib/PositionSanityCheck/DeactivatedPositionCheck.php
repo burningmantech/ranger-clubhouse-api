@@ -2,6 +2,9 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Position;
+use App\Models\PersonPosition;
+
 use Illuminate\Support\Facades\DB;
 
 class DeactivatedPositionCheck
@@ -46,8 +49,26 @@ class DeactivatedPositionCheck
         return $positions;
     }
 
-    public static function repair($peopleIds): array
+    public static function repair($peopleIds, ...$options): array
     {
+        $results = [];
+        $positionId = $options[0]['positionId'];
+
+        // Validate position exists and is inactive
+        $position = Position::where('id', $positionId)->where('active', 0)->get();
+        if ($position->count() == 0) {
+            throw new Exception("Invalid position!");
+        }
+
+        foreach ($peopleIds as $personId) {
+            PersonPosition::removeIdsFromPerson($personId, [$positionId], 'position sanity check repair');
+            $results[] = [
+                'id'       => $personId,
+                'messages' => ['position removed']
+            ];
+        }
+
+        return $results;
     }
 
     private static function position($obj): array

@@ -247,4 +247,61 @@ class PositionSanityCheckControllerTest extends TestCase
             'position_id' => Position::DIRT_SHINY_PENNY
         ]);
     }
+
+    public function testDeactivatedRepairInvalidPosition()
+    {
+        $this->addRole(Role::ADMIN);
+        $person = $this->person;
+
+        Position::factory()->create([
+            'id'     => Position::HQ_RUNNER,
+            'title'  => 'HQ Runner',
+            'active' => 1
+        ]);
+
+        $response = $this->json('POST', 'position/repair', [
+            'repair' => 'deactivated_positions',
+            'people_ids' => [ $person->id ],
+            'repair_params' => [ 'positionId' => Position::HQ_RUNNER ]
+        ]);
+
+        $response->assertStatus(500);
+    }
+
+    public function testDeactivatedRepair()
+    {
+        $this->addRole(Role::ADMIN);
+        $person = $this->person;
+
+        Position::factory()->create([
+            'id'     => Position::HQ_LEAD,
+            'title'  => 'HQ Lead',
+            'active' => 0
+        ]);
+
+        PersonPosition::factory()->create([
+            'person_id'    => $person->id,
+            'position_id'  => Position::HQ_LEAD
+        ]);
+
+        $response = $this->json('POST', 'position/repair', [
+            'repair' => 'deactivated_positions',
+            'people_ids' => [ $person->id ],
+            'repair_params' => [ 'positionId' => Position::HQ_LEAD ]
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, '*.id');
+        $response->assertJson([
+            [
+                'id'       => $person->id,
+                'messages' => [ 'position removed' ]
+            ]
+        ]);
+
+        $this->assertDatabaseMissing('person_position', [
+            'person_id'    => $person->id,
+            'position_id' => Position::HQ_LEAD
+        ]);
+    }
 }

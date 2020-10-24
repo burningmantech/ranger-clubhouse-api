@@ -27,7 +27,7 @@ class ShinnyPenniesCheck extends SanityCheck
         );
     }
 
-    public static function repair($peopleIds): array
+    public static function repair($peopleIds, ...$options): array
     {
         $results = [];
         $year = current_year();

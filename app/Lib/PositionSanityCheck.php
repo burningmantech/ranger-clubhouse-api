@@ -39,13 +39,13 @@ class PositionSanityCheck
      * @return array
      */
 
-    public static function repair(string $repair, array $peopleIds): array
+    public static function repair(string $repair, array $peopleIds, array $options): array
     {
         if (!array_key_exists($repair, self::CHECKERS)) {
             throw new InvalidArgumentException("Unknown repair action [$repair]");
         }
 
-        return self::CHECKERS[$repair]::repair($peopleIds);
+        return self::CHECKERS[$repair]::repair($peopleIds, $options);
     }
 
 }
