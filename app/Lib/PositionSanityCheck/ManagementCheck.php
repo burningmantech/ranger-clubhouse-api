@@ -67,7 +67,7 @@ class ManagementCheck extends SanityCheck
         return $issues;
     }
 
-    public static function repair($peopleIds): array
+    public static function repair($peopleIds, ...$options): array
     {
         $results = [];
         foreach ($peopleIds as $personId) {
