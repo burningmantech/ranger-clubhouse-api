@@ -190,31 +190,4 @@ class PositionController extends ApiController
         return response()->json(Position::retrieveSandPeopleQualifications());
     }
 
-    /**
-     * Sanity check
-     */
-
-    public function sanityChecker()
-    {
-        $this->authorize('sanityChecker', [ Position::class ]);
-        return response()->json(Position::sanityChecker());
-    }
-
-    /**
-     * Position Sanity Checker
-     */
-
-    public function repair()
-    {
-        $this->authorize('repair', [ Position::class ]);
-
-        $params = request()->validate([
-            'repair'       => 'required|string',
-            'people_ids'   => 'required|array',
-            'people_ids.*' => 'required|integer|exists:person,id',
-        ]);
-
-        return response()->json(Position::repair($params['repair'], $params['people_ids']));
-    }
-
 }
