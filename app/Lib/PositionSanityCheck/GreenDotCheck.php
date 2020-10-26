@@ -34,7 +34,13 @@ class GreenDotCheck extends SanityCheck
             $hasGPGD = PersonPosition::havePosition($personId, Position::GERLACH_PATROL_GREEN_DOT);
 
             if (!$hasDirt && !$hasSanctuary) {
-                $errors[] = 'not a Green Dot';
+                PersonPosition::removeIdsFromPerson(
+                    $personId,
+                    [Position::GERLACH_PATROL_GREEN_DOT],
+                    'position sanity checker repair'
+                );
+                $messages[] = 'removed Gerlach Patrol - Green Dot';
+
             } else {
                 $positionIds = [];
 
