@@ -39,14 +39,14 @@ class ConfigController extends Controller
      */
 
     public function show() {
-        $ghdTime = config('clubhouse.GroundhogDayServer');
+        $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
             Carbon::setTestNow($ghdTime);
         }
 
         $configs = setting(self::CLIENT_CONFIGS);
 
-        if (config('clubhouse.GroundhogDayServer')) {
+        if (config('clubhouse.GroundhogDayTime')) {
             $configs['GroundhogDayTime'] = (string) now();
         }
 

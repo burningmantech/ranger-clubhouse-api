@@ -67,7 +67,7 @@ if (!function_exists('mail_to')) {
 /**
  * Retrieve the current year.
  *
- * Support for groundhog day server. When the GroundhogDayServer configuration
+ * Support for groundhog day server. When the GroundhogDayTime configuration
  * variable is true, use the database year. otherwise use the system year.
  *
  * @return integer the current year (either real or simulated)
@@ -78,7 +78,7 @@ if (!function_exists('current_year')) {
     {
         static $year;
 
-        if (config('clubhouse.GroundhogDayServer')) {
+        if (config('clubhouse.GroundhogDayTime')) {
             if ($year) {
                 return $year;
             }

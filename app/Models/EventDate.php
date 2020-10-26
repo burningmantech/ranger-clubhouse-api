@@ -11,6 +11,10 @@ class EventDate extends ApiModel
     protected $table = 'event_dates';
     protected $auditModel = true;
 
+    const AFTER_EVENT = 'after-event';
+    const BEFORE_EVENT = 'before-event';
+    const EVENT = 'event';
+
     // All other table names are singular, and this one had to be pural. deal with it.
     protected $resourceSingle = 'event_date';
 
@@ -61,35 +65,35 @@ class EventDate extends ApiModel
     public static function calculatePeriod() {
         $now = now();
         if ($now->month <= 2) {
-            return 'after-event';
+            return self::AFTER_EVENT;
         }
 
-        $year = current_year();
+        $year = $now->year;
 
         $ed = self::findForYear($year);
 
         if ($ed && $ed->event_start && $ed->event_end) {
             if ($now->lt($ed->event_start)) {
-                return 'before-event';
+                return self::BEFORE_EVENT;
             }
 
             if ($now->gt($ed->event_end)) {
-                return 'after-event';
+                return self::AFTER_EVENT;
             }
 
-            return 'event';
+            return self::EVENT;
         } else {
             $laborDay = (new Carbon("September $year first monday"))->setTime(23, 59, 59);
 
             if ($laborDay->lte($now)) {
-                return 'after-event';
+                return self::AFTER_EVENT;
             }
 
             $gateOpen = $laborDay->clone()->subDays(8)->setTime(0, 0, 1);
             if ($gateOpen->lte($now) && $laborDay->gte($now)) {
-                return 'event';
+                return self::EVENT;
             }
-            return 'before-event';
+            return self::BEFORE_EVENT;
         }
     }
 

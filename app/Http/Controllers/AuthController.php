@@ -296,7 +296,7 @@ class AuthController extends Controller
 
     private function groundHogDayWrap($closure)
     {
-        $ghd = config('clubhouse.GroundhogDayServer');
+        $ghd = config('clubhouse.GroundhogDayTime');
         if (!empty($ghd)) {
             Carbon::setTestNow();
             $result = $closure();
