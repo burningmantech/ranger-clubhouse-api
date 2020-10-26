@@ -30,13 +30,22 @@ class Milestones
         $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
         $period = EventDate::calculatePeriod();
 
+        $settings = setting([
+            'MotorpoolPolicyEnable',
+            'OnboardAlphaShiftPrepLink',
+            'OnlineTrainingEnabled',
+            'OnlineTrainingUrl',
+            'RadioCheckoutAgreementEnabled',
+        ]);
+
         $milestones = [
             'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
-            'online_training_enabled' => setting('OnlineTrainingEnabled'),
-            'online_training_url' => setting('OnlineTrainingUrl'),
+            'online_training_enabled' => $settings['OnlineTrainingEnabled'],
+            'online_training_url' => $settings['OnlineTrainingUrl'],
             'behavioral_agreement' => $person->behavioral_agreement,
             'has_reviewed_pi' => $person->hasReviewedPi(),
             'asset_authorized' => $event->asset_authorized,
+            'radio_checkout_agreement_enabled' => $settings['RadioCheckoutAgreementEnabled'],
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
             'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year),
             'period' => $period,
@@ -58,7 +67,7 @@ class Milestones
         }
 
         if (!isset($milestones['training'])) {
-            $milestones['training'] = [ 'status' => 'no-shift'];
+            $milestones['training'] = ['status' => 'no-shift'];
         }
 
         usort($artTrainings, function ($a, $b) {
@@ -70,8 +79,8 @@ class Milestones
         switch ($status) {
             case Person::ALPHA:
             case Person::PROSPECTIVE:
-            case  Person::BONKED:
-                $milestones['alpha_shift_prep_link'] = setting('OnboardAlphaShiftPrepLink');
+            case Person::BONKED:
+                $milestones['alpha_shift_prep_link'] = $settings['OnboardAlphaShiftPrepLink'];
                 $milestones['alpha_shifts_available'] = $haveAlphaShifts = Slot::haveActiveForPosition(Position::ALPHA);
                 if ($haveAlphaShifts) {
                     $alphaShift = Schedule::findEnrolledSlots($person->id, $year, Position::ALPHA)->last();
@@ -131,21 +140,21 @@ class Milestones
                 }
             }
 
-            if ($period != 'after-event') {
+            if ($period != EventDate::AFTER_EVENT) {
                 $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
                 $milestones['shift_signups'] = Schedule::countWorkingShiftSignups($person);
                 // Person is *not* signed up - figure out if weekend shirts are available
                 $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
                 // Burn weekend!
                 $milestones['burn_weekend_signup'] = Schedule::haveBurnWeekendSignup($person);
-            }
 
-            $milestones['motorpool_agreement_available'] = setting('MotorpoolPolicyEnable');
-            $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
+                $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
+                $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
 
-            if ($event->may_request_stickers) {
-                $milestones['vehicle_requests_allowed'] = true;
-                $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
+                if ($event->may_request_stickers) {
+                    $milestones['vehicle_requests_allowed'] = true;
+                    $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
+                }
             }
         }
 

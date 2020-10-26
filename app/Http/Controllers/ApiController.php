@@ -32,7 +32,7 @@ class ApiController extends Controller
          */
         $check = Auth::check();
 
-        $ghdTime = config('clubhouse.GroundhogDayServer');
+        $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
             // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
             Carbon::setTestNow($ghdTime);

@@ -12,9 +12,8 @@ return [
     // Passed to the client and not used by the backend.
     'DeploymentEnvironment' => env('RANGER_CLUBHOUSE_ENVIRONMENT', ''),
 
-    // GroundhogDay Server support - if true, current_year() will pull the year from
-    // the database running with the faketime shim.
-    'GroundhogDayServer'    => env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_SERVER', false),
+    // GroundhogDay Server (string) - if set will turn on
+    'GroundhogDayTime'    => env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME', ''),
 
     'RekognitionAccessKey' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_KEY', ''),
     'RekognitionAccessSecret' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_SECRET', ''),
