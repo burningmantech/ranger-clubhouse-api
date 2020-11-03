@@ -770,7 +770,8 @@ class Timesheet extends ApiModel
     public static function retrieveAllForYearByCallsign($year)
     {
         $rows = self::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status', 'position:id,title,type,count_hours' ])
+                ->with([ 'person:id,callsign,status',
+                          'position:id,title,active,type,count_hours' ])
                 ->orderBy('on_duty')
                 ->get();
 
@@ -801,8 +802,9 @@ class Timesheet extends ApiModel
                         'duration'  => $t->duration,
                         'credits'   => $t->credits,
                         'position'   => [
-                            'id'    => $t->position_id,
-                            'title' => $t->position ? $t->position->title : "Position #".$t->position_id,
+                            'id'     => $t->position_id,
+                            'title'  => $t->position ? $t->position->title : "Position #".$t->position_id,
+                            'active' => $t->position->active,
                             'count_hours' => $t->position ? $t->position->count_hours : 0,
                         ]
                     ];

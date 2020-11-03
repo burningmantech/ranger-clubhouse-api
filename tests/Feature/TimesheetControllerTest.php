@@ -1119,7 +1119,8 @@ class TimesheetControllerTest extends TestCase
                         [
                             'position' => [
                                 'id' => Position::DIRT,
-                                'title' => 'Dirt'
+                                'title' => 'Dirt',
+                                'active'=> false,
                             ],
                             'on_duty' => (string)$entry->on_duty,
                             'off_duty' => (string)$entry->off_duty,
