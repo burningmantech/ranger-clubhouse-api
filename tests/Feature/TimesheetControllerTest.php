@@ -45,6 +45,7 @@ class TimesheetControllerTest extends TestCase
                 'id'    => Position::DIRT,
                 'title' => 'Dirt',
                 'type'  => 'Frontline',
+                'active' => false
             ]
         );
 
@@ -1227,7 +1228,9 @@ class TimesheetControllerTest extends TestCase
         $response->assertJson([
             'positions' => [
                 [
-                    'id'    => Position::DIRT,
+                    'id'     => Position::DIRT,
+                    'title'  => 'Dirt',
+                    'active' => false,
                     'timesheets' => [[
                             'person' => [
                                 'id'        => $personA->id,
@@ -1240,7 +1243,9 @@ class TimesheetControllerTest extends TestCase
                     ]],
                 ],
                 [
-                    'id'    => Position::HQ_WINDOW,
+                    'id'     => Position::HQ_WINDOW,
+                    'title'  => 'HQ Window',
+                    'active' => true,
                     'timesheets' => [[
                             'person' => [
                                 'id'        => $personB->id,

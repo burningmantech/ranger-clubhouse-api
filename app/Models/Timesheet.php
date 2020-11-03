@@ -818,7 +818,7 @@ class Timesheet extends ApiModel
     public static function retrieveByPosition($year, $includeEmail=false)
     {
         $rows = Timesheet::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status,email', 'position:id,title' ])
+                ->with([ 'person:id,callsign,status,email', 'position:id,title,active' ])
                 ->orderBy('on_duty')
                 ->get()
                 ->groupBy('position_id');
@@ -828,8 +828,9 @@ class Timesheet extends ApiModel
         foreach ($rows as $positionId => $entries) {
             $position = $entries[0]->position;
             $results[] = [
-                'id'    => $position->id,
-                'title' => $position->title,
+                'id'     => $position->id,
+                'title'  => $position->title,
+                'active' => $position->active,
                 'timesheets' => $entries->map(function($r) use ($includeEmail) {
                     $person = $r->person;
                     $personInfo = [
