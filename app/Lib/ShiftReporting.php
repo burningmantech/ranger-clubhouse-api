@@ -369,7 +369,7 @@ class ShiftReporting
                 ->join('position', 'position.id', 'slot.position_id')
                 ->whereYear('begins', $year)
                 ->where('slot.active', true)
-                ->with([ 'position:id,title', 'person_slot.person:id,callsign,status' ])
+                ->with([ 'position:id,title,active', 'person_slot.person:id,callsign,status' ])
                 ->orderBy('position.title')
                 ->orderBy('slot.begins')
                 ->get()
@@ -383,6 +383,7 @@ class ShiftReporting
             return [
                 'id'    => $position->id,
                 'title' => $position->title,
+                'active' => $position->active,
                 'slots' => $p->map(function ($slot) {
                     $signups = $slot->person_slot->sort(function ($a, $b) {
                         $aCallsign = $a->person ? $a->person->callsign : "Person #{$a->person_id}";
