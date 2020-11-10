@@ -793,7 +793,7 @@ class TimesheetController extends ApiController
         $this->authorize('timesheetTotals', [Timesheet::class]);
         $year = $this->getYear();
 
-        return response()->json(['people' => TImesheet::retrieveTimesheetTotals($year)]);
+        return response()->json(['people' => Timesheet::retrieveTimesheetTotals($year)]);
     }
 
     /*
@@ -805,7 +805,7 @@ class TimesheetController extends ApiController
         $this->authorize('timesheetByPosition', [Timesheet::class]);
         $year = $this->getYear();
 
-        return response()->json(['positions' => TImesheet::retrieveByPosition($year, $this->userCanViewEmail())]);
+        return response()->json(['positions' => Timesheet::retrieveByPosition($year, $this->userCanViewEmail())]);
 
     }
 }

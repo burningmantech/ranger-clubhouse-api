@@ -369,7 +369,7 @@ class ShiftReporting
                 ->join('position', 'position.id', 'slot.position_id')
                 ->whereYear('begins', $year)
                 ->where('slot.active', true)
-                ->with([ 'position:id,title', 'person_slot.person:id,callsign,status' ])
+                ->with([ 'position:id,title,active', 'person_slot.person:id,callsign,status' ])
                 ->orderBy('position.title')
                 ->orderBy('slot.begins')
                 ->get()
@@ -383,6 +383,7 @@ class ShiftReporting
             return [
                 'id'    => $position->id,
                 'title' => $position->title,
+                'active' => $position->active,
                 'slots' => $p->map(function ($slot) {
                     $signups = $slot->person_slot->sort(function ($a, $b) {
                         $aCallsign = $a->person ? $a->person->callsign : "Person #{$a->person_id}";
@@ -421,7 +422,7 @@ class ShiftReporting
                 ->join('slot', 'slot.id', 'person_slot.slot_id')
                 ->join('person', 'person.id', 'person_slot.person_id')
                 ->whereIn('person_slot.slot_id', $slotIds)
-                ->with([ 'slot', 'slot.position:id,title', 'person:id,callsign,status' ])
+                ->with([ 'slot', 'slot.position:id,title,active', 'person:id,callsign,status' ])
                 ->orderBy('person.callsign')
                 ->orderBy('slot.begins')
                 ->get()
@@ -437,8 +438,9 @@ class ShiftReporting
                     $slot = $row->slot;
                     return [
                         'position'  => [
-                            'id'    => $slot->position_id,
-                            'title' => $slot->position ? $slot->position->title : "Position #{$slot->position_id}"
+                            'id'     => $slot->position_id,
+                            'title'  => $slot->position ? $slot->position->title : "Position #{$slot->position_id}",
+                            'active' => $slot->position ? $slot->position->active : false
                         ],
                         'begins'      => (string) $slot->begins,
                         'ends'        => (string) $slot->ends,

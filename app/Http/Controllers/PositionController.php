@@ -119,6 +119,7 @@ class PositionController extends ApiController
         $positionQuery = Position::select(
             'id',
             'title',
+            'active',
             'type',
             'new_user_eligible',
             'all_rangers',

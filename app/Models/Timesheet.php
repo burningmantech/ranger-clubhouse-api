@@ -770,7 +770,8 @@ class Timesheet extends ApiModel
     public static function retrieveAllForYearByCallsign($year)
     {
         $rows = self::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status', 'position:id,title,type,count_hours' ])
+                ->with([ 'person:id,callsign,status',
+                          'position:id,title,active,type,count_hours' ])
                 ->orderBy('on_duty')
                 ->get();
 
@@ -801,8 +802,9 @@ class Timesheet extends ApiModel
                         'duration'  => $t->duration,
                         'credits'   => $t->credits,
                         'position'   => [
-                            'id'    => $t->position_id,
-                            'title' => $t->position ? $t->position->title : "Position #".$t->position_id,
+                            'id'     => $t->position_id,
+                            'title'  => $t->position ? $t->position->title : "Position #".$t->position_id,
+                            'active' => $t->position->active,
                             'count_hours' => $t->position ? $t->position->count_hours : 0,
                         ]
                     ];
@@ -818,7 +820,7 @@ class Timesheet extends ApiModel
     public static function retrieveByPosition($year, $includeEmail=false)
     {
         $rows = Timesheet::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status,email', 'position:id,title' ])
+                ->with([ 'person:id,callsign,status,email', 'position:id,title,active' ])
                 ->orderBy('on_duty')
                 ->get()
                 ->groupBy('position_id');
@@ -828,8 +830,9 @@ class Timesheet extends ApiModel
         foreach ($rows as $positionId => $entries) {
             $position = $entries[0]->position;
             $results[] = [
-                'id'    => $position->id,
-                'title' => $position->title,
+                'id'     => $position->id,
+                'title'  => $position->title,
+                'active' => $position->active,
                 'timesheets' => $entries->map(function($r) use ($includeEmail) {
                     $person = $r->person;
                     $personInfo = [
