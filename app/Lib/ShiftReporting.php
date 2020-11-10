@@ -422,7 +422,7 @@ class ShiftReporting
                 ->join('slot', 'slot.id', 'person_slot.slot_id')
                 ->join('person', 'person.id', 'person_slot.person_id')
                 ->whereIn('person_slot.slot_id', $slotIds)
-                ->with([ 'slot', 'slot.position:id,title', 'person:id,callsign,status' ])
+                ->with([ 'slot', 'slot.position:id,title,active', 'person:id,callsign,status' ])
                 ->orderBy('person.callsign')
                 ->orderBy('slot.begins')
                 ->get()
@@ -438,8 +438,9 @@ class ShiftReporting
                     $slot = $row->slot;
                     return [
                         'position'  => [
-                            'id'    => $slot->position_id,
-                            'title' => $slot->position ? $slot->position->title : "Position #{$slot->position_id}"
+                            'id'     => $slot->position_id,
+                            'title'  => $slot->position ? $slot->position->title : "Position #{$slot->position_id}",
+                            'active' => $slot->position ? $slot->position->active : false
                         ],
                         'begins'      => (string) $slot->begins,
                         'ends'        => (string) $slot->ends,
