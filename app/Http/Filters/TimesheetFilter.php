@@ -16,9 +16,8 @@ class TimesheetFilter
     }
 
     const USER_FIELDS = [
-        'notes',
-        'verified',
-        'is_incorrect'
+        'additional_notes',
+        'review_status',
     ];
 
     const MANAGE_FIELDS = [
@@ -26,13 +25,12 @@ class TimesheetFilter
         'on_duty',
         'person_id',
         'position_id',
-        'review_status',
-        'reviewer_notes',
+        'additional_reviewer_notes',
     ];
 
     public function deserialize(Person $user = null): array
     {
-        if ($user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]))
+        if ($user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]))
             return array_merge(self::USER_FIELDS, self::MANAGE_FIELDS);
 
         if ($this->record->person_id == $user->id || $user->hasRole(Role::MANAGE)) {

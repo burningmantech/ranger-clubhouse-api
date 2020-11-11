@@ -13,10 +13,11 @@ class PositionFactory extends Factory
 
     public function definition()
     {
-return [
-        'title' => $this->faker->text(10),
-        'max'   => 1,
-        'min'   => 0
-    ];
-}
+        return [
+            'title' => $this->faker->text(10),
+            'max' => 1,
+            'min' => 0,
+            'active' => true
+        ];
+    }
 }

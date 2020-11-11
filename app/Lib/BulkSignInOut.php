@@ -5,8 +5,10 @@ namespace App\Lib;
 use App\Models\Position;
 use App\Models\Person;
 use App\Models\PersonPosition;
+use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Helpers\SqlHelper;
+use App\Models\TimesheetLog;
 
 /*
  * Parse and verify the Bulk Sign In / Out lines sent down
@@ -26,8 +28,14 @@ class BulkSignInOut
 
     const DATE_REGEXP = '/^(\d{1,2})[-\/](\d{1,2})([-\/]\d+)?$/';
 
-
     const DATETIME_FORMAT = 'Y-m-d H:i:s';
+
+    /**
+     * Parse out the bulk sign in/out lines
+     *
+     * @param $lines
+     * @return array
+     */
 
     public static function parse($lines)
     {
@@ -59,7 +67,7 @@ class BulkSignInOut
             $entries[] = $entry;
         }
 
-        return [ $entries, $haveError ];
+        return [$entries, $haveError];
     }
 
     /*
@@ -82,7 +90,7 @@ class BulkSignInOut
      * @return object processed line
      */
 
-    public static function processLine($columns, $positionTitles, & $entry)
+    public static function processLine($columns, $positionTitles, &$entry)
     {
         $signin = null;
         $signout = null;
@@ -93,9 +101,9 @@ class BulkSignInOut
         if (empty($columns[0])) {
             $action = 'unknown';
             $errors[] = 'Callsign not specified';
-            $entry = (object) [
-                'action'    => 'unknown',
-                'errors'    => [ 'Callsign not specified' ]
+            $entry = (object)[
+                'action' => 'unknown',
+                'errors' => ['Callsign not specified']
             ];
             return false;
         }
@@ -107,97 +115,97 @@ class BulkSignInOut
         $year = current_year();
 
         switch ($count) {
-        case 1:
-            $action = 'unknown';
-            $errors[] = 'too few columns - need at least a time or position';
-            break;
+            case 1:
+                $action = 'unknown';
+                $errors[] = 'too few columns - need at least a time or position';
+                break;
 
-        /*
-         * callsign,time       - sign out @ time
-         * callsign,position   - sign in now w/position
-         */
-        case 2:
-            if (self::isTime($field)) {
-                $action = 'out';
-                $signout = self::parseTime($field, 'sign out', $errors);
-            } else {
-                $action = 'in';
+            /*
+             * callsign,time       - sign out @ time
+             * callsign,position   - sign in now w/position
+             */
+            case 2:
+                if (self::isTime($field)) {
+                    $action = 'out';
+                    $signout = self::parseTime($field, 'sign out', $errors);
+                } else {
+                    $action = 'in';
+                    $position = $field;
+                }
+                break;
+
+            /*
+             * callsign,date,time  - sign out @ date & time
+             * callsign,position,time  - sign in @ time w/position
+             */
+            case 3:
+                if (self::isDate($field)) {
+                    $action = 'out';
+                    $signout = self::parseDateAndTime($field, $columns[2], 'signout', $errors);
+                } else {
+                    $action = 'in';
+                    $signin = self::parseTime($columns[2], 'sign in', $errors);
+                    $position = $field;
+                }
+                break;
+
+            /*
+             * callsign,position,time,time - sign in/sign out
+             * callsign,position,date,time - sign in
+             */
+            case 4:
                 $position = $field;
-            }
-            break;
+                if (self::isTime($columns[2])) {
+                    $action = 'inout';
+                    $signin = self::parseTime($columns[2], 'sign in', $errors);
+                    $signout = self::parseTime($columns[3], 'sign out', $errors);
+                    if ($signin > $signout) {
+                        // graveyard or swing shifts e.g., 23:45 -> 06:45
+                        $signout = strtotime("+1 day", $signout);
+                    }
+                } else {
+                    $action = 'in';
+                    $signin = self::parseDateAndTime($columns[2], $columns[3], 'sign in', $errors);
+                }
+                break;
+            /*
+             * callsign,position,date,time,time - sign in & out
+             */
 
-        /*
-         * callsign,date,time  - sign out @ date & time
-         * callsign,position,time  - sign in @ time w/position
-         */
-        case 3:
-            if (self::isDate($field)) {
-                $action = 'out';
-                $signout = self::parseDateAndTime($field, $columns[2], 'signout', $errors);
-            } else {
-                $action = 'in';
-                $signin = self::parseTime($columns[2], 'sign in', $errors);
+            case 5:
                 $position = $field;
-            }
-            break;
-
-        /*
-         * callsign,position,time,time - sign in/sign out
-         * callsign,position,date,time - sign in
-         */
-        case 4:
-            $position = $field;
-            if (self::isTime($columns[2])) {
                 $action = 'inout';
-                $signin = self::parseTime($columns[2], 'sign in', $errors);
-                $signout = self::parseTime($columns[3], 'sign out', $errors);
-                if ($signin > $signout) {
+                $signin = self::parseDateAndTime($columns[2], $columns[3], 'sign in', $errors);
+                $signout = self::parseTime($columns[4], 'sign out', $errors);
+                if ($signin && $signout && $signin > $signout) {
                     // graveyard or swing shifts e.g., 23:45 -> 06:45
+                    $signout = strtotime(date('Y/m/d ', $signin) . ' ' . date('H:i', $signout));
                     $signout = strtotime("+1 day", $signout);
                 }
-            } else {
-                $action = 'in';
+                break;
+
+            /*
+             * callsign,position,date,time,date,time - sign in/sign out
+             */
+            case 6:
+                $action = 'inout';
+                $position = $field;
                 $signin = self::parseDateAndTime($columns[2], $columns[3], 'sign in', $errors);
-            }
-            break;
-        /*
-         * callsign,position,date,time,time - sign in & out
-         */
-
-        case 5:
-            $position = $field;
-            $action = 'inout';
-            $signin = self::parseDateAndTime($columns[2], $columns[3], 'sign in', $errors);
-            $signout = self::parseTime($columns[4], 'sign out', $errors);
-            if ($signin && $signout && $signin > $signout) {
-                // graveyard or swing shifts e.g., 23:45 -> 06:45
-                $signout = strtotime(date('Y/m/d ', $signin).' '.date('H:i', $signout));
-                $signout = strtotime("+1 day", $signout);
-            }
-            break;
-
-        /*
-         * callsign,position,date,time,date,time - sign in/sign out
-         */
-        case 6:
-            $action = 'inout';
-            $position = $field;
-            $signin = self::parseDateAndTime($columns[2], $columns[3], 'sign in', $errors);
-            $signout = self::parseDateAndTime($columns[4], $columns[5], 'sign out', $errors);
-            if ($signin && $signout) {
-                if ($signin >= $signout) {
-                    $errors[] = 'sign in time starts on or after sign out';
+                $signout = self::parseDateAndTime($columns[4], $columns[5], 'sign out', $errors);
+                if ($signin && $signout) {
+                    if ($signin >= $signout) {
+                        $errors[] = 'sign in time starts on or after sign out';
+                    }
                 }
-            }
-            break;
+                break;
 
-        default:
-            $errors[] = 'too many columns - format not understood.';
-            $action = 'unknown';
-            $signin = '';
-            $signout = '';
-            $position = '';
-            break;
+            default:
+                $errors[] = 'too many columns - format not understood.';
+                $action = 'unknown';
+                $signin = '';
+                $signout = '';
+                $position = '';
+                break;
         }
 
         $positionId = null;
@@ -262,16 +270,16 @@ class BulkSignInOut
             $position = $timesheet->position->title;
         }
 
-        $entry = (object) [
-            'person_id'         => $personId,
-            'callsign'          => $callsign,
-            'action'            => $action,
-            'timesheet_id'      => $timesheetId,
-            'position'          => $position,
-            'position_id'       => $positionId,
-            'signin'            => $signin ? date(self::DATETIME_FORMAT, $signin) : null,
-            'signout'           => $signout ? date(self::DATETIME_FORMAT, $signout) : null,
-            'errors'            => $errors
+        $entry = (object)[
+            'person_id' => $personId,
+            'callsign' => $callsign,
+            'action' => $action,
+            'timesheet_id' => $timesheetId,
+            'position' => $position,
+            'position_id' => $positionId,
+            'signin' => $signin ? date(self::DATETIME_FORMAT, $signin) : null,
+            'signout' => $signout ? date(self::DATETIME_FORMAT, $signout) : null,
+            'errors' => $errors
         ];
 
         return empty($errors);
@@ -291,7 +299,7 @@ class BulkSignInOut
     public static function parseTime($value, $name, &$errors)
     {
         if (!preg_match(self::TIME_REGEXP, $value, $match)) {
-            $errors[] ="$name is not a valid time format [$value]";
+            $errors[] = "$name is not a valid time format [$value]";
             return null;
         }
 
@@ -316,7 +324,7 @@ class BulkSignInOut
             $year = $match[4];
             // Only a two digit year? make it a 4 digit year.
             if (strlen($year) == 2) {
-                $year = '20'.$year;
+                $year = '20' . $year;
             }
         } else {
             $year = current_year();
@@ -337,5 +345,94 @@ class BulkSignInOut
         }
 
         return $dateTime;
+    }
+
+
+    public static function process($entries, int $userId)
+    {
+        $haveError = false;
+        foreach ($entries as $entry) {
+            $personId = $entry->person_id;
+            $positionId = $entry->position_id;
+            $signin = $entry->signin;
+            $signout = $entry->signout;
+            $action = $entry->action;
+
+            $data = [];
+
+            switch ($action) {
+                case 'inout':
+                    // Sign in & out - create timesheet
+                    $timesheet = new Timesheet([
+                        'person_id' => $personId,
+                        'position_id' => $positionId,
+                        'on_duty' => $signin,
+                        'off_duty' => $signout,
+                    ]);
+                    $event = TimesheetLog::CREATED;
+                    $data = [
+                        'position_id' => $positionId,
+                        'on_duty' => (string)$signin,
+                        'off_duty' => (string)$signout,
+                    ];
+                    break;
+
+                case 'in':
+                    // Sign in - create timesheet
+                    if (empty($signin)) {
+                        $signin = now();
+                    }
+
+                    $timesheet = new Timesheet([
+                        'person_id' => $personId,
+                        'position_id' => $positionId,
+                        'on_duty' => $signin,
+                    ]);
+                    $entry->signin = $signin;
+
+                    $event = TimesheetLog::SIGNON;
+                    $data = [
+                        'position_id' => $positionId,
+                        'on_duty' => (string)$signin
+                    ];
+                    break;
+
+                case 'out':
+                    $timesheetId = $entry->timesheet_id;
+                    $timesheet = Timesheet::find($timesheetId);
+                    if (!$timesheet) {
+                        // Impossible condition?
+                        $entry->errors = ["cannot find timesheet id=[$timesheetId]? "];
+                        $haveError = true;
+                        continue 2;
+                    }
+
+                    if (empty($signout)) {
+                        $signout = now();
+                    }
+                    $timesheet->off_duty = $signout;
+                    $event = TimesheetLog::SIGNOFF;
+                    $data = [
+                        'off_duty' => (string)$signout
+                    ];
+                    break;
+            }
+
+            if (!$timesheet->slot_id) {
+                // Try to associate a sign up with the entry
+                $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+            }
+
+            $timesheet->auditReason = 'bulk sign in/out';
+            if ($timesheet->save()) {
+                $data['via'] = TimesheetLog::VIA_BULK_UPLOAD;
+                $timesheet->log($event, $data);
+            } else {
+                $entry->errors = ["timesheet entry save failure " . json_encode($timesheet->getErrors())];
+                $haveError = true;
+            }
+        }
+
+        return $haveError;
     }
 }

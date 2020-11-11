@@ -12,7 +12,9 @@ use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
 use App\Models\Schedule;
 
+use Exception;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class TimesheetMissingController extends ApiController
 {
@@ -92,7 +94,7 @@ class TimesheetMissingController extends ApiController
         if ($createNew) {
             // Verify the person may hold the position
             if (!PersonPosition::havePosition($person->id, $timesheetMissing->new_position_id)) {
-                throw new \InvalidArgumentException('Person does not hold the position.');
+                throw new InvalidArgumentException('Person does not hold the position.');
             }
         }
 
@@ -121,15 +123,16 @@ class TimesheetMissingController extends ApiController
 
                 if (!$timesheet->save()) {
                     DB::rollback();
-                    throw new \InvalidArgumentException('Failed to create new entry.');
+                    throw new InvalidArgumentException('Failed to create new entry.');
                 }
 
-                TimesheetLog::record(
-                    'created',
-                    $person->id,
-                    $this->user->id,
-                    $timesheet->id,
-                    "missing entry " . $timesheet->position->title . " " . (string)$timesheet->on_duty
+                $timesheet->log(TimesheetLog::CREATED,
+                    [
+                        'via' => TimesheetLog::VIA_MISSING_ENTRY,
+                        'position_id' => $timesheet->position_id,
+                        'on_duty' => (string)$timesheet->on_duty,
+                        'off_duty' => (string)$timesheet->off_duty
+                    ]
                 );
 
                 $year = $timesheet->on_duty->year;
@@ -139,7 +142,7 @@ class TimesheetMissingController extends ApiController
                         $event->auditReason = 'unconfirmed - new (missing) entry created';
                         $event->timesheet_confirmed = false;
                         $event->saveWithoutValidation();
-                        TimesheetLog::record('confirmed', $person->id, $this->user->id, null, 'unconfirmed - new (missing) entry created');
+                        TimesheetLog::record(TimesheetLog::UNCONFIRMED, $person->id, $this->user->id, null, 'new entry (from missing request) created.');
                     }
                 }
             }

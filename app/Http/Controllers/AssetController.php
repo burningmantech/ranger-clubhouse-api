@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Http\Controllers\ApiController;
 use App\Models\AssetPerson;
-use App\Helpers\SqlHelper;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 class AssetController extends ApiController

@@ -145,6 +145,7 @@ class Training extends Position
                 if (!$isQualified) {
                     $info->is_unqualified = true;
                     $info->unqualified_reason = $unqualifiedReason;
+                    $info->unqualified_message = Position::UNQUALIFIED_MESSAGES[$unqualifiedReason];
                 }
             }
 

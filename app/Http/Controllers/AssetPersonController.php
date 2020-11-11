@@ -4,10 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-use App\Helpers\SqlHelper;
 use App\Http\Controllers\ApiController;
 
-use App\Models\Asset;
 use App\Models\AssetPerson;
 
 class AssetPersonController extends ApiController
@@ -31,13 +29,14 @@ class AssetPersonController extends ApiController
     /**
      * Create an asset person
      */
-    public function store(Request $request)
+
+    public function store()
     {
         $this->authorize('store', [ AssetPerson::class ]);
         $asset_person = new AssetPerson;
-        $this->fromReset($asset_person);
+        $this->fromRest($asset_person);
 
-        if (!$this->save()) {
+        if (!$asset_person->save()) {
             return $this->restError($asset_person);
         }
 

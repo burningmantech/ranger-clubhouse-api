@@ -16,18 +16,17 @@ class TimesheetMissingFilter
     }
 
     const USER_FIELDS = [
-        'notes',
+        'additional_notes',
         'off_duty',
         'on_duty',
         'partner',
         'person_id',
         'position_id',
-        'verified',
     ];
 
     const MANAGE_FIELDS = [
         'review_status',
-        'reviewer_notes',
+        'additional_reviewer_notes',
         'create_entry',
         'new_off_duty',
         'new_on_duty',
