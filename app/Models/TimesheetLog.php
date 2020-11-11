@@ -9,15 +9,33 @@ use App\Models\ApiModel;
 use App\Models\Person;
 use App\Models\Timesheet;
 
+use Illuminate\Support\Facades\DB;
+
 class TimesheetLog extends ApiModel
 {
     protected $table = "timesheet_log";
 
-    // all mass assignment
+    // allow mass assignment - all records are created behind the scenes
     protected $guarded = [];
 
+    const UNCONFIRMED = 'unconfirmed';  // Entire timesheet marked unconfirmed (usually an entry was updated/created)
+    const CONFIRMED = 'confirmed';      // Entire timesheet marked confirmed
+
+    const SIGNON = 'signon';    // Timesheet entry created via shift start
+    const SIGNOFF = 'signoff';  // Shift was ended
+    const UPDATE = 'update';    // Timesheet entry updated
+    const DELETE = 'delete';    // Timesheet entry deleted
+
+    const UNVERIFIED = 'unverified'; // Entry was marked unverified
+    const VERIFY = 'verify';    // Entry marked verified (aka correct)
+
+    const CREATED = 'created';  // created via bulk update or missing timesheet request
+
+    const VIA_BULK_UPLOAD = 'bulk-upload';  // Entry created via Bulk Uploader
+    const VIA_MISSING_ENTRY = 'missing-entry';  // Entry created via Missing Timesheet Request
+
     protected $casts = [
-        'created_at'    => 'datetime'
+        'created_at' => 'datetime'
     ];
 
     public function person()
@@ -49,55 +67,54 @@ class TimesheetLog extends ApiModel
     {
         $timesheets = self::select('timesheet_log.*')
             ->with([
-                    'person:id,callsign', 'creator:id,callsign',
-                    'timesheet:id,on_duty,off_duty,position_id',
-                    'timesheet.position:id,title'
+                'person:id,callsign', 'creator:id,callsign',
+                'timesheet:id,on_duty,off_duty,position_id',
+                'timesheet.position:id,title'
             ])
-            ->join('timesheet', 'timesheet.id', 'timesheet_log.timesheet_id')
+            ->leftJoin('timesheet', 'timesheet.id', 'timesheet_log.timesheet_id')
+            ->whereNotNull('timesheet_log.timesheet_id')
             ->where('timesheet_log.person_id', $personId)
-            ->whereYear('timesheet.on_duty', $year)
-            ->orderBy('created_at')
-            ->get();
+            ->where('timesheet_log.year', $year)
+            ->orderBy('timesheet_log.created_at')
+             ->get();
 
         // Possible issue: if the person confirms their timesheet in the year following
         // it may not be seen in the year being view. (.e.g, hubcap worked in 2018, yet
         // did not confirm his timesheets until 2019. The confirmation would appear in the 2019 log.)
-        $other = self::with([ 'person:id,callsign', 'creator:id,callsign'])
+        $other = self::with(['person:id,callsign', 'creator:id,callsign'])
             ->where('person_id', $personId)
             ->whereYear('created_at', $year)
             ->whereNull('timesheet_id')
-            ->orderBy('created_at')->get();
+            ->orderBy('created_at')
+            ->get();
 
-        return [ $timesheets, $other ];
+        return [$timesheets, $other];
+    }
+
+    public static function updateYear($timesheetId, $year)
+    {
+        DB::update("UPDATE timesheet_log SET year=? WHERE timesheet_id=? ", [ $timesheetId, $year]);
     }
 
     /**
      * Record a timesheet signon/off, creation, update, deletion, and person confirmation.
      *
-     * $action is one of the following:
-     *
-     * 'created' - full timeshift record created. Both on_duty & off_duty set. (bulk up, missing timesheet request)
-     * 'signon' - shift started
-     * 'signoff' - shift ended
-     * 'delete' - timesheet removed
-     * 'confirmed' - person confirmed or unconfirmed timesheets are correct (aka set person.timesheet_confirmed)
-     * 'review' - review status change (approved, denied)
-     * 'verify' - verification status update.
-     *
-     * @param string $action      timesheet action
-     * @param int    $personId    the timesheet owner
-     * @param int    $userId      user performing the action
-     * @param int    $timesheetId timesheet id (maybe null for 'confirmed')
-     * @param string $message     required message usually includes modified columns.
+     * @param string $action timesheet action
+     * @param int $personId the timesheet owner
+     * @param int $userId user performing the action
+     * @param  $timesheetId timesheet id (maybe null for 'confirmed')
+     * @param mixed $data required data usually includes modified columns.
      */
 
-    public static function record($action, $personId, $userId, $timesheetId, $message)
+    public static function record(string $action, int $personId, int $userId,  $timesheetId, $data, int $year=0)
     {
         $columns = [
-           'action'           => $action,
-           'person_id'        => $personId,
-           'create_person_id' => $userId,
-           'message'          => $message,
+            'action' => $action,
+            'person_id' => $personId,
+            'create_person_id' => $userId,
+            'data' => json_encode(is_array($data) ? $data : ['message' => $data]),
+            'year' => $year ? $year : current_year(),
+            'created_at' => now(),
         ];
 
         if ($timesheetId) {
@@ -107,4 +124,42 @@ class TimesheetLog extends ApiModel
         self::create($columns);
     }
 
+    public function decodeData()
+    {
+        $data = $this->data;
+
+        if (!$data) {
+            return null;
+        }
+
+        $decode = json_decode($data);
+        if (!$decode) {
+            return $data;
+        }
+
+        $positionId = $decode->position_id ?? null;
+        if ($positionId) {
+            if (is_array($positionId)) {
+                list ($oldId, $newId) = $positionId;
+                $decode->position_id = [
+                    ['id' => $oldId, 'title' => Position::retrieveTitle($oldId)],
+                    ['id' => $newId, 'title' => Position::retrieveTitle($newId)],
+                ];
+            } else {
+                $decode->position_title = Position::retrieveTitle($decode->position_id);
+            }
+        }
+
+        $forced = $decode->forced ?? null;
+        if ($forced) {
+            $positionId = $forced->position_id ?? null;
+            if ($positionId) {
+                $forced->position_title = Position::retrieveTitle($positionId);
+            }
+
+            $forced->message = Position::UNQUALIFIED_MESSAGES[$forced->reason] ?? "Unknown reason [{$forced->reason}]";
+        }
+
+        return $decode;
+    }
 }

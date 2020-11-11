@@ -8,21 +8,26 @@ use App\Models\ApiModel;
 use App\Models\Position;
 use App\Models\Person;
 use App\Models\Timesheet;
+use Illuminate\Support\Facades\Auth;
 
 class TimesheetMissing extends ApiModel
 {
     protected $table = "timesheet_missing";
     protected $auditModel = true;
 
+    const APPROVED = 'approved';
+    const REJECTED = 'rejected';
+    const PENDING = 'pending';
+
     protected $fillable = [
-        'notes',
+        'additional_notes',
         'off_duty',
         'on_duty',
         'partner',
         'person_id',
         'position_id',
         'review_status',
-        'reviewer_notes',
+        'additional_reviewer_notes',
 
         // Used for creating new entries when review_status == 'approved'
         'create_entry',
@@ -255,6 +260,29 @@ class TimesheetMissing extends ApiModel
 
     public function setNewPositionIdAttribute($value) {
         $this->new_position_id = $value;
+    }
+
+    public function setAdditionalReviewerNotesAttribute($note)
+    {
+        if (empty($note)) {
+            return;
+        }
+
+        $user = Auth::user();
+        $callsign = $user ? $user->callsign : '(unknown)';
+
+        $date = date('Y/m/d H:m:s');
+        $this->reviewer_notes = $this->reviewer_notes . "From $callsign on $date:\n$note\n\n";
+    }
+
+    public function setAdditionalNotesAttribute($note)
+    {
+        if (empty($note)) {
+            return;
+        }
+
+        $date = date('Y/m/d H:m:s');
+        $this->notes = $this->notes . "$date:\n$note\n\n";
     }
 
 }

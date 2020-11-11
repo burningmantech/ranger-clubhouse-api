@@ -211,6 +211,19 @@ class Position extends ApiModel
         Position::HQ_SUPERVISOR,
     ];
 
+    // Person has not signed the Sandman affidavit (all wanna be Sandmen)
+    const UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT = 'unsigned-sandman-affidavit';
+    // Person has no Burn Perimeter experience (all wanna be Sandmen)
+    const UNQUALIFIED_NO_BURN_PERIMETER_EXP = 'no-burn-perimeter-exp';
+    // Person has not completed dirt training or ART as required by the position
+    const UNQUALIFIED_UNTRAINED = 'untrained';
+
+    const UNQUALIFIED_MESSAGES = [
+        self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT => 'no signed Sandman affidavit',
+        self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'no Burn Perimeter experience',
+        self::UNQUALIFIED_UNTRAINED => 'Not trained',
+    ];
+
     protected $fillable = [
         'all_rangers',
         'count_hours',
@@ -248,7 +261,6 @@ class Position extends ApiModel
         return $this->hasMany(Position::class, 'training_position_id');
     }
 
-
     /**
      * Find  positions based on criteria
      * @param $query
@@ -267,13 +279,15 @@ class Position extends ApiModel
         return $sql->get();
     }
 
-    /*
+    /**
      * Find all training positions that are not trainer's training positions.
      * Optionally exclude Dirt Training (for ART module support)
      * Return only the id & title.
+     *
+     * @param false $excludeDirt
+     * @return array
      */
-
-    public static function findAllTrainings($excludeDirt = false)
+    public static function findAllTrainings($excludeDirt = false): array
     {
         $sql = self::select('id', 'title')
             ->where('type', Position::TYPE_TRAINING)
@@ -287,27 +301,22 @@ class Position extends ApiModel
         return $sql->get()->toArray();
     }
 
-    /*
+    /**
      * Retrieve the title for a position. Return a position id if the
      * position was not found.
      */
 
-    public static function retrieveTitle($id)
+    public static function retrieveTitle($id): string
     {
         $row = self::find($id);
 
-        if ($row == null) {
-            return "Position #{$id}";
-        } else {
-            return $row->title;
-        }
+        return $row ? $row->title : "Position #{$id}";
     }
 
-    /*
+    /**
      * Find all positions which reference the given training position
-     *
-     * @param int $positionId training position
-     * @return array positions which reference the training position.
+     * @param $positionId training position
+     * @return Position[]|Collection
      */
 
     public static function findTrainedPositions($positionId)
@@ -321,38 +330,44 @@ class Position extends ApiModel
 
     public static function findAllWithInProgressSlots()
     {
-        $now = (string) now();
+        $now = (string)now();
         return self::where('type', '!=', self::TYPE_TRAINING)
             ->whereRaw('EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
                 AND slot.position_id=position.id
                 AND ? >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
-                AND ? < slot.ends LIMIT 1)', [ $now, $now ])
+                AND ? < slot.ends LIMIT 1)', [$now, $now])
             ->orderBy("title")
             ->get();
     }
 
-    /*
-     * Is the person qualified for the Sandpeople?
+    /**
+     * Is the person qualified to work a Sandman position?
+     *
+     * @param Person $person
+     * @param $reason
+     * @return bool true if the person is qualified
      */
 
-    public static function isSandmanQualified($person, &$reason)
+    public static function isSandmanQualified(Person $person, &$reason)
     {
         $event = PersonEvent::findForPersonYear($person->id, current_year());
         if (!$event || !$event->sandman_affidavit) {
-            $reason = 'Sandman affidavit not signed';
+            $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
             return false;
         }
 
         if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
-            $reason = 'No Burn Perimeter exp.';
+            $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
             return false;
         }
 
         return true;
     }
 
-    /*
+    /**
      * Find everyone who is a Sandman and report on their eligibility.
+     *
+     * @return array
      */
 
     public static function retrieveSandPeopleQualifications()
@@ -386,10 +401,12 @@ class Position extends ApiModel
         ];
     }
 
-    /*
-     * Subtype is similar to 'position.type'
+    /**
+     * Return the "sub type" of the position - i.e. return an additional types
+     * For mentoring positions, figure out if it's a mentor or mentee position (Alpha & Cheetah Cub)
+     *
+     * @return string
      */
-
     public function getSubTypeAttribute()
     {
         $id = $this->id;

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ApiController;
 
 use App\Lib\Milestones;
+use App\Lib\Reports\TimesheetWorkSummaryReport;
 
 use App\Models\Person;
 use App\Models\PersonEvent;
@@ -18,27 +18,19 @@ use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
-use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-use App\Models\PersonSlot;
 use App\Models\PersonStatus;
 use App\Models\Position;
 use App\Models\Role;
-use App\Models\Slot;
 use App\Models\SurveyAnswer;
 use App\Models\Timesheet;
-use App\Models\TraineeStatus;
 use App\Models\Training;
 
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Mail\WelcomeMail;
-
-use Carbon\Carbon;
-use InvalidArgumentException;
-use RuntimeException;
 
 class PersonController extends ApiController
 {
@@ -130,7 +122,7 @@ class PersonController extends ApiController
     public function store(Request $request)
     {
         $this->authorize('store');
-        throw new RuntimeException('unimplemented');
+        throw new \RuntimeException('unimplemented');
     }
 
     /*
@@ -511,14 +503,10 @@ class PersonController extends ApiController
 
     public function timesheetSummary(Person $person)
     {
-        $params = request()->validate([
-            'year' => 'integer|required'
-        ]);
-
         $this->authorize('view', $person);
-
+        $year = $this->getYear();
         return response()->json([
-            'summary' => Timesheet::workSummaryForPersonYear($person->id, $params['year'])
+            'summary' => TimesheetWorkSummaryReport::execute($person->id, $year)
         ]);
     }
 
@@ -578,7 +566,7 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != Person::AUDITOR) {
-            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
         // make the callsign for an auditor.
