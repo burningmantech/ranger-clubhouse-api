@@ -142,7 +142,7 @@ class Milestones
 
             if ($period != EventDate::AFTER_EVENT) {
                 $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
-                $milestones['shift_signups'] = Schedule::countWorkingShiftSignups($person);
+                $milestones['shift_signups'] = Schedule::summarizeShiftSignups($person);
                 // Person is *not* signed up - figure out if weekend shirts are available
                 $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
                 // Burn weekend!

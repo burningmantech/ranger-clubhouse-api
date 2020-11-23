@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
-use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
 
-use App\Helpers\SqlHelper;
+use Illuminate\Http\Response;
 
 class AccessDocumentController extends ApiController
 {
@@ -25,12 +26,12 @@ class AccessDocumentController extends ApiController
     public function index()
     {
         $query = request()->validate([
-            'year'      => 'sometimes|digits:4',
+            'year' => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
             'status' => 'sometimes|string'
         ]);
 
-        $this->authorize('index', [ AccessDocument::class, $query['person_id'] ?? 0 ]);
+        $this->authorize('index', [AccessDocument::class, $query['person_id'] ?? 0]);
 
         return $this->success(AccessDocument::findForQuery($query), null, 'access_document');
     }
@@ -39,19 +40,19 @@ class AccessDocumentController extends ApiController
      * Retrieve all current/active access documents
      */
 
-     public function current()
-     {
-         $this->authorize('current', AccessDocument::class);
-         $params = request()->validate([
-             'for_delivery'  => 'sometimes|boolean',
-         ]);
+    public function current()
+    {
+        $this->authorize('current', AccessDocument::class);
+        $params = request()->validate([
+            'for_delivery' => 'sometimes|boolean',
+        ]);
 
-         $forDelivery = isset($params['for_delivery']);
+        $forDelivery = isset($params['for_delivery']);
 
-         return response()->json([
-             'documents'   => AccessDocument::retrieveCurrentByPerson($forDelivery)
-         ]);
-     }
+        return response()->json([
+            'documents' => AccessDocument::retrieveCurrentByPerson($forDelivery)
+        ]);
+    }
 
     /*
      * Retrieve all expiring tickets for the current year
@@ -83,13 +84,13 @@ class AccessDocumentController extends ApiController
         $ids = $params['ids'];
 
         $rows = AccessDocument::whereIn('id', $ids)
-            ->where('status', 'claimed')
+            ->where('status', AccessDocument::CLAIMED)
             ->get();
 
         foreach ($rows as $row) {
             $oldStatus = $row->status;
-            $row->update([ 'status' => 'submitted' ]);
-            AccessDocumentChanges::log($row, $this->user->id, [ 'status' => [ $oldStatus, 'submitted' ] ]);
+            $row->update(['status' => AccessDocument::SUBMITTED]);
+            AccessDocumentChanges::log($row, $this->user->id, ['status' => [$oldStatus, AccessDocument::SUBMITTED]]);
         }
 
         return $this->success();
@@ -101,7 +102,7 @@ class AccessDocumentController extends ApiController
 
     public function show(AccessDocument $accessDocument)
     {
-        $this->authorize('index', [ AccessDocument::class, $accessDocument->person_id ]);
+        $this->authorize('index', [AccessDocument::class, $accessDocument->person_id]);
         return $this->success($accessDocument);
     }
 
@@ -116,7 +117,7 @@ class AccessDocumentController extends ApiController
         $accessDocument = new AccessDocument;
         $this->fromRest($accessDocument);
 
-        if (!$this->userHasRole([ Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
+        if (!$this->userHasRole([Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
             $accessDocument->person_id = $this->user->id;
         }
 
@@ -154,8 +155,8 @@ class AccessDocumentController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\AccessDocument $accessDocument
-     * @return \Illuminate\Http\Response
+     * @param \App\AccessDocument $accessDocument
+     * @return Response
      */
     public function destroy(AccessDocument $accessDocument)
     {
@@ -179,7 +180,7 @@ class AccessDocumentController extends ApiController
         $this->authorize('update', $accessDocument);
 
         $request = request()->validate(
-            [ 'status' => 'required|string' ]
+            ['status' => 'required|string']
         );
 
         $status = $request['status'];
@@ -190,7 +191,7 @@ class AccessDocumentController extends ApiController
         switch ($status) {
             case AccessDocument::BANKED:
                 if (!in_array($adType, AccessDocument::TICKET_TYPES)
-                || !in_array($adStatus,AccessDocument::ACTIVE_STATUSES)) {
+                    || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
                     throw new \InvalidArgumentException('Illegal type and status combination');
                 }
                 break;
@@ -213,7 +214,6 @@ class AccessDocumentController extends ApiController
 
             default:
                 throw new \InvalidArgumentException('Unknown status action');
-                break;
         }
 
         $accessDocument->status = $status;
@@ -238,7 +238,7 @@ class AccessDocumentController extends ApiController
 
     public function grantWAPs()
     {
-        $this->authorize('grantWAPs', [ AccessDocument::class ]);
+        $this->authorize('grantWAPs', [AccessDocument::class]);
 
         $year = current_year();
         $startYear = $year - 3;
@@ -250,28 +250,28 @@ class AccessDocumentController extends ApiController
 
         // Find everyone who worked in the last three years
         $workedIds = Timesheet::select('person_id')
-                        ->join('person', 'person.id', 'timesheet.person_id')
-                        ->whereYear('on_duty', '>=', $startYear)
-                        ->whereIn('status', [ Person::ACTIVE, Person::INACTIVE ])
-                        ->groupBy('person_id')
-                        ->get()
-                        ->pluck('person_id');
+            ->join('person', 'person.id', 'timesheet.person_id')
+            ->whereYear('on_duty', '>=', $startYear)
+            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
+            ->groupBy('person_id')
+            ->get()
+            ->pluck('person_id');
 
         // .. and find everyone signed up this year.
 
         $slotIds = Slot::whereYear('begins', $year)->pluck('id');
         $signUpIds = PersonSlot::select('person_id')
-                    ->join('person', 'person.id', 'person_slot.person_id')
-                    ->whereIn('slot_id', $slotIds)
-                    ->whereIn('person.status', Person::ACTIVE_STATUSES)
-                    ->groupBy('person_slot.person_id')
-                    ->get()
-                    ->pluck('person_id');
+            ->join('person', 'person.id', 'person_slot.person_id')
+            ->whereIn('slot_id', $slotIds)
+            ->whereIn('person.status', Person::ACTIVE_STATUSES)
+            ->groupBy('person_slot.person_id')
+            ->get()
+            ->pluck('person_id');
 
         $personIds = $signUpIds->merge($workedIds)->unique();
         $people = Person::select('id', 'callsign', 'status')
-                ->whereIn('id', $personIds)
-                ->whereRaw('
+            ->whereIn('id', $personIds)
+            ->whereRaw('
                 (NOT EXISTS
                     (SELECT 1 FROM access_document WHERE access_document.person_id=person.id AND type="work_access_pass" AND status IN ("qualified", "claimed", "submitted") LIMIT 1)
                 AND
@@ -283,12 +283,12 @@ class AccessDocumentController extends ApiController
                       (SELECT 1 FROM access_document WHERE access_document.person_id=person.id AND type="staff_credential" AND status IN ("qualified", "claimed", "banked", "submitted") LIMIT 1)
                    )
                 ) ')
-                ->orderBy('callsign')
-                ->get();
+            ->orderBy('callsign')
+            ->get();
 
-        $this->grantAccessDocumentToPeople($people, 'work_access_pass', null, $year);
+        $this->grantAccessDocumentToPeople($people, AccessDocument::WAP, null, $year);
 
-        return response()->json([ 'people' => $people ]);
+        return response()->json(['people' => $people]);
     }
 
     /*
@@ -302,7 +302,7 @@ class AccessDocumentController extends ApiController
 
     public function grantAlphaWAPs()
     {
-        $this->authorize('grantAlphaWAPs', [ AccessDocument::class ]);
+        $this->authorize('grantAlphaWAPs', [AccessDocument::class]);
 
         $year = current_year();
 
@@ -316,20 +316,20 @@ class AccessDocumentController extends ApiController
 
         // Find all training slots starting on or after today
         $slotIds = Slot::select('id')
-                    ->whereYear('begins', $year)
-                    ->where('position_id', Position::TRAINING)
-                    ->whereRaw('begins > CURRENT_DATE()')
-                    ->get()
-                    ->pluck('id');
+            ->whereYear('begins', $year)
+            ->where('position_id', Position::TRAINING)
+            ->whereRaw('begins > ?', [now()])
+            ->get()
+            ->pluck('id');
 
         if (!empty($slotIds)) {
             $prospectiveIds = PersonSlot::select('person_id')
-                            ->join('person', 'person.id', 'person_slot.person_id')
-                            ->whereIn('slot_id', $slotIds)
-                            ->where('status', Person::PROSPECTIVE)
-                            ->groupBy('person_id')
-                            ->get()
-                            ->pluck('person_id');
+                ->join('person', 'person.id', 'person_slot.person_id')
+                ->whereIn('slot_id', $slotIds)
+                ->where('status', Person::PROSPECTIVE)
+                ->groupBy('person_id')
+                ->get()
+                ->pluck('person_id');
         } else {
             $prospectiveIds = [];
         }
@@ -352,40 +352,40 @@ class AccessDocumentController extends ApiController
             $people = [];
         }
 
-        $this->grantAccessDocumentToPeople($people, 'work_access_pass', $accessDate, $year, 'claimed');
-        return response()->json([ 'people' => $people ]);
+        $this->grantAccessDocumentToPeople($people, AccessDocument::WAP, $accessDate, $year, AccessDocument::CLAIMED);
+        return response()->json(['people' => $people]);
     }
 
     /*
-     * Grant Vehicle Passes to nyone who has a staff credential or
+     * Grant Vehicle Passes to anyone who has a staff credential or
      * a reduced-price ticket and who doesn't already have a VP.
      */
 
     public function grantVehiclePasses()
     {
-        $this->authorize('grantVehiclePasses', [ AccessDocument::class ]);
+        $this->authorize('grantVehiclePasses', [AccessDocument::class]);
 
         $year = current_year();
 
         $ids = AccessDocument::select('person_id')
-                ->whereIn('type', [ 'staff_credential', 'reduced_price_ticket'])
-                ->whereIn('status', [ 'qualified', 'claimed', 'banked' ])
-                ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document ad WHERE ad.person_id=access_document.person_id AND ad.type="vehicle_pass" AND ad.status IN ("qualified", "claimed", "submitted") LIMIT 1)')
-                ->groupBy('person_id')
-                ->pluck('person_id');
+            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
+            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document ad WHERE ad.person_id=access_document.person_id AND ad.type="vehicle_pass" AND ad.status IN ("qualified", "claimed", "submitted") LIMIT 1)')
+            ->groupBy('person_id')
+            ->pluck('person_id');
 
         if ($ids->count()) {
             $people = Person::select('id', 'callsign', 'status')
-                    ->whereIn('id', $ids)
-                    ->orderBy('callsign')
-                    ->get();
+                ->whereIn('id', $ids)
+                ->orderBy('callsign')
+                ->get();
 
-            $this->grantAccessDocumentToPeople($people, 'vehicle_pass', null, $year);
+            $this->grantAccessDocumentToPeople($people, AccessDocument::VEHICLE_PASS, null, $year);
         } else {
             $people = [];
         }
 
-        return response()->json([ 'people' => $people ]);
+        return response()->json(['people' => $people]);
     }
 
     /*
@@ -394,7 +394,7 @@ class AccessDocumentController extends ApiController
       */
     public function setStaffCredentialsAccessDate()
     {
-        $this->authorize('setStaffCredentialsAccessDate', [ AccessDocument::class ]);
+        $this->authorize('setStaffCredentialsAccessDate', [AccessDocument::class]);
 
         $accessDate = setting('TAS_DefaultWAPDate');
         if (empty($accessDate)) {
@@ -403,13 +403,13 @@ class AccessDocumentController extends ApiController
 
         $user = $this->user->callsign;
 
-        $rows = AccessDocument::where('type', 'staff_credential')
-                ->whereIn('status', [ 'banked', 'claimed', 'qualified'])
-                ->whereNull('access_date')
-                ->where('access_any_time', false)
-                ->with('person:id,callsign,status')
-                ->get();
-        $rows = $rows->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE);
+        $rows = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
+            ->whereIn('status', [AccessDocument::BANKED, AccessDocument::CLAIMED, AccessDocument::QUALIFIED])
+            ->whereNull('access_date')
+            ->where('access_any_time', false)
+            ->with('person:id,callsign,status')
+            ->get();
+        $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
 
         $documents = [];
         foreach ($rows as $row) {
@@ -418,7 +418,7 @@ class AccessDocumentController extends ApiController
             $this->saveAccessDocument($row, $documents);
         }
 
-        return response()->json([ 'access_documents' => $documents, 'access_date' => $accessDate ]);
+        return response()->json(['access_documents' => $documents, 'access_date' => $accessDate]);
     }
 
     /*
@@ -430,36 +430,36 @@ class AccessDocumentController extends ApiController
       */
     public function cleanAccessDocsFromPriorEvent()
     {
-        $this->authorize('cleanAccessDocsFromPriorEvent', [ AccessDocument::class ]);
+        $this->authorize('cleanAccessDocsFromPriorEvent', [AccessDocument::class]);
 
         $user = $this->user->callsign;
-        $rows = AccessDocument::whereIn('status', [ 'submitted', 'qualified' ])
-                  ->with('person:id,callsign,status')
-                  ->get();
-        $rows = $rows->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE);
+        $rows = AccessDocument::whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
+            ->with('person:id,callsign,status')
+            ->get();
+        $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
 
         $documents = [];
         foreach ($rows as $ad) {
             switch ($ad->status) {
-            case 'qualified':
-              if ($ad->type == 'vehicle_pass'
-              || $ad->type == 'work_access_pass'
-              || $ad->type == 'work_access_pass_so') {
-                  $ad->status = 'expired';
-                  $ad->addComment('marked as expired via maintenance function', $user);
-                  $this->saveAccessDocument($ad, $documents);
-              }
-              break;
+                case AccessDocument::QUALIFIED:
+                    if ($ad->type == AccessDocument::VEHICLE_PASS
+                        || $ad->type == AccessDocument::WAP
+                        || $ad->type == AccessDocument::WAPSO) {
+                        $ad->status = AccessDocument::EXPIRED;
+                        $ad->addComment('marked as expired via maintenance function', $user);
+                        $this->saveAccessDocument($ad, $documents);
+                    }
+                    break;
 
-            case 'submitted':
-              $ad->status = 'used';
-              $ad->addComment('marked as used via maintenance function', $user);
-              $this->saveAccessDocument($ad, $documents);
-              break;
+                case AccessDocument::SUBMITTED:
+                    $ad->status = AccessDocument::USED;
+                    $ad->addComment('marked as used via maintenance function', $user);
+                    $this->saveAccessDocument($ad, $documents);
+                    break;
             }
         }
 
-        return response()->json([ 'access_documents' => $documents ]);
+        return response()->json(['access_documents' => $documents]);
     }
 
     /*
@@ -471,25 +471,25 @@ class AccessDocumentController extends ApiController
 
     public function bankAccessDocuments()
     {
-        $this->authorize('bankAccessDocuments', [ AccessDocument::class ]);
+        $this->authorize('bankAccessDocuments', [AccessDocument::class]);
 
         $year = current_year();
         $user = $this->user->callsign;
 
-        $rows = AccessDocument::where('status', 'qualified')
-                ->whereIn('type', [ 'reduced_price_ticket', 'gift_ticket', 'staff_credential' ])
-                ->with('person:id,callsign,status')
-                ->get();
+        $rows = AccessDocument::where('status', AccessDocument::QUALIFIED)
+            ->whereIn('type', AccessDocument::TICKET_TYPES)
+            ->with('person:id,callsign,status')
+            ->get();
 
 
         $documents = [];
         foreach ($rows as $ad) {
-            if ($ad->type == 'staff_credential') {
+            if ($ad->type == AccessDocument::STAFF_CREDENTIAL) {
                 $ad->access_date = null;
                 $ad->access_any_time = false;
             }
 
-            $ad->status = 'banked';
+            $ad->status = AccessDocument::BANKED;
             $ad->addComment('marked as banked via maintenance function', $user);
             $this->saveAccessDocument($ad, $documents);
         }
@@ -497,14 +497,14 @@ class AccessDocumentController extends ApiController
         // The below code is kind of a hack and probably doesn't
         // really belong in this function
 
-        $rows = AccessDocument::where('status', 'banked')
-                ->where('type', 'staff_credential')
-                ->where(function ($q) {
-                    $q->whereNotNull('access_date');
-                    $q->orWhere('access_any_time', true);
-                })
-                ->with('person:id,callsign,status')
-                ->get();
+        $rows = AccessDocument::where('status', AccessDocument::BANKED)
+            ->where('type', AccessDocument::STAFF_CREDENTIAL)
+            ->where(function ($q) {
+                $q->whereNotNull('access_date');
+                $q->orWhere('access_any_time', true);
+            })
+            ->with('person:id,callsign,status')
+            ->get();
 
         foreach ($rows as $ad) {
             $ad->access_date = null;
@@ -517,7 +517,7 @@ class AccessDocumentController extends ApiController
             return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
         });
 
-        return response()->json([ 'access_documents' => $documents ]);
+        return response()->json(['access_documents' => $documents]);
     }
 
     /*
@@ -526,18 +526,18 @@ class AccessDocumentController extends ApiController
 
     public function expireAccessDocuments()
     {
-        $this->authorize('expireAccessDocuments', [ AccessDocument::class ]);
+        $this->authorize('expireAccessDocuments', [AccessDocument::class]);
 
         $user = $this->user->callsign;
 
-        $rows = AccessDocument::whereIn('status', [ 'banked', 'claimed', 'qualified' ])
-                ->whereRaw('expiry_date < ?', [now()])
-                ->with('person:id,callsign,status,email')
-                ->get();
+        $rows = AccessDocument::whereIn('status', [AccessDocument::BANKED, AccessDocument::CLAIMED, AccessDocument::QUALIFIED])
+            ->whereRaw('expiry_date < ?', [now()])
+            ->with('person:id,callsign,status,email')
+            ->get();
 
         $documents = [];
         foreach ($rows as $ad) {
-            $ad->status = 'expired';
+            $ad->status = AccessDocument::EXPIRED;
             $ad->addComment('marked as expired via maintenance function', $user);
             $this->saveAccessDocument($ad, $documents, true);
         }
@@ -546,14 +546,14 @@ class AccessDocumentController extends ApiController
             return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
         });
 
-        return response()->json([ 'access_documents' => $documents ]);
+        return response()->json(['access_documents' => $documents]);
     }
 
     /**
      * Bump all banked and qualified tickets' expiration by 1 year.
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function bumpExpiration()
@@ -567,8 +567,8 @@ class AccessDocumentController extends ApiController
 
         $callsign = $this->user->callsign;
 
-        $rows = AccessDocument::whereIn('status', [ 'banked', 'qualified'])
-                ->get();
+        $rows = AccessDocument::whereIn('status', [AccessDocument::BANKED, AccessDocument::QUALIFIED])
+            ->get();
 
         foreach ($rows as $row) {
             $row->expiry_date = $row->expiry_date->addYear();
@@ -581,14 +581,14 @@ class AccessDocumentController extends ApiController
             AccessDocumentChanges::log($row, $this->user->id, $changes);
         }
 
-        return response()->json([ 'count' => $rows->count() ]);
+        return response()->json(['count' => $rows->count()]);
     }
 
     /*
      * Save the access document, log the changes, and build a response.
      */
 
-    private function saveAccessDocument($ad, & $documents, $includeEmail=false)
+    private function saveAccessDocument($ad, &$documents, $includeEmail = false)
     {
         $changes = $ad->getChangedValues();
         $ad->save();
@@ -596,16 +596,16 @@ class AccessDocumentController extends ApiController
 
         $person = $ad->person;
         $result = [
-              'id'          => $ad->id,
-              'type'        => $ad->type,
-              'status'      => $ad->status,
-              'source_year' => $ad->source_year,
-              'person' => [
-                  'id'       => $ad->person_id,
-                  'callsign' => $person ? $person->callsign : 'Person #'.$ad->person_id,
-                  'status'   => $person ? $person->status : 'unknown',
-              ]
-          ];
+            'id' => $ad->id,
+            'type' => $ad->type,
+            'status' => $ad->status,
+            'source_year' => $ad->source_year,
+            'person' => [
+                'id' => $ad->person_id,
+                'callsign' => $person ? $person->callsign : 'Person #' . $ad->person_id,
+                'status' => $person ? $person->status : 'unknown',
+            ]
+        ];
 
         if ($includeEmail && $person) {
             $result['person']['email'] = $person->email;
@@ -620,16 +620,16 @@ class AccessDocumentController extends ApiController
      * The assumption is the type will be non-bankable item (vp, wap, etc) and will expire in the current year.
      */
 
-    private function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status='qualified')
+    private function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status = 'qualified')
     {
         $user = $this->user->callsign;
         $userId = $this->user->id;
 
         foreach ($people as $person) {
             $ad = new AccessDocument([
-                'person_id'   => $person->id,
-                'type'        => $type,
-                'status'      => $status,
+                'person_id' => $person->id,
+                'type' => $type,
+                'status' => $status,
                 'source_year' => $year,
                 'expiry_date' => "$year-09-15",
                 'access_date' => $accessDate,
