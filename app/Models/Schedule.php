@@ -453,17 +453,41 @@ class Schedule extends ApiModel
     /**
      * Count the number of working (i.e. non-training) signups the person has in the current year.
      * @param Person $person
-     * @return int
+     * @return array
      */
-    public static function countWorkingShiftSignups(Person $person)
+
+    public static function summarizeShiftSignups(Person $person) : array
     {
-        return DB::table('slot')
-            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
-            ->join('position', 'position.id', 'slot.position_id')
-            ->where('person_slot.person_id', $person->id)
-            ->where('position.type', '!=', 'Training')
-            ->whereYear('slot.begins', current_year())
-            ->count();
+
+        $year = current_year();
+        $rows = self::findForQuery([ 'year' => $year, 'person_id' => $person->id]);
+        $rows = $rows->filter(function ($r) {
+            return $r->type != Position::TYPE_TRAINING;
+        });
+
+        if (!$rows->isEmpty()) {
+            // Warm the position credit cache.
+            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        }
+
+        $totalDuration = 0.0;
+        $countedDuration = 0.0;
+        $credits = 0.0;
+
+        foreach ($rows as $row) {
+            $credits += $row->credits;
+            $totalDuration += $row->slot_duration;
+            if ($row->position_count_hours) {
+                $countedDuration += $row->slot_duration;
+            }
+        }
+
+        return [
+            'total_duration' => $totalDuration,
+            'counted_duration' => $countedDuration,
+            'credits' => $credits,
+            'slot_count' => count($rows)
+        ];
     }
 
     /*

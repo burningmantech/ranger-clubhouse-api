@@ -11,11 +11,14 @@ class EventDate extends ApiModel
     protected $table = 'event_dates';
     protected $auditModel = true;
 
+    /**
+     * Event periods throughout the year wrt the {Ranger,PNV,Auditor} dashboards.
+     * (not to be confuse with the {pre,post}-event weeks.)
+     */
     const AFTER_EVENT = 'after-event';
     const BEFORE_EVENT = 'before-event';
     const EVENT = 'event';
 
-    // All other table names are singular, and this one had to be pural. deal with it.
     protected $resourceSingle = 'event_date';
 
     protected $fillable = [
@@ -37,64 +40,57 @@ class EventDate extends ApiModel
     ];
 
     protected $rules = [
-        'event_end'            => 'required|date',
-        'event_start'          => 'required|date',
-        'post_event_end'       => 'required|date',
-        'pre_event_slot_end'   => 'required|date',
+        'event_end' => 'required|date',
+        'event_start' => 'required|date',
+        'post_event_end' => 'required|date',
+        'pre_event_slot_end' => 'required|date',
         'pre_event_slot_start' => 'required|date',
-        'pre_event_start'      => 'required|date',
+        'pre_event_start' => 'required|date',
     ];
 
-    public static function findAll() {
+    public static function findAll()
+    {
         return self::orderBy('event_start')->get();
     }
 
-    public static function findForYear($year) {
+    public static function findForYear($year)
+    {
         return self::whereYear('event_start', $year)->first();
     }
 
     /**
-     * Calculate what event period we're in.
+     * Calculate what the event period is for the dashboard
      *
-     * - before-event: start of the year til before gate opening
-     * - event: the event week from gate opening til end of Labor Day
-     * - after-event: Tuesday after Labor Day til the end of the year.
+     * - before-event: March 1st til gate opening
+     * - event: gate opening til Saturday @ noon after Labor Day.
+     * - after-event:  Saturday @ noon after Labor Day til March 1st
      *
      * @return string
      */
-    public static function calculatePeriod() {
+    public static function calculatePeriod()
+    {
         $now = now();
-        if ($now->month <= 2) {
+        if ($now->month < 3) {
             return self::AFTER_EVENT;
         }
 
         $year = $now->year;
 
-        $ed = self::findForYear($year);
+        $laborDay = new Carbon("September $year first monday");
 
-        if ($ed && $ed->event_start && $ed->event_end) {
-            if ($now->lt($ed->event_start)) {
-                return self::BEFORE_EVENT;
-            }
-
-            if ($now->gt($ed->event_end)) {
-                return self::AFTER_EVENT;
-            }
-
-            return self::EVENT;
-        } else {
-            $laborDay = (new Carbon("September $year first monday"))->setTime(23, 59, 59);
-
-            if ($laborDay->lte($now)) {
-                return self::AFTER_EVENT;
-            }
-
-            $gateOpen = $laborDay->clone()->subDays(8)->setTime(0, 0, 1);
-            if ($gateOpen->lte($now) && $laborDay->gte($now)) {
-                return self::EVENT;
-            }
-            return self::BEFORE_EVENT;
+        // Figure out when the Saturday after Labor Day is
+        $finalSaturday = $laborDay->clone()->addDays(5)->setTime(12, 0, 0);
+        if ($finalSaturday->lte($now)) {
+            return self::AFTER_EVENT;
         }
+
+        // Gate open is the Sunday a week before Labor Day
+        $gateOpen = $laborDay->clone()->subDays(8)->setTime(0, 0, 0);
+        if ($gateOpen->lte($now)) {
+            return self::EVENT;
+        }
+
+        return self::BEFORE_EVENT;
     }
 
     /**
@@ -106,11 +102,11 @@ class EventDate extends ApiModel
     public static function retrieveBurnWeekendPeriod()
     {
         $year = current_year();
-        $laborDay = (new Carbon("September $year first monday"));
+        $laborDay = new Carbon("September $year first monday");
         // Burn weekend is Friday @ 18:00 til Monday @ 00:00 (late Sunday night)
-        $start = $laborDay->clone()->subDays(3)->setTime(18,0,0);
-        $end = $laborDay->clone()->setTime(0,0,0);
+        $start = $laborDay->clone()->subDays(3)->setTime(18, 0, 0);
+        $end = $laborDay->clone()->setTime(0, 0, 0);
 
-        return [ $start, $end ];
+        return [$start, $end];
     }
 }
