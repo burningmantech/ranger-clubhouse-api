@@ -29,6 +29,14 @@ class Training extends Position
         'slug'
     ];
 
+    const FAIL = 'fail';        // Person was not marked as pass
+    const PASS = 'pass';        // Person passed or taught a session
+    const NO_SHOW = 'no-show';  // person (as a trainer) was no show.
+    const PENDING = 'pending'; // Training hasn't happened yet, or still within the grace period.
+    const NO_SHIFT = 'no-shift'; // No training sign up was found
+
+    const GRACE_PERIOD_HOURS = 12;
+
     /**
      * Is the person trained for a position in a given year?
      *
@@ -477,22 +485,22 @@ class Training extends Position
             $ed->date = $trainer->begins;
             $ed->slot_id = $trainer->id;
             $ed->is_trainer = true;
-            $ed->status = 'pass';
+            $ed->status = self::PASS;
         } elseif ($training) {
             // If the person did not pass, BUT there is a later sign up use the later sign up.
-            if (!$training->passed && $slot && $slot->ends->gt($training->ends)) {
+            if (!$training->passed && $slot && $slot->id != $training->id && $slot->ends->gt($training->ends)) {
                 $ed->location = $slot->description;
                 $ed->date = $slot->begins;
                 $ed->slot_id = $slot->id;
-                $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? 'pending' : 'failed';
+                $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? self::PENDING : self::FAIL;
             } else {
                 $ed->slot_id = $training->id;
                 $ed->location = $training->description;
                 $ed->date = $training->begins;
                 if (!$training->passed && self::isTimeWithinGracePeriod($training->ends, $now)) {
-                    $ed->status = 'pending';
+                    $ed->status = self::PENDING;
                 } else {
-                    $ed->status = ($training->passed ? 'pass' : 'fail');
+                    $ed->status = ($training->passed ? self::PASS : self::FAIL);
                 }
             }
         } elseif ($slot) {
@@ -500,7 +508,7 @@ class Training extends Position
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
             // Training signed up and no trainee status
-            $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? 'pending' : 'fail';
+            $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? self::PENDING : self::FAIL;
         } elseif ($teachingPositions && !$taught->isEmpty()) {
             // find the first pending session
             $slot = $taught->firstWhere('status', TrainerStatus::PENDING);
@@ -517,11 +525,11 @@ class Training extends Position
             $ed->slot_id = $slot->id;
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
-            $ed->status = $slot->status ?? TrainerStatus::PENDING;
+            $ed->status = $slot->status ?? self::PENDING;
             $ed->is_trainer = true;
         } else {
             // Nothing found.
-            $ed->status = 'no-shift';
+            $ed->status = self::NO_SHIFT;
         }
 
         if ($ed->date) {
@@ -533,7 +541,7 @@ class Training extends Position
         })->sortBy('title')->values();
 
         if ($trainingPositionId == Position::GREEN_DOT_TRAINING
-            && $ed->status != 'missing') {
+            && $ed->status != self::NO_SHIFT) {
             // Is a person a GD PNV? (i.e. does *not* have the GD position)
             $ed->is_green_dot_pnv = !PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
             // Perhaps a GD mentee?
@@ -547,8 +555,8 @@ class Training extends Position
 
         if ($ed->required_by->isEmpty()) {
             /*
-             * Person could be a prospective ART ranger. An ART training is available, yet
-             * holds no ART positions which requires training.
+             * Person could be a prospective special team ranger. If an ART is available, yet
+             * holds no special team positions which requires training.
              * Let the user know which positions might require training
              */
 
@@ -587,7 +595,7 @@ class Training extends Position
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
 
-        return $time->addHours(12)->gt($now);
+        return $time->addHours(self::GRACE_PERIOD_HOURS)->gt($now);
     }
 
     /**
