@@ -88,7 +88,7 @@ class Milestones
                         $milestones['alpha_shift'] = [
                             'slot_id' => $alphaShift->id,
                             'begins' => (string)$alphaShift->begins,
-                            'status' => Carbon::parse($alphaShift->begins)->addHours(24)->lte($now) ? 'no-show' : 'pending',
+                            'status' => Carbon::parse($alphaShift->begins)->addHours(24)->lte($now) ? Training::NO_SHOW : Training::PENDING,
                         ];
                     }
                 }
