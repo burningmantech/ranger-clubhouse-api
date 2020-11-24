@@ -475,7 +475,7 @@ class Training extends Position
             // Person taught the course
             $ed->location = $trainer->description;
             $ed->date = $trainer->begins;
-            $ed->slot_id = $trainer->slot_id;
+            $ed->slot_id = $trainer->id;
             $ed->is_trainer = true;
             $ed->status = 'pass';
         } elseif ($training) {
@@ -503,10 +503,11 @@ class Training extends Position
             $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? 'pending' : 'fail';
         } elseif ($teachingPositions && !$taught->isEmpty()) {
             // find the first pending session
-            $slot = $taught->firstWhere('status', null);
+            $slot = $taught->firstWhere('status', TrainerStatus::PENDING);
+
             if (!$slot) {
                 // nothing found - try to use a no-show
-                $slot = $taught->firstWhere('status', 'no-show');
+                $slot = $taught->firstWhere('status', TrainerStatus::NO_SHOW);
                 if (!$slot) {
                     // okay, try the first session
                     $slot = $taught->first();
@@ -516,7 +517,7 @@ class Training extends Position
             $ed->slot_id = $slot->id;
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
-            $ed->status = $slot->status ?? 'pending';
+            $ed->status = $slot->status ?? TrainerStatus::PENDING;
             $ed->is_trainer = true;
         } else {
             // Nothing found.
@@ -577,7 +578,7 @@ class Training extends Position
     }
 
     /**
-     * Is the given time within a grace period?
+     * Is the given time within a grace period? (up to 12 hours afterwards)
      * @param Carbon|string $time
      * @param $now
      * @return bool
@@ -617,7 +618,7 @@ class Training extends Position
 
         $alphaIds = [];
         foreach ($personIds as $id) {
-            if (@$people[$id]) {
+            if (isset($people[$id])) {
                 continue;
             }
             $alphaIds[] = $id;
@@ -918,7 +919,7 @@ class Training extends Position
     /**
      * Retrieve all trainings up to the given year and position for ids
      *
-     * @param $peopleIds people to look up
+     * @param array|mixed $peopleIds people to look up
      * @param int $positionId position to find (usually Training)
      * @param int $year find trainings upto and including the year
      * @return Collection
@@ -926,7 +927,7 @@ class Training extends Position
 
     public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year): Collection
     {
-        $now = (string) now();
+        $now = (string)now();
         // Find the sign ups
         $rows = DB::table('slot')
             ->select(

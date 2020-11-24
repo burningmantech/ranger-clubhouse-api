@@ -80,7 +80,7 @@ class TrainerStatus extends ApiModel
     public static function retrieveSessionsForPerson(int $personId, $positionIds, int $year)
     {
         return DB::table('slot')
-                ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', 'trainer_status.status')
+                ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', DB::raw('IFNULL(trainer_status.status, "pending") as status'))
                 ->join('person_slot', function ($q) use ($personId)  {
                     $q->on('person_slot.slot_id', 'slot.id');
                     $q->where('person_slot.person_id', $personId);
@@ -96,7 +96,7 @@ class TrainerStatus extends ApiModel
     }
 
     /*
-     * Delete all records refering to a slot. Used by slot deletion.
+     * Delete all records referring to a slot. Used by slot deletion.
      */
 
     public static function deleteForSlot($slotId) {
