@@ -378,6 +378,24 @@ class PersonScheduleController extends ApiController
     }
 
     /**
+     * Retrieve the scheduling log for a person & year.
+     * Allows a login management user to see the shift sign up and removals
+     * for another person without having to have full access to the action log.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
+
+    public function scheduleLog(Person $person)
+    {
+        $this->authorize('view', [Schedule::class, $person]);
+        $year = $this->getYear();
+
+        return response()->json(['logs' => Schedule::retrieveScheduleLog($person->id, $year)]);
+    }
+
+    /**
      * Is the user allowed to force a schedule change?
      *
      * - Admins are allowed

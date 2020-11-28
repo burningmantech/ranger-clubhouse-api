@@ -65,7 +65,7 @@ class Schedule extends ApiModel
     const NO_SLOT = 'no-slot'; // slot does not exist
     const HAS_STARTED = 'has-started'; // slot has already started
     const EXISTS = 'exists'; // person is already signed up for the slot.
-    const MISSING_REQUIREMENTS  = 'missing-requirements'; // person has not meet all the requirements to sign up
+    const MISSING_REQUIREMENTS = 'missing-requirements'; // person has not meet all the requirements to sign up
 
     /*
      * Failed sign up statuses that are allowed to be forced if the user has the appropriate
@@ -87,7 +87,7 @@ class Schedule extends ApiModel
         $personId = $query['person_id'] ?? null;
         $shiftsAvailable = $query['shifts_available'] ?? false;
         $remaining = $query['remaining'] ?? false;
-        $now = (string) now();
+        $now = (string)now();
 
         $selectColumns = [
             'slot.id as id',
@@ -279,7 +279,7 @@ class Schedule extends ApiModel
             }
 
             DB::commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             throw $e;
         }
@@ -361,7 +361,7 @@ class Schedule extends ApiModel
     public static function retrieveStartingSlotsForPerson($personId)
     {
         $rows = PersonSlot::join('slot', function ($query) {
-            $now = (string) now();
+            $now = (string)now();
             $query->whereRaw('slot.id=person_slot.slot_id');
             $query->whereRaw(
                 'slot.begins BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
@@ -456,11 +456,11 @@ class Schedule extends ApiModel
      * @return array
      */
 
-    public static function summarizeShiftSignups(Person $person) : array
+    public static function summarizeShiftSignups(Person $person): array
     {
 
         $year = current_year();
-        $rows = self::findForQuery([ 'year' => $year, 'person_id' => $person->id]);
+        $rows = self::findForQuery(['year' => $year, 'person_id' => $person->id]);
         $rows = $rows->filter(function ($r) {
             return $r->type != Position::TYPE_TRAINING;
         });
@@ -559,6 +559,65 @@ class Schedule extends ApiModel
             'event_start' => (string)$eventDates->event_start,
             'event_end' => (string)$eventDates->event_end,
         ];
+    }
+
+    public static function retrieveScheduleLog(int $personId, int $year)
+    {
+        $rows = ActionLog::where('target_person_id', $personId)
+            ->whereYear('created_at', $year)
+            ->whereIn('event', ['person-slot-add', 'person-slot-remove'])
+            ->with(['person:id,callsign'])
+            ->get();
+
+        $slots = [];
+        foreach ($rows as $row) {
+            $person = [
+                'id' => $row->person_id,
+                'callsign' => $row->person->callsign ?? 'Deleted #' . $row->person_id
+            ];
+            $slotId = $row->data['slot_id'];
+
+            if (!isset($slots[$slotId])) {
+                $slot = Slot::find($slotId);
+                if ($slot) {
+                    $slot->load(['position:id,title']);
+                    $logInfo = [
+                        'slot_id' => $slotId,
+                        'slot_description' => $slot->description,
+                        'slot_begins' => (string)$slot->begins,
+                        'position_id' => $slot->position_id,
+                        'position_title' => $slot->position->title ?? 'Deleted #' . $slot->position_id,
+                    ];
+                } else {
+                    $logInfo = [
+                        'slot_id' => $slotId,
+                        'slot_description' => 'Deleted #' . $slotId,
+                        'slot_begins' => (string)$row->created_at,
+                        'position_id' => 0,
+                        'position_title' => 'unknown'
+                    ];
+                }
+                 $slots[$slotId] = &$logInfo;
+            } else {
+                $logInfo = &$slots[$slotId];
+            }
+
+            if ($row->event == 'person-slot-add') {
+                $logInfo['added_at'] = (string)$row->created_at;
+                $logInfo['person_added'] = $person;
+            } else {
+                $logInfo['removed_at'] = (string)$row->created_at;
+                $logInfo['person_removed'] = $person;
+            }
+
+            unset($logInfo);
+        }
+
+        $slots = array_values($slots);
+        usort($slots, function ($a, $b) {
+           return strcmp($a['slot_begins'], $b['slot_begins']);
+        });
+        return $slots;
     }
 
     public function getSlotDurationAttribute(): int

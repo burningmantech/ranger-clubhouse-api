@@ -168,6 +168,7 @@ class ActionLog extends Model
             $log->data = $data;
         }
 
+        $log->created_at = now();
         $log->save();
     }
 
