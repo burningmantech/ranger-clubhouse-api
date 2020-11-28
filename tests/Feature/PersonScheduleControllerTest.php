@@ -3,14 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\PersonOnlineTraining;
-use http\Exception\RuntimeException;
 use Mockery;
 use Tests\TestCase;
+
+use Carbon\Carbon;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
-use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
@@ -41,10 +41,11 @@ class PersonScheduleControllerTest extends TestCase
 
     public $year;
 
-    public static function  setUpBeforeClass() : void
+    public static function setUpBeforeClass(): void
     {
 
     }
+
     /*
      * have each test have a fresh user that is logged in,
      * and a set of positions.
@@ -60,7 +61,7 @@ class PersonScheduleControllerTest extends TestCase
         // scheduling ends up sending lots of emails..
         Mail::fake();
 
-        $year = $this->year = date('Y') + 1;
+        $year = $this->year = date('Y');
 
         // Setup default (real world) positions
         $this->trainingPosition = Position::factory()->create(
@@ -913,7 +914,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson([
             'permission' => [
                 'all_signups_allowed' => false,
-                'requirements' => [ 'photo-unapproved' ]
+                'requirements' => ['photo-unapproved']
             ]
         ]);
     }
@@ -1063,8 +1064,8 @@ class PersonScheduleControllerTest extends TestCase
 
     /**
      * Make sure the two annotations
-     *   @runInSeparateProcess
-     *   @preserveGlobalState disabled
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      * are used when calling this mock.
      */
 
@@ -1183,5 +1184,52 @@ class PersonScheduleControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson(['burn_weekend_shift' => false]);
+    }
+
+    public function testScheduleLogSuccess()
+    {
+        $this->addPosition(Position::DIRT);
+        $this->addRole(Role::MANAGE);
+        $shift = $this->dirtSlots[0];
+        $personId = $this->user->id;
+        $callsign = $this->user->callsign;
+
+        $this->setupRequirements($this->user);
+
+        // Sign up, and then remove the sign up so a audit trail is available
+        $added = "{$this->year}-01-01 12:00:00";
+        Carbon::setTestNow($added);
+        $response = $this->json('POST', "person/$personId/schedule", ['slot_id' => $shift->id,]);
+        $response->assertStatus(200);
+
+        // Advance the clock
+        $removed = "{$this->year}-01-02 13:00:00";
+        Carbon::setTestNow($removed);
+        $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
+        $response->assertStatus(200);
+
+        // Grab the audit trail
+        $response = $this->json('GET', "person/$personId/schedule/log", ['year' => $this->year]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'logs' => [
+                [
+                    'slot_id' => $shift->id,
+                    'slot_description' => $shift->description,
+                    'slot_begins' => (string)$shift->begins,
+                    'added_at' => $added,
+                    'person_added' => [
+                        'id' => $personId,
+                        'callsign' => $callsign,
+                    ],
+                    'removed_at' => $removed,
+                    'person_removed' => [
+                        'id' => $personId,
+                        'callsign' => $callsign,
+                    ],
+                ]
+            ]
+        ]);
     }
 }

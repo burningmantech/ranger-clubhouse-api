@@ -11,6 +11,8 @@ use App\Models\PersonRole;
 use App\Models\PersonPosition;
 use App\Models\Setting;
 
+use Carbon\Carbon;
+
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
@@ -26,6 +28,9 @@ abstract class TestCase extends BaseTestCase
         gc_collect_cycles();
 
         Setting::$cache = [];
+
+        // Set the time to the beginning of the year
+        Carbon::setTestNow(date('Y-01-01 12:34:56'));
     }
 
     public function createUser()
