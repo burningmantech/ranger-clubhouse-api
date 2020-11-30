@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-use App\Http\Controllers\ApiController;
-
 use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
@@ -16,12 +14,13 @@ use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 
-use App\Helpers\SqlHelper;
-
 use App\Lib\HQWindow;
 use App\Lib\ShiftReporting;
+use App\Lib\Reports\ShiftLeadReport;
 
 use Carbon\Carbon;
+
+use App\Http\Controllers\ApiController;
 
 class SlotController extends ApiController
 {
@@ -212,8 +211,9 @@ class SlotController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  Slot  $slot
+     * @param Slot $slot
      * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function destroy(Slot $slot)
     {
@@ -240,6 +240,7 @@ class SlotController extends ApiController
             'is_onduty' => 'sometimes|boolean',
             'include_photo' => 'sometimes|boolean'
         ]);
+
         return response()->json([
             'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false, $params['include_photo'] ?? false)
         ]);
@@ -306,26 +307,7 @@ class SlotController extends ApiController
              'shift_duration'   => 'required|integer'
          ]);
 
-         $shiftStart = new Carbon($params['shift_start']);
-         $shiftDuration = $params['shift_duration'];
-         $shiftEnd = $shiftStart->clone()->addSeconds($shiftDuration);
-
-         $info = [
-             // Positions and head counts
-             'incoming_positions' => Slot::retrievePositionsScheduled($shiftStart, $shiftEnd, false),
-             'below_min_positions' => Slot::retrievePositionsScheduled($shiftStart, $shiftEnd, true),
-
-             // People signed up
-             'non_dirt_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'non-dirt'),
-             'command_staff_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'command'),
-             'dirt_signups' => Slot::retrieveRangersScheduled($shiftStart, $shiftEnd, 'dirt+green'),
-
-             // Green Dot head counts
-             'green_dot_total'  => Slot::countGreenDotsScheduled($shiftStart, $shiftEnd),
-             'green_dot_females'  => Slot::countGreenDotsScheduled($shiftStart, $shiftEnd, true),
-         ];
-
-         return response()->json($info);
+         return response()->json(ShiftLeadReport::execute(Carbon::parse($params['shift_start']), $params['shift_duration']));
     }
 
     /*
