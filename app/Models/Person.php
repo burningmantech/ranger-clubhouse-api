@@ -128,7 +128,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     protected $table = 'person';
     protected $auditModel = true;
 
-    public $auditExclude = [ 'password', 'tpassword', 'tpassword_expire', 'logged_in_at' ];
+    public $auditExclude = ['password', 'tpassword', 'tpassword_expire', 'logged_in_at'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -168,28 +168,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     protected $fillable = [
-        'first_name',
-        'mi',
-        'last_name',
-        'gender',
-
         'callsign',
         'callsign_approved',
         'formerly_known_as',
         'callsign_pronounce',
 
-        'vintage',
-
-        'behavioral_agreement',
         'status',
         'status_date',
         'timestamp',
 
-        'message',
-
         'date_verified',
         'create_date',
+
+
+        'vintage',
+        'behavioral_agreement',
+
+        'gender',
+        'pronouns',
+        'pronouns_custom',
+
+        'message',
+
         'email',
+        'first_name',
+        'mi',
+        'last_name',
         'street1',
         'street2',
         'apt',
@@ -197,19 +201,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'state',
         'zip',
         'country',
-        'reviewed_pi_at',
-        'has_reviewed_pi',  // Pseudo field
 
         'home_phone',
         'alt_phone',
 
-        'camp_location',
         'on_site',
-
         'longsleeveshirt_size_style',
         'teeshirt_size_style',
         'emergency_contact',
+        'camp_location',
 
+        'reviewed_pi_at',
+        'has_reviewed_pi',  // Pseudo field
 
         'vehicle_blacklisted',
 
@@ -315,6 +318,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'camp_location' => 'sometimes|string|nullable|max:200',
         'gender' => 'sometimes|string|nullable|max:32',
+        'pronouns' => 'sometimes|string|nullable',
+        'pronouns_custom' => 'sometimes|string|nullable',
 
         'has_reviewed_pi' => 'sometimes|boolean',
     ];
@@ -359,6 +364,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             if (empty($model->teeshirt_size_style)) {
                 $model->teeshirt_size_style = 'Unknown';
+            }
+
+            if ($model->pronouns != 'custom') {
+                $model->pronouns_custom = '';
             }
 
             /*
@@ -518,7 +527,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
                     foreach ($fields as $field) {
                         if (!in_array($field, self::SEARCH_FIELDS)) {
-                            throw new \InvalidArgumentException("Search field '$field' is not allowed.");
+                            throw new InvalidArgumentException("Search field '$field' is not allowed.");
                         }
 
                         if ($field == 'name') {
@@ -628,7 +637,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         switch ($type) {
             case 'contact':
                 return $sql->select('person.id', 'callsign', DB::raw('IF(person.status="inactive", true,false) as is_inactive'), DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
-                    ->whereIn('status', [Person::ACTIVE, Person::INACTIVE ])
+                    ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
                     ->leftJoin('alert_person', function ($join) {
                         $join->whereRaw('alert_person.person_id=person.id');
                         $join->where('alert_person.alert_id', '=', Alert::RANGER_CONTACT);
@@ -643,7 +652,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 return $sql->get(['id', 'callsign']);
         }
 
-        throw new \InvalidArgumentException("Unknown type [$type]");
+        throw new InvalidArgumentException("Unknown type [$type]");
     }
 
     public static function retrievePeopleByLocation($year)
@@ -934,7 +943,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->languages = $value;
     }
 
-    public function setHasReviewedPiAttribute($value) {
+    public function setHasReviewedPiAttribute($value)
+    {
         $this->has_reviewed_pi = $value;
     }
 
@@ -1189,7 +1199,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return self::splitCommas($this->known_rangers);
     }
 
-    public function hasReviewedPi() {
+    public function hasReviewedPi()
+    {
         return ($this->reviewed_pi_at && $this->reviewed_pi_at->year == current_year());
     }
 
@@ -1209,4 +1220,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }));
     }
 
+    public function setPronounsCustomAttribute($value)
+    {
+        $this->attributes['pronouns_custom'] = !empty($value) ? $value : '';
+    }
+
+    public function setPronounsAttribute($value)
+    {
+        $this->attributes['pronouns'] = !empty($value) ? $value : '';
+    }
 }
