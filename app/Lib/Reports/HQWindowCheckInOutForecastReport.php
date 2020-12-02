@@ -1,33 +1,36 @@
 <?php
 
-namespace App\Lib;
+namespace App\Lib\Reports;
 
 use App\Models\Position;
 use App\Models\Slot;
-
+use DateInterval;
+use DatePeriod;
+use DateTime;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class HQWindow
+class HQWindowCheckInOutForecastReport
 {
-    public static function retrieveCheckInOutForecast($year, $interval=15)
+    public static function execute(int $year, int $interval = 15)
     {
         // All shift visits excluding Training, Trainer, TiT, Uber & Burn Perimeter
-        $hqPositions = [ Position::HQ_WINDOW, Position::HQ_RUNNER, Position::HQ_SHORT, Position::HQ_LEAD ];
+        $hqPositions = [Position::HQ_WINDOW, Position::HQ_RUNNER, Position::HQ_SHORT, Position::HQ_LEAD];
 
         $intervalSeconds = $interval * 60;
 
         // Find out when HQ is supposedly open
         $row = DB::table('slot')
-                ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor(unix_timestamp(begins)/$intervalSeconds)) as opening")
-                ->whereIn('position_id', $hqPositions)
-                ->whereYear('begins', $year)
-                ->orderBy('begins')
-                ->first();
+            ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor(unix_timestamp(begins)/$intervalSeconds)) as opening")
+            ->whereIn('position_id', $hqPositions)
+            ->whereYear('begins', $year)
+            ->orderBy('begins')
+            ->first();
 
         // No opening slot? Usually happen early in the year when no shifts are setup.
         if ($row == null) {
             return [
-                'visits'=> [],
+                'visits' => [],
                 'burns' => []
             ];
         }
@@ -37,11 +40,11 @@ class HQWindow
         $roundUp = $intervalSeconds - 1;
 
         $row = DB::table('slot')
-                ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor((unix_timestamp(ends) + $roundUp)/$intervalSeconds)) as closing")
-                ->whereIn('position_id', $hqPositions)
-                ->whereYear('begins', $year)
-                ->orderBy('ends', 'desc')
-                ->first();
+            ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor((unix_timestamp(ends) + $roundUp)/$intervalSeconds)) as closing")
+            ->whereIn('position_id', $hqPositions)
+            ->whereYear('begins', $year)
+            ->orderBy('ends', 'desc')
+            ->first();
         $hqEnd = $row->closing;
 
         // Find all the checkins except all training related positions
@@ -49,18 +52,18 @@ class HQWindow
 
         // Find all the Burn Perimeter slots for the given year
         $burnPerimeterSlots = Slot::where('position_id', Position::BURN_PERIMETER)
-                                ->whereYear('begins', $year)
-                                ->orderBy('begins')
-                                ->get();
+            ->whereYear('begins', $year)
+            ->orderBy('begins')
+            ->get();
         $burnsByTime = [];
 
         foreach ($burnPerimeterSlots as $slot) {
-            $begins = (string) $slot->begins;
+            $begins = (string)$slot->begins;
 
             if (!array_key_exists($begins, $burnsByTime)) {
                 $burnsByTime[$begins] = [
                     'descriptions' => [],
-                    'visits'       => self::findBurnPerimeterVisits($begins, $allVisits, $intervalSeconds)
+                    'visits' => self::findBurnPerimeterVisits($begins, $allVisits, $intervalSeconds)
                 ];
             }
             $burnsByTime[$begins]['descriptions'][] = $slot->description;
@@ -76,12 +79,12 @@ class HQWindow
         $burns = array_values($burnsByTime);
 
         return [
-            'visits'=> $visits,
+            'visits' => $visits,
             'burns' => $burns
         ];
     }
 
-    /*
+    /**
      * Find all HQ visits for a given year
      *
      * Associated array list is formatted a
@@ -97,12 +100,12 @@ class HQWindow
 
     public static function findAllHQVisits($start, $end, $intervalSeconds)
     {
-        $dtStart = \DateTime::createFromFormat('Y-m-d H:i:s', $start);
-        $dtEnd = \DateTime::createFromFormat('Y-m-d H:i:s', $end);
+        $dtStart = DateTime::createFromFormat('Y-m-d H:i:s', $start);
+        $dtEnd = DateTime::createFromFormat('Y-m-d H:i:s', $end);
 
         $intervalMinutes = $intervalSeconds / 60;
-        $interval = \DateInterval::createFromDateString("$intervalMinutes minutes");
-        $period = new \DatePeriod($dtStart, $interval, $dtEnd);
+        $interval = DateInterval::createFromDateString("$intervalMinutes minutes");
+        $period = new DatePeriod($dtStart, $interval, $dtEnd);
 
         $rows = [];
         $periods = [];
@@ -110,17 +113,17 @@ class HQWindow
         foreach ($period as $dt) {
             $dtStart = $dt->format("Y-m-d H:i:00");
             $periods[$dtStart] = [
-                'checkin'   => 0,
-                'checkout'  => 0,
-                'windows'   => 0,
-                'runners'   => 0,
-                'shorts'    => 0,
-                'leads'     => 0
+                'checkin' => 0,
+                'checkout' => 0,
+                'windows' => 0,
+                'runners' => 0,
+                'shorts' => 0,
+                'leads' => 0
             ];
         }
 
-        $cond  = 'slot.position_id NOT IN ('.implode(',', [ Position::TRAINING, Position::TRAINER, Position::TRAINER_UBER, Position::TRAINER_ASSOCIATE]).')';
-        $cond = "slot.position_id NOT IN (".implode(',', [ Position::HQ_WINDOW, Position::HQ_RUNNER, Position::HQ_SHORT, Position::HQ_LEAD ]).") AND $cond AND begins >= CAST('$start' AS DATETIME) AND ends <=  CAST('$end' AS DATETIME)";
+        $cond = 'slot.position_id NOT IN (' . implode(',', [Position::TRAINING, Position::TRAINER, Position::TRAINER_UBER, Position::TRAINER_ASSOCIATE]) . ')';
+        $cond = "slot.position_id NOT IN (" . implode(',', [Position::HQ_WINDOW, Position::HQ_RUNNER, Position::HQ_SHORT, Position::HQ_LEAD]) . ") AND $cond AND begins >= CAST('$start' AS DATETIME) AND ends <=  CAST('$end' AS DATETIME)";
         $checkins = self::findHQVisits('begins', $cond, $intervalSeconds);
         $checkouts = self::findHQVisits('ends', $cond, $intervalSeconds);
 
@@ -128,10 +131,10 @@ class HQWindow
         self::populateForecastColumn($checkouts, $periods, 'checkout');
 
         $staffing = [
-             [ 'windows', Position::HQ_WINDOW ],
-             [ 'runners', Position::HQ_RUNNER ],
-             [ 'shorts', Position::HQ_SHORT ],
-             [ 'leads', Position::HQ_LEAD ],
+            ['windows', Position::HQ_WINDOW],
+            ['runners', Position::HQ_RUNNER],
+            ['shorts', Position::HQ_SHORT],
+            ['leads', Position::HQ_LEAD],
         ];
 
         // Find the staffing check in and outs for the various HQ positions, and build up a schedule.
@@ -151,15 +154,17 @@ class HQWindow
         return $periods;
     }
 
-    /*
+    /**
      * Find the check in & outs for (all) Burn Perimeters starting and ending
      * within a given time.
-     *
+     * @param string $start
+     * @param $periods
+     * @param int $intervalSeconds
+     * @return array
      */
-
-    public static function findBurnPerimeterVisits($start, $periods, $intervalSeconds)
+    public static function findBurnPerimeterVisits(string $start, $periods, int $intervalSeconds)
     {
-        $cond = "position_id=".Position::BURN_PERIMETER." AND begins='$start'";
+        $cond = "position_id=" . Position::BURN_PERIMETER . " AND begins='$start'";
         $checkins = self::findHQVisits('begins', $cond, $intervalSeconds);
         $checkouts = self::findHQVisits('ends', $cond, $intervalSeconds);
 
@@ -169,22 +174,22 @@ class HQWindow
 
             if (!array_key_exists($time, $periods)) {
                 $visits[$time] = [
-                    'checkin'   => (int)$row->total,
-                    'checkout'  => 0,
-                    'windows'   => 0,
-                    'runners'   => 0,
-                    'shorts'    => 0,
-                    'leads'     => 0,
+                    'checkin' => (int)$row->total,
+                    'checkout' => 0,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 0,
                 ];
             } else {
                 $period = $periods[$time];
                 $visits[$time] = [
-                    'checkin'   => (int)$row->total,
-                    'checkout'  => 0,
-                    'windows'   => (int)$period['windows'],
-                    'runners'   => (int)$period['runners'],
-                    'shorts'    => (int)$period['shorts'],
-                    'leads'     => (int)$period['leads'],
+                    'checkin' => (int)$row->total,
+                    'checkout' => 0,
+                    'windows' => (int)$period['windows'],
+                    'runners' => (int)$period['runners'],
+                    'shorts' => (int)$period['shorts'],
+                    'leads' => (int)$period['leads'],
                 ];
             }
         }
@@ -193,22 +198,22 @@ class HQWindow
             $time = (string)$row->time;
             if (!array_key_exists($time, $periods)) {
                 $visits[$time] = [
-                    'checkin'  => 0,
+                    'checkin' => 0,
                     'checkout' => (int)$row->total,
-                    'windows'  => 0,
-                    'runners'  => 0,
-                    'shorts'   => 0,
-                    'leads'    => 0,
+                    'windows' => 0,
+                    'runners' => 0,
+                    'shorts' => 0,
+                    'leads' => 0,
                 ];
             } else {
                 $period = $periods[$time];
                 $visits[$time] = [
-                    'checkin'  => 0,
+                    'checkin' => 0,
                     'checkout' => (int)$row->total,
-                    'windows'  => (int)$period['windows'],
-                    'runners'  => (int)$period['runners'],
-                    'shorts'   => (int)$period['shorts'],
-                    'leads'    => (int)$period['leads'],
+                    'windows' => (int)$period['windows'],
+                    'runners' => (int)$period['runners'],
+                    'shorts' => (int)$period['shorts'],
+                    'leads' => (int)$period['leads'],
                 ];
             }
         }
@@ -223,25 +228,33 @@ class HQWindow
         return $results;
     }
 
-    /*
-     * Find all the expected HQ visits (aka shift start or ends)
+    /**
+     *  Find all the expected HQ visits (aka shift start or ends)
+     * @param string $column
+     * @param string $cond
+     * @param int $intervalSeconds
+     * @return Collection
      */
 
-    public static function findHQVisits($column, $cond, $intervalSeconds = 900)
+    public static function findHQVisits(string $column, string $cond, int $intervalSeconds = 900)
     {
         return DB::table('slot')
-                ->selectRaw("from_unixtime($intervalSeconds*floor(unix_timestamp($column)/$intervalSeconds)) as 'time'")
-                ->selectRaw('sum(signed_up) as total')
-                ->whereRaw($cond)
-                ->groupBy('time')
-                ->orderBy('time')
-                ->get();
+            ->selectRaw("from_unixtime($intervalSeconds*floor(unix_timestamp($column)/$intervalSeconds)) as 'time'")
+            ->selectRaw('sum(signed_up) as total')
+            ->whereRaw($cond)
+            ->groupBy('time')
+            ->orderBy('time')
+            ->get();
     }
 
-    /*
-     * Loop thru a possible check in/out list and set the given column to the count.
-     */
 
+    /**
+     * Loop thru a possible check in/out list and set the given column to the count.
+     *
+     * @param $rows
+     * @param $periods
+     * @param $column
+     */
     public static function populateForecastColumn($rows, &$periods, $column)
     {
         foreach ($rows as $row) {

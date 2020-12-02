@@ -14,9 +14,14 @@ use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 
-use App\Lib\HQWindow;
-use App\Lib\ShiftReporting;
+use App\Lib\Reports\FlakeReport;
+use App\Lib\Reports\HQWindowCheckInOutForecastReport;
+use App\Lib\Reports\ScheduleByCallsignReport;
+use App\Lib\Reports\ScheduleByPositionReport;
+use App\Lib\Reports\ShiftCoverageReport;
 use App\Lib\Reports\ShiftLeadReport;
+use App\Lib\Reports\ShiftSignupsReport;
+
 
 use Carbon\Carbon;
 
@@ -323,7 +328,7 @@ class SlotController extends ApiController
             'interval'  => 'required|integer',
         ]);
 
-        return response()->json(HQWindow::retrieveCheckInOutForecast($params['year'], $params['interval']));
+        return response()->json(HQWindowCheckInOutForecastReport::execute($params['year'], $params['interval']));
     }
 
     /*
@@ -339,7 +344,7 @@ class SlotController extends ApiController
             'type'  => 'required|string'
         ]);
 
-        return response()->json(ShiftReporting::retrieveShiftCoverageByYearType($params['year'], $params['type']));
+        return response()->json(ShiftCoverageReport::execute($params['year'], $params['type']));
     }
 
     /*
@@ -352,7 +357,7 @@ class SlotController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'positions' => ShiftReporting::retrieveShiftSignupsForYear($year) ]);
+        return response()->json([ 'positions' => ShiftSignupsReport::execute($year) ]);
     }
 
     /*
@@ -365,7 +370,7 @@ class SlotController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'positions' => ShiftReporting::retrievePositionScheduleReport($year) ]);
+        return response()->json([ 'positions' => ScheduleByPositionReport::execute($year) ]);
     }
 
     /*
@@ -378,7 +383,7 @@ class SlotController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'people' => ShiftReporting::retrieveCallsignScheduleReport($year) ]);
+        return response()->json([ 'people' => ScheduleByCallsignReport::execute($year) ]);
     }
 
     /*
@@ -396,7 +401,7 @@ class SlotController extends ApiController
         $date = $params['date'] ?? now();
 
         return response()->json([
-            'positions' => ShiftReporting::retrieveFlakeReport($date),
+            'positions' => FlakeReport::execute($date),
             'date'  => (string)$date,
         ]);
     }
