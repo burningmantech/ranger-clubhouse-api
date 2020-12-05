@@ -42,7 +42,7 @@ class SlotController extends ApiController
         $query = request()->validate([
             'year'        => 'required_without:for_rollcall|digits:4',
             'type'        => 'sometimes|string',
-            'position_id' => 'sometimes|digits',
+            'position_id' => 'sometimes|integer',
             'for_rollcall' => 'sometimes|boolean',
         ]);
 

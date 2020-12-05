@@ -1218,16 +1218,24 @@ class PersonScheduleControllerTest extends TestCase
                     'slot_id' => $shift->id,
                     'slot_description' => $shift->description,
                     'slot_begins' => (string)$shift->begins,
-                    'added_at' => $added,
-                    'person_added' => [
-                        'id' => $personId,
-                        'callsign' => $callsign,
+                    'added' => [
+                        [
+                            'date' => $added,
+                            'person' => [
+                                'id' => $personId,
+                                'callsign' => $callsign,
+                            ]
+                        ]
                     ],
-                    'removed_at' => $removed,
-                    'person_removed' => [
-                        'id' => $personId,
-                        'callsign' => $callsign,
-                    ],
+                    'removed' => [
+                        [
+                            'date' => $removed,
+                            'person' => [
+                                'id' => $personId,
+                                'callsign' => $callsign,
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ]);
