@@ -597,17 +597,29 @@ class Schedule extends ApiModel
                         'position_title' => 'unknown'
                     ];
                 }
-                 $slots[$slotId] = &$logInfo;
+                $logInfo['added'] = [];
+                $logInfo['removed'] = [];
+
+                if (!PersonSlot::where([ 'person_id' => $personId, 'slot_id' => $slotId])->exists()) {
+                    // Indicate the person is no longer signed up
+                    $logInfo['no_signup'] = true;
+                }
+
+                $slots[$slotId] = &$logInfo;
             } else {
                 $logInfo = &$slots[$slotId];
             }
 
             if ($row->event == 'person-slot-add') {
-                $logInfo['added_at'] = (string)$row->created_at;
-                $logInfo['person_added'] = $person;
+                $logInfo['added'][] = [
+                    'date' => (string)$row->created_at,
+                    'person' => $person
+                ];
             } else {
-                $logInfo['removed_at'] = (string)$row->created_at;
-                $logInfo['person_removed'] = $person;
+                $logInfo['removed'][] = [
+                    'date' => (string)$row->created_at,
+                    'person' => $person
+                ];
             }
 
             unset($logInfo);
@@ -615,7 +627,7 @@ class Schedule extends ApiModel
 
         $slots = array_values($slots);
         usort($slots, function ($a, $b) {
-           return strcmp($a['slot_begins'], $b['slot_begins']);
+            return strcmp($a['slot_begins'], $b['slot_begins']);
         });
         return $slots;
     }

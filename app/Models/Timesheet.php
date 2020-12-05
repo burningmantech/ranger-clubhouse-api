@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Position;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -113,9 +111,12 @@ class Timesheet extends ApiModel
 
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
-        $onDuty = $query['on_duty'] ?? false;
+        $isOnDuty = $query['is_on_duty'] ?? false;
         $dutyDate = $query['duty_date'] ?? null;
         $overHours = $query['over_hours'] ?? 0;
+        $onDutyStart = $query['on_duty_start'] ?? null;
+        $onDutyEnd = $query['on_duty_end'] ?? null;
+        $positionId = $query['position_id'] ?? null;
 
         if ($year) {
             $sql->whereYear('on_duty', $year);
@@ -127,7 +128,7 @@ class Timesheet extends ApiModel
             $sql->with('person:id,callsign');
         }
 
-        if ($onDuty) {
+        if ($isOnDuty) {
             $sql->whereNull('off_duty');
             if ($overHours) {
                 $sql->whereRaw("TIMESTAMPDIFF(HOUR, on_duty, ?) >= ?", [now(), $overHours]);
@@ -137,6 +138,18 @@ class Timesheet extends ApiModel
         if ($dutyDate) {
             $sql->where('on_duty', '<=', $dutyDate);
             $sql->whereRaw('IFNULL(off_duty, ?) >= ?', [now(), $dutyDate]);
+        }
+
+        if ($onDutyStart) {
+            $sql->where('on_duty', '>=', $onDutyStart);
+        }
+
+        if ($onDutyEnd) {
+            $sql->where('on_duty', '<=', $onDutyEnd);
+        }
+
+        if ($positionId) {
+            $sql->where('position_id', $positionId);
         }
 
         $sql->with(self::RELATIONSHIPS);

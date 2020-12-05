@@ -48,9 +48,12 @@ class TimesheetController extends ApiController
         $params = $request->validate([
             'year' => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
-            'on_duty' => 'sometimes|boolean',
-            'over_hours' => 'sometimes|integer',
+            'is_on_duty' => 'sometimes|boolean',
             'duty_date' => 'sometimes|date',
+            'over_hours' => 'sometimes|integer',
+            'on_duty_start' => 'sometimes|date',
+            'on_duty_end' => 'sometimes|date',
+            'position_id' => 'sometimes|integer'
         ]);
 
         $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null]);
@@ -462,7 +465,7 @@ class TimesheetController extends ApiController
 
         $timesheet->setOffDutyToNow();
         $timesheet->auditReason = 'signout';
-        $timesheet->save();
+        $timesheet->saveOrThrow();
         $timesheet->loadRelationships();
         $timesheet->log(TimesheetLog::SIGNOFF, [
                 'position_id' => $timesheet->position_id,

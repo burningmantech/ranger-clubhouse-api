@@ -15,6 +15,8 @@ use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\Training;
 
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Alpha
@@ -22,7 +24,7 @@ class Alpha
     /**
      * Find all mentors and indicate if they are on duty.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public static function retrieveMentors()
     {
@@ -182,6 +184,8 @@ class Alpha
             'callsign' => $person->callsign,
             'callsign_approved' => $person->callsign_approved,
             'fkas' => $person->formerlyKnownAsArray(true),
+            'pronouns' => $person->pronouns,
+            'pronouns_custom' => $person->pronouns_custom,
             'known_rangers' => $person->knownRangersArray(),
             'known_pnvs' => $person->knownPnvsArray(),
             'first_name' => $person->first_name,
@@ -302,7 +306,7 @@ class Alpha
 
         // Next, find the Alpha sign ups
         $rows = PersonSlot::whereIn('slot_id', $slots->pluck('id')->toArray())
-            ->with([ 'person', 'person.person_photo' ])
+            ->with(['person', 'person.person_photo'])
             ->get()
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
@@ -332,7 +336,7 @@ class Alpha
      * Retrieval all Alphas who had a mentor with a verdict (passed, bonked) in the current year.
      * Pending status is filtered out.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
 
     public static function retrieveVerdicts()

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Person;
+use App\Models\Position;
 use App\Models\Timesheet;
 use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
