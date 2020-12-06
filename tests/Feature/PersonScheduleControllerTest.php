@@ -2,27 +2,29 @@
 
 namespace Tests\Feature;
 
-use App\Models\PersonOnlineTraining;
-use Mockery;
+
 use Tests\TestCase;
 
 use Carbon\Carbon;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
 
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
+
+use App\Jobs\TrainingSignupEmailJob;
+
+use App\Mail\TrainingSessionFullMail;
+
+use App\Models\EventDate;
 use App\Models\Person;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
-
-use Illuminate\Support\Facades\Queue;
-
-use App\Mail\TrainingSessionFullMail;
-use App\Jobs\TrainingSignupEmailJob;
 
 class PersonScheduleControllerTest extends TestCase
 {
@@ -41,11 +43,6 @@ class PersonScheduleControllerTest extends TestCase
 
     public $year;
 
-    public static function setUpBeforeClass(): void
-    {
-
-    }
-
     /*
      * have each test have a fresh user that is logged in,
      * and a set of positions.
@@ -62,6 +59,8 @@ class PersonScheduleControllerTest extends TestCase
         Mail::fake();
 
         $year = $this->year = date('Y');
+
+        Carbon::setTestNow("$year-02-01 12:00:00");
 
         // Setup default (real world) positions
         $this->trainingPosition = Position::factory()->create(
@@ -101,6 +100,11 @@ class PersonScheduleControllerTest extends TestCase
                 'training_position_id' => $this->greenDotTrainingPosition->id,
             ]
         );
+    }
+
+    private function setupTrainingSlots()
+    {
+        $year = $this->year;
 
         $this->trainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
@@ -117,7 +121,11 @@ class PersonScheduleControllerTest extends TestCase
                 ]
             );
         }
+    }
 
+    private function setupDirtSlots()
+    {
+        $year = $this->year;
         $this->dirtSlots = [];
         for ($i = 0; $i < 3; $i++) {
             $day = (25 + $i);
@@ -133,6 +141,11 @@ class PersonScheduleControllerTest extends TestCase
                 ]
             );
         }
+    }
+
+    private function setupGreenDotTrainingSlots()
+    {
+        $year = $this->year;
 
         $this->greenDotTrainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
@@ -180,7 +193,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function setupRequirements($person)
     {
-        $this->mockOnlineTrainingPass($person);
+        $this->markOnlineTrainingPassed($person);
         $this->setupPhotoStatus(PersonPhoto::APPROVED, $person);
     }
 
@@ -199,7 +212,7 @@ class PersonScheduleControllerTest extends TestCase
         $person->saveWithoutValidation();
     }
 
-    private function mockOnlineTrainingPass($person)
+    private function markOnlineTrainingPassed($person)
     {
         $ot = new PersonOnlineTraining;
         $ot->person_id = $person->id;
@@ -219,6 +232,9 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->addPosition(Position::TRAINING);
         $this->addPosition(Position::DIRT);
+
+        $this->setupDirtSlots();
+        $this->setupTrainingSlots();
 
         $slotId = $this->dirtSlots[0]->id;
 
@@ -248,6 +264,9 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->addPosition(Position::TRAINING);
         $this->addPosition(Position::DIRT);
+
+        $this->setupDirtSlots();
+        $this->setupTrainingSlots();
 
         $slotId = $this->dirtSlots[0]->id;
 
@@ -285,6 +304,8 @@ class PersonScheduleControllerTest extends TestCase
     public function testSignupForDirtShift()
     {
         $this->addPosition(Position::DIRT);
+        $this->setupDirtSlots();
+
         $shift = $this->dirtSlots[0];
         $personId = $this->user->id;
 
@@ -328,6 +349,8 @@ class PersonScheduleControllerTest extends TestCase
     public function testSignupForTrainingSession()
     {
         $this->addPosition(Position::TRAINING);
+        $this->setupTrainingSlots();
+
         $shift = $this->trainingSlots[0];
         $personId = $this->user->id;
 
@@ -373,6 +396,8 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
+        $this->setupTrainingSlots();
+
         $shift = $this->trainingSlots[0];
         $shift->update(['max' => 1]);
 
@@ -398,6 +423,8 @@ class PersonScheduleControllerTest extends TestCase
     public function testDoNotAllowShiftSignupWithNoPosition()
     {
         $this->setupRequirements($this->user);
+
+        $this->setupGreenDotTrainingSlots();
         $shift = $this->greenDotSlots[0];
 
         $response = $this->json(
@@ -429,6 +456,8 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
+
+        $this->setupTrainingSlots();
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1]);
 
@@ -459,6 +488,8 @@ class PersonScheduleControllerTest extends TestCase
     public function testPreventSignupForStartedShift()
     {
         $this->setupRequirements($this->user);
+        $this->setupTrainingSlots();
+
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
         $this->addPosition(Position::TRAINING);
@@ -490,6 +521,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testAllowSignupForStartedShiftIfAdmin()
     {
         $this->setupRequirements($this->user);
+        $this->setupDirtSlots();
         $this->addRole(Role::ADMIN);
 
         $person = Person::factory()->create();
@@ -522,6 +554,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testDenySignupForPastShiftForTrainer()
     {
         $this->addRole(Role::TRAINER);
+        $this->setupTrainingSlots();
 
         $person = $this->createPerson();
         $this->setupRequirements($person);
@@ -558,6 +591,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->setupRequirements($person);
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
+        $this->setupTrainingSlots();
 
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1,]);
@@ -592,6 +626,7 @@ class PersonScheduleControllerTest extends TestCase
         $this->setupRequirements($person);
         $this->addPosition(Position::TRAINING, $person);
         $this->addRole(Role::ADMIN);
+        $this->setupTrainingSlots();
 
         $shift = $this->trainingSlots[0];
         $shift->update(['signed_up' => 1, 'max' => 1]);
@@ -627,6 +662,7 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $this->user->id;
         $this->setupRequirements($this->user);
         $this->addPosition(Position::TRAINING);
+        $this->setupTrainingSlots();
 
         $previousTraining = $this->trainingSlots[0];
 
@@ -717,6 +753,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testAllowMultipleEnrollmentsForTrainingSessionsIfAdmin()
     {
         $this->addRole(Role::ADMIN);
+        $this->setupTrainingSlots();
 
         $person = Person::factory()->create();
         $this->setupRequirements($person);
@@ -767,6 +804,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $person = $this->createPerson();
         $this->setupRequirements($person);
+        $this->setupTrainingSlots();
 
         $personId = $person->id;
         $previousTraining = $this->trainingSlots[0];
@@ -804,6 +842,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDeleteSignupSuccess()
     {
+        $this->setupDirtSlots();
         $shift = $this->dirtSlots[0];
         $personId = $this->user->id;
         $personSlot = [
@@ -824,6 +863,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testPreventDeleteSignup()
     {
+        $this->setupDirtSlots();
         $shift = $this->dirtSlots[0];
         $shift->update(['begins' => date('2000-01-01 12:00:00')]);
         $personId = $this->user->id;
@@ -846,6 +886,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowDeleteSignupIfAdmin()
     {
+        $this->setupDirtSlots();
         $shift = $this->dirtSlots[0];
         $shift->update(['begins' => date('2000-01-01 12:00:00')]);
         $personId = $this->user->id;
@@ -870,6 +911,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testFailWhenDeletingNonExistentSignup()
     {
+        $this->setupDirtSlots();
         $shift = $this->dirtSlots[0];
         $personId = $this->user->id;
 
@@ -883,8 +925,8 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowActiveWhoCompletedOnlineTrainingAndHasPhoto()
     {
-        $photoMock = $this->setupPhotoStatus('approved');
-        $mrMock = $this->mockOnlineTrainingPass($this->user);
+        $this->setupPhotoStatus('approved');
+        $this->markOnlineTrainingPassed($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -904,7 +946,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDenyActiveWithNoPhoto()
     {
-        $mrMock = $this->mockOnlineTrainingPass($this->user);
+        $this->markOnlineTrainingPassed($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -947,7 +989,7 @@ class PersonScheduleControllerTest extends TestCase
         public function testDenyActiveWhoDidNotSignBehavioralAgreement()
         {
             $photoMock = $this->setupPhotoStatus('approved');
-            $mrMock = $this->mockOnlineTrainingPass(true);
+            $mrMock = $this->markOnlineTrainingPassed(true);
             $this->user->update([ 'behavioral_agreement' => false ]);
             $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                    'year' => $this->year
@@ -998,7 +1040,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $person = Person::factory()->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
         $this->actingAs($person);
-        $this->mockOnlineTrainingPass($person);
+        $this->markOnlineTrainingPassed($person);
 
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year
@@ -1020,6 +1062,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testSignUpLimitWithTrainingSlot()
     {
         $this->setupRequirements($this->user);
+        $this->setupTrainingSlots();
         $this->addPosition(Position::TRAINING);
 
         $shift = $this->trainingSlots[0];
@@ -1062,30 +1105,19 @@ class PersonScheduleControllerTest extends TestCase
         );
     }
 
-    /**
-     * Make sure the two annotations
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     * are used when calling this mock.
-     */
-
-    private function mockBurnWeekend()
+    private function findABurnWeekendDay()
     {
-        $mock = Mockery::mock('alias:App\Models\EventDate');
-        $mock->shouldReceive('retrieveBurnWeekendPeriod')
-            ->andReturn([now(), now()->addHours(6)]);
+        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
+
+        return $start->addHours(12);
     }
 
     /**
      * Recommend working a Burn Weekend shift is none is present in the schedule
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
      */
 
     public function testRecommendBurnWeekendShift()
     {
-        $this->mockBurnWeekend();
-
         $year = $this->year;
 
         $this->setupRequirements($this->user);
@@ -1107,20 +1139,13 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson(['burn_weekend_shift' => true]);
     }
 
-    /**
-     * Do NOT recommend working a Burn Weekend shift is none is present in the schedule for a non ranger
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
-
     public function testDoNotRecommendBurnWeekendShiftForNonRanger()
     {
-        $this->mockBurnWeekend();
         $year = $this->year;
 
         $person = Person::factory()->create(['status' => Person::NON_RANGER]);
         $this->actingAs($person);
-        $photoMock = $this->setupPhotoStatus('approved', $person);
+        $this->setupPhotoStatus('approved', $person);
 
         // Check for scheduling
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", ['year' => $year]);
@@ -1139,23 +1164,17 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson(['burn_weekend_shift' => false]);
     }
 
-    /**
-     * Do not recommend working a Burn Weekend shift because the person is signed up for a Burn Weekend shift.
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
-
     public function testDoNotRecommendBurnWeekendShift()
     {
-        $this->mockBurnWeekend();
+        $burn = $this->findABurnWeekendDay();
         $year = $this->year;
 
         $this->setupRequirements($this->user);
 
         $shift = Slot::factory()->create(
             [
-                'begins' => (string)now(),
-                'ends' => (string)now()->addHours(6),
+                'begins' => (string)$burn,
+                'ends' => (string)$burn->addHours(6),
                 'position_id' => Position::DIRT,
                 'description' => "BURN WEEKEND BABY!",
                 'signed_up' => 0,
@@ -1190,6 +1209,8 @@ class PersonScheduleControllerTest extends TestCase
     {
         $this->addPosition(Position::DIRT);
         $this->addRole(Role::MANAGE);
+        $this->setupDirtSlots();
+
         $shift = $this->dirtSlots[0];
         $personId = $this->user->id;
         $callsign = $this->user->callsign;
@@ -1199,7 +1220,7 @@ class PersonScheduleControllerTest extends TestCase
         // Sign up, and then remove the sign up so a audit trail is available
         $added = "{$this->year}-01-01 12:00:00";
         Carbon::setTestNow($added);
-        $response = $this->json('POST', "person/$personId/schedule", ['slot_id' => $shift->id,]);
+        $response = $this->json('POST', "person/$personId/schedule", ['slot_id' => $shift->id]);
         $response->assertStatus(200);
 
         // Advance the clock
