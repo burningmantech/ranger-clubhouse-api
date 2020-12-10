@@ -1,29 +1,38 @@
 @component('html-email')
-<p>
-    Dear Ranger,
-</p>
+    <p>
+        Hello {{$greeting}},
+    </p>
 
-<p>
-    You have been issued a temporary password to the Ranger Secret Clubhouse:
-</p>
+    <p>
+        You recently requested to reset your password for your Black Rock Ranger Secret Clubhouse account.
+        Click the button below to reset your password.
+    </p>
 
-<p>
-<b>{{ $password }}</b>
-</p>
+    <p class="text-align: center">
+        <div class="btn btn-primary"><a href="{{$resetURL}}">Reset Your Password</a></div>
+    </p>
 
-<p>
-    Please use it log in and change it to a password of your choice.
-</p>
+    <p>
+        If you did not request a password reset, please ignore this email or contact us at
+        <a href="mailto:{{$adminEmail}}">{{$adminEmail}}</a> to let us know someone is up to no good.
+    </p>
+    <p>
+        This password reset is only valid for the next 2 hours.
+    </p>
 
-<p>
-    If you are still unable to log in, or if you were not expecting this
-    message, please contact us at <a href="mailto:{{$adminEmail}}">{{$adminEmail}}</a>.
-</p>
+    <p>
+        Sincerely,
+    </p>
+    <p>
+        The Black Rock Ranger Tech Team<br>
+        <a href="mailto:{{$adminEmail}}">{{$adminEmail}}</a>
+    </p>
+    <p>
+        If you're having trouble clicking the password reset button, copy and paste the URL below
+        into your web browser.
+        <br>
+        <br>
+        <a href="{{$resetURL}}">{{$resetURL}}</a>
+    </p>
 
-<p>
-    Sincerely,
-</p>
-<p>
-    The Black Rock Ranger Tech Team
-</p>
 @endcomponent

@@ -456,6 +456,44 @@ class PersonControllerTest extends TestCase
         $response->assertStatus(200);
     }
 
+    /**
+     * Test changing password with password reset token.
+     */
+
+    public function testChangePasswordWithResetTokenSuccess()
+    {
+        $token = $this->user->createResetPasswordToken();
+        $response = $this->json(
+            'PATCH',
+            "person/{$this->user->id}/password",
+            [
+                'reset_token' => $token,
+                'password' => 'abcdef',
+                'password_confirmation' => 'abcdef',
+            ]
+        );
+        $response->assertStatus(200);
+    }
+
+    /**
+     * Test changing password with password reset token.
+     */
+
+    public function testChangePasswordWithInvalidResetToken()
+    {
+        $token = $this->user->createResetPasswordToken();
+        $response = $this->json(
+            'PATCH',
+            "person/{$this->user->id}/password",
+            [
+                'reset_token' => $token . 'blah',
+                'password' => 'abcdef',
+                'password_confirmation' => 'abcdef',
+            ]
+        );
+        $response->assertStatus(422);
+    }
+
 
     /**
      * Test change password failure with password confirmation mismatch.

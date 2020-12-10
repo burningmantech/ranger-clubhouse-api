@@ -256,17 +256,22 @@ class PersonController extends ApiController
         $requireOld = $this->isUser($person) && !$this->userHasRole(Role::ADMIN);
 
         $rules = [
-            'password' => 'required|confirmed',
-            'password_confirmation' => 'required'
+            'password' => 'required|string|confirmed',
+            'password_confirmation' => 'required|string',
         ];
 
-        if ($requireOld) {
-            $rules['password_old'] = 'required';
+        $token = request()->input('reset_token');
+        if (empty($token) && $requireOld) {
+            $rules['password_old'] = 'required|string';
         }
 
         $passwords = $request->validate($rules);
 
-        if ($requireOld && !$person->isValidPassword($passwords['password_old'])) {
+        if (!empty($token)) {
+            if ($person->tpassword != $token || $person->tpassword_expire <= now()->timestamp) {
+                return $this->restError('The password reset token is no longer valid.', 422);
+            }
+        } else if ($requireOld && !$person->isValidPassword($passwords['password_old'])) {
             return $this->restError('The old password does not match.', 422);
         }
 
