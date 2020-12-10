@@ -822,20 +822,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function isValidPassword(string $password): bool
     {
-        if (self::passwordMatch($this->password, $password)) {
-            return true;
-        }
-
-        if ($this->tpassword_expire < time()) {
-            return false;
-        }
-
-        return self::passwordMatch($this->tpassword, $password);
-    }
-
-    public static function passwordMatch($encyptedPw, $password): bool
-    {
-        if (strpos($encyptedPw, ':') === false) {
+        $encyptedPw = $this->password;
+         if (strpos($encyptedPw, ':') === false) {
             return false;
         }
 
@@ -859,10 +847,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function createResetPasswordToken(): string
     {
         $timestamp  = now()->timestamp;
-        // Only generate a new token if none exist or the token has expired
-        if (empty($this->tpassword)
-            || $this->tpassword_expire <= 1
-            || ($this->tpassword_expire + self::RESET_PASSWORD_EXPIRE) > $timestamp) {
+        // Generate a new token if none exists or the token has expired
+        if (empty($this->tpassword) || $timestamp > $this->tpassword_expire) {
             $this->tpassword = sprintf("%04x%s", $this->id, self::generateRandomString());
         }
         $this->tpassword_expire = $timestamp + self::RESET_PASSWORD_EXPIRE;
