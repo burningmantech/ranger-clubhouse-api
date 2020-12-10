@@ -41,7 +41,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 {
     use Authenticatable, Authorizable, Notifiable;
 
-    const RESET_PASSWORD_EXPIRE = (3600 * 48);
+    const RESET_PASSWORD_EXPIRE = (3600 * 2);
 
     // For resetting and adding roles & positions for new users
     const REMOVE_ALL = 0;
@@ -852,21 +852,23 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $this->password = "$salt:$sha";
         $this->tpassword = '';
-        $this->tpassword_expire = 1;
+        $this->tpassword_expire = 0;
         return $this->saveWithoutValidation();
     }
 
-    public function createResetPassword(): string
+    public function createResetPasswordToken(): string
     {
-        $resetPassword = self::generateRandomString();
-        $salt = self::generateRandomString();
-        $sha = sha1($salt . $resetPassword);
-
-        $this->tpassword = "$salt:$sha";
-        $this->tpassword_expire = time() + self::RESET_PASSWORD_EXPIRE;
+        $timestamp  = now()->timestamp;
+        // Only generate a new token if none exist or the token has expired
+        if (empty($this->tpassword)
+            || $this->tpassword_expire <= 1
+            || ($this->tpassword_expire + self::RESET_PASSWORD_EXPIRE) > $timestamp) {
+            $this->tpassword = sprintf("%04x%s", $this->id, self::generateRandomString());
+        }
+        $this->tpassword_expire = $timestamp + self::RESET_PASSWORD_EXPIRE;
         $this->saveWithoutValidation();
 
-        return $resetPassword;
+        return $this->tpassword;
     }
 
     public function getRolesAttribute()

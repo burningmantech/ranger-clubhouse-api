@@ -37,27 +37,39 @@ class AuthController extends Controller
             return $this->handleSSOLogin($code);
         }
 
-        $credentials = request()->validate([
-            'identification' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
         $actionData = $this->buildLogInfo();
 
-        $person = Person::where('email', $credentials['identification'])->first();
-        if (!$person) {
-            $actionData['email'] = $credentials['identification'];
-            ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
-            return response()->json(['status' => 'invalid-credentials'], 401);
-        }
+        $token = request()->input('reset_token');
+        if (!empty($token)) {
+            $person = Person::where('tpassword', $token)->first();
+            if (!$person) {
+                ActionLog::record(null, 'auth-failed', 'Reset password token not found', $actionData);
+                return response()->json(['status' => 'invalid-token'], 401);
+            }
 
-        if (!$person->isValidPassword($credentials['password'])) {
-            ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
-            return response()->json(['status' => 'invalid-credentials'], 401);
+            if ($person->tpassword_expire < now()->timestamp) {
+                ActionLog::record(null, 'auth-failed', 'Reset password token expired', $actionData);
+                return response()->json(['status' => 'invalid-token'], 401);
+            }
+        } else {
+            $credentials = request()->validate([
+                'identification' => 'required|string',
+                'password' => 'required|string',
+            ]);
+            $person = Person::where('email', $credentials['identification'])->first();
+            if (!$person) {
+                $actionData['email'] = $credentials['identification'];
+                ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
+                return response()->json(['status' => 'invalid-credentials'], 401);
+            }
+
+            if (!$person->isValidPassword($credentials['password'])) {
+                ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
+                return response()->json(['status' => 'invalid-credentials'], 401);
+            }
         }
 
         return $this->attemptLogin($person, $actionData);
-
     }
 
     private function buildLogInfo()
@@ -83,7 +95,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Attempt to login (aka responsed with a token) the user
+     * Attempt to login (aka responded with a token) the user
      *
      * Handles the common checks for both username/password and SSO logins.
      */
@@ -171,11 +183,11 @@ class AuthController extends Controller
             return response()->json(['status' => 'account-disabled'], 403);
         }
 
-        $resetPassword = $person->createResetPassword();
+        $token = $person->createResetPasswordToken();
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
-        if (!mail_to($person->email, new ResetPassword($resetPassword, setting('GeneralSupportEmail')))) {
+        if (!mail_to($person->email, new ResetPassword($person, $token, setting('AdminEmail')))) {
             return response()->json(['status' => 'mail-fail']);
         }
 

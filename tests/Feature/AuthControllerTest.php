@@ -18,7 +18,7 @@ class AuthControllerTest extends TestCase
      */
     public function testMissingParameters()
     {
-        $response = $this->json('POST', 'auth/login', [ ]);
+        $response = $this->json('POST', 'auth/login', []);
         $response->assertStatus(422);
     }
 
@@ -30,13 +30,13 @@ class AuthControllerTest extends TestCase
     {
         $response = $this->json(
             'POST', 'auth/login', [
-            'identification' => 'no-such-user@example.com',
-            'password'   => 'noshowers',
-             ]
+                'identification' => 'no-such-user@example.com',
+                'password' => 'noshowers',
+            ]
         );
 
         $response->assertStatus(401);
-        $response->assertJson([ 'status' => 'invalid-credentials']);
+        $response->assertJson(['status' => 'invalid-credentials']);
     }
 
     /**
@@ -45,15 +45,15 @@ class AuthControllerTest extends TestCase
 
     public function testSuspendedPerson()
     {
-        $user =Person::factory()->create([ 'status' => 'suspended']);
+        $user = Person::factory()->create(['status' => 'suspended']);
 
         $response = $this->json(
             'POST', 'auth/login',
-            [ 'identification' => $user->email, 'password'   => 'ineedashower!' ]
+            ['identification' => $user->email, 'password' => 'ineedashower!']
         );
 
         $response->assertStatus(401);
-        $response->assertJson([ 'status' => 'account-suspended' ]);
+        $response->assertJson(['status' => 'account-suspended']);
     }
 
 
@@ -63,60 +63,54 @@ class AuthControllerTest extends TestCase
 
     public function testWrongPassword()
     {
-        $user =Person::factory()->create();
+        $user = Person::factory()->create();
 
         $response = $this->json(
             'POST', 'auth/login',
-            [ 'identification' => $user->email, 'password'   => 'ineedashower! maybe' ]
+            ['identification' => $user->email, 'password' => 'ineedashower! maybe']
         );
 
         $response->assertStatus(401);
-        $response->assertJson([ 'status' => 'invalid-credentials' ]);
-    }
-
-   /**
-    * test for succesfull reset password
-    */
-
-    public function testResetPassword()
-    {
-        $user =Person::factory()->create();
-
-        Mail::fake();
-
-        $response = $this->json(
-            'POST', 'auth/reset-password', [
-            'identification' => $user->email,
-                ]
-        );
-
-        $response->assertStatus(200);
-        $response->assertJson([ 'status' => 'success' ]);
-
-        Mail::assertSent(
-            ResetPassword::class, function ($mail) use ($user) {
-                    return $mail->hasTo($user->email);
-            }
-        );
+        $response->assertJson(['status' => 'invalid-credentials']);
     }
 
     /**
-     * Test for failed reset password using non existant user
+     * test for successful reset password
+     */
+
+    public function testResetPassword()
+    {
+        $user = Person::factory()->create();
+
+        Mail::fake();
+
+        $response = $this->json('POST', 'auth/reset-password', ['identification' => $user->email]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'success']);
+
+        Mail::assertSent(ResetPassword::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
+    }
+
+    /**
+     * Test for failed reset password using non existent user
      */
 
     public function testResetPasswordForUnknownUser()
     {
-        $user =Person::factory()->create();
+        $user = Person::factory()->create();
 
         Mail::fake();
 
         $response = $this->json(
             'POST', 'auth/reset-password',
-            [ 'identification' => 'whothehellami@nowhere.dev' ]
+            ['identification' => 'whothehellami@nowhere.dev']
         );
 
         $response->assertStatus(400);
-        $response->assertJson([ 'status' => 'not-found' ]);
+        $response->assertJson(['status' => 'not-found']);
         Mail::assertNothingSent();
     }
 
@@ -126,17 +120,17 @@ class AuthControllerTest extends TestCase
 
     public function testResetPasswordForDisabledUser()
     {
-        $user =Person::factory()->create([ 'status' => Person::SUSPENDED ]);
+        $user = Person::factory()->create(['status' => Person::SUSPENDED]);
 
         Mail::fake();
 
         $response = $this->json(
             'POST', 'auth/reset-password',
-            [ 'identification' => $user->email ]
+            ['identification' => $user->email]
         );
 
         $response->assertStatus(403);
-        $response->assertJson([ 'status' => 'account-disabled' ]);
+        $response->assertJson(['status' => 'account-disabled']);
         Mail::assertNothingSent();
     }
 
