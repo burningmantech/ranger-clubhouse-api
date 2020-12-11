@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Person;
 use App\Models\ApiModel;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ErrorLog extends ApiModel
 {
@@ -98,7 +99,11 @@ class ErrorLog extends ApiModel
             $error['person_id'] = Auth::user()->id;
         }
 
-        self::create($error);
+        try {
+            self::create($error);
+        } catch (QueryException $e) {
+            Log::emergency("error log create exception $e");
+        }
     }
 
     /*

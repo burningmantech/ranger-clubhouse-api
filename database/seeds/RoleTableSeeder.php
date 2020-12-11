@@ -12,8 +12,6 @@ class RoleTableSeeder extends Seeder
      */
     public function run()
     {
-
-
         DB::table('role')->delete();
 
         DB::table('role')->insert(array(
@@ -125,14 +123,12 @@ class RoleTableSeeder extends Seeder
                     'title' => 'Timesheet Management',
                     'new_user_eligible' => 0,
                 ),
-
             18 =>
                 array(
                     'id' => 107,
                     'title' => 'Survey Management',
                     'new_user_eligible' => 0,
                 ),
-
         ));
     }
 }

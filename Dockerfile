@@ -9,6 +9,8 @@ RUN apk add --no-cache tzdata;
 # Libraries needed to build PHP extensions
 RUN apk add --no-cache libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
 RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
+# Required to run unit tests.
+RUN apk add --no-cache mysql-client;
 
 # Configure GD
 RUN docker-php-ext-configure gd \

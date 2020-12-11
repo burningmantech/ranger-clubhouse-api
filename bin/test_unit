@@ -81,7 +81,7 @@ db_init() {
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
         "${api_image_name}"                               \
-        php artisan migrate:fresh --seed --force --env testing;
+        php artisan migrate:fresh --force --env=testing;
 }
 
 
