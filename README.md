@@ -7,7 +7,8 @@
 You will need the following things properly installed on your computer.
 
 * [Git](https://git-scm.com/)
-* [PHP >= 7.1.3](https://php.net/)
+* [PHP >= 7.3](https://php.net/)
+* [Composer >= 2.0](https://getcomposer.org/)
 * [MySQL >= 5.6](https://www.mysql.com/downloads/)
 
 ## Installation
@@ -16,17 +17,16 @@ You will need the following things properly installed on your computer.
 * `cd ranger-clubhouse-api`
 * `composer install`
 * Copy `.env.clubhouse` to `.env` and set the configuration appropriately
-* `php artisan migrate` (needed to have database auditing)
+* Create the mysql database rangers. The mysql account 'rangers' will need appropriate
+permissions to access the rangers database.
+* If you did not receive a redacted database from the Ranger Tech Team, a basic database will need
+to be setup. Run `php artisan migrate:fresh --seed` to setup the database. A single account
+will be created - email: admin@example.com password: forkyourburn
 
 ## Running / Development
 
-* `php -S localhost:8000 -t public server.php`
+* `php artisan serve` to start the backend. Port 8000 on localhost (127.1) is used.
 * See the [ranger-clubhouse-web](https://github.com/burningmantech/ranger-clubhouse-web) `README` for instructions on how to start the frontend
-
-## Developing with Docker
-
-If you have Docker on your system, you can use it to do your development.
-One advantage to doing so is that you will be using the same dependencies (Linux, PHP, Nginx) and config as the deployed service, and another is that you don't have to install any of these dependencies onto your system to achieve this.
 
 ### Build a Docker Image
 
@@ -107,13 +107,3 @@ If you are changing code and want to see that reflected in the running applicati
 - autoloaded packages and throwning PHP exception may require an explicit path
   e.g., new Google_Client -> new \Google_Client
   throw new \InvalidArgumentException("blah")
-
-## What happened to the Classic Clubhouse config() function?
-
-Use the global setting() function instead. With Clubhouse 2, most existing configuration variables
-are stored within the database.
-
-In Classic Clubhouse, to read PhotoSource the call would be `config("PhotoSource"),
-the Clubhouse 2 wayis `setting('PhotoSource')`
-
-While config/clubhouse.php does exist, this file may go away.
