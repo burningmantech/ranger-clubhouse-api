@@ -47,7 +47,9 @@ class ApiController extends Controller
             }
 
             $this->user->retrieveRoles();
-            DB::select("UPDATE person SET last_seen_at=? WHERE id=?", [ now(), $this->user->id ]);
+            // Update the time the person was last seen. Avoid auditing and perform a faster-ish update
+            // then doing $user->last_seen_at = now(); $user->save();
+            DB::table('person')->where('id', $this->user->id)->update([ 'last_seen_at' => now() ]);
         }
     }
 
