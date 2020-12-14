@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM burningman/php-nginx:7.3.10-alpine3.10 as php
+FROM burningman/php-nginx:8.0.0-alpine3.12 as php
 
 # Install the timezone database
 RUN apk add --no-cache tzdata;
@@ -13,26 +13,25 @@ RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
 RUN apk add --no-cache mysql-client;
 
 # Configure GD
-RUN docker-php-ext-configure gd \
-    --with-gd \
-    --with-jpeg-dir=/usr/include/ \
-    --with-png-dir=/usr/include/ \
-    --with-webp-dir=/usr/include/  \
-    ;
+#RUN docker-php-ext-configure gd --enable-gd --with-jpeg --with-webp;
+RUN docker-php-ext-configure exif;
+RUN docker-php-ext-configure gd             \
+      --with-webp=/usr/include/           \
+      --with-jpeg=/usr/include/;
+
 
 # Install extensions
 RUN docker-php-ext-install gd;
-RUN docker-php-ext-install ctype;
 RUN docker-php-ext-install exif;
-RUN docker-php-ext-install json;
-RUN docker-php-ext-install mbstring;
 RUN docker-php-ext-install pdo;
 RUN docker-php-ext-install pdo_mysql;
-RUN docker-php-ext-install tokenizer;
-RUN docker-php-ext-install xml;
 
 # Remove development versions of libraries
 RUN apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
+
+# Turn on opcode caching
+RUN docker-php-ext-configure opcache --enable-opcache;
+RUN docker-php-ext-install opcache;
 
 # Set storage directory permissions
 RUN install -d -o www-data -g www-data -m 775  \
