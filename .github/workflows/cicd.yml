@@ -87,8 +87,8 @@ jobs:
       - name: Save Docker image
         run: |
           mkdir images;
-          docker image save ranger-clubhouse-api_dev:latest | gzip -9 > images/dev.tgz;
-          docker image save ranger-clubhouse-api:dev        | gzip -9 > images/api.tgz;
+          docker image save ranger-clubhouse-api_dev:latest | gzip -6 > images/dev.tgz;
+          docker image save ranger-clubhouse-api:dev        | gzip -6 > images/api.tgz;
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v1
