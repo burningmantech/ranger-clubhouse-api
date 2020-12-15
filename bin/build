@@ -14,35 +14,14 @@ else
     auth=""
 fi
 
-#
-# Build a stage and tag it
-#
-build() {
-    local stage="${1}"; shift;
-    local  name="${1}"; shift;
-
-    cache_flags() {
-        for stage in ${stages}; do
-            echo "--cache-from=${stage}";
-        done;
-    }
-
-    docker build             \
-        --target="${stage}"  \
-        --tag="${name}"      \
-        --build-arg COMPOSER_AUTH="${auth}" \
-        $(cache_flags)       \
-        "${wd}";
-
-    stages="${stages} ${name}";
-}
-
 
 #
 # Build and tag each stage
 #
-build php         "${php_image_name}";
-build source      "${source_image_name}";
-build build       "${build_image_name}";
-build development "${dev_image_name}";
-build application "${api_image_name}";
+docker build \
+    --target=php --tag="${php_image_name}" \
+    --target=source --tag="${source_image_name}" \
+    --target=build --tag="${build_image_name}" \
+    --target=application --tag="${api_image_name}" \
+        --build-arg COMPOSER_AUTH="${auth}" \
+        "${wd}";

@@ -87,8 +87,7 @@ jobs:
       - name: Save Docker image
         run: |
           mkdir images;
-          docker image save ranger-clubhouse-api_dev:latest | gzip -6 > images/dev.tgz;
-          docker image save ranger-clubhouse-api:dev        | gzip -6 > images/api.tgz;
+          docker image save ranger-clubhouse-api:dev | gzip -6 > images/api.tgz;
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v1
@@ -117,9 +116,7 @@ jobs:
           name: images
 
       - name: Load Docker image
-        run: |
-          gzip --uncompress --stdout images/dev.tgz | docker image load;
-          gzip --uncompress --stdout images/api.tgz | docker image load;
+        run: gzip --uncompress --stdout images/api.tgz | docker image load
 
       - name: Run unit tests
         run: ./bin/test_unit;
