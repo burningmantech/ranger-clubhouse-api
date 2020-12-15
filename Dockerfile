@@ -116,7 +116,8 @@ COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.co
 
 # Laravel task scheduler and queue worker
 COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
-COPY --chmod=755 ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
+COPY ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
+RUN chmod 555 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
 
 # Set working directory to application directory
 WORKDIR /var/www/application
