@@ -22,7 +22,6 @@ docker build \
     --target=php --tag="${php_image_name}" \
     --target=source --tag="${source_image_name}" \
     --target=build --tag="${build_image_name}" \
-    --target=development --tag="${dev_image_name}" \
     --target=application --tag="${api_image_name}" \
         --build-arg COMPOSER_AUTH="${auth}" \
         "${wd}";
