@@ -3,54 +3,24 @@
 # -----------------------------------------------------------------------------
 FROM burningman/php-nginx:8.0.0-alpine3.12 as php
 
-# Install the timezone database
-RUN apk add --no-cache tzdata;
-
-# Libraries needed to build PHP extensions
-RUN apk add --no-cache libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
-RUN apk add --no-cache libxml2 libpng libjpeg-turbo libwebp;
-# Required to run unit tests.
-RUN apk add --no-cache mysql-client;
-
-# Configure GD
-#RUN docker-php-ext-configure gd --enable-gd --with-jpeg --with-webp;
-RUN docker-php-ext-configure exif;
-RUN docker-php-ext-configure gd             \
-      --with-webp=/usr/include/           \
-      --with-jpeg=/usr/include/;
-
-
-# Install extensions
-RUN docker-php-ext-install gd;
-RUN docker-php-ext-install exif;
-RUN docker-php-ext-install pdo;
-RUN docker-php-ext-install pdo_mysql;
-
-# Remove development versions of libraries
-RUN apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev;
-
-# Turn on opcode caching
-RUN docker-php-ext-configure opcache --enable-opcache;
-RUN docker-php-ext-install opcache;
-
-# Set storage directory permissions
-RUN install -d -o www-data -g www-data -m 775  \
+RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev libxml2 libpng libjpeg-turbo libwebp mysql-client \
+    && docker-php-ext-configure gd \
+      --with-webp=/usr/include/    \
+      --with-jpeg=/usr/include/    \
+    && docker-php-ext-configure exif \
+    &&  docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install -j$(nproc) exif \
+    && docker-php-ext-install -j$(nproc) pdo \
+    && docker-php-ext-install -j$(nproc) pdo_mysql \
+    && docker-php-ext-configure opcache --enable-opcache \
+    && docker-php-ext-install -j$(nproc) opcache \
+    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
+    && install -d -o www-data -g www-data -m 775  \
     ./storage/framework/cache                  \
     ./storage/framework/sessions               \
     ./storage/framework/views                  \
-    ./storage/logs                             \
-    ;
-
-
-# -----------------------------------------------------------------------------
-# This stage adds composer to the base PHP image
-# -----------------------------------------------------------------------------
-FROM php as composer
-
-# Copy the install script, run it, delete it
-COPY ./docker/install_composer /docker_install/install
-RUN /docker_install/install && rm -rf /docker_install;
-
+    ./storage/logs \
+    && (curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer)
 
 # -----------------------------------------------------------------------------
 # This stage contains source files.
@@ -68,17 +38,13 @@ COPY ./database/      ./database/
 COPY ./config/        ./config/
 COPY ./bootstrap/     ./bootstrap/
 COPY ./app/           ./app/
-COPY ./artisan        ./
-COPY ./composer.*     ./
-COPY ./phpunit.xml    ./
-COPY ./server.php     ./
-COPY ./.env.testing   ./
+COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./server.php", "./.env.testing", "./"]
 
 
 # -----------------------------------------------------------------------------
 # This stage runs composer to build the PHP package dependencies.
 # -----------------------------------------------------------------------------
-FROM composer as build
+FROM php as build
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
@@ -97,16 +63,12 @@ USER www-data
 # Optimize for production and don't install development dependencies
 ARG COMPOSER_AUTH
 ENV COMPOSER_AUTH $COMPOSER_AUTH
-RUN php composer.phar install       \
-    --no-plugins --no-scripts       \
-    --optimize-autoloader --no-dev  \
-    ;
-
+RUN  /usr/bin/composer install --no-plugins --no-scripts --optimize-autoloader --no-dev;
 
 # -----------------------------------------------------------------------------
 # This stage runs composer to build additional dependencies for development.
 # -----------------------------------------------------------------------------
-FROM composer as development
+FROM php as development
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
@@ -127,7 +89,7 @@ COPY --from=build /var/www/composer_cache /var/www/composer_cache
 # Run composer to get dependencies
 ARG COMPOSER_AUTH
 ENV COMPOSER_AUTH $COMPOSER_AUTH
-RUN php composer.phar install --no-plugins --no-scripts;
+RUN /usr/bin/composer install --no-plugins --no-scripts;
 
 
 # -----------------------------------------------------------------------------
@@ -154,13 +116,12 @@ COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.co
 
 # Laravel task scheduler and queue worker
 COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
-COPY ./docker/clubhouse-scheduler /usr/bin/clubhouse-scheduler
-COPY ./docker/clubhouse-worker /usr/bin/clubhouse-worker
-
-RUN chmod 755 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
+COPY --chmod=755 ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
 
 # Set working directory to application directory
 WORKDIR /var/www/application
 
 # Set ownership of storage directory to www-data user and group
-RUN chown -R www-data:www-data storage;
+RUN chown -R www-data:www-data storage && rm -rf /var/cache/apk/*;
+
+
