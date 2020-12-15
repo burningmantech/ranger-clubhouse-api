@@ -111,7 +111,7 @@ test_unit() {
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
         "${dev_image_name}"                               \
-        ./vendor/bin/phpunit "$@";
+        sh -c "/usr/bin/composer require --dev phpunit/phpunit && ./vendor/bin/phpunit \"$@\"";
 }
 
 
