@@ -15,33 +15,33 @@ class ActionLogController extends ApiController
      * Retrieve the action log
      */
 
-     public function index()
-     {
-         $this->authorize('index', ActionLog::class);
+    public function index()
+    {
+        $this->authorize('index', ActionLog::class);
 
-         $params = request()->validate([
-             'sort'       => 'sometimes|string',
-             'events'     => 'sometimes|array',
+        $params = request()->validate([
+            'sort' => 'sometimes|string',
+            'events' => 'sometimes|array',
 
-             'start_time'  => 'sometimes|date',
-             'end_time'    => 'sometimes|date',
+            'start_time' => 'sometimes|date',
+            'end_time' => 'sometimes|date',
 
-             'page'       => 'sometimes|integer',
-             'page_size'  => 'sometimes|integer',
+            'page' => 'sometimes|integer',
+            'page_size' => 'sometimes|integer',
 
-             'person'     => 'sometimes|string',
+            'person' => 'sometimes|string',
         ]);
 
-        $redactData = !$this->userHasRole([ Role::ADMIN, Role::VC ]);
+        $redactData = !$this->userHasRole([Role::ADMIN, Role::VC]);
 
         if (isset($params['person'])) {
             $callsign = $params['person'];
             if (is_numeric($callsign)) {
-                $params['person_id'] = (int) $callsign;
+                $params['person_id'] = (int)$callsign;
             } else {
                 $person = Person::findByCallsign($callsign);
                 if (!$person) {
-                    return response()->json([ 'error' => "Person $callsign was not found."]);
+                    return response()->json(['error' => "Person $callsign was not found."]);
                 }
 
                 $params['person_id'] = $person->id;
@@ -60,20 +60,20 @@ class ActionLogController extends ApiController
 
     public function record()
     {
-        $data = request()->input('data');
-        $personId = request()->input('person_id');
-        $event = request()->input('event') ?? 'uknown';
-        $message = request()->input('message') ?? '';
-
-        if (!is_numeric($personId)) {
-            $personId = null;
-        }
+        $params = request()->validate([
+            'person_id' => 'sometimes|integer',
+            'target_person_id' => 'sometimes|integer',
+            'data' => 'sometimes|string',
+            'event' => 'required|string',
+            'message' => 'sometimes|string'
+        ]);
 
         $log = new ActionLog([
-            'person_id' => $personId,
-            'event'     => $event,
-            'data'      => $data,
-            'message'   => $message,
+            'person_id' => $params['person_id'] ?? null,
+            'target_person_id' => $params['target_person_id'] ?? null,
+            'event' => $params['event'],
+            'data' => $params['data'] ?? null,
+            'message' => $params['message'] ?? '',
         ]);
         $log->save();
 

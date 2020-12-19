@@ -31,6 +31,8 @@ use App\Models\Training;
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Mail\WelcomeMail;
+use InvalidArgumentException;
+use RuntimeException;
 
 class PersonController extends ApiController
 {
@@ -122,7 +124,7 @@ class PersonController extends ApiController
     public function store(Request $request)
     {
         $this->authorize('store');
-        throw new \RuntimeException('unimplemented');
+        throw new RuntimeException('unimplemented');
     }
 
     /*
@@ -133,8 +135,6 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
         $personId = $person->id;
-        $person->retrieveRoles();
-
         $person->languages = PersonLanguage::retrieveForPerson($personId);
 
         return $this->toRestFiltered($person);
@@ -439,13 +439,13 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
+        $personId = $person->id;
+        $person->retrieveRoles();
         $isArtTrainer = $person->hasRole([Role::ART_TRAINER, Role::ADMIN]);
+        $event = PersonEvent::firstOrNewForPersonYear($personId, current_year());
 
-        $event = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
-
-        $timesheet = Timesheet::findPersonOnDuty($person->id);
+        $timesheet = Timesheet::findPersonOnDuty($personId);
         if ($timesheet) {
-            $positionId = $timesheet->position_id;
             $onduty = [
                 'id' => $timesheet->position_id,
                 'title' => $timesheet->position->title,
@@ -454,21 +454,26 @@ class PersonController extends ApiController
             ];
         } else {
             $onduty = null;
-            $positionId = 0;
         }
 
         $data = [
+            'id' => $personId,
+            'callsign' => $person->callsign,
+            'callsign_approved' => $person->callsign_approved,
+            'status' => $person->status,
+            'bpguid' => $person->bpguid,
+            'roles' => $person->roles,
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_art_trainer' => $isArtTrainer,
                 'is_mentor' => $person->hasRole([Role::ADMIN, Role::MENTOR]),
-                'have_mentored' => PersonMentor::haveMentees($person->id),
-                'have_feedback' => SurveyAnswer::haveTrainerFeedback($person->id),
+                'have_mentored' => PersonMentor::haveMentees($personId),
+                'have_feedback' => SurveyAnswer::haveTrainerFeedback($personId),
             ],
-            'unread_message_count' => PersonMessage::countUnread($person->id),
-            'years' => Timesheet::years($person->id),
-            'all_years' => Timesheet::years($person->id, true),
-            'has_hq_window' => PersonPosition::havePosition($person->id, Position::HQ_WORKERS),
+            'unread_message_count' => PersonMessage::countUnread($personId),
+            'years' => Timesheet::years($personId),
+            'all_years' => Timesheet::years($personId, true),
+            'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
             'may_request_stickers' => $event->may_request_stickers,
             'onduty_position' => $onduty
         ];
@@ -483,6 +488,23 @@ class PersonController extends ApiController
         }
 
         return response()->json(['user_info' => $data]);
+    }
+
+    /**
+     * Return the years person has worked and has sign ups
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function years(Person $person)
+    {
+        $this->authorize('view', $person);
+        $personId = $person->id;
+        return response()->json([
+            'timesheet_years' => Timesheet::years($personId),
+            'all_years' => Timesheet::years($personId, true),
+        ]);
     }
 
     /*
@@ -571,7 +593,7 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != Person::AUDITOR) {
-            throw new \InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
         }
 
         // make the callsign for an auditor.
