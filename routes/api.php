@@ -188,6 +188,7 @@ Route::group([
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
 
     Route::get('person/{person}/status-history', 'PersonController@statusHistory');
+    Route::get('person/{person}/years', 'PersonController@years');
 
     Route::get('person/{person}/user-info', 'PersonController@userInfo');
     Route::get('person/{person}/unread-message-count', 'PersonController@UnreadMessageCount');

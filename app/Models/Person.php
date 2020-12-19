@@ -288,11 +288,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'trainer_status'
     ];
 
-
-    protected $appends = [
-        'roles',
-    ];
-
     protected $rules = [
         'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',

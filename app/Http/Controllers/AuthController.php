@@ -292,13 +292,12 @@ class AuthController extends Controller
 
     protected function respondWithToken($token, $person, $lastLoggedIn)
     {
-        // TODO does a 'refresh_token' need to be provided?
         return response()->json([
             'token' => $token,
-            'person_id' => $person->id,
-            'last_logged_in' => (string)$lastLoggedIn,
             'token_type' => 'bearer',
-            'expires_in' => $this->groundHogDayWrap(function() { return auth()->factory()->getTTL() * 60; })
+            // TODO: remove in Jan or Feb 2021 (wait for browser caches to expire and everyone has the frontend
+            // version which uses the 'sub' field in $token)
+            'person_id' => $person->id,
         ]);
     }
 
