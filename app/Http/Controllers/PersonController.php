@@ -441,7 +441,7 @@ class PersonController extends ApiController
 
         $personId = $person->id;
         $person->retrieveRoles();
-        $isArtTrainer = $person->hasRole([Role::ART_TRAINER, Role::ADMIN]);
+        $isArtTrainer = $person->hasRole(Role::ART_TRAINER);
         $event = PersonEvent::firstOrNewForPersonYear($personId, current_year());
 
         $timesheet = Timesheet::findPersonOnDuty($personId);

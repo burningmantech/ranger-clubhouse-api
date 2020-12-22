@@ -67,11 +67,11 @@ class Motd extends ApiModel
 
         switch ($type) {
             case 'expired':
-                $sql->where('expires_at', '>', now());
+                $sql->where('expires_at', '<', now());
                 break;
             case 'active':
                 $sql->where(function ($q) {
-                    $q->where('expires_at', '<', now());
+                    $q->where('expires_at', '>', now());
                     $q->orWhereNull('expires_at');
                 });
                 break;

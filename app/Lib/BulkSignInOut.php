@@ -7,7 +7,6 @@ use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Schedule;
 use App\Models\Timesheet;
-use App\Helpers\SqlHelper;
 use App\Models\TimesheetLog;
 
 /*
@@ -287,12 +286,18 @@ class BulkSignInOut
 
     public static function isTime($value)
     {
+        if ($value == '007') {
+            return false;
+        }
         return preg_match(self::TIME_REGEXP, $value);
     }
 
 
     public static function isDate($value)
     {
+        if ($value == '007') {
+            return false;
+        }
         return preg_match(self::DATE_REGEXP, $value);
     }
 
