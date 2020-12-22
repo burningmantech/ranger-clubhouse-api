@@ -7,7 +7,7 @@ use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Http\Controllers\ApiController;
 
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class PositionController extends ApiController
@@ -15,7 +15,7 @@ class PositionController extends ApiController
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
@@ -23,7 +23,6 @@ class PositionController extends ApiController
            'type'   => 'sometimes|string'
         ]);
 
-        //$this->authorize('view');
         return $this->success(Position::findForQuery($params), null);
     }
 
