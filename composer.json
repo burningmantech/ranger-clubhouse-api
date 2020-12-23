@@ -5,7 +5,7 @@
     "license": "MIT",
     "type": "project",
     "require": {
-        "php": ">=7.3",
+        "php": ">=8.0",
         "ext-ctype": "*",
         "ext-exif": "*",
         "ext-gd": "*",
