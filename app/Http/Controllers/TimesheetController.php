@@ -60,9 +60,20 @@ class TimesheetController extends ApiController
 
         $rows = Timesheet::findForQuery($params);
 
-        if (!$rows->isEmpty()) {
-            $year = $params['year'] ?? current_year();
-            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+        // Find all the years and positions to warm the position credit cache
+        $years = [];
+        foreach ($rows as $row) {
+            $year = $row->on_duty->year;
+            $positionId = $row->position_id;
+            if (!isset($years[$year])) {
+                $years[$year] = [$positionId];
+            } else if (!in_array($positionId, $years[$year])) {
+                $years[$year][] = $positionId;
+            }
+        }
+
+        foreach ($years as $year => $positions) {
+            PositionCredit::warmYearCache($year, $positions);
         }
 
         return $this->success($rows, null, 'timesheet');
@@ -468,9 +479,9 @@ class TimesheetController extends ApiController
         $timesheet->saveOrThrow();
         $timesheet->loadRelationships();
         $timesheet->log(TimesheetLog::SIGNOFF, [
-                'position_id' => $timesheet->position_id,
-                'off_duty' => (string)$timesheet->off_duty,
-            ]);
+            'position_id' => $timesheet->position_id,
+            'off_duty' => (string)$timesheet->off_duty,
+        ]);
 
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
 

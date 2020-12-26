@@ -39,16 +39,16 @@ class AuthController extends Controller
 
         $actionData = $this->buildLogInfo();
 
-        $token = request()->input('reset_token');
+        $token = request()->input('temp_token');
         if (!empty($token)) {
             $person = Person::where('tpassword', $token)->first();
             if (!$person) {
-                ActionLog::record(null, 'auth-failed', 'Reset password token not found', $actionData);
+                ActionLog::record(null, 'auth-failed', 'Temporary login token not found', $actionData);
                 return response()->json(['status' => 'invalid-token'], 401);
             }
 
             if ($person->tpassword_expire < now()->timestamp) {
-                ActionLog::record(null, 'auth-failed', 'Reset password token expired', $actionData);
+                ActionLog::record(null, 'auth-failed', 'Temporary login token expired', $actionData);
                 return response()->json(['status' => 'invalid-token'], 401);
             }
         } else {
@@ -119,7 +119,6 @@ class AuthController extends Controller
             return response()->json(['status' => 'login-disabled'], 401);
         }
 
-        $lastLoggedIn = $person->logged_in_at;
         $person->logged_in_at = now();
         $person->saveWithoutValidation();
 
@@ -128,7 +127,7 @@ class AuthController extends Controller
         $token = $this->groundHogDayWrap(function () use ($person) {
             return auth()->login($person);
         });
-        return $this->respondWithToken($token, $person, $lastLoggedIn);
+        return $this->respondWithToken($token, $person);
     }
 
     /**
@@ -183,7 +182,7 @@ class AuthController extends Controller
             return response()->json(['status' => 'account-disabled'], 403);
         }
 
-        $token = $person->createResetPasswordToken();
+        $token = $person->createTemporaryLoginToken();
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
@@ -290,7 +289,7 @@ class AuthController extends Controller
      * @return JsonResponse
      */
 
-    protected function respondWithToken($token, $person, $lastLoggedIn)
+    protected function respondWithToken($token, $person)
     {
         return response()->json([
             'token' => $token,

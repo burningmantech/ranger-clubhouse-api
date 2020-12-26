@@ -462,12 +462,12 @@ class PersonControllerTest extends TestCase
 
     public function testChangePasswordWithResetTokenSuccess()
     {
-        $token = $this->user->createResetPasswordToken();
+        $token = $this->user->createTemporaryLoginToken();
         $response = $this->json(
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'reset_token' => $token,
+                'temp_token' => $token,
                 'password' => 'abcdef',
                 'password_confirmation' => 'abcdef',
             ]
@@ -481,12 +481,12 @@ class PersonControllerTest extends TestCase
 
     public function testChangePasswordWithInvalidResetToken()
     {
-        $token = $this->user->createResetPasswordToken();
+        $token = $this->user->createTemporaryLoginToken();
         $response = $this->json(
             'PATCH',
             "person/{$this->user->id}/password",
             [
-                'reset_token' => $token . 'blah',
+                'temp_token' => $token . 'blah',
                 'password' => 'abcdef',
                 'password_confirmation' => 'abcdef',
             ]

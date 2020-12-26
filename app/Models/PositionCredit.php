@@ -41,10 +41,10 @@ class PositionCredit extends ApiModel
 
     const RELATIONS = [ 'position:id,title' ];
 
-    static public $yearCache = [];
+    public static array $yearCache = [];
 
-    public $start_timestamp;
-    public $end_timestamp;
+    public int $start_timestamp;
+    public int $end_timestamp;
 
     public function position() {
         return $this->belongsTo(Position::class);
@@ -84,7 +84,7 @@ class PositionCredit extends ApiModel
                 ->orderBy('start_time')->get();
 
         foreach ($rows as $row) {
-            // Cache the timestamp converstion
+            // Cache the timestamp conversion
             $row->start_timestamp = $row->start_time->timestamp;
             $row->end_timestamp = $row->end_time->timestamp;
         }
@@ -94,8 +94,15 @@ class PositionCredit extends ApiModel
         return $rows;
     }
 
-    public static function warmYearCache($year, $positionIds) {
-        $year = intval($year);
+    /**
+     * Warm the position credit cache with credits based on the given year and position ids.
+     * A performance optimization to help computeCredits() avoid extra lookups.
+     *
+     * @param int $year
+     * @param $positionIds
+     */
+
+    public static function warmYearCache(int $year, $positionIds) {
         $sql = self::whereYear('start_time', $year)
                 ->whereYear('end_time', $year)
                 ->orderBy('start_time');
@@ -107,7 +114,7 @@ class PositionCredit extends ApiModel
         $rows = $sql->get();
 
         foreach ($rows as $row) {
-            // Cache the timestamp converstion
+            // Cache the timestamp conversion
             $row->start_timestamp = $row->start_time->timestamp;
             $row->end_timestamp = $row->end_time->timestamp;
         }

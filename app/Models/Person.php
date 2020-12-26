@@ -41,7 +41,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 {
     use Authenticatable, Authorizable, Notifiable;
 
+    // How long is the reset password token good for? (in seconds)
     const RESET_PASSWORD_EXPIRE = (3600 * 2);
+
+    // How long is the pnv invite token sent in the welcome email good for? (in seconds)
+    const PNV_INVITATION_EXPIRE = (3600 * 24 * 14);
 
     // For resetting and adding roles & positions for new users
     const REMOVE_ALL = 0;
@@ -815,6 +819,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         ];
     }
 
+    /**
+     * Is the given password the one for this account?
+     *
+     * @param string $password
+     * @return bool
+     */
+
     public function isValidPassword(string $password): bool
     {
         $encyptedPw = $this->password;
@@ -828,25 +839,43 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return ($hashedPw == $sha);
     }
 
+    /**
+     * Set a new password and clear out the temporary login token.
+     *
+     * @param string $password
+     * @return bool
+     */
+
     public function changePassword(string $password): bool
     {
         $salt = self::generateRandomString();
         $sha = sha1($salt . $password);
 
         $this->password = "$salt:$sha";
+
+        // Clear out the temporary login token
         $this->tpassword = '';
         $this->tpassword_expire = 0;
         return $this->saveWithoutValidation();
     }
 
-    public function createResetPasswordToken(): string
+
+    /**
+     * Create, or extend, a temporary login token used to reset a password or, for an invited
+     * PNV, set a password.
+     *
+     * @param int $expireDuration time in seconds the token is good for.
+     * @return string
+     */
+
+    public function createTemporaryLoginToken(int $expireDuration = self::RESET_PASSWORD_EXPIRE): string
     {
         $timestamp  = now()->timestamp;
         // Generate a new token if none exists or the token has expired
         if (empty($this->tpassword) || $timestamp > $this->tpassword_expire) {
             $this->tpassword = sprintf("%04x%s", $this->id, self::generateRandomString());
         }
-        $this->tpassword_expire = $timestamp + self::RESET_PASSWORD_EXPIRE;
+        $this->tpassword_expire = $timestamp + $expireDuration;
         $this->saveWithoutValidation();
 
         return $this->tpassword;
