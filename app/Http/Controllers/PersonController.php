@@ -260,7 +260,7 @@ class PersonController extends ApiController
             'password_confirmation' => 'required|string',
         ];
 
-        $token = request()->input('reset_token');
+        $token = request()->input('temp_token');
         if (empty($token) && $requireOld) {
             $rules['password_old'] = 'required|string';
         }
@@ -622,10 +622,6 @@ class PersonController extends ApiController
         // Record the initial status for tracking through the Unified Flagging View
         PersonStatus::record($person->id, '', Person::AUDITOR, 'registration', $person->id);
 
-        // Send a welcome email to the person if not an auditor
-        if ($person->status != Person::AUDITOR && setting('SendWelcomeEmail')) {
-            mail_to($person->email, new WelcomeMail($person), true);
-        }
 
         return response()->json(['status' => 'success']);
     }

@@ -184,6 +184,7 @@ class SalesforceController extends ApiController
             $oldStatus = $person->status;
         }
 
+        $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
         $person->status = Person::PROSPECTIVE;
         $person->auditReason = 'salesforce import';
 
@@ -193,7 +194,7 @@ class SalesforceController extends ApiController
                 foreach ($person->getErrors() as $column => $errors) {
                     $message[] = "$column: ".implode(' & ', $errors);
                 }
-                $pca->message = ($isNew ? 'Creation' : 'Update').' error: '.implode(', ', $messages);
+                $pca->message = ($isNew ? 'Creation' : 'Update').' error: '.implode(', ', $message);
                 $pca->status = "failed";
                 ErrorLog::record('salesforce-import-fail', [
                     'person' => $person,
@@ -220,7 +221,7 @@ class SalesforceController extends ApiController
 
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
-            mail_to($person->email, new WelcomeMail($person), true);
+            mail_to($person->email, new WelcomeMail($person, $inviteToken), true);
         }
 
         $pca->chuid = $person->id;

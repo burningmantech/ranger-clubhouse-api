@@ -8,7 +8,7 @@
         Click the button below to reset your password.
     </p>
 
-    <p class="text-align: center">
+    <p style="text-align: center">
         <div class="btn btn-primary"><a href="{{$resetURL}}">Reset Your Password</a></div>
     </p>
 

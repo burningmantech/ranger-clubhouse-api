@@ -45,7 +45,7 @@ class ResetPassword extends Mailable
         } else {
             $server = 'ranger-clubhouse';
         }
-        $this->resetURL = "https://{$server}.burningman.org/client/reset-password?token=$token";
+        $this->resetURL = "https://{$server}.burningman.org/client/login?token=$token";
     }
 
     /**

@@ -16,6 +16,8 @@ class WelcomeMail extends Mailable
     use Queueable, SerializesModels;
 
     public $person;
+    public $inviteToken;
+    public $inviteUrl;
 
     /**
      * Create a new message instance.
@@ -23,9 +25,11 @@ class WelcomeMail extends Mailable
      * @return void
      */
 
-    public function __construct($person)
+    public function __construct($person, $inviteToken)
     {
         $this->person = $person;
+        $this->inviteToken = $inviteToken;
+        $this->inviteUrl = "https://ranger-clubhouse.burningman.org/client/login?token=$inviteToken&welcome=1";
     }
 
     /**
@@ -35,7 +39,7 @@ class WelcomeMail extends Mailable
      */
     public function build()
     {
-        return $this->from([ 'address' => 'ranger-vc-list@burningman.org', 'name' => 'The Black Rock Rangers'] )
+        return $this->from([ 'address' => setting('VCEmail'), 'name' => 'The Black Rock Rangers'] )
                 ->subject('Welcome to the Black Rock Rangers Secret Clubhouse!')
                 ->view('emails.welcome');
     }
