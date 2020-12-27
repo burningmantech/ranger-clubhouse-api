@@ -16,7 +16,7 @@ class PositionCreditController extends ApiController
     public function index()
     {
         $params = request()->validate([
-            'year'  => 'required|integer',
+            'year' => 'required|integer',
         ]);
 
         $this->authorize('view', PositionCredit::class);
@@ -48,7 +48,7 @@ class PositionCreditController extends ApiController
      */
     public function show(PositionCredit $position_credit)
     {
-        $this->authorize('view', Position::class);
+        $this->authorize('view', PositionCredit::class);
         $position_credit->loadRelations();
         return $this->success($position_credit);
     }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dba82a8b65407868276e4d90dc22ba78",
+    "content-hash": "d586c9223dce99998b3b605a14d364d8",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1433,6 +1433,59 @@
                 "source": "https://github.com/Intervention/image/tree/master"
             },
             "time": "2019-11-02T09:15:47+00:00"
+        },
+        {
+            "name": "jdavidbakr/cloudfront-proxies",
+            "version": "1.6.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jdavidbakr/CloudfrontProxies.git",
+                "reference": "06cf5199565068efc36b037fcdbee18cf3589ba0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jdavidbakr/CloudfrontProxies/zipball/06cf5199565068efc36b037fcdbee18cf3589ba0",
+                "reference": "06cf5199565068efc36b037fcdbee18cf3589ba0",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^6.3|^7.0",
+                "illuminate/support": "5.6.*|5.7.*|5.8.*|6.*|7.*|8.*"
+            },
+            "require-dev": {
+                "mockery/mockery": "~1.0",
+                "orchestra/testbench": "~3.0|~4.0|~5.0|6.x-dev",
+                "phpunit/phpunit": "~7.0|~8.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "jdavidbakr\\CloudfrontProxies\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "J David Baker",
+                    "email": "me@jdavidbaker.com",
+                    "homepage": "http://www.jdavidbaker.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Sets proxy settings for Cloudfront in a Laravel project",
+            "keywords": [
+                "cloudfront",
+                "laravel",
+                "trusted proxies"
+            ],
+            "support": {
+                "issues": "https://github.com/jdavidbakr/CloudfrontProxies/issues",
+                "source": "https://github.com/jdavidbakr/CloudfrontProxies/tree/master"
+            },
+            "time": "2020-09-08T17:30:50+00:00"
         },
         {
             "name": "laravel/framework",
