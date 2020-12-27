@@ -74,6 +74,8 @@ class ActionLogController extends ApiController
             'event' => $params['event'],
             'data' => $params['data'] ?? null,
             'message' => $params['message'] ?? '',
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent()
         ]);
         $log->save();
 
