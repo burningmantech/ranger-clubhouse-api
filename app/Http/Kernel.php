@@ -2,7 +2,15 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\RequestLogger;
+use App\Http\Middleware\TrimStrings;
+use App\Http\Middleware\TrustProxies;
+use Fruitcake\Cors\HandleCors;
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 class Kernel extends HttpKernel
 {
@@ -15,13 +23,13 @@ class Kernel extends HttpKernel
      */
     protected $middleware = [
 //        \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
-        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-        \App\Http\Middleware\TrimStrings::class,
+        ValidatePostSize::class,
+        TrimStrings::class,
 //        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-        \Monicahq\Cloudflare\Http\Middleware\TrustProxies::class,
-        \App\Http\Middleware\TrustProxies::class,
-        \Fruitcake\Cors\HandleCors::class,
-        \App\Http\Middleware\RequestLogger::class
+//        \Monicahq\Cloudflare\Http\Middleware\TrustProxies::class,
+        TrustProxies::class,
+        HandleCors::class,
+        RequestLogger::class
     ];
 
     /**
@@ -53,9 +61,9 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $routeMiddleware = [
-        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        'auth' => Authenticate::class,
+        'auth.basic' => AuthenticateWithBasicAuth::class,
+        'bindings' => SubstituteBindings::class,
 //        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
 //        'can' => \Illuminate\Auth\Middleware\Authorize::class,
 //        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
