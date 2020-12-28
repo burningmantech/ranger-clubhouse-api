@@ -28,5 +28,8 @@ php artisan route:cache;
 echo "Performing database migrations...";
 php artisan migrate --force;
 
+echo "Loading Cloudflare IP addresses"
+php artisan cloudflare:reload
+
 echo "Starting Nginx...";
 exec nginx "$@";
