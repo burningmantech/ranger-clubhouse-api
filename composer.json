@@ -21,11 +21,11 @@
         "fruitcake/laravel-cors": "^2.0.2",
         "guzzlehttp/guzzle": "^7.0.1",
         "intervention/image": "^2.5",
-        "jdavidbakr/cloudfront-proxies": "^1.6",
         "laravel/framework": "^8.0",
         "laravel/tinker": "^2.0.0",
         "league/flysystem-aws-s3-v3": "^1.0",
         "league/fractal": "^0.19.2",
+        "monicahq/laravel-cloudflare": "^1.7",
         "twilio/sdk": "^6.0",
         "tymon/jwt-auth": "^1.0"
     },
