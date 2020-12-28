@@ -70,14 +70,14 @@ class ActionLogController extends ApiController
 
         $data = $params['data'] ?? null;
         if (!$data) {
-            $data = [];
+            $data = (object) [];
         } else {
             $data = json_decode($data);
         }
 
         if ($data) {
-            $data['ip'] = request()->ip();
-            $data['user_agent'] = request()->userAgent();
+            $data->ip = request()->ip();
+            $data->user_agent = request()->userAgent();
             $data = json_encode($data);
         }
 
