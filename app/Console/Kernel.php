@@ -40,9 +40,6 @@ class Kernel extends ConsoleKernel
             // Talk with Docebo to see who completed online training
             // Runs every 15 mins March thru September
             $schedule->command('clubhouse:docebo-completion')->cron('0,15,30,45 * * 3-9 *')->onOneServer();
-
-            // Load up the cloudflare ip addresses
-            $schedule->command('cloudflare:reload')->dailyAt('04:00')->onOneServer();
         }
     }
 

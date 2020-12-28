@@ -25,7 +25,6 @@
         "laravel/tinker": "^2.0.0",
         "league/flysystem-aws-s3-v3": "^1.0",
         "league/fractal": "^0.19.2",
-        "monicahq/laravel-cloudflare": "^1.7",
         "twilio/sdk": "^6.0",
         "tymon/jwt-auth": "^1.0"
     },
@@ -35,7 +34,7 @@
         "filp/whoops": "^2.9.0",
         "mockery/mockery": "~1.4.2",
         "nunomaduro/collision": "^5.0",
-        "phpunit/phpunit": "^9.0"
+        "phpunit/phpunit": "^9.5"
     },
     "autoload": {
         "files": [

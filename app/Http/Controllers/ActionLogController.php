@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
+use App\Http\RestApi;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\Role;
+use Illuminate\Support\Facades\Log;
 
 class ActionLogController extends ApiController
 {
@@ -34,16 +33,15 @@ class ActionLogController extends ApiController
 
         $redactData = !$this->userHasRole([Role::ADMIN, Role::VC]);
 
-        if (isset($params['person'])) {
-            $callsign = $params['person'];
-            if (is_numeric($callsign)) {
-                $params['person_id'] = (int)$callsign;
+        $idOrCallsign = $params['person'] ?? null;
+        if ($idOrCallsign) {
+            if (is_numeric($idOrCallsign)) {
+                $params['person_id'] = (int)$idOrCallsign;
             } else {
-                $person = Person::findByCallsign($callsign);
+                $person = Person::findByCallsign($idOrCallsign);
                 if (!$person) {
-                    return response()->json(['error' => "Person $callsign was not found."]);
+                    return RestApi::error(response(), 422, "Person $idOrCallsign was not found.");
                 }
-
                 $params['person_id'] = $person->id;
             }
         }
@@ -68,28 +66,18 @@ class ActionLogController extends ApiController
             'message' => 'sometimes|string'
         ]);
 
-        $data = $params['data'] ?? null;
-        if (!$data) {
-            $data = (object) [];
-        } else {
-            $data = json_decode($data);
-        }
-
-        if ($data) {
-            $data->ip = request()->ip();
-            $data->user_agent = request()->userAgent();
-            $data = json_encode($data);
-        }
-
         $log = new ActionLog([
+            'ip' => request()->userAgent(),
+            'user_agent' => request()->ip(),
             'person_id' => $params['person_id'] ?? null,
             'target_person_id' => $params['target_person_id'] ?? null,
             'event' => $params['event'],
-            'data' => $data,
+            'data' => $params['data'] ?? null,
             'message' => $params['message'] ?? '',
         ]);
         $log->save();
 
+        Log::error('HEADERS '.json_encode(request()->headers));
         return response('success', 200);
     }
 

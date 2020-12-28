@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "84327b09f872161b3794d72410d25d88",
+    "content-hash": "dba82a8b65407868276e4d90dc22ba78",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -64,16 +64,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.171.6",
+            "version": "3.171.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "5587d22e63ef82ef74dffca5d47f307b84137b51"
+                "reference": "6c32f57bc381b46c783f70a20060fde1a95f4ab5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/5587d22e63ef82ef74dffca5d47f307b84137b51",
-                "reference": "5587d22e63ef82ef74dffca5d47f307b84137b51",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/6c32f57bc381b46c783f70a20060fde1a95f4ab5",
+                "reference": "6c32f57bc381b46c783f70a20060fde1a95f4ab5",
                 "shasum": ""
             },
             "require": {
@@ -148,9 +148,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.171.6"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.171.7"
             },
-            "time": "2020-12-23T19:12:28+00:00"
+            "time": "2020-12-28T19:12:41+00:00"
         },
         {
             "name": "brick/math",
@@ -2100,80 +2100,6 @@
                 }
             ],
             "time": "2020-10-18T11:50:25+00:00"
-        },
-        {
-            "name": "monicahq/laravel-cloudflare",
-            "version": "1.7.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/monicahq/laravel-cloudflare.git",
-                "reference": "68b384fcd543cf055940108eb61dcce546b7ae9a"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/monicahq/laravel-cloudflare/zipball/68b384fcd543cf055940108eb61dcce546b7ae9a",
-                "reference": "68b384fcd543cf055940108eb61dcce546b7ae9a",
-                "shasum": ""
-            },
-            "require": {
-                "fideloper/proxy": "^4.4",
-                "guzzlehttp/guzzle": "^6.3 || ^7.0",
-                "illuminate/console": "^5.5 || ^6.0 || ^7.0 || ^8.0",
-                "illuminate/http": "^5.5 || ^6.0 || ^7.0 || ^8.0",
-                "illuminate/support": "^5.5 || ^6.0 || ^7.0 || ^8.0",
-                "php": ">= 7.2.0"
-            },
-            "require-dev": {
-                "laravel/framework": "^5.6 || ^6.0 || ^7.0 || ^8.0",
-                "mockery/mockery": "^1.2",
-                "nunomaduro/larastan": "^0.5 || ^0.6",
-                "ocramius/package-versions": "1.5.1",
-                "orchestra/testbench": "^5.0 || ^6.0",
-                "phpunit/phpunit": "^9.0",
-                "thecodingmachine/phpstan-safe-rule": "^1.0",
-                "vimeo/psalm": "^3.9"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Monicahq\\Cloudflare\\TrustedProxyServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Monicahq\\Cloudflare\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Alexis Saettler",
-                    "email": "alexis@saettler.org"
-                }
-            ],
-            "description": "Add Cloudflare ip addresses to trusted proxies for Laravel.",
-            "keywords": [
-                "cloudflare",
-                "laravel",
-                "php",
-                "proxies"
-            ],
-            "support": {
-                "issues": "https://github.com/monicahq/laravel-cloudflare/issues",
-                "source": "https://github.com/monicahq/laravel-cloudflare"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/asbiin",
-                    "type": "github"
-                }
-            ],
-            "time": "2020-09-09T08:46:26+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -6126,16 +6052,16 @@
         },
         {
             "name": "facade/ignition",
-            "version": "2.5.3",
+            "version": "2.5.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/facade/ignition.git",
-                "reference": "d8dc4f90ed469f9f9313b976fb078c20585d5c99"
+                "reference": "703460094d4e2cad5552249b50f10ef2f6efbc96"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/facade/ignition/zipball/d8dc4f90ed469f9f9313b976fb078c20585d5c99",
-                "reference": "d8dc4f90ed469f9f9313b976fb078c20585d5c99",
+                "url": "https://api.github.com/repos/facade/ignition/zipball/703460094d4e2cad5552249b50f10ef2f6efbc96",
+                "reference": "703460094d4e2cad5552249b50f10ef2f6efbc96",
                 "shasum": ""
             },
             "require": {
@@ -6199,7 +6125,7 @@
                 "issues": "https://github.com/facade/ignition/issues",
                 "source": "https://github.com/facade/ignition"
             },
-            "time": "2020-12-09T20:25:45+00:00"
+            "time": "2020-12-28T23:16:59+00:00"
         },
         {
             "name": "facade/ignition-contracts",

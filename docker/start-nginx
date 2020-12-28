@@ -24,12 +24,10 @@ php artisan clubhouse:purge-settings
 echo "Caching Laravel configuration and routes...";
 php artisan config:cache;
 php artisan route:cache;
+php artisan view:cache
 
 echo "Performing database migrations...";
 php artisan migrate --force;
-
-echo "Loading Cloudflare IP addresses"
-php artisan cloudflare:reload
 
 echo "Starting Nginx...";
 exec nginx "$@";
