@@ -68,14 +68,25 @@ class ActionLogController extends ApiController
             'message' => 'sometimes|string'
         ]);
 
+        $data = $params['data'] ?? null;
+        if (!$data) {
+            $data = [];
+        } else {
+            $data = json_decode($data);
+        }
+
+        if ($data) {
+            $data['ip'] = request()->ip();
+            $data['user_agent'] = request()->userAgent();
+            $data = json_encode($data);
+        }
+
         $log = new ActionLog([
             'person_id' => $params['person_id'] ?? null,
             'target_person_id' => $params['target_person_id'] ?? null,
             'event' => $params['event'],
-            'data' => $params['data'] ?? null,
+            'data' => $data,
             'message' => $params['message'] ?? '',
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent()
         ]);
         $log->save();
 
