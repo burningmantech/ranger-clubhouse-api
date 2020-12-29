@@ -40,7 +40,7 @@ class ErrorLog extends ApiModel
             $data['method'] = $req->method();
             $data['parameters'] = $req->all();
 
-            $error['ip'] = $req->ip();
+            $error['ip'] = $req->getClientIp();
             $error['user_agent'] = $req->userAgent();
             $error['url'] = $req->fullUrl();
         }
@@ -89,7 +89,7 @@ class ErrorLog extends ApiModel
 
         // Include the IP, user_agent and URL location
         if ($req) {
-            $error['ip'] = $req->ip();
+            $error['ip'] = $req->getClientIp();
             $error['user_agent'] = $req->userAgent();
             $error['url'] = $req->fullUrl();
         }

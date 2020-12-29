@@ -75,7 +75,7 @@ class AuthController extends Controller
     private function buildLogInfo()
     {
         $actionData = [
-            'ip' => request()->ip(),
+            'ip' => request()->getClientIp(),
             'user_agent' => request()->userAgent(),
         ];
 
@@ -165,7 +165,7 @@ class AuthController extends Controller
         ]);
 
         $action = [
-            'ip' => request()->ip(),
+            'ip' => request()->getClientIp(),
             'user_agent' => request()->userAgent(),
             'email' => $data['identification']
         ];

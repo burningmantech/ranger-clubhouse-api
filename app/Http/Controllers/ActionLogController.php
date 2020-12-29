@@ -67,8 +67,8 @@ class ActionLogController extends ApiController
         ]);
 
         $log = new ActionLog([
-            'ip' => request()->userAgent(),
-            'user_agent' => request()->ip(),
+            'ip' => request()->getClientIp(),
+            'user_agent' => request()->userAgent(),
             'person_id' => $params['person_id'] ?? null,
             'target_person_id' => $params['target_person_id'] ?? null,
             'event' => $params['event'],
@@ -77,8 +77,6 @@ class ActionLogController extends ApiController
         ]);
         $log->save();
 
-        Log::error('LARAVEL HEADERS '.json_encode(request()->header()));
-        Log::error('PHP HEADERS '.json_encode(getallheaders()));
         return response('success', 200);
     }
 
