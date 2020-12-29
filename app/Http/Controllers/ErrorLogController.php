@@ -23,7 +23,7 @@ class ErrorLogController extends ApiController
 
         $record = [
             'error_type' => $errorType,
-            'ip'         => request()->getClientIp(),
+            'ip'         => request_ip(),
             'url'        => $url,
             'user_agent' => request()->userAgent(),
             'data'       => $data,
