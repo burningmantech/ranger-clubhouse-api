@@ -22,7 +22,7 @@ if (!function_exists('setting')) {
      * @return mixed setting value
      */
 
-    function setting($name, $throwOnEmpty=false)
+    function setting($name, $throwOnEmpty = false)
     {
         return Setting::getValue($name, $throwOnEmpty);
     }
@@ -38,7 +38,7 @@ if (!function_exists('setting')) {
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to($email, $message, $queueMail=false)
+    function mail_to($email, $message, $queueMail = false)
     {
         if (is_string($email) && strpos($email, ',') !== false) {
             $email = explode(',', $email);
@@ -49,17 +49,17 @@ if (!function_exists('mail_to')) {
             if ($queueMail && !env('APP_DEBUG')) {
                 $to->queue($message);
             } else {
-               $to->send($message);
+                $to->send($message);
             }
             return true;
-        } catch (\Swift_TransportException $e) {
+        } catch (Swift_TransportException $e) {
             ErrorLog::recordException($e, 'email-exception', [
-                    'type'    => 'mail-to',
-                    'email'   => $email,
-                    'message' => $message
-             ]);
+                'type' => 'mail-to',
+                'email' => $email,
+                'message' => $message
+            ]);
 
-             return false;
+            return false;
         }
     }
 }
@@ -74,7 +74,7 @@ if (!function_exists('mail_to')) {
  */
 
 if (!function_exists('current_year')) {
-    function current_year() : int
+    function current_year(): int
     {
         static $year;
 
@@ -91,7 +91,7 @@ if (!function_exists('current_year')) {
 }
 
 if (!function_exists('event_year')) {
-    function event_year() : int
+    function event_year(): int
     {
         $now = now();
         if ($now->month >= 9) {
@@ -105,5 +105,12 @@ if (!function_exists('event_year')) {
         }
 
         return $now->year;
+    }
+}
+
+if (!function_exists('request_ip')) {
+    function request_ip(): string
+    {
+        return implode(',', request()->getClientIps());
     }
 }

@@ -67,7 +67,7 @@ class ActionLogController extends ApiController
         ]);
 
         $log = new ActionLog([
-            'ip' => request()->getClientIp(),
+            'ip' => request_ip(),
             'user_agent' => request()->userAgent(),
             'person_id' => $params['person_id'] ?? null,
             'target_person_id' => $params['target_person_id'] ?? null,
