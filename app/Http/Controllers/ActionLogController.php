@@ -77,7 +77,8 @@ class ActionLogController extends ApiController
         ]);
         $log->save();
 
-        Log::error('HEADERS '.json_encode(request()->headers));
+        Log::error('LARAVEL HEADERS '.json_encode(request()->header()));
+        Log::error('PHP HEADERS '.json_encode(getallheaders()));
         return response('success', 200);
     }
 
