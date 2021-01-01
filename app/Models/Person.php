@@ -332,6 +332,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $roles;
 
+
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
      * @var string
@@ -829,7 +830,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function isValidPassword(string $password): bool
     {
         $encyptedPw = $this->password;
-         if (strpos($encyptedPw, ':') === false) {
+        if (strpos($encyptedPw, ':') === false) {
             return false;
         }
 
@@ -870,7 +871,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function createTemporaryLoginToken(int $expireDuration = self::RESET_PASSWORD_EXPIRE): string
     {
-        $timestamp  = now()->timestamp;
+        $timestamp = now()->timestamp;
         // Generate a new token if none exists or the token has expired
         if (empty($this->tpassword) || $timestamp > $this->tpassword_expire) {
             $this->tpassword = sprintf("%04x%s", $this->id, self::generateRandomString());
@@ -886,12 +887,29 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->roles;
     }
 
+    /**
+     * Retrieve the person's assigned roles. Add MANAGE if the person has MANAGE_ON_PLAYA
+     * and the Login Management On Playa setting is enabled.
+     *
+     */
+
     public function retrieveRoles(): void
     {
         $this->roles = PersonRole::findRoleIdsForPerson($this->id);
+
+        if (in_array(Role::MANAGE_ON_PLAYA, $this->roles) && setting('LoginManageOnPlayaEnabled')) {
+            $this->roles[] = Role::MANAGE;
+        }
     }
 
-    public function hasRole($role): bool
+    /**
+     * Check to see if the person has a specific role or roles.
+     *
+     * @param array|int $role
+     * @return bool true if the person has the role
+     */
+
+    public function hasRole(array|int $role): bool
     {
         if ($this->roles === null) {
             $this->retrieveRoles();
@@ -903,11 +921,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                     return true;
                 }
             }
-        } else {
-            return in_array($role, $this->roles);
+            return false;
         }
 
-        return false;
+        return in_array($role, $this->roles);
     }
 
     public function isAdmin(): bool

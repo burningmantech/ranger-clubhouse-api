@@ -394,16 +394,20 @@ class PersonController extends ApiController
         $newIds = [];
         $deleteIds = [];
 
+        // Only tech ninjas may grant/revoke the tech ninja role. Ignore attempts to alter the role by
+        // mere mortals.
+        $isTechNinja = $this->userHasRole(Role::TECH_NINJA);
+
         // Find the new ids
         foreach ($roleIds as $id) {
-            if (!in_array($id, $existingRoles)) {
+            if (!in_array($id, $existingRoles) && ($id != Role::TECH_NINJA || $isTechNinja)) {
                 $newIds[] = $id;
             }
         }
 
         // Find the ids to be deleted
         foreach ($existingRoles as $id) {
-            if (!in_array($id, $roleIds)) {
+            if (!in_array($id, $roleIds) && ($id != Role::TECH_NINJA || $isTechNinja)) {
                 $deleteIds[] = $id;
             }
         }

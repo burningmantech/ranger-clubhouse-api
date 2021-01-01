@@ -833,6 +833,49 @@ class PersonControllerTest extends TestCase
         );
     }
 
+    /**
+     * Ensure a non-Tech Ninja cannot add the Tech Ninja Role
+     */
+    public function test_user_cannot_add_tech_nina_role()
+    {
+        $person = Person::factory()->create();
+        $this->addAdminRole();
+
+        $response = $this->json('POST', "person/{$person->id}/roles", [ 'role_ids' => [Role::MENTOR, Role::TECH_NINJA ]]);
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('person_role', [
+            'person_id' => $person->id,
+            'role_id' => Role::TECH_NINJA
+        ]);
+
+        $this->assertDatabaseHas('person_role', [
+            'person_id' => $person->id,
+            'role_id' => Role::MENTOR
+        ]);
+    }
+
+    /**
+     * Test if a tech ninja can add the tech ninja role to another person.
+     *
+     */
+    public function test_user_can_add_tech_nina_role()
+    {
+        $person = Person::factory()->create();
+        $this->addAdminRole();
+        $this->addRole(Role::TECH_NINJA);
+
+        $response = $this->json('POST', "person/{$person->id}/roles", [ 'role_ids' => [Role::MENTOR, Role::TECH_NINJA ]]);
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('person_role', [
+            'person_id' => $person->id,
+            'role_id' => Role::TECH_NINJA
+        ]);
+
+        $this->assertDatabaseHas('person_role', [
+            'person_id' => $person->id,
+            'role_id' => Role::MENTOR
+        ]);
+    }
 
     /*
      * Test how many years a person has rangered

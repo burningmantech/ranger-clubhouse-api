@@ -27,6 +27,9 @@ class Role extends ApiModel
     const MEGAPHONE        = 105; // RBS access
     const TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
     const SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
+    const MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
+
+    const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     protected $casts = [
         'new_user_eligible' => 'bool'
