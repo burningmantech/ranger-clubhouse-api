@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Carbon\Carbon;
 use Tests\TestCase;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -746,6 +747,9 @@ class TimesheetControllerTest extends TestCase
 
     public function testradioEligibilityReport()
     {
+        // 2020 is funky
+        Carbon::setTestNow('2019-01-01 12:34:56');
+        $this->year = 2019;
         $lastYear = $this->year - 1;
         $prevYear = $this->year - 2;
         $person = $this->targetPerson;

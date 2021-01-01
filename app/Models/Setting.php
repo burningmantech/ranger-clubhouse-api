@@ -40,7 +40,6 @@ class Setting extends ApiModel
      * options: array of possible options format is [ 'option', 'description' ]
      */
 
-
     const DESCRIPTIONS = [
         'AccountCreationEmail' => [
             'description' => 'Alert email address when accounts register',
@@ -511,6 +510,11 @@ class Setting extends ApiModel
             'description' => 'Email(s) to notify when vehicle requests are queued up for review. (nightly mail)',
             'type' => 'email'
         ],
+
+        'LoginManageOnPlayaEnabled' => [
+            'description' => 'Enables Login Manage On Playa role',
+            'type' => 'bool'
+        ]
     ];
 
     /*

@@ -33,11 +33,7 @@ class PersonFilter
         'last_seen_at'
     ];
 
-    const ROLES_FIELDS = [
-        'roles',
-    ];
-
-    const CERTIFICATIONS_FIELDS = [
+     const CERTIFICATIONS_FIELDS = [
         'osha10',
         'osha30',
     ];
@@ -150,7 +146,6 @@ class PersonFilter
     const FIELDS_SERIALIZE = [
         [ self::NAME_GENDER_FIELDS ],
         [ self::STATUS_FIELDS ],
-        [ self::ROLES_FIELDS ],
         [ self::ACCOUNT_FIELDS ],
         [ self::CALLSIGNS_FIELDS ],
         [ self::CERTIFICATIONS_FIELDS ],
@@ -176,7 +171,6 @@ class PersonFilter
         [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
         [ self::CERTIFICATIONS_FIELDS, false, [ Role::VC ]],
         [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
-        [ self::ROLES_FIELDS, false, [ Role::MENTOR, Role::VC ] ],
         [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
