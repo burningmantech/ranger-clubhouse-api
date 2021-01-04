@@ -2,7 +2,6 @@
 
 namespace App\Lib;
 
-use Illuminate\Support\Facades\DB;
 
 class PositionSanityCheck
 {
@@ -14,15 +13,16 @@ class PositionSanityCheck
      */
 
     const CHECKERS = [
-        'green_dot'             => 'App\Lib\PositionSanityCheck\GreenDotCheck',
-        'management_role'       => 'App\Lib\PositionSanityCheck\ManagementCheck',
-        'shiny_pennies'         => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+        'green_dot' => 'App\Lib\PositionSanityCheck\GreenDotCheck',
+        'management_role' => 'App\Lib\PositionSanityCheck\ManagementYearRoundCheck',
+        'management_onplaya_role' => 'App\Lib\PositionSanityCheck\ManagementOnPlayaCheck',
+        'shiny_pennies' => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
         'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
     ];
 
     public static function issues(): array
     {
-        foreach(self::CHECKERS as $name => $checker) {
+        foreach (self::CHECKERS as $name => $checker) {
             $insanity[$name] = $checker::issues();
         }
 

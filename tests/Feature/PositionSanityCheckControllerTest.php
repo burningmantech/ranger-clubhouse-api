@@ -16,6 +16,11 @@ class PositionSanityCheckControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public $person;
+    public $trainer;
+    public $shinyPenny;
+    public $personYear;
+    
     public function setUp() : void
     {
         parent::setUp();
@@ -54,6 +59,11 @@ class PositionSanityCheckControllerTest extends TestCase
             'title' => 'Operator'
         ]);
 
+        Position::factory()->create([
+            'id'   => Position::TRAINER,
+            'title' => 'Trainer'
+        ]);
+
         // Shiny Penny without the Dirt Shiny Position
         $this->shinyPenny = Person::factory()->create([ 'callsign' => 'B Callsign' ]);
         PersonMentor::factory()->create([
@@ -61,6 +71,14 @@ class PositionSanityCheckControllerTest extends TestCase
             'mentor_id'   => $this->user->id,
             'mentor_year' => date('Y'),
             'status'      => 'pass'
+        ]);
+
+        // Trainer to test Login Management Year Round
+        $this->trainer = Person::factory()->create([ 'callsign' => 'Trainer' ]);
+        // person has a Login Management position but no LM role
+        PersonPosition::factory()->create([
+            'person_id'    => $this->trainer->id,
+            'position_id'  => Position::TRAINER
         ]);
 
     }
@@ -76,11 +94,13 @@ class PositionSanityCheckControllerTest extends TestCase
         $person = $this->person;
         $personYear = $this->personYear;
         $shinyPenny = $this->shinyPenny;
+        $trainer = $this->trainer;
 
         $response = $this->json('GET', 'position/sanity-checker');
         $response->assertStatus(200);
 
         $response->assertJsonCount(1, 'green_dot.*.id');
+        $response->assertJsonCount(1, 'management_onplaya_role.*.id');
         $response->assertJsonCount(1, 'management_role.*.id');
         $response->assertJsonCount(2, 'shiny_pennies.*.id');
 
@@ -95,7 +115,7 @@ class PositionSanityCheckControllerTest extends TestCase
                 ]
             ],
 
-            'management_role' => [
+            'management_onplaya_role' => [
                 [
                     'id'   => $person->id,
                     'callsign' => $person->callsign,
@@ -103,6 +123,18 @@ class PositionSanityCheckControllerTest extends TestCase
                     'positions' => [ [
                         'id'    => Position::OPERATOR,
                         'title' => 'Operator'
+                    ] ]
+                ]
+            ],
+
+            'management_role' => [
+                [
+                    'id'   => $trainer->id,
+                    'callsign' => $trainer->callsign,
+                    'is_shiny_penny' => 0,
+                    'positions' => [ [
+                        'id'    => Position::TRAINER,
+                        'title' => 'Trainer'
                     ] ]
                 ]
             ],
