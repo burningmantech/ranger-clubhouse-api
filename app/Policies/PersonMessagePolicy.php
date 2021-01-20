@@ -20,21 +20,25 @@ class PersonMessagePolicy
 
     public function before(Person $user)
     {
-        if ($user->hasRole([Role::MANAGE, Role::ADMIN])) {
+        if ($user->hasRole(Role::ADMIN)) {
             return true;
         }
+    }
+
+    private function isLMOPEnabled($user) {
+        return $user->hasRole(Role::MANAGE) && setting('LoginManageOnPlayaEnabled');
     }
 
     /**
      * Determine whether the user can view the message.
      *
      * @param  \App\Models\Person  $user
-     * @param  \App\Person  $person
+     * @param  \App\Models\Person  $person
      * @return mixed
      */
     public function index(Person $user, $personId)
     {
-        return ($user->id == $personId);
+        return ($this->isLMOPEnabled($user) || $user->id == $personId);
     }
 
     /**
@@ -58,11 +62,11 @@ class PersonMessagePolicy
 
     public function delete(Person $user, PersonMessage $person_message)
     {
-        return ($user->id == $person_message->person_id);
+        return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
     }
 
     /**
-     * Determine whether the user can store messages.
+     * Determine whether the user can mark messages read.
      *
      * @param  \App\Models\Person  $user
      * @return mixed
@@ -70,6 +74,6 @@ class PersonMessagePolicy
 
     public function markread(Person $user, PersonMessage $person_message)
     {
-        return ($user->id == $person_message->person_id);
+        return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
     }
 }

@@ -512,7 +512,7 @@ class Setting extends ApiModel
         ],
 
         'LoginManageOnPlayaEnabled' => [
-            'description' => 'Enables Login Manage On Playa role',
+            'description' => 'Enables Login Manage On Playa role AND allows LM Year Round to view Emergency Contact Info plus read Clubhouse Messages',
             'type' => 'bool'
         ]
     ];
