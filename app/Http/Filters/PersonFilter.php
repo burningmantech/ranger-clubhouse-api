@@ -81,6 +81,9 @@ class PersonFilter
     const HQ_INFO = [
         'on_site',
         'camp_location',
+    ];
+
+    const EMERGENCY_CONTACT = [
         'emergency_contact'
     ];
 
@@ -139,9 +142,9 @@ class PersonFilter
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
-    // 1: allow fields if the person is the authorized user
+    // 1: allow fields if the person is the user
     // 2: which roles are allowed the field (if null, allow any)
-    //
+    // 3: Only allowed if LoginManagementOnPlayaEnabled is turned on.
 
     const FIELDS_SERIALIZE = [
         [ self::NAME_GENDER_FIELDS ],
@@ -163,6 +166,7 @@ class PersonFilter
         [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
         [ self::RANGER_ADMIN_FIELDS ],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
+        [ self::EMERGENCY_CONTACT, true, [ Role::VIEW_PII, Role::VC ], true ],
     ];
 
     const FIELDS_DESERIALIZE = [
@@ -184,10 +188,13 @@ class PersonFilter
         [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
         [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
         [ self::RANGER_ADMIN_FIELDS, false, [ Role::ADMIN ]],
+        [ self::EMERGENCY_CONTACT, true, [ Role::VIEW_PII, Role::VC ], true],
     ];
 
     public function buildFields(array $fieldGroups, $authorizedUser): array
     {
+        $onplaya = setting('LoginManageOnPlayaEnabled');
+
         $fields = [ ];
 
         if ($authorizedUser) {
@@ -199,7 +206,6 @@ class PersonFilter
         }
 
         foreach ($fieldGroups as $group) {
-            $anyone = count($group) == 1;
             $roles = null;
 
             if (count($group) == 1) {
@@ -212,6 +218,9 @@ class PersonFilter
                 }
                 if (isset($group[2])) {
                     $roles = $group[2];
+                    if (isset($group[3]) && $onplaya) {
+                        $roles[] = Role::MANAGE;
+                    }
                 }
             }
 

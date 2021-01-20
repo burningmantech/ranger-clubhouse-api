@@ -17,6 +17,7 @@ class ConfigController extends Controller
         'EditorUrl',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',
+        'LoginManageOnPlayaEnabled',
         'MealDates',
         'MealInfoAvailable',
         'MentorEmail',
