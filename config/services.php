@@ -17,22 +17,16 @@ return [
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),
+        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+    ],
+
+    'postmark' => [
+        'token' => env('POSTMARK_TOKEN'),
     ],
 
     'ses' => [
-        'key' => env('SES_KEY'),
-        'secret' => env('SES_SECRET'),
-        'region' => 'us-east-1',
+        'key' => env('RANGER_CLUBHOUSE_SES_ACCESS_KEY_ID'),
+        'secret' => env('RANGER_CLUBHOUSE_SES_SECRET_ACCESS_KEY'),
+        'region' => env('RANGER_CLUBHOUSE_SES_REGION', 'us-west-2'),
     ],
-
-    'sparkpost' => [
-        'secret' => '82fb6f0d010f2eca1d1115d527de670809e1a513',
-    ],
-
-    'stripe' => [
-        'model' => App\Models\Person::class,
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
-    ],
-
 ];
