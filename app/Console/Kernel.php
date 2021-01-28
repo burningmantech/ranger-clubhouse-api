@@ -37,9 +37,9 @@ class Kernel extends ConsoleKernel
             // Let the vehicle request reviewers know if vehicles are queued up.
             $schedule->command('clubhouse:vehicle-pending')->dailyAt('19:00')->onOneServer();
 
-            // Talk with Docebo to see who completed online training
+            // Talk with Moodle to see who completed online training
             // Runs every 15 mins March thru September
-            $schedule->command('clubhouse:docebo-completion')->cron('0,15,30,45 * * 3-9 *')->onOneServer();
+            $schedule->command('clubhouse:moodle-completion')->cron('0,15,30,45 * * 3-9 *')->onOneServer();
         }
     }
 

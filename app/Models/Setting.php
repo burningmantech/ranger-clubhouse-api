@@ -150,42 +150,40 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'DoceboDomain' => [
-            'description' => 'Docebo learning domain to use',
+        'MoodleDomain' => [
+            'description' => 'The LMS domain name',
             'type' => 'string'
         ],
 
-        'DoceboClientId' => [
-            'description' => 'Docebo Client ID - used to manage users and query course completion',
+        'MoodleClientId' => [
+            'description' => 'Moodle Client ID/username - used to manage users and query course completion',
             'type' => 'string',
             'is_credential' => true,
         ],
 
-        'DoceboClientSecret' => [
-            'description' => 'Docebo Client Seret - used to manage users and query course completion',
+        'MoodleClientSecret' => [
+            'description' => 'Moodle Client Secret/password - used to manage users and query course completion',
             'type' => 'string',
             'is_credential' => true,
         ],
 
-        'DoceboUsername' => [
-            'description' => 'Docebo username - used to manage users and query course compl etion',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'DoceboPassword' => [
-            'description' => 'Docebo password - used to manage users and query course completion',
-            'type' => 'string',
-            'is_credential' => true,
-        ],
-
-        'DoceboHalfCourseId' => [
-            'description' => 'Docebo Half Ranger course id (record id, not course code) for active Rangers (2+ years)',
+         'MoodleHalfCourseId' => [
+            'description' => 'Moodle training course ID for active Rangers (2+ years)',
             'type' => 'integer',
         ],
 
-        'DoceboFullCourseId' => [
-            'description' => 'Docebo full Ranger course id (record id, not course code) for PNVs, Auditors, Binaries, and Inactive Rangers',
+        'MoodleFullCourseId' => [
+            'description' => 'Moodle half training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
+            'type' => 'integer',
+        ],
+
+        'MoodleServiceName' => [
+            'description' => 'Moodle ervice name to use',
+            'type' => 'string',
+        ],
+
+        'MoodleStudentRoleID' => [
+            'description' => 'The LMS (Moodle) role id to assign to new users (usually student)',
             'type' => 'integer',
         ],
 

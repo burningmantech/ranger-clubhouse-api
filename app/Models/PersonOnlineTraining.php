@@ -17,7 +17,8 @@ class PersonOnlineTraining extends ApiModel
     // Table is not directly accessible
     protected $guarded = [];
 
-    const DOCEBO = 'docebo';
+    const MOODLE = 'moodle';
+    const DOCEBO = 'docebo';    // Was supposed to be used in 2020, yet Org decided to go with Hive.
     const MANUAL_REVIEW = 'manual-review'; // prior to 2020
 
     public function person()
