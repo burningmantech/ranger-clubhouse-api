@@ -217,7 +217,7 @@ class PersonScheduleControllerTest extends TestCase
         $ot = new PersonOnlineTraining;
         $ot->person_id = $person->id;
         $ot->completed_at = now();
-        $ot->type = PersonOnlineTraining::DOCEBO;
+        $ot->type = PersonOnlineTraining::MOODLE;
         $ot->saveWithoutValidation();
     }
 

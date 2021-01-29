@@ -16,6 +16,7 @@ class OnlineTrainingEnrollmentMail extends Mailable
     public $person;
     public $courseType;
     public $password;
+    public $otUrl;
 
     /**
      * Create a new message instance.
@@ -27,6 +28,7 @@ class OnlineTrainingEnrollmentMail extends Mailable
         $this->person = $person;
         $this->courseType = $courseType;
         $this->password = $password;
+        $this->otUrl = setting('OnlineTrainingUrl');
     }
 
     /**

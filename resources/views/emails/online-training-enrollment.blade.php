@@ -3,16 +3,20 @@
         Hello {{$person->callsign}},
     </p>
     <p>
-        This confirms a Burning Man Online Training website account has been created and you have been enrolled in
+        This confirms a Ranger Online Training website account has been created and you have been enrolled in
         Part 1 of Ranger Training (online). The account is SEPARATE from your Clubhouse account.
     </p>
     <p>
         In order to log into the Online Training website, use the following credentials:
     </p>
     <p>
-        <b>Username: </b> {{$person->email}}<br>
-        <b>Password: </b> {{$password}}<br>
-        <b>Online training website: </b> <a href="https://lms.burningman.org">lms.burningman.org</a>
+        <b>Username: </b> {{$person->email}}
+    </p>
+    <p>
+        <b>Password: </b> {{$password}}
+    </p>
+    <p>
+        <b>Online training website: </b> <a href="$otUrl">{{$otUrl}}</a>
     </p>
     <p>
         Note: the above credentials are ONLY for the online training website (lms.burningman.org), NOT the

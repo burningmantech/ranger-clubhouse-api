@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiController;
 
-use App\Lib\Docebo;
+use App\Lib\Moodle;
 
 use App\Mail\OnlineTrainingEnrollmentMail;
 
@@ -12,7 +12,6 @@ use App\Models\Person;
 use App\Models\PersonOnlineTraining;
 use App\Models\Timesheet;
 
-use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -53,10 +52,10 @@ class OnlineTrainingController extends ApiController
          */
         if ($person->status == Person::ACTIVE
             && count(Timesheet::years($person->id)) >= 2) {
-            $courseId = setting('DoceboHalfCourseId');
+            $courseId = setting('MoodleHalfCourseId');
             $type = 'half';
         } else {
-            $courseId = setting('DoceboFullCourseId');
+            $courseId = setting('MoodleFullCourseId');
             $type = 'full';
         }
 
@@ -65,8 +64,8 @@ class OnlineTrainingController extends ApiController
         $lms = null;
 
         if (empty($person->lms_id)) {
-            // See if the person already has a Docebo account setup
-            $lms = new Docebo();
+            // See if the person already has an online account setup
+            $lms = new Moodle();
             if ($lms->findPerson($person) == false) {
                 // Nope, create the user
                 if ($lms->createUser($person, $password) == false) {
@@ -79,7 +78,7 @@ class OnlineTrainingController extends ApiController
 
         if ($person->lms_course != $courseId) {
             if (!$lms) {
-                $lms = new Docebo();
+                $lms = new Moodle;
             }
 
             // Enroll the person in the course
@@ -112,8 +111,8 @@ class OnlineTrainingController extends ApiController
         $otSettings = setting([
             'OnlineTrainingDisabledAllowSignups',
             'OnlineTrainingEnabled',
-            'DoceboHalfCourseId',
-            'DoceboFullCourseId'
+            'LMSHalfCourseId',
+            'LMSFullCourseId'
         ]);
 
         return response()->json($otSettings);
@@ -130,7 +129,7 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('courses', PersonOnlineTraining::class);
 
-        $lms = new Docebo();
+        $lms = new LMS();
         return response()->json(['courses' => $lms->retrieveAvailableCourses()]);
     }
 
@@ -143,10 +142,10 @@ class OnlineTrainingController extends ApiController
     public function enrollment()
     {
         $this->authorize('enrollment', PersonOnlineTraining::class);
-        $lms = new Docebo();
+        $lms = new LMS();
 
-        $fullId = setting('DoceboFullCourseId');
-        $halfId = setting('DoceboHalfCourseId');
+        $fullId = setting('LMSFullCourseId');
+        $halfId = setting('LMSHalfCourseId');
 
         return response()->json([
             'full_course' => !empty($fullId) ? $lms->retrieveCourseEnrollment($fullId) : [],
