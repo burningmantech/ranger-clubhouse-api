@@ -65,6 +65,8 @@ CREATE TABLE `action_logs` (
   `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `data` longtext COLLATE utf8mb4_unicode_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_agent` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `action_logs_person_id_created_at_index` (`person_id`,`created_at`),
   KEY `action_logs_target_person_id_created_at_index` (`target_person_id`,`created_at`),
@@ -730,7 +732,7 @@ CREATE TABLE `person_online_training` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `person_id` bigint(20) NOT NULL,
   `completed_at` datetime NOT NULL,
-  `type` enum('manual-review','docebo') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `person_online_training_person_id_completed_at_index` (`person_id`,`completed_at`)
@@ -1240,3 +1242,6 @@ INSERT INTO `migrations` VALUES (108,'2020_09_15_154301_drop_auto_signout',41);
 INSERT INTO `migrations` VALUES (109,'2020_09_17_143217_add_active_flag_to_position',42);
 INSERT INTO `migrations` VALUES (110,'2020_10_26_150235_convert_timesheets',43);
 INSERT INTO `migrations` VALUES (111,'2020_11_27_215720_add_pronouns_to_person',44);
+INSERT INTO `migrations` VALUES (112,'2020_12_28_162128_add_ip_and_user_agent_to_action_logs',45);
+INSERT INTO `migrations` VALUES (113,'2020_12_29_122848_add_lm_on_playa_to_roles',46);
+INSERT INTO `migrations` VALUES (114,'2021_01_28_153101_add_moodle_to_person_online_training',47);
