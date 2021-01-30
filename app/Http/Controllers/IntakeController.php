@@ -8,13 +8,13 @@ use Illuminate\Validation\Rule;
 
 use App\Lib\Intake;
 
+use App\Models\Role;
 use App\Models\Person;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
 
 use App\Http\Controllers\ApiController;
 
-use App\Models\Role;
 
 class IntakeController extends ApiController
 {
@@ -33,8 +33,13 @@ class IntakeController extends ApiController
     }
 
     /**
-     * Volu
+     * Retrieve the intake spigot - a collection of progression counts broken down by day.
+     * (photo uploaded, training signups, etc.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
+
     public function spigot()
     {
         $this->authorize('isIntake');
@@ -131,5 +136,43 @@ class IntakeController extends ApiController
         }
 
         return $this->success();
+    }
+
+    /**
+     * Update the on an intake note. Only allowed by the note's creator.
+     *
+     * @param PersonIntakeNote $note
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function updateNote(PersonIntakeNote $person_intake_note)
+    {
+        if ($person_intake_note->person_source_id != $this->user->id) {
+            $this->notPermitted('Not authorized to update note.');
+        }
+
+        $params = request()->validate(['note' => 'required|string']);
+
+        $person_intake_note->note = $params['note'];
+        $person_intake_note->saveOrThrow();
+        return $this->success();
+    }
+
+    /**
+     * Delete an intake note. Only allowed by the note's creator.
+     *
+     * @param PersonIntakeNote $note
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function deleteNote(PersonIntakeNote $person_intake_note)
+    {
+        if ($person_intake_note->person_source_id != $this->user->id) {
+            $this->notPermitted('Not authorized to delete note.');
+        }
+        $person_intake_note->delete();
+        return $this->restDeleteSuccess();
     }
 }

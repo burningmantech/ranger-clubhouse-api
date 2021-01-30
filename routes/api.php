@@ -127,6 +127,8 @@ Route::group([
     Route::get('intake/spigot', 'IntakeController@spigot');
     Route::get('intake/{person}/history', 'IntakeController@history');
     Route::post('intake/{person}/note', 'IntakeController@appendNote');
+    Route::post('intake/{person_intake_note}/update-note', 'IntakeController@updateNote');
+    Route::delete('intake/{person_intake_note}/delete-note', 'IntakeController@deleteNote');
 
     Route::post('maintenance/update-positions', 'MaintenanceController@updatePositions');
     Route::post('maintenance/mark-off-site', 'MaintenanceController@markOffSite');
