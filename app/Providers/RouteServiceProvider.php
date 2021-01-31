@@ -10,6 +10,7 @@ use App\Models\Bmid;
 use App\Models\Document;
 use App\Models\Help;
 use App\Models\PersonEvent;
+use App\Models\PersonIntakeNote;
 use App\Models\Setting;
 
 class RouteServiceProvider extends ServiceProvider

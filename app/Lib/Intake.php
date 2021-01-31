@@ -241,7 +241,7 @@ class Intake
 
         $trainings = Training::retrieveTrainingHistoryForIds($pnvIds, Position::TRAINING, $year);
         $mentors = PersonMentor::retrieveAllMentorsForIds($pnvIds, $year);
-        $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA, $year);
+        $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA);
 
         // Find the people
         $people = Person::whereIn('id', $pnvIds)->orderBy('callsign')->get();
