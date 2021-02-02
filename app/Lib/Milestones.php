@@ -95,7 +95,7 @@ class Milestones
                 $milestones['needs_full_training'] = true;
                 break;
             case Person::ACTIVE:
-                if (count(Timesheet::years($person->id)) <= 1) {
+                if (count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) <= 1) {
                     // Binaries have to take a full day's training
                     $milestones['needs_full_training'] = true;
                     $milestones['is_binary'] = true;

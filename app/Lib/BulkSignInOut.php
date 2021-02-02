@@ -212,17 +212,16 @@ class BulkSignInOut
 
         $person = Person::findByCallsign($callsign);
         if ($person) {
-            $callsign = $person->callsign;
             $personId = $person->id;
-        } else {
+            $callsign = $person->callsign;
+        }  else {
             $personId = null;
         }
 
-        $personId = $person ? $person->id : null;
         if (!$personId) {
             $errors[] = "callsign '$callsign' not found";
         } elseif (empty($errors)) {
-            $timesheet = Timesheet::findOnDutyForPersonYear($personId, $year);
+            $timesheet = Timesheet::findPersonOnDuty($personId);
             $timesheetId = $timesheet ? $timesheet->id : null;
 
             if ($action == 'in' && $timesheetId) {

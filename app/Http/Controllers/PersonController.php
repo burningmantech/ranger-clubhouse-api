@@ -475,11 +475,15 @@ class PersonController extends ApiController
                 'have_feedback' => SurveyAnswer::haveTrainerFeedback($personId),
             ],
             'unread_message_count' => PersonMessage::countUnread($personId),
-            'years' => Timesheet::years($personId),
-            'all_years' => Timesheet::years($personId, true),
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
             'may_request_stickers' => $event->may_request_stickers,
-            'onduty_position' => $onduty
+            'onduty_position' => $onduty,
+
+            // Years breakdown
+            'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
+            'all_years' => Timesheet::findYears($personId, Timesheet::YEARS_ALL),
+            'rangered_years' => Timesheet::findYears($personId, Timesheet::YEARS_RANGERED),
+            'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
         ];
 
         /*
@@ -506,8 +510,10 @@ class PersonController extends ApiController
         $this->authorize('view', $person);
         $personId = $person->id;
         return response()->json([
-            'timesheet_years' => Timesheet::years($personId),
-            'all_years' => Timesheet::years($personId, true),
+            'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
+            'all_years' => Timesheet::findYears($personId, Timesheet::YEARS_ALL),
+            'rangered_years' => Timesheet::findYears($personId, Timesheet::YEARS_RANGERED),
+            'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
         ]);
     }
 
