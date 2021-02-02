@@ -14,6 +14,8 @@ class FreakingYearsReport
      * Build a Freaking Years report - how long a person has rangered, the first year rangered, the last year to ranger,
      * and if the person intends to ranger in the intended year (usually the current year)
      *
+     * Non Ranger work entries (i.e. a person who worked as Non Ranger status volunteer) are excluded.
+     *
      * @param bool $showAll false if only report on active status rangers, otherwise everyone.
      * @param int $intendToWorkYear year the person might work in (usually the current year)
      * @return array|\Illuminate\Support\Collection
@@ -31,7 +33,8 @@ class FreakingYearsReport
             "EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$intendToWorkYear WHERE person_slot.person_id=E.person_id LIMIT 1) AS signed_up " .
             'FROM (SELECT person.id as person_id, COUNT(DISTINCT(YEAR(on_duty))) AS year FROM ' .
             "person, timesheet WHERE $statusCond person.id = person_id " .
-            "AND position_id  NOT IN ($excludePositionIds)" .
+            "AND position_id NOT IN ($excludePositionIds) " .
+            "AND is_non_ranger is false " .
             'GROUP BY person.id, YEAR(on_duty)) AS E ' .
             'GROUP BY E.person_id'
         );

@@ -3,12 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-use Carbon\Carbon;
-
-use App\Lib\WorkSummary;
 
 use App\Models\ApiModel;
 use App\Models\Person;
@@ -27,6 +24,12 @@ class Timesheet extends ApiModel
     const STATUS_VERIFIED = 'verified';
     const STATUS_UNVERIFIED = 'unverified';
 
+    // type for findYears()
+    const YEARS_ALL = 'all';
+    const YEARS_WORKED = 'worked';
+    const YEARS_RANGERED = 'rangered';
+    const YEARS_NON_RANGERED = 'non-rangered';
+
     const EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
         Position::TRAINING,
@@ -43,6 +46,7 @@ class Timesheet extends ApiModel
         'timesheet_confirmed_at',
         'timesheet_confirmed',
         'slot_id',
+        'is_non_ranger',
 
         'additional_notes',  // pseudo field -- appends to notes
         'additional_reviewer_notes'  // pseudo field -- appends to reviewer_notes
@@ -69,10 +73,31 @@ class Timesheet extends ApiModel
         'verified_at',
     ];
 
-    const RELATIONSHIPS = ['reviewer_person:id,callsign', 'verified_person:id,callsign', 'position:id,title,count_hours'];
+    const RELATIONSHIPS = [
+        'reviewer_person:id,callsign',
+        'verified_person:id,callsign',
+        'position:id,title,count_hours'
+    ];
 
     public $_additional_notes;
     public $_additional_reviewer_notes;
+
+    public static function boot()
+    {
+        parent::boot();
+
+        /*
+         * When a timesheet entry is about to be created, mark the entry as a 'non ranger'
+         * entry if the person is a Non Ranger. (i.e. volunteer working for the Rangers but is
+         * not actual Ranger)
+         */
+
+        self::creating(function ($model) {
+            if ($model->person && $model->person->status == Person::NON_RANGER) {
+                $model->is_non_ranger = true;
+            }
+        });
+    }
 
     public function person()
     {
@@ -163,7 +188,14 @@ class Timesheet extends ApiModel
         return $rows;
     }
 
-    public static function findPersonOnDuty($personId)
+    /**
+     * Find the (still) on duty timesheet for a person
+     *
+     * @param $personId
+     * @return Timesheet|null
+     */
+
+    public static function findPersonOnDuty(int $personId): Timesheet|null
     {
         return self::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -172,11 +204,15 @@ class Timesheet extends ApiModel
             ->first();
     }
 
-    /*
+    /**
      * Check to see if a person is signed into a position(s)
+     *
+     * @param int $personId
+     * @param $positionIds
+     * @return bool
      */
 
-    public static function isPersonSignIn($personId, $positionIds)
+    public static function isPersonSignIn(int $personId, $positionIds): bool
     {
         $sql = self::where('person_id', $personId)->whereNull('off_duty');
         if (is_array($positionIds)) {
@@ -188,20 +224,16 @@ class Timesheet extends ApiModel
         return $sql->exists();
     }
 
-    public static function findOnDutyForPersonYear($personId, $year)
-    {
-        return self::where('person_id', $personId)
-            ->whereNull('off_duty')
-            ->whereYear('on_duty', $year)
-            ->with('position:id,title,type')
-            ->first();
-    }
-
-    /*
+    /**
      * Find an existing overlapping timesheet entry for a date range
+     *
+     * @param int $personId
+     * @param $onduty
+     * @param $offduty
+     * @return Timesheet|null
      */
 
-    public static function findOverlapForPerson($personId, $onduty, $offduty)
+    public static function findOverlapForPerson(int $personId, $onduty, $offduty): Timesheet|null
     {
         return self::where('person_id', $personId)
             ->where(function ($sql) use ($onduty, $offduty) {
@@ -212,7 +244,17 @@ class Timesheet extends ApiModel
             })->first();
     }
 
-    public static function findShiftWithinMinutes($personId, $startTime, $withinMinutes)
+    /**
+     * Find an entry for a given person at a time within the given +/- minutes
+     * (used to help find a shift partner for missing timesheet entry requests)
+     *
+     * @param int $personId
+     * @param int $startTime
+     * @param int $withinMinutes
+     * @return Timesheet|null
+     */
+
+    public static function findShiftWithinMinutes(int $personId, int $startTime, int $withinMinutes): Timesheet|null
     {
         return self::with(['position:id,title'])
             ->where('person_id', $personId)
@@ -223,25 +265,38 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Find the years a person was on working
+     * Find the years a person has based on $type:
+     *
+     * YEARS_ALL: Timesheet years *including* Alpha & Training combined with shift sign up years
+     * YEARS_WORKED: Timesheet years excluding Alpha & Training entries
+     * YEARS_RANGERED: Timesheet years excluding Alpha & Training entries as a Ranger (is_non_ranger=false)
+     * YEARS_NON_RANGERED: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_non_ranger=true)
      *
      * @param int $personId
-     * @param bool $everything if true include all scheduled years as well
+     * @param string $whichYears
      * @return array
      */
 
-    public static function years(int $personId, bool $everything = false)
+    public static function findYears(int $personId, string $type): array
     {
-        $query = self::selectRaw("YEAR(on_duty) as year")
+        $everything = ($type == self::YEARS_ALL);
+
+        $sql = self::selectRaw("YEAR(on_duty) as year")
             ->where('person_id', $personId)
             ->groupBy("year")
             ->orderBy("year", "asc");
 
         if (!$everything) {
-            $query = $query->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS);
+            $sql = $sql->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS);
         }
 
-        $years = $query->pluck('year')->toArray();
+        if ($type == self::YEARS_NON_RANGERED) {
+            $sql->where('is_non_ranger', true);
+        } else if ($type == self::YEARS_RANGERED) {
+            $sql->where('is_non_ranger', false);
+        }
+
+        $years = $sql->pluck('year')->toArray();
 
         if (!$everything) {
             return $years;
@@ -263,11 +318,16 @@ class Timesheet extends ApiModel
         return $years;
     }
 
-    /*
+    /**
      * Find the latest timesheet entry for a person in a position and given year
+     *
+     * @param int $personId
+     * @param int $positionId
+     * @param int $year
+     * @return Timesheet|null
      */
 
-    public static function findLatestForPersonPosition($personId, $positionId, $year)
+    public static function findLatestForPersonPosition(int $personId, int $positionId, int $year): Timesheet|null
     {
         return self::where('person_id', $personId)
             ->where('position_id', $positionId)
@@ -287,7 +347,7 @@ class Timesheet extends ApiModel
      *   [ 'person1_id' => 'years', 'person2_id' => 'years' ]
      */
 
-    public static function yearsRangeredCountForIds($personIds)
+    public static function yearsRangeredCountForIds($personIds): array
     {
         $ids = [];
         foreach ($personIds as $id) {
@@ -311,11 +371,14 @@ class Timesheet extends ApiModel
         return $people;
     }
 
-    /*
-     * Find out if the person has an alpha timesheet entry for the current year
+    /**
+     * Does the given person have an Alpha entry for the current year?
+     *
+     * @param int $personId
+     * @return bool
      */
 
-    public static function hasAlphaEntry($personId)
+    public static function hasAlphaEntry(int $personId): bool
     {
         return Timesheet::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -345,9 +408,18 @@ class Timesheet extends ApiModel
             ]);
     }
 
-    public static function countUnverifiedForPersonYear(int $personId, int $year)
+    /**
+     * Count the number of unverified timesheet entries for a given person and year
+     *
+     * @param int $personId
+     * @param int $year
+     * @return int
+     */
+
+    public static function countUnverifiedForPersonYear(int $personId, int $year): int
     {
-        // Find all the unverified timesheets
+        // Find all the unverified timesheet entries (unverified, and entries that were
+        // corrected but the correction not verified by the person)
         return Timesheet::where('person_id', $personId)
             ->whereYear('on_duty', $year)
             ->whereIn('review_status', [Timesheet::STATUS_UNVERIFIED, Timesheet::STATUS_APPROVED])
@@ -355,260 +427,16 @@ class Timesheet extends ApiModel
             ->count();
     }
 
-    public static function retrieveCombinedCorrectionRequestsForYear($year)
-    {
-        $corrections = self::retrieveCorrectionRequestsForYear($year);
-
-        $requests = [];
-        foreach ($corrections as $req) {
-            $requests[] = [
-                'person'    => $req->person,
-                'position'  => $req->position,
-                'on_duty'   => (string)$req->on_duty,
-                'off_duty'  => (string)$req->off_duty,
-                'duration'  => $req->duration,
-                'credits'   => $req->credits,
-                'is_missing'=> false,
-                'notes' => $req->notes
-            ];
-        }
-
-        $missing = TimesheetMissing::retrieveForPersonOrAllForYear(null, $year);
-
-        foreach ($missing as $req) {
-            $requests[] = [
-                'person'    => $req->person,
-                'position'  => $req->position,
-                'on_duty'   => (string)$req->on_duty,
-                'off_duty'  => (string)$req->off_duty,
-                'duration'  => $req->duration,
-                'credits'   => $req->credits,
-                'is_missing'=> true,
-                'notes' => $req->notes
-            ];
-        }
-
-        usort($requests, function ($a, $b) {
-            return strcasecmp($a['person']->callsign, $b['person']->callsign);
-        });
-
-        return $requests;
-    }
-
-    /*
-     * Retrieve all people who has not indicated their timesheet entries are correct.
+    /**
+     * Determine if the given person has worked one or more positions in the last X years
+     *
+     * @param int $personId
+     * @param int $years
+     * @param $positionIds
+     * @return bool
      */
 
-    public static function retrieveUnconfirmedPeopleForYear($year)
-    {
-        return DB::select(
-                "SELECT person.id, callsign, first_name, last_name, email, home_phone,
-                    (SELECT count(*) FROM timesheet
-                        WHERE person.id=timesheet.person_id
-                          AND YEAR(timesheet.on_duty)=?
-                          AND timesheet.verified IS FALSE) as unverified_count
-               FROM person
-               LEFT JOIN person_event ON person_event.person_id=person.id AND person_event.year=?
-               WHERE status in ('active', 'inactive', 'inactive extension', 'retired')
-                 AND IFNULL(person_event.timesheet_confirmed, FALSE) != TRUE
-                 AND EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(timesheet.on_duty)=?)
-               ORDER BY callsign",
-             [ $year, $year, $year ]
-         );
-    }
-
-    /*
-     * Retrieve folks who potentially earned a t-shirt
-     */
-
-    public static function retrievePotentialEarnedShirts($year, $thresholdSS, $thresholdLS)
-    {
-      $active_statuses = implode("','", Person::ACTIVE_STATUSES);
-      $report = DB::select(
-       "SELECT
-          person.id, person.callsign, person.status, person.first_name, person.mi, person.last_name,
-          eh.estimated_hours,
-          ah.actual_hours,
-          person.teeshirt_size_style, person.longsleeveshirt_size_style
-        FROM
-          person
-        LEFT JOIN (
-          SELECT
-            person_slot.person_id,
-            round(sum(((TIMESTAMPDIFF(MINUTE, slot.begins, slot.ends))/60)),2) AS estimated_hours
-          FROM
-            slot
-          JOIN
-            person_slot ON person_slot.slot_id = slot.id
-          JOIN
-            position ON position.id = slot.position_id
-          WHERE
-            YEAR(slot.begins) = ?
-            AND position.count_hours IS TRUE
-          GROUP BY person_id
-        ) eh ON eh.person_id = person.id
-
-        LEFT JOIN (
-          SELECT
-            timesheet.person_id,
-            round(sum(((TIMESTAMPDIFF(MINUTE, timesheet.on_duty, timesheet.off_duty))/60)),2) AS actual_hours
-          FROM
-            timesheet
-          JOIN
-            position ON position.id = timesheet.position_id
-          WHERE
-            YEAR(timesheet.on_duty) = ?
-            AND position.count_hours IS TRUE
-          GROUP BY person_id
-        ) ah ON ah.person_id = person.id
-
-        WHERE
-          ( actual_hours > 0 OR estimated_hours > 0 )
-          AND person.id NOT IN (
-            SELECT
-              timesheet.person_id
-            FROM
-              timesheet
-            JOIN
-              position ON position.id = timesheet.position_id
-            WHERE
-              YEAR(timesheet.on_duty) = ?
-              AND position_id = ?
-          )
-          AND person.status IN ('" . $active_statuses . "')
-        ORDER BY
-          person.callsign
-        "
-        , [$year, $year, $year, Position::ALPHA]
-      );
-
-      if (empty($report)) {
-        return [];
-      }
-
-      $report = collect($report);
-      return $report->map(function ($row) use ($thresholdSS, $thresholdLS) {
-        return [
-          'id'    => $row->id,
-          'callsign'  => $row->callsign,
-          'first_name' => $row->first_name,
-          'middle_initial' => $row->mi,
-          'last_name' => $row->last_name,
-          'estimated_hours' => $row->estimated_hours,
-          'actual_hours' => $row->actual_hours,
-          'longsleeveshirt_size_style' => $row->longsleeveshirt_size_style,
-          'earned_ls' => ($row->actual_hours >= $thresholdLS),
-          'teeshirt_size_style' => $row->teeshirt_size_style,
-          'earned_ss' => ($row->actual_hours >= $thresholdSS), // gonna be true always, but just in case the selection above changes.
-        ];
-      });
-    }
-
-    /*
-     * Retrieve all timesheets for a given year, grouped by callsign
-     */
-
-    public static function retrieveAllForYearByCallsign($year)
-    {
-        $rows = self::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status',
-                          'position:id,title,active,type,count_hours' ])
-                ->orderBy('on_duty')
-                ->get();
-
-        if (!$rows->isEmpty()) {
-            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
-        }
-
-        $personGroups = $rows->groupBy('person_id');
-
-        return $personGroups->map(function ($group) {
-            $person = $group[0]->person;
-
-            return [
-                'id' => $group[0]->person_id,
-                'callsign' => $person ? $person->callsign : "Person #".$group[0]->person_id,
-                'status' => $person ? $person->status : 'deleted',
-
-                'total_credits' => $group->pluck('credits')->sum(),
-                'total_duration' => $group->pluck('duration')->sum(),
-                'total_appreciation_duration' => $group->filter(function ($t) {
-                    return $t->position ? $t->position->count_hours : false;
-                })->pluck('duration')->sum(),
-
-                'timesheet' => $group->map(function ($t) {
-                    return [
-                        'on_duty'   => (string) $t->on_duty,
-                        'off_duty'  => (string) $t->off_duty,
-                        'duration'  => $t->duration,
-                        'credits'   => $t->credits,
-                        'position'   => [
-                            'id'     => $t->position_id,
-                            'title'  => $t->position ? $t->position->title : "Position #".$t->position_id,
-                            'active' => $t->position->active,
-                            'count_hours' => $t->position ? $t->position->count_hours : 0,
-                        ]
-                    ];
-                })->values()
-            ];
-        })->sortBy('callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
-    }
-
-    /*
-     * Breakdown the positions within a given year
-     */
-
-    public static function retrieveByPosition($year, $includeEmail=false)
-    {
-        $rows = Timesheet::whereYear('on_duty', $year)
-                ->with([ 'person:id,callsign,status,email', 'position:id,title,active' ])
-                ->orderBy('on_duty')
-                ->get()
-                ->groupBy('position_id');
-
-        $results = [];
-
-        foreach ($rows as $positionId => $entries) {
-            $position = $entries[0]->position;
-            $results[] = [
-                'id'     => $position->id,
-                'title'  => $position->title,
-                'active' => $position->active,
-                'timesheets' => $entries->map(function($r) use ($includeEmail) {
-                    $person = $r->person;
-                    $personInfo = [
-                        'id'    => $r->person_id,
-                        'callsign' => $person ? $person->callsign : 'Person #'.$r->person_id,
-                        'status' => $person ? $person->status : 'deleted'
-                    ];
-
-                    if ($includeEmail) {
-                        $personInfo['email'] = $person ? $person->email : '';
-                    }
-
-                    return [
-                        'id'       => $r->id,
-                        'on_duty'  => (string) $r->on_duty,
-                        'off_duty' => (string) $r->off_duty,
-                        'duration' => $r->duration,
-                        'person'   => $personInfo
-                    ];
-                })
-            ];
-        }
-
-        usort($results, function ($a, $b) {
-            return strcasecmp($a['title'], $b['title']);
-        });
-
-        return $results;
-    }
-
-    /*
-    * Determine if the person has worked one or more positions in the last X years
-    */
-
-    public static function didPersonWorkPosition($personId, $years, $positionIds)
+    public static function didPersonWorkPosition(int $personId, int $years, $positionIds): bool
     {
         if (!is_array($positionIds)) {
             $positionIds = [$positionIds];
@@ -640,11 +468,14 @@ class Timesheet extends ApiModel
             ->exists();
     }
 
-    /*
+    /**
      * Calculate how many credits earned for a year
+     * @param int $personId
+     * @param int $year
+     * @return float
      */
 
-    public static function earnedCreditsForYear($personId, $year)
+    public static function earnedCreditsForYear(int $personId, int $year): float
     {
         $rows = Timesheet::findForQuery(['person_id' => $personId, 'year' => $year]);
         if (!$rows->isEmpty()) {
@@ -654,30 +485,47 @@ class Timesheet extends ApiModel
         return $rows->pluck('credits')->sum();
     }
 
-    public function log($action, $data=null) {
+    /**
+     * Create a Timesheet audit log for the entry
+     *
+     * @param string $action See TimesheetLog for actions
+     * @param null $data
+     */
+
+    public function log(string $action, $data = null)
+    {
         TimesheetLog::record($action, $this->person_id, Auth::id(), $this->id, $data, $this->on_duty->year);
     }
 
-    /*
-    * Return the total seconds on duty.
-    */
+    /**
+     * Return the total seconds on duty.
+     * @return int
+     */
 
-    public function getDurationAttribute()
+    public function getDurationAttribute(): int
     {
         $offDuty = $this->off_duty ?? now();
         return $offDuty->diffInSeconds($this->on_duty);
     }
 
-    public function getPositionTitleAttribute()
+    /**
+     * Return the position title (if record was joined with the position table)
+     *
+     * @return string
+     */
+
+    public function getPositionTitleAttribute(): string
     {
         return $this->attributes['position_title'] ?? '';
     }
 
-    /*
+    /**
      * Return the credits earned
+     *
+     * @return float
      */
 
-    public function getCreditsAttribute()
+    public function getCreditsAttribute(): float
     {
         // Already computed?
         if (isset($this->attributes['credits'])) {
@@ -697,27 +545,52 @@ class Timesheet extends ApiModel
         return $credits;
     }
 
-    public function setOnDutyToNow()
+    /**
+     * Set the on duty time to now
+     */
+
+    public function setOnDutyToNow(): void
     {
         $this->on_duty = now();
     }
 
-    public function setOffDutyToNow()
+    /**
+     * Set the off duty time to now
+     */
+
+    public function setOffDutyToNow(): void
     {
         $this->off_duty = now();
     }
 
-    public function setVerifiedAtToNow()
+    /**
+     * Set verified at time to now
+     */
+
+    public function setVerifiedAtToNow(): void
     {
         $this->verified_at = now();
     }
 
-    public function getPositionSubtypeAttribute()
+    /**
+     * Return the position subtype for the timesheet entry.
+     *
+     * @return string|null
+     */
+
+    public function getPositionSubtypeAttribute(): string|null
     {
         return $this->position->subtype;
     }
 
-    public function setAdditionalReviewerNotesAttribute($notes)
+    /**
+     * Append the given notes to the reviewer notes, timestamp and logged in user's callsign
+     * are added.
+     *
+     * @param string|null $notes
+     */
+
+    public function setAdditionalReviewerNotesAttribute(string|null $notes): void
     {
         if (empty($notes)) {
             return;
@@ -731,12 +604,25 @@ class Timesheet extends ApiModel
         $this->reviewer_notes = $this->reviewer_notes . "From $callsign on $date:\n$notes\n\n";
     }
 
-    public function getAdditionalReviewerNotesAttribute()
+    /**
+     * Get the newly entered reviewer notes (only used for auditing purposes)
+     *
+     * @return string|null
+     */
+
+    public function getAdditionalReviewerNotesAttribute(): string|null
     {
         return $this->_additional_reviewer_notes;
     }
 
-    public function setAdditionalNotesAttribute($notes)
+    /**
+     * Append correction notes (aka why-does-this-entry-needs-to-be-fixed)
+     * to the existing notes. Timestamp and user's callsign is added.
+     *
+     * @param string|null $notes
+     */
+
+    public function setAdditionalNotesAttribute(string|null $notes): void
     {
         if (empty($notes)) {
             return;
@@ -747,7 +633,13 @@ class Timesheet extends ApiModel
         $this->notes = $this->notes . "$date:\n$notes\n\n";
     }
 
-    public function getAdditionalNotesAttribute()
+    /**
+     * Get the newly entered correction notes (only used for auditing purposes)
+     *
+     * @return string|null
+     */
+
+    public function getAdditionalNotesAttribute(): string|null
     {
         return $this->_additional_notes;
     }

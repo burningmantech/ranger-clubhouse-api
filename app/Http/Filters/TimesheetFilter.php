@@ -26,6 +26,7 @@ class TimesheetFilter
         'person_id',
         'position_id',
         'additional_reviewer_notes',
+        'is_non_ranger'
     ];
 
     public function deserialize(Person $user = null): array

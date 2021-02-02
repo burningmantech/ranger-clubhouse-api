@@ -51,7 +51,7 @@ class OnlineTrainingController extends ApiController
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
          */
         if ($person->status == Person::ACTIVE
-            && count(Timesheet::years($person->id)) >= 2) {
+            && count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) >= 2) {
             $courseId = setting('MoodleHalfCourseId');
             $type = 'half';
         } else {
