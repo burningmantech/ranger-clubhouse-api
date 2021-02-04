@@ -148,7 +148,7 @@ class IntakeController extends ApiController
 
     public function updateNote(PersonIntakeNote $person_intake_note)
     {
-        if ($person_intake_note->person_source_id != $this->user->id) {
+        if ($person_intake_note->person_source_id != $this->user->id || $person_intake_note->is_log) {
             $this->notPermitted('Not authorized to update note.');
         }
 
@@ -169,7 +169,7 @@ class IntakeController extends ApiController
 
     public function deleteNote(PersonIntakeNote $person_intake_note)
     {
-        if ($person_intake_note->person_source_id != $this->user->id) {
+        if ($person_intake_note->person_source_id != $this->user->id || $person_intake_note->is_log) {
             $this->notPermitted('Not authorized to delete note.');
         }
         $person_intake_note->delete();

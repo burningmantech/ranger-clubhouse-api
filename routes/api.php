@@ -271,10 +271,12 @@ Route::group([
 
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
-    Route::post('training-session/{id}/score-student', 'TrainingSessionController@scoreStudent');
-    Route::post('training-session/{id}/trainer-status', 'TrainingSessionController@trainerStatus');
-    Route::get('training-session/{id}/trainers', 'TrainingSessionController@trainers');
-    Route::get('training-session/{id}', 'TrainingSessionController@show');
+    Route::post('training-session/{training_session}/score-student', 'TrainingSessionController@scoreStudent');
+    Route::post('training-session/{training_session}/trainer-status', 'TrainingSessionController@trainerStatus');
+    Route::get('training-session/{training_session}/trainers', 'TrainingSessionController@trainers');
+    Route::post('training-session/{trainee_note}/update-note', 'TrainingSessionController@updateNote');
+    Route::delete('training-session/{trainee_note}/delete-note', 'TrainingSessionController@deleteNote');
+    Route::get('training-session/{training_session}', 'TrainingSessionController@show');
 
     Route::get('training/{id}/multiple-enrollments', 'TrainingController@multipleEnrollmentsReport');
     Route::get('training/{id}/capacity', 'TrainingController@capacityReport');
