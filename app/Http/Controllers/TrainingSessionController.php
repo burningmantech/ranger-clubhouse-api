@@ -193,7 +193,7 @@ class TrainingSessionController extends ApiController
 
     public function updateNote(TraineeNote $trainee_note)
     {
-        if ($trainee_note->person_source_id != $this->user->id) {
+        if ($trainee_note->person_source_id != $this->user->id || $trainee_note->is_log) {
             $this->notPermitted('Not authorized to update note.');
         }
 
@@ -214,7 +214,7 @@ class TrainingSessionController extends ApiController
 
     public function deleteNote(TraineeNote $trainee_note)
     {
-        if ($trainee_note->person_source_id != $this->user->id) {
+        if ($trainee_note->person_source_id != $this->user->id || $trainee_note->is_log) {
             $this->notPermitted('Not authorized to delete note.');
         }
         $trainee_note->delete();
