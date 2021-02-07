@@ -3,11 +3,8 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-
-use Carbon\Carbon;
 
 class OnlineTrainingEnrollmentMail extends Mailable
 {
@@ -39,7 +36,7 @@ class OnlineTrainingEnrollmentMail extends Mailable
     public function build()
     {
         return $this->from([
-            'address' => 'ranger-trainingacademy-list@burningman.org',
+            'address' => setting('TrainingAcademyEmail'),
             'name' => 'The Ranger Training Academy'
         ])->subject('Enrolled in Part 1 of Ranger Training (online)')
             ->view('emails.online-training-enrollment');

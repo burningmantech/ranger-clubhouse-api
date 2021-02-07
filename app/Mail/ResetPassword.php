@@ -20,9 +20,9 @@ class ResetPassword extends Mailable
      *
      * @return void
      */
-    public function __construct($person, $token, $adminEmail)
+    public function __construct($person, $token)
     {
-        $this->adminEmail = $adminEmail;
+        $this->adminEmail = setting('AdminEmail');
 
         switch ($person->status) {
             case Person::AUDITOR:
@@ -40,12 +40,8 @@ class ResetPassword extends Mailable
                 break;
         }
 
-        if (config('clubhouse.DeploymentEnvironment') == 'Staging') {
-            $server = 'ranger-clubhouse-staging';
-        } else {
-            $server = 'ranger-clubhouse';
-        }
-        $this->resetURL = "https://{$server}.burningman.org/client/login?token=$token";
+        $host = request()->getSchemeAndHttpHost();
+        $this->resetURL = "{$host}/client/login?token={$token}";
     }
 
     /**
