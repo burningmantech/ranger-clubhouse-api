@@ -9,7 +9,6 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 class WelcomeMail extends Mailable
 {
@@ -29,7 +28,8 @@ class WelcomeMail extends Mailable
     {
         $this->person = $person;
         $this->inviteToken = $inviteToken;
-        $this->inviteUrl = "https://ranger-clubhouse.burningman.org/client/login?token=$inviteToken&welcome=1";
+        $host = request()->getSchemeAndHttpHost();
+        $this->inviteUrl = "{$host}/client/login?token={$inviteToken}&welcome=1";
     }
 
     /**
@@ -39,8 +39,8 @@ class WelcomeMail extends Mailable
      */
     public function build()
     {
-        return $this->from([ 'address' => setting('VCEmail'), 'name' => 'The Black Rock Rangers'] )
-                ->subject('Welcome to the Black Rock Rangers Secret Clubhouse!')
-                ->view('emails.welcome');
+        return $this->from(['address' => setting('VCEmail'), 'name' => 'The Black Rock Rangers'])
+            ->subject('Welcome to the Black Rock Rangers Secret Clubhouse!')
+            ->view('emails.welcome');
     }
 }

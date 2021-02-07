@@ -32,7 +32,7 @@ class OnlineTrainingCompletedMail extends Mailable
     public function build()
     {
         return $this->from([
-            'address' => 'ranger-trainingacademy-list@burningman.org',
+            'address' => setting('TrainingAcademyEmail'),
             'name' => 'The Ranger Training Academy'
             ])->subject('Part 1 of Ranger Training (online) Completed')
             ->view('emails.online-training-completed');

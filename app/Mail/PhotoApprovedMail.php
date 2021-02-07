@@ -31,7 +31,7 @@ class PhotoApprovedMail extends Mailable
      */
     public function build()
     {
-        return $this->from([ 'address' => 'ranger-vc-list@burningman.org', 'name' => 'The Voluneer Coordinators'] )
+        return $this->from([ 'address' => setting('VCEmail'), 'name' => 'The Volunteer Coordinators'] )
                 ->subject('Ranger Clubhouse photo submission APPROVED.')
                 ->view('emails.photo-approved');
     }
