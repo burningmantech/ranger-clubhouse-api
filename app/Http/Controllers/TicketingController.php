@@ -187,4 +187,28 @@ class TicketingController extends ApiController
 
         return $this->success();
     }
+
+    /**
+     * Return the appreciation credit/hour thresholds for tickets, All-You-Can-Eat pass, shirts, and showers.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function thresholds()
+    {
+        // anyone can see the thresholds.
+
+        $thresholds = setting([
+            'AllYouCanEatEventWeekThreshold',
+            'AllYouCanEatEventPeriodThreshold',
+            'ScTicketThreshold',
+            'RpTicketThreshold',
+            'ShowerPogThreshold',
+            'ShowerAccessThreshold',
+            'ShirtLongSleeveHoursThreshold',
+            'ShirtShortSleeveHoursThreshold',
+        ]);
+
+        return response()->json([ 'thresholds' => $thresholds ]);
+    }
 }

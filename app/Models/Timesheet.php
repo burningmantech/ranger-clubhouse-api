@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
 use Illuminate\Support\Facades\Auth;
@@ -254,7 +255,7 @@ class Timesheet extends ApiModel
      * @return Timesheet|null
      */
 
-    public static function findShiftWithinMinutes(int $personId, int $startTime, int $withinMinutes): Timesheet|null
+    public static function findShiftWithinMinutes(int $personId, Carbon|int $startTime, int $withinMinutes): Timesheet|null
     {
         return self::with(['position:id,title'])
             ->where('person_id', $personId)
