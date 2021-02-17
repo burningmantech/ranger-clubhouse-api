@@ -72,6 +72,6 @@ class TimesheetWorkSummaryReport
             'counted_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
             'event_start' => (string)$eventDates->event_start,
             'event_end' => (string)$eventDates->event_end,
-        ];
+         ];
     }
 }

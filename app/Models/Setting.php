@@ -56,9 +56,15 @@ class Setting extends ApiModel
             'type' => 'bool',
         ],
 
-        'BmidTestToken' => [
-            'description' => 'BMID test token to trigger Lambase bug',
-            'type' => 'string',
+
+        'AllYouCanEatEventWeekThreshold' => [
+            'description' => 'Event week hour threshold to earn an All-You-Can-Eat-Pass',
+            'type' => 'integer'
+        ],
+
+        'AllYouCanEatEventPeriodThreshold' => [
+            'description' => 'Event period (pre-event,event,post-event weeks) hour threshold to earn an All-You-Can-Eat-Pass',
+            'type' => 'integer'
         ],
 
         'BroadcastClubhouseNotify' => [
@@ -306,6 +312,16 @@ class Setting extends ApiModel
 
         'ShirtShortSleeveHoursThreshold' => [
             'description' => 'Hour threshold to earn a short sleeve shirt/t-shirt',
+            'type' => 'integer',
+        ],
+
+        'ShowerPogThreshold' => [
+            'description' => 'Hour threshold to earn a shower pog to The Wet Spot',
+            'type' => 'integer'
+        ],
+
+        'ShowerAccessThreshold' => [
+            'description' => 'Hour threshold to earn shower access for the next event',
             'type' => 'integer',
         ],
 
@@ -604,6 +620,8 @@ class Setting extends ApiModel
                 return filter_var($value, FILTER_VALIDATE_BOOLEAN);
             case 'integer':
                 return (int)$value;
+            case 'float':
+                return (float) $value;
             default:
                 return $value;
         }
