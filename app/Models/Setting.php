@@ -30,6 +30,15 @@ class Setting extends ApiModel
 
     public static $cache = [];
 
+    const TYPE_BOOL = 'bool';
+    const TYPE_DATE = 'date';
+    const TYPE_DATETIME = 'datetime';
+    const TYPE_EMAIL = 'email';
+    const TYPE_FLOAT = 'float';
+    const TYPE_INTEGER = 'integer';
+    const TYPE_STRING = 'string';
+    const TYPE_URL = 'url';
+    
     /*
      * Each setting must be described in the table below.
      *
@@ -43,48 +52,48 @@ class Setting extends ApiModel
     const DESCRIPTIONS = [
         'AccountCreationEmail' => [
             'description' => 'Alert email address when accounts register',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'AdminEmail' => [
             'description' => 'Ranger Tech Team Email Address',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'AllowSignupsWithoutPhoto' => [
             'description' => 'Allow shift signups without requiring an approved photo',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
 
         'AllYouCanEatEventWeekThreshold' => [
             'description' => 'Event week hour threshold to earn an All-You-Can-Eat-Pass',
-            'type' => 'integer'
+            'type' => self::TYPE_INTEGER
         ],
 
         'AllYouCanEatEventPeriodThreshold' => [
             'description' => 'Event period (pre-event,event,post-event weeks) hour threshold to earn an All-You-Can-Eat-Pass',
-            'type' => 'integer'
+            'type' => self::TYPE_INTEGER
         ],
 
         'BroadcastClubhouseNotify' => [
             'description' => 'Enable RBS notification of new Clubhouse messages',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'BroadcastClubhouseSandbox' => [
             'description' => 'Enable RBS Clubhouse Message sandbox mode (Clubhouse messages not created)',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'BroadcastMailSandbox' => [
             'description' => 'Enable RBS sandbox email mode',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'BroadcastSMSService' => [
             'description' => 'Ranger Broadcast SMS Service',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['twilio', 'deliver SMS messages via Twilio'],
                 ['sandbox', 'No SMS sent - developer mode'],
@@ -93,266 +102,278 @@ class Setting extends ApiModel
 
         'BroadcastSMSSandbox' => [
             'description' => 'Sandbox SMS messages',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'DailyReportEmail' => [
             'description' => 'Email address to send the Clubhouse Daily Report',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
+        ],
+
+        'DashboardPeriod' => [
+            'description' => 'The Dashboard Period',
+            'type' => self::TYPE_STRING,
+            'default' => 'auto',
+            'options' => [
+                [ 'auto', 'Period automatically determined' ],
+                [ 'after-event', 'After Event (Sept thru March)' ],
+                [ 'before-event', 'Before Event (March thru mid-to-late August)' ],
+                [ 'event', 'Event Period (mid Aug til 1st Sat after Labor Day)' ],
+            ]
         ],
 
         'EditorUrl' => [
             'description' => 'The script URL of the WYSIWYG editor (currently TinyMCE)',
-            'type' => 'url'
+            'type' => self::TYPE_URL
         ],
 
         'GeneralSupportEmail' => [
             'description' => 'General Ranger Email Address',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'JoiningRangerSpecialTeamsUrl' => [
             'description' => 'How To Join Ranger Special Teams Document URL',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'MealDates' => [
             'description' => 'Commissary dates and hours',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'MealInfoAvailable' => [
             'description' => 'True if meal information is available.',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'MentorEmail' => [
             'description' => 'Mentor Cadre email. Shown to Alphas when suggesting contacting the cadre.',
-            'type' => 'email'
+            'type' => self::TYPE_EMAIL
         ],
 
         'MotorpoolPolicyEnable' => [
             'description' => 'Enable Motorpool Policy Page',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
          'OnboardAlphaShiftPrepLink' => [
             'description' => 'Used by the Onboarding Checklist for PNVs. Link to how to prep for your Alpha Shift in the Ranger Manual',
-            'type' => 'string'
+            'type' => self::TYPE_STRING
         ],
 
         'OnlineTrainingEnabled' => [
             'description' => 'Enable online training link',
-            'type' => 'bool'
+            'type' => self::TYPE_BOOL
         ],
 
         'OnlineTrainingUrl' => [
             'description' => 'Online Training Url',
-            'type' => 'string'
+            'type' => self::TYPE_STRING
         ],
 
         'OnlineTrainingDisabledAllowSignups' => [
             'description' => 'Enable shift signups even if Online Training is disabled',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'MoodleDomain' => [
             'description' => 'The LMS domain name',
-            'type' => 'string'
+            'type' => self::TYPE_STRING
         ],
 
         'MoodleClientId' => [
             'description' => 'Moodle Client ID/username - used to manage users and query course completion',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'MoodleClientSecret' => [
             'description' => 'Moodle Client Secret/password - used to manage users and query course completion',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
          'MoodleHalfCourseId' => [
             'description' => 'Moodle training course ID for active Rangers (2+ years)',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'MoodleFullCourseId' => [
             'description' => 'Moodle half training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'MoodleServiceName' => [
             'description' => 'Moodle ervice name to use',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'MoodleStudentRoleID' => [
             'description' => 'The LMS (Moodle) role id to assign to new users (usually student)',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'PersonnelEmail' => [
             'description' => 'Ranger Personnel Email Address',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'PhotoAnalysisEnabled' => [
             'description' => 'Run all uploaded photos through AWS Rekognition face detection',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'PhotoRekognitionAccessKey' => [
             'description' => 'AWS Rekognition Access Key used for BMID photo analysis',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true
         ],
 
         'PhotoRekognitionAccessSecret' => [
             'description' => 'AWS Rekognition Secret Key used for BMID photo analysis',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true
         ],
 
         'PhotoPendingNotifyEmail' => [
             'description' => 'Email(s) to notify when photos are queued up for review. (nightly mail)',
-            'type' => 'email'
+            'type' => self::TYPE_EMAIL
         ],
 
         'PhotoUploadEnable' => [
             'description' => 'Enable Photo Uploading',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'RadioCheckoutAgreementEnabled' => [
             'description' => 'Allows the Radio Checkout Agreement to be signed',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'RadioInfoAvailable' => [
             'description' => 'True if radio information has been uploaded.',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'RangerFeedbackFormUrl' => [
             'description' => 'Ranger Feedback Form URL',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'RangerManualUrl' => [
             'description' => 'The current Ranger Manual document',
-            'type' => 'string'
+            'type' => self::TYPE_STRING
         ],
 
         'RangerPoliciesUrl' => [
             'description' => 'Ranger Policy Document URL',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'RpTicketThreshold' => [
             'description' => 'Credit threshold for a reduced price ticket. Shown on the Schedule and Ticket announce pages',
-            'type' => 'float',
+            'type' => self::TYPE_FLOAT,
         ],
 
         'SFEnableWritebacks' => [
             'description' => 'Enable Salesforce Object Update',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'SFprdAuthUrl' => [
             'description' => 'Salesforce Production Authentication URL',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'SFprdClientId' => [
             'description' => 'Salesforce Production Client ID',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'SFprdClientSecret' => [
             'description' => 'Salesforce Production Client Secret',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'SFprdPassword' => [
             'description' => 'Salesforce Production Password (login password + security token)',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'SFprdUsername' => [
             'description' => 'Salesforce Production Username',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'ScTicketThreshold' => [
             'description' => 'Credit threshold for staff credential. Shown on the Schedule and Ticket announce pages',
-            'type' => 'float',
+            'type' => self::TYPE_FLOAT,
         ],
 
         'SendWelcomeEmail' => [
             'description' => 'Enable Welcome email when an account is created',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'ShiftSignupFromEmail' => [
             'description' => 'From email  address for shift sign up messages',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'ShirtLongSleeveHoursThreshold' => [
             'description' => 'Hour threshold to earn a long sleeve shirt',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'ShirtShortSleeveHoursThreshold' => [
             'description' => 'Hour threshold to earn a short sleeve shirt/t-shirt',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'ShowerPogThreshold' => [
             'description' => 'Hour threshold to earn a shower pog to The Wet Spot',
-            'type' => 'integer'
+            'type' => self::TYPE_INTEGER
         ],
 
         'ShowerAccessThreshold' => [
             'description' => 'Hour threshold to earn shower access for the next event',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'TAS_Alpha_FAQ' => [
             'description' => 'Alpha WAP FAQ Link',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_BoxOfficeOpenDate' => [
             'description' => 'Playa Box Office Opening date and time',
-            'type' => 'datetime',
+            'type' => self::TYPE_DATETIME,
         ],
 
         'TAS_DefaultAlphaWAPDate' => [
             'description' => 'Default Alpha WAP Access Date',
-            'type' => 'date',
+            'type' => self::TYPE_DATE,
         ],
 
         'TAS_DefaultSOWAPDate' => [
             'description' => 'Default WAP SO Access Date',
-            'type' => 'date',
+            'type' => self::TYPE_DATE,
         ],
 
         'TAS_DefaultWAPDate' => [
             'description' => 'Default WAP Access Date',
-            'type' => 'date',
+            'type' => self::TYPE_DATE,
         ],
 
         'TAS_Delivery' => [
             'description' => 'Ticket Delivery View',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['none', 'not available yet'],
                 ['view', 'ticket announcement'],
@@ -363,27 +384,27 @@ class Setting extends ApiModel
 
         'TAS_Email' => [
             'description' => 'Ranger Ticketing Support Email',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'TAS_Pickup_Locations' => [
             'description' => 'Locations w/hours to pickup staff credentials and will-call items. Shown on the ticketing page',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_SubmitDate' => [
             'description' => 'Ticketing Submission Deadline',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_Ticket_FAQ' => [
             'description' => 'Ticketing FAQ Link',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_Tickets' => [
             'description' => 'Event Ticket Mode',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['none', 'not available yet'],
                 ['view', 'ticket announcement'],
@@ -394,7 +415,7 @@ class Setting extends ApiModel
 
         'TAS_VP' => [
             'description' => 'Vehicle Pass Mode',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['none', 'not available yet'],
                 ['view', 'ticket announcement'],
@@ -405,12 +426,12 @@ class Setting extends ApiModel
 
         'TAS_VP_FAQ' => [
             'description' => 'Vehicle Pass FAQ Link',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_WAP' => [
             'description' => 'Work Access Pass Mode',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['none', 'not available yet'],
                 ['view', 'ticket announcement'],
@@ -421,12 +442,12 @@ class Setting extends ApiModel
 
         'TAS_WAPDateRange' => [
             'description' => 'WAP allowable date range. Format: MM/DD-MM/DD',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TAS_WAPSO' => [
             'description' => 'WAP SO Mode',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['none', 'not available yet'],
                 ['view', 'ticket announcement'],
@@ -437,33 +458,33 @@ class Setting extends ApiModel
 
         'TAS_WAPSOMax' => [
             'description' => 'Max. WAP SO Count',
-            'type' => 'integer',
+            'type' => self::TYPE_INTEGER,
         ],
 
         'TAS_WAP_FAQ' => [
             'description' => 'WAP FAQ Link',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'ThankYouCardsHash' => [
             'description' => 'Thank You card page password. SHA-256 encoded.',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'TicketVendorEmail' => [
             'description' => 'Ticketing Vendor Support Email',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'TicketVendorName' => [
             'description' => 'Ticketing Vendor Name',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'TicketingPeriod' => [
             'description' => 'Ticketing Period / Season',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'options' => [
                 ['offseason', 'off season - show banked tickets'],
                 ['announce', 'announce - tickets have been awarded but ticketing window is not open'],
@@ -474,62 +495,71 @@ class Setting extends ApiModel
 
         'TicketsAndStuffEnablePNV' => [
             'description' => 'Enable Ticketing Page for PNVs',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'TimesheetCorrectionEnable' => [
             'description' => 'Allow users to submit Timesheet Corrections',
-            'type' => 'bool',
+            'type' => self::TYPE_BOOL,
         ],
 
         'TrainingAcademyEmail' => [
             'description' => 'Training Academy Email',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'TrainingSignupFromEmail' => [
             'description' => 'From email address for training sign up messages',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'TwilioAccountSID' => [
             'description' => 'Twilio Account SID',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'TwilioAuthToken' => [
             'description' => 'Twilio Authentication Token',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'TwilioServiceId' => [
             'description' => 'Twilio Service ID of SMS Channel',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
 
         'TwilioStatusCallbackUrl' => [
             'description' => 'Twilio Status Callback URL (not implemented currently)',
-            'type' => 'string',
+            'type' => self::TYPE_STRING,
         ],
 
         'VCEmail' => [
             'description' => 'Ranger Volunteer Coordinator Address',
-            'type' => 'email',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'VehiclePendingEmail' => [
             'description' => 'Email(s) to notify when vehicle requests are queued up for review. (nightly mail)',
-            'type' => 'email'
+            'type' => self::TYPE_EMAIL
         ],
 
         'LoginManageOnPlayaEnabled' => [
             'description' => 'Enables Login Manage On Playa role AND allows LM Year Round to view Emergency Contact Info plus read Clubhouse Messages',
-            'type' => 'bool'
+            'type' => self::TYPE_BOOL
         ]
     ];
+
+    public  function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        if (isset($this->name) && !isset($this->value) && isset(self::DESCRIPTIONS[$this->name]['default'])) {
+            $this->value = self::DESCRIPTIONS[$this->name]['default'];
+        }
+    }
 
     /*
      * Find a setting. Must be defined in the DESCRIPTIONS table
@@ -583,10 +613,22 @@ class Setting extends ApiModel
                     throw new \InvalidArgumentException("'$setting' is an unknown setting.");
                 }
 
+                if (isset(self::$cache[$setting])) {
+                    $settings[$setting] = self::$cache[$setting];
+                } else {
+                    if ($row) {
+                        $value = self::castValue($desc['type'], $row->value);
+                    } else if (isset($desc['default'])) {
+                        $value = self::castValue($desc['type'], $desc['default']);
+                    } else {
+                        $value = null;
+                    }
 
-                $settings[$setting] = $row ? self::castValue($desc['type'], $row->value) : null;
-                if ($throwOnEmpty && self::notEmpty($settings[$setting])) {
-                    throw new \RuntimeException("Setting '$setting' is empty.");
+                    if ($throwOnEmpty && self::notEmpty($settings[$setting])) {
+                        throw new \RuntimeException("Setting '$setting' is empty.");
+                    }
+                    $settings[$setting] = $value;
+                    self::$cache[$setting] = $value;
                 }
             }
 
@@ -602,8 +644,13 @@ class Setting extends ApiModel
             }
 
             $row = self::select('value')->where('name', $name)->first();
-
-            $value = $row ? self::castValue($desc['type'], $row->value) : null;
+            if ($row) {
+                $value = self::castValue($desc['type'], $row->value);
+            } else if (isset($desc['default'])) {
+                $value = self::castValue($desc['type'], $desc['default']);
+            } else {
+                $value = null;
+            }
             if ($throwOnEmpty && self::notEmpty($value)) {
                 throw new \RuntimeException("Setting '$name' is empty.");
             }
@@ -616,11 +663,11 @@ class Setting extends ApiModel
     {
         // Convert the values
         switch ($type) {
-            case 'bool':
+            case self::TYPE_BOOL:
                 return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            case 'integer':
+            case self::TYPE_INTEGER:
                 return (int)$value;
-            case 'float':
+            case self::TYPE_FLOAT:
                 return (float) $value;
             default:
                 return $value;

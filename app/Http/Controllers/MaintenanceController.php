@@ -6,18 +6,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\DB;
 
-use App\Models\ActionLog;
-use App\Models\Broadcast;
-use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonPosition;
-use App\Models\PersonStatus;
-use App\Models\PersonPhoto;
 use App\Models\Position;
-use App\Models\Role;
-
-use App\Mail\DailyReportMail;
-use App\Mail\PhotoPendingMail;
 
 use RuntimeException;
 

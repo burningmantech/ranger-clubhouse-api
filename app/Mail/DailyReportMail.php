@@ -11,24 +11,19 @@ class DailyReportMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $failedBroadcasts;
-    public $errorLogs;
-    public $roleLogs;
-    public $statusLogs;
-    public $settings;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings)
+    public function __construct(
+        public $failedBroadcasts,
+        public $errorLogs,
+        public $roleLogs,
+        public $statusLogs,
+        public $settings,
+        public $dashboardPeriod)
     {
-        $this->failedBroadcasts = $failedBroadcasts;
-        $this->errorLogs = $errorLogs;
-        $this->roleLogs = $roleLogs;
-        $this->statusLogs = $statusLogs;
-        $this->settings = $settings;
     }
 
     /**
