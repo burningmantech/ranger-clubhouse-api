@@ -9,19 +9,30 @@
     <table class="table" style="width: auto">
         <tbody>
         <tr>
-            <td  style="width: 20%">Online Training</td>
+            <td style="width: 20%">Dashboard Period</td>
             <td>
-                {!! ($settings['OnlineTrainingEnabled'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                {!! ($settings['DashboardPeriod'] != 'auto') ? $dashboardPeriod : "<b style='color: red'>FORCED: {$settings['DashboardPeriod']}</b>" !!}
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 20%">Online Training</td>
+            <td>
+                @if ($dashboardPeriod == 'after-event')
+                    {!!($settings['OnlineTrainingEnabled'] ?? false) ? 'Enabled' : 'DISABLED'  !!}
+                    (ok for After Event period)
+                @else
+                    {!! ($settings['OnlineTrainingEnabled'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                @endif
             </td>
         </tr>
         <tr>
             <td style="width: 20%">Photo Uploading</td>
             <td>
-              {!! ($settings['PhotoUploadEnable'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                {!! ($settings['PhotoUploadEnable'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
             </td>
         </tr>
         <tr>
-            <td  style="width: 20%">Signups without OT</td>
+            <td style="width: 20%">Signups without OT</td>
             <td>
                 {!! ($settings['OnlineTrainingDisabledAllowSignups'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal)' !!}
             </td>
@@ -79,13 +90,13 @@
             </tbody>
         </table>
     @else
-        <b class="color: green">Congratulations! No error logs were recorded.</b>
+        <span class="color: green">No error logs were recorded.</span>
     @endif
 
 
     <h3>Failed Broadcasts ({{count($failedBroadcasts)}})</h3>
     @if (count($failedBroadcasts) == 0)
-        <b class="color: green">No broadcast failures.</b>
+        <b style="color: green">No broadcast failures.</b>
     @else
         <table class="table table-sm table-striped">
             <thead>
@@ -134,7 +145,7 @@
     <h3>Role Changes ({{count($roleLogs)}})</h3>
 
     @if (count($roleLogs) == 0)
-        <b class="color: green">No role changes happened.</b>
+        <span class="color: green">No role changes happened.</span>
     @else
         <table class="table table-sm table-striped">
             <thead>
@@ -142,8 +153,7 @@
                 <th>Timestamp</th>
                 <th>Callsign</th>
                 <th>Source</th>
-                <th>Roles Added</th>
-                <th>Roles Removed</th>
+                <th>Roles</th>
                 <th>Reason</th>
             </tr>
             </thead>
@@ -163,16 +173,10 @@
                     </td>
                     <td>
                         @if ($log->event == 'person-role-add')
-                            {{$log->roles->implode('title', ', ')}}
-                        @else
-                            -
+                            <div>ADDED: {{$log->roles->implode('title', ', ')}}</div>
                         @endif
-                    </td>
-                    <td>
-                        @if ($log->event != 'person-role-add')
-                            {{$log->roles->implode('title', ', ')}}
-                        @else
-                            -
+                        @if ($log->event != 'person-role-remove')
+                            <div>REMOVED: {{$log->roles->implode('title', ', ')}}</div>
                         @endif
                     </td>
                     <td>{{$log->message}}</td>
@@ -183,7 +187,7 @@
 
     <h3>Status Changes ({{count($statusLogs)}})</h3>
     @if (count($statusLogs) == 0)
-        <b>No status changes happened.</b>
+        <span>No status changes happened.</span>
     @else
         <table class="table table-sm table-striped">
             <thead>

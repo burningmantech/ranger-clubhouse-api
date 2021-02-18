@@ -7,11 +7,10 @@ use App\Mail\DailyReportMail;
 use App\Models\ActionLog;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
+use App\Models\EventDate;
 use App\Models\PersonStatus;
-use App\Models\TaskLog;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class ClubhouseDailyReportCommand extends Command
 {
@@ -30,16 +29,6 @@ class ClubhouseDailyReportCommand extends Command
     protected $description = 'Build and email the daily report';
 
     /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
      * Execute the console command.
      *
      * @return mixed
@@ -49,17 +38,28 @@ class ClubhouseDailyReportCommand extends Command
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
         $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 20])['error_logs'];
 
-        $roleLogs = ActionLog::findForQuery(['lastday' => 'true', 'page_size' => 1000, 'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
-        $statusLogs = PersonStatus::whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)',[now()])->with(['person:id,callsign', 'person_source:id,callsign'])->get();
+        $roleLogs = ActionLog::findForQuery([
+            'lastday' => 'true',
+            'page_size' => 1000,
+            'events' => ['person-role-add', 'person-role-remove']], false)['action_logs'];
+
+        $statusLogs = PersonStatus::whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)', [now()])
+            ->with(['person:id,callsign', 'person_source:id,callsign'])
+            ->get();
 
         $settings = setting([
             'OnlineTrainingEnabled',
             'OnlineTrainingDisabledAllowSignups',
             'PhotoUploadEnable',
             'TicketingPeriod',
-            'TimesheetCorrectionEnable'
+            'TimesheetCorrectionEnable',
+            'DashboardPeriod',
         ]);
 
-        mail_to(setting('DailyReportEmail'), new DailyReportMail($failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings));
+        mail_to(setting('DailyReportEmail'), new DailyReportMail(
+            $failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings, EventDate::calculatePeriod()
+        ));
+
+        return true;
     }
 }

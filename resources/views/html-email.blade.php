@@ -115,14 +115,14 @@
     h4 {
       color: #000000;
       font-family: sans-serif;
-      font-weight: 400;
+      font-weight: 500;
       line-height: 1.4;
       margin: 10px 0;
     }
 
     h1 {
       font-size: 35px;
-      font-weight: 300;
+      font-weight: 500;
       text-align: center;
       text-transform: capitalize;
     }

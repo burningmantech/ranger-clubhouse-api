@@ -59,7 +59,7 @@ class EventDate extends ApiModel
     }
 
     /**
-     * Calculate what the event period is for the dashboard
+     * Calculate what the event period is for the dashboard.
      *
      * - before-event: March 1st til gate opening
      * - event: gate opening til Saturday @ noon after Labor Day.
@@ -67,8 +67,13 @@ class EventDate extends ApiModel
      *
      * @return string
      */
-    public static function calculatePeriod()
+    public static function calculatePeriod() : string
     {
+        $periodSetting = setting('DashboardPeriod');
+        if (!empty($periodSetting) && $periodSetting != 'auto') {
+            return $periodSetting;
+        }
+
         $now = now();
         if ($now->month < 3) {
             return self::AFTER_EVENT;
