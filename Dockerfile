@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM burningman/php-nginx:8.0.2-alpine3.12 as php
+FROM burningman/php-nginx:8.0.3-alpine3.12 as php
 
 RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev libxml2 libpng libjpeg-turbo libwebp mysql-client \
     && docker-php-ext-configure gd \
