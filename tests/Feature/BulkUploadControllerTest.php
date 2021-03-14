@@ -705,8 +705,7 @@ class BulkUploadControllerTest extends TestCase
             'person_id' => $personId,
             'source_year' => $year,
             'type' => AccessDocument::EVENT_RADIO,
-            'item_count' => 1,
+            'item_count' => 2,
         ]);
-
     }
 }
