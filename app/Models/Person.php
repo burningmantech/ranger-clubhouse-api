@@ -558,11 +558,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             $orderBy = "CASE";
             if ($emailOnly) {
-                $orderBy .= " WHEN email=" . SqlHelper::quote($q) . " THEN CONCAT('00', callsign)";
+                $orderBy .= " WHEN email=" . SqlHelper::quote($q) . " THEN CONCAT('01', callsign)";
+                $orderBy .= " WHEN email like " . SqlHelper::quote($q . '%') . " THEN CONCAT('02', callsign)";
                 $orderBy .= " WHEN email like " . SqlHelper::quote($likeQuery) . " THEN CONCAT('03', callsign)";
+            } else {
+                $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
+                $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
+                $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('03', callsign)";
             }
-            $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
-            $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('02', callsign)";
             $orderBy .= " ELSE callsign END";
 
             $sql->orderBy(DB::raw($orderBy));
