@@ -3,12 +3,12 @@
 namespace App\Models;
 
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\ApiModel;
 
-use App\Models\AccessDocumentDelivery;
 use App\Models\Person;
 
 use Carbon\Carbon;
@@ -35,6 +35,12 @@ class AccessDocument extends ApiModel
     const WAP = 'work_access_pass';
     const WAPSO = 'work_access_pass_so';
 
+    const ALL_YOU_CAN_EAT = 'all_you_can_eat';
+    const EVENT_RADIO = 'event_radio';
+    const WET_SPOT = 'wet_spot';
+    const WET_SPOT_POG = 'wet_spot_pog'; // unused currently, might be used someday by the HQ Window Interface
+
+
     const ACTIVE_STATUSES = [
         self::QUALIFIED,
         self::CLAIMED,
@@ -53,6 +59,25 @@ class AccessDocument extends ApiModel
         self::GIFT
     ];
 
+    const APPRECIATION_TYPES = [
+        self::ALL_YOU_CAN_EAT,
+        self::WET_SPOT,
+        self::EVENT_RADIO
+    ];
+
+    const HAS_ACCESS_DATE_TYPES = [
+        self::STAFF_CREDENTIAL,
+        self::WAP,
+        self::WAPSO
+    ];
+
+    const EXPIRE_THIS_YEAR_TYPES = [
+        self::WAP,
+        self::WAPSO,
+        self::VEHICLE_PASS,
+        self::EVENT_RADIO
+    ];
+
     protected $fillable = [
         'person_id',
         'type',
@@ -61,11 +86,18 @@ class AccessDocument extends ApiModel
         'access_date',
         'access_any_time',
         'name',
+        'item_count',
         'comments',
         'expiry_date',
-//        'create_date', set by model
         'modified_date',
         'additional_comments',
+        'delivery_method',
+        'street1',
+        'street2',
+        'city',
+        'state',
+        'postal_code',
+        'country'
     ];
 
     protected $casts = [
@@ -74,11 +106,12 @@ class AccessDocument extends ApiModel
         'create_date' => 'datetime',
         'modified_date' => 'datetime',
         'past_expire_date' => 'boolean',
+        'access_any_time' => 'boolean'
     ];
 
     protected $hidden = [
         'person',
-        'additional_comments'   // pseudo-column, write-only. used to append to comments.
+        'additional_comments',   // pseudo-column, write-only. used to append to comments.
     ];
 
     protected $appends = [
@@ -91,25 +124,29 @@ class AccessDocument extends ApiModel
         parent::boot();
 
         self::saving(function ($model) {
-            // TODO - adjust access_document schema to default to current timestamp
-            if ($model->create_date == null) {
+            if (empty($model->item_count)) {
+                $model->item_count = 0;
+            }
+
+            if (empty($model->create_date)) {
                 $model->create_date = now();
             }
 
-            // Certain things always expire this year
-            if (in_array($model->type, [self::WAP, self::WAPSO, self::VEHICLE_PASS])) {
-                $model->expiry_date = current_year();
+            if (in_array($model->type, self::EXPIRE_THIS_YEAR_TYPES)) {
+                $year = current_year();
+                // Certain things always expire this year
+                if (!$model->expiry_date || Carbon::parse($model->expiry_date)->year > $year) {
+                    $model->expiry_date = $year;
+                }
             }
 
-            // Only SO WAPs can have names
+            // Only WAP SOs can have names
             if ($model->type != self::WAPSO) {
                 $model->name = null;
             }
 
             // Only SCs and WAPs have access dates
-            if ($model->type != self::STAFF_CREDENTIAL &&
-                $model->type != self::WAP &&
-                $model->type != self::WAPSO) {
+            if (!in_array($model->type, self::HAS_ACCESS_DATE_TYPES)) {
                 $model->access_date = null;
                 $model->access_any_time = false;
             }
@@ -137,17 +174,22 @@ class AccessDocument extends ApiModel
         $status = $query['status'] ?? null;
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
+        $type = $query['type'] ?? null;
 
         if ($status != 'all') {
-            if (!$status) {
+            if (empty($status)) {
                 $sql->whereNotIn('status', self::INVALID_STATUSES);
             } else {
-                $sql = $sql->whereIn('status', explode(',', $status));
+                $sql->whereIn('status', is_array($status) ? $status : explode(',', $status));
             }
         }
 
         if ($personId) {
             $sql->where('person_id', $personId);
+        }
+
+        if ($type) {
+            $sql->whereIn('type', is_array($type) ? $type : explode(',', $type));
         }
 
         if ($year) {
@@ -160,103 +202,43 @@ class AccessDocument extends ApiModel
     /**
      * Build up a ticketing package for the person
      *
-     * @param $personId
+     * @param int $personId
      * @return array
      */
 
-    public static function buildPackageForPerson($personId)
+    public static function buildPackageForPerson(int $personId): array
     {
-        $period = setting('TicketingPeriod');
-        $rows = self::findForQuery(['person_id' => $personId]);
-
-        // Filter for the tickets
-        $filtered = $rows->whereIn('type', self::TICKET_TYPES);
-
-        $tickets = [];
-        $chosen = null;
-        foreach ($filtered as $row) {
-            $ticket = (object)[
-                'id' => $row->id,
-                'type' => $row->type,
-                'status' => $row->status,
-                'source_year' => $row->source_year,
-                'expiry_date' => (string)$row->expiry_date,
-                'access_any_time' => $row->access_any_time,
-                'access_date' => (string)$row->access_date,
-            ];
-
-            $tickets[] = $ticket;
-
-            if ($row->status == self::CLAIMED) {
-                $chosen = $ticket;
-            } elseif ($chosen == null ||
-                ($chosen->status != self::CLAIMED && $chosen->source_year > $row->source_year)) {
-                $chosen = $ticket;
-            }
-        }
-
-        if ($chosen) {
-            $chosen->selected = 1;
-        }
-
-        $row = $rows->firstWhere('type', self::VEHICLE_PASS);
-        if ($row) {
-            $vp = [
-                'id' => $row->id,
-                'type' => $row->type,
-                'status' => $row->status,
-            ];
-        } else {
-            $vp = null;
-        }
-
-        $row = $rows->firstWhere('type', self::WAP);
-        if ($row) {
-            $wap = [
-                'id' => $row->id,
-                'type' => $row->type,
-                'status' => $row->status,
-                'access_any_time' => $row->access_any_time,
-                'access_date' => (string)$row->access_date,
-            ];
-        } else {
-            $wap = null;
-        }
-
-        $wapso = $rows->where('type', self::WAPSO)->map(function ($so) {
-            return self::buildSOWAPEntry($so);
-        })->values()->all();
-
         $year = event_year() - 1;
-        $credits = Timesheet::earnedCreditsForYear($personId, $year);
-
-        $package = [
-            'tickets' => $tickets,
-            'vehicle_pass' => $vp,
-            'wap' => $wap,
-            'wapso' => $wapso,
-            'year_earned' => $year,
-            'credits_earned' => $credits,
-        ];
-
-        if ($period == 'open' || $period == 'closed') {
-            $row = AccessDocumentDelivery::findForPersonYear($personId, current_year());
-
-            if ($row) {
-                $package['delivery'] = [
-                    'method' => $row->method,
-                    'street' => $row->street,
-                    'city' => $row->city,
-                    'state' => $row->state,
-                    'postal_code' => $row->postal_code,
-                    'country' => $row->country,
-                ];
-            } else {
-                $package['delivery'] = ['method' => 'none'];
-            }
+        if ($year == 2020) {
+            // 2020 didn't happen. :-(
+            $year = 2019;
         }
 
-        return $package;
+        return [
+            'access_documents' => self::findForQuery(['person_id' => $personId]),
+            'delivery' => AccessDocumentDelivery::findForPersonYear($personId, current_year()),
+            'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
+            'year_earned' => $year,
+        ];
+    }
+
+    /**
+     * Find a document that is available (qualified, claimed, banked, submitted) for the given person
+     *
+     * @param int $personId
+     * @param string $type
+     * @return AccessDocument|null
+     */
+
+    public static function findAvailableTypeForPerson(int $personId, string $type)
+    {
+        return self::where(['person_id' => $personId, 'type' => $type])
+            ->whereIn('status', [
+                self::QUALIFIED,
+                self::CLAIMED,
+                self::BANKED,
+                self::SUBMITTED
+            ])->first();
     }
 
     /*
@@ -280,6 +262,8 @@ class AccessDocument extends ApiModel
             $sql = self::whereIn('status', self::ACTIVE_STATUSES);
         }
 
+        $sql->whereNotIn('type', self::APPRECIATION_TYPES);
+
         $rows = $sql->select(
             '*',
             DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
@@ -290,13 +274,6 @@ class AccessDocument extends ApiModel
 
         $people = [];
 
-        if ($forDelivery) {
-            $personIds = $rows->pluck('person_id')->unique()->toArray();
-            $deliveries = AccessDocumentDelivery::whereIn('person_id', $personIds)
-                ->where('year', $currentYear)
-                ->get()
-                ->keyBy('person_id');
-        }
 
         $dateRange = setting('TAS_WAPDateRange');
         if ($dateRange) {
@@ -304,6 +281,13 @@ class AccessDocument extends ApiModel
         } else {
             $low = 5;
             $high = 26;
+        }
+
+        if ($rows->isNotEmpty()) {
+            $deliveriesByPerson = AccessDocumentDelivery::whereIn('person_id', $rows->pluck('person_id'))
+                ->where('year', $currentYear)
+                ->get()
+                ->keyBy('person_id');
         }
 
         foreach ($rows as $row) {
@@ -324,6 +308,7 @@ class AccessDocument extends ApiModel
             $person = $people[$personId];
             $person->documents[] = $row;
 
+            $errors = [];
             switch ($row->type) {
                 case self::STAFF_CREDENTIAL:
                 case self::WAP:
@@ -331,16 +316,13 @@ class AccessDocument extends ApiModel
                     if (!$row->access_any_time) {
                         $accessDate = $row->access_date;
                         if (!$accessDate) {
-                            $row->has_error = true;
-                            $row->error = "missing access date";
+                            $errors[] = "missing access date";
                         } elseif ($accessDate->year < $currentYear) {
-                            $row->has_error = true;
-                            $row->error = "access date [$accessDate] is less than current year [$currentYear]";
+                            $errors[] = "access date [$accessDate] is less than current year [$currentYear]";
                         } else {
                             $day = $accessDate->day;
                             if ($day < $low || $day > $high) {
-                                $row->has_error = true;
-                                $row->error = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
+                                $errors[] = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
                             }
                         }
                     }
@@ -348,14 +330,14 @@ class AccessDocument extends ApiModel
             }
 
             if ($forDelivery) {
-                $delivery = $deliveries[$personId] ?? null;
-                $deliveryMethod = $delivery ? $delivery->method : 'will_call';
+                $delivery = $deliveriesByPerson->get($row->person_id);
+                $deliveryMethod = $delivery ? $delivery->method : 'unknown';
                 $person->delivery_method = $deliveryMethod;
-                $deliveryType = "UNKNOWN";
+                $deliveryType = 'unknown';
 
                 switch ($row->type) {
                     case self::STAFF_CREDENTIAL:
-                        $deliveryType = 'staff_credentialing';
+                        $deliveryType = AccessDocumentDelivery::STAFF_CREDENTIALING;
                         break;
 
                     case self::WAP:
@@ -365,29 +347,43 @@ class AccessDocument extends ApiModel
 
                     case self::RPT:
                         $deliveryType = $deliveryMethod;
+                        if ($deliveryMethod == 'unknown') {
+                            $errors[] = 'missing delivery method';
+                        }
                         break;
 
                     case self::VEHICLE_PASS:
                     case self::GIFT:
                         if ($row->type == self::VEHICLE_PASS && $row->has_staff_credential) {
-                            $deliveryType = 'staff_credentialing';
-                        } else if ($deliveryMethod == 'mail') {
-                            $row->delivery_address = [
-                                'street' => $delivery->street,
-                                'city' => $delivery->city,
-                                'state' => $delivery->state,
-                                'postal_code' => $delivery->postal_code,
-                                'country' => 'US',
-                                'phone' => $row->person->home_phone,
-                            ];
-                            $deliveryType = 'mail';
+                            $deliveryType = AccessDocumentDelivery::STAFF_CREDENTIALING;
+                        } else if ($deliveryMethod == 'unknown') {
+                            $errors[] = 'missing delivery method';
+                        } else if ($deliveryMethod == AccessDocumentDelivery::MAIL) {
+                            if ($delivery->hasAddress()) {
+                                $row->delivery_address = [
+                                    'street' => $delivery->street,
+                                    'city' => $delivery->city,
+                                    'state' => $delivery->state,
+                                    'postal_code' => $delivery->postal_code,
+                                    'country' => 'US',
+                                    'phone' => $row->person->home_phone,
+                                ];
+                            } else {
+                                $errors[] = 'missing mailing address';
+                            }
+                            $deliveryType = AccessDocumentDelivery::MAIL;
                         } else {
-                            $deliveryType = 'will_call';
+                            $deliveryType = AccessDocumentDelivery::WILL_CALL;
                         }
                         break;
                 }
 
                 $row->delivery_type = $deliveryType;
+            }
+
+            if (!empty($errors)) {
+                $row->error = implode(';', $errors);
+                $row->has_error = true;
             }
         }
 
@@ -441,21 +437,19 @@ class AccessDocument extends ApiModel
         }
 
         $people = array_values($peopleByIds);
-        usort(
-            $people,
-            function ($a, $b) {
-                return strcasecmp($a['person']->callsign, $b['person']->callsign);
-            }
-        );
+        usort($people, fn ($a, $b) => strcasecmp($a['person']->callsign, $b['person']->callsign));
 
         return $people;
     }
 
-    /*
-     * Find the work access pass for a person
+    /**
+     * Find a candidate WAP for a person
+     *
+     * @param int $personId
+     * @return AccessDocument|null
      */
 
-    public static function findWAPForPerson($personId)
+    public static function findWAPForPerson(int $personId)
     {
         $rows = self::where('person_id', $personId)
             ->whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
@@ -501,7 +495,7 @@ class AccessDocument extends ApiModel
                     $wap = $row;
                     break;
                 }
-                if ($wap == null || $row->access_date == null) {
+                if ($wap == null || $wap->access_date == null) {
                     $wap = $row;
                 } else if ($wap->access_date == null) {
                     continue;
@@ -517,11 +511,15 @@ class AccessDocument extends ApiModel
     }
 
     /**
+     * Update all non-submitted WAP & Staff Credentials with new access date
      *
-     * Update all non-submitted WAPs for a person
+     * @param int $personId
+     * @param Carbon|string|null $accessDate
+     * @param bool $accessAnyTime
+     * @param string $reason
      */
-
-    public static function updateWAPsForPerson($personId, $accessDate, $accessAnyTime)
+    public static function updateWAPsForPerson(int $personId, Carbon|string|null $accessDate,
+                                               bool $accessAnyTime, string $reason)
     {
         if (empty($accessDate)) {
             $accessDate = null;
@@ -532,14 +530,14 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
             ->get();
 
-        $user = Auth::user();
-        $userId = $user ? $user->id : 0;
-
+        $userId = Auth::id();
         foreach ($rows as $row) {
             $row->access_date = $accessDate;
             $row->access_any_time = $accessAnyTime;
+            $row->auditReason = $reason;
             $changes = $row->getChangedValues();
             $row->saveWithoutValidation();
+
             if (!empty($changes)) {
                 AccessDocumentChanges::log($row, $userId, $changes);
             }
@@ -547,14 +545,13 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     *
      * Find all the Significant Other WAPs for a person and year
      *
-     * @param integer $personId person to find
-     * @param integer $year year to search
+     * @param int $personId person to find
+     * @return AccessDocument[]|Collection
      */
 
-    public static function findSOWAPsForPerson($personId, $year)
+    public static function findSOWAPsForPerson(int $personId)
     {
         return self::where('type', self::WAPSO)
             ->where('person_id', $personId)
@@ -565,11 +562,10 @@ class AccessDocument extends ApiModel
     /**
      * Count how many (current) Significant Other WAP's for a person & year
      *
-     * @param integer $personId person to find
-     * @param integer $year year to search
+     * @param int $personId person to find
      */
 
-    public static function SOWAPCount($personId, $year)
+    public static function SOWAPCount(int $personId)
     {
         return self::where('person_id', $personId)
             ->where('type', self::WAPSO)
@@ -645,7 +641,7 @@ class AccessDocument extends ApiModel
 
     public function setAccessDateAttribute($date)
     {
-        $this->attributes['access_date'] = empty($date) ? NULL : $date;
+        $this->attributes['access_date'] = empty($date) ? null : $date;
     }
 
     /*
@@ -701,18 +697,4 @@ class AccessDocument extends ApiModel
     {
         return in_array($this->type, self::TICKET_TYPES);
     }
-
-
-    public static function buildSOWAPEntry($row)
-    {
-        return [
-            'id' => $row->id,
-            'type' => $row->type,
-            'status' => $row->status,
-            'name' => $row->name,
-            'access_date' => (string)$row->access_date,
-            'access_any_time' => $row->access_any_time,
-        ];
-    }
-
 }

@@ -3,26 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccessDocumentDelivery;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
+use Illuminate\Http\Response;
 
 class AccessDocumentDeliveryController extends ApiController
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
     public function index()
     {
         $query = request()->validate([
-            'year'      => 'sometimes|digits:4',
+            'year' => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
-            ]);
+        ]);
 
         $personId = empty($query['person_id']) ? null : $query['person_id'];
 
-        $this->authorize('index', [ AccessDocumentDelivery::class, $personId ]);
+        $this->authorize('index', [AccessDocumentDelivery::class, $personId]);
 
         $rows = AccessDocumentDelivery::findForQuery($query);
 
@@ -33,27 +37,35 @@ class AccessDocumentDeliveryController extends ApiController
      * Show a single Access Document Delivery
      *
      * @param AccessDocumentDelivery $add
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
     public function show(AccessDocumentDelivery $add)
-   {
-       $this->authorize('show', $add);
+    {
+        $this->authorize('show', $add);
 
-       return $this->success($add);
-   }
+        return $this->success($add);
+    }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a new Access Document Delivery OR allow an update to an existing one.
+     * (slight bit of a hack to support the frontend)
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return JsonResponse
      */
-    public function store(Request $request)
+    public function store()
     {
-        $this->authorize('create', AccessDocumentDelivery::class);
+        $params = request()->validate([
+            'access_document_delivery.person_id' => 'required|integer',
+            'access_document_delivery.year' => 'required|integer'
+        ]);
+        $p = $params['access_document_delivery'];
+        $personId = $p['person_id'];
+        $year = $p['year'];
 
-        $add = new AccessDocumentDelivery;
+        $this->authorize('create', [AccessDocumentDelivery::class, $personId]);
+
+        $add = AccessDocumentDelivery::findOrNewForPersonYear($personId, $year);
         $this->fromRest($add);
 
         if ($add->save()) {
@@ -66,11 +78,10 @@ class AccessDocumentDeliveryController extends ApiController
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\AccessDocumentDelivery  $accessDocumentDelivery
-     * @return \Illuminate\Http\Response
+     * @param AccessDocumentDelivery $accessDocumentDelivery
+     * @return JsonResponse
      */
-    public function update(Request $request, AccessDocumentDelivery $add)
+    public function update(AccessDocumentDelivery $add)
     {
         $this->authorize('update', $add);
         $this->fromRest($add);
@@ -86,8 +97,8 @@ class AccessDocumentDeliveryController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\AccessDocumentDelivery  $accessDocumentDelivery
-     * @return \Illuminate\Http\Response
+     * @param AccessDocumentDelivery $accessDocumentDelivery
+     * @return Response
      */
     public function destroy(AccessDocumentDelivery $add)
     {

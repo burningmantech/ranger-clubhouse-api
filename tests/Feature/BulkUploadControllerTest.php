@@ -12,7 +12,6 @@ use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonPosition;
 use App\Models\PersonEvent;
-use App\Models\RadioEligible;
 
 class BulkUploadControllerTest extends TestCase
 {
@@ -22,7 +21,7 @@ class BulkUploadControllerTest extends TestCase
      * have each test have a fresh user that is logged in.
      */
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
         $this->signInUser();
@@ -36,16 +35,16 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonStatusWithUnknownCallsign()
     {
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'prospective',
-            'records'   => 'unknown-callsign',
-            'commit'    => true,
+            'action' => 'prospective',
+            'records' => 'unknown-callsign',
+            'commit' => true,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => 'unknown-callsign',
-                'status'    => 'callsign-not-found',
+                'callsign' => 'unknown-callsign',
+                'status' => 'callsign-not-found',
             ]
         ]]);
     }
@@ -57,9 +56,9 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdateEmptyRecord()
     {
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'prospective',
-            'records'   => "   \n\n\n",
-            'commit'    => true,
+            'action' => 'prospective',
+            'records' => "   \n\n\n",
+            'commit' => true,
         ]);
 
         $response->assertStatus(422);
@@ -72,19 +71,19 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonStatusWithoutCommit()
     {
         $person = Person::factory()->create([
-            'status'    => 'prospective'
+            'status' => 'prospective'
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'alpha',
-            'records'   => $person->callsign,
+            'action' => 'alpha',
+            'records' => $person->callsign,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $person->callsign,
-                'status'    => 'success'
+                'callsign' => $person->callsign,
+                'status' => 'success'
             ]
         ]]);
 
@@ -99,21 +98,21 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonStatusWithCommit()
     {
         $person = Person::factory()->create([
-            'status'    => 'prospective'
+            'status' => 'prospective'
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'alpha',
-            'records'   => $person->callsign,
-            'commit'    => true,
+            'action' => 'alpha',
+            'records' => $person->callsign,
+            'commit' => true,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $person->callsign,
-                'status'    => 'success',
-                'changes'    => [ 'prospective', 'alpha' ]
+                'callsign' => $person->callsign,
+                'status' => 'success',
+                'changes' => ['prospective', 'alpha']
             ]
         ]]);
 
@@ -132,7 +131,7 @@ class BulkUploadControllerTest extends TestCase
     public function testUpdatePersonStatusAlphaToActive()
     {
         $person = Person::factory()->create([
-            'status'    => 'alpha'
+            'status' => 'alpha'
         ]);
 
         PersonPosition::factory()->create([
@@ -141,17 +140,17 @@ class BulkUploadControllerTest extends TestCase
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'active',
-            'records'   => $person->callsign,
-            'commit'    => true,
+            'action' => 'active',
+            'records' => $person->callsign,
+            'commit' => true,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $person->callsign,
-                'status'    => 'success',
-                'changes'    => [ 'alpha', 'active' ]
+                'callsign' => $person->callsign,
+                'status' => 'success',
+                'changes' => ['alpha', 'active']
             ]
         ]]);
 
@@ -171,22 +170,22 @@ class BulkUploadControllerTest extends TestCase
     {
         $year = current_year();
         $person = Person::factory()->create([]);
-        $personEvent = PersonEvent::factory()->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
+        $personEvent = PersonEvent::factory()->create(['year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'org_vehicle_insurance',
-            'records'   => $person->callsign,
+            'action' => 'org_vehicle_insurance',
+            'records' => $person->callsign,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $person->callsign,
-                'status'    => 'success',
+                'callsign' => $person->callsign,
+                'status' => 'success',
             ]
         ]]);
 
-        $this->assertDatabaseHas('person_event', [ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
+        $this->assertDatabaseHas('person_event', ['year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
     }
 
     /*
@@ -197,27 +196,27 @@ class BulkUploadControllerTest extends TestCase
     {
         $year = current_year();
         $person = Person::factory()->create([]);
-        $personEvent = PersonEvent::factory()->create([ 'year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
+        $personEvent = PersonEvent::factory()->create(['year' => $year, 'person_id' => $person->id, 'org_vehicle_insurance' => false]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'org_vehicle_insurance',
-            'records'   => $person->callsign,
-            'commit'    => 1,
+            'action' => 'org_vehicle_insurance',
+            'records' => $person->callsign,
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $person->callsign,
-                'status'    => 'success',
-                'changes'    => [ 0, 1]
+                'callsign' => $person->callsign,
+                'status' => 'success',
+                'changes' => [0, 1]
             ]
         ]]);
 
         $this->assertDatabaseHas('person_event', [
             'year' => $year,
             'person_id' => $person->id,
-            'org_vehicle_insurance'     => 1
+            'org_vehicle_insurance' => 1
         ]);
     }
 
@@ -230,22 +229,28 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'showers',
-            'records'   => "{$callsign},1",
-            'commit'    => 1,
+            'action' => 'showers',
+            'records' => "{$callsign},1",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $callsign,
-                'status'    => 'success',
+                'callsign' => $callsign,
+                'status' => 'success',
             ]
         ]]);
 
         $this->assertDatabaseHas('bmid', [
             'person_id' => $this->user->id,
-            'showers'     => 1
+            'showers' => 1
+        ]);
+
+        $this->assertDatabaseHas('access_document', [
+            'person_id' => $this->user->id,
+            'type' => AccessDocument::WET_SPOT,
+            'status' => AccessDocument::CLAIMED
         ]);
     }
 
@@ -258,21 +263,21 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'showers',
-            'records'   => "{$callsign},1",
+            'action' => 'showers',
+            'records' => "{$callsign},1",
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $callsign,
-                'status'    => 'success',
+                'callsign' => $callsign,
+                'status' => 'success',
             ]
         ]]);
 
         $this->assertDatabaseMissing('bmid', [
             'person_id' => $this->user->id,
-            'showers'     => 1
+            'showers' => 1
         ]);
     }
 
@@ -286,27 +291,27 @@ class BulkUploadControllerTest extends TestCase
 
         Bmid::factory()->create([
             'person_id' => $this->user->id,
-            'year'      => date('Y'),
-            'showers'   => 1,
+            'year' => date('Y'),
+            'showers' => 1,
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'showers',
-            'records'   => "{$callsign},0",
-            'commit'    => 1,
+            'action' => 'showers',
+            'records' => "{$callsign},0",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $callsign,
-                'status'    => 'success',
+                'callsign' => $callsign,
+                'status' => 'success',
             ]
         ]]);
 
         $this->assertDatabaseHas('bmid', [
             'person_id' => $this->user->id,
-            'showers'     => 0
+            'showers' => 0
         ]);
     }
 
@@ -319,21 +324,21 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'    => 'showers',
-            'records'   => "{$callsign},1",
+            'action' => 'showers',
+            'records' => "{$callsign},1",
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
-                'callsign'  => $callsign,
-                'status'    => 'success',
+                'callsign' => $callsign,
+                'status' => 'success',
             ]
         ]]);
 
         $this->assertDatabaseMissing('bmid', [
             'person_id' => $this->user->id,
-            'showers'     => 1
+            'showers' => 1
         ]);
     }
 
@@ -345,59 +350,69 @@ class BulkUploadControllerTest extends TestCase
     public function testGrantingMealsWithCommit()
     {
         $callsign = $this->user->callsign;
+        $year = date('Y');
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'meals',
-            'records'  => "$callsign,event+post",
-            'commit'   => 1,
+            'action' => 'meals',
+            'records' => "$callsign,event+post",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success'
+                'status' => 'success'
             ]
         ]]);
 
         $this->assertDatabaseHas(
             'bmid',
-            [ 'person_id' => $this->user->id, 'year' => date('Y'), 'meals' => 'event+post' ]
+            ['person_id' => $this->user->id, 'year' => $year, 'meals' => 'event+post']
         );
     }
 
     /*
-     * Test adding more meals to a person
+     * Test adding all meals to a person
      */
 
-    public function testGrantingMoreMealsWithCommit()
+    public function testGrantingAllMealsWithCommit()
     {
         $callsign = $this->user->callsign;
         $year = date('Y');
 
         Bmid::factory()->create([
             'person_id' => $this->user->id,
-            'year'      => $year,
-            'meals'     => 'pre+event'
+            'year' => $year,
+            'meals' => 'event'
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'meals',
-            'records'  => "$callsign,+post",
-            'commit'   => 1,
+            'action' => 'meals',
+            'records' => "$callsign,all",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success'
+                'status' => 'success'
             ]
         ]]);
 
         $this->assertDatabaseHas(
             'bmid',
-            [ 'person_id' => $this->user->id, 'year' => $year, 'meals' => 'all' ]
+            ['person_id' => $this->user->id, 'year' => $year, 'meals' => 'all']
+        );
+
+        $this->assertDatabaseHas('access_document',
+            [
+                'person_id' => $this->user->id,
+                'source_year' => $year,
+                'type' => AccessDocument::ALL_YOU_CAN_EAT,
+                'status' => AccessDocument::CLAIMED
+            ]
         );
     }
 
@@ -412,27 +427,27 @@ class BulkUploadControllerTest extends TestCase
 
         Bmid::factory()->create([
             'person_id' => $this->user->id,
-            'year'      => $year,
-            'status'    => 'ready_to_print'
+            'year' => $year,
+            'status' => 'ready_to_print'
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'bmidsubmitted',
-            'records'  => $callsign,
-            'commit'   => 1,
+            'action' => 'bmidsubmitted',
+            'records' => $callsign,
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success'
+                'status' => 'success'
             ]
         ]]);
 
         $this->assertDatabaseHas(
             'bmid',
-            [ 'person_id' => $this->user->id, 'year' => $year, 'status' => 'submitted' ]
+            ['person_id' => $this->user->id, 'year' => $year, 'status' => 'submitted']
         );
     }
 
@@ -446,16 +461,16 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'tickets',
-            'records'  => "$callsign,CRED",
-            'commit'   => 1,
+            'action' => 'tickets',
+            'records' => "$callsign,CRED",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
@@ -470,25 +485,25 @@ class BulkUploadControllerTest extends TestCase
         );
 
         $types = [
-            'RPT'   => 'reduced_price_ticket',
-            'GIFT'  => 'gift_ticket',
-            'VP'    => 'vehicle_pass',
-            'WAP'   => 'work_access_pass',
+            'RPT' => 'reduced_price_ticket',
+            'GIFT' => 'gift_ticket',
+            'VP' => 'vehicle_pass',
+            'WAP' => 'work_access_pass',
         ];
 
         // Run through each type to make sure it works
         foreach ($types as $type => $adType) {
             $response = $this->json('POST', 'bulk-upload', [
-                'action'   => 'tickets',
-                'records'  => "$callsign,$type",
-                'commit'   => 1,
+                'action' => 'tickets',
+                'records' => "$callsign,$type",
+                'commit' => 1,
             ]);
 
             $response->assertStatus(200);
-            $response->assertJson([ 'results' => [
+            $response->assertJson(['results' => [
                 [
                     'callsign' => $callsign,
-                    'status'   => 'success',
+                    'status' => 'success',
                 ]
             ]]);
             $this->assertDatabaseHas(
@@ -513,16 +528,16 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'tickets',
-            'records'  => "$callsign,CRED,$year-08-25",
-            'commit'   => 1,
+            'action' => 'tickets',
+            'records' => "$callsign,CRED,$year-08-25",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
@@ -551,20 +566,20 @@ class BulkUploadControllerTest extends TestCase
 
         AccessDocument::factory()->create([
             'person_id' => $personId,
-            'type'      => 'work_access_pass',
+            'type' => 'work_access_pass',
         ]);
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'wap',
-            'records'  => "$callsign,$year-08-25",
-            'commit'   => 1,
+            'action' => 'wap',
+            'records' => "$callsign,$year-08-25",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
@@ -579,16 +594,16 @@ class BulkUploadControllerTest extends TestCase
 
         // Set with anytime date
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'wap',
-            'records'  => "$callsign,any",
-            'commit'   => 1,
+            'action' => 'wap',
+            'records' => "$callsign,any",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
@@ -616,16 +631,16 @@ class BulkUploadControllerTest extends TestCase
         $this->setting('TAS_WAPDateRange', '3-28');
 
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'wap',
-            'records'  => "$callsign,$year-08-25",
-            'commit'   => 1,
+            'action' => 'wap',
+            'records' => "$callsign,$year-08-25",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'failed',
+                'status' => 'failed',
             ]
         ]]);
 
@@ -651,45 +666,46 @@ class BulkUploadControllerTest extends TestCase
 
         // Test default one radio.
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'eventradio',
-            'records'  => "$callsign",
-            'commit'   => 1,
+            'action' => 'eventradio',
+            'records' => "$callsign",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
-        $this->assertDatabaseHas('radio_eligible', [
+        $this->assertDatabaseHas('access_document', [
             'person_id' => $personId,
-            'year'      => $year,
-            'max_radios' => 1,
+            'source_year' => $year,
+            'type' => AccessDocument::EVENT_RADIO,
+            'item_count' => 1,
         ]);
 
         // Set specific number
         $response = $this->json('POST', 'bulk-upload', [
-            'action'   => 'eventradio',
-            'records'  => "$callsign,2",
-            'commit'   => 1,
+            'action' => 'eventradio',
+            'records' => "$callsign,2",
+            'commit' => 1,
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson([ 'results' => [
+        $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status'   => 'success',
+                'status' => 'success',
             ]
         ]]);
 
-        $this->assertDatabaseHas('radio_eligible', [
+        $this->assertDatabaseHas('access_document', [
             'person_id' => $personId,
-            'year'      => $year,
-            'max_radios' => 2,
+            'source_year' => $year,
+            'type' => AccessDocument::EVENT_RADIO,
+            'item_count' => 2,
         ]);
-
     }
 }

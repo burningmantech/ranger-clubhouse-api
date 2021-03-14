@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\RestApi;
 use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 use App\Models\Bmid;
+use App\Models\ErrorLog;
 use App\Models\PersonPosition;
 use App\Models\Position;
 
+use App\Lib\BMIDManagement;
 use App\Lib\LambaseBMID;
+use App\Lib\LambaseBMIDException;
 
-use GuzzleHttp;
 
 class BmidController extends ApiController
 {
@@ -48,7 +50,7 @@ class BmidController extends ApiController
             ]
         ]);
 
-        return response()->json(['bmids' => Bmid::findForManage($params['year'], $params['filter'])]);
+        return response()->json(['bmids' => BMIDManagement::retrieveCategoryToManage($params['year'], $params['filter'])]);
     }
 
     /*
@@ -144,7 +146,7 @@ class BmidController extends ApiController
             'year' => 'required|integer'
         ]);
 
-        return response()->json(Bmid::sanityCheckForYear($params['year']));
+        return response()->json(BMIDManagement::sanityCheckForYear($params['year']));
     }
 
     /**
@@ -222,7 +224,7 @@ class BmidController extends ApiController
 
     public function setBMIDTitles()
     {
-        $this->authorize('setBMIDTitles', [Bmid::class]);
+        $this->authorize('setBMIDTitles', Bmid::class);
 
         $titles = [
             // Title 1

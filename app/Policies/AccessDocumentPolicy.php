@@ -17,6 +17,7 @@ class AccessDocumentPolicy
             return true;
         }
     }
+
     /**
      * Determine whether the user can view the AccessDocument.
      */
@@ -55,7 +56,8 @@ class AccessDocumentPolicy
      * @param Person $user
      * @return bool
      */
-    public function bumpExpiration(Person $user) {
+    public function bumpExpiration(Person $user)
+    {
         return false;
     }
 
@@ -129,5 +131,10 @@ class AccessDocumentPolicy
     public function expireAccessDocuments(Person $user)
     {
         return false;
+    }
+
+    public function delivery(Person $user, $personId)
+    {
+        return ($user->id == $personId);
     }
 }

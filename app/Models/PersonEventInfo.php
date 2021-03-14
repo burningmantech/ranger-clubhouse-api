@@ -6,14 +6,6 @@ use App\Models\ApihouseResult;
 
 use App\Models\Bmid;
 use App\Models\PersonOnlineTraining;
-use App\Models\RadioEligible;
-use App\Models\Slot;
-use App\Models\TraineeStatus;
-
-use App\Helpers\SqlHelper;
-
-use App\Policies\VehiclePolicy;
-use Carbon\Carbon;
 
 class PersonEventInfo extends ApihouseResult
 {
@@ -45,6 +37,7 @@ class PersonEventInfo extends ApihouseResult
     public static function findForPersonYear($personId, $year)
     {
         $info = new PersonEventInfo();
+        $isCurrentYear = (current_year() == $year);
 
         $info->person_id = $personId;
         $info->year = $year;
@@ -60,26 +53,50 @@ class PersonEventInfo extends ApihouseResult
             $info->trainings[] = Training::retrieveEducation($personId, $position, $year);
         }
 
-        usort($info->trainings, function ($a, $b) {
-            return strcmp($a->position_title, $b->position_title);
-        });
+        usort($info->trainings, fn($a, $b) => strcmp($a->position_title, $b->position_title));
 
-        $radio = RadioEligible::findForPersonYear($personId, $year);
         $info->radio_info_available = setting('RadioInfoAvailable');
-        $info->radio_max = $radio ? $radio->max_radios : 0;
-        $info->radio_eligible = $info->radio_max > 0 ? true : false;
+
+        if ($info->radio_info_available) {
+            $radio = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO);
+            if ($radio) {
+                $info->radio_eligible = true;
+                $info->radio_max = $radio->item_count;
+                $info->radio_status = $radio->status;
+            } else {
+                $info->radio_eligible = false;
+            }
+        }
 
         $bmid = Bmid::findForPersonYear($personId, $year);
+        $info->meals = '';
+        $info->showers = false;
+
         if ($bmid) {
             $info->meals = $bmid->meals;
             $info->showers = $bmid->showers;
-        } else {
-            $info->meals = '';
-            $info->showers = false;
         }
 
-        if (current_year() == $year && !setting('MealInfoAvailable')) {
-            $info->meals = 'no-info';
+        if ($isCurrentYear) {
+            if (setting('MealInfoAvailable')) {
+                $meals = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::ALL_YOU_CAN_EAT);
+                if ($meals) {
+                    $info->meals_status = $meals->status;
+                    if ($meals->status != AccessDocument::BANKED && (!$bmid || empty($bmid->meals))) {
+                        $meals->meals = 'all';
+                    }
+                }
+            } else {
+                $info->meals = 'no-info';
+            }
+
+            $showers = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::WET_SPOT);
+            if ($showers) {
+                $info->meals_status = $showers->status;
+                if (!$bmid && $showers->status != AccessDocument::BANKED) {
+                    $info->showers = true;
+                }
+            }
         }
 
         $ot = PersonOnlineTraining::findForPersonYear($personId, $year);

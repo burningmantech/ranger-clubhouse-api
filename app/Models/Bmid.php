@@ -7,79 +7,119 @@ use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonEvent;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-use App\Helpers\SqlHelper;
 
 class Bmid extends ApiModel
 {
-    const MEALS_TYPES = [
-        'all',
-        'event',
-        'event+post',
-        'post',
-        'pre',
-        'pre+event',
-        'pre+post'
-    ];
-    const READY_TO_PRINT_STATUSES = [
-        'in_prep',
-        'ready_to_print',
-        'ready_to_reprint_changed',
-        'ready_to_reprint_lost',
-    ];
-    const ALLOWED_PERSON_STATUSES = [
-        'active',
-        'inactive',
-        'inactive extension',
-        'retired',
-        'alpha',
-        'prospective'
-    ];
-    const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid';
-    const INSANE_PERSON_COLUMNS = [
-        'id',
-        'callsign',
-        'email',
-        'first_name',
-        'last_name',
-        'status'
-    ];
-    public $wap;
-
-    // Allow (mostly) mass assignment - BMIDs are an exclusive Admin function.
-    public $_access_any_time;
-    public $_access_date;
-    public $_original_access_any_time;
-    public $_original_access_date;
-    public $uploadedToLambase = false;
-    public $has_signups = false;
     protected $table = 'bmid';
     protected $auditModel = true;
+
+    const MEALS_ALL = 'all';
+    const MEALS_EVENT = 'event';
+    const MEALS_EVENT_PLUS_POST = 'event+post';
+    const MEALS_POST = 'post';
+    const MEALS_PRE = 'pre';
+    const MEALS_PRE_PLUS_EVENT = 'pre+event';
+    const MEALS_PRE_PLUS_POST = 'pre+post';
+
+    const MEALS_TYPES = [
+        self::MEALS_ALL,
+        self::MEALS_EVENT,
+        self::MEALS_EVENT_PLUS_POST,
+        self::MEALS_POST,
+        self::MEALS_PRE,
+        self::MEALS_PRE_PLUS_EVENT,
+        self::MEALS_PRE_PLUS_POST
+    ];
+
+    // BMID is being prepped
+    const IN_PREP = 'in_prep';
+    // Ready to be sent off to be printed
+    const READY_TO_PRINT = 'ready_to_print';
+    // BMID was changed (name, photos, titles, etc.) and needs to be reprinted
+    const READY_TO_REPRINT_CHANGE = 'ready_to_reprint_changed';
+    // BMID was lost and a new one issued
+    const READY_TO_REPRINT_LOST = 'ready_to_reprint_lost';
+
+    // BMID has issues, do not print.
+    const ISSUES = 'issues';
+
+    // Person is not rangering this year (common) or another reason.
+    const DO_NOT_PRINT = 'do_not_print';
+
+    const READY_TO_PRINT_STATUSES = [
+        self::IN_PREP,
+        self::READY_TO_PRINT,
+        self::READY_TO_REPRINT_CHANGE,
+        self::READY_TO_REPRINT_LOST,
+    ];
+
+    const ALLOWED_PERSON_STATUSES = [
+        Person::ACTIVE,
+        Person::INACTIVE,
+        Person::INACTIVE_EXTENSION,
+        Person::RETIRED,
+        Person::ALPHA,
+        Person::PROSPECTIVE
+    ];
+
+    const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid';
+
+    protected $wap;
+
+    protected $access_any_time = false;
+    protected $access_date = null;
+
+    protected $uploadedToLambase = false;
+    protected $has_signups = false;
+    protected $org_vehicle_insurance = false;
+
+    protected $fillable = [
+        'person_id',
+        'year',
+        'status',
+        'title1',
+        'title2',
+        'title3',
+        'team',
+        'showers',
+        'meals',
+        'batch',
+        'notes',
+
+        // pseudo-columns
+        'access_date',
+        'access_any_time',
+    ];
+
     protected $guarded = [
         'create_datetime',
         'modified_datetime'
     ];
+
     protected $attributes = [
         'showers' => false,
         'meals' => null,
-        'org_vehicle_insurance' => false
     ];
+
     protected $casts = [
         'showers' => 'bool',
         'org_vehicle_insurance' => 'bool',
         'create_datetime' => 'datetime',
         'modified_datetime' => 'datetime',
-        'access_date' => 'datetime',
+        'access_date' => 'datetime:Y-m-d',
         'access_any_time' => 'bool',
     ];
+
     protected $appends = [
         'access_any_time',
         'access_date',
+        'has_signups',
+        'org_vehicle_insurance',
         'wap_id',
         'wap_status',
         'wap_type',
-        'has_signups'
     ];
 
     public static function boot()
@@ -88,17 +128,24 @@ class Bmid extends ApiModel
 
         self::creating(function ($model) {
             if (empty($model->status)) {
-                $model->status = 'in_prep';
+                $model->status = self::IN_PREP;
             }
         });
 
         self::saved(function ($model) {
             $model->updateWap();
+            $model->syncToAccessDocuments();
         });
 
         self::created(function ($model) {
             $model->updateWap();
+            $model->syncToAccessDocuments();
         });
+    }
+
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public static function find($id)
@@ -128,8 +175,8 @@ class Bmid extends ApiModel
 
     public function setWap($wap)
     {
-        $this->_access_date = $this->_original_access_date = $wap->access_date;
-        $this->_access_any_time = $this->_original_access_any_time = $wap->access_any_time;
+        $this->access_date = $wap->access_date;
+        $this->access_any_time = $wap->access_any_time;
         $this->wap = $wap;
     }
 
@@ -166,11 +213,11 @@ class Bmid extends ApiModel
 
         // Figure out which people do not have BMIDs yet.
         foreach ($personIds as $personId) {
-            if (!isset($bmidsByPerson[$personId])) {
+            if (!$bmidsByPerson->has($personId)) {
                 $bmid = new Bmid([
                     'person_id' => $personId,
                     'year' => $year,
-                    'status' => 'in_prep'
+                    'status' => self::IN_PREP
                 ]);
 
                 $bmids->push($bmid);
@@ -191,23 +238,24 @@ class Bmid extends ApiModel
     {
         $year = current_year();
 
-        // Populate all the BMIDS with people..
+        // Populate all the BMIDs with people..
         $bmids->load([self::PERSON_WITH]);
 
-        $personEvents = PersonEvent::findAllForIdsYear($bmids->pluck('person_id'), $year)->keyBy('person_id');
+        // Load up the org insurance flags
+        $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
         foreach ($bmids as $bmid) {
-            $event = $personEvents[$bmid->person_id] ?? null;
+            $event = $personEvents->get($bmid->person_id);
             if ($event) {
                 $bmid->org_vehicle_insurance = $event->org_vehicle_insurance;
             }
         }
 
+        // Set the WAPs
         $waps = AccessDocument::findWAPForPersonIds($personIds);
         $bmidsByPerson = $bmids->keyBy('person_id');
         foreach ($waps as $personId => $wap) {
             $bmidsByPerson[$personId]->setWap($wap);
         }
-
 
         // Figure out who has signed up for the year.
         $ids = DB::table('person')
@@ -219,6 +267,36 @@ class Bmid extends ApiModel
 
         foreach ($ids as $id) {
             $bmidsByPerson[$id]->has_signups = true;
+        }
+
+        $newBmids = $bmids->filter(fn($b) => !$b->id);
+        if ($newBmids->isEmpty()) {
+            // no new BMIDs to process
+            return;
+        }
+
+
+        $itemsByPersonId = AccessDocument::whereIn('person_id', $newBmids->pluck('person_id'))
+            ->where('status', AccessDocument::CLAIMED)
+            ->whereIn('type', [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])
+            ->get()
+            ->groupBy('person_id');
+
+        foreach ($bmids as $bmid) {
+            $items = $itemsByPersonId->get($bmid->person_id);
+            if (!$items) {
+                continue;
+            }
+
+            $meals = $items->firstWhere('type', AccessDocument::ALL_YOU_CAN_EAT);
+            if ($meals) {
+                $bmid->meals = self::MEALS_ALL;
+            }
+
+            $showers = $items->firstWhere('type', AccessDocument::WET_SPOT);
+            if ($showers) {
+                $bmid->showers = true;
+            }
         }
     }
 
@@ -234,8 +312,9 @@ class Bmid extends ApiModel
     {
         $sql = self::query();
 
-        if (isset($query['year'])) {
-            $sql->where('year', $query['year']);
+        $year = $query['year'] ?? null;
+        if ($year) {
+            $sql->where('year', $year);
         }
 
         $bmids = $sql->with(['person:id,callsign,email'])->get();
@@ -245,216 +324,107 @@ class Bmid extends ApiModel
         return $bmids;
     }
 
-    public static function findForManage($year, $filter)
-    {
-        switch ($filter) {
-            case 'alpha':
-                // Find all alphas & prospective
-                $ids = Person::whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
-                    ->get('id')
-                    ->pluck('id');
-                break;
-
-            case 'signedup':
-                // Find any vets who are signed up and/or passed training
-                $slotIds = Slot::whereYear('begins', $year)
-                    ->where('begins', '>=', "$year-08-10")
-                    ->pluck('id');
-
-                $signedUpIds = PersonSlot::whereIn('slot_id', $slotIds)
-                    ->join('person', function ($j) {
-                        $j->whereRaw('person.id=person_slot.person_id');
-                        $j->whereIn('person.status', Person::ACTIVE_STATUSES);
-                    })
-                    ->distinct('person_slot.person_id')
-                    ->pluck('person_id')
-                    ->toArray();
-
-                $slotIds = Slot::join('position', 'position.id', '=', 'slot.position_id')
-                    ->whereYear('begins', $year)
-                    ->where('position.type', Position::TYPE_TRAINING)
-                    ->get(['slot.id'])
-                    ->pluck('id')
-                    ->toArray();
-
-                $trainedIds = TraineeStatus::join('person', function ($j) {
-                    $j->whereRaw('person.id=trainee_status.person_id');
-                    $j->whereIn('person.status', Person::ACTIVE_STATUSES);
-                })
-                    ->whereIn('slot_id', $slotIds)
-                    ->where('passed', 1)
-                    ->distinct('trainee_status.person_id')
-                    ->pluck('trainee_status.person_id')
-                    ->toArray();
-                $ids = array_merge($trainedIds, $signedUpIds);
-                break;
-
-            case 'submitted':
-            case 'printed':
-                // Any BMIDs already submitted or printed out
-                $ids = Bmid::where('year', $year)
-                    ->where('status', $filter)
-                    ->pluck('person_id')
-                    ->toArray();
-                break;
-
-            case 'nonprint':
-                // Any BMIDs held back
-                $ids = Bmid::where('year', $year)
-                    ->whereIn('status', ['issues', 'do_not_print'])
-                    ->pluck('person_id')
-                    ->toArray();
-                break;
-
-            case 'no-shifts':
-                // Any BMIDs held back
-                $ids = Bmid::where('year', $year)
-                    ->whereRaw("NOT EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE bmid.person_id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
-                    ->pluck('person_id')
-                    ->toArray();
-                break;
-
-            default:
-                // Find the special people.
-                // "You're good enough, smart enough, and doggone it, people like you."
-                $wapDate = setting('TAS_DefaultWAPDate');
-
-                $specialIds = self::where('year', $year)
-                    ->where(function ($q) {
-                        $q->whereNotNull('title1');
-                        $q->orWhereNotNull('title2');
-                        $q->orWhereNotNull('title3');
-                        $q->orWhereNotNull('meals');
-                        $q->orWhere('showers', true);
-                    })
-                    ->get(['person_id'])
-                    ->pluck('person_id')
-                    ->toArray();
-
-                $adIds = AccessDocument::whereIn('type', ['staff_credential', 'work_access_pass'])
-                    ->whereIn('status', ['banked', 'qualified', 'claimed', 'submitted'])
-                    ->where(function ($q) use ($wapDate) {
-                        // Any AD where the person can get in at any time
-                        //   OR
-                        // The access date is gte WAP access
-                        $q->where('access_any_time', 1);
-                        $q->orWhere(function ($q) use ($wapDate) {
-                            $q->whereNotNull('access_date');
-                            $q->where('access_date', '<', "$wapDate 00:00:00");
-                        });
-                    })
-                    ->distinct('person_id')
-                    ->get(['person_id'])
-                    ->pluck('person_id')
-                    ->toArray();
-
-                $ids = array_merge($specialIds, $adIds);
-                break;
-        }
-
-        return self::findForPersonIds($year, $ids);
-    }
-
-    public static function sanityCheckForYear($year)
-    {
-        /*
-         * Find people who have signed up shifts starting before their WAP access date
-         */
-
-        $positionIds = implode(',', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER]);
-        $ids = DB::select("SELECT ps.person_id as id
-            FROM person_slot ps
-            JOIN slot s ON s.id=ps.slot_id
-            JOIN position po ON po.id=s.position_id
-            JOIN access_document wap ON wap.person_id=ps.person_id
-            WHERE
-                YEAR(s.begins)=$year
-                AND s.position_id NOT IN ($positionIds)
-                AND wap.type IN ('staff_credential', 'work_access_pass')
-                AND wap.status in ('qualified', 'claimed', 'banked')
-                AND s.begins > '$year-08-15'
-                AND s.begins < wap.access_date
-                AND wap.access_any_time=0
-            GROUP BY ps.person_id");
-
-        $shiftsBeforeWap = Person::whereIn('id', array_column($ids, 'id'))
-            ->where('status', '!=', Person::ALPHA)
-            ->orderBy('callsign')
-            ->get(self::INSANE_PERSON_COLUMNS);
-        /*
-         * Find people who signed up early shifts yet do not have a WAP
-         */
-
-        $positionIds = implode(',', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER, Position::GREEN_DOT_TRAINER, Position::GREEN_DOT_TRAINING]);
-        $ids = DB::select("SELECT ps.person_id as id
-                FROM person_slot ps
-                JOIN slot s ON s.id=ps.slot_id
-                JOIN position po ON po.id=s.position_id
-                WHERE
-                    YEAR(s.begins)=$year
-                    AND s.position_id NOT IN ($positionIds)
-                    AND YEAR(s.begins)=$year
-                    AND s.begins > '$year-08-10'
-                    AND NOT EXISTS (SELECT 1 FROM access_document wap
-                        WHERE wap.person_id=ps.person_id
-                        AND wap.type IN ('work_access_pass', 'staff_credential')
-                        AND wap.status IN ('qualified', 'claimed', 'banked') LIMIT 1)
-                GROUP BY ps.person_id");
-
-        $shiftsNoWap = Person::whereIn('id', array_column($ids, 'id'))
-            ->where('status', '!=', Person::ALPHA)
-            ->orderBy('callsign')
-            ->get(self::INSANE_PERSON_COLUMNS);
-
-        $boxOfficeOpenDate = setting("TAS_BoxOfficeOpenDate");
-
-        $ids = DB::select("SELECT wap.person_id AS id
-                FROM access_document wap
-                JOIN access_document rpt ON wap.person_id=rpt.person_id
-                    AND rpt.type='reduced_price_ticket' AND rpt.status in ('qualified', 'claimed')
-                JOIN person p ON p.id = wap.person_id AND p.status != 'alpha'
-                WHERE
-                    wap.type='work_access_pass'
-                    AND wap.status IN ('qualified', 'claimed')
-                    AND wap.access_date < '$boxOfficeOpenDate'
-                GROUP BY wap.person_id");
-
-        $rptBeforeBoxOfficeOpens = Person::whereIn('id', array_column($ids, 'id'))
-            ->orderBy('callsign')
-            ->get(self::INSANE_PERSON_COLUMNS);
-        return [
-            [
-                'type' => 'shifts-before-access-date',
-                'people' => $shiftsBeforeWap,
-            ],
-
-            [
-                'type' => 'shifts-no-wap',
-                'people' => $shiftsNoWap,
-            ],
-
-            [
-                'type' => 'rpt-before-box-office',
-                'box_office' => $boxOfficeOpenDate,
-                'people' => $rptBeforeBoxOfficeOpens
-            ]
-        ];
-    }
-
-    public function person()
-    {
-        return $this->belongsTo(Person::class);
-    }
 
     public function updateWap()
     {
-        AccessDocument::updateWAPsForPerson($this->person_id, $this->_access_date, $this->_access_any_time);
+        AccessDocument::updateWAPsForPerson($this->person_id, $this->access_date, $this->access_any_time, 'set via BMID update');
 
         $wap = $this->wap;
         if ($wap) {
             $wap->refresh();
             $this->setWap($wap);
         }
+    }
+
+    /**
+     * Sync the BMID appreciations choices against the Person Items.
+     */
+
+    public function syncToAccessDocuments()
+    {
+        $items = AccessDocument::where('person_id', $this->person_id)
+            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
+            ->whereIn('type', [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])
+            ->get();
+
+        $this->syncItem($items, AccessDocument::ALL_YOU_CAN_EAT, $this->meals == self::MEALS_ALL);
+        $this->syncItem($items, AccessDocument::WET_SPOT, $this->showers);
+    }
+
+    public function syncItem($items, $type, $claim)
+    {
+        $status = $claim ? AccessDocument::CLAIMED : AccessDocument::BANKED;
+        $item = $items->firstWhere('type', $type);
+        if ($item && $item->status != $status) {
+            $item->status = $status;
+            $item->auditReason = $item->additional_comments = "{$status} via BMID";
+            $item->saveWithoutValidation();
+        }
+    }
+
+    public static function syncFromAccessDocument(AccessDocument $ad)
+    {
+        if (!in_array($ad->type, [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])) {
+            return;
+        }
+
+        if (!in_array($ad->status, [AccessDocument::CLAIMED, AccessDocument::BANKED])) {
+            return;
+        }
+
+        $bmid = self::findForPersonYear($ad->person_id, current_year());
+        if (!$bmid) {
+            return;
+        }
+
+        $bmid->loadRelationships();
+
+        $status = $ad->status;
+        $reason = null;
+        switch ($ad->type) {
+            case AccessDocument::ALL_YOU_CAN_EAT:
+                // Person wants the buffet!
+                if ($status == AccessDocument::CLAIMED) {
+                    if ($bmid->meals == self::MEALS_ALL) {
+                        // Already set for all you can eat.
+                        return;
+                    }
+                    $bmid->meals = self::MEALS_ALL;
+                    $reason = 'claimed all-you-can-eat';
+                } else if ($status == AccessDocument::BANKED) {
+                    if (empty($bmid->meals)) {
+                        return; // nothing to do.
+                    }
+                    $bmid->meals = '';
+                    $reason = 'banked all-you-can-eat';
+                }
+                break;
+            case AccessDocument::WET_SPOT:
+                // Person wants to be clean.
+                if ($status == AccessDocument::CLAIMED) {
+                    if ($bmid->showers) {
+                        // Already set for showers
+                        return;
+                    }
+                    $bmid->showers = true;
+                    $reason = 'claimed wet-spot';
+                } else if ($status == AccessDocument::BANKED) {
+                    if (!$bmid->showers) {
+                        return; // already banked.
+                    }
+                    $bmid->showers = false;
+                    $reason = 'banked wet-spot';
+                }
+                break;
+        }
+
+        if (!$reason) {
+            return; // nothing happened.
+        }
+
+        $bmid->auditReason = $reason;
+        $bmid->appendNotes($reason);
+        $bmid->saveWithoutValidation();
     }
 
     public function setTitle1Attribute($value)
@@ -482,24 +452,33 @@ class Bmid extends ApiModel
         $this->attributes['team'] = $value ?: null;
     }
 
+
     public function setAccessDateAttribute($value)
     {
-        $this->_access_date = $value;
+        $this->access_date = $value;
     }
 
     public function getAccessDateAttribute()
     {
-        return (string)$this->_access_date;
+        return (string)$this->access_date;
     }
 
     public function setAccessAnyTimeAttribute($value)
     {
-        $this->_access_any_time = $value;
+        $this->access_any_time = $value;
     }
 
     public function getAccessAnyTimeAttribute()
     {
-        return $this->_access_any_time;
+        return $this->access_any_time;
+    }
+
+    public function setOrgVehicleInsuranceAttribute($value) {
+        $this->org_vehicle_insurance = $value;
+    }
+
+    public function getOrgVehicleInsuranceAttribute() {
+        return $this->org_vehicle_insurance;
     }
 
     public function getWapIdAttribute()
@@ -522,7 +501,12 @@ class Bmid extends ApiModel
         return $this->has_signups;
     }
 
-    public function isPrintable()
+    /**
+     * Is the BMID printable (both person & BMID have to be an acceptable status)
+     *
+     * @return bool
+     */
+    public function isPrintable(): bool
     {
         if (!$this->person || !in_array($this->person->status, self::ALLOWED_PERSON_STATUSES)) {
             return false;
@@ -533,5 +517,18 @@ class Bmid extends ApiModel
         }
 
         return true;
+    }
+
+    /**
+     * Append to the notes with timestamp and callsign.
+     *
+     * @param string $notes
+     */
+
+    public function appendNotes(string $notes)
+    {
+        $date = date('n/j/y G:i:s');
+        $callsign = Auth::check() ? Auth::user()->callsign : '(unknown)';
+        $this->notes = "$date $callsign: $notes\n{$this->notes}";
     }
 }
