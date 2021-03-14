@@ -27,9 +27,9 @@ class AccessDocumentDeliveryPolicy
     /*
      * Person may create a delivery record
      */
-    public function create(Person $user)
+    public function create(Person $user, $personId)
     {
-        return true;
+        return ($user->id == $personId);
     }
 
     /*

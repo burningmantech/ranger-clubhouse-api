@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Exceptions\InvalidFormatException;
+use Exception;
 use Illuminate\Database\QueryException;
 use App\Http\Controllers\ApiController;
 
@@ -10,9 +12,9 @@ use App\Models\AccessDocumentChanges;
 use App\Models\Bmid;
 use App\Models\Person;
 use App\Models\PersonEvent;
-use App\Models\RadioEligible;
 
 use Carbon\Carbon;
+use InvalidArgumentException;
 
 class BulkUploadController extends ApiController
 {
@@ -132,7 +134,7 @@ class BulkUploadController extends ApiController
         }
 
         if (empty($records)) {
-            throw new \InvalidArgumentException('records parameter is empty');
+            throw new InvalidArgumentException('records parameter is empty');
         }
 
         $callsigns = Person::findAllByCallsigns($callsigns, true);
@@ -156,7 +158,7 @@ class BulkUploadController extends ApiController
         } elseif ($action == 'eventradio') {
             $this->processEventRadio($records, $action, $commit, $reason);
         } else {
-            throw new \InvalidArgumentException('Unknown action');
+            throw new InvalidArgumentException('Unknown action');
         }
 
         $results = array_map(function ($record) {
@@ -292,11 +294,38 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
+            $reason = null;
             switch ($action) {
                 case 'showers':
                     $showers = strtolower(trim($data[0]));
                     $oldValue = $bmid->showers;
                     $newValue = $bmid->showers = ($showers[0] == 'y' || $showers[0] == 1);
+                    if ($commit) {
+                        $ad = AccessDocument::findAvailableTypeForPerson($person->id, AccessDocument::WET_SPOT);
+                        if ($ad) {
+                            if ($newValue && $ad->status != AccessDocument::CLAIMED) {
+                                $ad->status = AccessDocument::CLAIMED;
+                                $reason = 'claimed via set showers bulk uploader';
+                            } else if (!$newValue && $ad->status == AccessDocument::CLAIMED) {
+                                $ad->status = AccessDocument::BANKED;
+                                $reason = 'banked via set showers bulk uploader';
+                            }
+                        } else if ($newValue) {
+                            $ad = new AccessDocument([
+                                'person_id' => $person->id,
+                                'type' => AccessDocument::WET_SPOT,
+                                'status' => AccessDocument::CLAIMED,
+                                'expiry_date' => $year + 3,
+                                'source_year' => $year,
+                            ]);
+                            $reason = 'claimed via set showers bulk upload';
+                        }
+
+                        if ($ad && $ad->isDirty()) {
+                            $ad->additional_comments = $ad->auditReason = $reason;
+                            $ad->saveWithoutValidation();
+                        }
+                    }
                     break;
 
                 case 'meals':
@@ -314,6 +343,34 @@ class BulkUploadController extends ApiController
 
                     $oldValue = $bmid->meals;
                     $newValue = $bmid->meals = $meals;
+
+                    if ($commit) {
+                        $ad = AccessDocument::findAvailableTypeForPerson($person->id, AccessDocument::ALL_YOU_CAN_EAT);
+                        $isAllYouCanEat = ($newValue == Bmid::MEALS_ALL);
+                        if ($ad) {
+                            if (!$isAllYouCanEat && $ad->status != AccessDocument::CLAIMED) {
+                                $ad->status = AccessDocument::BANKED;
+                                $reason = 'banked via set meals bulk uploader';
+                            } else if ($isAllYouCanEat && $ad->status != AccessDocument::CLAIMED) {
+                                $ad->status = AccessDocument::CLAIMED;
+                                $reason = 'claimed via set meals bulk uploader';
+                            }
+                        } else if ($isAllYouCanEat) {
+                            $ad = new AccessDocument([
+                                'person_id' => $person->id,
+                                'type' => AccessDocument::ALL_YOU_CAN_EAT,
+                                'status' => AccessDocument::CLAIMED,
+                                'expiry_date' => $year + 3,
+                                'source_year' => $year,
+                            ]);
+                            $reason = 'claimed via bulk upload';
+                        }
+
+                        if ($ad && $ad->isDirty()) {
+                            $ad->additional_comments = $ad->auditReason = $reason;
+                            $ad->saveWithoutValidation();
+                        }
+                    }
                     break;
 
                 case 'bmidsubmitted':
@@ -329,7 +386,7 @@ class BulkUploadController extends ApiController
                     break;
 
                 default:
-                    throw new \InvalidArgumentException('Unknown action');
+                    throw new InvalidArgumentException('Unknown action');
                     break;
             }
 
@@ -383,26 +440,26 @@ class BulkUploadController extends ApiController
             $accessDate = null;
             switch (strtoupper($type)) {
                 case 'CRED':
-                    $type = "staff_credential";
+                    $type = AccessDocument::STAFF_CREDENTIAL;
                     if (count($data) >= 2) {
                         $accessDate = trim($data[1]);
                     }
                     break;
 
                 case 'RPT':
-                    $type = 'reduced_price_ticket';
+                    $type = AccessDocument::RPT;
                     break;
 
                 case 'GIFT':
-                    $type = 'gift_ticket';
+                    $type = AccessDocument::GIFT;
                     break;
 
                 case 'VP':
-                    $type = 'vehicle_pass';
+                    $type = AccessDocument::VEHICLE_PASS;
                     break;
 
                 case 'WAP':
-                    $type = 'work_access_pass';
+                    $type = AccessDocument::WAP;
                     if (count($data) >= 2) {
                         $accessDate = trim($data[1]);
                     }
@@ -417,7 +474,7 @@ class BulkUploadController extends ApiController
             if ($accessDate != null) {
                 try {
                     $accessDateCleaned = Carbon::parse($accessDate);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $record->status = 'failed';
                     $record->details = "Access date is invalid [$accessDate]";
                     continue;
@@ -439,7 +496,7 @@ class BulkUploadController extends ApiController
                     'source_year' => $sourceYear,
                     'expiry_date' => $expiryYear,
                     'comments' => "$uploadDate {$this->user->callsign}: $reason",
-                    'status' => 'qualified',
+                    'status' => AccessDocument::QUALIFIED,
                 ]
             );
 
@@ -475,18 +532,18 @@ class BulkUploadController extends ApiController
             $data = $record->data;
             if (empty($data)) {
                 $record->status = 'failed';
-                $record->detail = 'missing acesss type';
+                $record->detail = 'missing access type';
             }
 
             $accessDate = trim($data[0]);
 
             $anytime = false;
-            if (strtolower($accessDate) == "any") {
+            if (strtolower($accessDate) == 'any') {
                 $anytime = true;
             } else {
                 try {
                     $accessDateCleaned = Carbon::parse($accessDate);
-                } catch (\Exception $e) {
+                } catch (InvalidFormatException $e) {
                     $record->status = 'failed';
                     $record->details = "Invalid date [$accessDate]";
                     continue;
@@ -507,7 +564,7 @@ class BulkUploadController extends ApiController
             if ($wap == null) {
                 $record->status = 'failed';
                 $record->details = 'No WAP access document could be found';
-            } elseif ($wap->status == 'submitted') {
+            } elseif ($wap->status == AccessDocument::SUBMITTED) {
                 $record->status = 'failed';
                 $record->details = 'WAP has already been submitted';
             } else {
@@ -518,9 +575,8 @@ class BulkUploadController extends ApiController
                     $accessDate = $accessDateCleaned;
                     $accessAnyTime = false;
                 }
-                $oldValue = (string)$wap->access_date;
                 if ($commit) {
-                    AccessDocument::updateWAPsForPerson($person->id, $accessDate, $accessAnyTime);
+                    AccessDocument::updateWAPsForPerson($person->id, $accessDate, $accessAnyTime, 'set via bulk uploader');
                 }
                 $record->status = 'success';
             }
@@ -530,6 +586,7 @@ class BulkUploadController extends ApiController
     private function processEventRadio($records, $action, $commit, $reason)
     {
         $year = current_year();
+        $uploadDate = date('n/j/y G:i:s');
 
         foreach ($records as $record) {
             $person = $record->person;
@@ -537,23 +594,27 @@ class BulkUploadController extends ApiController
                 continue;
             }
 
-            if (empty($record->data)) {
-                $maxRadios = 1;
-            } else {
-                $maxRadios = (int)$record->data[0];
+            if (!$commit) {
+                // No other verification to do other than say yah the callsign exists.
+                $record->status = 'success';
+                continue;
             }
 
-            $radio = RadioEligible::firstOrNewForPersonYear($person->id, $year);
-            $oldValue = $radio->max_radios;
-            $newValue = $radio->max_radios = $maxRadios;
+            $radio = AccessDocument::findAvailableTypeForPerson($person->id, AccessDocument::EVENT_RADIO);
+            if (!$radio) {
+                $radio = new AccessDocument([
+                    'person_id' => $person->id,
+                    'type' => AccessDocument::EVENT_RADIO,
+                    'status' => AccessDocument::QUALIFIED,
+                    'source_year' => $year,
+                    'expiry_date' => $year,
+                ]);
+            }
 
+            $radio->item_count = empty($record->data) ? 1 : (int)$record->data[0];
+            $radio->additional_comments = "set by bulk upload";
+            $this->saveModel($radio, $record);
             $record->status = 'success';
-            $record->changes = [$oldValue, $newValue];
-
-            if ($commit) {
-                $this->saveModel($radio, $record);
-            }
-
         }
     }
 }

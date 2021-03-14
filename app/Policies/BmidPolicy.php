@@ -77,4 +77,8 @@ class BmidPolicy
     {
         return false;
     }
+
+    public function syncAppreciations(Person $user) {
+        return false;
+    }
 }

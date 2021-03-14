@@ -100,7 +100,9 @@ class ActionLog extends Model
         }
 
         // Results sort 'asc' or 'desc'
-        $sql->orderBy('created_at', ($sort == 'asc' ? 'asc' : 'desc'));
+        $sortOrder = ($sort == 'asc' ? 'asc' : 'desc');
+        $sql->orderBy('created_at', $sortOrder);
+        $sql->orderBy('id', $sortOrder);
 
         // Figure out pagination
         $page = $page - 1;
