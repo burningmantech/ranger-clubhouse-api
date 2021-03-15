@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 FROM burningman/php-nginx:8.0.3-alpine3.12 as php
 
-RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev libxml2 libpng libjpeg-turbo libwebp mysql-client \
+RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev libxml2 libpng libjpeg-turbo libwebp mysql-client icu-dev \
     && docker-php-ext-configure gd \
       --with-webp=/usr/include/    \
       --with-jpeg=/usr/include/    \
@@ -14,6 +14,8 @@ RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-d
     && docker-php-ext-install -j$(nproc) pdo_mysql \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) opcache \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install -j$(nproc) intl \
     && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     && install -d -o www-data -g www-data -m 775  \
     ./storage/framework/cache                  \
