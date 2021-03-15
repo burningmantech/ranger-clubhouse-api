@@ -14,6 +14,7 @@ namespace App\Models;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 use InvalidArgumentException;
+use NumberFormatter;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 use App\Helpers\SqlHelper;
@@ -132,7 +134,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     protected $table = 'person';
     protected $auditModel = true;
 
-    public $auditExclude = ['password', 'tpassword', 'tpassword_expire', 'logged_in_at', 'last_seen_at'];
+    public $auditExclude = [
+        'password',
+        'tpassword',
+        'tpassword_expire',
+        'logged_in_at',
+        'last_seen_at',
+        'callsign_normalized',
+        'callsign_soundex'
+    ];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -142,7 +152,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     protected $hidden = [
         'password',
         'tpassword',
-        'tpassword_expire'
+        'tpassword_expire',
+        'callsign_normalized',
+        'callsign_soundex'
     ];
 
     protected $casts = [
@@ -494,7 +506,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // remove duplicate spaces
             $q = trim(preg_replace('/\s+/', ' ', $query['query']));
             $normalized = self::normalizeCallsign($q);
-            $metaphone = metaphone($normalized);
+            $metaphone = metaphone(self::spellOutNumbers($normalized));
 
             if (substr($q, 0, 1) == '+') {
                 // Search by number
@@ -545,8 +557,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                             }
                         } elseif ($field == 'callsign') {
                             $sql->orWhere('callsign_normalized', $normalized);
-                            $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
+                            $sql->orWhere('callsign_normalized', 'like', $normalized . '%');
                             $sql->orWhere('callsign_soundex', $metaphone);
+                            $sql->orWhere('callsign_soundex', 'like', $metaphone . '%');
                         } else {
                             $sql->orWhere($field, 'like', $likeQuery);
                         }
@@ -565,8 +578,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
                 $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
                 $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('03', callsign)";
+                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('04', callsign)";
             }
-            $orderBy .= " ELSE callsign END";
+            $orderBy .= " ELSE CONCAT('06', callsign) END";
 
             $sql->orderBy(DB::raw($orderBy));
         } else {
@@ -614,20 +628,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      *
      * @param string $query string to match against callsigns
      * @param string $type callsign search type
-     * @return array person id & callsigns which match
+     * @return array|Collection person id & callsigns which match
      */
 
-    public static function searchCallsigns($query, $type, $limit)
+    public static function searchCallsigns(string $query, string $type, $limit)
     {
         $like = '%' . $query . '%';
 
         $normalized = self::normalizeCallsign($query);
-        $metaphone = metaphone($normalized);
+        $metaphone = metaphone(self::spellOutNumbers($normalized));
         $quoted = SqlHelper::quote($normalized);
-        $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('!', callsign)";
+        $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('01', callsign)";
         $quoted = SqlHelper::quote($metaphone);
-        $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('#', callsign)";
-        $orderBy .= " ELSE callsign END";
+        $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('02', callsign)";
+        $orderBy .= " ELSE CONCAT('03', callsign) END";
 
         $sql = DB::table('person')
             ->where(function ($q) use ($query, $like, $normalized, $metaphone) {
@@ -1145,7 +1159,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $value = trim($value);
         $this->attributes['callsign'] = $value;
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
-        $this->attributes['callsign_soundex'] = metaphone($this->attributes['callsign_normalized']);
+        $this->attributes['callsign_soundex'] = metaphone(self::spellOutNumbers($this->attributes['callsign_normalized']));
 
         // Update the callsign FKA if the callsign did actually change.
         if ($this->isDirty('callsign')) {
@@ -1260,5 +1274,19 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function setPronounsAttribute($value)
     {
         $this->attributes['pronouns'] = !empty($value) ? $value : '';
+    }
+
+    /**
+     * Spell out all the numbers in a string.
+     * e.g., 3pio -> threepio, hubcap92 -> hubcapninetytwo
+     *
+     * @param string $word
+     * @return string
+     */
+
+    public static function spellOutNumbers(string $word): string
+    {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return preg_replace_callback('/\d+/', fn($number) => $formatter->format((int)$number[0]), $word);
     }
 }
