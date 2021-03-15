@@ -16,7 +16,7 @@ class PersonFactory extends Factory
         $uuid = (string)Str::uuid();
         return [
             'status' => 'active',
-            'callsign' => $uuid,
+            'callsign' => $this->faker->unique()->word(),
             'callsign_approved' => true,
             'email' => $uuid . '@e.co',
             'first_name' => 'Bravo',
