@@ -13,7 +13,7 @@ class RemetaphoneNumericCallsigns extends Migration
      */
     public function up()
     {
-        $people = DB::table('person')->select('id', 'callsign')->where('callsign', 'regexp', '\d')->get();
+        $people = DB::table('person')->select('id', 'callsign')->get();
         foreach ($people as $p) {
             DB::table('person')->where('id', $p->id)->update([
                 'callsign_soundex' => metaphone(Person::spellOutNumbers(Person::normalizeCallsign($p->callsign)))
