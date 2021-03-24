@@ -47,12 +47,9 @@ class SurveyGroupControllerTest extends TestCase
             'sort_index' => 99,
             'title' => 'A Survey Group',
             'description' => 'This is a group',
-            'is_trainer_group' => true,
         ];
 
-        $response = $this->json('POST', 'survey-group', [
-            'survey_group' => $data
-        ]);
+        $response = $this->json('POST', 'survey-group', ['survey_group' => $data]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('survey_group', $data);

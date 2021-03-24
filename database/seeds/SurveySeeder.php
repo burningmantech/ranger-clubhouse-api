@@ -45,7 +45,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'rating',
                 'options' => '',
                 'description' => 'Overall, how would you rate this location for training?',
-                'code' => 'venue_rating',
                 'is_required' => true
             ]);
 
@@ -57,7 +56,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'options' => '',
                 'description' => 'Any comments on this location\'s suitability for training (e.g., parking, public transit, noise, neighbors, safety, etc.)?',
                 'is_required' => false,
-                'code' => 'venue_comments'
             ]);
 
             $trainingId = DB::table('survey_group')->insertGetId([
@@ -75,7 +73,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'options' => '',
                 'description' => 'How would you rate this training in terms of overall effectiveness?',
                 'is_required' => true,
-                'code' => 'training_rating'
             ]);
 
             DB::table('survey_question')->insert([
@@ -85,7 +82,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What parts of the training did you find MOST interesting, useful, or effective?',
-                'code' => 'training_best',
             ]);
 
             DB::table('survey_question')->insert([
@@ -95,7 +91,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What parts of the training did you find LEAST interesting, useful, or effective?',
-                'code' => 'training_worst'
             ]);
 
             DB::table('survey_question')->insert([
@@ -105,7 +100,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'text',
                 'options' => '',
                 'description' => 'Were there any parts of the training that you think could have been covered in less time?  If so, which?',
-                'code' => 'training_less'
             ]);
 
             DB::table('survey_question')->insert([
@@ -115,7 +109,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'text',
                 'options' => '',
                 'description' => 'Were there any parts of the training that you would have liked to spend more time on, or additional topics you would like to see covered in the future?  If so, which?',
-                'code' => 'training_more'
             ]);
 
             if ($year <= 2017) {
@@ -133,7 +126,6 @@ we appreciate you taking the time to share your thoughts with us.',
                     'options' => '',
                     'type' => 'rating',
                     'description' => 'How would you rate the RUdE training in terms of overall effectiveness?',
-                    'code' => 'rude_rating'
                 ]);
 
                 DB::table('survey_question')->insert([
@@ -143,7 +135,6 @@ we appreciate you taking the time to share your thoughts with us.',
                     'options' => '',
                     'type' => 'text',
                     'description' => 'What did you like or dislike about the RUdE training?  What would you like to see covered next year?',
-                    'code' => 'rude_comments'
                 ]);
 
             }
@@ -152,7 +143,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'survey_id' => $surveyId,
                 'sort_index' => 4,
                 'title' => 'Please Tell Us About Your Trainer',
-                'is_trainer_group' => true,
                  'description' => ''
            ]);
 
@@ -164,7 +154,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'options' => '',
                 'description' => 'How did this Trainer do in terms of effectively covering the training material in an engaging manner?',
                 'is_required' => true,
-                'code' => 'trainer_rating'
             ]);
 
             DB::table('survey_question')->insert([
@@ -174,7 +163,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What did this Trainer do really well?  How can they improve?  Any other comments?',
-                'code' => 'trainer_comment'
             ]);
 
             $artId = DB::table('survey_group')->insertGetId([
@@ -192,7 +180,6 @@ we appreciate you taking the time to share your thoughts with us.',
                 'options' => '',
                 'description' => 'Did you take an Advanced Ranger Training (ART) module in the morning?
 If so, please tell us which one and what you thought of it.  (If not, just skip this question.)',
-                'code' => 'art'
             ]);
 
 
@@ -210,7 +197,6 @@ If so, please tell us which one and what you thought of it.  (If not, just skip 
                 'type' => 'rating',
                 'options' => '',
                 'description' => 'Overall, how would you rate the Ranger Manual in terms of readability and usefulness',
-                'code' => 'manual_rating'
             ]);
 
             DB::table('survey_question')->insert([
@@ -220,7 +206,6 @@ If so, please tell us which one and what you thought of it.  (If not, just skip 
                 'type' => 'text',
                 'options' => '',
                 'description' => 'How did you use the Ranger Manual during the training?',
-                'code' => 'manual_use',
             ]);
 
             DB::table('survey_question')->insert([
@@ -230,7 +215,6 @@ If so, please tell us which one and what you thought of it.  (If not, just skip 
                 'type' => 'text',
                 'options' => '',
                 'description' => "Any comments on the Ranger Manual?  For example, anything you think it's missing?",
-                'code' => 'manual_comments'
             ]);
 
             $partingId = DB::table('survey_group')->insertGetId([
@@ -247,7 +231,6 @@ If so, please tell us which one and what you thought of it.  (If not, just skip 
                 'type' => 'text',
                 'options' => '',
                 'description' => 'If you could give us one suggestion or piece of advice on how to make Ranger trainings better, what would it be?',
-                'code' => 'suggestion'
             ]);
 
             DB::table('survey_question')->insert([
@@ -257,7 +240,6 @@ If so, please tell us which one and what you thought of it.  (If not, just skip 
                 'type' => 'text',
                 'options' => '',
                 'description' => 'Anything else you\'d like to tell us?',
-                'code' => 'other'
             ]);
         }
     }

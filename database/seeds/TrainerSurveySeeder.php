@@ -59,7 +59,6 @@ Please send us mail at <a href="mailto:ranger-trainingacademy-list@burningman.or
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What did this person do that worked really well or impressed you, if anything?',
-                'code' => 'good',
                 'is_required' => false
             ]);
 
@@ -70,7 +69,6 @@ Please send us mail at <a href="mailto:ranger-trainingacademy-list@burningman.or
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What did this person do that didn\'t work so well or made you concerned, if anything?',
-                'code' => 'bad',
                 'is_required' => false
             ]);
 
@@ -81,7 +79,6 @@ Please send us mail at <a href="mailto:ranger-trainingacademy-list@burningman.or
                 'type' => 'text',
                 'options' => '',
                 'description' => 'What specific suggestions would you offer this person for next time?',
-                'code' => 'suggestions',
                 'is_required' => false
             ]);
 
@@ -102,7 +99,6 @@ above so they can understand what they need to work on.'
                 'type' => 'rating',
                 'options' => '',
                 'description' => 'How would you rate this person in terms of their ability to effectively cover the training material in an engaging manner?',
-                'code' => 'overall_rating',
                 'is_required' => false
             ]);
 
@@ -119,7 +115,6 @@ that they truly let the group discuss during discussion activities,
 that they didn\'t hog the stage,
 that their stories contributed to the group as a whole,
 and that they took input from their fellow Trainers and Associate Trainers.)',
-                'code' => 'nam_rating',
                 'is_required' => false
             ]);
 
@@ -131,7 +126,6 @@ and that they took input from their fellow Trainers and Associate Trainers.)',
                 'type' => 'rating',
                 'options' => '',
                 'description' => 'How would you rate this person in terms of their ability to stay on time during the training?',
-                'code' => 'ontime_rating',
                 'is_required' => false
             ]);
 
@@ -142,7 +136,6 @@ and that they took input from their fellow Trainers and Associate Trainers.)',
                 'type' => 'rating',
                 'options' => '',
                 'description' => 'How would you rate this person in terms of their ability to stick to the curriculum?',
-                'code' => 'followcurriculum_rating',
                 'is_required' => false
             ]);
 
@@ -158,7 +151,6 @@ teach the training?
                 (This means that they knew which sections they were supposed to deliver,
 they knew the material in those sections, they attended any prep calls or
             meetings, they had their notes with them, their notes were organized, etc.)',
-                'code' => 'preparedness_rating',
                 'is_required' => false
             ]);
 
@@ -169,7 +161,6 @@ they knew the material in those sections, they attended any prep calls or
                 'type' => 'options',
                 'options' => "Yes\nNo\nMaybe\nna",
                 'description' => 'If this person was an Associate Trainer, do you think they\'re ready to graduate to Trainer?',
-                'code' => 'tit_graduate',
                 'is_required' => false
             ]);
 
@@ -181,7 +172,6 @@ they knew the material in those sections, they attended any prep calls or
                 'options' => '',
                 'description' => 'If you don\'t think they\'re ready to
 graduate to Trainer, what would you want to see them demonstrate or improve upon before you\'d think they were ready?',
-                'code' => 'tit_demonstrate',
                 'is_required' => false
             ]);
 
@@ -192,7 +182,6 @@ graduate to Trainer, what would you want to see them demonstrate or improve upon
                 'type' => 'options',
                 'options' => "Yes\nNo\n",
                 'description' => 'For all of your comments above, have you given this person this feedback directly, either in person, by phone, or email?',
-                'code' => 'gavefb',
                 'is_required' => false
             ]);
 
@@ -203,7 +192,6 @@ graduate to Trainer, what would you want to see them demonstrate or improve upon
                 'type' => 'text',
                 'options' => '',
                 'description' => 'If not, why not?',
-                'code' => 'didntgivefb_why',
                 'is_required' => false
             ]);
 
@@ -221,7 +209,6 @@ graduate to Trainer, what would you want to see them demonstrate or improve upon
                 'type' => 'text',
                 'options' => '',
                 'description' => 'Anything else you\'d like to tell us about this person?',
-                'code' => 'confidential_comments',
                 'is_required' => false
             ]);
         }

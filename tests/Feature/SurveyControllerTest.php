@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use http\Exception\InvalidArgumentException;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -152,13 +151,11 @@ class SurveyControllerTest extends TestCase
                         'id' => $venueGroup->id,
                         'title' => $venueGroup->title,
                         'description' => $venueGroup->description,
-                        'is_trainer_group' => false,
                         'survey_questions' => [
                             [
                                 'id' => $venueQ->id,
                                 'sort_index' => $venueQ->sort_index,
                                 'type' => $venueQ->type,
-                                'code' => $venueQ->code,
                                 'description' => $venueQ->description,
                             ]
                         ]
@@ -168,13 +165,11 @@ class SurveyControllerTest extends TestCase
                         'id' => $trainerGroup->id,
                         'title' => $trainerGroup->title,
                         'description' => $trainerGroup->description,
-                        'is_trainer_group' => true,
                         'survey_questions' => [
                             [
                                 'id' => $trainerQ->id,
                                 'sort_index' => $trainerQ->sort_index,
                                 'type' => $trainerQ->type,
-                                'code' => $trainerQ->code,
                                 'description' => $trainerQ->description,
                             ]
                         ]
@@ -223,7 +218,7 @@ class SurveyControllerTest extends TestCase
         $this->venueGroup = SurveyGroup::factory()->create(['survey_id' => $surveyId, 'sort_index' => 1]);
         $this->venueQuestion = SurveyQuestion::factory()->create(['survey_id' => $surveyId, 'survey_group_id' => $this->venueGroup->id]);
 
-        $this->trainerGroup = SurveyGroup::factory()->create(['survey_id' => $surveyId, 'is_trainer_group' => true, 'sort_index' => 2]);
+        $this->trainerGroup = SurveyGroup::factory()->create(['survey_id' => $surveyId, 'type' => 'trainer', 'sort_index' => 2]);
         $this->trainerQuestion = SurveyQuestion::factory()->create(['survey_id' => $surveyId, 'survey_group_id' => $this->trainerGroup->id]);
 
         $this->slot = Slot::factory()->create([
@@ -246,12 +241,6 @@ class SurveyControllerTest extends TestCase
             'slot_id' => $this->slot->id,
             'trainer_slot_id' => $this->trainerSlot->id,
             'status' => TrainerStatus::ATTENDED
-        ]);
-    }
-
-    private function buildTrainerResponses() {
-        $this->trainerAnswer = SurveyAnswer::factory()->create([
-            'id'
         ]);
     }
 

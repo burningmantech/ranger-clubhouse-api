@@ -14,9 +14,10 @@ class SurveyGroupFactory extends Factory
         return [
             'survey_id' => 1,
             'sort_index' => 1,
+            'type' => SurveyGroup::TYPE_NORMAL,
             'title' => $this->faker->text(20),
             'description' => $this->faker->text(20),
-            'is_trainer_group' => false,
+            'report_title' => '',
         ];
     }
 }

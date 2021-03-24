@@ -64,7 +64,6 @@ class SurveyQuestionControllerTest extends TestCase
             'is_required' => true,
             'type' => 'options',
             'options' => '1. Option',
-            'code' => 'good'
         ];
 
         $response = $this->json('POST', 'survey-question', [

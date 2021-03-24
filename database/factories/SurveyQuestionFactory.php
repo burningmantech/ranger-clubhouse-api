@@ -19,7 +19,6 @@ class SurveyQuestionFactory extends Factory
             'is_required' => true,
             'type' => 'options',
             'options' => "First Option\nSecond Option\n",
-            'code' => 'good'
         ];
     }
 }
