@@ -12,6 +12,11 @@ class SurveyAnswer extends ApiModel
     protected $table = 'survey_answer';
     public $timestamps = true;
 
+    /*
+     * Note the survey_answer.callsign column has the callsign value from the survey form from 2019 and prior.
+     * The field was free form, and not validated. The reporting code still uses the column if person_id is 0.
+     */
+
     protected $fillable = [
         'survey_id',
         'survey_group_id',
@@ -40,7 +45,7 @@ class SurveyAnswer extends ApiModel
     ];
 
     protected $attributes = [
-        'can_share_name' => true,
+        'can_share_name' => false,
     ];
 
     public function trainer()

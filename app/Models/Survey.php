@@ -18,8 +18,11 @@ class Survey extends ApiModel
     protected $auditModel = true;
     public $timestamps = true;
 
+    // Survey is for trainers on trainers.
     const TRAINER = 'trainer';
+    // Survey is for a training session
     const TRAINING = 'training';
+    // Survey is for a shift (not implemented currently)
     const SLOT = 'slot';
 
     protected $fillable = [
@@ -39,6 +42,11 @@ class Survey extends ApiModel
         'epilogue' => 'sometimes|string',
         'position_id' => 'sometimes|integer|nullable',
     ];
+
+    public function survey_group()
+    {
+        return $this->hasMany(SurveyGroup::class);
+    }
 
     /**
      * Find all the surveys
@@ -96,6 +104,7 @@ class Survey extends ApiModel
         $includeSlots = $query['include_slots'] ?? false;
 
         $sql = self::with('position:id,title')
+            ->with('survey_group')
             ->orderBy('year');
 
         if ($year) {
@@ -123,6 +132,25 @@ class Survey extends ApiModel
                     }
                 }
             }
+
+            // Build up the report types
+            $reports = [
+                [
+                    'id' => 'main',
+                    'title' => ($row->type == self::TRAINER) ? 'Trainer-On-Trainer Feedback' : 'Venue Feedback'
+                ]
+            ];
+
+            foreach ($row->survey_group as $group) {
+                if ($group->type != SurveyGroup::TYPE_NORMAL) {
+                    $reports[] = [
+                        'id' => $group->getReportId(),
+                        'title' => $group->getReportTitleDefault(),
+                    ];
+                }
+            }
+
+            $row->reports = $reports;
         }
 
         return $rows;
@@ -143,7 +171,7 @@ class Survey extends ApiModel
             'signed_up',
             DB::raw('EXISTS (SELECT 1 FROM survey_answer WHERE slot_id=slot.id LIMIT 1) AS has_responses'),
             DB::raw('IF(slot.ends < ? , TRUE, FALSE) as has_ended'),
-            )->setBindings([now()])
+        )->setBindings([now()])
             ->whereYear('begins', $this->year)
             ->where('position_id', $this->position_id)
             ->orderBy('begins')
@@ -169,7 +197,8 @@ class Survey extends ApiModel
                     'year' => $s->year,
                     'type' => $s->type,
                     'position_id' => $s->position_id,
-                    'position_title' => $s->position->title
+                    'position_title' => $s->position->title,
+                    'title' => $s->title,
                 ];
             })
             ->sortBy('year')
@@ -178,13 +207,13 @@ class Survey extends ApiModel
     }
 
     /**
-     * Find all surveys with answers for a person and year
+     * Find all surveys with answers for a trainer and year
      *
      * @param int $personId
      * @param int $year
      * @return Survey[]|\Illuminate\Database\Eloquent\Collection
      */
-    public static function findAllForPersonYear(int $personId, int $year)
+    public static function findAllForTrainerYear(int $personId, int $year)
     {
         return Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
             ->with(['position:id,title'])
@@ -192,6 +221,12 @@ class Survey extends ApiModel
             ->get();
     }
 
+    public static function hasTrainerSurveyForPosition(int $positionId) {
+        return self::where('type', self::TRAINER)
+                    ->where('year', current_year())
+                    ->where('position_id', $positionId)
+                    ->exists();
+    }
     /**
      * Find any unanswered surveys for a person who has passed training in a given year.
      *
@@ -208,7 +243,7 @@ class Survey extends ApiModel
             ->where('person_id', $personId)
             ->where('passed', true)
             // is there a survey available?
-            ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.year=? AND survey.position_id=slot.position_id LIMIT 1)', [$year])
+            ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINING])
             // Ensure person is still signed up
             ->whereRaw('EXISTS (SELECT 1 FROM person_slot WHERE person_slot.slot_id=trainee_status.slot_id AND person_slot.person_id=? LIMIT 1)', [$personId])
             // .. and have not responded to the survey
@@ -226,6 +261,7 @@ class Survey extends ApiModel
             })->values()->toArray();
 
         $positionIds = [];
+
         foreach (Position::TRAINERS as $trainingId => $trainerIds) {
             $positionIds = array_merge($positionIds, $trainerIds);
         }
@@ -233,6 +269,7 @@ class Survey extends ApiModel
         $trainerSurveys = [];
         // Is the person a teacher of any kind?
         if (PersonPosition::havePosition($personId, $positionIds)) {
+
             // Find all the sessions the person taught (aka marked as attended)
             $taught = TrainerStatus::join('slot', 'slot.id', 'trainer_status.trainer_slot_id')
                 ->whereIn('slot.position_id', $positionIds)
@@ -244,13 +281,17 @@ class Survey extends ApiModel
             if (!$taught->isEmpty()) {
                 // Find all the other co-trainers
                 $slotIds = $taught->pluck('slot_id')->unique()->toArray();
-                $trainerSlots = TrainerStatus::whereIn('slot_id', $slotIds)
+                $trainerSlots = TrainerStatus::select('trainer_status.*')
+                    ->join('slot', 'slot.id', 'trainer_status.slot_id')
+                    ->whereIn('slot_id', $slotIds)
                     ->where('trainer_status.person_id', '!=', $personId)
                     ->where('trainer_status.status', TrainerStatus::ATTENDED)
+                    // is there a survey available?
+                    ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINER])
                     ->whereRaw('NOT EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.slot_id=trainer_status.slot_id AND survey_answer.trainer_id=trainer_status.person_id AND survey_answer.person_id=? LIMIT 1)', [$personId])
                     ->with(['slot:id,begins,description,position_id', 'slot.position:id,title', 'person:id,callsign', 'trainer_slot.position:id,title'])
                     ->get()
-                    ->groupBy('trainee_status.slot_id');
+                    ->groupBy('trainer_status.slot_id');
 
                 foreach ($trainerSlots as $slotId => $trainers) {
                     $slot = $trainers[0]->slot;
