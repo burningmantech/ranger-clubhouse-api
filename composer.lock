@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "49f67ec16be1d70d8f98bb14891ba180",
+    "content-hash": "bc082a5283fc5a767361f3689241c218",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -64,16 +64,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.175.3",
+            "version": "3.176.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "836564a2cef648e60fee63d3f9c5a74757aa3217"
+                "reference": "776b944988167fa3d563d2cbc5fcb6763424a9f0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/836564a2cef648e60fee63d3f9c5a74757aa3217",
-                "reference": "836564a2cef648e60fee63d3f9c5a74757aa3217",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/776b944988167fa3d563d2cbc5fcb6763424a9f0",
+                "reference": "776b944988167fa3d563d2cbc5fcb6763424a9f0",
                 "shasum": ""
             },
             "require": {
@@ -148,9 +148,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.175.3"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.176.8"
             },
-            "time": "2021-03-24T18:14:18+00:00"
+            "time": "2021-04-05T18:16:29+00:00"
         },
         {
             "name": "brick/math",
@@ -8370,7 +8370,8 @@
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
         "ext-tokenizer": "*",
-        "ext-xml": "*"
+        "ext-xml": "*",
+        "ext-zip": "*"
     },
     "platform-dev": [],
     "plugin-api-version": "2.0.0"
