@@ -7,6 +7,7 @@ use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonEvent;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -48,6 +49,9 @@ class Bmid extends ApiModel
     // Person is not rangering this year (common) or another reason.
     const DO_NOT_PRINT = 'do_not_print';
 
+    // BMID was submitted
+    const SUBMITTED = 'submitted';
+
     const READY_TO_PRINT_STATUSES = [
         self::IN_PREP,
         self::READY_TO_PRINT,
@@ -71,9 +75,11 @@ class Bmid extends ApiModel
     protected $access_any_time = false;
     protected $access_date = null;
 
-    protected $uploadedToLambase = false;
     protected $has_signups = false;
     protected $org_vehicle_insurance = false;
+
+    protected $want_meals = '';
+    protected $want_showers = false;
 
     protected $fillable = [
         'person_id',
@@ -110,6 +116,7 @@ class Bmid extends ApiModel
         'modified_datetime' => 'datetime',
         'access_date' => 'datetime:Y-m-d',
         'access_any_time' => 'bool',
+        'want_showers' => 'bool',
     ];
 
     protected $appends = [
@@ -117,6 +124,8 @@ class Bmid extends ApiModel
         'access_date',
         'has_signups',
         'org_vehicle_insurance',
+        'want_meals',
+        'want_showers',
         'wap_id',
         'wap_status',
         'wap_type',
@@ -134,12 +143,10 @@ class Bmid extends ApiModel
 
         self::saved(function ($model) {
             $model->updateWap();
-            $model->syncToAccessDocuments();
         });
 
         self::created(function ($model) {
             $model->updateWap();
-            $model->syncToAccessDocuments();
         });
     }
 
@@ -160,17 +167,7 @@ class Bmid extends ApiModel
 
     public function loadRelationships()
     {
-        $this->load(self::PERSON_WITH);
-        $event = PersonEvent::findForPersonYear($this->person_id, $this->year);
-
-        if ($event) {
-            $this->org_vehicle_insurance = $event->org_vehicle_insurance;
-        }
-
-        $wap = AccessDocument::findWAPForPerson($this->person_id);
-        if ($wap) {
-            $this->setWap($wap);
-        }
+        self::bulkLoadRelationships(new EloquentCollection([$this]), [$this->person_id]);
     }
 
     public function setWap($wap)
@@ -227,9 +224,10 @@ class Bmid extends ApiModel
 
         self::bulkLoadRelationships($bmids, $personIds);
 
-        $bmids = $bmids->sortBy(function ($bmid, $key) {
-            return $bmid->person ? $bmid->person->callsign : "";
-        }, SORT_NATURAL | SORT_FLAG_CASE)->values();
+        $bmids = $bmids->sortBy(
+            fn($bmid, $key) => ($bmid->person ? $bmid->person->callsign : ""),
+            SORT_NATURAL | SORT_FLAG_CASE
+        )->values();
 
         return $bmids;
     }
@@ -269,16 +267,10 @@ class Bmid extends ApiModel
             $bmidsByPerson[$id]->has_signups = true;
         }
 
-        $newBmids = $bmids->filter(fn($b) => !$b->id);
-        if ($newBmids->isEmpty()) {
-            // no new BMIDs to process
-            return;
-        }
-
-
-        $itemsByPersonId = AccessDocument::whereIn('person_id', $newBmids->pluck('person_id'))
-            ->where('status', AccessDocument::CLAIMED)
-            ->whereIn('type', [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])
+        // Load up what the person wants to claim OR has been submitted
+        $itemsByPersonId = AccessDocument::whereIn('person_id', $bmids->pluck('person_id'))
+            ->where('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->whereIn('type', [AccessDocument::ALL_EAT_PASS, AccessDocument::EVENT_EAT_PASS, AccessDocument::WET_SPOT])
             ->get()
             ->groupBy('person_id');
 
@@ -288,14 +280,18 @@ class Bmid extends ApiModel
                 continue;
             }
 
-            $meals = $items->firstWhere('type', AccessDocument::ALL_YOU_CAN_EAT);
-            if ($meals) {
-                $bmid->meals = self::MEALS_ALL;
-            }
-
-            $showers = $items->firstWhere('type', AccessDocument::WET_SPOT);
-            if ($showers) {
-                $bmid->showers = true;
+            foreach ($items as $item) {
+                switch ($item->type) {
+                    case AccessDocument::ALL_EAT_PASS:
+                        $bmid->want_meals = self::MEALS_ALL;
+                        break;
+                    case AccessDocument::EVENT_EAT_PASS:
+                        $bmid->want_meals = self::MEALS_EVENT;
+                        break;
+                    case AccessDocument::WET_SPOT:
+                        $bmid->want_showers = true;
+                        break;
+                }
             }
         }
     }
@@ -334,97 +330,6 @@ class Bmid extends ApiModel
             $wap->refresh();
             $this->setWap($wap);
         }
-    }
-
-    /**
-     * Sync the BMID appreciations choices against the Person Items.
-     */
-
-    public function syncToAccessDocuments()
-    {
-        $items = AccessDocument::where('person_id', $this->person_id)
-            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
-            ->whereIn('type', [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])
-            ->get();
-
-        $this->syncItem($items, AccessDocument::ALL_YOU_CAN_EAT, $this->meals == self::MEALS_ALL);
-        $this->syncItem($items, AccessDocument::WET_SPOT, $this->showers);
-    }
-
-    public function syncItem($items, $type, $claim)
-    {
-        $status = $claim ? AccessDocument::CLAIMED : AccessDocument::BANKED;
-        $item = $items->firstWhere('type', $type);
-        if ($item && $item->status != $status) {
-            $item->status = $status;
-            $item->auditReason = $item->additional_comments = "{$status} via BMID";
-            $item->saveWithoutValidation();
-        }
-    }
-
-    public static function syncFromAccessDocument(AccessDocument $ad)
-    {
-        if (!in_array($ad->type, [AccessDocument::ALL_YOU_CAN_EAT, AccessDocument::WET_SPOT])) {
-            return;
-        }
-
-        if (!in_array($ad->status, [AccessDocument::CLAIMED, AccessDocument::BANKED])) {
-            return;
-        }
-
-        $bmid = self::findForPersonYear($ad->person_id, current_year());
-        if (!$bmid) {
-            return;
-        }
-
-        $bmid->loadRelationships();
-
-        $status = $ad->status;
-        $reason = null;
-        switch ($ad->type) {
-            case AccessDocument::ALL_YOU_CAN_EAT:
-                // Person wants the buffet!
-                if ($status == AccessDocument::CLAIMED) {
-                    if ($bmid->meals == self::MEALS_ALL) {
-                        // Already set for all you can eat.
-                        return;
-                    }
-                    $bmid->meals = self::MEALS_ALL;
-                    $reason = 'claimed all-you-can-eat';
-                } else if ($status == AccessDocument::BANKED) {
-                    if (empty($bmid->meals)) {
-                        return; // nothing to do.
-                    }
-                    $bmid->meals = '';
-                    $reason = 'banked all-you-can-eat';
-                }
-                break;
-            case AccessDocument::WET_SPOT:
-                // Person wants to be clean.
-                if ($status == AccessDocument::CLAIMED) {
-                    if ($bmid->showers) {
-                        // Already set for showers
-                        return;
-                    }
-                    $bmid->showers = true;
-                    $reason = 'claimed wet-spot';
-                } else if ($status == AccessDocument::BANKED) {
-                    if (!$bmid->showers) {
-                        return; // already banked.
-                    }
-                    $bmid->showers = false;
-                    $reason = 'banked wet-spot';
-                }
-                break;
-        }
-
-        if (!$reason) {
-            return; // nothing happened.
-        }
-
-        $bmid->auditReason = $reason;
-        $bmid->appendNotes($reason);
-        $bmid->saveWithoutValidation();
     }
 
     public function setTitle1Attribute($value)
@@ -473,11 +378,13 @@ class Bmid extends ApiModel
         return $this->access_any_time;
     }
 
-    public function setOrgVehicleInsuranceAttribute($value) {
+    public function setOrgVehicleInsuranceAttribute($value)
+    {
         $this->org_vehicle_insurance = $value;
     }
 
-    public function getOrgVehicleInsuranceAttribute() {
+    public function getOrgVehicleInsuranceAttribute()
+    {
         return $this->org_vehicle_insurance;
     }
 
@@ -499,6 +406,14 @@ class Bmid extends ApiModel
     public function getHasSignupsAttribute()
     {
         return $this->has_signups;
+    }
+
+    public function getWantMealsAttribute() {
+        return $this->want_meals;
+    }
+
+    public function getWantShowersAttribute() {
+        return $this->want_showers;
     }
 
     /**
@@ -531,4 +446,31 @@ class Bmid extends ApiModel
         $callsign = Auth::check() ? Auth::user()->callsign : '(unknown)';
         $this->notes = "$date $callsign: $notes\n{$this->notes}";
     }
+
+    /**
+     * Builds a "meal matrix" indicating which weeks the person can
+     * have meals. This is a union between what has been set by the
+     * BMID administrator, and what the person claimed.
+     *
+     * @return array
+     */
+
+    public function buildMealsMatrix() : array
+    {
+        if ($this->meals == self::MEALS_ALL || $this->want_meals == self::MEALS_ALL) {
+            return [ self::MEALS_PRE => true,  self::MEALS_EVENT => true, self::MEALS_POST => true];
+        }
+
+        $matrix = [];
+        foreach (explode('+', $this->meals) as $week) {
+            $matrix[$week] = true;
+        }
+
+        if (!empty($this->want_meals)) {
+            $matrix[$this->want_meals] = true;
+        }
+
+        return $matrix;
+    }
+
 }

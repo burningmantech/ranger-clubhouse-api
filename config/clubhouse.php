@@ -21,5 +21,10 @@ return [
     /*
      * What config/filesystem.php driver to use for photo storage.
      */
-    'PhotoStorage' => env('RANGER_CLUBHOUSE_PHOTO_STORAGE', 'photos-local')
+    'PhotoStorage' => env('RANGER_CLUBHOUSE_PHOTO_STORAGE', 'photos-local'),
+
+    /*
+     * Where to store the BMID exports
+     */
+    'BmidExportStorage' => env('RANGER_CLUBHOUSE_PHOTO_STORAGE', 'bmid-export-local')
 ];

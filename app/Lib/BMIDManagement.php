@@ -219,6 +219,14 @@ class BMIDManagement
                         $q->orWhereNotNull('title3');
                         $q->orWhereNotNull('meals');
                         $q->orWhere('showers', true);
+                        $q->orWhereExists(function ($item) {
+                           $item->select(DB::raw(1))
+                               ->from('access_document')
+                               ->whereColumn('access_document.person_id', 'bmid.person_id')
+                               ->whereIn('access_document.type', [ AccessDocument::WET_SPOT, ...AccessDocument::EAT_PASSES])
+                               ->whereIn('access_document.status', [ AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                               ->limit(1);
+                        });
                     })
                     ->get(['person_id'])
                     ->pluck('person_id')

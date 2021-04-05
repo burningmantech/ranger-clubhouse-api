@@ -39,8 +39,10 @@ Route::group([
     Route::match(['GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
     // Only used for development.
-    Route::get('photos/{file}', 'PersonPhotoController@photoImage')->where('file', '.*');
-    Route::get('staging/{file}', 'PersonPhotoController@photoImage')->where('file', '.*');
+    if (app()->isLocal()) {
+        // Serve up files in exports, photos, and staging
+        Route::get('{file}', 'FileController@serve')->where('file', '(exports|photos|staging)/.*');
+    }
 });
 
 
@@ -66,7 +68,7 @@ Route::group([
     Route::post('access-document/clean-access-documents', 'AccessDocumentController@cleanAccessDocsFromPriorEvent');
     Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
     Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
-    Route::patch('access-document/{access_document}/status', 'AccessDocumentController@status');
+    Route::patch('access-document/statuses', 'AccessDocumentController@statuses');
     Route::resource('access-document', 'AccessDocumentController');
 
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
@@ -87,7 +89,8 @@ Route::group([
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
 
-    Route::post('bmid/lambase', 'BmidController@lambase');
+    Route::post('bmid/export', 'BmidController@export');
+    Route::get('bmid/exports', 'BmidController@exportList');
     Route::get('bmid/manage', 'BmidController@manage');
     Route::get('bmid/manage-person', 'BmidController@managePerson');
     Route::get('bmid/sanity-check', 'BmidController@sanityCheck');

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use App\Models\AccessDocument;
@@ -246,12 +245,6 @@ class BulkUploadControllerTest extends TestCase
             'person_id' => $this->user->id,
             'showers' => 1
         ]);
-
-        $this->assertDatabaseHas('access_document', [
-            'person_id' => $this->user->id,
-            'type' => AccessDocument::WET_SPOT,
-            'status' => AccessDocument::CLAIMED
-        ]);
     }
 
     /*
@@ -404,15 +397,6 @@ class BulkUploadControllerTest extends TestCase
         $this->assertDatabaseHas(
             'bmid',
             ['person_id' => $this->user->id, 'year' => $year, 'meals' => 'all']
-        );
-
-        $this->assertDatabaseHas('access_document',
-            [
-                'person_id' => $this->user->id,
-                'source_year' => $year,
-                'type' => AccessDocument::ALL_YOU_CAN_EAT,
-                'status' => AccessDocument::CLAIMED
-            ]
         );
     }
 
@@ -666,7 +650,7 @@ class BulkUploadControllerTest extends TestCase
 
         // Test default one radio.
         $response = $this->json('POST', 'bulk-upload', [
-            'action' => 'eventradio',
+            'action' => 'event_radio',
             'records' => "$callsign",
             'commit' => 1,
         ]);
@@ -688,7 +672,7 @@ class BulkUploadControllerTest extends TestCase
 
         // Set specific number
         $response = $this->json('POST', 'bulk-upload', [
-            'action' => 'eventradio',
+            'action' => 'event_radio',
             'records' => "$callsign,2",
             'commit' => 1,
         ]);

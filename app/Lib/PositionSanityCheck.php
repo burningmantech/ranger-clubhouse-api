@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use InvalidArgumentException;
 
 class PositionSanityCheck
 {
@@ -23,7 +24,7 @@ class PositionSanityCheck
     public static function issues(): array
     {
         foreach (self::CHECKERS as $name => $checker) {
-            $insanity[$name] = $checker::issues();
+            $insanity[$name] = call_user_func("$checker::issues");
         }
 
         $insanity['shiny_penny_year'] = current_year();
@@ -45,7 +46,8 @@ class PositionSanityCheck
             throw new InvalidArgumentException("Unknown repair action [$repair]");
         }
 
-        return self::CHECKERS[$repair]::repair($peopleIds, $options);
+        $class = self::CHECKERS[$repair];
+        return call_user_func("$class::repair", $peopleIds, $options);
     }
 
 }

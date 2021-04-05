@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\BmidExport;
+use App\Models\PersonPhoto;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,11 +23,14 @@ class BmidControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public $year;
+    public $people;
+
     /*
      * have each test have a fresh user that is logged in.
      */
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
         $this->signInUser();
@@ -48,72 +54,72 @@ class BmidControllerTest extends TestCase
          *  - has WAP access date before the box office opens.
          */
 
-        $personWithTitle = Person::factory()->create([ 'callsign' => 'Masters McTitle']);
-        Bmid::factory()->create([ 'person_id' => $personWithTitle->id, 'title1' => 'hasTitle', 'year' => $year ]);
+        $personWithTitle = Person::factory()->create(['callsign' => 'Masters McTitle']);
+        Bmid::factory()->create(['person_id' => $personWithTitle->id, 'title1' => 'hasTitle', 'year' => $year]);
 
-        $personWithMeal = Person::factory()->create([ 'callsign' => 'Death Eater']);
-        Bmid::factory()->create([ 'person_id' => $personWithMeal->id, 'meals' => 'all', 'year' => $year ]);
+        $personWithMeal = Person::factory()->create(['callsign' => 'Death Eater']);
+        Bmid::factory()->create(['person_id' => $personWithMeal->id, 'meals' => 'all', 'year' => $year]);
 
-        $personWithShower = Person::factory()->create([ 'callsign' => 'Wet Spot Willie']);
-        Bmid::factory()->create([ 'person_id' => $personWithShower->id, 'showers' => true, 'year' => $year ]);
+        $personWithShower = Person::factory()->create(['callsign' => 'Wet Spot Willie']);
+        Bmid::factory()->create(['person_id' => $personWithShower->id, 'showers' => true, 'year' => $year]);
 
-        $personWithWap = Person::factory()->create([ 'callsign' => 'Early Bird']);
+        $personWithWap = Person::factory()->create(['callsign' => 'Early Bird']);
         $wap = AccessDocument::factory()->create([
-            'person_id'   => $personWithWap->id,
+            'person_id' => $personWithWap->id,
             'access_date' => "$year-08-20 00:00:00",
-            'type'        => 'work_access_pass',
-            'status'      => 'claimed',
+            'type' => 'work_access_pass',
+            'status' => 'claimed',
         ]);
 
         // create an alpha
-        $personAlpha = Person::factory()->create([ 'callsign' => 'Alpha Beta', 'status' => 'alpha' ]);
+        $personAlpha = Person::factory()->create(['callsign' => 'Alpha Beta', 'status' => 'alpha']);
 
         // Person signed up for on playa shifts, and/or passed training
         $slot = Slot::factory()->create([
-            'begins'    => "$year-08-20 00:00:00",
-            'ends'      => "$year-08-20 06:00:00",
-            'position_id'   => Position::DIRT,
+            'begins' => "$year-08-20 00:00:00",
+            'ends' => "$year-08-20 06:00:00",
+            'position_id' => Position::DIRT,
         ]);
-        $personPlaya = Person::factory()->create([ 'callsign' => 'Dusty Bottoms' ]);
-        PersonSlot::factory()->create([ 'person_id' => $personPlaya->id, 'slot_id' => $slot->id ]);
+        $personPlaya = Person::factory()->create(['callsign' => 'Dusty Bottoms']);
+        PersonSlot::factory()->create(['person_id' => $personPlaya->id, 'slot_id' => $slot->id]);
 
         // Vet passed training
         $trainingSlot = Slot::factory()->create([
-            'begins'    => "$year-07-20 09:45:00",
-            'ends'      => "$year-07-20 17:45:00",
-            'position_id'   => Position::TRAINING,
+            'begins' => "$year-07-20 09:45:00",
+            'ends' => "$year-07-20 17:45:00",
+            'position_id' => Position::TRAINING,
         ]);
 
         Position::factory()->create([
-            'id'    => Position::TRAINING,
-            'type'  => 'Training'
+            'id' => Position::TRAINING,
+            'type' => 'Training'
         ]);
 
-        $personTrained = Person::factory()->create([ 'callsign' => 'Trenton Trained']);
+        $personTrained = Person::factory()->create(['callsign' => 'Trenton Trained']);
 
         $traineeStatus = TraineeStatus::factory()->create([
-            'slot_id'   => $trainingSlot->id,
+            'slot_id' => $trainingSlot->id,
             'person_id' => $personTrained->id,
-            'passed'    => true,
+            'passed' => true,
         ]);
 
         $this->people = [
             'title' => $personWithTitle,
-            'meal'  => $personWithMeal,
+            'meal' => $personWithMeal,
             'shower' => $personWithShower,
-            'wap'   => $personWithWap,
+            'wap' => $personWithWap,
             'alpha' => $personAlpha,
-            'onplaya'   => $personPlaya,
-            'trained'   => $personTrained,
+            'onplaya' => $personPlaya,
+            'trained' => $personTrained,
         ];
 
         // Processed BMIDs
-        foreach ([ 'submitted', 'issues' ] as $status) {
-            $person = Person::factory()->create([ 'callsign' => "BMID $status"]);
+        foreach (['submitted', 'issues'] as $status) {
+            $person = Person::factory()->create(['callsign' => "BMID $status"]);
             $bmid = Bmid::factory()->create([
                 'person_id' => $person->id,
-                'year'      => $year,
-                'status'    => $status,
+                'year' => $year,
+                'status' => $status,
             ]);
 
             $this->people[$status] = $person;
@@ -131,22 +137,22 @@ class BmidControllerTest extends TestCase
 
         $bmid = Bmid::factory()->create([
             'person_id' => $person->id,
-            'year'      => $year,
-            'title1'    => 'Title X',
-            'title2'    => 'Title Y',
-            'title3'    => 'Title Z'
+            'year' => $year,
+            'title1' => 'Title X',
+            'title2' => 'Title Y',
+            'title3' => 'Title Z'
         ]);
 
-        $response = $this->json('GET', 'bmid', [ 'year' => $year ]);
+        $response = $this->json('GET', 'bmid', ['year' => $year]);
         $response->assertStatus(200);
         $response->assertJson([
             'bmids' => [
                 [
                     'person_id' => $person->id,
-                    'year'      => $year,
-                    'title1'    => 'Title X',
-                    'title2'    => 'Title Y',
-                    'title3'    => 'Title Z'
+                    'year' => $year,
+                    'title1' => 'Title X',
+                    'title2' => 'Title Y',
+                    'title3' => 'Title Z'
                 ]
             ]
         ]);
@@ -160,21 +166,21 @@ class BmidControllerTest extends TestCase
     {
         $this->createBmids();
 
-        $response = $this->json('GET', 'bmid/manage', [ 'year' => $this->year,  'filter' => 'signedup' ]);
+        $response = $this->json('GET', 'bmid/manage', ['year' => $this->year, 'filter' => 'signedup']);
         $response->assertStatus(200);
 
         $response->assertJson(
             [
-            'bmids' => [
-                [
-                    'person_id' => $this->people['onplaya']->id,
-                    'status'    => 'in_prep'
-                ],
-                [
-                    'person_id' => $this->people['trained']->id,
-                    'status'    => 'in_prep'
-                ]
-            ]]
+                'bmids' => [
+                    [
+                        'person_id' => $this->people['onplaya']->id,
+                        'status' => 'in_prep'
+                    ],
+                    [
+                        'person_id' => $this->people['trained']->id,
+                        'status' => 'in_prep'
+                    ]
+                ]]
         );
 
         $response->assertJsonCount(2, 'bmids.*.person_id');
@@ -192,13 +198,13 @@ class BmidControllerTest extends TestCase
     {
         $this->createBmids();
 
-        $response = $this->json('GET', 'bmid/manage', [ 'year' => $this->year,  'filter' => 'special' ]);
+        $response = $this->json('GET', 'bmid/manage', ['year' => $this->year, 'filter' => 'special']);
         $response->assertStatus(200);
 
-        $response->assertJsonFragment([ 'person_id' => $this->people['title']->id ]);
-        $response->assertJsonFragment([ 'person_id' => $this->people['meal']->id ]);
-        $response->assertJsonFragment([ 'person_id' => $this->people['shower']->id ]);
-        $response->assertJsonFragment([ 'person_id' => $this->people['wap']->id ]);
+        $response->assertJsonFragment(['person_id' => $this->people['title']->id]);
+        $response->assertJsonFragment(['person_id' => $this->people['meal']->id]);
+        $response->assertJsonFragment(['person_id' => $this->people['shower']->id]);
+        $response->assertJsonFragment(['person_id' => $this->people['wap']->id]);
         $response->assertJsonCount(4, 'bmids.*.person_id');
     }
 
@@ -210,10 +216,10 @@ class BmidControllerTest extends TestCase
     {
         $this->createBmids();
 
-        $response = $this->json('GET', 'bmid/manage', [ 'year' => $this->year,  'filter' => 'submitted' ]);
+        $response = $this->json('GET', 'bmid/manage', ['year' => $this->year, 'filter' => 'submitted']);
         $response->assertStatus(200);
 
-        $response->assertJsonFragment([ 'person_id' => $this->people['submitted']->id ]);
+        $response->assertJsonFragment(['person_id' => $this->people['submitted']->id]);
         $response->assertJsonCount(1, 'bmids.*.person_id');
     }
 
@@ -226,10 +232,10 @@ class BmidControllerTest extends TestCase
     {
         $this->createBmids();
 
-        $response = $this->json('GET', 'bmid/manage', [ 'year' => $this->year,  'filter' => 'nonprint' ]);
+        $response = $this->json('GET', 'bmid/manage', ['year' => $this->year, 'filter' => 'nonprint']);
         $response->assertStatus(200);
 
-        $response->assertJsonFragment([ 'person_id' => $this->people['issues']->id ]);
+        $response->assertJsonFragment(['person_id' => $this->people['issues']->id]);
         $response->assertJsonCount(1, 'bmids.*.person_id');
     }
 
@@ -241,16 +247,16 @@ class BmidControllerTest extends TestCase
     {
         $person = Person::factory()->create();
         $data = [
-            'year'      => $this->year,
+            'year' => $this->year,
             'person_id' => $person->id,
-            'title1'    => 'Lord Of The Flies',
-            'title2'    => 'Head Supreme',
-            'title3'    => 'Keeper of Puns',
+            'title1' => 'Lord Of The Flies',
+            'title2' => 'Head Supreme',
+            'title3' => 'Keeper of Puns',
         ];
 
-        $response = $this->json('POST', 'bmid', [ 'bmid' => $data ]);
+        $response = $this->json('POST', 'bmid', ['bmid' => $data]);
         $response->assertStatus(200);
-        $response->assertJson([ 'bmid' => $data ]);
+        $response->assertJson(['bmid' => $data]);
         $this->assertDatabaseHas('bmid', $data);
     }
 
@@ -261,19 +267,19 @@ class BmidControllerTest extends TestCase
     public function testUpdateBmid()
     {
         $data = [
-             'year'      => $this->year,
-             'person_id' => $this->user->id,
-             'title1'    => 'Village Idiot',
-         ];
+            'year' => $this->year,
+            'person_id' => $this->user->id,
+            'title1' => 'Village Idiot',
+        ];
 
         $bmid = Bmid::factory()->create($data);
 
-        $response = $this->json('PUT', "bmid/{$bmid->id}", [ 'bmid' => [ 'title1' => 'Town Crier'] ]);
+        $response = $this->json('PUT', "bmid/{$bmid->id}", ['bmid' => ['title1' => 'Town Crier']]);
         $response->assertStatus(200);
         $this->assertDatabaseHas('bmid', [
-             'id'   => $bmid->id,
-             'title1' => 'Town Crier'
-         ]);
+            'id' => $bmid->id,
+            'title1' => 'Town Crier'
+        ]);
     }
 
     /*
@@ -283,17 +289,17 @@ class BmidControllerTest extends TestCase
     public function testDestroyBmid()
     {
         $data = [
-              'year'      => $this->year,
-              'person_id' => $this->user->id,
-          ];
+            'year' => $this->year,
+            'person_id' => $this->user->id,
+        ];
 
         $bmid = Bmid::factory()->create($data);
 
         $response = $this->json('DELETE', "bmid/{$bmid->id}");
         $response->assertStatus(204);
         $this->assertDatabaseMissing('bmid', [
-              'id'   => $bmid->id,
-          ]);
+            'id' => $bmid->id,
+        ]);
     }
 
     /*
@@ -304,19 +310,38 @@ class BmidControllerTest extends TestCase
     {
         $person = Person::factory()->create();
 
+        AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'type' => AccessDocument::EVENT_EAT_PASS,
+            'status' => AccessDocument::CLAIMED,
+            'source_year' => $this->year,
+            'expiry_date' => $this->year
+        ]);
+
+        AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'type' => AccessDocument::WET_SPOT,
+            'status' => AccessDocument::CLAIMED,
+            'source_year' => $this->year,
+            'expiry_date' => $this->year
+        ]);
+
         $response = $this->json(
-             'GET',
-             'bmid/manage-person',
-            [ 'year' => $this->year, 'person_id' => $person->id ]
-         );
+            'GET',
+            'bmid/manage-person',
+            ['year' => $this->year, 'person_id' => $person->id]
+        );
+
 
         $response->assertStatus(200);
         $response->assertJson([
-              'bmid' => [
-                  'person_id' => $person->id,
-                  'year'      => $this->year,
-              ]
-          ]);
+            'bmid' => [
+                'person_id' => $person->id,
+                'year' => $this->year,
+                'want_showers' => true,
+                'want_meals' => Bmid::MEALS_EVENT,
+            ]
+        ]);
 
         $json = json_decode($response->getContent(), true);
         $this->assertEquals(false, isset($json['bmid']['id']));
@@ -329,22 +354,22 @@ class BmidControllerTest extends TestCase
     public function testFindExistingBmidToManage()
     {
         $person = Person::factory()->create();
-        $bmid = Bmid::factory()->create([ 'person_id' => $person->id, 'year' => $this->year ]);
+        $bmid = Bmid::factory()->create(['person_id' => $person->id, 'year' => $this->year]);
 
         $response = $this->json(
-              'GET',
-              'bmid/manage-person',
-             [ 'year' => $this->year, 'person_id' => $person->id ]
-          );
+            'GET',
+            'bmid/manage-person',
+            ['year' => $this->year, 'person_id' => $person->id]
+        );
 
         $response->assertStatus(200);
         $response->assertJson([
-               'bmid' => [
-                   'id'        => $bmid->id,
-                   'person_id' => $person->id,
-                   'year'      => $this->year,
-               ]
-           ]);
+            'bmid' => [
+                'id' => $bmid->id,
+                'person_id' => $person->id,
+                'year' => $this->year,
+            ]
+        ]);
     }
 
     /*
@@ -354,17 +379,17 @@ class BmidControllerTest extends TestCase
     public function testDoNotFindBmidToManage()
     {
         $response = $this->json(
-               'GET',
-               'bmid/manage-person',
-              [ 'year' => $this->year, 'person_id' => 999999 ]
-           );
+            'GET',
+            'bmid/manage-person',
+            ['year' => $this->year, 'person_id' => 999999]
+        );
 
         $response->assertStatus(422);
         $response->assertJson([
-               'errors' => [
-                   [ 'title' => 'The selected person id is invalid.'  ]
-               ]
-            ]);
+            'errors' => [
+                ['title' => 'The selected person id is invalid.']
+            ]
+        ]);
     }
 
     /*
@@ -378,22 +403,90 @@ class BmidControllerTest extends TestCase
 
         // BMID should be created and one title set.
         $special = Person::factory()->create();
-        PersonPosition::factory()->create([ 'person_id' => $special->id, 'position_id' => Position::OOD ]);
+        PersonPosition::factory()->create(['person_id' => $special->id, 'position_id' => Position::OOD]);
 
         $response = $this->json('POST', 'bmid/set-bmid-titles');
         $response->assertStatus(200);
         $response->assertJsonCount(1, 'bmids.*.id');
         $response->assertJson([
-                'bmids' => [
-                    [
-                        'id'       => $special->id,
-                        'callsign' => $special->callsign,
-                        'title1'   => 'Officer of the Day'
-                    ]
+            'bmids' => [
+                [
+                    'id' => $special->id,
+                    'callsign' => $special->callsign,
+                    'title1' => 'Officer of the Day'
                 ]
-            ]);
+            ]
+        ]);
 
-        $this->assertDatabaseHas('bmid', [ 'person_id' => $special->id, 'title1' =>  'Officer of the Day' ]);
-        $this->assertDatabaseMissing('bmid', [ 'person_id' => $simple->id ]);
+        $this->assertDatabaseHas('bmid', ['person_id' => $special->id, 'title1' => 'Officer of the Day']);
+        $this->assertDatabaseMissing('bmid', ['person_id' => $simple->id]);
+    }
+
+    /**
+     * Test exporting to Marcato
+     */
+
+    public function testExportMarcato()
+    {
+        $photoStorage = config('clubhouse.PhotoStorage');
+        $exportStorage = config('clubhouse.BmidExportStorage');
+        Storage::fake($exportStorage);
+        Storage::fake($photoStorage);
+
+        $person = Person::factory()->create();
+
+        Storage::disk($photoStorage)
+            ->put(PersonPhoto::storagePath('headshot.jpg'), 'a photo');
+
+        $photo = PersonPhoto::factory()->create([
+            'person_id' => $person->id,
+            'image_filename' => 'headshot.jpg',
+            'status' => PersonPhoto::APPROVED
+        ]);
+
+        $person->person_photo_id = $photo->id;
+        $person->saveWithoutValidation();
+
+        $bmid = Bmid::factory()->create([
+            'year' => $this->year,
+            'person_id' => $person->id,
+            'title1' => 'Lord Of The Flies',
+            'title2' => 'Head Supreme',
+            'title3' => 'Keeper of Puns',
+            'status' => Bmid::READY_TO_PRINT,
+        ]);
+
+        $meals = AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'type' => AccessDocument::ALL_EAT_PASS,
+            'status' => AccessDocument::CLAIMED,
+            'source_year' => $this->year,
+            'expiry_date' => $this->year
+        ]);
+
+        $response = $this->json('POST', 'bmid/export', [
+            'year' => $this->year,
+            'person_ids' => [$person->id],
+            'batch_info' => 'Big Batch'
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'bmids' => [[
+                'person_id' => $person->id,
+                'status' => Bmid::SUBMITTED,
+                'batch' => 'Big Batch'
+            ]]
+        ]);
+
+        $this->assertDatabaseHas('access_document', [
+            'id' => $meals->id,
+            'status' => AccessDocument::SUBMITTED
+        ]);
+
+        $this->assertDatabaseHas('bmid_export', [ 'batch_info' => 'Big Batch']);
+        $export = BmidExport::firstOrFail();
+
+        Storage::disk($exportStorage)->assertExists(BmidExport::storagePath($export->filename));
     }
 }

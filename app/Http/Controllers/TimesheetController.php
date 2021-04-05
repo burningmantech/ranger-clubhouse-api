@@ -441,8 +441,8 @@ class TimesheetController extends ApiController
             $response['forced'] = true;
             $response['unqualified_reason'] = $unqualifiedReason;
             $response['unqualified_message'] = Position::UNQUALIFIED_MESSAGES[$unqualifiedReason];
-            if ($positionRequired) {
-                $response['required_training'] = $positionRequired;
+            if ($requiredPositionId) {
+                $response['required_training'] = Position::retrieveTitle($requiredPositionId);
             }
 
             $log['forced'] = [

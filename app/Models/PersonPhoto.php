@@ -7,7 +7,6 @@ use App\Models\ApiModel;
 use App\Models\Person;
 use App\Models\ErrorLog;
 
-use App\Helpers\SqlHelper;
 
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -356,9 +355,9 @@ class PersonPhoto extends ApiModel
                 ErrorLog::record('person-photo-delete-exception', [
                     'person_id' => $userId,
                     'target_person_id' => $personId,
-                    'person_photo_id' => $personPhoto->id,
-                    'image_filename' => $personPhoto->image_filename,
-                    'orig_filename' => $personPhoto->orig_filename
+                    'person_photo_id' => $row->id,
+                    'image_filename' => $row->image_filename,
+                    'orig_filename' => $row->orig_filename
                 ]);
             }
 
@@ -371,12 +370,12 @@ class PersonPhoto extends ApiModel
         $this->uploaded_at = now();
     }
 
-    public function getImageUrlAttribute()
+    public function getImageUrlAttribute() : string
     {
         return self::storage()->url(self::storagePath($this->image_filename));
     }
 
-    public function getOrigUrlAttribute()
+    public function getOrigUrlAttribute() : string
     {
         return self::storage()->url(self::storagePath($this->orig_filename));
     }
@@ -477,6 +476,27 @@ class PersonPhoto extends ApiModel
         }
 
         return self::storage()->put(self::storagePath($file), $contents);
+    }
+
+    /**
+     * Does the image file actually exist within the storage?
+     *
+     * @return bool
+     */
+    public function imageExists() : bool
+    {
+        return self::storage()->exists(self::storagePath($this->image_filename));
+    }
+    /**
+     * Return the contents of the image.
+     *
+     * @return string
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     */
+
+    public function readImage() : string
+    {
+        return self::storage()->get(self::storagePath($this->image_filename));
     }
 
     /**

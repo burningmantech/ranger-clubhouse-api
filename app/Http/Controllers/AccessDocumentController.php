@@ -2,23 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccessDocumentDelivery;
-use App\Models\Bmid;
+use App\Http\Controllers\ApiController;
+
 use Exception;
+use InvalidArgumentException;
+
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
+use App\Models\AccessDocumentDelivery;
 use App\Models\Person;
 use App\Models\PersonSlot;
 use App\Models\Position;
-use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
-use InvalidArgumentException;
 
 class AccessDocumentController extends ApiController
 {
@@ -92,7 +91,7 @@ class AccessDocumentController extends ApiController
 
         $rows = AccessDocument::whereIn('id', $params['ids'])
             ->where('status', AccessDocument::CLAIMED)
-            ->whereNotIn('type', AccessDocument::APPRECIATION_TYPES)
+            ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
             ->get();
 
         if ($rows->isNotEmpty()) {
@@ -104,8 +103,7 @@ class AccessDocumentController extends ApiController
         foreach ($rows as $row) {
             $comment = "bulk marked submitted\ndelivery ";
             $delivery = $deliveries->get($row->person_id);
-            if ($row->type == AccessDocument::VEHICLE_PASS
-                && $staffCredentials->has($row->person_id)) {
+            if ($row->type == AccessDocument::VEHICLE_PASS && $staffCredentials->has($row->person_id)) {
                 $comment .= 'w/Staff Credential';
             } else if ($delivery) {
                 $comment .= $delivery->method;
@@ -115,6 +113,7 @@ class AccessDocumentController extends ApiController
             } else {
                 $comment .= 'none';
             }
+
             $row->additional_comments = $comment;
             $oldStatus = $row->status;
             $row->status = AccessDocument::SUBMITTED;
@@ -159,8 +158,6 @@ class AccessDocumentController extends ApiController
 
         AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, 'create');
 
-        Bmid::syncFromAccessDocument($accessDocument);
-
         return $this->success($accessDocument);
     }
 
@@ -186,8 +183,6 @@ class AccessDocumentController extends ApiController
             AccessDocumentChanges::log($accessDocument, $this->user->id, $changes);
         }
 
-        Bmid::syncFromAccessDocument($accessDocument);
-
         return $this->success($accessDocument);
     }
 
@@ -211,70 +206,111 @@ class AccessDocumentController extends ApiController
     }
 
     /**
-     * Set the status for the document.
+     * Set the status for several documents owned by the same person at once.
      *
-     * Yes, this could be folded into store(), however, this limits the security complexity
-     * of having to filter through the data sent in a store request.
+     * Special attention is given to tickets and vehicle passes. Any update to a ticket
+     * will cause a check for all banked tickets, and if so, release the
+     * vehicle pass to prevent gaming the system, or unintentionally give the VP to the person.
      *
-     * @param AccessDocument $accessDocument
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function status(AccessDocument $accessDocument)
+
+    public function statuses()
     {
-        $this->authorize('update', $accessDocument);
+        $params = request()->validate([
+            'statuses.*.id' => 'required|integer|exists:access_document,id',
+            'statuses.*.status' => 'required|string'
+        ]);
 
-        $request = request()->validate(['status' => 'required|string']);
+        $rows = AccessDocument::whereIn('id', array_column($params['statuses'], 'id'))->get();
 
-        $status = $request['status'];
-
-        $adStatus = $accessDocument->status;
-        $adType = $accessDocument->type;
-
-        switch ($status) {
-            case AccessDocument::BANKED:
-                if ((!in_array($adType, AccessDocument::TICKET_TYPES)
-                        && !in_array($adType, AccessDocument::APPRECIATION_TYPES))
-                    || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
-                    throw new InvalidArgumentException('Illegal type and status combination');
-                }
-                break;
-
-            case AccessDocument::CLAIMED:
-                if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
-                    throw new InvalidArgumentException('Document is not banked or qualified');
-                }
-                break;
-
-            case AccessDocument::QUALIFIED:
-                if ($adType != AccessDocument::WAP
-                    && $adType != AccessDocument::VEHICLE_PASS
-                    && !in_array($adType, AccessDocument::APPRECIATION_TYPES)) {
-                    throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass, or an Appreciation.');
-                }
-
-                if ($adStatus != AccessDocument::CLAIMED) {
-                    throw new InvalidArgumentException('Document is not claimed.');
-                }
-                break;
-
-            default:
-                throw new InvalidArgumentException('Unknown status action');
+        $personId = $rows[0]->person_id;
+        foreach ($rows as $row) {
+            // Verify person can update all the documents.
+            $this->authorize('update', $row);
+            if ($personId != $row->person_id) {
+                throw new \InvalidArgumentException("All records must be for the same person");
+            }
         }
 
-        $accessDocument->status = $status;
+        $docsById = $rows->keyBy('id');
 
-        $changes = $accessDocument->getChangedValues();
+        $haveTicket = false;
 
-        if (!empty($changes)) {
-            $accessDocument->saveWithoutValidation();
-            $changes['id'] = $accessDocument->id;
-            AccessDocumentChanges::log($accessDocument, $this->user->id, $changes);
+        foreach ($params['statuses'] as $statusUpdate){
+            $status = $statusUpdate['status'];
+            $ad = $docsById->get($statusUpdate['id']);
+            $adType = $ad->type;
+            $adStatus = $ad->status;
+            switch ($status) {
+                case AccessDocument::BANKED:
+                    if ((!in_array($adType, AccessDocument::TICKET_TYPES)
+                            && !in_array($adType, AccessDocument::PROVISION_TYPES))
+                        || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
+                        throw new InvalidArgumentException('Illegal type and status combination');
+                    }
+                    break;
+
+                case AccessDocument::CLAIMED:
+                    if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
+                        throw new InvalidArgumentException('Document is not banked or qualified');
+                    }
+                    break;
+
+                case AccessDocument::QUALIFIED:
+                    if ($adType != AccessDocument::WAP
+                        && $adType != AccessDocument::VEHICLE_PASS
+                        && !in_array($adType, AccessDocument::PROVISION_TYPES)) {
+                        throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass, or an Appreciation.');
+                    }
+
+                    if ($adStatus != AccessDocument::CLAIMED) {
+                        throw new InvalidArgumentException('Document is not claimed.');
+                    }
+                    break;
+
+                default:
+                    throw new InvalidArgumentException('Unknown status action');
+            }
+
+            $ad->status = $status;
+
+            $changes = $ad->getChangedValues();
+
+            if (!empty($changes)) {
+                $ad->saveWithoutValidation();
+                $changes['id'] = $ad->id;
+                AccessDocumentChanges::log($ad, $this->user->id, $changes);
+            }
+
+            if ($ad->isTicket()) {
+                $haveTicket = true;
+            }
         }
 
-        Bmid::syncFromAccessDocument($accessDocument);
 
-        return $this->success($accessDocument);
+        if ($haveTicket) {
+            // Prevent people from trying to game the system and grab the VP without claiming any tickets.
+            $personId = $rows[0]->person_id;
+            if (AccessDocument::noAvailableTickets($personId)) {
+                $vp = AccessDocument::where([
+                    'person_id' => $personId,
+                    'type' => AccessDocument::VEHICLE_PASS,
+                    'status' => AccessDocument::CLAIMED
+                ])->first();
+                if ($vp) {
+                    $vp->status = AccessDocument::QUALIFIED;
+                    $vp->auditReason = 'All tickets were banked';
+                    $vp->saveWithoutValidation();
+                    AccessDocumentChanges::log($vp, $this->user->id,
+                        [ 'status' => [AccessDocument::CLAIMED, AccessDocument::QUALIFIED ]]
+                    );
+                }
+            }
+        }
+
+        return $this->success($rows, null, 'access_document');
     }
 
     /**
@@ -539,7 +575,7 @@ class AccessDocumentController extends ApiController
         $user = $this->user->callsign;
 
         $rows = AccessDocument::where('status', AccessDocument::QUALIFIED)
-            ->whereIn('type', array_merge(AccessDocument::TICKET_TYPES, AccessDocument::APPRECIATION_TYPES))
+            ->whereIn('type', array_merge(AccessDocument::TICKET_TYPES, AccessDocument::PROVISION_TYPES))
             ->with('person:id,callsign,status')
             ->get();
 
