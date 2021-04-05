@@ -104,7 +104,7 @@ class ClubhouseGroundHogDayCommand extends Command
         DB::table('asset')->whereYear('created_at', '>', $year);
 
         // Mark some assets as being checked out
-        DB::table('asset_person')->whereYear('checked_in', '>=', $groundHogDay)->delete();
+        DB::table('asset_person')->whereYear('checked_in', '>=', $year)->delete();
         DB::table('asset_person')->where('checked_out', '>=', $groundHogDay)->update([ 'checked_in' => null ]);
 
         // Mark everyone on site who has a timesheet or is schedule to work as on site and signed paperwork

@@ -35,9 +35,10 @@ class BmidPolicy
     }
 
     /**
-     * Determine whether the user upload to Lambase
+     * Determine whether the the user can export the BMIDs for printing
      */
-    public function lambase(Person $user)
+
+    public function export(Person $user)
     {
         return false;
     }

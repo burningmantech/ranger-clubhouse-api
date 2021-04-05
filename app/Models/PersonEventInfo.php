@@ -79,12 +79,10 @@ class PersonEventInfo extends ApihouseResult
 
         if ($isCurrentYear) {
             if (setting('MealInfoAvailable')) {
-                $meals = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::ALL_YOU_CAN_EAT);
+                $meals = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EAT_PASSES);
                 if ($meals) {
                     $info->meals_status = $meals->status;
-                    if ($meals->status != AccessDocument::BANKED && (!$bmid || empty($bmid->meals))) {
-                        $meals->meals = 'all';
-                    }
+                    $info->meals_available = $meals->type;
                 }
             } else {
                 $info->meals = 'no-info';

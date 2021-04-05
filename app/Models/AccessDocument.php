@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\ApiModel;
-
 use App\Models\Person;
 
 use Carbon\Carbon;
@@ -35,11 +33,11 @@ class AccessDocument extends ApiModel
     const WAP = 'work_access_pass';
     const WAPSO = 'work_access_pass_so';
 
-    const ALL_YOU_CAN_EAT = 'all_you_can_eat';
+    const ALL_EAT_PASS = 'all_eat_pass';
+    const EVENT_EAT_PASS = 'event_eat_pass';
     const EVENT_RADIO = 'event_radio';
     const WET_SPOT = 'wet_spot';
     const WET_SPOT_POG = 'wet_spot_pog'; // unused currently, might be used someday by the HQ Window Interface
-
 
     const ACTIVE_STATUSES = [
         self::QUALIFIED,
@@ -59,10 +57,16 @@ class AccessDocument extends ApiModel
         self::GIFT
     ];
 
-    const APPRECIATION_TYPES = [
-        self::ALL_YOU_CAN_EAT,
+    const PROVISION_TYPES = [
+        self::ALL_EAT_PASS,
+        self::EVENT_EAT_PASS,
+        self::EVENT_RADIO,
         self::WET_SPOT,
-        self::EVENT_RADIO
+    ];
+
+    const EAT_PASSES = [
+        self::ALL_EAT_PASS,
+        self::EVENT_EAT_PASS,
     ];
 
     const HAS_ACCESS_DATE_TYPES = [
@@ -76,6 +80,21 @@ class AccessDocument extends ApiModel
         self::WAPSO,
         self::VEHICLE_PASS,
         self::EVENT_RADIO
+    ];
+
+    const TYPE_LABELS = [
+        self::STAFF_CREDENTIAL => 'Staff Credential',
+        self::RPT => 'Reduced-Price Ticket',
+        self::GIFT => 'Gift Ticket',
+        self::VEHICLE_PASS => 'Vehicle Pass',
+        self::WAP => 'WAP',
+        self::WAPSO => 'WAPSO',
+
+        self::ALL_EAT_PASS => 'All Eat Pass',
+        self::EVENT_EAT_PASS => 'Event Week Eat Pass',
+        self::EVENT_RADIO => 'Event Radio',
+        self::WET_SPOT => 'Wet Spot Access',
+        self::WET_SPOT_POG => 'Wet Spot Pog',
     ];
 
     protected $fillable = [
@@ -200,6 +219,21 @@ class AccessDocument extends ApiModel
     }
 
     /**
+     * Check to see if an available ticket exists -- must have an unbanked ticket.
+     *
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function noAvailableTickets(int $personId): bool
+    {
+        return self::where('person_id', $personId)
+            ->whereIn('type', self::TICKET_TYPES)
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED])
+            ->doesntExist();
+    }
+
+    /**
      * Build up a ticketing package for the person
      *
      * @param int $personId
@@ -223,16 +257,21 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Find a document that is available (qualified, claimed, banked, submitted) for the given person
+     * Find a document that is available (qualified, claimed, banked, submitted) for the given person & type(s)
      *
      * @param int $personId
-     * @param string $type
+     * @param array|string $type
      * @return AccessDocument|null
      */
 
-    public static function findAvailableTypeForPerson(int $personId, string $type)
+    public static function findAvailableTypeForPerson(int $personId, array|string $type)
     {
-        return self::where(['person_id' => $personId, 'type' => $type])
+        if (!is_array($type)) {
+            $type = [$type];
+        }
+
+        return self::where('person_id', $personId)
+            ->whereIn('type', $type)
             ->whereIn('status', [
                 self::QUALIFIED,
                 self::CLAIMED,
@@ -241,9 +280,33 @@ class AccessDocument extends ApiModel
             ])->first();
     }
 
+    /**
+     * Find all item types for a given person, and mark as submitted (consumed).
+     * (Don't allow people to bank an item if it was set on the BMID directly.)
+     *
+     * @param int $personId
+     * @param array $type
+     */
+
+    public static function markSubmittedForBMID(int $personId, array $type)
+    {
+        $rows = self::whereIn('type', $type)
+                ->where('person_id', $personId)
+                ->whereIn('status', [ self::QUALIFIED, self::CLAIMED, self::BANKED ])
+                ->get();
+
+        foreach ($rows as $row) {
+            $row->status = self::SUBMITTED;
+            $changes = $row->getChangedValues();
+            $row->additional_comments = 'Consumed by BMID export';
+            $row->auditReason = 'Consumed by BMID export';
+            $row->saveWithoutValidation();
+            AccessDocumentChanges::log($row, Auth::id(), $changes);
+        }
+    }
+
     /*
-     * Retrieve all access documents that are claimed, qualified, or banked
-     * group by people.
+     * Retrieve all access documents, group by people, that are claimed, qualified, or banked
      *
      * Return an array. Each element is an associative array:
      *
@@ -262,7 +325,7 @@ class AccessDocument extends ApiModel
             $sql = self::whereIn('status', self::ACTIVE_STATUSES);
         }
 
-        $sql->whereNotIn('type', self::APPRECIATION_TYPES);
+        $sql->whereNotIn('type', self::PROVISION_TYPES);
 
         $rows = $sql->select(
             '*',
@@ -387,12 +450,7 @@ class AccessDocument extends ApiModel
             }
         }
 
-        usort(
-            $people,
-            function ($a, $b) {
-                return strcasecmp($a->person->callsign, $b->person->callsign);
-            }
-        );
+        usort($people, fn($a, $b) => strcasecmp($a->person->callsign, $b->person->callsign));
 
         return [
             'people' => $people,
@@ -437,7 +495,7 @@ class AccessDocument extends ApiModel
         }
 
         $people = array_values($peopleByIds);
-        usort($people, fn ($a, $b) => strcasecmp($a['person']->callsign, $b['person']->callsign));
+        usort($people, fn($a, $b) => strcasecmp($a['person']->callsign, $b['person']->callsign));
 
         return $people;
     }
@@ -663,20 +721,6 @@ class AccessDocument extends ApiModel
     }
 
     /*
-     * Is the country code a EU country?
-     */
-
-    public static function isEUCountry($country)
-    {
-        return in_array($country, [
-            "BE", "BG", "CZ", "DK", "DE", "EE", "IE",
-            "EL", "ES", "FR", "HR", "IT", "CY", "LV", "LT", "LU",
-            "HU", "MT", "NL", "AT", "PL", "PT", "RO", "SI", "SK",
-            "FI", "SE", "UK", "GB"
-        ]);
-    }
-
-    /*
      * additional_comments, when set, pre-appends to the comments column with
      * a timestamp and current user's callsign.
      */
@@ -696,5 +740,10 @@ class AccessDocument extends ApiModel
     public function isTicket()
     {
         return in_array($this->type, self::TICKET_TYPES);
+    }
+
+    public function getTypeLabel()
+    {
+        return self::TYPE_LABELS[$this->type] ?? $this->type;
     }
 }

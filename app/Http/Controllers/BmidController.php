@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\RestApi;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 use App\Models\Bmid;
-use App\Models\ErrorLog;
+use App\Models\BmidExport;
 use App\Models\PersonPosition;
 use App\Models\Position;
 
 use App\Lib\BMIDManagement;
-use App\Lib\LambaseBMID;
-use App\Lib\LambaseBMIDException;
+use App\Lib\MarcatoExport;
 
+use InvalidArgumentException;
 
 class BmidController extends ApiController
 {
@@ -69,13 +71,16 @@ class BmidController extends ApiController
         return response()->json(['bmid' => Bmid::findForPersonManage($params['person_id'], $params['year'])]);
     }
 
-    /*
-     * Send BMIDs to Lambase
+    /**
+     * Export BMIDs to Marcato
+     *
+     * @returns JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function lambase()
+    public function export()
     {
-        $this->authorize('lambase', Bmid::class);
+        $this->authorize('export', Bmid::class);
 
         $params = request()->validate([
             'year' => 'required|integer',
@@ -86,58 +91,41 @@ class BmidController extends ApiController
 
         $bmids = Bmid::findForPersonIds($params['year'], $params['person_ids']);
 
-        $user = $this->user->callsign;
-        $uploadDate = date('n/j/y G:i:s');
-        $batchInfo = $params['batch_info'] ?? '';
-        $batchInfo = $batchInfo . " submitted $uploadDate by $user";
+        if ($bmids->isEmpty()) {
+            throw new InvalidArgumentException('No BMIDs were found');
+        }
 
         // Filter out the IDS.
-        $filterBmids = $bmids->filter(function ($row) use ($batchInfo) {
-            if ($row->isPrintable()) {
-                $row->batch = $batchInfo;
-                return true;
-            }
-            return false;
-        });
+        $filterBmids = $bmids->filter(fn($bmid) => $bmid->isPrintable());
 
-        try {
-            if (!empty($filterBmids)) {
-                LambaseBMID::upload($filterBmids);
-            }
-        } catch (LambaseBMIDException $e) {
-            $message = $e->getMessage();
-            ErrorLog::recordException($e, 'lambase-bmid-exception', [
-                'lambase_result' => $e->lambaseResult
-            ]);
-            return RestApi::error(response(), 500, "Lambase upload failed: {$message}");
-        }
+        $batchInfo = $params['batch_info'] ?? '';
+        $exportUrl = MarcatoExport::export($filterBmids, $batchInfo);
 
-        $results = [];
-        foreach ($bmids as $bmid) {
-            if (!$bmid->uploadedToLambase) {
-                $results[] = [
-                    'person_id' => $bmid->person_id,
-                    'status' => 'failed'
-                ];
-                continue;
-            }
-            $bmid->status = 'submitted';
-            $bmid->notes = "$uploadDate $user: Uploaded to Lambase\n$bmid->notes";
-            $bmid->auditReason = 'upload to print';
-            $bmid->save();
-
-            $results[] = [
-                'person_id' => $bmid->person_id,
-                'status' => 'submitted'
-            ];
-        }
-
-        return response()->json(['bmids' => $results]);
+        return response()->json([ 'export_url' => $exportUrl, 'bmids' => $filterBmids ]);
     }
 
-    /*
-     * Sanity Check the BMIDs
+    /**
+     * Retrieve all exports for a given year
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
+
+    public function exportList()
+    {
+        $this->authorize('export', Bmid::class);
+        $year = $this->getYear();
+
+        return response()->json([ 'exports' => BmidExport::findAllForYear($year)]);
+    }
+
+
+    /**
+     * Sanity Check the BMIDs
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
     public function sanityCheck()
     {
         $this->authorize('index', Bmid::class);
@@ -282,9 +270,7 @@ class BmidController extends ApiController
             ];
         }
 
-        usort($badges, function ($a, $b) {
-            return strcasecmp($a['callsign'], $b['callsign']);
-        });
+        usort($badges, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return response()->json(['bmids' => $badges]);
     }

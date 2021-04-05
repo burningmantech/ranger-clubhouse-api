@@ -73,6 +73,23 @@ return [
             'visibility' => 'public',
         ],
 
+        'bmid-export-local' => [
+            'driver' => 'local',
+            'root' => storage_path(''),
+            'url' => env('APP_URL'),
+            'visibility' => 'public',
+        ],
+
+        'bmid-export-s3' => [
+            'driver' => 's3',
+            'key' => env('RANGER_CLUBHOUSE_S3_ACCESS_KEY', ''),
+            'secret' => env('RANGER_CLUBHOUSE_S3_ACCESS_SECRET', ''),
+            'region' => env('RANGER_CLUBHOUSE_S3_DEFAULT_REGION', 'us-west-2'),
+            'bucket' => env('RANGER_CLUBHOUSE_S3_BUCKET', 'ranger-photos'),
+            'url' => env('RANGER_CLUBHOUSE_S3_URL', 'https://ranger-photos.s3-us-west-2.amazonaws.com'),
+            'visibility' => 'public',
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
