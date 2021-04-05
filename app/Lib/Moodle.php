@@ -20,12 +20,8 @@ use RuntimeException;
 class Moodle
 {
     public $domain;
-    public $clientId;
-    public $clientSecret;
     public $token;
     public $serviceName;
-
-    const SERVICE_NAME = 'rangerweb';
 
     const LOGIN_URL = '/login/token.php';
     const WEB_SERVICE_URL = '/webservice/rest/server.php';
@@ -39,14 +35,11 @@ class Moodle
 
     public function __construct()
     {
-        $settings = setting(['MoodleDomain', 'MoodleClientId', 'MoodleClientSecret', 'MoodleServiceName'], true);
+        $settings = setting(['MoodleDomain', 'MoodleToken', 'MoodleServiceName'], true);
 
         $this->domain = $settings['MoodleDomain'];
-        $this->clientId = $settings['MoodleClientId'];
-        $this->clientSecret = $settings['MoodleClientSecret'];
+        $this->token = $settings['MoodleToken'];
         $this->serviceName = $settings['MoodleServiceName'];
-
-        $this->retrieveAccessToken();
     }
 
     public function retrieveAccessToken()
@@ -55,10 +48,9 @@ class Moodle
             'query' => [
                 'username' => $this->clientId,
                 'password' => $this->clientSecret,
-                'service' => self::SERVICE_NAME
+                'service' => $this->serviceName,
             ],
         ]);
-
         $this->token = $json->token;
     }
 
