@@ -18,7 +18,7 @@ RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-d
     && docker-php-ext-install -j$(nproc) opcache \
     && docker-php-ext-configure intl \
     && docker-php-ext-install -j$(nproc) intl \
-    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev libzip-dev \
+    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     && install -d -o www-data -g www-data -m 775  \
     ./storage/framework/cache                  \
     ./storage/framework/sessions               \
