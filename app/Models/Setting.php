@@ -182,14 +182,8 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING
         ],
 
-        'MoodleClientId' => [
-            'description' => 'Moodle Client ID/username - used to manage users and query course completion',
-            'type' => self::TYPE_STRING,
-            'is_credential' => true,
-        ],
-
-        'MoodleClientSecret' => [
-            'description' => 'Moodle Client Secret/password - used to manage users and query course completion',
+        'MoodleToken' => [
+            'description' => 'Moodle Web Service Token',
             'type' => self::TYPE_STRING,
             'is_credential' => true,
         ],
@@ -624,7 +618,7 @@ class Setting extends ApiModel
                         $value = null;
                     }
 
-                    if ($throwOnEmpty && self::notEmpty($settings[$setting])) {
+                    if ($throwOnEmpty && self::notEmpty($value)) {
                         throw new \RuntimeException("Setting '$setting' is empty.");
                     }
                     $settings[$setting] = $value;
