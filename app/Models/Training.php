@@ -53,7 +53,7 @@ class Training extends Position
 
         // The person has to have passed dirt training
         if ($person->status != Person::NON_RANGER
-            && !self::didPersonPassForYear($personId, Position::TRAINING, $year)) {
+            && !self::didPersonPassForYear($person, Position::TRAINING, $year)) {
             $requiredPositionId = Position::TRAINING;
             return false;
         }
@@ -72,7 +72,7 @@ class Training extends Position
         }
 
         // And check if person did pass the ART
-        if (self::didPersonPassForYear($personId, $trainingId, $year)) {
+        if (self::didPersonPassForYear($person, $trainingId, $year)) {
             return true;
         }
 
@@ -108,7 +108,8 @@ class Training extends Position
         $positions = PersonPosition::findForPerson($personId);
 
         $personPositions = [];
-        foreach ($positions as $position) {
+
+         foreach ($positions as $position) {
             $info = (object)[
                 'id' => $position->id,
                 'title' => $position->title,
@@ -164,28 +165,38 @@ class Training extends Position
              * - and the person did not pass/attend training
              */
 
-            if (!$trainer && $trainingId && !self::didPersonPassForYear($personId, $trainingId, $year)) {
+            if (!$trainer && $trainingId && !self::didPersonPassForYear($person, $trainingId, $year)) {
                 $info->is_untrained = true;
                 $info->training_position_id = $trainingId;
                 $info->training_title = Position::retrieveTitle($trainingId);
             }
-
         }
 
         return $personPositions;
     }
 
     /**
-     * Did the person pass training in a given year? check to see if they were a teach or student.
+     * Did the person pass training in a given year? check to see if they were a teacher or student.
      *
-     * @param int $personId person to check
+     * @param Person $person person to check
      * @param int $positionId position in question
      * @param int $year the year to check in
      * @return bool true if the person passed in the given year
      */
 
-    public static function didPersonPassForYear(int $personId, int $positionId, int $year): bool
+    public static function didPersonPassForYear(Person $person, int $positionId, int $year): bool
     {
+        $personId = $person->id;
+
+        if ($positionId == Position::TRAINING) {
+            $isBinary = Timesheet::isPersonBinary($person);
+
+            $otOnly = setting($isBinary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
+            if ($otOnly) {
+                return PersonOnlineTraining::didCompleteForYear($personId, current_year());
+            }
+        }
+
         return TraineeStatus::didPersonPassForYear($personId, $positionId, $year)
             || TrainerStatus::didPersonTeachForYear($personId, $positionId, $year);
     }

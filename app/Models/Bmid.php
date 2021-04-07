@@ -473,4 +473,8 @@ class Bmid extends ApiModel
         return $matrix;
     }
 
+    public function effectiveMeals() : string {
+        $meals = $this->buildMealsMatrix();
+        return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', $meals);
+    }
 }

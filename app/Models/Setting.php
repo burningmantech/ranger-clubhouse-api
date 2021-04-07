@@ -76,6 +76,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_INTEGER
         ],
 
+        'AuditorRegistrationDisabled' => [
+            'description' => 'Prevent Auditors from registering for an account in the Clubhouse',
+            'type' => self::TYPE_BOOL,
+            'default' => false,
+        ],
+
         'BroadcastClubhouseNotify' => [
             'description' => 'Enable RBS notification of new Clubhouse messages',
             'type' => self::TYPE_BOOL,
@@ -175,6 +181,18 @@ class Setting extends ApiModel
         'OnlineTrainingDisabledAllowSignups' => [
             'description' => 'Enable shift signups even if Online Training is disabled',
             'type' => self::TYPE_BOOL,
+        ],
+
+        'OnlineTrainingOnlyForBinaries' => [
+            'description' => 'Only require Online Training and not Face-to-Face training for vets (2+ years)',
+            'type' => self::TYPE_BOOL,
+            'default' => false
+        ],
+
+        'OnlineTrainingOnlyForVets' => [
+            'description' => 'Only require Online Training and not Face-to-Face training for binaries (0-1 years)',
+            'type' => self::TYPE_BOOL,
+            'default' => false
         ],
 
         'MoodleDomain' => [

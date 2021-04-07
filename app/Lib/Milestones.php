@@ -70,11 +70,16 @@ class Milestones
             $milestones['training'] = ['status' => 'no-shift'];
         }
 
-        usort($artTrainings, function ($a, $b) {
-            return strcasecmp($a->position_title, $b->position_title);
-        });
+        usort($artTrainings, fn ($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $milestones['art_trainings'] = $artTrainings;
+
+        $isBinary = Timesheet::isPersonBinary($person);
+
+        if (in_array($status, Person::ACTIVE_STATUSES)) {
+            // Only require Online Training to be passed in order to work? (2021 social distancing training)
+            $milestones['online_training_only'] = setting($isBinary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
+        }
 
         switch ($status) {
             case Person::ALPHA:
@@ -95,7 +100,7 @@ class Milestones
                 $milestones['needs_full_training'] = true;
                 break;
             case Person::ACTIVE:
-                if (count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) <= 1) {
+                if ($isBinary) {
                     // Binaries have to take a full day's training
                     $milestones['needs_full_training'] = true;
                     $milestones['is_binary'] = true;
@@ -162,7 +167,7 @@ class Milestones
     }
 
     /**
-     * Is the given time within a grace period?
+     * Is the given time within a 12 hour grace period?
      * @param Carbon|string $time
      * @param $now
      * @return bool

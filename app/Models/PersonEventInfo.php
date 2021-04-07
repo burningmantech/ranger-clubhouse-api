@@ -24,6 +24,9 @@ class PersonEventInfo extends ApihouseResult
 
     public $vehicles;
 
+    public $is_binary;
+    public $online_training_only;
+
     /*
      * Gather all information related to a given year for a person
      * - training status & location (if any)
@@ -34,8 +37,9 @@ class PersonEventInfo extends ApihouseResult
      * @return PersonEventInfo
      */
 
-    public static function findForPersonYear($personId, $year)
+    public static function findForPersonYear(Person $person, $year)
     {
+        $personId = $person->id;
         $info = new PersonEventInfo();
         $isCurrentYear = (current_year() == $year);
 
@@ -68,36 +72,22 @@ class PersonEventInfo extends ApihouseResult
             }
         }
 
-        $bmid = Bmid::findForPersonYear($personId, $year);
-        $info->meals = '';
-        $info->showers = false;
+        $bmid = Bmid::findForPersonManage($personId, $year);
 
         if ($bmid) {
-            $info->meals = $bmid->meals;
-            $info->showers = $bmid->showers;
-        }
-
-        if ($isCurrentYear) {
-            if (setting('MealInfoAvailable')) {
-                $meals = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EAT_PASSES);
-                if ($meals) {
-                    $info->meals_status = $meals->status;
-                    $info->meals_available = $meals->type;
-                }
-            } else {
-                $info->meals = 'no-info';
-            }
-
-            $showers = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::WET_SPOT);
-            if ($showers) {
-                $info->meals_status = $showers->status;
-                if (!$bmid && $showers->status != AccessDocument::BANKED) {
-                    $info->showers = true;
-                }
-            }
+            $info->meals = $bmid->effectiveMeals();
+            $info->showers = $bmid->showers || $bmid->want_showers;
+         } else {
+            $info->meals = '';
+            $info->showers = false;
         }
 
         $ot = PersonOnlineTraining::findForPersonYear($personId, $year);
+
+        if (in_array($person->status, Person::ACTIVE_STATUSES)) {
+            $info->is_binary = Timesheet::isPersonBinary($person);
+            $info->online_training_only = setting($info->is_binary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
+        }
 
         if ($ot) {
             $info->online_training_passed = true;
