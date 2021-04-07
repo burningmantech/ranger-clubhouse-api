@@ -14,6 +14,7 @@ class ConfigController extends Controller
 
     const CLIENT_CONFIGS = [
         'AdminEmail',
+        'AuditorRegistrationDisabled',
         'EditorUrl',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',

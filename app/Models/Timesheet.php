@@ -320,6 +320,34 @@ class Timesheet extends ApiModel
     }
 
     /**
+     * Is the person a binary Ranger (0 or 1 years experience).
+     * Current year is excluded to handle dashboard & training concerns.
+     *
+     * (e.g., Hubcap was a shiny penny in 2018, and works their first shift in 2019 - the current year,
+     *  which means they have two years by simply counting timesheet entries. We don't want that because
+     * then it throws things off with the dashboard & training checks.)
+     *
+     * @param \App\Models\Person $person
+     * @return bool
+     */
+
+    public static function isPersonBinary(Person $person) : bool
+    {
+        if ($person->status != Person::ACTIVE) {
+            return false;
+        }
+
+        $years = self::selectRaw("YEAR(on_duty) as year")
+            ->where('person_id', $person->id)
+            ->whereYear('on_duty', '!=', current_year())
+            ->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS)
+            ->groupBy("year")
+            ->get();
+
+        return $years->count() <= 1;
+    }
+
+    /**
      * Find the latest timesheet entry for a person in a position and given year
      *
      * @param int $personId

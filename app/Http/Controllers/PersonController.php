@@ -231,7 +231,7 @@ class PersonController extends ApiController
     public function eventInfo(Person $person)
     {
         $year = $this->getYear();
-        $eventInfo = PersonEventInfo::findForPersonYear($person->id, $year);
+        $eventInfo = PersonEventInfo::findForPersonYear($person, $year);
         if ($eventInfo) {
             return response()->json(['event_info' => $eventInfo]);
         }
@@ -576,6 +576,10 @@ class PersonController extends ApiController
 
     public function register()
     {
+        if (setting('AuditorRegistrationDisabled')) {
+            throw new \InvalidArgumentException("Auditor registration is disabled at this time.");
+        }
+
         $params = request()->validate([
             'intent' => 'required|string',
             'person.email' => 'required|email',

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PersonOnlineTraining;
 use Carbon\Carbon;
 use Tests\TestCase;
 
@@ -327,6 +328,30 @@ class TimesheetControllerTest extends TestCase
     }
 
     /*
+     * Sign in a person who is trained
+     */
+
+    public function testSigninForOnlineTrainingOnly()
+    {
+        $this->createTrainingSession(false);
+        $targetPersonId = $this->targetPerson->id;
+
+        $this->setting('OnlineTrainingOnlyForBinaries', true);
+
+        PersonOnlineTraining::factory()->create([
+            'person_id' => $targetPersonId,
+        ]);
+
+        $response = $this->json('POST', 'timesheet/signin', [
+            'person_id' => $targetPersonId,
+            'position_id' => Position::DIRT,
+        ]);
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'success']);
+    }
+
+
+    /*
      * Prevent a sign in for an untrained person
      */
 
@@ -339,6 +364,28 @@ class TimesheetControllerTest extends TestCase
             'person_id' => $targetPersonId,
             'position_id' => Position::DIRT,
         ]);
+        $response->assertJson([
+            'status' => 'not-trained',
+            'position_title' => 'Training',
+            'position_id' => Position::TRAINING,
+        ]);
+    }
+
+    /*
+     * Prevent a sign in for an untrained person
+     */
+
+    public function testNoSignInForNoOnlineTraining()
+    {
+        $this->createTrainingSession(false);
+        $targetPersonId = $this->targetPerson->id;
+        $this->setting('OnlineTrainingOnlyForBinaries', true);
+
+        $response = $this->json('POST', 'timesheet/signin', [
+            'person_id' => $targetPersonId,
+            'position_id' => Position::DIRT,
+        ]);
+
         $response->assertJson([
             'status' => 'not-trained',
             'position_title' => 'Training',
@@ -563,7 +610,7 @@ class TimesheetControllerTest extends TestCase
                 ]
             ],
         ]);
-   }
+    }
 
     /*
      * Unconfirmed people report
