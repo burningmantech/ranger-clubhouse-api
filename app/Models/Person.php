@@ -557,7 +557,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                             }
                         } elseif ($field == 'callsign') {
                             $sql->orWhere('callsign_normalized', $normalized);
-                            $sql->orWhere('callsign_normalized', 'like', $normalized . '%');
+                            $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
                             $sql->orWhere('callsign_soundex', $metaphone);
                             $sql->orWhere('callsign_soundex', 'like', $metaphone . '%');
                         } else {
@@ -575,10 +575,23 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $orderBy .= " WHEN email like " . SqlHelper::quote($q . '%') . " THEN CONCAT('02', callsign)";
                 $orderBy .= " WHEN email like " . SqlHelper::quote($likeQuery) . " THEN CONCAT('03', callsign)";
             } else {
+                /*
+                 * Sort priority is
+                 * - Exact callsign match
+                 * - Beginning of callsign match
+                 * - Substring callsign match
+                 * - Exact phonetic callsign match
+                 * - Beginning of phonetic match
+                 * - substring phonetic match
+                 * - Everything else
+                 *
+                 */
                 $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
                 $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
-                $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('03', callsign)";
-                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('04', callsign)";
+                $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
+                $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('04', callsign)";
+                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('05', callsign)";
+                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
             }
             $orderBy .= " ELSE CONCAT('06', callsign) END";
 
