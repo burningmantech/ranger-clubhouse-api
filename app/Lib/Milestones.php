@@ -82,6 +82,11 @@ class Milestones
         }
 
         switch ($status) {
+            case Person::AUDITOR:
+                if (setting('OnlineTrainingOnlyForAuditors')) {
+                    $milestones['online_training_only'] = true;
+                }
+                break;
             case Person::ALPHA:
             case Person::PROSPECTIVE:
             case Person::BONKED:

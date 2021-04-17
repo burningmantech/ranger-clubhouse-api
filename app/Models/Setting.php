@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Models\ApiModel;
-use \Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use InvalidArgumentException;
+use RuntimeException;
 
 class Setting extends ApiModel
 {
@@ -38,7 +40,7 @@ class Setting extends ApiModel
     const TYPE_INTEGER = 'integer';
     const TYPE_STRING = 'string';
     const TYPE_URL = 'url';
-    
+
     /*
      * Each setting must be described in the table below.
      *
@@ -121,10 +123,10 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
             'default' => 'auto',
             'options' => [
-                [ 'auto', 'Period automatically determined' ],
-                [ 'after-event', 'After Event (Sept thru March)' ],
-                [ 'before-event', 'Before Event (March thru mid-to-late August)' ],
-                [ 'event', 'Event Period (mid Aug til 1st Sat after Labor Day)' ],
+                ['auto', 'Period automatically determined'],
+                ['after-event', 'After Event (Sept thru March)'],
+                ['before-event', 'Before Event (March thru mid-to-late August)'],
+                ['event', 'Event Period (mid Aug til 1st Sat after Labor Day)'],
             ]
         ],
 
@@ -163,7 +165,7 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
-         'OnboardAlphaShiftPrepLink' => [
+        'OnboardAlphaShiftPrepLink' => [
             'description' => 'Used by the Onboarding Checklist for PNVs. Link to how to prep for your Alpha Shift in the Ranger Manual',
             'type' => self::TYPE_STRING
         ],
@@ -181,6 +183,12 @@ class Setting extends ApiModel
         'OnlineTrainingDisabledAllowSignups' => [
             'description' => 'Enable shift signups even if Online Training is disabled',
             'type' => self::TYPE_BOOL,
+        ],
+
+        'OnlineTrainingOnlyForAuditors' => [
+            'description' => 'Auditor are only allowed to take Online Training',
+            'type' => self::TYPE_BOOL,
+            'default' => false
         ],
 
         'OnlineTrainingOnlyForBinaries' => [
@@ -206,7 +214,7 @@ class Setting extends ApiModel
             'is_credential' => true,
         ],
 
-         'MoodleHalfCourseId' => [
+        'MoodleHalfCourseId' => [
             'description' => 'Moodle training course ID for active Rangers (2+ years)',
             'type' => self::TYPE_INTEGER,
         ],
@@ -564,7 +572,7 @@ class Setting extends ApiModel
         ]
     ];
 
-    public  function __construct(array $attributes = [])
+    public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
 
@@ -622,7 +630,7 @@ class Setting extends ApiModel
                 $row = $rows[$setting] ?? null;
                 $desc = self::DESCRIPTIONS[$setting] ?? null;
                 if (!$desc) {
-                    throw new \InvalidArgumentException("'$setting' is an unknown setting.");
+                    throw new InvalidArgumentException("'$setting' is an unknown setting.");
                 }
 
                 if (isset(self::$cache[$setting])) {
@@ -637,7 +645,7 @@ class Setting extends ApiModel
                     }
 
                     if ($throwOnEmpty && self::notEmpty($value)) {
-                        throw new \RuntimeException("Setting '$setting' is empty.");
+                        throw new RuntimeException("Setting '$setting' is empty.");
                     }
                     $settings[$setting] = $value;
                     self::$cache[$setting] = $value;
@@ -648,7 +656,7 @@ class Setting extends ApiModel
         } else {
             $desc = self::DESCRIPTIONS[$name] ?? null;
             if (!$desc) {
-                throw new \InvalidArgumentException("'$name' is an unknown setting.");
+                throw new InvalidArgumentException("'$name' is an unknown setting.");
             }
 
             if (isset(self::$cache[$name])) {
@@ -664,7 +672,7 @@ class Setting extends ApiModel
                 $value = null;
             }
             if ($throwOnEmpty && self::notEmpty($value)) {
-                throw new \RuntimeException("Setting '$name' is empty.");
+                throw new RuntimeException("Setting '$name' is empty.");
             }
             self::$cache[$name] = $value;
             return $value;
@@ -680,7 +688,7 @@ class Setting extends ApiModel
             case self::TYPE_INTEGER:
                 return (int)$value;
             case self::TYPE_FLOAT:
-                return (float) $value;
+                return (float)$value;
             default:
                 return $value;
         }
