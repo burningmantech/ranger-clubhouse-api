@@ -33,11 +33,15 @@ class Scheduling
             return [
                 'signup_for_all_shifts' => false,
                 'signup_for_training' => false,
-                'requirements' => [ self::PAST_PROSPECTIVE ]
+                'requirements' => [self::PAST_PROSPECTIVE]
             ];
         }
 
         $isAuditor = ($status == Person::AUDITOR);
+        if ($isAuditor && setting('OnlineTrainingOnlyForAuditors')) {
+            return ['online_training_only' => true];
+        }
+
         $isPNV = ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
         $isNonRanger = ($status == Person::NON_RANGER);
 
