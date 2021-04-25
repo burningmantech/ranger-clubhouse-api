@@ -267,9 +267,11 @@ class Bmid extends ApiModel
             $bmidsByPerson[$id]->has_signups = true;
         }
 
-        // Load up what the person wants to claim OR has been submitted
+        // The provisions are special - by default, the items are opt-out so treat an item qualified as
+        // the same as claimed.
+
         $itemsByPersonId = AccessDocument::whereIn('person_id', $bmids->pluck('person_id'))
-            ->where('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->whereIn('type', [AccessDocument::ALL_EAT_PASS, AccessDocument::EVENT_EAT_PASS, AccessDocument::WET_SPOT])
             ->get()
             ->groupBy('person_id');

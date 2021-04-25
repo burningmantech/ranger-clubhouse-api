@@ -447,6 +447,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return null;
     }
 
+    public function person_role() {
+        return $this->hasMany(PersonRole::class);
+    }
+
     public function save($options = [])
     {
         $isNew = !$this->id;

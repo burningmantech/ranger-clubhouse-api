@@ -10,6 +10,7 @@ use App\Models\Position;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BMIDManagement
@@ -24,7 +25,7 @@ class BMIDManagement
         'status'
     ];
 
-     /**
+    /**
      * Sanity check the BMIDs.
      *
      * - Find any BMID for a person who has non-Training shifts starting before the access date
@@ -135,7 +136,7 @@ class BMIDManagement
      *
      * @param int $year
      * @param string $filter
-     * @return Bmid[]|array|\Illuminate\Database\Eloquent\Collection
+     * @return Bmid[]|array|Collection
      */
 
     public static function retrieveCategoryToManage(int $year, string $filter)
@@ -219,14 +220,6 @@ class BMIDManagement
                         $q->orWhereNotNull('title3');
                         $q->orWhereNotNull('meals');
                         $q->orWhere('showers', true);
-                        $q->orWhereExists(function ($item) {
-                           $item->select(DB::raw(1))
-                               ->from('access_document')
-                               ->whereColumn('access_document.person_id', 'bmid.person_id')
-                               ->whereIn('access_document.type', [ AccessDocument::WET_SPOT, ...AccessDocument::EAT_PASSES])
-                               ->whereIn('access_document.status', [ AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-                               ->limit(1);
-                        });
                     })
                     ->get(['person_id'])
                     ->pluck('person_id')
@@ -253,7 +246,17 @@ class BMIDManagement
                     ->pluck('person_id')
                     ->toArray();
 
+                $provisionIds = AccessDocument::whereIn('access_document.type', [AccessDocument::WET_SPOT, ...AccessDocument::EAT_PASSES])
+                    ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                    ->distinct('person_id')
+                    ->get(['person_id'])
+                    ->pluck('person_id')
+                    ->toArray();
+
+
                 $ids = array_merge($specialIds, $adIds);
+                $ids = array_merge($provisionIds, $ids);
+                $ids = array_unique($ids);
                 break;
         }
 
