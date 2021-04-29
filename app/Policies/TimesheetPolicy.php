@@ -37,12 +37,21 @@ class TimesheetPolicy
     }
 
     /*
-     * Can the user mark the sheet as verified?
+     * Can the user update a timesheet?
      */
 
     public function update(Person $user, Timesheet $timesheet)
     {
         return $user->hasRole(Role::MANAGE) || ($user->id == $timesheet->person_id);
+    }
+
+    /**
+     * Can the user update the position on an active timesheet?
+     */
+
+    public function updatePosition(Person $user, Timesheet $timesheet)
+    {
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*
@@ -115,7 +124,7 @@ class TimesheetPolicy
 
     public function sanityChecker(Person $user)
     {
-        return $user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]);
+        return $user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
     }
 
     /**

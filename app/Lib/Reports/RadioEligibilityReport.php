@@ -24,21 +24,18 @@ class RadioEligibilityReport
 
     public static function execute(int $currentYear)
     {
-        // 2020 didn't happen, so adjust for that.
-        if ($currentYear == 2021) {
+        // 2020 & 2021 didn't happen, so adjust for that.
+        if ($currentYear == 2021 || $currentYear == 2022) {
             $lastYear = 2019;
             $prevYear = 2018;
-        } else if ($currentYear == 2022) {
-            $lastYear = 2021;
-            $prevYear = 2019;
         } else {
             $lastYear = $currentYear - 1;
             $prevYear = $currentYear - 2;
         }
 
-        $statuses = implode("','", [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED ]);
+        $statuses = implode("','", [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED]);
         $shiftLeadPosititons = implode(',', [Position::OOD, Position::DEPUTY_OOD, Position::RSC_SHIFT_LEAD, Position::RSC_SHIFT_LEAD_PRE_EVENT]);
-        $excludePositions = implode(',', [ Position::ALPHA, Position::TRAINING]);
+        $excludePositions = implode(',', [Position::ALPHA, Position::TRAINING]);
 
         $people = DB::select("SELECT person.id, person.callsign,
                 (SELECT SUM(TIMESTAMPDIFF(second, on_duty, off_duty))/3600.0 FROM timesheet WHERE person.id=timesheet.person_id AND year(on_duty)=$lastYear AND position_id NOT IN (1,13)) as hours_last_year,

@@ -33,6 +33,7 @@ use App\Lib\Reports\TimesheetByCallsignReport;
 use App\Lib\Reports\TimesheetByPositionReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
+use InvalidArgumentException;
 
 class TimesheetController extends ApiController
 {
@@ -323,6 +324,50 @@ class TimesheetController extends ApiController
     }
 
     /**
+     * Update an on duty Timesheet to the new position.
+     *
+     * @param Timesheet $timesheet
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function updatePosition(Timesheet $timesheet): JsonResponse
+    {
+        $this->authorize('updatePosition', $timesheet);
+        $params = request()->validate(['position_id' => 'required|integer|exists:position,id']);
+
+        if ($timesheet->off_duty) {
+            throw new InvalidArgumentException('Timesheet entry is not off duty.');
+        }
+
+        $positionId = $params['position_id'];
+        $person = $timesheet->person;
+        $personId = $timesheet->person_id;
+
+        $requiredPositionId = 0;
+        $unqualifiedReason = null;
+        $result = null;
+        $signonForced = false;
+        $canForceSignon = $this->userHasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
+
+        if (!$this->clearedToWork($person, $positionId, $requiredPositionId, $result, $canForceSignon, $signonForced, $unqualifiedReason)) {
+            return response()->json($result);
+        }
+
+        $oldPositionId = $timesheet->position_id;
+        $timesheet->position_id = $positionId;
+        // Find new sign up to associate with
+        $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($personId, $positionId, $timesheet->on_duty);
+        $timesheet->auditReason = 'position update while on duty';
+        $timesheet->saveOrThrow();
+
+        $log = [
+            'position_id' => [$oldPositionId, $timesheet->position_id],
+        ];
+
+        return $this->reportSignIn(TimesheetLog::UPDATE, $timesheet, $signonForced, $requiredPositionId, $unqualifiedReason, $log);
+    }
+
+    /**
      * Delete a timesheet entry
      *
      * @param Timesheet $timesheet
@@ -366,51 +411,22 @@ class TimesheetController extends ApiController
         $personId = $params['person_id'];
         $positionId = $params['position_id'];
 
-        // confirm person exists
-        $person = Person::findOrFail($personId);
-
-        // Confirm the person is allowed to sign into the position
-        if (!PersonPosition::havePosition($personId, $positionId)) {
-            return response()->json(['status' => 'position-not-held']);
-        }
-
         // they cannot be already on duty
         $onDuty = Timesheet::findPersonOnDuty($personId);
         if ($onDuty) {
             return response()->json(['status' => 'already-on-duty', 'timesheet' => $onDuty]);
         }
 
+        // confirm person exists
+        $person = Person::findOrFail($personId);
+
         $signonForced = false;
-        $required = null;
         $unqualifiedReason = null;
         $requiredPositionId = 0;
 
-        // Are they trained for this position?
-        if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
-            $positionRequired = Position::retrieveTitle($requiredPositionId);
-            if ($canForceSignon) {
-                $signonForced = true;
-                $unqualifiedReason = Position::UNQUALIFIED_UNTRAINED;
-            } else {
-                return response()->json([
-                    'status' => 'not-trained',
-                    'position_title' => $positionRequired,
-                    'position_id' => $requiredPositionId
-                ]);
-            }
-        }
-
-        // Sandman blocker - must be qualified
-        if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
-            if ($canForceSignon) {
-                $signonForced = true;
-            } else {
-                return response()->json([
-                    'status' => 'not-qualified',
-                    'unqualified_reason' => $unqualifiedReason,
-                    'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason]
-                ]);
-            }
+        $result = null;
+        if (!$this->clearedToWork($person, $positionId, $requiredPositionId, $result, $canForceSignon, $signonForced, $unqualifiedReason)) {
+            return response()->json($result);
         }
 
         $timesheet = new Timesheet($params);
@@ -427,14 +443,21 @@ class TimesheetController extends ApiController
 
         $timesheet->loadRelationships();
 
-        $response = [
-            'status' => 'success',
-            'timesheet_id' => $timesheet->id,
-        ];
-
         $log = [
             'position_id' => $timesheet->position_id,
             'on_duty' => (string)$timesheet->on_duty
+        ];
+
+
+        return $this->reportSignIn(TimesheetLog::SIGNON, $timesheet, $signonForced, $requiredPositionId, $unqualifiedReason, $log);
+    }
+
+    private function reportSignIn(string $action, Timesheet $timesheet, bool $signonForced,
+                                  int $requiredPositionId, $unqualifiedReason, $log)
+    {
+        $response = [
+            'status' => 'success',
+            'timesheet_id' => $timesheet->id,
         ];
 
         if ($signonForced) {
@@ -445,15 +468,13 @@ class TimesheetController extends ApiController
                 $response['required_training'] = Position::retrieveTitle($requiredPositionId);
             }
 
-            $log['forced'] = [
-                'reason' => $unqualifiedReason,
-            ];
+            $log['forced'] = ['reason' => $unqualifiedReason];
             if ($unqualifiedReason == Position::UNQUALIFIED_UNTRAINED) {
                 $log['forced']['position_id'] = $requiredPositionId;
             }
         }
 
-        $timesheet->log(TimesheetLog::SIGNON, $log);
+        $timesheet->log($action, $log);
 
         return response()->json($response);
     }
@@ -794,5 +815,54 @@ class TimesheetController extends ApiController
         $this->authorize('timesheetByPosition', [Timesheet::class]);
         $year = $this->getYear();
         return response()->json(['positions' => TimesheetByPositionReport::execute($year, $this->userCanViewEmail())]);
+    }
+
+    private function clearedToWork(Person $person,
+                                   int $positionId,
+                                   int &$requiredPositionId,
+                                   &$response,
+                                   bool $canForceSignon,
+                                   bool &$signonForced,
+                                   &$unqualifiedReason)
+    {
+        $personId = $person->id;
+
+        // Confirm the person is allowed to sign into the position
+        if (!PersonPosition::havePosition($personId, $positionId)) {
+            $response = ['status' => 'position-not-held'];
+            return false;
+        }
+
+
+        // Are they trained for this position?
+        if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
+            $positionRequired = Position::retrieveTitle($requiredPositionId);
+            if ($canForceSignon) {
+                $signonForced = true;
+                $unqualifiedReason = Position::UNQUALIFIED_UNTRAINED;
+            } else {
+                $response = [
+                    'status' => 'not-trained',
+                    'position_title' => $positionRequired,
+                    'position_id' => $requiredPositionId
+                ];
+                return false;
+            }
+        }
+
+        // Sandman blocker - must be qualified
+        if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
+            if ($canForceSignon) {
+                $signonForced = true;
+            } else {
+                $response = [
+                    'status' => 'not-qualified',
+                    'unqualified_reason' => $unqualifiedReason,
+                    'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason]
+                ];
+            }
+        }
+
+        return true;
     }
 }
