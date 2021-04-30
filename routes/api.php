@@ -310,6 +310,7 @@ Route::group([
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::match(['GET', 'POST'], 'timesheet/special-teams', 'TimesheetController@specialTeamsReport');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
+    Route::patch('timesheet/{timesheet}/update-position', 'TimesheetController@updatePosition');
     Route::resource('timesheet', 'TimesheetController');
 
     Route::resource('timesheet-missing', 'TimesheetMissingController');
