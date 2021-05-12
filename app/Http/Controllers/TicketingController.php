@@ -9,13 +9,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccessDocumentDelivery;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\ApiController;
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
+
+use Illuminate\Http\JsonResponse;
+
 use InvalidArgumentException;
 
 class TicketingController extends ApiController
@@ -161,16 +162,20 @@ class TicketingController extends ApiController
         return response()->json($rows);
     }
 
-    /*
-     * Create or update the delivery method and/or address.
+    /**
+     * Update the delivery method for all available tickets
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
 
-    public function delivery(Person $person)
+    public function delivery(Person $person): JsonResponse
     {
         $this->authorize('delivery', [AccessDocument::class, $person->id]);
 
         $params = request()->validate([
-            'method' => 'required|string',
+            'delivery_method' => 'required|string',
             'street' => 'sometimes|string|nullable',
             'city' => 'sometimes|string|nullable',
             'state' => 'sometimes|string|nullable',
@@ -178,13 +183,18 @@ class TicketingController extends ApiController
             'country' => 'sometimes|string|nullable',
         ]);
 
-        $row = AccessDocumentDelivery::findOrNewForPersonYear($person->id, current_year());
-        $row->fill($params);
-        if (!$row->save()) {
-            return $this->restError($row);
+        $tickets = AccessDocument::findAllAvailableDeliverablesForPerson($person->id);
+        foreach ($tickets as $ticket) {
+            $ticket->fill($params);
+            $ticket->auditReason = 'Delivery update';
+            $changes = $ticket->getChangedValues();
+            if (!empty($changes)) {
+                $ticket->save();
+                AccessDocumentChanges::log($ticket, $this->user->id, $changes);
+            }
         }
 
-        return response()->json($row);
+        return $this->success($tickets, null, 'access_document');
     }
 
     /**
@@ -193,7 +203,7 @@ class TicketingController extends ApiController
      * @return JsonResponse
      */
 
-    public function thresholds()
+    public function thresholds(): JsonResponse
     {
         // anyone can see the thresholds.
 

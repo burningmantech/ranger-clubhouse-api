@@ -10,9 +10,10 @@ use InvalidArgumentException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
+use App\Lib\TicketingManagement;
+
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
-use App\Models\AccessDocumentDelivery;
 use App\Models\Person;
 use App\Models\PersonSlot;
 use App\Models\Position;
@@ -58,7 +59,7 @@ class AccessDocumentController extends ApiController
 
         $forDelivery = $params['for_delivery'] ?? false;
 
-        return response()->json(['documents' => AccessDocument::retrieveCurrentByPerson($forDelivery)]);
+        return response()->json(['documents' => TicketingManagement::retrieveCurrentByPerson($forDelivery)]);
     }
 
     /**
@@ -70,7 +71,7 @@ class AccessDocumentController extends ApiController
     public function expiring()
     {
         $this->authorize('expiring', AccessDocument::class);
-        return response()->json(['expiring' => AccessDocument::retrieveExpiringTicketsByPerson(current_year())]);
+        return response()->json(['expiring' => TicketingManagement::retrieveExpiringTicketsByPerson(current_year())]);
     }
 
     /**
@@ -94,24 +95,14 @@ class AccessDocumentController extends ApiController
             ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
             ->get();
 
-        if ($rows->isNotEmpty()) {
-            $deliveries = AccessDocumentDelivery::retrieveForPersonIdsYear($rows->pluck('person_id'), current_year());
-        }
-
         $staffCredentials = $rows->where('type', AccessDocument::STAFF_CREDENTIAL)->keyBy('person_id');
 
         foreach ($rows as $row) {
             $comment = "bulk marked submitted\ndelivery ";
-            $delivery = $deliveries->get($row->person_id);
             if ($row->type == AccessDocument::VEHICLE_PASS && $staffCredentials->has($row->person_id)) {
                 $comment .= 'w/Staff Credential';
-            } else if ($delivery) {
-                $comment .= $delivery->method;
-                if ($delivery->method == AccessDocumentDelivery::MAIL) {
-                    $comment .= "mail {$delivery->street}, {$delivery->city}, {$delivery->state} {$delivery->postal_code}";
-                }
             } else {
-                $comment .= 'none';
+                $comment .= $row->delivery_method;
             }
 
             $row->additional_comments = $comment;
