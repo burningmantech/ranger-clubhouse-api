@@ -25,6 +25,18 @@ class AccessDocument extends ApiModel
     const EXPIRED = 'expired';
     const SUBMITTED = 'submitted';
 
+    const ACTIVE_STATUSES = [
+        self::QUALIFIED,
+        self::CLAIMED,
+        self::BANKED
+    ];
+
+    const INVALID_STATUSES = [
+        self::USED,
+        self::CANCELLED,
+        self::EXPIRED
+    ];
+
     // Access Document types
     const STAFF_CREDENTIAL = 'staff_credential';
     const RPT = 'reduced_price_ticket';
@@ -39,22 +51,17 @@ class AccessDocument extends ApiModel
     const WET_SPOT = 'wet_spot';
     const WET_SPOT_POG = 'wet_spot_pog'; // unused currently, might be used someday by the HQ Window Interface
 
-    const ACTIVE_STATUSES = [
-        self::QUALIFIED,
-        self::CLAIMED,
-        self::BANKED
-    ];
-
-    const INVALID_STATUSES = [
-        self::USED,
-        self::CANCELLED,
-        self::EXPIRED
-    ];
-
     const TICKET_TYPES = [
         self::STAFF_CREDENTIAL,
         self::RPT,
         self::GIFT
+    ];
+
+    const DELIVERABLE_TYPES = [
+        self::STAFF_CREDENTIAL,
+        self::RPT,
+        self::GIFT,
+        self::VEHICLE_PASS
     ];
 
     const PROVISION_TYPES = [
@@ -97,6 +104,11 @@ class AccessDocument extends ApiModel
         self::WET_SPOT_POG => 'Wet Spot Pog',
     ];
 
+    const DELIVERY_NONE = 'none';
+    const DELIVERY_POSTAL = 'postal';
+    const DELIVERY_EMAIL = 'email';
+    const DELIVERY_WILL_CALL = 'will_call';
+
     protected $fillable = [
         'person_id',
         'type',
@@ -138,6 +150,10 @@ class AccessDocument extends ApiModel
         'has_staff_credential'
     ];
 
+    protected $attributes = [
+        'delivery_method' => 'none'
+    ];
+
     public static function boot()
     {
         parent::boot();
@@ -157,6 +173,22 @@ class AccessDocument extends ApiModel
                 if (!$model->expiry_date || Carbon::parse($model->expiry_date)->year > $year) {
                     $model->expiry_date = $year;
                 }
+            }
+
+            switch ($model->type) {
+                case self::WAP:
+                case self::WAPSO:
+                    $model->delivery_method = self::DELIVERY_EMAIL;
+                    break;
+                case self::STAFF_CREDENTIAL:
+                    $model->delivery_method = self::DELIVERY_WILL_CALL;
+                    break;
+                case self::EVENT_EAT_PASS:
+                case self::WET_SPOT:
+                case self::ALL_EAT_PASS:
+                case self::WET_SPOT_POG:
+                    $model->delivery_method = self::DELIVERY_NONE;
+                    break;
             }
 
             // Only WAP SOs can have names
@@ -243,17 +275,31 @@ class AccessDocument extends ApiModel
     public static function buildPackageForPerson(int $personId): array
     {
         $year = event_year() - 1;
-        if ($year == 2020) {
-            // 2020 didn't happen. :-(
+        if ($year == 2020 || $year == 2021) {
+            // 2020 & 2021 didn't happen. :-(
             $year = 2019;
         }
 
         return [
             'access_documents' => self::findForQuery(['person_id' => $personId]),
-            'delivery' => AccessDocumentDelivery::findForPersonYear($personId, current_year()),
             'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
             'year_earned' => $year,
+            'period' => setting('TicketingPeriod')
         ];
+    }
+
+    /**
+     * Find all available (qualified, claimed, banked) deliverables (tickets & vehicle pass) for a person
+     *
+     * @param int $personId
+     */
+
+    public static function findAllAvailableDeliverablesForPerson(int $personId)
+    {
+        return self::where('person_id', $personId)
+            ->whereIn('type', self::DELIVERABLE_TYPES)
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
+            ->get();
     }
 
     /**
@@ -264,7 +310,7 @@ class AccessDocument extends ApiModel
      * @return AccessDocument|null
      */
 
-    public static function findAvailableTypeForPerson(int $personId, array|string $type)
+    public static function findAvailableTypeForPerson(int $personId, array|string $type): ?AccessDocument
     {
         if (!is_array($type)) {
             $type = [$type];
@@ -291,9 +337,9 @@ class AccessDocument extends ApiModel
     public static function markSubmittedForBMID(int $personId, array $type)
     {
         $rows = self::whereIn('type', $type)
-                ->where('person_id', $personId)
-                ->whereIn('status', [ self::QUALIFIED, self::CLAIMED, self::BANKED ])
-                ->get();
+            ->where('person_id', $personId)
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
+            ->get();
 
         foreach ($rows as $row) {
             $row->status = self::SUBMITTED;
@@ -303,201 +349,6 @@ class AccessDocument extends ApiModel
             $row->saveWithoutValidation();
             AccessDocumentChanges::log($row, Auth::id(), $changes);
         }
-    }
-
-    /*
-     * Retrieve all access documents, group by people, that are claimed, qualified, or banked
-     *
-     * Return an array. Each element is an associative array:
-     *
-     * person info: id,callsign,status,first_name,last_name,email
-     *     if $includeDelivery is true include - street1,city,state,zip,country
-     * documents: array of access documents
-     */
-
-    public static function retrieveCurrentByPerson($forDelivery)
-    {
-        $currentYear = current_year();
-
-        if ($forDelivery) {
-            $sql = self::where('status', self::CLAIMED);
-        } else {
-            $sql = self::whereIn('status', self::ACTIVE_STATUSES);
-        }
-
-        $sql->whereNotIn('type', self::PROVISION_TYPES);
-
-        $rows = $sql->select(
-            '*',
-            DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
-        )
-            ->with(['person:id,callsign,status,first_name,last_name,email,home_phone,street1,street2,city,state,zip,country'])
-            ->orderBy('source_year')
-            ->get();
-
-        $people = [];
-
-
-        $dateRange = setting('TAS_WAPDateRange');
-        if ($dateRange) {
-            list($low, $high) = explode("-", trim($dateRange));
-        } else {
-            $low = 5;
-            $high = 26;
-        }
-
-        if ($rows->isNotEmpty()) {
-            $deliveriesByPerson = AccessDocumentDelivery::whereIn('person_id', $rows->pluck('person_id'))
-                ->where('year', $currentYear)
-                ->get()
-                ->keyBy('person_id');
-        }
-
-        foreach ($rows as $row) {
-            // skip deleted person records
-            if (!$row->person) {
-                continue;
-            }
-
-            $personId = $row->person_id;
-
-            if (!isset($people[$personId])) {
-                $people[$personId] = (object)[
-                    'person' => $row->person,
-                    'documents' => []
-                ];
-            }
-
-            $person = $people[$personId];
-            $person->documents[] = $row;
-
-            $errors = [];
-            switch ($row->type) {
-                case self::STAFF_CREDENTIAL:
-                case self::WAP:
-                case self::WAPSO:
-                    if (!$row->access_any_time) {
-                        $accessDate = $row->access_date;
-                        if (!$accessDate) {
-                            $errors[] = "missing access date";
-                        } elseif ($accessDate->year < $currentYear) {
-                            $errors[] = "access date [$accessDate] is less than current year [$currentYear]";
-                        } else {
-                            $day = $accessDate->day;
-                            if ($day < $low || $day > $high) {
-                                $errors[] = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
-                            }
-                        }
-                    }
-                    break;
-            }
-
-            if ($forDelivery) {
-                $delivery = $deliveriesByPerson->get($row->person_id);
-                $deliveryMethod = $delivery ? $delivery->method : 'unknown';
-                $person->delivery_method = $deliveryMethod;
-                $deliveryType = 'unknown';
-
-                switch ($row->type) {
-                    case self::STAFF_CREDENTIAL:
-                        $deliveryType = AccessDocumentDelivery::STAFF_CREDENTIALING;
-                        break;
-
-                    case self::WAP:
-                    case self::WAPSO:
-                        $deliveryType = 'print_at_home';
-                        break;
-
-                    case self::RPT:
-                        $deliveryType = $deliveryMethod;
-                        if ($deliveryMethod == 'unknown') {
-                            $errors[] = 'missing delivery method';
-                        }
-                        break;
-
-                    case self::VEHICLE_PASS:
-                    case self::GIFT:
-                        if ($row->type == self::VEHICLE_PASS && $row->has_staff_credential) {
-                            $deliveryType = AccessDocumentDelivery::STAFF_CREDENTIALING;
-                        } else if ($deliveryMethod == 'unknown') {
-                            $errors[] = 'missing delivery method';
-                        } else if ($deliveryMethod == AccessDocumentDelivery::MAIL) {
-                            if ($delivery->hasAddress()) {
-                                $row->delivery_address = [
-                                    'street' => $delivery->street,
-                                    'city' => $delivery->city,
-                                    'state' => $delivery->state,
-                                    'postal_code' => $delivery->postal_code,
-                                    'country' => 'US',
-                                    'phone' => $row->person->home_phone,
-                                ];
-                            } else {
-                                $errors[] = 'missing mailing address';
-                            }
-                            $deliveryType = AccessDocumentDelivery::MAIL;
-                        } else {
-                            $deliveryType = AccessDocumentDelivery::WILL_CALL;
-                        }
-                        break;
-                }
-
-                $row->delivery_type = $deliveryType;
-            }
-
-            if (!empty($errors)) {
-                $row->error = implode(';', $errors);
-                $row->has_error = true;
-            }
-        }
-
-        usort($people, fn($a, $b) => strcasecmp($a->person->callsign, $b->person->callsign));
-
-        return [
-            'people' => $people,
-            'day_high' => (int)$high,
-            'day_low' => (int)$low,
-        ];
-    }
-
-    /*
-     * Retrieve all people with expiring tickets for a given year.
-     */
-
-    public static function retrieveExpiringTicketsByPerson($year)
-    {
-        $rows = self::whereIn('type', self::TICKET_TYPES)
-            ->whereIn('status', [self::QUALIFIED, self::BANKED])
-            ->whereYear('expiry_date', $year)
-            ->with(['person:id,callsign,email,status'])
-            ->orderBy('source_year')
-            ->get();
-
-        $peopleByIds = [];
-        foreach ($rows as $row) {
-            if (!$row->person) {
-                continue;
-            }
-
-            $personId = $row->person->id;
-            if (!isset($peopleByIds[$personId])) {
-                $peopleByIds[$personId] = [
-                    'person' => $row->person,
-                    'tickets' => []
-                ];
-            }
-
-            $peopleByIds[$personId]['tickets'][] = [
-                'id' => $row->id,
-                'type' => $row->type,
-                'status' => $row->status,
-                'expiry_date' => (string)$row->expiry_date,
-            ];
-        }
-
-        $people = array_values($peopleByIds);
-        usort($people, fn($a, $b) => strcasecmp($a['person']->callsign, $b['person']->callsign));
-
-        return $people;
     }
 
     /**
@@ -706,7 +557,7 @@ class AccessDocument extends ApiModel
      * Return true if the document expired
      */
 
-    public function getPastExpireDateAttribute()
+    public function getPastExpireDateAttribute() : bool
     {
         return ($this->expiry_date && $this->expiry_date->year < current_year());
     }
@@ -745,5 +596,46 @@ class AccessDocument extends ApiModel
     public function getTypeLabel()
     {
         return self::TYPE_LABELS[$this->type] ?? $this->type;
+    }
+
+    public function setStreet1Attribute($value)
+    {
+        $this->attributes['street1'] = $value ?? '';
+    }
+
+    public function setStreet2Attribute($value)
+    {
+        $this->attributes['street2'] = $value ?? '';
+    }
+
+    public function setCityAttribute($value)
+    {
+        $this->attributes['city'] = $value ?? '';
+    }
+
+    public function setStateAttribute($value)
+    {
+        $this->attributes['state'] = $value ?? '';
+    }
+
+    public function setPostalCodeAttribute($value)
+    {
+        $this->attributes['postal_code'] = $value ?? '';
+    }
+
+    public function setCountryAttribute($value)
+    {
+        $this->attributes['country'] = $value ?? '';
+    }
+
+    public function hasAddress() : bool
+    {
+        foreach (['street1', 'city', 'state', 'postal_code'] as $field) {
+            if (empty($this->{$field})) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
