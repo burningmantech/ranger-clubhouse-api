@@ -184,9 +184,9 @@ class Training extends Position
      * @return bool true if the person passed in the given year
      */
 
-    public static function didPersonPassForYear(Person $person, int $positionId, int $year): bool
+    public static function didPersonPassForYear(Person|int $person, int $positionId, int $year): bool
     {
-        $personId = $person->id;
+        $personId =  is_a($person, Person::class) ? $person->id : $person;
 
         if ($positionId == Position::TRAINING) {
             $isBinary = Timesheet::isPersonBinary($person);
