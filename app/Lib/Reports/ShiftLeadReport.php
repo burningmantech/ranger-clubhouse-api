@@ -209,6 +209,9 @@ class ShiftLeadReport
 
     public static function countGreenDotsScheduled(Carbon $shiftStart, Carbon $shiftEnd, bool $femaleOnly = false) : int
     {
+        $rows = DB::select('SELECT version() as version');
+        $useModernRegexp = stripos($rows[0]->version, '8.') === 0;
+
         $sql = DB::table('slot')
             ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
             ->join('person', 'person.id', '=', 'person_slot.person_id')
@@ -217,9 +220,15 @@ class ShiftLeadReport
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 
         if ($femaleOnly) {
-            $sql->where(function ($q) {
+            $sql->where(function ($q) use ($useModernRegexp) {
                 $q->whereRaw('lower(LEFT(person.gender,1)) = "f"');
-                $q->orWhereRaw('person.gender REGEXP "[[:<:]](female|girl|femme|lady|she|her|woman|famale|fem)[[:>:]]"');
+                if ($useModernRegexp) {
+                    // Mysql 8.0 +
+                    $q->orWhereRaw('person.gender REGEXP "\\b(female|girl|femme|lady|she|her|woman|famale|fem)\\b"');
+                } else {
+                    // Mysql < 8.0
+                    $q->orWhereRaw('person.gender REGEXP "[[:<:]](female|girl|femme|lady|she|her|woman|famale|fem)[[:>:]]"');
+                }
             });
         }
 
