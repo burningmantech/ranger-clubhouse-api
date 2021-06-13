@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-
-use App\Http\Controllers\ApiController;
-
+use App\Lib\BulkLookup;
 use App\Lib\Milestones;
 use App\Lib\Reports\TimesheetWorkSummaryReport;
-
+use App\Mail\AccountCreationMail;
+use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
@@ -27,10 +22,10 @@ use App\Models\Role;
 use App\Models\SurveyAnswer;
 use App\Models\Timesheet;
 use App\Models\Training;
-
-use App\Mail\AccountCreationMail;
-use App\Mail\NotifyVCEmailChangeMail;
-use App\Mail\WelcomeMail;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -577,7 +572,7 @@ class PersonController extends ApiController
     public function register()
     {
         if (setting('AuditorRegistrationDisabled')) {
-            throw new \InvalidArgumentException("Auditor registration is disabled at this time.");
+            throw new InvalidArgumentException("Auditor registration is disabled at this time.");
         }
 
         $params = request()->validate([
@@ -743,11 +738,30 @@ class PersonController extends ApiController
 
     /**
      * Retrieve status history
+     * @throws AuthorizationException
      */
 
-    public function statusHistory(Person $person)
+    public function statusHistory(Person $person): JsonResponse
     {
         $this->authorize('statusHistory', Person::class);
         return response()->json(['history' => PersonStatus::retrieveAllForId($person->id)]);
     }
+
+    /**
+     *
+     */
+
+    public function bulkLookup()
+    {
+        $this->authorize('bulkLookup', Person::class);
+        $params = request()->validate([
+            'people' => 'required|array',
+            'people.*' => 'required|string',
+        ]);
+
+        return response()->json([
+            'people' => BulkLookup::retrieveByCallsignOrEmail($params['people'])
+        ]);
+    }
 }
+
