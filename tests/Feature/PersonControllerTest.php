@@ -2,11 +2,8 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
-
+use APp\Mail\AccountCreationMail;
+use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\Person;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
@@ -21,10 +18,10 @@ use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
-
-use App\Mail\NotifyVCEmailChangeMail;
-use APp\Mail\AccountCreationMail;
-use APp\Mail\WelcomeMail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Mail;
+use Tests\TestCase;
 
 class PersonControllerTest extends TestCase
 {
@@ -355,12 +352,12 @@ class PersonControllerTest extends TestCase
         Mail::assertQueued(NotifyVCEmailChangeMail::class, function ($mail) use ($person) {
             return $mail->person->id === $person->id;
         });
-/*        Mail::assertSent(
-            NotifyVCEmailChangeMail::class,
-            function ($mail) {
-                return $mail->hasTo(setting('VCEmail'));
-            }
-        );*/
+        /*        Mail::assertSent(
+                    NotifyVCEmailChangeMail::class,
+                    function ($mail) {
+                        return $mail->hasTo(setting('VCEmail'));
+                    }
+                );*/
     }
 
 
@@ -841,7 +838,7 @@ class PersonControllerTest extends TestCase
         $person = Person::factory()->create();
         $this->addAdminRole();
 
-        $response = $this->json('POST', "person/{$person->id}/roles", [ 'role_ids' => [Role::MENTOR, Role::TECH_NINJA ]]);
+        $response = $this->json('POST', "person/{$person->id}/roles", ['role_ids' => [Role::MENTOR, Role::TECH_NINJA]]);
         $response->assertStatus(200);
         $this->assertDatabaseMissing('person_role', [
             'person_id' => $person->id,
@@ -864,7 +861,7 @@ class PersonControllerTest extends TestCase
         $this->addAdminRole();
         $this->addRole(Role::TECH_NINJA);
 
-        $response = $this->json('POST', "person/{$person->id}/roles", [ 'role_ids' => [Role::MENTOR, Role::TECH_NINJA ]]);
+        $response = $this->json('POST', "person/{$person->id}/roles", ['role_ids' => [Role::MENTOR, Role::TECH_NINJA]]);
         $response->assertStatus(200);
         $this->assertDatabaseHas('person_role', [
             'person_id' => $person->id,
@@ -934,7 +931,7 @@ class PersonControllerTest extends TestCase
     public function testUnreadMessageCountSuccess()
     {
         for ($i = 0; $i < 3; $i++) {
-          $m = PersonMessage::factory()->create(
+            $m = PersonMessage::factory()->create(
                 [
                     'recipient_callsign' => $this->user->callsign,
                 ]
@@ -1488,6 +1485,34 @@ class PersonControllerTest extends TestCase
             'actives' => [['id' => $active->id, 'last_year' => $year]],
             'past_prospectives' => [['id' => $pastProspective->id]],
             'vintage' => [['id' => $vintage->id]]
+        ]);
+    }
+
+    /*
+     * Bulk Callsign/Email Lookup
+     */
+
+    public function testBulkLookup()
+    {
+        $this->addAdminRole();
+        $existsCallsign = Person::factory()->create();
+        $existsEmail = Person::factory()->create();
+
+        $response = $this->json('GET', 'person/bulk-lookup', [
+            'people' => [
+                $existsEmail->email,
+                $existsCallsign->callsign,
+                'does not exists'
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'people' => [
+                ['result' => 'success', 'id' => $existsEmail->id, 'callsign' => $existsEmail->callsign],
+                ['result' => 'success', 'id' => $existsCallsign->id, 'callsign' => $existsCallsign->callsign],
+                ['result' => 'not-found', 'person' => 'does not exists']
+            ]
         ]);
     }
 }

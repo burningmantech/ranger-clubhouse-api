@@ -23,6 +23,8 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
  */
 
 
+use Illuminate\Support\Facades\Route;
+
 Route::group([
     'middleware' => 'api',
 ], function ($router) {
@@ -165,6 +167,7 @@ Route::group([
     Route::get('person/by-role', 'PersonController@peopleByRole');
     Route::get('person/by-status', 'PersonController@peopleByStatus');
     Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
+    Route::get('person/bulk-lookup', 'PersonController@bulkLookup');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');

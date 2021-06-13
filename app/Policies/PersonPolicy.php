@@ -145,4 +145,8 @@ class PersonPolicy
     public function isAdmin(Person $user) {
         return $user->isAdmin();
     }
+
+    public function bulkLookup(Person $user) {
+        return $user->isAdmin();
+    }
 }
