@@ -24,8 +24,8 @@ class AssetAttachmentController extends ApiController
     {
         $this->authorize('store', AssetAttachment::class);
 
-        $asset = new AssetAttachment;
-        $this->fromRest($asset);
+        $asset_attachment = new AssetAttachment;
+        $this->fromRest($asset_attachment);
 
         if ($asset->save()) {
             return $this->success($asset_attachment);
@@ -52,7 +52,7 @@ class AssetAttachmentController extends ApiController
         $this->authorize('update', $asset_attachment);
         $this->fromRest($asset_attachment);
 
-        if ($asset->save()) {
+        if ($asset_attachment->save()) {
             return $this->success($asset_attachment);
         }
 
@@ -65,7 +65,7 @@ class AssetAttachmentController extends ApiController
     public function destroy(AssetAttachment $asset_attachment)
     {
         $this->authorize('delete', $asset_attachment);
-        $asset->delete();
+        $asset_attachment->delete();
         return $this->restDeleteSuccess();
     }
 }

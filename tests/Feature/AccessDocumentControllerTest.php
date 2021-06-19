@@ -2,21 +2,20 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use App\Models\AccessDocument;
 use App\Models\Person;
-use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
-use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
 
 class AccessDocumentControllerTest extends TestCase
 {
     use RefreshDatabase;
+    use WithFaker;
 
     /*
      * have each test have a fresh user that is logged in.
@@ -322,10 +321,10 @@ class AccessDocumentControllerTest extends TestCase
         $this->addAdminRole();
 
         $this->setting('TAS_DefaultAlphaWAPDate', date('Y-08-20'));
-        $alpha = Person::factory()->create(['status' => 'alpha', 'callsign' => 'A']);
+        $alpha = Person::factory()->create(['status' => Person::ALPHA, 'callsign' => 'Alpha 1']);
 
         // Alpha should not be granted a second WAP.
-        $noWap = Person::factory()->create(['status' => 'alpha', 'callsign' => 'No Wap']);
+        $noWap = Person::factory()->create(['status' => Person::ALPHA]);
         AccessDocument::factory()->create([
             'source_year' => date('Y'),
             'person_id' => $noWap->id,
@@ -333,7 +332,7 @@ class AccessDocumentControllerTest extends TestCase
             'status' => 'claimed'
         ]);
 
-        $prospective = Person::factory()->create(['status' => 'prospective', 'callsign' => 'B']);
+        $prospective = Person::factory()->create(['status' => Person::PROSPECTIVE, 'callsign' => 'Prospective 1']);
         $slot = Slot::factory()->create([
             'position_id' => Position::TRAINING,
             'begins' => date('Y-12-31 23:00:00'),
@@ -355,7 +354,8 @@ class AccessDocumentControllerTest extends TestCase
                 ],
                 [
                     'id' => $prospective->id,
-                    'callsign' => $prospective->callsign
+                    'callsign' => $prospective->callsign,
+                    'status' => Person::PROSPECTIVE,
                 ]
             ]
         ]);

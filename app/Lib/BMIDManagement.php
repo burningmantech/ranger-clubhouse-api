@@ -5,6 +5,7 @@ namespace App\Lib;
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\Person;
+use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Slot;
@@ -261,5 +262,56 @@ class BMIDManagement
         }
 
         return BMID::findForPersonIds($year, $ids);
+    }
+
+    public static function setBMIDTitles()
+    {
+        $year = current_year();
+
+        $bmidTitles = [];
+        $bmids = [];
+
+        foreach (Bmid::BADGE_TITLES as $positionId => $title) {
+            // Find folks who have the position
+            $people = PersonPosition::where('position_id', $positionId)->pluck('person_id');
+
+            foreach ($people as $personId) {
+                $bmid = $bmids[$personId] ?? null;
+                if ($bmid == null) {
+                    $bmid = Bmid::findForPersonManage($personId, $year);
+                    // cache the BMID record - multiple titles might be set
+                    $bmids[$personId] = $bmid;
+                }
+
+                $bmid->{$title[0]} = $title[1];
+
+                if (!isset($bmids[$personId])) {
+                    $bmidTitles[$personId] = [];
+                }
+                $bmidTitles[$personId][$title[0]] = $title[1];
+            }
+        }
+
+        $badges = [];
+
+        foreach ($bmids as $bmid) {
+            $bmid->auditReason = 'maintenance - set BMID titles';
+            $bmid->saveWithoutValidation();
+
+            $person = $bmid->person;
+            $title = $bmidTitles[$bmid->person_id];
+            $badges[] = [
+                'id' => $personId,
+                'callsign' => $person->callsign,
+                'status' => $person->status,
+                'title1' => $title['title1'] ?? null,
+                'title2' => $title['title2'] ?? null,
+                'title3' => $title['title3'] ?? null,
+            ];
+        }
+
+        usort($badges, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+
+        return $badges;
     }
 }

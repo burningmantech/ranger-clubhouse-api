@@ -2,12 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\PersonEvent;
-
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 
 class Position extends ApiModel
 {
@@ -171,21 +166,6 @@ class Position extends ApiModel
     ];
 
 
-    /*
-     * To qualify to work a Sandman position the person must have worked
-     * one of the following positions within the last SANDMAN_YEAR_CUTOFF years.
-     */
-
-    const SANDMAN_QUALIFIED_POSITIONS = [
-        Position::BURN_COMMAND_TEAM,
-        Position::BURN_PERIMETER,
-        Position::BURN_QUAD_LEAD,
-        Position::SANDMAN,
-        Position::SPECIAL_BURN
-    ];
-
-    const SANDMAN_YEAR_CUTOFF = 5;
-
     const PROBLEM_HOURS = [
         Position::OOD => 28,
         Position::PERSONNEL_MANAGER => 28,
@@ -223,6 +203,16 @@ class Position extends ApiModel
         self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'no Burn Perimeter experience',
         self::UNQUALIFIED_UNTRAINED => 'Not trained',
     ];
+
+    const SANDMAN_QUALIFIED_POSITIONS = [
+        Position::BURN_COMMAND_TEAM,
+        Position::BURN_PERIMETER,
+        Position::BURN_QUAD_LEAD,
+        Position::SANDMAN,
+        Position::SPECIAL_BURN
+    ];
+
+    const SANDMAN_YEAR_CUTOFF = 5;
 
     protected $fillable = [
         'all_rangers',
@@ -365,49 +355,12 @@ class Position extends ApiModel
     }
 
     /**
-     * Find everyone who is a Sandman and report on their eligibility.
-     *
-     * @return array
-     */
-
-    public static function retrieveSandPeopleQualifications()
-    {
-        $year = current_year();
-        $cutoff = $year - self::SANDMAN_YEAR_CUTOFF;
-
-        $positionIds = implode(',', self::SANDMAN_QUALIFIED_POSITIONS);
-
-        $sandPeople = DB::table('person')
-            ->select(
-                'id',
-                'callsign',
-                DB::raw('IFNULL(person_event.sandman_affidavit, FALSE) as sandman_affidavit'),
-                DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty) >= $cutoff AND position_id IN ($positionIds) LIMIT 1) AS has_experience"),
-                DB::raw("EXISTS (SELECT 1 FROM trainee_status JOIN slot ON slot.id=trainee_status.slot_id WHERE trainee_status.person_id=person.id AND slot.position_id=" . Position::SANDMAN_TRAINING . " AND YEAR(slot.begins)=$year AND passed=1 LIMIT 1) as is_trained"),
-                DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id WHERE person_slot.person_id=person.id AND slot.position_id=" . Position::SANDMAN . " AND YEAR(slot.begins)=$year LIMIT 1) as is_signed_up")
-            )
-            ->leftJoin('person_event', function ($j) use ($year) {
-                $j->on('person_event.person_id', 'person.id');
-                $j->where('year', $year);
-            })
-            ->where('status', Person::ACTIVE)
-            ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id=?)', [Position::SANDMAN])
-            ->orderBy('callsign')
-            ->get();
-
-        return [
-            'sandpeople' => $sandPeople,
-            'cutoff_year' => $cutoff
-        ];
-    }
-
-    /**
      * Return the "sub type" of the position - i.e. return an additional types
      * For mentoring positions, figure out if it's a mentor or mentee position (Alpha & Cheetah Cub)
      *
      * @return string
      */
-    public function getSubTypeAttribute()
+    public function getSubtypeAttribute()
     {
         $id = $this->id;
 

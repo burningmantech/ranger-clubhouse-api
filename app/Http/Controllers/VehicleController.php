@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Vehicle;
-
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class VehicleController extends ApiController
 {
@@ -14,8 +13,10 @@ class VehicleController extends ApiController
      * Display a listing of the person vehicles.
      *
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
@@ -105,30 +106,15 @@ class VehicleController extends ApiController
 
     /**
      * Vehicle Paperwork Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function paperwork()
+    public function paperwork(): JsonResponse
     {
         $this->authorize('paperwork', [Vehicle::class]);
 
-        $rows = DB::table('person')
-            ->select(
-                'id',
-                'callsign',
-                'status',
-                DB::raw('IFNULL(person_event.signed_motorpool_agreement, false) AS signed_motorpool_agreement'),
-                DB::raw('IFNULL(person_event.org_vehicle_insurance, false) AS org_vehicle_insurance')
-            )->join('person_event', function ($j) {
-                $j->on('person_event.person_id', 'person.id');
-                $j->where('person_event.year', current_year());
-                $j->where(function ($q) {
-                    $q->where('signed_motorpool_agreement', true);
-                    $q->orWhere('org_vehicle_insurance', true);
-                });
-            })
-            ->orderBy('callsign')
-            ->get();
-
-        return response()->json(['people' => $rows]);
+        return response()->json(['people' => VehiclePaperworkReport::execute()]);
     }
 }
