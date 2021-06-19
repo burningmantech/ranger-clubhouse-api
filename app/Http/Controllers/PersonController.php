@@ -4,6 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Lib\BulkLookup;
 use App\Lib\Milestones;
+use App\Lib\Reports\AlphaShirtsReport;
+use App\Lib\Reports\LanguagesSpokenOnSiteReport;
+use App\Lib\Reports\PeopleByLocationReport;
+use App\Lib\Reports\PeopleByRoleReport;
+use App\Lib\Reports\PeopleByStatusReport;
+use App\Lib\Reports\RecommendStatusChangeReport;
 use App\Lib\Reports\TimesheetWorkSummaryReport;
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
@@ -635,34 +641,26 @@ class PersonController extends ApiController
         return response()->json(['status' => 'success']);
     }
 
-    /*
+    /**
      * Prospective / Alpha estimated shirts report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function alphaShirts()
+    public function alphaShirts(): JsonResponse
     {
         $this->authorize('alphaShirts', [Person::class]);
 
-        $rows = Person::select(
-            'id',
-            'callsign',
-            'status',
-            'first_name',
-            'last_name',
-            'email',
-            'longsleeveshirt_size_style',
-            'teeshirt_size_style'
-        )
-            ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
-            ->orderBy('callsign')
-            ->get();
-
-        return response()->json(['alphas' => $rows]);
+        return response()->json(['alphas' => AlphaShirtsReport::execute()]);
     }
 
-    /*
-    * People By Location report
-    */
+    /**
+     * People By Location report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
 
     public function peopleByLocation()
     {
@@ -674,7 +672,7 @@ class PersonController extends ApiController
 
         $year = $params['year'] ?? current_year();
 
-        return response()->json(['people' => Person::retrievePeopleByLocation($year)]);
+        return response()->json(['people' => PeopleByLocationReport::execute($year)]);
     }
 
     /*
@@ -685,40 +683,48 @@ class PersonController extends ApiController
     {
         $this->authorize('peopleByRole', [Person::class]);
 
-        return response()->json(['roles' => Person::retrievePeopleByRole()]);
+        return response()->json(['roles' => PeopleByRoleReport::execute()]);
     }
 
-    /*
+    /**
      * People By Status report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function peopleByStatus()
+    public function peopleByStatus(): JsonResponse
     {
         $this->authorize('peopleByStatus', [Person::class]);
 
-        return response()->json(['statuses' => Person::retrievePeopleByStatus()]);
+        return response()->json(['statuses' => PeopleByStatusReport::execute()]);
     }
 
-    /*
-     * Languages Report
+    /**
+     *
+     * Languages Spoken On Site Report
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function languagesReport()
+    public function languagesReport(): JsonResponse
     {
         $this->authorize('peopleByStatus', [Person::class]);
 
-        return response()->json(['languages' => PersonLanguage::retrieveAllOnSiteSpeakers()]);
+        return response()->json(['languages' => LanguagesSpokenOnSiteReport::execute()]);
     }
 
-    /*
+    /**
      * People By Status Change Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function peopleByStatusChange()
+    public function peopleByStatusChange(): JsonResponse
     {
         $this->authorize('peopleByStatusChange', [Person::class]);
-        $year = $this->getYear();
-        return response()->json(Person::retrieveRecommendedStatusChanges($year));
+        return response()->json(RecommendStatusChangeReport::execute($this->getYear()));
     }
 
     /**
@@ -748,10 +754,13 @@ class PersonController extends ApiController
     }
 
     /**
+     * Lookup accounts by callsign and/or email
      *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function bulkLookup()
+    public function bulkLookup(): JsonResponse
     {
         $this->authorize('bulkLookup', Person::class);
         $params = request()->validate([

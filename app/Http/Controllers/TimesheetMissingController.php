@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\PositionCredit;
+use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
-use App\Models\Schedule;
-
 use Exception;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -147,7 +144,7 @@ class TimesheetMissingController extends ApiController
                 }
             }
             DB::commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             throw $e;
         }

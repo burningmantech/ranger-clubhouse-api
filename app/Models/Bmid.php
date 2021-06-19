@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\Position;
-use App\Models\PersonEvent;
-
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +61,18 @@ class Bmid extends ApiModel
         Person::RETIRED,
         Person::ALPHA,
         Person::PROSPECTIVE
+    ];
+
+    const BADGE_TITLES = [
+        // Title 1
+        Position::RSC_SHIFT_LEAD => ['title1', 'Shift Lead'],
+        Position::DEPARTMENT_MANAGER => ['title1', 'Department Manager'],
+        Position::OPERATIONS_MANAGER => ['title1', 'Operations Manager'],
+        Position::OOD => ['title1', 'Officer of the Day'],
+        // Title 2
+        Position::LEAL => ['title2', 'LEAL'],
+        // Title 3
+        Position::DOUBLE_OH_7 => ['title3', '007']
     ];
 
     const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid';
@@ -410,11 +417,13 @@ class Bmid extends ApiModel
         return $this->has_signups;
     }
 
-    public function getWantMealsAttribute() {
+    public function getWantMealsAttribute()
+    {
         return $this->want_meals;
     }
 
-    public function getWantShowersAttribute() {
+    public function getWantShowersAttribute()
+    {
         return $this->want_showers;
     }
 
@@ -457,10 +466,10 @@ class Bmid extends ApiModel
      * @return array
      */
 
-    public function buildMealsMatrix() : array
+    public function buildMealsMatrix(): array
     {
         if ($this->meals == self::MEALS_ALL || $this->want_meals == self::MEALS_ALL) {
-            return [ self::MEALS_PRE => true,  self::MEALS_EVENT => true, self::MEALS_POST => true];
+            return [self::MEALS_PRE => true, self::MEALS_EVENT => true, self::MEALS_POST => true];
         }
 
         $matrix = [];
@@ -475,7 +484,8 @@ class Bmid extends ApiModel
         return $matrix;
     }
 
-    public function effectiveMeals() : string {
+    public function effectiveMeals(): string
+    {
         $meals = $this->buildMealsMatrix();
         return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', $meals);
     }

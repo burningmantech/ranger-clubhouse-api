@@ -95,6 +95,6 @@ class AssetPersonController extends ApiController
           'year'              => 'sometimes|integer',
       ]);
 
-        return response()->json([ 'radios' => AssetPerson::findRadiosCheckedOutForQuery($params)]);
+        return response()->json([ 'radios' => RadioCheckoutReport::execute($params)]);
     }
 }

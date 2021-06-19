@@ -645,7 +645,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      *
      * @param string $query string to match against callsigns
      * @param string $type callsign search type
-     * @return array|Collection person id & callsigns which match
+     * @return mixed person id & callsigns which match
      */
 
     public static function searchCallsigns(string $query, string $type, $limit)
@@ -687,171 +687,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         throw new InvalidArgumentException("Unknown type [$type]");
-    }
-
-    public static function retrievePeopleByLocation($year)
-    {
-        return self::select(
-            'id',
-            'callsign',
-            'first_name',
-            'last_name',
-            'status',
-            'email',
-            'city',
-            'state',
-            'zip',
-            'country',
-            DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
-            DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != " . Position::ALPHA . " WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
-        )
-            ->orderBy('country')
-            ->orderBy('state')
-            ->orderBy('city')
-            ->orderBy('zip')
-            ->get();
-    }
-
-    public static function retrievePeopleByRole()
-    {
-        $roleGroups = DB::table('role')
-            ->select('role.id as role_id', 'role.title', 'person.id as person_id', 'person.callsign')
-            ->join('person_role', 'person_role.role_id', 'role.id')
-            ->join('person', 'person.id', 'person_role.person_id')
-            ->orderBy('callsign')
-            ->get()
-            ->groupBy('role_id');
-
-        $roles = [];
-        foreach ($roleGroups as $roleId => $group) {
-            $roles[] = [
-                'id' => $roleId,
-                'title' => $group[0]->title,
-                'people' => $group->map(function ($row) {
-                    return ['id' => $row->person_id, 'callsign' => $row->callsign];
-                })->values()
-            ];
-        }
-
-        usort($roles, function ($a, $b) {
-            return strcasecmp($a['title'], $b['title']);
-        });
-        return $roles;
-    }
-
-    public static function retrievePeopleByStatus()
-    {
-        $statusGroups = self::select('id', 'callsign', 'status')
-            ->orderBy('status')
-            ->orderBy('callsign')
-            ->get()
-            ->groupBy('status');
-
-        return $statusGroups->sortKeys()->map(function ($group, $status) {
-            return [
-                'status' => $status,
-                'people' => $group->map(function ($row) {
-                    return [
-                        'id' => $row->id,
-                        'callsign' => $row->callsign
-                    ];
-                })->values()
-            ];
-        })->values();
-    }
-
-    public static function retrieveRecommendedStatusChanges($year)
-    {
-        $filterTestAccounts = function ($r) {
-            // Filter out testing accounts, and temporary laminates.
-            return !preg_match('/(^(testing|lam #|temp \d+))|\(test\)/i', $r->callsign);
-        };
-
-        $yearsRangered = DB::raw('(SELECT COUNT(DISTINCT(YEAR(on_duty))) FROM timesheet WHERE person_id=person.id AND position_id NOT IN (1, 13, 29, 30)) AS years');
-        $lastYear = DB::raw('(SELECT YEAR(on_duty) FROM timesheet WHERE person_id=person.id ORDER BY on_duty DESC LIMIT 1) AS last_year');
-
-        // Inactive means that you have not rangered in any of the last 3 events
-        // but you have rangered in at least one of the last 5 events
-        $inactives = Person::select(
-            'id',
-            'callsign',
-            'status',
-            'email',
-            'vintage',
-            $lastYear,
-            $yearsRangered
-        )->where('status', 'active')
-            ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 3, $year])
-            ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 5, $year - 4])
-            ->orderBy('callsign')
-            ->get()
-            ->filter($filterTestAccounts)->values();
-
-        // Retired means that you have not rangered in any of the last 5 events
-        $retired = Person::select(
-            'id',
-            'callsign',
-            'status',
-            'email',
-            'vintage',
-            $lastYear,
-            $yearsRangered
-        )->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION])
-            ->whereRaw('person.id NOT IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 5, $year])
-            ->orderBy('callsign')
-            ->get()
-            ->filter($filterTestAccounts)->values();
-
-
-        // Mark as vintage are people who have been active for 10 years or more.
-        $vintage = DB::table('timesheet')
-            ->select(
-                'person_id as id',
-                'callsign',
-                'status',
-                'email',
-                'vintage',
-                DB::raw('YEAR(MAX(on_duty)) AS last_year'),
-                DB::raw('count(distinct(YEAR(on_duty))) as years')
-            )
-            ->join('person', 'person.id', 'timesheet.person_id')
-            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
-            ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
-            ->where('vintage', false)
-            ->groupBy(['person_id', 'callsign', 'status', 'email', 'vintage'])
-            ->havingRaw('count(distinct(YEAR(on_duty))) >= 10')
-            ->orderBy('callsign')
-            ->get()
-            ->filter($filterTestAccounts)->values();
-
-        // People who have been active in the last three events yet are listed as inactive
-        $actives = Person::select(
-            'id',
-            'callsign',
-            'status',
-            'email',
-            'vintage',
-            $lastYear,
-            $yearsRangered
-        )->whereIn('status', [Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
-            ->whereRaw('person.id IN (SELECT person_id FROM timesheet WHERE YEAR(on_duty) BETWEEN ? AND ?)', [$year - 3, $year])
-            ->orderBy('callsign')
-            ->get()
-            ->filter($filterTestAccounts)->values();
-
-        $pastProspectives = Person::select('id', 'callsign', 'status', 'email')
-            ->whereIn('status', [Person::BONKED, Person::ALPHA, Person::PROSPECTIVE])
-            ->orderBy('callsign')
-            ->get()
-            ->filter($filterTestAccounts)->values();
-
-        return [
-            'inactives' => $inactives,
-            'retired' => $retired,
-            'actives' => $actives,
-            'past_prospectives' => $pastProspectives,
-            'vintage' => $vintage
-        ];
     }
 
     /**
@@ -1143,7 +978,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return bool true if the callsign was successfully reset
      */
 
-    public function resetCallsign()
+    public function resetCallsign(): bool
     {
         $year = current_year() % 100;
         for ($tries = 0; $tries < 10; $tries++) {
@@ -1168,7 +1003,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Normalize store a normalized and metaphone version of the callsign
+     * Store a normalized and metaphone version of the callsign
      */
 
     public function setCallsignAttribute($value)
@@ -1185,7 +1020,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $fka = $this->formerly_known_as;
                 if (empty($fka)) {
                     $this->formerly_known_as = $oldCallsign;
-                } elseif (strpos($fka, $oldCallsign) === false) {
+                } elseif (stripos($fka, $oldCallsign) === false) {
                     $this->formerly_known_as = $fka . ',' . $oldCallsign;
                 }
             }

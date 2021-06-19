@@ -2,20 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-
-use App\Models\Bmid;
-use App\Models\BmidExport;
-use App\Models\PersonPosition;
-use App\Models\Position;
-
 use App\Lib\BMIDManagement;
 use App\Lib\MarcatoExport;
-
+use App\Models\Bmid;
+use App\Models\BmidExport;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class BmidController extends ApiController
@@ -23,8 +17,11 @@ class BmidController extends ApiController
     /**
      * Display a list of BMIDs.
      *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', Bmid::class);
 
@@ -35,11 +32,14 @@ class BmidController extends ApiController
         return response()->json(['bmids' => Bmid::findForQuery($params)]);
     }
 
-    /*
+    /**
      * Manage a potential list of BMIDs
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function manage()
+    public function manage(): JsonResponse
     {
         $this->authorize('index', Bmid::class);
 
@@ -55,11 +55,14 @@ class BmidController extends ApiController
         return response()->json(['bmids' => BMIDManagement::retrieveCategoryToManage($params['year'], $params['filter'])]);
     }
 
-    /*
+    /**
      * Manage for a single person
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function managePerson()
+    public function managePerson(): JsonResponse
     {
         $this->authorize('index', Bmid::class);
 
@@ -78,7 +81,7 @@ class BmidController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function export()
+    public function export(): JsonResponse
     {
         $this->authorize('export', Bmid::class);
 
@@ -101,21 +104,22 @@ class BmidController extends ApiController
         $batchInfo = $params['batch_info'] ?? '';
         $exportUrl = MarcatoExport::export($filterBmids, $batchInfo);
 
-        return response()->json([ 'export_url' => $exportUrl, 'bmids' => $filterBmids ]);
+        return response()->json(['export_url' => $exportUrl, 'bmids' => $filterBmids]);
     }
 
     /**
      * Retrieve all exports for a given year
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function exportList()
+    public function exportList(): JsonResponse
     {
         $this->authorize('export', Bmid::class);
         $year = $this->getYear();
 
-        return response()->json([ 'exports' => BmidExport::findAllForYear($year)]);
+        return response()->json(['exports' => BmidExport::findAllForYear($year)]);
     }
 
 
@@ -126,7 +130,7 @@ class BmidController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function sanityCheck()
+    public function sanityCheck(): JsonResponse
     {
         $this->authorize('index', Bmid::class);
 
@@ -140,8 +144,11 @@ class BmidController extends ApiController
     /**
      * Store a newly created BMID.
      *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
         $this->authorize('create', Bmid::class);
 
@@ -166,8 +173,12 @@ class BmidController extends ApiController
     /**
      * Show a single BMID.
      *
+     * @param Bmid $bmid
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function show(Bmid $bmid)
+
+    public function show(Bmid $bmid): JsonResponse
     {
         $this->authorize('show', $bmid);
 
@@ -179,8 +190,12 @@ class BmidController extends ApiController
     /**
      * Update a BMID
      *
+     * @param Bmid $bmid
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function update(Bmid $bmid)
+
+    public function update(Bmid $bmid): JsonResponse
     {
         $this->authorize('update', $bmid);
 
@@ -198,80 +213,28 @@ class BmidController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
+     * @param Bmid $bmid
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Bmid $bmid)
+
+    public function destroy(Bmid $bmid): JsonResponse
     {
         $this->authorize('delete', $bmid);
         $bmid->delete();
         return $this->restDeleteSuccess();
     }
 
-    /*
+    /**
      * Set BMID titles based on positions held in Clubhouse.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function setBMIDTitles()
+    public function setBMIDTitles(): JsonResponse
     {
         $this->authorize('setBMIDTitles', Bmid::class);
-
-        $titles = [
-            // Title 1
-            Position::RSC_SHIFT_LEAD => ['title1', 'Shift Lead'],
-            Position::DEPARTMENT_MANAGER => ['title1', 'Department Manager'],
-            Position::OPERATIONS_MANAGER => ['title1', 'Operations Manager'],
-            Position::OOD => ['title1', 'Officer of the Day'],
-            // Title 2
-            Position::LEAL => ['title2', 'LEAL'],
-            // Title 3
-            Position::DOUBLE_OH_7 => ['title3', '007']
-        ];
-
-        $year = current_year();
-
-        $bmidTitles = [];
-        $bmids = [];
-
-        foreach ($titles as $positionId => $title) {
-            // Find folks who have the position
-            $people = PersonPosition::where('position_id', $positionId)->pluck('person_id');
-
-            foreach ($people as $personId) {
-                $bmid = $bmids[$personId] ?? null;
-                if ($bmid == null) {
-                    $bmid = Bmid::findForPersonManage($personId, $year);
-                    // cache the BMID record - multiple titles might be set
-                    $bmids[$personId] = $bmid;
-                }
-
-                $bmid->{$title[0]} = $title[1];
-
-                if (!isset($bmids[$personId])) {
-                    $bmidTitles[$personId] = [];
-                }
-                $bmidTitles[$personId][$title[0]] = $title[1];
-            }
-        }
-
-        $badges = [];
-
-        foreach ($bmids as $bmid) {
-            $bmid->auditReason = 'maintenance - set BMID titles';
-            $bmid->saveWithoutValidation();
-
-            $person = $bmid->person;
-            $title = $bmidTitles[$bmid->person_id];
-            $badges[] = [
-                'id' => $personId,
-                'callsign' => $person->callsign,
-                'status' => $person->status,
-                'title1' => $title['title1'] ?? null,
-                'title2' => $title['title2'] ?? null,
-                'title3' => $title['title3'] ?? null,
-            ];
-        }
-
-        usort($badges, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-
-        return response()->json(['bmids' => $badges]);
+        return response()->json(['bmids' => BMIDManagement::setBMIDTitles()]);
     }
 }
