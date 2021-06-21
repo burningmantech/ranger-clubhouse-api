@@ -305,7 +305,7 @@ class Position extends ApiModel
 
     /**
      * Find all positions which reference the given training position
-     * @param $positionId training position
+     * @param $positionId position
      * @return Position[]|Collection
      */
 
