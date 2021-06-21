@@ -36,7 +36,7 @@ class AlertPerson extends ApiModel
         )->leftJoin('alert_person', function ($join) use ($personId) {
             $join->where('alert_person.person_id','=',$personId);
             $join->whereRaw('alert_person.alert_id=alert.id');
-        })->orderBy('alert.on_playa', 'desc', 'alert.title', 'asc')->get();
+        })->orderBy('alert.on_playa', 'desc')->orderBy('alert.title')->get();
     }
 
     /*

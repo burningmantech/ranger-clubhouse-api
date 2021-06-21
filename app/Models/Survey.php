@@ -77,7 +77,7 @@ class Survey extends ApiModel
      * @param string $type
      * @param int $positionId
      * @param int $year
-     * @return Survey
+     * @return Survey|null
      * @throws ModelNotFoundException
      */
 
