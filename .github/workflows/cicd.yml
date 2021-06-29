@@ -65,7 +65,7 @@ jobs:
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax;
         env:
-          PHP: php7.3.11
+          PHP: php8.0.6
 
 
   docker:
@@ -173,7 +173,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v1
         with:
-          python-version: '3.7'
+          python-version: '3.9'
 
       - name: Deploy to staging
         run: ./bin/deploy staging;
