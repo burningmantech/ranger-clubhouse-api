@@ -20,7 +20,7 @@ class PositionControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
         $this->signInUser();
@@ -33,10 +33,10 @@ class PositionControllerTest extends TestCase
     public function testIndexPosition()
     {
         $position = Position::factory()->create([
-            'min'   => 1,
-            'max'   => 10,
+            'min' => 1,
+            'max' => 10,
             'count_hours' => true,
-            'type'  => 'Frontline',
+            'type' => 'Frontline',
             'short_title' => 'XYZZY'
         ]);
 
@@ -45,15 +45,15 @@ class PositionControllerTest extends TestCase
         $response->assertJsonCount(1, 'position.*.id');
 
         $response->assertJson([
-            'position'  => [
+            'position' => [
                 [
-                    'id'          => $position->id,
-                    'title'       => $position->title,
-                    'min'         => 1,
-                    'max'         => 10,
+                    'id' => $position->id,
+                    'title' => $position->title,
+                    'min' => 1,
+                    'max' => 10,
                     'count_hours' => true,
-                    'type'        => 'Frontline',
-                    'short_title'  => 'XYZZY'
+                    'type' => 'Frontline',
+                    'short_title' => 'XYZZY'
                 ]
             ]
         ]);
@@ -67,15 +67,15 @@ class PositionControllerTest extends TestCase
     {
         $this->addRole(Role::ADMIN);
         $data = [
-            'title'       => 'Gerlach Pizza Patrol',
-            'short_title'  => 'PIZZA',
-            'min'         => 5,
-            'max'         => 25,
+            'title' => 'Gerlach Pizza Patrol',
+            'short_title' => 'PIZZA',
+            'min' => 5,
+            'max' => 25,
             'count_hours' => true,
-            'type'        => 'Frontline'
+            'type' => 'Frontline'
         ];
 
-        $response = $this->json('POST', 'position', [ 'position' => $data ]);
+        $response = $this->json('POST', 'position', ['position' => $data]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('position', $data);
@@ -91,12 +91,12 @@ class PositionControllerTest extends TestCase
         $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
-            'position' => [ 'title' => 'Something Title', 'active' => false ]
+            'position' => ['title' => 'Something Title', 'active' => false]
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('position',
-            [ 'id' => $position->id, 'title' => 'Something Title', 'active' => false ]);
+            ['id' => $position->id, 'title' => 'Something Title', 'active' => false]);
     }
 
     /*
@@ -111,7 +111,7 @@ class PositionControllerTest extends TestCase
 
         $response = $this->json('DELETE', "position/{$positionId}");
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('position', [ 'id' => $positionId ]);
+        $this->assertDatabaseMissing('position', ['id' => $positionId]);
     }
 
     /*
@@ -123,25 +123,25 @@ class PositionControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $sandmanTraining = Slot::factory()->create([
-            'description'  => 'Stop that runner',
-            'position_id'  => Position::SANDMAN_TRAINING,
-            'begins'       => date('Y-01-01 00:00:00'),
-            'ends'         => date('Y-01-01 00:10:00')
-         ]);
+            'description' => 'Stop that runner',
+            'position_id' => Position::SANDMAN_TRAINING,
+            'begins' => date('Y-01-01 00:00:00'),
+            'ends' => date('Y-01-01 00:10:00')
+        ]);
 
         $sandmanShift = Slot::factory()->create([
-            'description'   => 'Burn All The Things',
-            'position_id'   => Position::SANDMAN,
-            'begins'        => date('Y-12-31 00:00:00'),
-            'ends'          => date('Y-12-31 00:10:00')
+            'description' => 'Burn All The Things',
+            'position_id' => Position::SANDMAN,
+            'begins' => date('Y-12-31 00:00:00'),
+            'ends' => date('Y-12-31 00:10:00')
         ]);
 
         // Create a person who is fully qualified
         // trained, has Sandman position, worked BP, signed affidavit, signed up to work this year.
         //
         $personQualified = Person::factory()->create([
-            'callsign'  => 'A Qualified',
-         ]);
+            'callsign' => 'A Qualified',
+        ]);
 
         PersonEvent::factory()->create([
             'person_id' => $personQualified->id,
@@ -150,59 +150,195 @@ class PositionControllerTest extends TestCase
         ]);
 
         PersonPosition::factory()->create([
-             'person_id'    => $personQualified->id,
-             'position_id'  => Position::SANDMAN,
-         ]);
+            'person_id' => $personQualified->id,
+            'position_id' => Position::SANDMAN,
+        ]);
 
         Timesheet::factory()->create([
-            'person_id'    => $personQualified->id,
-            'position_id'  => Position::BURN_PERIMETER,
-            'on_duty'   => date('Y-08-20 23:00:00'),
-            'off_duty'  => date('Y-08-20 23:30:00')
-         ]);
+            'person_id' => $personQualified->id,
+            'position_id' => Position::BURN_PERIMETER,
+            'on_duty' => date('Y-08-20 23:00:00'),
+            'off_duty' => date('Y-08-20 23:30:00')
+        ]);
 
         TraineeStatus::factory()->create([
-             'slot_id'   => $sandmanTraining->id,
-             'person_id' => $personQualified->id,
-             'passed'    => true
-         ]);
+            'slot_id' => $sandmanTraining->id,
+            'person_id' => $personQualified->id,
+            'passed' => true
+        ]);
 
         PersonSlot::factory()->create([
-             'person_id' => $personQualified->id,
-             'slot_id'   => $sandmanShift->id
-         ]);
+            'person_id' => $personQualified->id,
+            'slot_id' => $sandmanShift->id
+        ]);
 
         // .. and a person who is not at all qualified
-        $personUnqualified = Person::factory()->create([ 'callsign' => 'B Unqualified' ]);
+        $personUnqualified = Person::factory()->create(['callsign' => 'B Unqualified']);
         PersonPosition::factory()->create([
-             'person_id'    => $personUnqualified->id,
-             'position_id'  => Position::SANDMAN
-         ]);
+            'person_id' => $personUnqualified->id,
+            'position_id' => Position::SANDMAN
+        ]);
 
-        $response = $this->json('GET', 'position/sandman-qualified', [ 'year' => date('Y') ]);
+        $response = $this->json('GET', 'position/sandman-qualified', ['year' => date('Y')]);
         $response->assertStatus(200);
         $response->assertJsonCount(2, 'sandpeople.*.id');
 
         $response->assertJson([
-             'sandpeople'   => [
-                 [
-                     'id'                => $personQualified->id,
-                     'callsign'          => $personQualified->callsign,
-                     'sandman_affidavit' => 1,
-                     'has_experience'    => 1,
-                     'is_trained'        => 1,
-                     'is_signed_up'      => 1,
-                 ],
-                 [
-                     'id'                => $personUnqualified->id,
-                     'callsign'          => $personUnqualified->callsign,
-                     'sandman_affidavit' => 0,
-                     'has_experience'    => 0,
-                     'is_trained'        => 0,
-                     'is_signed_up'      => 0,
-                 ]
+            'sandpeople' => [
+                [
+                    'id' => $personQualified->id,
+                    'callsign' => $personQualified->callsign,
+                    'sandman_affidavit' => 1,
+                    'has_experience' => 1,
+                    'is_trained' => 1,
+                    'is_signed_up' => 1,
+                ],
+                [
+                    'id' => $personUnqualified->id,
+                    'callsign' => $personUnqualified->callsign,
+                    'sandman_affidavit' => 0,
+                    'has_experience' => 0,
+                    'is_trained' => 0,
+                    'is_signed_up' => 0,
+                ]
 
-             ]
-         ]);
+            ]
+        ]);
     }
+
+
+    public function createBulkPeople()
+    {
+        Position::factory()->create(['id' => Position::HQ_WINDOW, 'title' => 'HQ Window']);
+        Position::factory()->create(['id' => Position::DIRT_GREEN_DOT, 'title' => 'Dirt Green Dot']);
+
+        $person1 = Person::factory()->create();
+        PersonPosition::factory()->create([
+            'person_id' => $person1->id,
+            'position_id' => Position::HQ_WINDOW,
+        ]);
+
+        $this->person1 = $person1;
+    }
+
+    /*
+     * Verify a bulk position grant/revoke
+     */
+
+    public function testVerifyBulkPositionGrantRevoke()
+    {
+        $this->addRole(Role::ADMIN);
+        $this->createBulkPeople();
+        $person1 = $this->person1;
+
+        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+            'callsigns' => $person1->callsign,
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'grant' => 1,
+            'commit' => 0
+        ]);
+
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'people' => [
+                [
+                    'id' => $person1->id,
+                    'callsign' => $person1->callsign,
+                    'success' => true,
+                ],
+            ]
+        ]);
+    }
+
+    /*
+     * Commit a bulk position grant
+     */
+
+    public function testCommitBulkPositionGrant()
+    {
+        $this->addRole(Role::ADMIN);
+
+        $this->createBulkPeople();
+        $person1 = $this->person1;
+
+        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+            'callsigns' => $person1->callsign,
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'grant' => 1,
+            'commit' => 1
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'people' => [
+                [
+                    'id' => $person1->id,
+                    'callsign' => $person1->callsign,
+                    'success' => true,
+                ]
+            ]
+        ]);
+
+        $this->assertDatabaseHas('person_position', [
+            'person_id' => $person1->id,
+            'position_id' => Position::DIRT_GREEN_DOT,
+        ]);
+    }
+
+    /*
+     * Fail a bulk position grant with an unknown callsign
+     */
+
+    public function testFailBulkPositionGrant()
+    {
+        $this->addRole(Role::ADMIN);
+        $this->createBulkPeople();
+
+        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+            'callsigns' => 'nosuchcallsign',
+            'position_id' => Position::HQ_WINDOW,
+            'grant' => 1,
+            'commit' => 0
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'people' => [
+                [
+                    'callsign' => 'nosuchcallsign',
+                    'errors' => 'Callsign not found',
+                ],
+            ]
+        ]);
+    }
+
+    /*
+     * Fail a bulk position grant with a position already granted.
+     */
+
+    public function testFailBulkPositionAlreadyGranted()
+    {
+        $this->addRole(Role::ADMIN);
+        $this->createBulkPeople();
+        $person1 = $this->person1;
+
+        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+            'callsigns' => $person1->callsign,
+            'position_id' => Position::HQ_WINDOW,
+            'grant' => 1,
+            'commit' => 0
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'people' => [
+                [
+                    'callsign' => $person1->callsign,
+                    'errors' => 'Position already granted',
+                ],
+            ]
+        ]);
+    }
+
 }

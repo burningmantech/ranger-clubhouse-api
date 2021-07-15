@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\BulkPositionGrantRevoke;
 use App\Lib\Reports\PeopleByPositionReport;
 use App\Lib\Reports\SandmanQualificationReport;
 use App\Models\Person;
@@ -118,5 +119,32 @@ class PositionController extends ApiController
     {
         $this->authorize('sandmanQualified', Position::class);
         return response()->json(SandmanQualificationReport::execute());
+    }
+
+    /**
+     * Grant or revoke a position for a list of callsigns
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function bulkGrantRevoke(): JsonResponse
+    {
+        $this->authorize('bulkGrantRevoke', Position::class);
+        $params = request()->validate([
+            'callsigns' => 'string|required',
+            'position_id' => 'integer|required|exists:position,id',
+            'grant' => 'boolean|required',
+            'commit' => 'boolean|sometimes',
+        ]);
+
+        return response()->json([
+            'people' => BulkPositionGrantRevoke::execute(
+                $params['callsigns'],
+                $params['position_id'],
+                $params['grant'],
+                $params['commit'] ?? false
+            )
+        ]);
     }
 }

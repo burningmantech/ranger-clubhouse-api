@@ -40,7 +40,8 @@ class PersonPosition extends ApiModel
      * @param $positionId
      * @return bool
      */
-    public static function havePosition($personId, $positionId)
+    
+    public static function havePosition($personId, $positionId): bool
     {
         $sql = self::where('person_id', $personId);
         if (is_array($positionId)) {
