@@ -216,6 +216,7 @@ Route::group([
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
 
+    Route::post('position/bulk-grant-revoke', 'PositionController@bulkGrantRevoke');
     Route::get('position/people-by-position', 'PositionController@peopleByPosition');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
     Route::get('position/sanity-checker', 'PositionSanityCheckController@sanityChecker');
