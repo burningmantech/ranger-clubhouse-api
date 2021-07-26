@@ -6,6 +6,7 @@ namespace App\Lib\Reports;
 
 use App\Models\Position;
 use App\Models\Slot;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ShiftCoverageReport
@@ -161,7 +162,7 @@ class ShiftCoverageReport
             $periods[] = [
                 'begins'    => (string) $shift->begins_epoch,
                 'ends'      => (string) $shift->ends_epoch,
-                'date'      => $shift->begins_epoch->toDateString(),
+                'date'      => $shift->begins_epoch,
                 'positions' => $positions,
             ];
         }
@@ -182,7 +183,12 @@ class ShiftCoverageReport
 
     public static function getShiftsByPosition($year, $positionId)
     {
-        $sql = Slot::whereYear('begins', $year);
+        $sql = DB::table('slot')
+            ->select('slot.*',
+                DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
+                DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
+            )
+            ->whereYear('begins', $year);
 
         if (is_array($positionId)) {
             $sql->whereIn('position_id', $positionId);
@@ -190,29 +196,7 @@ class ShiftCoverageReport
             $sql->where('position_id', $positionId);
         }
 
-        $slots = $sql->orderBy('begins')->get();
-
-        foreach ($slots as $slot) {
-            $slot->begins_epoch = self::adjustToHourBoundary($slot->begins);
-            $slot->ends_epoch = self::adjustToHourBoundary($slot->ends);
-        }
-
-        return $slots;
-    }
-
-    /*
-     * Adjust a shift to an hour boundary
-     */
-
-    public static function adjustToHourBoundary($epoch)
-    {
-        $epoch = $epoch->clone();
-        if ($epoch->minute >= 30) {
-            $epoch->addHour();
-        }
-        $epoch->minute = 0;
-        $epoch->second = 0;
-        return $epoch;
+        return $sql->orderBy('begins')->get();
     }
 
     /*
@@ -222,12 +206,12 @@ class ShiftCoverageReport
 
     public static function getSignUps($positionId, $begins, $ends, $flag, $parenthetical)
     {
-        $begins = $begins->clone()->addMinutes(90);
-        $ends = $ends->clone()->subMinutes(90);
+        $begins = Carbon::parse($begins)->addMinutes(90);
+        $ends = Carbon::parse($ends)->subMinutes(90);
 
-        $sql = DB::table('person_slot')
+        $sql = DB::table('slot')
+            ->join('person_slot', 'slot.id', 'person_slot.slot_id')
             ->join('person', 'person.id', 'person_slot.person_id')
-            ->join('slot', 'slot.id', 'person_slot.slot_id')
             ->where(function ($q) use ($begins, $ends) {
                 // Shift spans the entire period
                 $q->where(function ($q) use ($begins, $ends) {
@@ -266,8 +250,6 @@ class ShiftCoverageReport
             ->orderBy('slot.ends', 'desc')
             ->orderBy('person.callsign')
             ->get();
-
-        $prevBegins = null;
 
         $shifts = [];
         $groups = $rows->groupBy('begins');
