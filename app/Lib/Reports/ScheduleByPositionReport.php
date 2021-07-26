@@ -42,6 +42,7 @@ class ScheduleByPositionReport
                         ->values();
 
                     return [
+                        'id' => $slot->id,
                         'begins' => (string)$slot->begins,
                         'ends' => (string)$slot->ends,
                         'active' => $slot->active,

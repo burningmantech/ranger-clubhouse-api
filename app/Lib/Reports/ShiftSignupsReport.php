@@ -6,23 +6,21 @@ use App\Models\Slot;
 
 class ShiftSignupsReport
 {
-    /*
-     * Shift Signup report
+
+    /**
+     * Report on all active shifts signups for a given year. Shifts are grouped together by position and
+     * calculate a summary of empty shifts and total sign ups.
+     *
+     * @param int $year
+     * @return array
      */
 
-    public static function execute(int $year)
+    public static function execute(int $year): array
     {
-        $rows = Slot::select(
-            'slot.id',
-            'begins',
-            'ends',
-            'description',
-            'signed_up',
-            'max',
-            'position_id'
-        )->whereYear('begins', $year)
-            ->with([ 'position:id,title'])
+        $rows = Slot::whereYear('begins', $year)
+            ->where('active', true)
             ->orderBy('begins')
+            ->with(['position:id,title'])
             ->get();
 
         $rowsByPositions = $rows->groupBy('position_id');
@@ -41,31 +39,28 @@ class ShiftSignupsReport
             }
 
             $positions[] = [
-                'id'              => $positionId,
-                'title'           => $shifts[0]->position->title,
+                'id' => $positionId,
+                'title' => $shifts[0]->position->title,
                 'total_signed_up' => $totalSignedUp,
-                'total_max'       => $totalMax,
-                'total_empty'     => $emptyShifts,
+                'total_max' => $totalMax,
+                'total_empty' => $emptyShifts,
                 'full_percentage' => ($totalMax > 0 ? floor(($totalSignedUp * 100) / $totalMax) : 0),
-                'shifts'          => $shifts->map(function ($row) {
+                'shifts' => $shifts->map(function ($row) {
                     return [
-                        'id'          => $row->id,
-                        'begins'      => (string) $row->begins,
-                        'ends'        => (string) $row->ends,
+                        'id' => $row->id,
+                        'begins' => (string)$row->begins,
+                        'ends' => (string)$row->ends,
                         'description' => $row->description,
-                        'signed_up'   => $row->signed_up,
-                        'max'         => $row->max,
-                        'full_percentage' => ($row->max > 0 ? floor(($row->signed_up * 100)/ $row->max) : 0)
+                        'signed_up' => $row->signed_up,
+                        'max' => $row->max,
+                        'full_percentage' => ($row->max > 0 ? floor(($row->signed_up * 100) / $row->max) : 0)
                     ];
                 })
             ];
         }
 
-        usort($positions, function ($a, $b) {
-            return strcasecmp($a['title'], $b['title']);
-        });
+        usort($positions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
 
         return $positions;
     }
-
 }
