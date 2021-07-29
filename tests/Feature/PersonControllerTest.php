@@ -1498,7 +1498,7 @@ class PersonControllerTest extends TestCase
         $existsCallsign = Person::factory()->create();
         $existsEmail = Person::factory()->create();
 
-        $response = $this->json('GET', 'person/bulk-lookup', [
+        $response = $this->json('POST', 'person/bulk-lookup', [
             'people' => [
                 $existsEmail->email,
                 $existsCallsign->callsign,
