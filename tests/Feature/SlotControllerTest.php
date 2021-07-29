@@ -2,16 +2,15 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
 
 class SlotControllerTest extends TestCase
 {
@@ -22,7 +21,7 @@ class SlotControllerTest extends TestCase
      * have each test have a fresh user that is logged in,
      */
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -32,31 +31,31 @@ class SlotControllerTest extends TestCase
         // Setup default (real world) positions
         $this->trainingPosition = Position::factory()->create(
             [
-                'id'    => Position::TRAINING,
+                'id' => Position::TRAINING,
                 'title' => 'Training',
-                'type'  => 'Training',
+                'type' => 'Training',
             ]
         );
 
         $this->trainingSlots = [];
         for ($i = 0; $i < 3; $i++) {
-            $day                   = (25 + $i);
+            $day = (25 + $i);
             $this->trainingSlots[] = Slot::factory()->create(
                 [
-                    'begins'      => date("$year-05-$day 09:45:00"),
-                    'ends'        => date("$year-05-$day 17:45:00"),
+                    'begins' => date("$year-05-$day 09:45:00"),
+                    'ends' => date("$year-05-$day 17:45:00"),
                     'position_id' => Position::TRAINING,
                     'description' => "Training #$i",
-                    'signed_up'   => 0,
-                    'max'         => 10,
-                    'min'         => 0,
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
             );
         }
 
         EventDate::factory()->create([
-            'event_start'   => '2019-08-25 00:00:00',
-            'event_end'     => '2019-09-02 23:59:00',
+            'event_start' => '2019-08-25 00:00:00',
+            'event_end' => '2019-09-02 23:59:00',
             'pre_event_start' => '2019-01-01 00:00:00',
             'post_event_end' => '2019-12-31 00:00:00',
             'pre_event_slot_start' => '2019-08-15 00:00:00',
@@ -70,7 +69,7 @@ class SlotControllerTest extends TestCase
 
     public function testIndexForCurrentYear()
     {
-        $response = $this->json('GET', 'slot', [ 'year' => $this->year ]);
+        $response = $this->json('GET', 'slot', ['year' => $this->year]);
         $response->assertStatus(200);
         $this->assertCount(3, $response->json()['slot']);
     }
@@ -81,7 +80,7 @@ class SlotControllerTest extends TestCase
 
     public function testIndexForPastYear()
     {
-        $response = $this->json('GET', 'slot', [ 'year' => $this->year - 1]);
+        $response = $this->json('GET', 'slot', ['year' => $this->year - 1]);
         $response->assertStatus(200);
         $this->assertCount(0, $response->json()['slot']);
     }
@@ -94,12 +93,12 @@ class SlotControllerTest extends TestCase
     {
         $this->addRole(Role::EDIT_SLOTS);
         $data = [
-            'begins'      => date("Y-08-01 12:00:00"),
-            'ends'        => date('Y-08-02 12:00:00'),
-            'max'         => 99,
+            'begins' => date("Y-08-01 12:00:00"),
+            'ends' => date('Y-08-02 12:00:00'),
+            'max' => 99,
             'description' => 'The Minty Training',
             'position_id' => Position::GREEN_DOT_TRAINING,
-            'active'      => true
+            'active' => true
         ];
 
         $response = $this->json('POST', 'slot', [
@@ -113,13 +112,13 @@ class SlotControllerTest extends TestCase
     private function buildRestrictedSlot()
     {
         return [
-            'begins'      => '2019-08-19 12:00:00',
-            'ends'        => '2019-08-19 13:00:00',
-            'max'         => 99,
+            'begins' => '2019-08-19 12:00:00',
+            'ends' => '2019-08-19 13:00:00',
+            'max' => 99,
             'description' => $this->faker->text(10),
-            'url'         => $this->faker->text(30),
+            'url' => $this->faker->text(30),
             'position_id' => Position::DIRT,
-            'active'      => true
+            'active' => true
         ];
     }
 
@@ -180,14 +179,14 @@ class SlotControllerTest extends TestCase
 
         $slot->url = $this->faker->title;
 
-        $response = $this->json('PUT', "slot/{$slot->id}", [ 'slot' => [
+        $response = $this->json('PUT', "slot/{$slot->id}", ['slot' => [
             'url' => $slot->url
         ]]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('slot', [
-            'id'    => $slot->id,
-            'url'   => $slot->url
+            'id' => $slot->id,
+            'url' => $slot->url
         ]);
     }
 
@@ -199,20 +198,20 @@ class SlotControllerTest extends TestCase
     {
         $this->addRole(Role::EDIT_SLOTS);
         $slot = $this->trainingSlots[0];
-        $response = $this->json('PUT', "slot/{$slot->id}", [ 'slot' =>
+        $response = $this->json('PUT', "slot/{$slot->id}", ['slot' =>
             [
                 'position_id' => Position::DIRT,
-                'begins'      => '2019-08-19 12:00:00',
-                'ends'        => '2019-08-19 13:00:00',
+                'begins' => '2019-08-19 12:00:00',
+                'ends' => '2019-08-19 13:00:00',
             ]
         ]);
 
         $response->assertStatus(422);
         $this->assertDatabaseMissing('slot', [
-            'id'          => $slot->id,
+            'id' => $slot->id,
             'position_id' => Position::DIRT,
-            'begins'      => '2019-08-19 12:00:00',
-            'ends'        => '2019-08-19 13:00:00',
+            'begins' => '2019-08-19 12:00:00',
+            'ends' => '2019-08-19 13:00:00',
         ]);
     }
 
@@ -225,19 +224,19 @@ class SlotControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $slot = $this->trainingSlots[0];
-        $response = $this->json('PUT', "slot/{$slot->id}", [ 'slot' =>
+        $response = $this->json('PUT', "slot/{$slot->id}", ['slot' =>
             [
                 'position_id' => Position::DIRT,
-                'begins'      => '2019-08-19 12:00:00',
-                'ends'        => '2019-08-19 13:00:00',
+                'begins' => '2019-08-19 12:00:00',
+                'ends' => '2019-08-19 13:00:00',
             ]
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('slot', [
-            'id'          => $slot->id,
-            'position_id' =>  Position::DIRT,
-            'begins'      => '2019-08-19 12:00:00',
+            'id' => $slot->id,
+            'position_id' => Position::DIRT,
+            'begins' => '2019-08-19 12:00:00',
         ]);
     }
 
@@ -253,7 +252,7 @@ class SlotControllerTest extends TestCase
         $response = $this->json('DELETE', "slot/{$slotId}");
 
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('slot', [ 'id' => $slotId ]);
+        $this->assertDatabaseMissing('slot', ['id' => $slotId]);
     }
 
     /*
@@ -267,15 +266,15 @@ class SlotControllerTest extends TestCase
         $person = Person::factory()->create();
 
         PersonSlot::factory()->create([
-             'person_id'    => $person->id,
-             'slot_id'      => $slotId,
-         ]);
+            'person_id' => $person->id,
+            'slot_id' => $slotId,
+        ]);
 
         $response = $this->json('GET', "slot/{$slotId}/people");
         $response->assertStatus(200);
         $response->assertJson([
-             'people' => [
-                 [ 'id' => $person->id, 'callsign' => $person->callsign ]
+            'people' => [
+                ['id' => $person->id, 'callsign' => $person->callsign]
             ]
         ]);
     }
@@ -291,7 +290,7 @@ class SlotControllerTest extends TestCase
         $year = $this->year;
 
         for ($i = 0; $i < 3; $i++) {
-            $hourStart = $i*2;
+            $hourStart = $i * 2;
             $hourEnd = $hourStart + 1;
 
             $begins = date("$year-08-25 0$hourStart:00:00");
@@ -301,13 +300,13 @@ class SlotControllerTest extends TestCase
             if ($i == 0) {
                 $shift = Slot::factory()->create(
                     [
-                        'begins'      => $begins,
-                        'ends'        => $ends,
+                        'begins' => $begins,
+                        'ends' => $ends,
                         'position_id' => Position::HQ_WINDOW,
                         'description' => "Worker #$i",
-                        'signed_up'   => 1,
-                        'max'         => 4,
-                        'min'         => 0,
+                        'signed_up' => 1,
+                        'max' => 4,
+                        'min' => 0,
                     ]
                 );
             }
@@ -317,13 +316,13 @@ class SlotControllerTest extends TestCase
             if ($i != 1) {
                 $shift = Slot::factory()->create(
                     [
-                        'begins'      => $begins,
-                        'ends'        => $ends,
+                        'begins' => $begins,
+                        'ends' => $ends,
                         'position_id' => Position::HQ_SHORT,
                         'description' => "HQ Short #$i",
-                        'signed_up'   => 1,
-                        'max'         => 1,
-                        'min'         => 1,
+                        'signed_up' => 1,
+                        'max' => 1,
+                        'min' => 1,
                     ]
                 );
             }
@@ -332,13 +331,13 @@ class SlotControllerTest extends TestCase
             if ($i != 2) {
                 $shift = Slot::factory()->create(
                     [
-                        'begins'      => $begins,
-                        'ends'        => $ends,
+                        'begins' => $begins,
+                        'ends' => $ends,
                         'position_id' => Position::HQ_LEAD,
                         'description' => "HQ Lead #$i",
-                        'signed_up'   => 1,
-                        'max'         => 1,
-                        'min'         => 1,
+                        'signed_up' => 1,
+                        'max' => 1,
+                        'min' => 1,
                     ]
                 );
             }
@@ -348,26 +347,26 @@ class SlotControllerTest extends TestCase
 
             $dirt = Slot::factory()->create(
                 [
-                    'begins'      => $begins,
-                    'ends'        => $ends,
+                    'begins' => $begins,
+                    'ends' => $ends,
                     'position_id' => Position::DIRT,
                     'description' => "Dirt #$i",
-                    'signed_up'   => $people,
-                    'max'         => 10,
-                    'min'         => 1
+                    'signed_up' => $people,
+                    'max' => 10,
+                    'min' => 1
                 ]
             );
 
             $visits[] = [
-                'period'     => $begins,
-                'checkin'    => $people,
-                'windows'   => ($i ? 1 : 0),
-                'shorts'    => ($i != 1 ? 1 : 0),
-                'leads'     => ($i != 2 ? 1 : 0),
+                'period' => $begins,
+                'checkin' => $people,
+                'windows' => ($i ? 1 : 0),
+                'shorts' => ($i != 1 ? 1 : 0),
+                'leads' => ($i != 2 ? 1 : 0),
             ];
         }
 
-        $response = $this->json('GET', 'slot/hq-forecast-report', [ 'year' => $year, 'interval' => 60 ]);
+        $response = $this->json('GET', 'slot/hq-forecast-report', ['year' => $year, 'interval' => 60]);
 
         $response->assertJson([
             'visits' => [
@@ -440,54 +439,49 @@ class SlotControllerTest extends TestCase
         $year = date('Y');
         $person = Person::factory()->create();
         $position = Position::factory()->create([
-            'id'    => Position::DIRT_GREEN_DOT,
+            'id' => Position::DIRT_GREEN_DOT,
             'title' => 'Dirt - Green Dot'
         ]);
 
         $slot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
-            'begins'      => date("$year-m-d 10:00:00"),
-            'ends'        => date("$year-m-d 11:00:00"),
-            'max'         => 10,
+            'begins' => date("$year-m-d 10:00:00"),
+            'ends' => date("$year-m-d 11:00:00"),
+            'max' => 10,
         ]);
 
         PersonSlot::factory()->create([
             'person_id' => $person->id,
-            'slot_id'   => $slot->id
+            'slot_id' => $slot->id
         ]);
 
         $emptySlot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
-            'begins'      => date("$year-m-d 13:00:00"),
-            'ends'        => date("$year-m-d 14:00:00"),
-            'max'         => 10,
+            'begins' => date("$year-m-d 13:00:00"),
+            'ends' => date("$year-m-d 14:00:00"),
+            'max' => 10,
         ]);
 
-        $response = $this->json('GET', 'slot/position-schedule-report', [ 'year' => $year]);
+        $response = $this->json('GET', 'slot/position-schedule-report', ['year' => $year]);
         $response->assertStatus(200);
 
         $response->assertJson([
             'positions' => [
                 [
-                    'id'    => $position->id,
+                    'id' => $position->id,
                     'title' => $position->title,
                     'slots' => [
                         [
-                            'begins'    => (string) $slot->begins,
-                            'ends'      => (string) $slot->ends,
-                            'max'       => $slot->max,
-                            'sign_ups' => [
-                                [
-                                    'id'    => $person->id,
-                                    'callsign'  => $person->callsign
-                                ]
-                            ]
+                            'begins' => (string)$slot->begins,
+                            'ends' => (string)$slot->ends,
+                            'max' => $slot->max,
+                            'sign_ups' => [$person->id]
                         ],
                         [
-                            'begins'    => (string) $emptySlot->begins,
-                            'ends'      => (string) $emptySlot->ends,
-                            'max'       => $emptySlot->max,
-                            'sign_ups' => [ ]
+                            'begins' => (string)$emptySlot->begins,
+                            'ends' => (string)$emptySlot->ends,
+                            'max' => $emptySlot->max,
+                            'sign_ups' => []
                         ]
                     ]
                 ]
@@ -506,39 +500,39 @@ class SlotControllerTest extends TestCase
         $year = date('Y');
         $person = Person::factory()->create();
         $position = Position::factory()->create([
-            'id'    => Position::DIRT_GREEN_DOT,
+            'id' => Position::DIRT_GREEN_DOT,
             'title' => 'Dirt - Green Dot'
         ]);
 
         $slot = Slot::factory()->create([
             'position_id' => Position::DIRT_GREEN_DOT,
-            'begins'      => date("$year-m-d 10:00:00"),
-            'ends'        => date("$year-m-d 11:00:00"),
-            'max'         => 10,
+            'begins' => date("$year-m-d 10:00:00"),
+            'ends' => date("$year-m-d 11:00:00"),
+            'max' => 10,
         ]);
 
         PersonSlot::factory()->create([
             'person_id' => $person->id,
-            'slot_id'   => $slot->id
+            'slot_id' => $slot->id
         ]);
 
-        $response = $this->json('GET', 'slot/callsign-schedule-report', [ 'year' => $year]);
+        $response = $this->json('GET', 'slot/callsign-schedule-report', ['year' => $year]);
         $response->assertStatus(200);
 
         $response->assertJson([
             'people' => [
                 [
-                    'id'       => $person->id,
+                    'id' => $person->id,
                     'callsign' => $person->callsign,
-                    'slots'    => [
+                    'slots' => [
                         [
-                            'position'  => [
-                                'id'    => $position->id,
+                            'position' => [
+                                'id' => $position->id,
                                 'title' => $position->title,
                             ],
-                            'begins'    => (string) $slot->begins,
-                            'ends'      => (string) $slot->ends,
-                            'description'       => $slot->description,
+                            'begins' => (string)$slot->begins,
+                            'ends' => (string)$slot->ends,
+                            'description' => $slot->description,
                         ]
                     ]
                 ]

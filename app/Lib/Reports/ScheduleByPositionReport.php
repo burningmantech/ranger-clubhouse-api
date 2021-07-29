@@ -5,7 +5,6 @@ namespace App\Lib\Reports;
 
 
 use App\Models\Slot;
-use Illuminate\Support\Collection;
 
 class ScheduleByPositionReport
 {
@@ -13,22 +12,23 @@ class ScheduleByPositionReport
      * Report on all scheduled sign up by position for a given year
      *
      * @param int $year
-     * @return Collection
+     * @return array
      */
 
-    public static function execute(int $year)
+    public static function execute(int $year, $canViewEmail): array
     {
         $rows = Slot::select('slot.*')
             ->join('position', 'position.id', 'slot.position_id')
             ->whereYear('begins', $year)
-            ->with(['position:id,title,active', 'person_slot.person:id,callsign,status'])
+            ->with(['position:id,title,active', 'person_slot.person:id,callsign,first_name,last_name,status,email'])
             ->orderBy('position.title')
             ->orderBy('slot.begins')
             ->get()
             ->groupBy('position_id');
 
+        $people = [];
 
-        return $rows->map(function ($p) {
+        $positions = $rows->map(function ($p) use ($canViewEmail, &$people) {
             $slot = $p[0];
             $position = $slot->position;
 
@@ -36,11 +36,7 @@ class ScheduleByPositionReport
                 'id' => $position->id,
                 'title' => $position->title,
                 'active' => $position->active,
-                'slots' => $p->map(function ($slot) {
-                    $signups = $slot->person_slot
-                        ->sort(fn($a, $b) => strcasecmp($a->person->callsign, $b->person->callsign))
-                        ->values();
-
+                'slots' => $p->map(function ($slot) use ($canViewEmail, &$people) {
                     return [
                         'id' => $slot->id,
                         'begins' => (string)$slot->begins,
@@ -48,16 +44,29 @@ class ScheduleByPositionReport
                         'active' => $slot->active,
                         'description' => (string)$slot->description,
                         'max' => $slot->max,
-                        'sign_ups' => $signups->map(function ($row) {
+                        'sign_ups' =>  $slot->person_slot->map(function ($row) use ($canViewEmail, &$people) {
                             $person = $row->person;
-                            return [
-                                'id' => $row->person_id,
-                                'callsign' => $person->callsign
+                            $personId = $person->id;
+                            $people[$personId] ??= [
+                                'id' => $personId,
+                                'callsign' => $person->callsign,
+                                'first_name' => $person->first_name,
+                                'last_name' => $person->last_name,
+                                'status' => $person->status,
                             ];
-                        })
+                            if ($canViewEmail) {
+                                $people[$personId]['email'] ??= $person->email;
+                            }
+                            return $personId;
+                        })->toArray()
                     ];
-                })->values()
+                })->values()->toArray()
             ];
-        })->values();
+        })->values()->toArray();
+
+        return [
+            'positions' => $positions,
+            'people'=> $people
+        ];
     }
 }
