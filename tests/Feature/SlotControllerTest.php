@@ -524,20 +524,22 @@ class SlotControllerTest extends TestCase
                 [
                     'id' => $person->id,
                     'callsign' => $person->callsign,
-                    'slots' => [
-                        [
-                            'position' => [
-                                'id' => $position->id,
-                                'title' => $position->title,
-                            ],
-                            'begins' => (string)$slot->begins,
-                            'ends' => (string)$slot->ends,
-                            'description' => $slot->description,
-                        ]
-                    ]
+                    'slot_ids' => [$slot->id]
+                ]
+            ],
+            'positions' => [
+                $position->id => ['title' => $position->title]
+            ],
+
+            'slots' => [
+                $slot->id => [
+                    'begins' => (string)$slot->begins,
+                    'ends' => (string)$slot->ends,
+                    'description' => $slot->description,
+                    'position_id' => $position->id
                 ]
             ]
+
         ]);
     }
-
 }

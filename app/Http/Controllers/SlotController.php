@@ -383,7 +383,7 @@ class SlotController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'people' => ScheduleByCallsignReport::execute($year) ]);
+        return response()->json(ScheduleByCallsignReport::execute($year));
     }
 
     /*

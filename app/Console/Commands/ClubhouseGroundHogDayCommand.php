@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Lib\RedactDatabase;
+use App\Models\Setting;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use App\Models\Motd;
-
-use App\Lib\RedactDatabase;
 
 class ClubhouseGroundHogDayCommand extends Command
 {
@@ -38,7 +37,7 @@ class ClubhouseGroundHogDayCommand extends Command
         $this->signature = 'clubhouse:groundhog-day
                     {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-groundhog-day-YYYY-MM-DD.sql}
                     {--tempdb=ranger_ghd : temporary database name}
-                    {--day='.(date('Y') - 1).'-08-30 18:00:00 : ground hog day date/time}
+                    {--day=' . (date('Y') - 1) . '-08-30 18:00:00 : ground hog day date/time}
                     ';
         parent::__construct();
     }
@@ -72,7 +71,7 @@ class ClubhouseGroundHogDayCommand extends Command
         }
 
         // Switch databases
-        config([ 'database.connections.mysql.database' => $ghdname ]);
+        config(['database.connections.mysql.database' => $ghdname]);
         DB::purge('mysql');
 
         RedactDatabase::execute($year);
@@ -80,7 +79,7 @@ class ClubhouseGroundHogDayCommand extends Command
         // Kill anytime sheets in the future
         DB::table('timesheet')->where('on_duty', '>', $groundHogDay)->delete();
         // Mark timesheets ending after groundhog day as still on duty
-        DB::table('timesheet')->where('off_duty', '>', $groundHogDay)->update([ 'off_duty' => null ]);
+        DB::table('timesheet')->where('off_duty', '>', $groundHogDay)->update(['off_duty' => null]);
 
         // Remove any timesheet logs after groundhog day
         DB::table('timesheet_log')->where('created_at', '>=', $groundHogDay)->delete();
@@ -105,24 +104,36 @@ class ClubhouseGroundHogDayCommand extends Command
 
         // Mark some assets as being checked out
         DB::table('asset_person')->whereYear('checked_in', '>=', $year)->delete();
-        DB::table('asset_person')->where('checked_out', '>=', $groundHogDay)->update([ 'checked_in' => null ]);
+        DB::table('asset_person')->where('checked_out', '>=', $groundHogDay)->update(['checked_in' => null]);
 
-        // Mark everyone on site who has a timesheet or is schedule to work as on site and signed paperwork
-        DB::table('person')
-            ->where(function ($q)  use($ghdTime, $year) {
+        // Mark everyone on site who had a timesheet or was scheduled to work as on site and signed paperwork
+        $peopleIds = DB::table('person')
+            ->select('person.id')
+            ->where(function ($q) use ($ghdTime, $year) {
                 $start = date('Y-08-20', $ghdTime);
                 $end = date('Y-09-04', $ghdTime);
                 $q->whereRaw("EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE (slot.begins >= '$start' AND slot.ends <= '$end') AND person_slot.person_id=person.id LIMIT 1)");
                 $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
-            })->update([
-                'on_site'              => true,
+            })
+            ->pluck('id');
+
+        DB::table('person')->whereIn('id', $peopleIds)
+            ->update([
+                'on_site' => true,
                 'behavioral_agreement' => true,
-              ]);
+            ]);
+
+        DB::table('person_event')->where('year', $year)
+            ->update([
+                'signed_motorpool_agreement' => true,
+                'asset_authorized' => true
+            ]);
+
         // Setup an announcement
 
         DB::table('motd')->insert([
-            'subject' => 'Welcome to '.date('l, F jS Y', strtotime($groundHogDay)).'!',
-            'message'    => 'Remember the temporal prime directive, do not muck up the timeline by killing your own grandparent in the past.',
+            'subject' => 'Welcome to ' . date('l, F jS Y', strtotime($groundHogDay)) . '!',
+            'message' => 'Remember the temporal prime directive, do not muck up the timeline by killing your own grandparent in the past.',
             'person_id' => 4594,
             'for_rangers' => true,
             'for_pnvs' => true,
@@ -130,8 +141,23 @@ class ClubhouseGroundHogDayCommand extends Command
             'expires_at' => '2099-09-01 12:00:00'
         ]);
 
+        $trueSettings = [
+            'RadioCheckoutAgreementEnabled',
+            'MotorpoolPolicyEnable',
+            'LoginManageOnPlayaEnabled',
+            'RadioInfoAvailable',
+            'TimesheetCorrectionEnable',
+            'BroadcastClubhouseSandbox',
+            'BroadcastMailSandbox',
+            'BroadcastSMSSandbox'
+        ];
+
+        foreach ($trueSettings as $name) {
+            Setting::where('name', $name)->update(['value' => 'true']);
+        }
+
         $this->info("Creating mysql dump of groundhog database");
-        $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-".date('Y-m-d').".sql";
+        $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-" . date('Y-m-d') . ".sql";
 
         if (shell_exec("mysqldump -u $user $ghdname > $dump")) {
             $this->info("Failed to dump database - $ghdname has not been deleted.");

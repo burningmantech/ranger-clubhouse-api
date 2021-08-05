@@ -4,14 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\PositionCredit;
-use App\Models\Slot;
 
 
 class Timesheet extends ApiModel
@@ -327,11 +321,11 @@ class Timesheet extends ApiModel
      *  which means they have two years by simply counting timesheet entries. We don't want that because
      * then it throws things off with the dashboard & training checks.)
      *
-     * @param \App\Models\Person $person
+     * @param Person $person
      * @return bool
      */
 
-    public static function isPersonBinary(Person $person) : bool
+    public static function isPersonBinary(Person $person): bool
     {
         if ($person->status != Person::ACTIVE) {
             return false;
@@ -533,8 +527,14 @@ class Timesheet extends ApiModel
 
     public function getDurationAttribute(): int
     {
+        if (isset($this->attributes['duration'])) {
+            return $this->attributes['duration'];
+        }
+
         $offDuty = $this->off_duty ?? now();
-        return $offDuty->diffInSeconds($this->on_duty);
+        $duration = $offDuty->diffInSeconds($this->on_duty);
+        $this->attributes['duration'] = $duration;
+        return $duration;
     }
 
     /**

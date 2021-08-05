@@ -4,6 +4,7 @@ namespace App\Lib\Reports;
 
 use App\Models\PositionCredit;
 use App\Models\Timesheet;
+use Illuminate\Support\Facades\DB;
 
 class TimesheetTotalsReport
 {
@@ -19,11 +20,11 @@ class TimesheetTotalsReport
 
     public static function execute(int $year)
     {
+        $positionIds = DB::table('position')->where('count_hours', true)->pluck('id');
+
         $rows = Timesheet::whereYear('on_duty', $year)
-            ->join('position', 'position.id', 'timesheet.position_id')
-            ->where('position.count_hours', true)
+            ->whereIn('position_id', $positionIds)
             ->with(['person:id,callsign,status', 'position:id,title,active'])
-            ->orderBy('timesheet.person_id')
             ->get();
 
         if (!$rows->isEmpty()) {
@@ -44,7 +45,7 @@ class TimesheetTotalsReport
 
             // Summarize the positions worked
             foreach ($group as $positionId => $posEntries) {
-                $position = $posEntries[0];
+                $position = $posEntries[0]->position;
                 $duration = $posEntries->pluck('duration')->sum();
                 $totalDuration += $duration;
                 $credits = $posEntries->pluck('credits')->sum();
@@ -59,13 +60,12 @@ class TimesheetTotalsReport
             }
 
             // Sort by position title
-            usort($positions, function ($a, $b) {
-                return strcasecmp($a['title'], $b['title']);
-            });
+            usort($positions, fn ($a, $b) => strcasecmp($a['title'], $b['title']));
+
 
             $results[] = [
                 'id' => $personId,
-                'callsign' => $person ? $person->callsign : 'Person #' . $personId,
+                'callsign' => $person->callsign ?? 'Person #' . $personId,
                 'status' => $person->status,
                 'positions' => $positions,
                 'total_duration' => $totalDuration,
@@ -73,9 +73,7 @@ class TimesheetTotalsReport
             ];
         }
 
-        usort($results, function ($a, $b) {
-            return strcasecmp($a['callsign'], $b['callsign']);
-        });
+        usort($results, fn ($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return $results;
     }
