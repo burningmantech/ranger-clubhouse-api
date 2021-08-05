@@ -2,7 +2,7 @@
 
 namespace App\Lib\Reports;
 
-use App\Models\Person;
+use Illuminate\Support\Facades\DB;
 
 class PeopleByStatusReport
 {
@@ -12,9 +12,10 @@ class PeopleByStatusReport
      * @return array
      */
 
-    public static function execute() : array
+    public static function execute(): array
     {
-        $statusGroups = Person::select('id', 'callsign', 'status')
+        $statusGroups = DB::table('person')
+            ->select('id', 'callsign', 'status')
             ->orderBy('status')
             ->orderBy('callsign')
             ->get()
