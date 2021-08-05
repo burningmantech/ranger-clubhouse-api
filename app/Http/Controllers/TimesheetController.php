@@ -786,7 +786,7 @@ class TimesheetController extends ApiController
     {
         $this->authorize('timesheetByCallsign', [Timesheet::class]);
         $year = $this->getYear();
-        return response()->json(['people' => TimesheetByCallsignReport::execute($year)]);
+        return response()->json(TimesheetByCallsignReport::execute($year));
     }
 
     /**
@@ -814,7 +814,7 @@ class TimesheetController extends ApiController
     {
         $this->authorize('timesheetByPosition', [Timesheet::class]);
         $year = $this->getYear();
-        return response()->json(['positions' => TimesheetByPositionReport::execute($year, $this->userCanViewEmail())]);
+        return response()->json(TimesheetByPositionReport::execute($year, $this->userCanViewEmail()));
     }
 
     private function clearedToWork(Person $person,

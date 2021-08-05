@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Lib\Reports;
 
 use App\Models\Person;
@@ -93,7 +94,8 @@ class PeopleByPositionReport
             }
             $positions[] = $position;
         }
-        $people = Person::whereIn('id', array_keys($allPeople))
+        $people = DB::table('person')
+            ->whereIn('id', array_keys($allPeople))
             ->select('id', 'callsign', 'status', 'on_site')
             ->get();
 

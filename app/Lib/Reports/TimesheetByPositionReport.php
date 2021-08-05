@@ -3,6 +3,7 @@
 namespace App\Lib\Reports;
 
 use App\Models\Timesheet;
+use Illuminate\Support\Facades\DB;
 
 class TimesheetByPositionReport
 {
@@ -16,30 +17,35 @@ class TimesheetByPositionReport
 
     public static function execute(int $year, bool $includeEmail = false)
     {
+        $now = now();
         $rows = Timesheet::whereYear('on_duty', $year)
-            ->with(['person:id,callsign,status,email', 'position:id,title,active'])
+            ->select(
+                '*',
+                DB::raw("(UNIX_TIMESTAMP(IFNULL(off_duty, '$now')) - UNIX_TIMESTAMP(on_duty)) AS duration")
+            )->with(['person:id,callsign,status,email', 'position:id,title,active'])
             ->orderBy('on_duty')
             ->get()
             ->groupBy('position_id');
 
-        $results = [];
+        $positions = [];
+        $people = [];
 
         foreach ($rows as $positionId => $entries) {
             $position = $entries[0]->position;
-            $results[] = [
+            $positions[] = [
                 'id' => $position->id,
                 'title' => $position->title,
                 'active' => $position->active,
-                'timesheets' => $entries->map(function ($r) use ($includeEmail) {
+                'timesheets' => $entries->map(function ($r) use ($includeEmail, & $people) {
                     $person = $r->person;
-                    $personInfo = [
+                    $people[$r->person_id] ??= [
                         'id' => $r->person_id,
-                        'callsign' => $person ? $person->callsign : 'Person #' . $r->person_id,
-                        'status' => $person ? $person->status : 'deleted'
+                        'callsign' => $person->callsign ?? 'Person #' . $r->person_id,
+                        'status' => $person->status ?? 'deleted'
                     ];
 
                     if ($includeEmail) {
-                        $personInfo['email'] = $person ? $person->email : '';
+                        $people[$r->person_id]['email'] ??= $person->email ?? '';
                     }
 
                     return [
@@ -47,16 +53,17 @@ class TimesheetByPositionReport
                         'on_duty' => (string)$r->on_duty,
                         'off_duty' => (string)$r->off_duty,
                         'duration' => $r->duration,
-                        'person' => $personInfo
+                        'person_id' => $r->person_id,
                     ];
                 })
             ];
         }
 
-        usort($results, function ($a, $b) {
-            return strcasecmp($a['title'], $b['title']);
-        });
+        usort($positions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
 
-        return $results;
+        return [
+            'positions' => $positions,
+            'people' => $people,
+        ];
     }
 }

@@ -18,10 +18,7 @@ class  LanguagesSpokenOnSiteReport
             ->pluck('id');
 
         $languages = PersonLanguage::whereIn('person_id', $personId)
-            ->with(['person' => function ($q) {
-                $q->select('id', 'callsign');
-                $q->orderBy('callsign');
-            }])
+            ->with(['person:id,callsign'])
             ->orderBy('language_name')
             ->get()
             ->filter(fn($row) => $row->person != null)
@@ -35,7 +32,7 @@ class  LanguagesSpokenOnSiteReport
                         'id' => $row->person_id,
                         'callsign' => $row->person->callsign
                     ];
-                })->values()
+                })->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values()
             ];
         })->sortBy('language', SORT_NATURAL | SORT_FLAG_CASE)->values();
 

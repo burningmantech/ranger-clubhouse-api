@@ -1187,16 +1187,18 @@ class TimesheetControllerTest extends TestCase
                     'status' => $person->status,
                     'timesheet' => [
                         [
-                            'position' => [
-                                'id' => Position::DIRT,
-                                'title' => 'Dirt',
-                                'active' => true,
-                            ],
+                            'position_id' => Position::DIRT,
                             'on_duty' => (string)$entry->on_duty,
                             'off_duty' => (string)$entry->off_duty,
                             'duration' => 3600,
                         ]
                     ]
+                ]
+            ],
+            'positions' => [
+                Position::DIRT => [
+                    'title' => 'Dirt',
+                    'active' => true,
                 ]
             ]
         ]);
@@ -1303,11 +1305,7 @@ class TimesheetControllerTest extends TestCase
                     'title' => 'Dirt',
                     'active' => true,
                     'timesheets' => [[
-                        'person' => [
-                            'id' => $personA->id,
-                            'callsign' => $personA->callsign,
-                            'status' => $personA->status,
-                        ],
+                        'person_id' => $personA->id,
                         'on_duty' => (string)$entryA->on_duty,
                         'off_duty' => (string)$entryA->off_duty,
                         'duration' => 3600
@@ -1318,15 +1316,22 @@ class TimesheetControllerTest extends TestCase
                     'title' => 'HQ Window',
                     'active' => true,
                     'timesheets' => [[
-                        'person' => [
-                            'id' => $personB->id,
-                            'callsign' => $personB->callsign,
-                            'status' => $personB->status,
-                        ],
+                        'person_id' => $personB->id,
                         'on_duty' => (string)$entryB->on_duty,
                         'off_duty' => (string)$entryB->off_duty,
                         'duration' => 7200
                     ]]
+                ]
+            ],
+
+            'people' => [
+                $personA->id => [
+                    'callsign' => $personA->callsign,
+                    'status' => $personA->status,
+                ],
+                $personB->id => [
+                    'callsign' => $personB->callsign,
+                    'status' => $personB->status,
                 ]
             ]
         ]);
