@@ -127,6 +127,16 @@ class Position extends ApiModel
     const QUARTERMASTER = 84;
 
     /*
+     * 2021 Operation Non-Event (O.N.E.) positions
+     */
+
+    const ONE_SHIFT_LEAD = 132;
+    const ONE_TROUBLESHOOTER = 133;
+    const ONE_GREEN_DOT = 134;
+    const ONE_GERLACH_PATROL_DIRT = 135;
+    const ONE_RSCI = 136;
+
+    /*
      * Position types
      */
     const TYPE_COMMAND = 'Command';

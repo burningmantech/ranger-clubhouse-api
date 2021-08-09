@@ -16,6 +16,12 @@ class ShiftLeadReport
     const COMMAND = 'command';
     const DIRT_AND_GREEN_DOT = 'dirt+green';
 
+    const DIRT_AND_GREEN_DOT_POSITIONS = [
+            Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
+            Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE,
+            Position::ONE_GERLACH_PATROL_DIRT, Position::ONE_GREEN_DOT
+    ];
+
     public static function execute(Carbon $shiftStart, int $shiftDuration): array
     {
         $shiftEnd = $shiftStart->clone()->addSeconds($shiftDuration);
@@ -118,10 +124,8 @@ class ShiftLeadReport
 
         switch ($type) {
             case self::NON_DIRT:
-                $sql->whereNotIn('slot.position_id', [
-                    Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
-                    Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
-                ])->where('position.type', '=', Position::TYPE_FRONTLINE);
+                $sql->whereNotIn('slot.position_id', self::DIRT_AND_GREEN_DOT_POSITIONS)
+                    ->where('position.type', '=', Position::TYPE_FRONTLINE);
                 break;
 
             case self::COMMAND:
@@ -129,10 +133,8 @@ class ShiftLeadReport
                 break;
 
             case self::DIRT_AND_GREEN_DOT:
-                $sql->whereIn('slot.position_id', [
-                    Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
-                    Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE
-                ])->orderBy('years', 'desc');
+                $sql->whereIn('slot.position_id',  self::DIRT_AND_GREEN_DOT_POSITIONS)
+                    ->orderBy('years', 'desc');
                 break;
         }
 
@@ -142,11 +144,14 @@ class ShiftLeadReport
 
         $personIds = $people->pluck('person_id')->toArray();
 
-        $peoplePositions = DB::table('person_position')
+        $peoplePositions = DB::table('position')
             ->select('person_position.person_id', 'position.short_title', 'position.id as position_id')
-            ->join('position', 'position.id', '=', 'person_position.position_id')
+            ->join('person_position', 'position.id',  'person_position.position_id')
             ->where('position.on_sl_report', 1)
-            ->whereNotIn('position.id', [Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY])    // Don't need report on dirt
+            ->whereNotIn('position.id', [
+                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
+                Position::ONE_GERLACH_PATROL_DIRT
+            ])    // Don't need report on dirt
             ->whereIn('person_position.person_id', $personIds)
             ->get()
             ->groupBy('person_id');
@@ -159,35 +164,42 @@ class ShiftLeadReport
             $positionId = $person->position_id;
 
             // GD Mentees are not considered to be on a proper GD shift.
-            $person->is_greendot_shift = ($positionId == Position::DIRT_GREEN_DOT
-                || $positionId == Position::GREEN_DOT_MENTOR);
+            $person->is_greendot_shift = (
+                $positionId == Position::DIRT_GREEN_DOT
+                || $positionId == Position::GREEN_DOT_MENTOR
+                || $positionId == Position::ONE_GREEN_DOT
+            );
 
             $person->slot_begins_day_before = (new Carbon($person->slot_begins))->day != $shiftStart->day;
             $person->slot_ends_day_after = (new Carbon($person->slot_ends))->day != $shiftStart->day;
 
             if ($positions) {
-                $person->is_troubleshooter = $positions->contains('position_id', Position::TROUBLESHOOTER);
-                $person->is_rsl = $positions->contains('position_id', Position::RSC_SHIFT_LEAD);
+                $person->is_troubleshooter = $positions->whereIn('position_id', [ Position::TROUBLESHOOTER, Position::ONE_TROUBLESHOOTER ])->count() != 0;
+                $person->is_rsl = $positions->whereIn('position_id', [ Position::RSC_SHIFT_LEAD, Position::ONE_SHIFT_LEAD ])->count() != 0;
                 $person->is_ood = $positions->contains('position_id', Position::OOD);
 
                 // Determine if the person is a GD AND if they have been trained this year.
                 $haveGDPosition = $positions->contains(function ($row) {
                     $pid = $row->position_id;
-                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR);
+                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR || $pid == Position::ONE_GREEN_DOT);
                 });
 
                 // The check for the mentee shift is a hack to prevent past years from showing
                 // a GD Mentee as a qualified GD.
                 if ($haveGDPosition) {
-                    $person->is_greendot = Training::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
-                    if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
-                        $person->is_greendot = false; // just in case
-                        // Not trained - remove the GD positions
-                        $positions = $positions->filter(function ($row) {
-                            $pid = $row->position_id;
-                            return !($pid == Position::DIRT_GREEN_DOT
-                                || $pid == Position::GREEN_DOT_MENTOR);
-                        });
+                    if ($year == 2021) {
+                        $person->is_greendot = $positions->contains('position_id', Position::ONE_GREEN_DOT);
+                    } else {
+                        $person->is_greendot = Training::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
+                        if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
+                            $person->is_greendot = false; // just in case
+                            // Not trained - remove the GD positions
+                            $positions = $positions->filter(function ($row) {
+                                $pid = $row->position_id;
+                                return !($pid == Position::DIRT_GREEN_DOT
+                                    || $pid == Position::GREEN_DOT_MENTOR);
+                            });
+                        }
                     }
                 }
 
@@ -210,7 +222,7 @@ class ShiftLeadReport
     public static function countGreenDotsScheduled(Carbon $shiftStart, Carbon $shiftEnd, bool $femaleOnly = false) : int
     {
         $rows = DB::select('SELECT version() as version');
-        $useModernRegexp = stripos($rows[0]->version, '8.') === 0;
+        $useModernRegexp = stripos($rows[0]->version, '5.') !== 0;
 
         $sql = DB::table('slot')
             ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
