@@ -114,6 +114,17 @@ class ShiftCoverageReport
         [ Position::QUARTERMASTER, 'QM', self::CALLSIGNS ],
     ];
 
+    const ONE_POSITIONS = [
+        [ Position::ONE_OOD, 'ONE OOD', self::CALLSIGNS ],
+        [ Position::ONE_SHIFT_LEAD, 'ONE Lead', self::CALLSIGNS ],
+        [ Position::ONE_RSCI, 'ONESCI', self::CALLSIGNS ],
+        [ Position::ONE_TROUBLESHOOTER, 'ONE Troubleshooter', self::CALLSIGNS ],
+        [ Position::ONE_GERLACH_PATROL_DIRT, 'ONE Dirt', self::CALLSIGNS ],
+        [ Position::ONE_GREEN_DOT, 'ONE Green Dot', self::CALLSIGNS ],
+        [ Position::ONE_HQ_ON_CALL, 'ONE HQ Window', self::CALLSIGNS ],
+        [ Position::ONE_HQ_WINDOW, 'ONE HQ On Call', self::CALLSIGNS ],
+    ];
+
     /*
       * The various type which can be reported on.
       *
@@ -131,6 +142,7 @@ class ShiftCoverageReport
         'echelon'        => [ Position::ECHELON_FIELD, self::ECHELON ],
         'pre-event'      => [ Position::DIRT_PRE_EVENT, self::PRE_EVENT ],
         'command'        => [ [ Position::DIRT, Position::DIRT_POST_EVENT ], self::COMMAND ],
+        'one'           => [ Position::ONE_GERLACH_PATROL_DIRT, self::ONE_POSITIONS ]
     ];
 
     public static function execute(int $year, string $type)

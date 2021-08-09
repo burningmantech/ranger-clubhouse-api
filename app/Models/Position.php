@@ -135,6 +135,9 @@ class Position extends ApiModel
     const ONE_GREEN_DOT = 134;
     const ONE_GERLACH_PATROL_DIRT = 135;
     const ONE_RSCI = 136;
+    const ONE_OOD = 131;
+    const ONE_HQ_WINDOW = 137;
+    const ONE_HQ_ON_CALL = 138;
 
     /*
      * Position types
