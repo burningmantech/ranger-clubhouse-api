@@ -120,6 +120,13 @@ class ShiftLeadReport
             ->orderBy('slot.begins')
             ->orderByRaw('CASE WHEN position.id=' . Position::DIRT_SHINY_PENNY . ' THEN "1111" ELSE position.title END DESC');
 
+        // Only report on active positions for the current year. Previous years may reference
+        // positions that have been deactivated since.
+
+        if ($shiftStart->year == current_year()) {
+            $sql->where('position.active', true);
+        }
+
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
 
         switch ($type) {
