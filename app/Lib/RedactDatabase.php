@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
 class RedactDatabase {
     public static function execute($year) {
 
-        $salt = '123456';
-        $sha = sha1($salt . 'donothing');
+       // $salt = '123456';
+       // $sha = sha1($salt . 'donothing');
 
         // No fruit-cup.. err.. Personal Information for you tonight!
         DB::table('person')->update([
@@ -37,7 +37,7 @@ class RedactDatabase {
             'camp_location' => 'D-Lot',
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
             'tpassword' => '',
-            'password' => "$salt:$sha",
+          //  'password' => "$salt:$sha",
         ]);
 
         // Zap training notes
