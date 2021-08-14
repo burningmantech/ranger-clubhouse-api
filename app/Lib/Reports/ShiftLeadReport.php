@@ -4,10 +4,11 @@ namespace App\Lib\Reports;
 
 use App\Models\Person;
 use App\Models\Position;
+use App\Models\Slot;
 use App\Models\Training;
-
 use Carbon\Carbon;
-
+use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ShiftLeadReport
@@ -17,49 +18,58 @@ class ShiftLeadReport
     const DIRT_AND_GREEN_DOT = 'dirt+green';
 
     const DIRT_AND_GREEN_DOT_POSITIONS = [
-            Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
-            Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE,
-            Position::ONE_GERLACH_PATROL_DIRT, Position::ONE_GREEN_DOT
+        Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
+        Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE,
+        Position::ONE_GERLACH_PATROL_DIRT, Position::ONE_GREEN_DOT
     ];
+
+    /**
+     * Run the Shift Lead report Find signups for positions of interest and show them to Khaki.
+     * Include a person's positions which might help Khaki out in a bind.
+     *
+     * @param Carbon $shiftStart - Date time of interested shifts
+     * @param int $shiftDuration
+     * @return array
+     * @throws Exception
+     */
 
     public static function execute(Carbon $shiftStart, int $shiftDuration): array
     {
         $shiftEnd = $shiftStart->clone()->addSeconds($shiftDuration);
 
+        list ($totalGreenDots, $femaleGreenDots) = self::countGreenDotsScheduled($shiftStart, $shiftEnd);
+
+        $positions = [];
+        $slots = [];
+
         return [
             // Positions and head counts
-            'incoming_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, false),
-            'below_min_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, true),
+            'incoming_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, false, $positions, $slots),
+            'below_min_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, true, $positions, $slots),
 
             // People signed up
-            'non_dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::NON_DIRT),
-            'command_staff_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::COMMAND),
-            'dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::DIRT_AND_GREEN_DOT),
+            'non_dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::NON_DIRT, $positions, $slots),
+            'command_staff_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::COMMAND, $positions, $slots),
+            'dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::DIRT_AND_GREEN_DOT, $positions, $slots),
 
             // Green Dot head counts
-            'green_dot_total' => self::countGreenDotsScheduled($shiftStart, $shiftEnd),
-            'green_dot_females' => self::countGreenDotsScheduled($shiftStart, $shiftEnd, true),
+            'green_dot_total' => $totalGreenDots,
+            'green_dot_females' => $femaleGreenDots,
+
+            'positions' =>  $positions,
+            'slots' => $slots,
         ];
 
     }
 
-    public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin)
+    public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin, &$positions, &$slots)
     {
         $now = (string)now();
-        $sql = DB::table('slot')
-            ->select(
-                'slot.begins AS slot_begins',
-                'slot.ends AS slot_ends',
-                DB::raw('TIMESTAMPDIFF(second,slot.begins,slot.ends) as slot_duration'),
-                DB::raw("IF(slot.begins < '$now' AND slot.ends > '$now', TIMESTAMPDIFF(second, '$now', ends),0) as remaining"),
-                'slot.description AS description',
-                'slot.signed_up AS signed_up',
-                'slot.min AS min',
-                'slot.max AS max',
-                'position.title AS title',
-                'position.type AS position_type'
-            )->join('position', 'position.id', '=', 'slot.position_id')
-            ->orderBy('position.title')
+        $sql = Slot::select('slot.*',
+            DB::raw('TIMESTAMPDIFF(second,slot.begins,slot.ends) as duration'),
+            DB::raw("IF(slot.begins < '$now' AND slot.ends > '$now', TIMESTAMPDIFF(second, '$now', ends),0) as remaining"),
+        )->join('position', 'position.id', 'slot.position_id')
+            ->with('position')
             ->orderBy('slot.begins');
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
@@ -71,7 +81,16 @@ class ShiftLeadReport
             $sql->where('position.type', Position::TYPE_FRONTLINE);
         }
 
-        return $sql->get();
+        $rows = $sql->get();
+
+        $slotIds = [];
+        foreach ($rows as $row) {
+            self::addPosition($row->position, $positions);
+            self::addSlot($row, $slots, $shiftStart);
+            $slotIds[] = $row->id;
+        }
+
+        return $slotIds;
     }
 
     /**
@@ -80,36 +99,29 @@ class ShiftLeadReport
      * @param Carbon $shiftStart
      * @param Carbon $shiftEnd
      * @param string $type
-     * @return \Illuminate\Support\Collection
-     * @throws \Exception
+     * @param $positions
+     * @param $slots
+     * @return array
      */
 
-    public static function retrieveRangersScheduled(Carbon $shiftStart, Carbon $shiftEnd, string $type)
+    public static function retrieveRangersScheduled(Carbon $shiftStart, Carbon $shiftEnd, string $type, &$positions, &$slots): array
     {
         $year = $shiftStart->year;
 
-        $sql = DB::table('slot')
-            ->select(
-                'slot.id AS slot_id',
-                'slot.begins AS slot_begins',
-                'slot.ends AS slot_ends',
-                'slot.description',
-                'slot.signed_up',
-                'person.callsign',
-                'person.callsign_pronounce',
-                'person.gender',
-                'person.pronouns',
-                'person.pronouns_custom',
-                'person.id AS person_id',
-                'person.vehicle_blacklisted',
-                DB::raw('IFNULL(person_event.signed_motorpool_agreement, FALSE) as signed_motorpool_agreement'),
-                DB::raw('IFNULL(person_event.org_vehicle_insurance, FALSE) as org_vehicle_insurance'),
-                'position.title AS position_title',
-                'position.short_title AS short_title',
-                'position.type AS position_type',
-                'position.id AS position_id',
-                DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id) AS years')
-            )
+        $sql = Slot::select(
+            'slot.*',
+            'person.id AS person_id',
+            'person.callsign',
+            'person.callsign_pronounce',
+            'person.gender',
+            'person.pronouns',
+            'person.pronouns_custom',
+            'person.vehicle_blacklisted',
+            DB::raw('IFNULL(person_event.signed_motorpool_agreement, FALSE) as signed_motorpool_agreement'),
+            DB::raw('IFNULL(person_event.org_vehicle_insurance, FALSE) as org_vehicle_insurance'),
+            DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id AND is_non_ranger = false) AS years'),
+        )
+            ->with('position')
             ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
             ->join('person', 'person.id', '=', 'person_slot.person_id')
             ->join('position', 'position.id', '=', 'slot.position_id')
@@ -117,8 +129,7 @@ class ShiftLeadReport
                 $j->on('person_event.person_id', 'person.id');
                 $j->where('person_event.year', $year);
             })
-            ->orderBy('slot.begins')
-            ->orderByRaw('CASE WHEN position.id=' . Position::DIRT_SHINY_PENNY . ' THEN "1111" ELSE position.title END DESC');
+            ->orderBy('slot.begins');
 
         // Only report on active positions for the current year. Previous years may reference
         // positions that have been deactivated since.
@@ -140,20 +151,24 @@ class ShiftLeadReport
                 break;
 
             case self::DIRT_AND_GREEN_DOT:
-                $sql->whereIn('slot.position_id',  self::DIRT_AND_GREEN_DOT_POSITIONS)
+                $sql->whereIn('slot.position_id', self::DIRT_AND_GREEN_DOT_POSITIONS)
                     ->orderBy('years', 'desc');
                 break;
         }
 
         $sql->orderBy('callsign');
 
-        $people = $sql->get();
+        $rows = $sql->get();
 
-        $personIds = $people->pluck('person_id')->toArray();
+        if ($rows->count() == 0) {
+            return [];
+        }
+
+        $personIds = $rows->pluck('person_id')->toArray();
 
         $peoplePositions = DB::table('position')
             ->select('person_position.person_id', 'position.short_title', 'position.id as position_id')
-            ->join('person_position', 'position.id',  'person_position.position_id')
+            ->join('person_position', 'position.id', 'person_position.position_id')
             ->where('position.on_sl_report', 1)
             ->whereNotIn('position.id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
@@ -163,31 +178,47 @@ class ShiftLeadReport
             ->get()
             ->groupBy('person_id');
 
-        foreach ($people as $person) {
-            $person->gender = Person::summarizeGender($person->gender);
+        $greenDotTrainingPassed = Training::didIdsPassForYear($personIds, Position::GREEN_DOT_TRAINING, $year);
+        $rangers = [];
 
-            $positions = $peoplePositions[$person->person_id] ?? null;
+        foreach ($rows as $row) {
+            self::addSlot($row, $slots, $shiftStart);
+            self::addPosition($row->position, $positions);
 
-            $positionId = $person->position_id;
+            $ranger = (object)[
+                'id' => $row->person_id,
+                'slot_id' => $row->id,
+                'callsign' => $row->callsign,
+                'callsign_pronounce' => $row->callsign_pronounce,
+                'gender' => Person::summarizeGender($row->gender),
+                'pronouns' => $row->pronouns,
+                'pronouns_custom' => $row->pronouns_custom,
+                'vehicle_blacklisted' => $row->vehicle_blacklisted,
+                'signed_motorpool_agreement' => $row->signed_motorpool_agreement,
+                'org_vehicle_insurance' => $row->org_vehicle_insurance,
+                'years' => $row->years,
+            ];
+            $rangers[] = $ranger;
+
+            $havePositions = $peoplePositions[$row->person_id] ?? null;
+
+            $positionId = $row->position_id;
 
             // GD Mentees are not considered to be on a proper GD shift.
-            $person->is_greendot_shift = (
+            $ranger->is_greendot_shift = (
                 $positionId == Position::DIRT_GREEN_DOT
                 || $positionId == Position::GREEN_DOT_MENTOR
                 || $positionId == Position::ONE_GREEN_DOT
             );
 
-            $person->slot_begins_day_before = (new Carbon($person->slot_begins))->day != $shiftStart->day;
-            $person->slot_ends_day_after = (new Carbon($person->slot_ends))->day != $shiftStart->day;
-
-            if ($positions) {
-                $person->is_troubleshooter = $positions->whereIn('position_id', [ Position::TROUBLESHOOTER, Position::ONE_TROUBLESHOOTER ])->count() != 0;
-                $person->is_rsl = $positions->whereIn('position_id', [ Position::RSC_SHIFT_LEAD, Position::ONE_SHIFT_LEAD ])->count() != 0;
-                $person->is_ood = $positions->contains('position_id', Position::OOD);
+            if ($havePositions) {
+                $ranger->is_troubleshooter = $havePositions->whereIn('position_id', [Position::TROUBLESHOOTER, Position::ONE_TROUBLESHOOTER])->count() != 0;
+                $ranger->is_rsl = $havePositions->whereIn('position_id', [Position::RSC_SHIFT_LEAD, Position::ONE_SHIFT_LEAD])->count() != 0;
+                $ranger->is_ood = $havePositions->contains('position_id', Position::OOD);
 
                 // Determine if the person is a GD AND if they have been trained this year.
-                $haveGDPosition = $positions->contains(function ($row) {
-                    $pid = $row->position_id;
+                $haveGDPosition = $havePositions->contains(function ($pos) {
+                    $pid = $pos->position_id;
                     return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR || $pid == Position::ONE_GREEN_DOT);
                 });
 
@@ -195,26 +226,25 @@ class ShiftLeadReport
                 // a GD Mentee as a qualified GD.
                 if ($haveGDPosition) {
                     if ($year == 2021) {
-                        $person->is_greendot = $positions->contains('position_id', Position::ONE_GREEN_DOT);
+                        $ranger->is_greendot = $havePositions->contains('position_id', Position::ONE_GREEN_DOT);
                     } else {
-                        $person->is_greendot = Training::didPersonPassForYear($person->person_id, Position::GREEN_DOT_TRAINING, $year);
-                        if (!$person->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
-                            $person->is_greendot = false; // just in case
+                        $ranger->is_greendot = isset($greenDotTrainingPassed[$row->person_id]);
+                        if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
+                            $ranger->is_greendot = false; // just in case
                             // Not trained - remove the GD positions
-                            $positions = $positions->filter(function ($row) {
-                                $pid = $row->position_id;
-                                return !($pid == Position::DIRT_GREEN_DOT
-                                    || $pid == Position::GREEN_DOT_MENTOR);
+                            $havePositions = $havePositions->filter(function ($pos) {
+                                $pid = $pos->position_id;
+                                return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
                             });
                         }
                     }
                 }
 
-                $person->positions = $positions->pluck('short_title')->toArray();
+                $ranger->positions = $havePositions->pluck('short_title')->toArray();
             }
         }
 
-        return $people;
+        return $rangers;
     }
 
     /**
@@ -222,36 +252,26 @@ class ShiftLeadReport
      *
      * @param Carbon $shiftStart
      * @param Carbon $shiftEnd
-     * @param bool $femaleOnly if true, use the gender field to determine if they might be female.
-     * @return int
+     * @return array
      */
 
-    public static function countGreenDotsScheduled(Carbon $shiftStart, Carbon $shiftEnd, bool $femaleOnly = false) : int
+    public static function countGreenDotsScheduled(Carbon $shiftStart, Carbon $shiftEnd): array
     {
-        $rows = DB::select('SELECT version() as version');
-        $useModernRegexp = stripos($rows[0]->version, '5.') !== 0;
-
         $sql = DB::table('slot')
-            ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
-            ->join('person', 'person.id', '=', 'person_slot.person_id')
+            ->select('person.id', 'person.gender')
+            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+            ->join('person', 'person.id', 'person_slot.person_id')
             ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR]);
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 
-        if ($femaleOnly) {
-            $sql->where(function ($q) use ($useModernRegexp) {
-                $q->whereRaw('lower(LEFT(person.gender,1)) = "f"');
-                if ($useModernRegexp) {
-                    // Mysql 8.0 +
-                    $q->orWhereRaw('person.gender REGEXP "\\b(female|girl|femme|lady|she|her|woman|famale|fem)\\b"');
-                } else {
-                    // Mysql < 8.0
-                    $q->orWhereRaw('person.gender REGEXP "[[:<:]](female|girl|femme|lady|she|her|woman|famale|fem)[[:>:]]"');
-                }
-            });
-        }
+        $greenDots = $sql->get();
 
-        return $sql->count();
+        $total = $greenDots->count();
+        $females = $greenDots->filter(fn($person) => Person::summarizeGender($person->gender) == 'F')
+            ->count();
+
+        return [$total, $females];
     }
 
     /**
@@ -284,4 +304,45 @@ class ShiftLeadReport
         });
     }
 
+    /**
+     * Build up the positions seen
+     *
+     * @param $position
+     * @param $positions
+     */
+
+    public static function addPosition($position, &$positions)
+    {
+        $positions[$position->id] ??= [
+            'title' => $position->title,
+            'short_title' => $position->short_title,
+            'type' => $position->type,
+            'active' => $position->active,
+        ];
+    }
+
+    /**
+     * Build up the slots seen.
+     *
+     * @param $slot
+     * @param $slots
+     * @param Carbon $shiftStart
+     */
+
+    public static function addSlot($slot, &$slots, Carbon $shiftStart)
+    {
+         $slots[$slot->id] ??= [
+            'begins' => (string)$slot->begins,
+            'ends' => (string)$slot->ends,
+            'begins_day_before' => $slot->begins->day != $shiftStart->day,
+            'ends_day_after' => $slot->ends->day != $shiftStart->day,
+            'description' => $slot->description,
+            'signed_up' => $slot->signed_up,
+            'position_id' => $slot->position_id,
+            'min' => $slot->min,
+            'max' => $slot->max,
+            'duration' => $slot->duration ?? 0,
+            'remaining' => $slot->remaining ?? 0,
+        ];
+    }
 }

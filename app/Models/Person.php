@@ -1049,7 +1049,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $check = trim(strtolower($gender));
 
         // Female gender
-        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|femal|fem)\b/', $check) || $check == 'f') {
+        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|femal|fem|cis[\s\-]?female)\b/', $check) || $check == 'f') {
             return 'F';
         }
 

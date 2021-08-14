@@ -2,19 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\PersonPosition;
-use App\Models\PersonStatus;
-use App\Models\Position;
-use App\Models\TraineeStatus;
-use App\Models\TraineeNote;
 use Carbon\Carbon;
-
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -40,7 +31,7 @@ class Training extends Position
     /**
      * Is the person trained for a position in a given year?
      *
-     * @param \App\Models\Person $person person to check
+     * @param Person $person person to check
      * @param int $positionId the position in question
      * @param int $year year of training
      * @param int $requiredPositionId the training position required if person is not trained
@@ -109,7 +100,7 @@ class Training extends Position
 
         $personPositions = [];
 
-         foreach ($positions as $position) {
+        foreach ($positions as $position) {
             $info = (object)[
                 'id' => $position->id,
                 'title' => $position->title,
@@ -186,7 +177,7 @@ class Training extends Position
 
     public static function didPersonPassForYear(Person|int $person, int $positionId, int $year): bool
     {
-        $personId =  is_a($person, Person::class) ? $person->id : $person;
+        $personId = is_a($person, Person::class) ? $person->id : $person;
 
         if ($positionId == Position::TRAINING) {
             $isBinary = Timesheet::isPersonBinary($person);
@@ -199,6 +190,49 @@ class Training extends Position
 
         return TraineeStatus::didPersonPassForYear($personId, $positionId, $year)
             || TrainerStatus::didPersonTeachForYear($personId, $positionId, $year);
+    }
+
+    /**
+     * Did any of the ids pass training? Online Training is not considered.
+     *
+     * @param array $personIds
+     * @param int $positionId
+     * @param int $year
+     * @return mixed
+     */
+
+    public static function didIdsPassForYear(array $personIds, int $positionId, int $year)
+    {
+        $traineePositionIds = [$positionId];
+
+        if ($positionId == Position::HQ_FULL_TRAINING) {
+            $traineePositionIds[] = Position::HQ_REFRESHER_TRAINING;
+        }
+
+        $sql = DB::table('trainee_status')
+            ->select('trainee_status.person_id')
+            ->join('slot', 'slot.id', 'trainee_status.slot_id')
+            ->whereIn('trainee_status.person_id', $personIds)
+            ->whereIn('slot.position_id', $traineePositionIds)
+            ->whereYear('slot.begins', $year)
+            ->where('passed', 1);
+
+        $trainerPositionIds = Position::TRAINERS[$positionId] ?? null;
+        if ($trainerPositionIds) {
+            $trainerSql = DB::table('trainer_status')
+                ->select('trainer_status.person_id')
+                ->join('slot', 'slot.id', 'trainer_status.slot_id')
+                ->whereIn('trainer_status.person_id', $personIds)
+                ->whereIn('slot.position_id', $trainerPositionIds)
+                ->whereYear('slot.begins', $year)
+                ->where('status', TrainerStatus::ATTENDED);
+            $sql->union($trainerSql);
+        }
+
+        return $sql->get()->reduce(function ($hash, $row) {
+            $hash[$row->person_id] = true;
+            return $hash;
+        }, []);
     }
 
     /**
@@ -253,7 +287,7 @@ class Training extends Position
      * Find out the education status for a given person, position and year
      *
      * @param int $personId
-     * @param \App\Models\Position $position
+     * @param Position $position
      * @param int $year
      * @return object
      */
@@ -468,6 +502,7 @@ class Training extends Position
 
         return $alphaIds;
     }
+
     /**
      * Find all the dirt trainings for a person in a given year
      *
@@ -550,6 +585,7 @@ class Training extends Position
         }
         return $rows->groupBy('person_id');
     }
+
     /**
      * Is this training an ART training?
      *
