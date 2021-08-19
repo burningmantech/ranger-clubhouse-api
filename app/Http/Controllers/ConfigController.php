@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class ConfigController extends Controller
 {
@@ -16,6 +16,7 @@ class ConfigController extends Controller
         'AdminEmail',
         'AuditorRegistrationDisabled',
         'EditorUrl',
+        'HQWindowInterfaceEnabled',
         'GeneralSupportEmail',
         'JoiningRangerSpecialTeamsUrl',
         'LoginManageOnPlayaEnabled',
@@ -37,10 +38,11 @@ class ConfigController extends Controller
     /**
      * Return the minimal set of settings used to boot the frontend application.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
-    public function show() {
+    public function show()
+    {
         $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
             Carbon::setTestNow($ghdTime);
@@ -49,7 +51,7 @@ class ConfigController extends Controller
         $configs = setting(self::CLIENT_CONFIGS);
 
         if (config('clubhouse.GroundhogDayTime')) {
-            $configs['GroundhogDayTime'] = (string) now();
+            $configs['GroundhogDayTime'] = (string)now();
         }
 
         $configs['DeploymentEnvironment'] = config('clubhouse.DeploymentEnvironment');

@@ -833,6 +833,10 @@ class TimesheetController extends ApiController
             return false;
         }
 
+        // TODO: Remove post ONE
+        if (current_year() == 2021 && in_array($positionId, Position::ONE_POSITIONS)) {
+            return true;
+        }
 
         // Are they trained for this position?
         if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
