@@ -13,7 +13,7 @@ class PositionPolicy
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
     }
@@ -74,7 +74,7 @@ class PositionPolicy
 
     public function sandmanQualified(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
     }
 
     /**
@@ -86,7 +86,7 @@ class PositionPolicy
 
     public function sanityChecker(Person $user): bool
     {
-        return $user->hasRole([Role::MANAGE, Role::GRANT_POSITION]);
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE, Role::GRANT_POSITION]);
     }
 
     /**
@@ -98,7 +98,7 @@ class PositionPolicy
     public function repair(Person $user): bool
     {
         // Only admins & Gran Positions are allowed to run it.
-        return $user->hasRole(Role::GRANT_POSITION);
+        return $user->hasRole([ Role::ADMIN, Role::GRANT_POSITION]);
     }
 
     /**
@@ -109,7 +109,7 @@ class PositionPolicy
 
     public function bulkGrantRevoke(Person $user): bool
     {
-        // Only admins & are allowed to run it.
-        return false;
+        // Only admins are allowed to run it.
+        return $user->hasRole(Role::ADMIN);
     }
 }

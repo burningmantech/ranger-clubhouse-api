@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Alert;
 use App\Models\AlertPerson;
-use App\Http\Controllers\ApiController;
 
 class AlertController extends ApiController
 {
@@ -23,7 +22,7 @@ class AlertController extends ApiController
 
     public function store()
     {
-        $this->authorize('store', [ Alert::class ]);
+        $this->authorize('store', [Alert::class]);
 
         $alert = new Alert;
         $this->fromRest($alert);

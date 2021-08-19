@@ -69,7 +69,7 @@ class PositionController extends ApiController
 
     public function update(Position $position): JsonResponse
     {
-        $this->authorize('update', Position::class);
+        $this->authorize('update', $position);
         $this->fromRest($position);
 
         if ($position->save()) {
@@ -87,7 +87,7 @@ class PositionController extends ApiController
      */
     public function destroy(Position $position)
     {
-        $this->authorize('delete', Position::class);
+        $this->authorize('delete', $position);
         $position->delete();
         PersonPosition::where('position_id', $position->id)->delete();
         return $this->restDeleteSuccess();

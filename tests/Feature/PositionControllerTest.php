@@ -65,7 +65,7 @@ class PositionControllerTest extends TestCase
 
     public function testCreatePosition()
     {
-        $this->addRole(Role::ADMIN);
+        $this->addRole(Role::TECH_NINJA);
         $data = [
             'title' => 'Gerlach Pizza Patrol',
             'short_title' => 'PIZZA',
@@ -87,7 +87,7 @@ class PositionControllerTest extends TestCase
 
     public function testUpdatePosition()
     {
-        $this->addRole(Role::ADMIN);
+        $this->addRole(Role::TECH_NINJA);
         $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
@@ -105,7 +105,7 @@ class PositionControllerTest extends TestCase
 
     public function testDeletePosition()
     {
-        $this->addRole(Role::ADMIN);
+        $this->addRole(Role::TECH_NINJA);
         $position = Position::factory()->create();
         $positionId = $position->id;
 
@@ -120,7 +120,7 @@ class PositionControllerTest extends TestCase
 
     public function testSandmanQualificationReport()
     {
-        $this->addRole(Role::ADMIN);
+        $this->addRole(Role::MANAGE);
 
         $sandmanTraining = Slot::factory()->create([
             'description' => 'Stop that runner',

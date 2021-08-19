@@ -2,15 +2,7 @@
 
 namespace App\Models;
 
-use App\Helpers\SqlHelper;
-
 use App\Lib\WorkSummary;
-
-use App\Models\ApiModel;
-use App\Models\Slot;
-
-use Carbon\Carbon;
-
 use Exception;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -125,10 +117,13 @@ class Schedule extends ApiModel
 
             // .. and find out which slots a person has signed up for
             if ($shiftsAvailable) {
-                $sql->join('person_position', function ($join) use ($personId) {
-                    $join->where('person_position.person_id', $personId)
-                        ->on('person_position.position_id', 'slot.position_id');
-                });
+                $sql = DB::table('person_position')
+                    ->join('slot', function ($join) use ($personId) {
+                        $join->where('person_position.person_id', $personId)
+                            ->on('person_position.position_id', 'slot.position_id');
+                    });
+            } else {
+                $sql = DB::table('slot');
             }
         }
 
@@ -600,7 +595,7 @@ class Schedule extends ApiModel
                 $logInfo['added'] = [];
                 $logInfo['removed'] = [];
 
-                if (!PersonSlot::where([ 'person_id' => $personId, 'slot_id' => $slotId])->exists()) {
+                if (!PersonSlot::where(['person_id' => $personId, 'slot_id' => $slotId])->exists()) {
                     // Indicate the person is no longer signed up
                     $logInfo['no_signup'] = true;
                 }

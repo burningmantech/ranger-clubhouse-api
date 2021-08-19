@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use RuntimeException;
@@ -135,6 +134,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_URL
         ],
 
+        'HQWindowInterfaceEnabled' => [
+            'description' => 'Enable the HQ Window Interface (normally enabled during the event)',
+            'type' => self::TYPE_BOOL,
+            'default' => true,
+        ],
+
         'GeneralSupportEmail' => [
             'description' => 'General Ranger Email Address',
             'type' => self::TYPE_EMAIL,
@@ -181,8 +186,9 @@ class Setting extends ApiModel
         ],
 
         'OnlineTrainingDisabledAllowSignups' => [
-            'description' => 'Enable shift signups even if Online Training is disabled',
+            'description' => 'Enable shift signups even if Online Training is disabled (VERY DANGEROUS)',
             'type' => self::TYPE_BOOL,
+            'default' => false,
         ],
 
         'OnlineTrainingOnlyForAuditors' => [

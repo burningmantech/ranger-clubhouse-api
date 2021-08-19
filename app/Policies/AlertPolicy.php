@@ -13,7 +13,7 @@ class AlertPolicy
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
     }
