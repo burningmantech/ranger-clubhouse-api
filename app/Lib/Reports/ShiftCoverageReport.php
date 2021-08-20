@@ -115,14 +115,12 @@ class ShiftCoverageReport
     ];
 
     const ONE_POSITIONS = [
-      //  [ Position::ONE_OOD, 'ONE OOD', self::CALLSIGNS ],
         [ Position::ONE_SHIFT_LEAD, 'ONE Lead', self::CALLSIGNS ],
         [ Position::ONE_RSCI, 'ONESCI', self::CALLSIGNS ],
         [ Position::ONE_TROUBLESHOOTER, 'ONE Troubleshooter', self::CALLSIGNS ],
         [ Position::ONE_GERLACH_PATROL_DIRT, 'ONE Dirt', self::CALLSIGNS ],
         [ Position::ONE_GREEN_DOT, 'ONE Green Dot', self::CALLSIGNS ],
-        [ Position::ONE_HQ_ON_CALL, 'ONE HQ Window', self::CALLSIGNS ],
-        [ Position::ONE_HQ_WINDOW, 'ONE HQ On Call', self::CALLSIGNS ],
+        [ Position::ONE_HQ_WINDOW, 'ONE HQ Window', self::CALLSIGNS ],
     ];
 
     /*

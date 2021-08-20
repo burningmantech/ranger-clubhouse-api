@@ -135,10 +135,7 @@ class Position extends ApiModel
     const ONE_GREEN_DOT = 134;
     const ONE_GERLACH_PATROL_DIRT = 135;
     const ONE_RSCI = 136;
-    const ONE_OOD = 131;
     const ONE_HQ_WINDOW = 137;
-    const ONE_HQ_ON_CALL = 138;
-    const ONE_HQ_LEADERS = 139;
 
     // TODO: Remove post ONE.
     const ONE_POSITIONS = [
@@ -147,10 +144,7 @@ class Position extends ApiModel
         self::ONE_GREEN_DOT,
         self::ONE_GERLACH_PATROL_DIRT,
         self::ONE_RSCI,
-        self::ONE_OOD,
         self::ONE_HQ_WINDOW,
-        self::ONE_HQ_ON_CALL,
-        self::ONE_HQ_LEADERS
     ];
 
     /*
