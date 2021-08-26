@@ -56,8 +56,17 @@ class ClubhouseDailyReportCommand extends Command
             'DashboardPeriod',
         ]);
 
+        $settingLogs = ActionLog::findForQuery(
+            [
+                'lastday' => true,
+                'page_size' => 1000,
+                'events' => ['setting-update'],
+            ],
+            false
+        )['action_logs'];
+
         mail_to(setting('DailyReportEmail'), new DailyReportMail(
-            $failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings, EventDate::calculatePeriod()
+            $failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings, $settingLogs, EventDate::calculatePeriod()
         ));
 
         return true;

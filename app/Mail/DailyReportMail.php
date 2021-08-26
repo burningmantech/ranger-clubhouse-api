@@ -22,6 +22,7 @@ class DailyReportMail extends Mailable
         public $roleLogs,
         public $statusLogs,
         public $settings,
+        public $settingLogs,
         public $dashboardPeriod)
     {
     }

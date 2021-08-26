@@ -13,7 +13,7 @@ class SettingPolicy
     use HandlesAuthorization;
 
     public function before(Person $user) {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([ Role::ADMIN, Role::TECH_NINJA ])) {
             return true;
         }
     }
@@ -35,7 +35,7 @@ class SettingPolicy
 
     public function update(Person $user, Setting $setting)
     {
-        return false;
+        return !$setting->is_credential || $user->hasRole(Role::TECH_NINJA);
     }
 
     public function destroy(Person $user, Setting $setting)

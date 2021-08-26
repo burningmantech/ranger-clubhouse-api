@@ -88,7 +88,7 @@ class ActionLog extends Model
         }
 
         if ($lastDay) {
-            $sql->whereRaw('created_at >= DATE_SUB(?, INTERVAL 24 HOUR)', [ now() ]);
+            $sql->whereRaw('created_at >= ?', [ now()->subHours(24) ]);
         }
 
         // How many total for the query

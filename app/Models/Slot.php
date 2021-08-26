@@ -2,17 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-
-use App\Models\ApiModel;
-use App\Models\EventDate;
-use App\Models\PersonSlot;
-use App\Models\Position;
-use App\Models\Timesheet;
-use App\Models\TrainerStatus;
-
-use Carbon\Carbon;
 
 class Slot extends ApiModel
 {
@@ -57,6 +49,11 @@ class Slot extends ApiModel
     protected $dates = [
         'ends',
         'begins',
+    ];
+
+    // Don't track changes to the signed up count.
+    public $auditExclude = [
+      'signed_up'
     ];
 
     public static function findForQuery($query)
