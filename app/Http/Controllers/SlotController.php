@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-
+use App\Lib\Reports\FlakeReport;
+use App\Lib\Reports\HQWindowCheckInOutForecastReport;
+use App\Lib\Reports\ScheduleByCallsignReport;
+use App\Lib\Reports\ScheduleByPositionReport;
+use App\Lib\Reports\ShiftCoverageReport;
+use App\Lib\Reports\ShiftLeadReport;
+use App\Lib\Reports\ShiftSignupsReport;
 use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
@@ -13,26 +17,20 @@ use App\Models\SurveyAnswer;
 use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
-
-use App\Lib\Reports\FlakeReport;
-use App\Lib\Reports\HQWindowCheckInOutForecastReport;
-use App\Lib\Reports\ScheduleByCallsignReport;
-use App\Lib\Reports\ScheduleByPositionReport;
-use App\Lib\Reports\ShiftCoverageReport;
-use App\Lib\Reports\ShiftLeadReport;
-use App\Lib\Reports\ShiftSignupsReport;
-
-
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use UnexpectedValueException;
 
-use App\Http\Controllers\ApiController;
 
 class SlotController extends ApiController
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     public function index()
@@ -40,8 +38,8 @@ class SlotController extends ApiController
         $this->authorize('index', Slot::class);
 
         $query = request()->validate([
-            'year'        => 'required_without:for_rollcall|digits:4',
-            'type'        => 'sometimes|string',
+            'year' => 'required_without:for_rollcall|digits:4',
+            'type' => 'sometimes|string',
             'position_id' => 'sometimes|integer',
             'for_rollcall' => 'sometimes|boolean',
         ]);
@@ -60,8 +58,8 @@ class SlotController extends ApiController
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -87,7 +85,7 @@ class SlotController extends ApiController
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function show(Slot $slot)
     {
@@ -97,8 +95,8 @@ class SlotController extends ApiController
     /**
      * Update the specified resource in storage.
      *
-     * @param Slot  $slot
-     * @return \Illuminate\Http\JsonResponse
+     * @param Slot $slot
+     * @return JsonResponse
      */
     public function update(Slot $slot)
     {
@@ -124,7 +122,7 @@ class SlotController extends ApiController
         $this->authorize('update', Slot::class);
 
         $params = request()->validate([
-            'ids'   => 'required|array',
+            'ids' => 'required|array',
             'attributes' => 'required|array'
         ]);
 
@@ -187,7 +185,7 @@ class SlotController extends ApiController
                 foreach ($sourceSlots as $source) {
                     if ($source->training_id || $source->trainer_slot_id || $source->trainee_slot_id) {
                         $title = $source->position->title;
-                        throw new \UnexpectedValueException(
+                        throw new UnexpectedValueException(
                             "Clubhouse server doesn't yet know how to bulk-copy training or mentor/mentee shift pairs:"
                             . " ${title}: {$source->description}: {$source->begins}");
                     }
@@ -207,7 +205,7 @@ class SlotController extends ApiController
                     array_push($results, $target);
                 }
             });
-        } catch (\UnexpectedValueException $e) {
+        } catch (UnexpectedValueException $e) {
             return $this->restError($e->getMessage(), 400);
         }
         return $this->success($results, null, 'slot');
@@ -217,26 +215,27 @@ class SlotController extends ApiController
      * Remove the specified resource from storage.
      *
      * @param Slot $slot
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
     public function destroy(Slot $slot)
     {
         $this->authorize('delete', Slot::class);
 
-        $slot->delete();
         PersonSlot::deleteForSlot($slot->id);
         TraineeStatus::deleteForSlot($slot->id);
         TrainerStatus::deleteForSlot($slot->id);
         TraineeNote::deleteForSlot($slot->id);
         SurveyAnswer::deleteForSlot($slot->id);
 
+        $slot->delete();
+
         return $this->restDeleteSuccess();
     }
 
     /**
      * Return people signed up for a given Slot
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     public function people(Slot $slot)
@@ -247,18 +246,18 @@ class SlotController extends ApiController
         ]);
 
         return response()->json([
-            'people' =>Slot::findSignUps($slot->id, $params['is_onduty'] ?? false, $params['include_photo'] ?? false)
+            'people' => Slot::findSignUps($slot->id, $params['is_onduty'] ?? false, $params['include_photo'] ?? false)
         ]);
     }
 
     /**
      * Return how many years the slots span
-      * @return \Illuminate\Http\JsonResponse
-      */
+     * @return JsonResponse
+     */
 
     public function years()
     {
-        return response()->json([ 'years' => Slot::findYears() ]);
+        return response()->json(['years' => Slot::findYears()]);
     }
 
     /**
@@ -293,10 +292,10 @@ class SlotController extends ApiController
         $this->authorize('report', Slot::class);
 
         $params = request()->validate([
-             'year' => 'required|integer'
-         ]);
+            'year' => 'required|integer'
+        ]);
 
-         return response()->json([ 'shifts' => Slot::retrieveDirtTimes($params['year'])]);
+        return response()->json(['shifts' => Slot::retrieveDirtTimes($params['year'])]);
     }
 
     /*
@@ -308,11 +307,11 @@ class SlotController extends ApiController
         $this->authorize('report', Slot::class);
 
         $params = request()->validate([
-             'shift_start' => 'required|date',
-             'shift_duration'   => 'required|integer'
-         ]);
+            'shift_start' => 'required|date',
+            'shift_duration' => 'required|integer'
+        ]);
 
-         return response()->json(ShiftLeadReport::execute(Carbon::parse($params['shift_start']), $params['shift_duration']));
+        return response()->json(ShiftLeadReport::execute(Carbon::parse($params['shift_start']), $params['shift_duration']));
     }
 
     /*
@@ -324,8 +323,8 @@ class SlotController extends ApiController
         $this->authorize('report', Slot::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer',
-            'interval'  => 'required|integer',
+            'year' => 'required|integer',
+            'interval' => 'required|integer',
         ]);
 
         return response()->json(HQWindowCheckInOutForecastReport::execute($params['year'], $params['interval']));
@@ -340,8 +339,8 @@ class SlotController extends ApiController
         $this->authorize('report', Slot::class);
 
         $params = request()->validate([
-            'year'  => 'required|integer',
-            'type'  => 'required|string'
+            'year' => 'required|integer',
+            'type' => 'required|string'
         ]);
 
         return response()->json(ShiftCoverageReport::execute($params['year'], $params['type']));
@@ -357,7 +356,7 @@ class SlotController extends ApiController
 
         $year = $this->getYear();
 
-        return response()->json([ 'positions' => ShiftSignupsReport::execute($year) ]);
+        return response()->json(['positions' => ShiftSignupsReport::execute($year)]);
     }
 
     /*
@@ -395,14 +394,14 @@ class SlotController extends ApiController
         $this->authorize('report', Slot::class);
 
         $params = request()->validate([
-            'date'  => 'sometimes|date'
+            'date' => 'sometimes|date'
         ]);
 
         $date = $params['date'] ?? now();
 
         return response()->json([
             'positions' => FlakeReport::execute($date),
-            'date'  => (string)$date,
+            'date' => (string)$date,
         ]);
     }
 

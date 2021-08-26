@@ -17,6 +17,8 @@ class Setting extends ApiModel
     protected $primaryKey = 'name';
     public $incrementing = false;
 
+    protected $auditModel = true;
+
     protected $rules = [
         'name' => 'required|string',
         'value' => 'required|string|nullable'
@@ -46,7 +48,8 @@ class Setting extends ApiModel
      * The definitions are:
      * description: single line detail on what the setting is
      * type: the value type (bool,string,json,email,date,datetime,integer,float)
-     * is_credential (optional) - set true if the setting is a credential and should not be included in a redact database dump
+     * is_credential (optional) - set true if the setting is a credential and should not be included in a redacted
+     *         database dump, the value returned in an API lookup response, or prevented from being set by a non-Tech Ninja
      * options: array of possible options format is [ 'option', 'description' ]
      */
 
@@ -619,12 +622,14 @@ class Setting extends ApiModel
     {
         $rows = Setting::all()->keyBy('name');
 
-        $settings = collect([]);
+        $settings = [];
         foreach (self::DESCRIPTIONS as $name => $desc) {
-            $settings[] = $rows[$name] ?? new Setting(['name' => $name]);
-        }
+           $settings[] = $rows[$name] ?? new Setting(['name' => $name]);
+         }
 
-        return $settings->sortBy('name')->values();
+        usort($settings, fn ($a, $b) => strcasecmp($a->name, $b->name));
+
+        return $settings;
     }
 
     public static function getValue($name, $throwOnEmpty = false)
@@ -707,25 +712,21 @@ class Setting extends ApiModel
 
     public function getTypeAttribute()
     {
-        $desc = self::DESCRIPTIONS[$this->name] ?? null;
-        return $desc ? $desc['type'] : null;
+        return self::DESCRIPTIONS[$this->name]['type'] ?? null;
     }
 
     public function getDescriptionAttribute()
     {
-        $desc = self::DESCRIPTIONS[$this->name] ?? null;
-        return $desc ? $desc['description'] : null;
+       return self::DESCRIPTIONS[$this->name]['description'] ?? null;
     }
 
     public function getOptionsAttribute()
     {
-        $desc = self::DESCRIPTIONS[$this->name] ?? null;
-        return $desc ? ($desc['options'] ?? null) : null;
+       return self::DESCRIPTIONS[$this->name]['options'] ?? null;
     }
 
     public function getIsCredentialAttribute()
     {
-        $desc = self::DESCRIPTIONS[$this->name] ?? null;
-        return $desc ? ($desc['is_credential'] ?? false) : null;
+        return  self::DESCRIPTIONS[$this->name]['is_credential'] ?? false;
     }
 }
