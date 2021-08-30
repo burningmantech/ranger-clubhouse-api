@@ -303,6 +303,7 @@ Route::group([
     Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::get('timesheet/log', 'TimesheetController@showLog');
+    Route::get('timesheet/on-duty-shift-lead-report', 'TimesheetController@onDutyShiftLeadReport');
     Route::post('timesheet/signin', 'TimesheetController@signin');
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
     Route::get('timesheet/potential-shirts-earned', 'TimesheetController@potentialShirtsEarnedReport');

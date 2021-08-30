@@ -226,4 +226,13 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /**
+     * Can the person run the On Duty Shift Lead Report
+     *
+     * @param Person $user
+     * @return bool
+     */
+    public function onDutyShiftLeadReport(Person $user) {
+        return $user->hasRole(Role::MANAGE);
+    }
 }

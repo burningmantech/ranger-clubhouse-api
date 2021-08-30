@@ -24,7 +24,7 @@ class ShiftLeadReport
     ];
 
     /**
-     * Run the Shift Lead report Find signups for positions of interest and show them to Khaki.
+     * Run the SCHEDULED Shift Lead report Find signups for positions of interest and show them to Khaki.
      * Include a person's positions which might help Khaki out in a bind.
      *
      * @param Carbon $shiftStart - Date time of interested shifts
@@ -59,7 +59,6 @@ class ShiftLeadReport
             'positions' =>  $positions,
             'slots' => $slots,
         ];
-
     }
 
     public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin, &$positions, &$slots)
@@ -261,7 +260,7 @@ class ShiftLeadReport
             ->select('person.id', 'person.gender')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR]);
+            ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::ONE_GREEN_DOT]);
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 

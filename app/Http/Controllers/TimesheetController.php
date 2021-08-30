@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-
-use App\Http\Controllers\ApiController;
-
+use App\Lib\BulkSignInOut;
+use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
+use App\Lib\Reports\FreakingYearsReport;
+use App\Lib\Reports\HoursCreditsReport;
+use App\Lib\Reports\OnDutyShiftLeadReport;
+use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
+use App\Lib\Reports\PotentialEarnedShirtsReport;
+use App\Lib\Reports\RadioEligibilityReport;
+use App\Lib\Reports\SpecialTeamsWorkReport;
+use App\Lib\Reports\ThankYouCardsReport;
+use App\Lib\Reports\TimesheetByCallsignReport;
+use App\Lib\Reports\TimesheetByPositionReport;
+use App\Lib\Reports\TimesheetSanityCheckReport;
+use App\Lib\Reports\TimesheetTotalsReport;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
@@ -18,21 +26,9 @@ use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
-
-use App\Lib\BulkSignInOut;
-
-use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
-use App\Lib\Reports\FreakingYearsReport;
-use App\Lib\Reports\HoursCreditsReport;
-use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
-use App\Lib\Reports\PotentialEarnedShirtsReport;
-use App\Lib\Reports\RadioEligibilityReport;
-use App\Lib\Reports\SpecialTeamsWorkReport;
-use App\Lib\Reports\ThankYouCardsReport;
-use App\Lib\Reports\TimesheetByCallsignReport;
-use App\Lib\Reports\TimesheetByPositionReport;
-use App\Lib\Reports\TimesheetSanityCheckReport;
-use App\Lib\Reports\TimesheetTotalsReport;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 class TimesheetController extends ApiController
@@ -453,7 +449,7 @@ class TimesheetController extends ApiController
     }
 
     private function reportSignIn(string $action, Timesheet $timesheet, bool $signonForced,
-                                  int $requiredPositionId, $unqualifiedReason, $log)
+                                  int    $requiredPositionId, $unqualifiedReason, $log)
     {
         $response = [
             'status' => 'success',
@@ -817,13 +813,27 @@ class TimesheetController extends ApiController
         return response()->json(TimesheetByPositionReport::execute($year, $this->userCanViewEmail()));
     }
 
+    /**
+     * The On Duty Shift Lead Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function onDutyShiftLeadReport()
+    {
+        $this->authorize('onDutyShiftLeadReport', [Timesheet::class]);
+
+        return response()->json(OnDutyShiftLeadReport::execute());
+    }
+
     private function clearedToWork(Person $person,
-                                   int $positionId,
-                                   int &$requiredPositionId,
-                                   &$response,
-                                   bool $canForceSignon,
-                                   bool &$signonForced,
-                                   &$unqualifiedReason)
+                                   int    $positionId,
+                                   int    &$requiredPositionId,
+                                          &$response,
+                                   bool   $canForceSignon,
+                                   bool   &$signonForced,
+                                          &$unqualifiedReason)
     {
         $personId = $person->id;
 
