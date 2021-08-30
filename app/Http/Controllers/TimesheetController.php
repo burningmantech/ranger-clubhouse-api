@@ -50,7 +50,8 @@ class TimesheetController extends ApiController
             'over_hours' => 'sometimes|integer',
             'on_duty_start' => 'sometimes|date',
             'on_duty_end' => 'sometimes|date',
-            'position_id' => 'sometimes|integer'
+            'position_id' => 'sometimes|integer',
+            'include_photo' => 'sometimes|boolean',
         ]);
 
         $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null]);
@@ -491,17 +492,47 @@ class TimesheetController extends ApiController
             return response()->json(['status' => 'already-signed-off', 'timesheet' => $timesheet]);
         }
 
-        $timesheet->setOffDutyToNow();
+         $timesheet->setOffDutyToNow();
         $timesheet->auditReason = 'signout';
         $timesheet->saveOrThrow();
         $timesheet->loadRelationships();
         $timesheet->log(TimesheetLog::SIGNOFF, [
             'position_id' => $timesheet->position_id,
             'off_duty' => (string)$timesheet->off_duty,
+            'duration' => $timesheet->duration,
         ]);
 
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
 
+    }
+
+    /**
+     * Restart a shift - use for accidental sign out.
+     *
+     * @param Timesheet $timesheet
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function resignin(Timesheet $timesheet)
+    {
+        $this->authorize('resignin', $timesheet);
+
+        $personId = request()->input('person_id');
+
+        if ($personId != $timesheet->person_id) {
+            return response()->json(['status' => 'person-mismatch' ]);
+        }
+
+        $offDuty = $timesheet->off_duty;
+        if (empty($offDuty)) {
+            return response()->json(['status' => 'already-on-duty', 'timesheet' => $timesheet]);
+        }
+
+        // GRR: Cannot use $timesheet->off_duty = null because it will be cast to Carbon::parse(null). Sigh.
+        $timesheet->setOffDutyToNullAndSave('re-signin');
+        $timesheet->log(TimesheetLog::UPDATE, ['off_duty' => [(string)$offDuty, 're-signin'] ]);
+        return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
     }
 
     /**

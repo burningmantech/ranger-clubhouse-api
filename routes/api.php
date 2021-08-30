@@ -314,6 +314,7 @@ Route::group([
     Route::get('timesheet/totals', 'TimesheetController@timesheetTotals');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::match(['GET', 'POST'], 'timesheet/special-teams', 'TimesheetController@specialTeamsReport');
+    Route::post('timesheet/{timesheet}/resignin', 'TimesheetController@resignin');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::patch('timesheet/{timesheet}/update-position', 'TimesheetController@updatePosition');
     Route::resource('timesheet', 'TimesheetController');

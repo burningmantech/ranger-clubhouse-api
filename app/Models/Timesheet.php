@@ -12,6 +12,10 @@ class Timesheet extends ApiModel
 {
     protected $table = 'timesheet';
     protected $auditModel = true;
+    public $auditExclude = [
+        'credits',
+        'duration'
+    ];
 
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
@@ -77,6 +81,8 @@ class Timesheet extends ApiModel
     public $_additional_notes;
     public $_additional_reviewer_notes;
 
+    public $photo_url;
+
     public static function boot()
     {
         parent::boot();
@@ -97,6 +103,12 @@ class Timesheet extends ApiModel
                 // TODO: Remove post ONE.
                 $model->is_non_ranger = true;
             }
+        });
+
+        self::saving(function ($model) {
+            // Don't save pseudo or SQL computed fields
+            unset($model->attributes['credits']);
+            unset($model->attributes['duration']);
         });
     }
 
@@ -132,7 +144,6 @@ class Timesheet extends ApiModel
 
     public static function findForQuery($query)
     {
-        $year = 0;
         $sql = self::query();
 
         $year = $query['year'] ?? null;
@@ -143,6 +154,7 @@ class Timesheet extends ApiModel
         $onDutyStart = $query['on_duty_start'] ?? null;
         $onDutyEnd = $query['on_duty_end'] ?? null;
         $positionId = $query['position_id'] ?? null;
+        $includePhoto = $query['include_photo'] ?? false;
 
         if ($year) {
             $sql->whereYear('on_duty', $year);
@@ -181,6 +193,13 @@ class Timesheet extends ApiModel
         $sql->with(self::RELATIONSHIPS);
 
         $rows = $sql->orderBy('on_duty', 'asc')->get();
+
+        if ($includePhoto) {
+            foreach ($rows as $row) {
+                $row->photo_url = PersonPhoto::retrieveImageUrlForPerson($row->person_id);
+                $row->appends[] = 'photo_url';
+            }
+        }
 
         if (!$personId) {
             $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
@@ -599,6 +618,24 @@ class Timesheet extends ApiModel
     }
 
     /**
+     * Set the off duty to null and save the record. Cannot use $model->off_duty = null because
+     * Eloquent will insist on using Carbon::parse(null) which yields the current time. Sigh.
+     */
+
+    public function setOffDutyToNullAndSave(string $reason) : void
+    {
+        $oldValue = (string) $this->off_duty;
+        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [ $this->id ]);
+        ActionLog::record(Auth::user(),  'timesheet-update', $reason, [
+            'id' => $this->id,
+            'off_duty' => [ $oldValue, null ]
+        ], $this->person_id);
+
+        $this->refresh();
+        $this->loadRelationships();
+    }
+
+    /**
      * Set verified at time to now
      */
 
@@ -677,5 +714,9 @@ class Timesheet extends ApiModel
     public function getAdditionalNotesAttribute(): string|null
     {
         return $this->_additional_notes;
+    }
+
+    public function getPhotoUrlAttribute() {
+        return $this->photo_url;
     }
 }
