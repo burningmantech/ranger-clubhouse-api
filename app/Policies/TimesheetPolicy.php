@@ -3,9 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Person;
-use App\Models\Position;
-use App\Models\Timesheet;
 use App\Models\Role;
+use App\Models\Timesheet;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TimesheetPolicy
@@ -78,6 +77,15 @@ class TimesheetPolicy
      */
 
     public function signin(Person $user)
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
+    /*
+     * Can user re-signin the person?
+     */
+
+    public function resignin(Person $user)
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -232,7 +240,8 @@ class TimesheetPolicy
      * @param Person $user
      * @return bool
      */
-    public function onDutyShiftLeadReport(Person $user) {
+    public function onDutyShiftLeadReport(Person $user)
+    {
         return $user->hasRole(Role::MANAGE);
     }
 }
