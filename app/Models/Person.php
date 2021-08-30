@@ -453,7 +453,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function save($options = [])
     {
-        $isNew = !$this->id;
+        $isNew = !$this->exists;
         if ($isNew) {
             // Creating record = require callsign & email
             $this->rules['callsign'] = 'required|string|unique:person,callsign';
