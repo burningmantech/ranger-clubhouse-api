@@ -105,11 +105,6 @@ class Timesheet extends ApiModel
             }
         });
 
-        self::saving(function ($model) {
-            // Don't save pseudo or SQL computed fields
-            unset($model->attributes['credits']);
-            unset($model->attributes['duration']);
-        });
     }
 
     public function person()

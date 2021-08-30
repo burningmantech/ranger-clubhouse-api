@@ -492,14 +492,13 @@ class TimesheetController extends ApiController
             return response()->json(['status' => 'already-signed-off', 'timesheet' => $timesheet]);
         }
 
-         $timesheet->setOffDutyToNow();
+        $timesheet->setOffDutyToNow();
         $timesheet->auditReason = 'signout';
         $timesheet->saveOrThrow();
         $timesheet->loadRelationships();
         $timesheet->log(TimesheetLog::SIGNOFF, [
             'position_id' => $timesheet->position_id,
             'off_duty' => (string)$timesheet->off_duty,
-            'duration' => $timesheet->duration,
         ]);
 
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
@@ -521,7 +520,7 @@ class TimesheetController extends ApiController
         $personId = request()->input('person_id');
 
         if ($personId != $timesheet->person_id) {
-            return response()->json(['status' => 'person-mismatch' ]);
+            return response()->json(['status' => 'person-mismatch']);
         }
 
         $offDuty = $timesheet->off_duty;
@@ -531,7 +530,7 @@ class TimesheetController extends ApiController
 
         // GRR: Cannot use $timesheet->off_duty = null because it will be cast to Carbon::parse(null). Sigh.
         $timesheet->setOffDutyToNullAndSave('re-signin');
-        $timesheet->log(TimesheetLog::UPDATE, ['off_duty' => [(string)$offDuty, 're-signin'] ]);
+        $timesheet->log(TimesheetLog::UPDATE, ['off_duty' => [(string)$offDuty, 're-signin']]);
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
     }
 
