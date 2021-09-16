@@ -145,7 +145,7 @@ class PersonController extends ApiController
      * Update a person record. Also update the person_language table at the same time.
      */
 
-    public function update(Request $request, Person $person)
+    public function update(Person $person)
     {
         $this->authorize('update', $person);
 

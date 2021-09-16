@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Lib\WorkSummary;
 use Exception;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 
 class ScheduleException extends Exception
 {
@@ -57,7 +56,7 @@ class Schedule extends ApiModel
     const NO_SLOT = 'no-slot'; // slot does not exist
     const HAS_STARTED = 'has-started'; // slot has already started
     const EXISTS = 'exists'; // person is already signed up for the slot.
-    const MISSING_REQUIREMENTS = 'missing-requirements'; // person has not meet all the requirements to sign up
+    const MISSING_REQUIREMENTS = 'missing-requirements'; // person has not met all the requirements to sign up
 
     /*
      * Failed sign up statuses that are allowed to be forced if the user has the appropriate
@@ -68,31 +67,19 @@ class Schedule extends ApiModel
         self::FULL, self::HAS_STARTED, self::MULTIPLE_ENROLLMENT
     ];
 
-    public static function findForQuery($query)
+    public static function findForQuery($personId, $year, $query = [])
     {
-        if (empty($query['year'])) {
-            throw new InvalidArgumentException('Missing year parameter');
-        }
-
-        $year = $query['year'];
-
-        $personId = $query['person_id'] ?? null;
-        $shiftsAvailable = $query['shifts_available'] ?? false;
-        $remaining = $query['remaining'] ?? false;
         $now = (string)now();
+        $onlySignups = $query['only_signups'] ?? false;
 
         $selectColumns = [
             'slot.id as id',
-            'position.id as position_id',
-            'position.title AS position_title',
-            'position.type AS position_type',
-            'position.contact_email',
-            'position.count_hours as position_count_hours',
+            'slot.position_id as position_id',
             'slot.begins AS slot_begins',
             'slot.ends AS slot_ends',
             'slot.description AS slot_description',
             'slot.signed_up AS slot_signed_up',
-            'slot.max AS slot_max_potential',    // use to compute sign up limit.
+            'slot.max AS slot_max_potential',    // used to compute sign up limit.
             'slot.url AS slot_url',
             'slot.active as slot_active',
             'slot.trainer_slot_id',
@@ -100,49 +87,46 @@ class Schedule extends ApiModel
             DB::raw('UNIX_TIMESTAMP(slot.begins) as slot_begins_time'),
             DB::raw('UNIX_TIMESTAMP(slot.ends) as slot_ends_time'),
             DB::raw("IF(slot.begins < '$now', TRUE, FALSE) as has_started"),
-            DB::raw("IF(slot.ends < '$now', TRUE, FALSE) as has_ended")
+            DB::raw("IF(slot.ends < '$now', TRUE, FALSE) as has_ended"),
+            DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned")
         ];
 
-        // Is this a simple schedule find for a person?
-        if ($personId && !$shiftsAvailable) {
-            $sql = DB::table('person_slot')
-                ->where('person_slot.person_id', $personId)
-                ->join('slot', 'slot.id', '=', 'person_slot.slot_id');
-            if ($remaining) {
-                $sql->where('slot.ends', '>', $now);
-            }
-        } else {
-            // Retrieve all slots
-            $sql = DB::table('slot');
+        // Find all slots the person is eligible for AND all slots the person is already signed up for
+        // Note: a person may be signed up for a position they no longer hold. e.g., Alpha, Green Dot Mentee, etc.
 
-            // .. and find out which slots a person has signed up for
-            if ($shiftsAvailable) {
-                $sql = DB::table('person_position')
-                    ->join('slot', function ($join) use ($personId) {
-                        $join->where('person_position.person_id', $personId)
-                            ->on('person_position.position_id', 'slot.position_id');
-                    });
-            } else {
-                $sql = DB::table('slot');
-            }
-        }
-
-        if (isset($query['type'])) {
-            $sql = $sql->where('position.type', $query['type']);
-        }
-
-        $rows = $sql->select($selectColumns)
+        $sql = DB::table('slot')
+            ->select($selectColumns)
+            ->leftJoin('person_slot', function ($join) use ($personId) {
+                $join->where('person_slot.person_id', $personId)
+                    ->on('slot.id', 'person_slot.slot_id');
+            })->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->whereYear('slot.begins', $year)
-            ->join('position', 'position.id', '=', 'slot.position_id')
-            ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
-            ->orderBy('slot.begins', 'asc')
-            ->orderBy('position.title', 'asc')
-            ->orderBy('slot.description', 'asc')
-            ->get()
-            ->toArray();
+            ->orderBy('slot.begins', 'asc');
+
+        if ($onlySignups) {
+            $sql->whereNotNull('person_slot.person_id');
+        } else {
+            $sql->leftJoin('person_position', function ($join) use ($personId) {
+                $join->where('person_position.person_id', $personId)
+                    ->on('person_position.position_id', 'slot.position_id');
+            })->whereRaw('(person_slot.person_id IS NOT NULL OR person_position.person_id IS NOT NULL)');
+        }
+
+        $rows = $sql->get();
+
+        if (!$rows->isEmpty()) {
+            $positions = DB::table('position')
+                ->select('id', 'title', 'type', 'contact_email', 'count_hours')
+                ->whereIn('id', $rows->pluck('position_id')->unique())
+                ->get()
+                ->toArray();
+        } else {
+            $positions = [];
+        }
+
 
         // return an array of Schedule loaded from the rows
-        return Schedule::hydrate($rows);
+        return [Schedule::hydrate($rows->toArray()), $positions];
     }
 
     /**
@@ -453,11 +437,15 @@ class Schedule extends ApiModel
 
     public static function summarizeShiftSignups(Person $person): array
     {
-
         $year = current_year();
-        $rows = self::findForQuery(['year' => $year, 'person_id' => $person->id]);
-        $rows = $rows->filter(function ($r) {
-            return $r->type != Position::TYPE_TRAINING;
+        list ($rows, $positions) = self::findForQuery($person->id, $year);
+
+        $positionsById = [];
+        foreach ($positions as $position) {
+            $positionById[$position->id] = $position;
+        }
+        $rows = $rows->filter(function ($r) use ($positionsById) {
+            return $positionsById[$r->position_id]->type != Position::TYPE_TRAINING;
         });
 
         if (!$rows->isEmpty()) {
@@ -507,7 +495,7 @@ class Schedule extends ApiModel
 
     public static function scheduleSummaryForPersonYear($personId, $year)
     {
-        $rows = self::findForQuery(['person_id' => $personId, 'year' => $year]);
+        list ($rows, $positions) = self::findForQuery($personId, $year, [ 'only_signups' => true ]);
 
         $eventDates = EventDate::findForYear($year);
 
@@ -536,8 +524,14 @@ class Schedule extends ApiModel
 
         $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
 
+        $positionsById = [];
+        foreach ($positions as $position) {
+            $positionsById[$position->id] = $position;
+        }
+
         foreach ($rows as $row) {
-            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $row->position_count_hours);
+            $position = $positionsById[$row->position_id];
+            $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $position->count_hours);
         }
 
         return [
