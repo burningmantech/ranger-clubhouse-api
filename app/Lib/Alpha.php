@@ -302,6 +302,7 @@ class Alpha
         // Find the Alpha slots
         $slots = Slot::whereYear('begins', $year)
             ->where('position_id', Position::ALPHA)
+            ->orderBy('begins')
             ->get();
 
         // Next, find the Alpha sign ups
