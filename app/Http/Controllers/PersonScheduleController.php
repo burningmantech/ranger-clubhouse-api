@@ -2,13 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-
-use App\Http\Controllers\ApiController;
-
 use App\Jobs\TrainingSignupEmailJob;
-
+use App\Lib\Scheduling;
+use App\Mail\TrainingSessionFullMail;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
@@ -16,11 +12,9 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
-
-use App\Lib\Scheduling;
-
-use App\Mail\TrainingSessionFullMail;
-use Illuminate\Http\Response;
+use App\Models\Timesheet;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class PersonScheduleController extends ApiController
 {
@@ -34,19 +28,36 @@ class PersonScheduleController extends ApiController
 
         $query = request()->validate([
             'year' => 'required|digits:4',
-            'shifts_available' => 'sometimes|boolean',
+            'credits_earned' => 'sometimes|boolean',
+            'schedule_summary' => 'sometimes|boolean',
+            'signup_permission' => 'sometimes|boolean',
         ]);
 
-        $query['person_id'] = $person->id;
+        $year = $query['year'];
 
-        $rows = Schedule::findForQuery($query);
+        list ($rows, $positions) = Schedule::findForQuery($person->id, $year, $query);
+
+        $meta = ['positions' => $positions];
+
+        // Try to reduce the round trips to the backend by including common associated scheduling info
+         if ($query['credits_earned'] ?? false) {
+            $meta['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
+        }
+
+        if ($query['schedule_summary'] ?? false) {
+            $meta['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
+        }
+
+        if ($query['signup_permission'] ?? false) {
+            $meta['signup_permission'] = Scheduling::retrieveSignUpPermission($person, $year);
+        }
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.
             PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        return $this->success($rows, null, 'schedules');
+        return $this->success($rows, $meta, 'schedules');
     }
 
     /*
@@ -327,11 +338,7 @@ class PersonScheduleController extends ApiController
         $now = now();
         $year = current_year();
 
-        $rows = Schedule::findForQuery([
-            'person_id' => $person->id,
-            'year' => $year,
-            'remaining' => true
-        ]);
+        list($rows, $positions) = Schedule::findForQuery($person->id, $year, ['remaining' => true]);
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.
@@ -384,7 +391,7 @@ class PersonScheduleController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
 
     public function scheduleLog(Person $person)

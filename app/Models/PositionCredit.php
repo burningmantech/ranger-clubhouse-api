@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-
-use App\Models\ApiModel;
-use App\Models\Position;
-
 use DB;
 
 class PositionCredit extends ApiModel
@@ -32,21 +27,22 @@ class PositionCredit extends ApiModel
     ];
 
     protected $rules = [
-        'start_time'    => 'required|date',
-        'end_time'      => 'required|date|after:start_time',
-        'position_id'   => 'required|exists:position,id',
-        'description'   => 'required|string',
+        'start_time' => 'required|date',
+        'end_time' => 'required|date|after:start_time',
+        'position_id' => 'required|exists:position,id',
+        'description' => 'required|string',
         'credits_per_hour' => 'required|numeric',
     ];
 
-    const RELATIONS = [ 'position:id,title' ];
+    const RELATIONS = ['position:id,title'];
 
     public static array $yearCache = [];
 
     public int $start_timestamp;
     public int $end_timestamp;
 
-    public function position() {
+    public function position()
+    {
         return $this->belongsTo(Position::class);
     }
 
@@ -54,15 +50,18 @@ class PositionCredit extends ApiModel
      * Find all credits for a given year
      */
 
-    public static function findForYear($year) {
+    public static function findForYear($year)
+    {
         return self::with(self::RELATIONS)
-                ->whereYear('start_time', $year)
-                ->orderBy('start_time')->get();
+            ->whereYear('start_time', $year)
+            ->orderBy('start_time')->get();
     }
 
-    public function loadRelations() {
+    public function loadRelations()
+    {
         $this->load(self::RELATIONS);
     }
+
     /*
      * Find all the credits for a given year and position, cache the results.
      *
@@ -70,7 +69,8 @@ class PositionCredit extends ApiModel
      * @return array PositionCredits
      */
 
-    public static function findForYearPosition($year, $positionId) {
+    public static function findForYearPosition($year, $positionId)
+    {
         $year = intval($year);
         $positionId = intval($positionId);
 
@@ -79,9 +79,9 @@ class PositionCredit extends ApiModel
         }
 
         $rows = self::where('position_id', $positionId)
-                ->whereYear('start_time', $year)
-                ->whereYear('end_time', $year)
-                ->orderBy('start_time')->get();
+            ->whereYear('start_time', $year)
+            ->whereYear('end_time', $year)
+            ->orderBy('start_time')->get();
 
         foreach ($rows as $row) {
             // Cache the timestamp conversion
@@ -102,10 +102,9 @@ class PositionCredit extends ApiModel
      * @param $positionIds
      */
 
-    public static function warmYearCache(int $year, $positionIds) {
-        $sql = self::whereYear('start_time', $year)
-                ->whereYear('end_time', $year)
-                ->orderBy('start_time');
+    public static function warmYearCache(int $year, $positionIds)
+    {
+        $sql = self::whereYear('start_time', $year)->orderBy('start_time');
 
         if (!empty($positionIds)) {
             $sql->whereIn('position_id', $positionIds);
@@ -122,9 +121,7 @@ class PositionCredit extends ApiModel
         self::$yearCache[$year] = $rows->groupBy('position_id');
 
         foreach ($positionIds as $id) {
-            if (!isset(self::$yearCache[$year][$id])) {
-                self::$yearCache[$year][$id] = [];
-            }
+            self::$yearCache[$year][$id] ??= [];
         }
     }
 
@@ -137,7 +134,8 @@ class PositionCredit extends ApiModel
      * @param array $creditCache (optional) the position credits for the year
      * @return float the earn credits
      */
-    public static function computeCredits(int $positionId, int $startTime, int $endTime, int $year): float {
+    public static function computeCredits(int $positionId, int $startTime, int $endTime, int $year): float
+    {
         $credits = PositionCredit::findForYearPosition($year, $positionId);
 
         if (empty($credits)) {
@@ -157,7 +155,8 @@ class PositionCredit extends ApiModel
         return $total;
     }
 
-    public static function minutesOverlap(int $startA, int $endA, int $startB, int $endB): float {
+    public static function minutesOverlap(int $startA, int $endA, int $startB, int $endB): float
+    {
         // latest start time
         $start = $startA > $startB ? $startA : $startB;
         // earlies end time

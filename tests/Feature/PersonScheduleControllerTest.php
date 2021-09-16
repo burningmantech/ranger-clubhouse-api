@@ -223,38 +223,6 @@ class PersonScheduleControllerTest extends TestCase
 
 
     /*
-     * Find only the signups for a year.
-     */
-
-    public function testFindOnlyShiftSignupsForAYear()
-    {
-        $personId = $this->user->id;
-
-        $this->addPosition(Position::TRAINING);
-        $this->addPosition(Position::DIRT);
-
-        $this->setupDirtSlots();
-        $this->setupTrainingSlots();
-
-        $slotId = $this->dirtSlots[0]->id;
-
-        PersonSlot::factory()->create(
-            [
-                'person_id' => $personId,
-                'slot_id' => $slotId,
-            ]
-        );
-
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year]);
-        $response->assertStatus(200);
-
-        $response->assertJsonStructure(['schedules' => [['id']]]);
-        $this->assertCount(1, $response->json()['schedules']);
-        $this->assertEquals($slotId, $response->json()['schedules'][0]['id']);
-    }
-
-
-    /*
      * Find the available shifts and signups for a year.
      */
 
@@ -277,7 +245,7 @@ class PersonScheduleControllerTest extends TestCase
             ]
         );
 
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year, 'shifts_available' => 1]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year]);
         $response->assertStatus(200);
 
         // Should match 6 shifts - 3 trainings and 3 dirt shift
