@@ -626,11 +626,21 @@ class PersonPhoto extends ApiModel
             return;
         }
 
+        $accessKey = setting('PhotoRekognitionAccessKey');
+        $secret = setting('PhotoRekognitionAccessSecret');
+
+        if (empty($accessKey) || empty($secret)) {
+            ErrorLog::record('photo-analyze-no-credentials', [
+                'message' => 'PhotoRekognitionAccessKey or PhotoRekognitionAccessSecret is empty'
+            ]);
+            return;
+        }
+
         try {
             $rekognition = new RekognitionClient([
                 'region' => 'us-west-2',
                 'version' => 'latest',
-                'credentials' => new Credentials(setting('PhotoRekognitionAccessKey'), setting('PhotoRekognitionAccessSecret'))
+                'credentials' => new Credentials($accessKey, $secret)
             ]);
 
             $result = $rekognition->DetectFaces([
