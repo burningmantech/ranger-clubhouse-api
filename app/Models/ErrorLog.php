@@ -84,7 +84,7 @@ class ErrorLog extends ApiModel
 
         $error = [
             'error_type' => $error_type,
-            'data' => $data
+            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE),
         ];
 
         // Include the IP, user_agent and URL location
