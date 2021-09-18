@@ -37,19 +37,22 @@ class PersonScheduleController extends ApiController
 
         list ($rows, $positions) = Schedule::findForQuery($person->id, $year, $query);
 
-        $meta = ['positions' => $positions];
+        $results = [
+            'slots' => $rows,
+            'positions' => $positions
+        ];
 
         // Try to reduce the round trips to the backend by including common associated scheduling info
          if ($query['credits_earned'] ?? false) {
-            $meta['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
+             $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
         }
 
         if ($query['schedule_summary'] ?? false) {
-            $meta['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
+            $results['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
         }
 
         if ($query['signup_permission'] ?? false) {
-            $meta['signup_permission'] = Scheduling::retrieveSignUpPermission($person, $year);
+            $results['signup_permission'] = Scheduling::retrieveSignUpPermission($person, $year);
         }
 
         if (!$rows->isEmpty()) {
@@ -57,11 +60,15 @@ class PersonScheduleController extends ApiController
             PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        return $this->success($rows, $meta, 'schedules');
+        return response()->json($results);
     }
 
-    /*
+    /**
      * Add a person to a slot schedule
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function store(Person $person)
@@ -250,6 +257,7 @@ class PersonScheduleController extends ApiController
      * @param int $personId slot to delete for person
      * @param int $slotId to delete
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function destroy(Person $person, $slotId)
@@ -287,24 +295,31 @@ class PersonScheduleController extends ApiController
         return response()->json($result);
     }
 
-    /*
+    /**
      * Check to see if sign ups are allowed
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function permission(Person $person)
+    public function permission(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
         return response()->json(['permission' => Scheduling::retrieveSignUpPermission($person, $this->getYear())]);
     }
 
-    /*
+    /**
      * Shift recommendations for a person (currently recommend Burn Weekend shift only)
      *
      * (use primarily by the HQ interface)
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function recommendations(Person $person)
+    public function recommendations(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
@@ -313,11 +328,15 @@ class PersonScheduleController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Find one or more about to start shifts - used to suggest starting position.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function imminent(Person $person)
+    public function imminent(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
@@ -326,17 +345,21 @@ class PersonScheduleController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Provide answers for folks wanting to know how many remaining hours
      * and credits will be earned based on the schedule.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function expected(Person $person)
+    public function expected(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
         $now = now();
-        $year = current_year();
+        $year = $now->year;
 
         list($rows, $positions) = Schedule::findForQuery($person->id, $year, ['remaining' => true]);
 
@@ -368,14 +391,18 @@ class PersonScheduleController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Retrieve the schedule summary for a given year.
      *
      * Hours and expected credits are broken down into pre-event, event, and post-event
      * periods along with "other" (usually training)
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function scheduleSummary(Person $person)
+    public function scheduleSummary(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
@@ -394,7 +421,7 @@ class PersonScheduleController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function scheduleLog(Person $person)
+    public function scheduleLog(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
         $year = $this->getYear();
@@ -409,12 +436,12 @@ class PersonScheduleController extends ApiController
      * - ART Trainers (role) are allowed for any ART training
      * - Trainers (role) are only allowed to remove people, not sign up (per 2020 TA request)
      *
-     * @param $slot
+     * @param Slot $slot
      * @param bool $isSignup true if check for a sign up, false for a removal
-     * @return array [ canForce
+     * @return array
      */
 
-    private function canForceScheduleChange($slot, $isSignup = true)
+    private function canForceScheduleChange(Slot $slot, bool $isSignup = true): array
     {
         $isTrainer = false;
         $roleCanForce = null;

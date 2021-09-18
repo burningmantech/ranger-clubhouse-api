@@ -251,7 +251,7 @@ class TimesheetController extends ApiController
 
         if ($timesheet->isDirty('position_id')) {
             // Find new sign up to associate with
-            $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
         }
 
         $auditColumns = [];
@@ -353,7 +353,7 @@ class TimesheetController extends ApiController
         $oldPositionId = $timesheet->position_id;
         $timesheet->position_id = $positionId;
         // Find new sign up to associate with
-        $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($personId, $positionId, $timesheet->on_duty);
+        $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($personId, $positionId, $timesheet->on_duty);
         $timesheet->auditReason = 'position update while on duty';
         $timesheet->saveOrThrow();
 
@@ -427,12 +427,13 @@ class TimesheetController extends ApiController
         }
 
         $timesheet = new Timesheet($params);
+        $timesheet->setOnDutyToNow();
+
         if (!$timesheet->slot_id) {
             // Try to associate a slot with the sign on
-            $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
         }
 
-        $timesheet->setOnDutyToNow();
         $timesheet->auditReason = 'sign in';
         if (!$timesheet->save()) {
             return $this->restError($timesheet);

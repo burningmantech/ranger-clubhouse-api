@@ -115,7 +115,7 @@ class TimesheetMissingController extends ApiController
 
                 if (!$timesheet->slot_id) {
                     // Try to associate a slot with the sign on
-                    $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($person->id, $timesheet->position_id, $timesheet->on_duty);
+                    $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($person->id, $timesheet->position_id, $timesheet->on_duty);
                 }
 
                 if (!$timesheet->save()) {

@@ -121,7 +121,7 @@ class Milestones
                 // Full day's training required, and walk a cheetah shift.
                 $milestones['needs_full_training'] = true;
                 $milestones['is_cheetah_cub'] = true;
-                $cheetah = Schedule::findEnrolledSlotIds($person->id, $year, Position::CHEETAH_CUB)->last();
+                $cheetah = Schedule::findEnrolledSlots($person->id, $year, Position::CHEETAH_CUB)->last();
                 if ($cheetah) {
                     $milestones['cheetah_cub_shift'] = [
                         'slot_id' => $cheetah->id,
