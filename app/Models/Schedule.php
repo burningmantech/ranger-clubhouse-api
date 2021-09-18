@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Lib\WorkSummary;
+use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ScheduleException extends Exception
@@ -42,7 +44,9 @@ class Schedule extends ApiModel
         'slot_ends'
     ];
 
-    const SHIFT_STARTS_WITHIN = 30; // A shift starts within X minutes
+    const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes
+
+    const MAY_START_SHIFT_WITHIN = 15; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
 
     /*
      * Sign up statuses
@@ -67,7 +71,20 @@ class Schedule extends ApiModel
         self::FULL, self::HAS_STARTED, self::MULTIPLE_ENROLLMENT
     ];
 
-    public static function findForQuery($personId, $year, $query = [])
+    /**
+     * Find slots in the given year the person may potentially sign up for and/or what slots
+     * the person is already signed up for.
+     *
+     * NOTE: A slot may be returned where the person no longer holds the position. E.g., Alpha, ART mentees,
+     * or is no longer part of a special team.
+     *
+     * @param int $personId
+     * @param int $year
+     * @param array $query
+     * @return array
+     */
+
+    public static function findForQuery(int $personId, int $year, $query = []): array
     {
         $now = (string)now();
         $onlySignups = $query['only_signups'] ?? false;
@@ -136,7 +153,7 @@ class Schedule extends ApiModel
      * @return mixed
      */
 
-    public static function findNextShift(int $personId)
+    public static function findNextShift(int $personId): mixed
     {
         return DB::table('person_slot')
             ->select('position.title', 'slot.description', 'begins')
@@ -177,10 +194,10 @@ class Schedule extends ApiModel
             return ['status' => self::EXISTS, 'signed_up' => $slot->signed_up];
         }
 
-
         $now = now();
 
         if ($now->gt($slot->begins) && !$force) {
+            // Shift has already started, don't allow a sign up
             return ['status' => self::HAS_STARTED, 'signed_up' => $slot->signed_up];
         }
 
@@ -209,15 +226,12 @@ class Schedule extends ApiModel
                 $isOvercapacity = true;
             }
 
-            // looks up! sign up the person
-            $ps = new PersonSlot([
-                'person_id' => $personId,
-                'slot_id' => $updateSlot->id
-            ]);
-            $ps->save();
+            // Sign up the person
+            PersonSlot::create(['person_id' => $personId, 'slot_id' => $updateSlot->id]);
 
             $updateSlot->signed_up += 1;
             $updateSlot->save();
+
             DB::commit();
 
             return [
@@ -232,13 +246,14 @@ class Schedule extends ApiModel
     }
 
     /**
-     * Remove a sign up for a person
+     * Remove a sign-up for a person
      *
      * @param int $personId
      * @param int $slotId
      * @return array
      * @throws Exception
      */
+
     public static function deleteFromSchedule(int $personId, int $slotId): array
     {
         $personSlot = PersonSlot::where([
@@ -266,12 +281,18 @@ class Schedule extends ApiModel
         return ['status' => self::SUCCESS, 'signed_up' => $slot->signed_up];
     }
 
-    /*
+    /**
      * Does a person have multiple enrollments for the same position (aka Training or Alpha shift)
      * and if so what are the enrollments?
+     *
+     * @param int $personId
+     * @param int $positionId
+     * @param int $year
+     * @param $enrollments
+     * @return bool
      */
 
-    public static function haveMultipleEnrollments($personId, $positionId, $year, &$enrollments)
+    public static function haveMultipleEnrollments(int $personId, int $positionId, int $year, &$enrollments): bool
     {
         $slotIds = self::findEnrolledSlotIds($personId, $year, $positionId);
 
@@ -284,14 +305,18 @@ class Schedule extends ApiModel
         return true;
     }
 
-    /*
+    /**
      * Can the person join the training session?
      *
      * When the slot has a session part (a "Part X" in the description) hunt down the other
      * enrollments and see if the parts match.
+     * @param int $personId
+     * @param Slot $slot
+     * @param $enrollments
+     * @return bool
      */
 
-    public static function canJoinTrainingSlot($personId, $slot, &$enrollments)
+    public static function canJoinTrainingSlot(int $personId, Slot $slot, &$enrollments): bool
     {
         $enrollments = null;
 
@@ -321,70 +346,111 @@ class Schedule extends ApiModel
         return false;
     }
 
-    public static function findEnrolledSlotIds($personId, $year, $positionId)
+    /**
+     * Find all slot ids the person is signed up for a given year and position.
+     *
+     * @param int $personId
+     * @param int $year
+     * @param int $positionId
+     * @return Collection
+     */
+
+    public static function findEnrolledSlotIds(int $personId, int $year, int $positionId): Collection
     {
         return self::findEnrolledSlots($personId, $year, $positionId)->pluck('slot_id');
     }
 
-    public static function findEnrolledSlots($personId, $year, $positionId)
+    /**
+     * Find all slot rows the person is signed up for a given year and position.
+     *
+     * @param $personId
+     * @param $year
+     * @param $positionId
+     * @return PersonSlot[]|\Illuminate\Database\Eloquent\Collection|Collection
+     */
+
+    public static function findEnrolledSlots($personId, $year, $positionId): \Illuminate\Database\Eloquent\Collection|array|Collection
     {
         return PersonSlot::where('person_slot.person_id', $personId)
             ->join('slot', function ($query) use ($positionId, $year) {
-                $query->whereRaw('slot.id=person_slot.slot_id');
+                $query->whereColumn('slot.id', 'person_slot.slot_id');
                 $query->where('slot.position_id', $positionId);
                 $query->whereYear('slot.begins', $year);
             })->orderBy('slot.begins')
             ->get();
     }
 
-    public static function retrieveStartingSlotsForPerson($personId)
-    {
-        $rows = PersonSlot::join('slot', function ($query) {
-            $now = (string)now();
-            $query->whereRaw('slot.id=person_slot.slot_id');
-            $query->whereRaw(
-                'slot.begins BETWEEN DATE_SUB(?, INTERVAL ? MINUTE) AND DATE_ADD(?, INTERVAL ? MINUTE)',
-                [$now, self::SHIFT_STARTS_WITHIN, $now, self::SHIFT_STARTS_WITHIN]
-            );
-        })
-            ->where('person_id', $personId)
-            ->with('slot.position:id,title')->get();
+    /**
+     * Find the slots where the person signed up beginning within +/- LOCATE_SHIFT_START_WITHIN minutes of now.
+     *
+     * @param int $personId
+     * @return array
+     */
 
-        return $rows->map(function ($row) {
-            return [
+    public static function retrieveStartingSlotsForPerson(int $personId): array
+    {
+        $now = now();
+        $rows = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
+            ->whereRaw(
+                '? BETWEEN DATE_SUB(slot.begins, INTERVAL ? MINUTE) AND DATE_ADD(slot.begins, INTERVAL ? MINUTE)',
+                [$now, self::LOCATE_SHIFT_START_WITHIN, self::LOCATE_SHIFT_START_WITHIN]
+            )
+            ->where('person_id', $personId)
+            ->with('slot.position:id,title')
+            ->get();
+
+        return $rows->map(function ($row) use ($now) {
+            $slot = $row->slot;
+            $start = $slot->begins->clone()->subMinutes(self::MAY_START_SHIFT_WITHIN);
+            $withinStart = $start->lte($now);
+            $shift = [
                 'slot_id' => $row->slot_id,
-                'slot_description' => $row->slot->description,
-                'position_id' => $row->slot->position_id,
-                'position_title' => $row->slot->position->title,
-                'slot_begins' => (string)$row->slot->begins,
-                'slot_ends' => (string)$row->slot->ends,
+                'slot_description' => $slot->description,
+                'position_id' => $slot->position_id,
+                'position_title' => $slot->position->title,
+                'slot_begins' => (string)$slot->begins,
+                'slot_ends' => (string)$slot->ends,
+                'is_within_start_time' => $withinStart,
             ];
-        });
+            if (!$withinStart) {
+                $shift['can_start_in'] = $now->diffInMinutes($start);
+            }
+            return $shift;
+        })->toArray();
     }
 
     /**
-     * Find the (probable) slot sign up for a person based on the position and time.
+     * Find the (probable) slot id sign up for a person based on the position and time.
      *
      * @param integer $personId the person in question
      * @param integer $positionId the position to search for
-     * @param string $begins the time to look for.
-     * @return mixed return the id of the slot found, or null if nothing.
+     * @param string|Carbon $begins the time to look for.
+     * @return int|null return the id of the slot found, or null if nothing.
      */
 
-    public static function findSlotSignUpByPositionTime($personId, $positionId, $begins)
+    public static function findSlotIdSignUpByPositionTime(int $personId, int $positionId, string|Carbon $begins): int|null
     {
-        $signUp = PersonSlot::join('slot', function ($q) use ($begins) {
-            $q->on('slot.id', 'person_slot.slot_id');
-            $q->whereRaw('slot.begins BETWEEN DATE_SUB(?, INTERVAL 45 MINUTE) AND DATE_ADD(?, INTERVAL 45 MINUTE)',
-                [$begins, $begins]);
-        })->where('person_id', $personId)
+        $time = Carbon::parse($begins);
+        $start = $time->clone()->subMinutes(self::LOCATE_SHIFT_START_WITHIN);
+        $end = $time->clone()->addMinutes(self::LOCATE_SHIFT_START_WITHIN);
+
+        $signUp = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
+            ->whereRaw('slot.begins BETWEEN ? AND ?', [$start, $end])
+            ->where('person_id', $personId)
             ->where('slot.position_id', $positionId)
             ->first();
 
-        return $signUp ? $signUp->slot_id : null;
+        return $signUp?->slot_id;
     }
 
-    public static function haveBurnWeekendSignup(Person $person)
+    /**
+     * Does the person have a sign up occurring in the Burn Weekend?
+     *
+     * @param Person $person
+     * @return bool
+     */
+
+    public static function haveBurnWeekendSignup(Person $person): bool
     {
         list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
         return Schedule::hasSignupInPeriod($person->id, $start, $end);
@@ -396,7 +462,8 @@ class Schedule extends ApiModel
      * @param Person $person
      * @return bool true if shifts are available
      */
-    public static function haveAvailableBurnWeekendShiftsForPerson(Person $person)
+
+    public static function haveAvailableBurnWeekendShiftsForPerson(Person $person): bool
     {
         list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
 
@@ -419,7 +486,8 @@ class Schedule extends ApiModel
      *
      * @return bool true if shifts are available
      */
-    public static function areDirtShiftsAvailable()
+
+    public static function areDirtShiftsAvailable(): bool
     {
         return DB::table('slot')
             ->where('slot.active', true)
@@ -431,6 +499,7 @@ class Schedule extends ApiModel
 
     /**
      * Count the number of working (i.e. non-training) signups the person has in the current year.
+     *
      * @param Person $person
      * @return array
      */
@@ -444,6 +513,7 @@ class Schedule extends ApiModel
         foreach ($positions as $position) {
             $positionById[$position->id] = $position;
         }
+
         $rows = $rows->filter(function ($r) use ($positionsById) {
             return $positionsById[$r->position_id]->type != Position::TYPE_TRAINING;
         });
@@ -473,11 +543,16 @@ class Schedule extends ApiModel
         ];
     }
 
-    /*
-     * Determine if a person is signed up for a shift occuring within a certain date range.
+    /**
+     * Determine if a person is signed up for a shift occurring within a certain date range.
+     *
+     * @param int $personId
+     * @param $start
+     * @param $end
+     * @return bool
      */
 
-    public static function hasSignupInPeriod($personId, $start, $end)
+    public static function hasSignupInPeriod(int $personId, $start, $end)
     {
         return DB::table('person_slot')
             ->join('slot', 'person_slot.slot_id', 'slot.id')
@@ -489,13 +564,17 @@ class Schedule extends ApiModel
             ->exists();
     }
 
-    /*
-     * build a schedule summary (credit / hour break down into pre-event, event, post-event, other)
+    /**
+     * Build a schedule summary (credit / hour break down into pre-event, event, post-event, other)
+     *
+     * @param int $personId
+     * @param int $year
+     * @return array
      */
 
-    public static function scheduleSummaryForPersonYear($personId, $year)
+    public static function scheduleSummaryForPersonYear(int $personId, int $year): array
     {
-        list ($rows, $positions) = self::findForQuery($personId, $year, [ 'only_signups' => true ]);
+        list ($rows, $positions) = self::findForQuery($personId, $year, ['only_signups' => true]);
 
         $eventDates = EventDate::findForYear($year);
 
@@ -550,7 +629,15 @@ class Schedule extends ApiModel
         ];
     }
 
-    public static function retrieveScheduleLog(int $personId, int $year)
+    /**
+     * Report on slots the given person signed up and/or was removed from.
+     *
+     * @param int $personId
+     * @param int $year
+     * @return array
+     */
+
+    public static function retrieveScheduleLog(int $personId, int $year): array
     {
         $rows = ActionLog::where('target_person_id', $personId)
             ->whereYear('created_at', $year)
@@ -621,26 +708,45 @@ class Schedule extends ApiModel
         return $slots;
     }
 
+    /**
+     * Calculate how long the shift is in seconds.
+     *
+     * @return int
+     */
     public function getSlotDurationAttribute(): int
     {
         return $this->slot_ends_time - $this->slot_begins_time;
     }
+
+    /**
+     * Return the year the slot is for
+     *
+     * @return int
+     */
 
     public function getYearAttribute(): int
     {
         return $this->slot_begins->year;
     }
 
+    /**
+     * Return how many credits this slot is worth
+     *
+     * @return float
+     */
+
     public function getCreditsAttribute(): float
     {
         return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
     }
 
-    /*
+    /**
      * Figure out how many signups are allowed.
+     *
+     * @return int
      */
 
-    public function getSlotMaxAttribute()
+    public function getSlotMaxAttribute(): int
     {
         return ($this->trainer_slot_id ? $this->trainer_count * $this->slot_max_potential : $this->slot_max_potential);
     }

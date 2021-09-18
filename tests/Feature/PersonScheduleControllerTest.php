@@ -249,7 +249,7 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertStatus(200);
 
         // Should match 6 shifts - 3 trainings and 3 dirt shift
-        $this->assertCount(6, $response->json()['schedules']);
+        $this->assertCount(6, $response->json()['slots']);
     }
 
 
@@ -259,9 +259,9 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testDoNotFindAnyShiftsForYear()
     {
-        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year, 'shifts_available' => 1]);
+        $response = $this->json('GET', "person/{$this->user->id}/schedule", ['year' => $this->year]);
         $response->assertStatus(200);
-        $response->assertJson(['schedules' => []]);
+        $response->assertJson(['slots' => []]);
     }
 
 

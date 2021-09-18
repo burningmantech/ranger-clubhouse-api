@@ -424,7 +424,7 @@ class BulkSignInOut
 
             if (!$timesheet->slot_id) {
                 // Try to associate a sign up with the entry
-                $timesheet->slot_id = Schedule::findSlotSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+                $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
             }
 
             $timesheet->auditReason = 'bulk sign in/out';
