@@ -361,7 +361,7 @@ class PersonScheduleController extends ApiController
         $now = now();
         $year = $now->year;
 
-        list($rows, $positions) = Schedule::findForQuery($person->id, $year, ['remaining' => true]);
+        list($rows, $positions) = Schedule::findForQuery($person->id, $year, ['remaining' => true, 'only_signups' => true]);
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.

@@ -487,6 +487,6 @@ class Bmid extends ApiModel
     public function effectiveMeals(): string
     {
         $meals = $this->buildMealsMatrix();
-        return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', $meals);
+        return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', array_keys($meals));
     }
 }

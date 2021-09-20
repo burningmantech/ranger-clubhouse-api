@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ClubhouseGroundHogDayCommand extends Command
 {
-    const GROUNDHOG_DATETIME = "2019-08-30 19:00:00";
+    const GROUNDHOG_DATETIME = "2019-08-30 17:50:00";
     const GROUNDHOG_DATABASE = "rangers_ghd";
 
     /**
