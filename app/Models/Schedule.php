@@ -88,9 +88,10 @@ class Schedule extends ApiModel
     {
         $now = (string)now();
         $onlySignups = $query['only_signups'] ?? false;
+        $remaining = $query['remaining'] ?? false;
 
         $selectColumns = [
-            'slot.id as id',
+            DB::raw('DISTINCT slot.id as id'),
             'slot.position_id as position_id',
             'slot.begins AS slot_begins',
             'slot.ends AS slot_ends',
@@ -127,6 +128,11 @@ class Schedule extends ApiModel
                 $join->where('person_position.person_id', $personId)
                     ->on('person_position.position_id', 'slot.position_id');
             })->whereRaw('(person_slot.person_id IS NOT NULL OR person_position.person_id IS NOT NULL)');
+        }
+
+        if ($remaining) {
+            // Include slots already started but have not ended.
+            $sql->where('slot.ends', '>=', now());
         }
 
         $rows = $sql->get();

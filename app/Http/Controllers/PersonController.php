@@ -101,7 +101,9 @@ class PersonController extends ApiController
 
                 if ($searchingForFKA) {
                     foreach ($person->formerlyKnownAsArray(true) as $fka) {
-                        if (stripos($fka, $query) !== false) {
+                        // Don't bother matching on the FKA if it already matches the beginning of the current callsign.
+                        // Helps with callsigns which were truncated (fka: doctor hubcap -> hubcap)
+                        if (stripos($fka, $query) !== false && stripos($person->callsign_normalized, $query) !== 0) {
                             $row['fka_match'] = $fka;
                             break;
                         }

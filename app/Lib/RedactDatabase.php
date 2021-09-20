@@ -48,7 +48,6 @@ class RedactDatabase {
             'access_document_changes',
             'access_document_delivery',
             'access_document',
-            'action_logs',
             'broadcast_message',
             'broadcast',
             'contact_log',
@@ -66,6 +65,7 @@ class RedactDatabase {
             DB::statement("TRUNCATE $table");
         }
 
+        DB::delete("DELETE FROM action_logs WHERE event not in ('person-slot-add', 'person-slot-remove')");
         // Zap all the Clubhouse message archives including the current table
         $rows = DB::select('SHOW TABLES LIKE "person_message%"');
         foreach($rows as $row)
