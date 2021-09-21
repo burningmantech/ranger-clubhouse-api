@@ -1336,4 +1336,45 @@ class TimesheetControllerTest extends TestCase
             ]
         ]);
     }
+
+    /**
+     * Test the Ranger Retention report
+     */
+
+    public function testRangerRetentionReport() {
+        $this->addAdminRole();
+        $year = date('Y');
+        $excludeYear = $year - 5;   // Report shouldn't pick up this year.
+
+        $personA = Person::factory()->create(['callsign' => 'A']);
+        $personB = Person::factory()->create(['callsign' => 'B']);
+
+        // Clear out the default timesheets created in setUp()
+        Timesheet::query()->delete();
+
+        $entryA = Timesheet::factory()->create([
+            'person_id' => $personA->id,
+            'on_duty' => date('Y-08-20 10:00:00'),
+            'off_duty' => date('Y-08-20 11:00:00'),
+            'position_id' => Position::DIRT
+        ]);
+
+        $entryB = Timesheet::factory()->create([
+            'person_id' => $personB->id,
+            'on_duty' => date("$excludeYear-08-20 10:00:00"),
+            'off_duty' => date("$excludeYear-08-20 12:00:00"),
+            'position_id' => Position::DIRT
+        ]);
+
+        $response = $this->json('GET', 'timesheet/retention-report');
+        $response->assertStatus(200);
+        $response->assertJson([
+            'start_year' => $year - 4,
+            'end_year'=> $year,
+            'people'=> [[
+                'id' => $personA->id,
+                'callsign'=> $personA->callsign,
+            ]]
+        ]);
+    }
 }

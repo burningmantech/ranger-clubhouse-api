@@ -10,6 +10,7 @@ use App\Lib\Reports\OnDutyShiftLeadReport;
 use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
 use App\Lib\Reports\PotentialEarnedShirtsReport;
 use App\Lib\Reports\RadioEligibilityReport;
+use App\Lib\Reports\RangerRetentionReport;
 use App\Lib\Reports\SpecialTeamsWorkReport;
 use App\Lib\Reports\ThankYouCardsReport;
 use App\Lib\Reports\TimesheetByCallsignReport;
@@ -30,6 +31,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
+use Psy\Util\Json;
 
 class TimesheetController extends ApiController
 {
@@ -909,5 +911,18 @@ class TimesheetController extends ApiController
         }
 
         return true;
+    }
+
+    /**
+     * Run the Ranger Retention Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function retentionReport() : JsonResponse {
+        $this->authorize('retentionReport', Timesheet::class);
+
+        return response()->json(RangerRetentionReport::execute());
     }
 }

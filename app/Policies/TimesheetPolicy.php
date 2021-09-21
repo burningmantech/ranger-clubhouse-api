@@ -244,4 +244,8 @@ class TimesheetPolicy
     {
         return $user->hasRole(Role::MANAGE);
     }
+
+    public function retentionReport(Person $user) {
+        return false;
+    }
 }
