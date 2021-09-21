@@ -126,6 +126,8 @@ class Position extends ApiModel
 
     const QUARTERMASTER = 84;
 
+    const DEEP_FREEZE = 38;
+
     /*
      * 2021 Operation Non-Event (O.N.E.) positions
      */
