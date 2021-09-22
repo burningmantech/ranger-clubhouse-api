@@ -141,17 +141,6 @@ class Position extends ApiModel
     const ONE_OPS_MANAGER = 140;
     const ONE_OPS_DEPUTY = 141;
 
-    // TODO: Remove post ONE.
-    const ONE_POSITIONS = [
-        self::ONE_SHIFT_LEAD,
-        self::ONE_TROUBLESHOOTER,
-        self::ONE_GREEN_DOT,
-        self::ONE_GERLACH_PATROL_DIRT,
-        self::ONE_RSCI,
-        self::ONE_OPS_MANAGER,
-        self::ONE_OPS_DEPUTY,
-        self::ONE_HQ_WINDOW,
-    ];
 
     /*
      * Position types
@@ -336,7 +325,7 @@ class Position extends ApiModel
      * @return Position[]|Collection
      */
 
-    public static function findTrainedPositions($positionId)
+    public static function findTrainedPositions(int $positionId)
     {
         return self::select('id', 'title')->where('training_position_id', $positionId)->get();
     }

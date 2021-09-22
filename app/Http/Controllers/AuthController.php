@@ -294,9 +294,6 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'token_type' => 'bearer',
-            // TODO: remove in Jan or Feb 2021 (wait for browser caches to expire and everyone has the frontend
-            // version which uses the 'sub' field in $token)
-            'person_id' => $person->id,
         ]);
     }
 
