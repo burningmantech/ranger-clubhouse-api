@@ -149,7 +149,8 @@ class ClubhouseGroundHogDayCommand extends Command
             'TimesheetCorrectionEnable',
             'BroadcastClubhouseSandbox',
             'BroadcastMailSandbox',
-            'BroadcastSMSSandbox'
+            'BroadcastSMSSandbox',
+            'HQWindowInterfaceEnabled'
         ];
 
         foreach ($trueSettings as $name) {
