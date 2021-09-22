@@ -97,12 +97,6 @@ class Timesheet extends ApiModel
             if ($model->person && $model->person->status == Person::NON_RANGER) {
                 $model->is_non_ranger = true;
             }
-
-            if (in_array($model->position_id, Position::ONE_POSITIONS)) {
-                // Force all ONE positions to be non-ranger volunteer entries.
-                // TODO: Remove post ONE.
-                $model->is_non_ranger = true;
-            }
         });
 
     }
