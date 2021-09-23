@@ -215,8 +215,8 @@ class Position extends ApiModel
     const UNQUALIFIED_UNTRAINED = 'untrained';
 
     const UNQUALIFIED_MESSAGES = [
-        self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT => 'no signed Sandman affidavit',
-        self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'no Burn Perimeter experience',
+        self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT => 'Sandman Affidavit not signed',
+        self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'No Burn Perimeter experience',
         self::UNQUALIFIED_UNTRAINED => 'Not trained',
     ];
 
