@@ -513,15 +513,14 @@ class Schedule extends ApiModel
     public static function summarizeShiftSignups(Person $person): array
     {
         $year = current_year();
-        list ($rows, $positions) = self::findForQuery($person->id, $year);
+        list ($rows, $positions) = self::findForQuery($person->id, $year, [ 'only_signups' => true]);
 
         $positionsById = [];
         foreach ($positions as $position) {
-            $positionById[$position->id] = $position;
+            $positionsById[(int)$position->id] = $position;
         }
-
         $rows = $rows->filter(function ($r) use ($positionsById) {
-            return $positionsById[$r->position_id]->type != Position::TYPE_TRAINING;
+            return $positionsById[(int)$r->position_id]->type != Position::TYPE_TRAINING;
         });
 
         if (!$rows->isEmpty()) {

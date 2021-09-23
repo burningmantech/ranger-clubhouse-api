@@ -74,7 +74,6 @@ class ShiftCoverageReport
         [ Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS ],
         [ Position::RSC_WESL, 'WESL', self::CALLSIGNS ],
         [ Position::OPERATOR, 'Opr', self::CALLSIGNS ],
-        [ Position::RSC_WESL, 'WESL', self::CALLSIGNS ],
         [ [ Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE ], 'TS', self::CALLSIGNS, [ Position::TROUBLESHOOTER_MENTEE => 'Mentee' ] ],
         [ [ Position::LEAL, Position::LEAL_PARTNER ], 'LEAL', self::CALLSIGNS, [ Position::LEAL_PARTNER => 'Partner' ] ],
         [ [ Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN ], 'GDL', self::CALLSIGNS, [ Position::GREEN_DOT_LEAD_INTERN => 'Intern' ] ],
