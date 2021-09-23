@@ -902,6 +902,7 @@ class TimesheetController extends ApiController
                     'unqualified_reason' => $unqualifiedReason,
                     'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason]
                 ];
+                return false;
             }
         }
 
