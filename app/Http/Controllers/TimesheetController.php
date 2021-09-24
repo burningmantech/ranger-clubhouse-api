@@ -402,7 +402,7 @@ class TimesheetController extends ApiController
         $canForceSignon = $this->userHasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
 
         $params = request()->validate([
-            'person_id' => 'required|integer',
+            'person_id' => 'required|integer|exists:person,id',
             'position_id' => 'required|integer|exists:position,id',
             'slot_id' => 'sometimes|integer|exists:slot,id',
         ]);
@@ -448,7 +448,6 @@ class TimesheetController extends ApiController
             'on_duty' => (string)$timesheet->on_duty
         ];
 
-
         return $this->reportSignIn(TimesheetLog::SIGNON, $timesheet, $signonForced, $requiredPositionId, $unqualifiedReason, $log);
     }
 
@@ -458,6 +457,7 @@ class TimesheetController extends ApiController
         $response = [
             'status' => 'success',
             'timesheet_id' => $timesheet->id,
+            'on_duty' => (string) $timesheet->on_duty,
         ];
 
         if ($signonForced) {
