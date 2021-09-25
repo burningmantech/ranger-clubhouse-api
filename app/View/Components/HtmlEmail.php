@@ -11,7 +11,7 @@ class HtmlEmail extends Component
      *
      * @return void
      */
-    public function __construct(public $isPublicEmail = true)
+    public function __construct(public $isPublicEmail = false)
     {
     }
 
