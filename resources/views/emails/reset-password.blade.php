@@ -1,5 +1,5 @@
-@component('html-email')
-    <p>
+<x-html-email :isPublicEmail="true">
+<p>
         Hello {{$greeting}},
     </p>
 
@@ -35,4 +35,4 @@
         <a href="{{$resetURL}}">{{$resetURL}}</a>
     </p>
 
-@endcomponent
+</x-html-email>

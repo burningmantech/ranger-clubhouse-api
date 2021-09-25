@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
 <p>
   Dear VCs,
 </p>
@@ -18,4 +18,4 @@
   <br>
   The Clubhouse
 </p>
-@endcomponent
+</x-html-email>

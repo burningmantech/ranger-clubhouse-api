@@ -149,4 +149,13 @@ class PersonPolicy
     public function bulkLookup(Person $user) {
         return $user->isAdmin();
     }
+
+    /**
+     * Can the person send a message to request
+     * @param Person $user
+     * @return int
+     */
+    public function updateMailingLists(Person $user, Person $person) {
+        return $user->id == $person->id || $user->hasRole([ Role::ADMIN, Role::VC ]);
+    }
 }

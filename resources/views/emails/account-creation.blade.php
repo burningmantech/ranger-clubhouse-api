@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
 <p>
 @if ($status == 'failed')
 Failed to create an account ({{$details}}) for:
@@ -12,4 +12,4 @@ Your humble servant,<br>
 <br>
 The Clubhouse
 </p>
-@endcomponent
+</x-html-email>

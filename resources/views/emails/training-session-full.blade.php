@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
 <p>
 Heads up! A training session has reached capacity.
 </p>
@@ -13,4 +13,4 @@ Your humble servant,<br>
 <br>
 The Clubhouse Bot
 </p>
-@endcomponent
+</x-html-email>

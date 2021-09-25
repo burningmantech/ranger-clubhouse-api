@@ -1,5 +1,5 @@
-@component('html-email')
-    <p>
+<x-html-email :isPublicEmail="true">
+<p>
         Hello from the Black Rock Rangers,
     </p>
     <p>
@@ -37,4 +37,4 @@
         <a href="{{$inviteUrl}}">{{$inviteUrl}}</a>
     </p>
 
-@endcomponent
+</x-html-email>

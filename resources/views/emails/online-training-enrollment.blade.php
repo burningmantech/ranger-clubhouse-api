@@ -1,5 +1,5 @@
-@component('html-email')
-    <p>
+<x-html-email :isPublicEmail="true">
+<p>
         Hello {{$person->callsign}},
     </p>
     <p>
@@ -35,4 +35,4 @@
         Yours sincerely,<br>
         The Ranger Training Academy
     </p>
-@endcomponent
+</x-html-email>

@@ -1,5 +1,5 @@
-@component('html-email')
-<p>
+<x-html-email :isPublicEmail="true">
+  <p>
   Hello from the Ranger Volunteer Coordinators,
 </p>
 
@@ -49,4 +49,4 @@ The following problem(s) were found with your photo submission:
   Yours sincerely,<br>
   The Ranger Volunteer Coordinators
 </p>
-@endcomponent
+</x-html-email>

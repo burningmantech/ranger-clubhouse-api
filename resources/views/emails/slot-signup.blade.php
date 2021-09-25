@@ -1,5 +1,5 @@
-@component('html-email')
-<p>Hello from the Black Rock Rangers,</p>
+<x-html-email :isPublicEmail="true">
+  <p>Hello from the Black Rock Rangers,</p>
 <p>
   * * * DO NOT REPLY TO THIS MESSAGE * * *
 </p>
@@ -29,4 +29,4 @@
 <p>
   The Black Rock Rangers
 </p>
-@endcomponent
+</x-html-email>
