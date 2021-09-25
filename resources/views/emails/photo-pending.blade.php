@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
     <p>
         Hello Photo Reviewer,
     </p>
@@ -29,4 +29,4 @@
         Forever your humble digital servant,<br>
         The Clubhouse Bot
     </p>
-@endcomponent
+</x-html-email>

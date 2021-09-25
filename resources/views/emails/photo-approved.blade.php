@@ -1,5 +1,5 @@
-@component('html-email')
-<p>
+<x-html-email :isPublicEmail="true">
+  <p>
   Hello from the Ranger Volunteer Coordinators,
 </p>
 
@@ -21,4 +21,4 @@
   Yours sincerely,<br>
   The Volunteer Coordinators
 </p>
-@endcomponent
+</x-html-email>

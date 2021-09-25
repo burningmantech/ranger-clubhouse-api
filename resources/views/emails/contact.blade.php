@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
 <p>
 Dear Ranger {{$recipientPerson->callsign}},
 </p>
@@ -38,4 +38,4 @@ Thank you,
 <p>
     The Black Rock Rangers
 </p>
-@endcomponent
+</x-html-email>

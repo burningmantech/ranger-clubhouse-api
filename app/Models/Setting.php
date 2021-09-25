@@ -153,6 +153,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'MailingListUpdateRequestEmail' => [
+            'description' => 'Email address(es) to send a message when an active Ranger requests to update the mailing list subscriptions',
+            'type' => self::TYPE_EMAIL,
+        ],
+
         'MealDates' => [
             'description' => 'Commissary dates and hours',
             'type' => self::TYPE_STRING,

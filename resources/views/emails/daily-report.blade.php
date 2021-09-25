@@ -1,4 +1,4 @@
-@component('html-email')
+<x-html-email>
     <h2>Daily Report for {{date('Y-m-d')}}</h2>
 
     <p>
@@ -238,4 +238,4 @@
             </tbody>
         </table>
     @endif
-@endcomponent
+</x-html-email>
