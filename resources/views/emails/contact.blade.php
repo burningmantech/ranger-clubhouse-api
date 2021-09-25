@@ -1,4 +1,4 @@
-<x-html-email>
+<x-html-email :isPublicEmail="true">
 <p>
 Dear Ranger {{$recipientPerson->callsign}},
 </p>

@@ -111,7 +111,11 @@ class ContactController extends ApiController
             throw new \InvalidArgumentException('Person does not have an active/current status');
         }
 
-        $params = request()->validate(['old_email' => 'required|string']);
+        $params = request()->validate([
+            'old_email' => 'required|string',
+            'message' => 'sometimes|string|max:1500'
+        ]);
+
         $oldEmail = $params['old_email'];
 
         $email = setting('MailingListUpdateRequestEmail');
@@ -125,7 +129,7 @@ class ContactController extends ApiController
             return $this->success();
         }
 
-        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail));
+        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? ''));
         return $this->success();
     }
 }

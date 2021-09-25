@@ -12,20 +12,13 @@ class UpdateMailingListSubscriptionsMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Person $person;
-    public Person $user;
-    public string $oldEmail;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct(Person $person, Person $user, string $oldEmail)
+    public function __construct(public Person $person, public Person $user, public string $oldEmail, public string $additionalLists)
     {
-        $this->person = $person;
-        $this->user = $user;
-        $this->oldEmail = $oldEmail;
     }
 
     /**
