@@ -726,9 +726,8 @@ class RBS
          */
 
         if (!$sendClubhouse && !$isEmergency) {
-            $rows = $rows->filter(function ($row) use ($sendSms, $sendEmail) {
-                return ($sendSms && $row->use_sms) || ($sendEmail && $row->use_email);
-            });
+            $rows = $rows->filter(fn ($row) => ($sendSms && $row->use_sms) || ($sendEmail && $row->use_email))
+                ->values();
         }
 
         if ($countOnly) {
