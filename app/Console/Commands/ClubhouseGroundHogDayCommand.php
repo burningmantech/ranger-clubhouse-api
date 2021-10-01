@@ -38,6 +38,7 @@ class ClubhouseGroundHogDayCommand extends Command
                     {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-groundhog-day-YYYY-MM-DD.sql}
                     {--tempdb=ranger_ghd : temporary database name}
                     {--day=' . (date('Y') - 1) . '-08-30 18:00:00 : ground hog day date/time}
+                    {--no-redact : do not react the database}
                     ';
         parent::__construct();
     }
@@ -51,6 +52,7 @@ class ClubhouseGroundHogDayCommand extends Command
     {
         $ghdname = $this->option('tempdb') ?? self::GROUNDHOG_DATABASE;
         $groundHogDay = $this->option('day') ?? self::GROUNDHOG_DATETIME;
+        $noRedact = $this->option('no-redact') ?? false;
         $ghdTime = strtotime($groundHogDay);
         $year = date('Y', $ghdTime);
 
@@ -74,7 +76,23 @@ class ClubhouseGroundHogDayCommand extends Command
         config(['database.connections.mysql.database' => $ghdname]);
         DB::purge('mysql');
 
-        RedactDatabase::execute($year);
+        if ($noRedact) {
+            $this->info('NOT redacting the database.');
+        } else {
+            $this->info('Redacting the database');
+            RedactDatabase::execute($year);
+        }
+
+        // Mark everyone on site who had a timesheet or was scheduled to work as on site and signed paperwork
+        $peopleIds = DB::table('person')
+            ->select('person.id')
+            ->where(function ($q) use ($year) {
+                $start = "{$year}-08-20";
+                $end = "{$year}-09-10";
+                $q->whereRaw("EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE (slot.begins >= '$start' AND slot.ends <= '$end') AND person_slot.person_id=person.id LIMIT 1)");
+                $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
+            })
+            ->pluck('id');
 
         // Kill anytime sheets in the future
         DB::table('timesheet')->where('on_duty', '>', $groundHogDay)->delete();
@@ -103,25 +121,27 @@ class ClubhouseGroundHogDayCommand extends Command
         DB::table('asset')->whereYear('created_at', '>', $year);
 
         // Mark some assets as being checked out
-        DB::table('asset_person')->whereYear('checked_in', '>=', $year)->delete();
-        DB::table('asset_person')->where('checked_out', '>=', $groundHogDay)->update(['checked_in' => null]);
+        DB::table('asset_person')->where('checked_out', '>', $groundHogDay)->delete();
+        DB::table('asset_person')->where('checked_in', '>=', $groundHogDay)->update([ 'checked_in' => null ]);
 
-        // Mark everyone on site who had a timesheet or was scheduled to work as on site and signed paperwork
-        $peopleIds = DB::table('person')
-            ->select('person.id')
-            ->where(function ($q) use ($ghdTime, $year) {
-                $start = date('Y-08-20', $ghdTime);
-                $end = date('Y-09-04', $ghdTime);
-                $q->whereRaw("EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE (slot.begins >= '$start' AND slot.ends <= '$end') AND person_slot.person_id=person.id LIMIT 1)");
-                $q->orWhereRaw("EXISTS (SELECT 1 FROM timesheet WHERE YEAR(timesheet.on_duty)=$year AND timesheet.person_id=person.id LIMIT 1)");
-            })
-            ->pluck('id');
 
         DB::table('person')->whereIn('id', $peopleIds)
             ->update([
                 'on_site' => true,
                 'behavioral_agreement' => true,
             ]);
+
+
+        $personEvents = [];
+        foreach ($peopleIds as $id) {
+            $personEvents[] = [
+                'person_id' => $id,
+                'year' => $year,
+                'signed_motorpool_agreement' => true,
+                'asset_authorized' => true
+            ];
+        }
+        DB::table('person_event')->insertOrIgnore($personEvents);
 
         DB::table('person_event')->where('year', $year)
             ->update([
@@ -154,8 +174,12 @@ class ClubhouseGroundHogDayCommand extends Command
         ];
 
         foreach ($trueSettings as $name) {
-            Setting::where('name', $name)->update(['value' => 'true']);
+            $setting = Setting::find($name);
+            $setting->value = 'true';
+            $setting->update();
         }
+
+        Setting::find('DashboardPeriod')->update([ 'value' => 'event']);
 
         $this->info("Creating mysql dump of groundhog database");
         $dump = $this->option('dumpfile') ?? "rangers-groundhog-day-" . date('Y-m-d') . ".sql";

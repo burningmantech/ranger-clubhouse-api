@@ -482,19 +482,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /*
      * Bulk lookup by callsigns
-     * return an associatve array index by callsign
+     * return an associative array index by callsign
      */
 
-    public static function findAllByCallsigns(array $callsigns, $toLowerCase = false)
+    public static function findAllByCallsigns(array $callsigns)
     {
-        $rows = self::whereIn('callsign', $callsigns)->get();
-
-        if (!$toLowerCase) {
-            return $rows->keyBy('callsign');
-        }
+        $normalizedCallsigns = array_map(fn ($name) => Person::normalizeCallsign($name), $callsigns);
+        $rows = self::whereIn('callsign_normalized', $normalizedCallsigns)->get();
 
         return $rows->reduce(function ($keys, $row) {
-            $keys[strtolower($row->callsign)] = $row;
+            $keys[strtolower($row->callsign_normalized)] = $row;
             return $keys;
         }, []);
     }
@@ -636,7 +633,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign($callsign)
     {
-        return preg_replace('/[^\w]/', '', $callsign);
+        return strtolower(preg_replace('/[^\w]/', '', $callsign));
     }
 
     /**

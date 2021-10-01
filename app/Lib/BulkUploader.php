@@ -112,10 +112,10 @@ class BulkUploader
             return [];
         }
 
-        $callsigns = Person::findAllByCallsigns($callsigns, true);
+        $callsigns = Person::findAllByCallsigns($callsigns);
 
         foreach ($records as $record) {
-            $record->person = $callsigns[strtolower($record->callsign)] ?? null;
+            $record->person = $callsigns[Person::normalizeCallsign($record->callsign)] ?? null;
         }
 
         $processAction = self::ACTIONS[$action] ?? null;
