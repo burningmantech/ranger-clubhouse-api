@@ -2,24 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\ActionLog;
-use App\Models\Person;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-
-use Illuminate\Database\Query\Builder;
-use Illuminate\Support\MessageBag;
-use Illuminate\Support\Facades\Auth;
-
-use Illuminate\Validation\Factory as Validator;
-
-use App\Http\RestApi\SerializeRecord;
-use App\Http\RestApi\DeserializeRecord;
-
-use DateTimeInterface;
-
 use Carbon\Carbon;
+use DateTimeInterface;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -172,7 +162,7 @@ abstract class ApiModel extends Model
             $personId = ($this->getAttribute('person_id') ?? null);
         }
 
-        ActionLog::record(Auth::user(), $table .'-'.$event, $this->auditReason, $data, $personId);
+        ActionLog::record(Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
     }
 
     public function save($options = [])
@@ -202,7 +192,7 @@ abstract class ApiModel extends Model
             return true;
         }
 
-        $validator = \Validator::make($this->getAttributes(), $rules);
+        $validator = Validator::make($this->getAttributes(), $rules);
 
         if ($validator->fails()) {
             $this->errors = $validator->errors();
@@ -290,7 +280,8 @@ abstract class ApiModel extends Model
         return $date->format('Y-m-d H:i:s');
     }
 
-    public function setAuditModel($audit) {
+    public function setAuditModel($audit)
+    {
         $this->auditModel = $audit;
     }
 }

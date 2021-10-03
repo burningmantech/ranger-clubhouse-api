@@ -173,9 +173,10 @@ Route::group([
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');
 
+    Route::get('person/{person}/tickets-provisions-progress', 'PersonController@ticketsProvisionsProgress');
+    Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
-    Route::get('person/{person}/credits', 'PersonController@credits');
     Route::get('person/{person}/milestones', 'PersonController@milestones');
     Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');

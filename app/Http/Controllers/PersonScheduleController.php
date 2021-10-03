@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Jobs\TrainingSignupEmailJob;
 use App\Lib\Scheduling;
+use App\Lib\WorkSummary;
 use App\Mail\TrainingSessionFullMail;
+use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
@@ -43,8 +45,8 @@ class PersonScheduleController extends ApiController
         ];
 
         // Try to reduce the round trips to the backend by including common associated scheduling info
-         if ($query['credits_earned'] ?? false) {
-             $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
+        if ($query['credits_earned'] ?? false) {
+            $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
         }
 
         if ($query['schedule_summary'] ?? false) {
@@ -368,26 +370,36 @@ class PersonScheduleController extends ApiController
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
 
-        $time = 0;
-        $credits = 0.0;
+        $eventDates = EventDate::findForYear($year);
+        $positionsById = [];
+        foreach ($positions as $position) {
+            $positionsById[$position->id] = $position;
+        }
 
-        foreach ($rows as $row) {
-            if ($row->position_count_hours) {
+        $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
+        foreach ($rows as $slot) {
+            if ($slot->slot_begins->lt($now)) {
                 // Truncate any shifts which have started
-                if ($row->slot_begins->lt($now)) {
-                    $row->slot_begins = $now;
-                    $row->slot_begins_time = $now->timestamp;
-                }
-
-                $time += $row->slot_duration;
+                $slot->slot_begins = $now;
+                $slot->slot_begins_time = $now->timestamp;
             }
-            $credits += $row->credits;
+            $position = $positionsById[$slot->position_id];
+            $summary->computeTotals($slot->position_id, $slot->slot_begins_time, $slot->slot_ends_time, $position->count_hours);
         }
 
         return response()->json([
-            'duration' => $time,
-            'credits' => $credits,
-            'slot_count' => count($rows)
+            'pre_event_duration' => $summary->pre_event_duration,
+            'pre_event_credits' => $summary->pre_event_credits,
+            'event_duration' => $summary->event_duration,
+            'event_credits' => $summary->event_credits,
+            'post_event_duration' => $summary->post_event_duration,
+            'post_event_credits' => $summary->post_event_credits,
+            'total_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration + $summary->other_duration),
+            'total_credits' => ($summary->pre_event_credits + $summary->event_credits + $summary->post_event_credits),
+            'other_duration' => $summary->other_duration,
+            'counted_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
+            'event_start' => (string)$eventDates->event_start,
+            'event_end' => (string)$eventDates->event_end,
         ]);
     }
 

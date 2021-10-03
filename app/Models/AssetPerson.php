@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
-use App\Models\Person;
-use App\Models\AssetAttachment;
-use App\Models\Asset;
-
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 class AssetPerson extends ApiModel
 {
     protected $table = 'asset_person';
+    protected $auditModel = true;
 
     protected $fillable = [
         'person_id',
@@ -61,26 +58,37 @@ class AssetPerson extends ApiModel
      * person_id: person to search for if absent, person callsign will also be looked up
      *
      * @param array $query conditions to look up
-     *
+     * @return Collection|array
      */
-    public static function findForQuery($query)
+
+    public static function findForQuery($query): Collection|array
     {
         $sql = self::with(['asset', 'attachment']);
 
-        if (@$query['person_id']) {
-            $sql = $sql->where('person_id', $query['person_id']);
+        $personId = $query['person_id'] ?? null;
+        $year = $query['year'] ?? null;
+
+        if ($personId) {
+            $sql->where('person_id', $personId);
         } else {
-            $sql = $ql->with(['person:id,callsign']);
+            $sql = $sql->with(['person:id,callsign']);
         }
 
-        if (@$query['year']) {
-            $sql = $sql->whereYear('checked_out', $query['year']);
+        if ($year) {
+            $sql->whereYear('checked_out', $year);
         }
 
         return $sql->orderBy('checked_out')->get();
     }
 
-    public static function retrieveHistory($assetId)
+    /**
+     * Find the check out/in history for an asset.
+     *
+     * @param $assetId
+     * @return Collection|array
+     */
+
+    public static function retrieveHistory($assetId): Collection|array
     {
         return self::where('asset_id', $assetId)
             ->with(['person:id,callsign', 'attachment'])
@@ -89,9 +97,11 @@ class AssetPerson extends ApiModel
 
     /**
      * Find if a person has checked out an asset.
+     * @param $assetId
+     * @return Builder|Model|null
      */
 
-    public static function findCheckedOutPerson($assetId)
+    public static function findCheckedOutPerson($assetId): Model|Builder|null
     {
         return self::where('asset_id', $assetId)
             ->whereNull('checked_in')
@@ -99,13 +109,14 @@ class AssetPerson extends ApiModel
             ->first();
     }
 
+    /**
+     * Set the attachment_id column, set to null if value is empty
+     *
+     * @param $value
+     */
+
     public function setAttachmentIdAttribute($value)
     {
-        if (empty($value)) {
-            $value = null;
-        }
-
-        $this->attributes['attachment_id'] = $value;
+        $this->attributes['attachment_id'] = empty($value) ? null : $value;
     }
-
 }

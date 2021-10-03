@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Controllers\ApiController;
-
 use App\Models\AssetPerson;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class AssetPersonController extends ApiController
 {
     /**
      * Find an asset set based on person and/or year.
      *
+     * @return JsonResponse
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
-            'year'      => 'sometimes|integer',
+            'year' => 'sometimes|integer',
         ]);
 
         $rows = AssetPerson::findForQuery($params);
@@ -28,11 +28,14 @@ class AssetPersonController extends ApiController
 
     /**
      * Create an asset person
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
-        $this->authorize('store', [ AssetPerson::class ]);
+        $this->authorize('store', [AssetPerson::class]);
         $asset_person = new AssetPerson;
         $this->fromRest($asset_person);
 
@@ -45,8 +48,13 @@ class AssetPersonController extends ApiController
 
     /**
      * Retrieve an asset person
+     *
+     * @param AssetPerson $asset_person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function show(AssetPerson $asset_person)
+
+    public function show(AssetPerson $asset_person): JsonResponse
     {
         $this->authorize('show', $asset_person);
         $asset_person->loadRelationships();
@@ -56,8 +64,13 @@ class AssetPersonController extends ApiController
 
     /**
      * Update an AssetPerson record
+     *
+     * @param AssetPerson $asset_person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function update(AssetPerson $asset_person)
+
+    public function update(AssetPerson $asset_person): JsonResponse
     {
         $this->authorize('update', $asset_person);
         $this->fromRest($asset_person);
@@ -71,8 +84,13 @@ class AssetPersonController extends ApiController
 
     /**
      * Delete an asset person record
+     *
+     * @param AssetPerson $asset_person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(AssetPerson $asset_person)
+
+    public function destroy(AssetPerson $asset_person): JsonResponse
     {
         $this->authorize('destroy', $asset_person);
         $asset_person->delete();
@@ -80,21 +98,24 @@ class AssetPersonController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /*
+    /**
      * Radio checkout report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function radioCheckoutReport()
+    public function radioCheckoutReport(): JsonResponse
     {
         $this->authorize('radioCheckoutReport', AssetPerson::class);
 
         $params = request()->validate([
-          'include_qualified' => 'sometimes|boolean',
-          'event_summary'     => 'sometimes|boolean',
-          'hour_limit'        => 'sometimes|integer',
-          'year'              => 'sometimes|integer',
-      ]);
+            'include_qualified' => 'sometimes|boolean',
+            'event_summary' => 'sometimes|boolean',
+            'hour_limit' => 'sometimes|integer',
+            'year' => 'sometimes|integer',
+        ]);
 
-        return response()->json([ 'radios' => RadioCheckoutReport::execute($params)]);
+        return response()->json(['radios' => RadioCheckoutReport::execute($params)]);
     }
 }

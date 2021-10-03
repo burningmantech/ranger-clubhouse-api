@@ -577,9 +577,18 @@ class Schedule extends ApiModel
      * @return array
      */
 
-    public static function scheduleSummaryForPersonYear(int $personId, int $year): array
+    public static function scheduleSummaryForPersonYear(int $personId, int $year, bool $remaining = false): object
     {
-        list ($rows, $positions) = self::findForQuery($personId, $year, ['only_signups' => true]);
+        $query = [
+            'only_signups' => true
+        ];
+
+        if ($remaining){
+            $query['remaining']  = true;
+        }
+        $now = now();
+
+        list ($rows, $positions) = self::findForQuery($personId, $year, $query);
 
         $eventDates = EventDate::findForYear($year);
 
@@ -592,7 +601,7 @@ class Schedule extends ApiModel
             $time = $rows->pluck('slot_duration')->sum();
             $credits = $rows->pluck('credits')->sum();
 
-            return [
+            return (object)[
                 'pre_event_duration' => 0,
                 'pre_event_credits' => 0,
                 'event_duration' => $time,
@@ -614,11 +623,16 @@ class Schedule extends ApiModel
         }
 
         foreach ($rows as $row) {
+            if ($remaining && $row->slot_begins->lt($now)) {
+                // Truncate any shifts which have started
+                $row->slot_begins = $now;
+                $row->slot_begins_time = $now->timestamp;
+            }
             $position = $positionsById[$row->position_id];
             $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $position->count_hours);
         }
 
-        return [
+        return (object) [
             'pre_event_duration' => $summary->pre_event_duration,
             'pre_event_credits' => $summary->pre_event_credits,
             'event_duration' => $summary->event_duration,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\AppreciationProgress;
 use App\Lib\BulkLookup;
 use App\Lib\Milestones;
 use App\Lib\Reports\AlphaShirtsReport;
@@ -11,6 +12,7 @@ use App\Lib\Reports\PeopleByRoleReport;
 use App\Lib\Reports\PeopleByStatusReport;
 use App\Lib\Reports\RecommendStatusChangeReport;
 use App\Lib\Reports\TimesheetWorkSummaryReport;
+use App\Lib\TicketsAndProvisionsProgress;
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\Person;
@@ -772,6 +774,25 @@ class PersonController extends ApiController
 
         return response()->json([
             'people' => BulkLookup::retrieveByCallsignOrEmail($params['people'])
+        ]);
+    }
+
+    /**
+     * Report on how the person is doing with earning tickets and provisions (meals, showers, clothing.)
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function ticketsProvisionsProgress(Person $person): JsonResponse
+    {
+        if (!in_array($person->status, Person::LIVE_STATUSES)) {
+            throw new InvalidArgumentException('Person may not earn tickets and provisions.');
+        }
+        $this->authorize('ticketsProvisionsProgress', $person);
+        return response()->json([
+            'progress' => TicketsAndProvisionsProgress::compute($person)
         ]);
     }
 }
