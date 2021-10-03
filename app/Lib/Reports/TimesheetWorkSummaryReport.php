@@ -15,10 +15,10 @@ class TimesheetWorkSummaryReport
      *
      * @param int $personId
      * @param int $year
-     * @return array
+     * @return object
      */
 
-    public static function execute(int $personId, int $year) : array
+    public static function execute(int $personId, int $year) : object
     {
         $rows = Timesheet::findForQuery(['person_id' => $personId, 'year' => $year]);
 
@@ -33,7 +33,7 @@ class TimesheetWorkSummaryReport
             $time = $rows->pluck('duration')->sum();
             $credits = $rows->pluck('credits')->sum();
 
-            return [
+            return (object) [
                 'pre_event_duration' => 0,
                 'pre_event_credits' => 0,
                 'event_duration' => $time,
@@ -59,7 +59,7 @@ class TimesheetWorkSummaryReport
             );
         }
 
-        return [
+        return (object) [
             'pre_event_duration' => $summary->pre_event_duration,
             'pre_event_credits' => $summary->pre_event_credits,
             'event_duration' => $summary->event_duration,

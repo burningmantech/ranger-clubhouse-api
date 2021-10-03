@@ -153,9 +153,23 @@ class PersonPolicy
     /**
      * Can the person send a message to request
      * @param Person $user
-     * @return int
+     * @param Person $person
+     * @return bool
      */
-    public function updateMailingLists(Person $user, Person $person) {
+
+    public function updateMailingLists(Person $user, Person $person) : bool {
         return $user->id == $person->id || $user->hasRole([ Role::ADMIN, Role::VC ]);
+    }
+
+    /**
+     * Can the user view the tickets & provisions progress?
+     *
+     * @param Person $user
+     * @param Person $person
+     * @return bool
+     */
+
+    public function ticketsProvisionsProgress(Person $user, Person $person) : bool {
+        return ($user->id == $person->id) || $user->hasRole(Role::MANAGE);
     }
 }
