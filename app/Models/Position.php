@@ -282,6 +282,8 @@ class Position extends ApiModel
             $sql->where('type', $type);
         }
 
+        // if GPE
+        $sql->where('id', '>=', 500);
         return $sql->get();
     }
 
@@ -303,6 +305,7 @@ class Position extends ApiModel
         if ($excludeDirt) {
             $sql = $sql->where('id', '!=', Position::TRAINING);
         }
+        $sql->where('id', '>=', '500');
 
         return $sql->get()->toArray();
     }

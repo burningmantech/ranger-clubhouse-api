@@ -44,8 +44,9 @@ class PeopleByPositionReport
             DB::raw("(SELECT COUNT(*) FROM person_position WHERE position_id = position.id) AS num_people"),
             DB::raw("(SELECT COUNT(*) FROM person_position"
                 . " INNER JOIN person ON person.id = person_position.person_id"
-                . " WHERE position_id = position.id AND person.on_site) AS num_on_site")
+                . " WHERE position_id > 500 AND position_id = position.id AND person.on_site) AS num_on_site")
         );
+        // gpe position_id > 500
         foreach ($positionQuery->get() as $pos) {
             $position = $pos->toArray();
             if (!$position['new_user_eligible'] && !$position['all_rangers']) { // show people with the position

@@ -74,6 +74,8 @@ class Slot extends ApiModel
 
         if ($positionId) {
             $sql->where('position_id', $positionId);
+            // if GPE
+             $sql->where('position_id', '>=', '500');
         }
 
         if ($forRollcall) {

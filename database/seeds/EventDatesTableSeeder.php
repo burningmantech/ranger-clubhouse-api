@@ -12,7 +12,8 @@ class EventDatesTableSeeder extends Seeder
      */
     public function run()
     {
-        
+        // start of this week
+        $seed_event_date = strtotime('last monday');
 
         \DB::table('event_dates')->delete();
         
@@ -97,8 +98,21 @@ class EventDatesTableSeeder extends Seeder
                 'pre_event_slot_start' => '2020-08-20 00:00:00',
                 'pre_event_slot_end' => '2020-08-28 00:00:00',
             ),
+            // gpe development - make a fake event for this coming week.
+            // remove before going to production
+            8 =>
+            array (
+
+                'event_start' => date('Y-m-d H:i:s', $seed_event_date),
+                'event_end'   => date('Y-m-d H:i:s', strtotime('1 week', $seed_event_date)),
+                'pre_event_start' => date('Y-01-01 00:00:00'),
+                'post_event_end' => date('Y-12-31 23:59:00'),
+                'id' => 9,
+                'pre_event_slot_start' => date('Y-m-d H:i:s', strtotime('-10 days', $seed_event_date)),
+                'pre_event_slot_end'   => date('Y-m-d H:i:s', strtotime('-2 days',  $seed_event_date))
+            )
         ));
         
         
     }
-}
+} 

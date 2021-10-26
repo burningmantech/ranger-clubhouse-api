@@ -141,6 +141,7 @@ class Schedule extends ApiModel
             $positions = DB::table('position')
                 ->select('id', 'title', 'type', 'contact_email', 'count_hours')
                 ->whereIn('id', $rows->pluck('position_id')->unique())
+                ->where('id', '>=', '500')
                 ->get()
                 ->toArray();
         } else {
