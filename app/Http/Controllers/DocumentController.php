@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DocumentController extends ApiController
@@ -11,13 +12,13 @@ class DocumentController extends ApiController
     /**
      * Display a document listing
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
     public function index()
     {
-        $this->authorize('index', [ Document::class ]);
+        $this->authorize('index', [Document::class]);
 
         return $this->success(Document::findAll(), null, 'document');
     }
@@ -25,14 +26,14 @@ class DocumentController extends ApiController
     /**
      * Store a document
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param Request $request
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
     public function store()
     {
-        $this->authorize('store', [ Document::class ]);
+        $this->authorize('store', [Document::class]);
         $personId = $this->user->id;
         $document = new Document;
         $this->fromRest($document);
@@ -49,8 +50,8 @@ class DocumentController extends ApiController
     /**
      * Display a document
      *
-     * @param  \App\Models\Document  $document
-     * @return \Illuminate\Http\JsonResponse
+     * @param Document $document
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
@@ -63,8 +64,8 @@ class DocumentController extends ApiController
     /**
      * Update a document
      *
-     * @param  \App\Models\Document  $document
-     * @return \Illuminate\Http\JsonResponse
+     * @param Document $document
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
@@ -86,8 +87,8 @@ class DocumentController extends ApiController
     /**
      * Remove the document
      *
-     * @param  \App\Models\Document  $document
-     * @return \Illuminate\Http\JsonResponse
+     * @param Document $document
+     * @return JsonResponse
      * @throws AuthorizationException
      */
     public function destroy(Document $document)

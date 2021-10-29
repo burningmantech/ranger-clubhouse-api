@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
+use App\Lib\Agreements;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentDelivery;
 use App\Models\ActionLog;
@@ -45,6 +46,7 @@ use App\Models\TrainingSession;
 use App\Policies\AccessDocumentDeliveryPolicy;
 use App\Policies\AccessDocumentPolicy;
 use App\Policies\ActionLogPolicy;
+use App\Policies\AgreementsPolicy;
 use App\Policies\AlertPersonPolicy;
 use App\Policies\AlertPolicy;
 use App\Policies\AssetAttachmentPolicy;
@@ -71,7 +73,6 @@ use App\Policies\SchedulePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SlotPolicy;
 use App\Policies\SurveyPolicy;
-use App\Policies\SurveyAnswerPolicy;
 use App\Policies\SurveyGroupPolicy;
 use App\Policies\SurveyQuestionPolicy;
 use App\Policies\TimesheetMissingPolicy;
@@ -90,6 +91,7 @@ class AuthServiceProvider extends ServiceProvider
         AccessDocument::class => AccessDocumentPolicy::class,
         AccessDocumentDelivery::class => AccessDocumentDeliveryPolicy::class,
         ActionLog::class => ActionLogPolicy::class,
+        Agreements::class => AgreementsPolicy::class,
         Alert::class => AlertPolicy::class,
         AlertPerson::class => AlertPersonPolicy::class,
         Asset::class  => AssetPolicy::class,
@@ -116,7 +118,6 @@ class AuthServiceProvider extends ServiceProvider
         Setting::class => SettingPolicy::class,
         Slot::class => SlotPolicy::class,
         Survey::class => SurveyPolicy::class,
-        SurveyAnswer::class => SurveyAnswerPolicy::class,
         SurveyGroup::class => SurveyGroupPolicy::class,
         SurveyQuestion::class => SurveyQuestionPolicy::class,
         Timesheet::class => TimesheetPolicy::class,

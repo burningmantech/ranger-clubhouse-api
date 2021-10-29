@@ -76,6 +76,7 @@ Route::group([
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
     Route::resource('action-log', 'ActionLogController', ['only' => 'index']);
+
     Route::resource('clubhouse1-log', 'Clubhouse1LogController', ['only' => 'index']);
 
     Route::resource('alert', 'AlertController');
@@ -90,6 +91,10 @@ Route::group([
     Route::post('asset-person/checkout', 'AssetPersonController@checkout');
     Route::post('asset-person/{asset_person}/checkin', 'AssetPersonController@checkin');
     Route::resource('asset-person', 'AssetPersonController');
+
+    Route::post('agreements/{person}/{document}/sign', 'AgreementsController@sign');
+    Route::get('agreements/{person}/{document}', 'AgreementsController@show');
+    Route::get('agreements/{person}', 'AgreementsController@index');
 
     Route::post('bmid/export', 'BmidController@export');
     Route::get('bmid/exports', 'BmidController@exportList');
