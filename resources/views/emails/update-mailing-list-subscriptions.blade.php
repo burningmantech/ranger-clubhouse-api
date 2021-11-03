@@ -8,18 +8,24 @@
         Old email address: {{$oldEmail}}<br>
         New email address: {{$person->email}}<br>
     </p>
-    <p>
-        @if (empty($additionalLists))
-            No additional mailing lists to update were given.
-        @else
-            The following mailing list(s) should be updated in addition to Allcom &amp; Announce:<br>
+    @if (empty($additionalLists))
+        <p>
+            {{$person->callsign}} did not state if other mailing lists should be updated.
+        </p>
+    @else
+        <p>
+            {{$person->callsign}} left the following message about updating other Ranger mailing lists besides Allcom &amp; Announce:
+        </p>
+        <p>
             {!! nl2br(e($additionalLists)) !!}
-        @endif
-    </p>
+        </p>
+    @endif
     <p>
         You can use the link below to respond to {{$person->callsign}} at their new address.
     </p>
     <p>
-        <a href="mailto:{{$person->email}}?subject=Ranger mailing list subscriptions ">Send email to {{$person->callsign}}</a>
+        <a href="mailto:{{$person->email}}?subject=Ranger mailing list subscriptions">
+            Send email to {{$person->callsign}} at {{$person->email}}
+        </a>
     </p>
 </x-html-email>
