@@ -50,6 +50,7 @@ class ReservedCallsigns
         'Tango',
         'Uniform',
         'Victor',
+        'Whiskey',
         'X-ray',
         'Yankee',
         'Zulu'
