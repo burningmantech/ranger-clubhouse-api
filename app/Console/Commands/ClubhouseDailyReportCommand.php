@@ -3,13 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Mail\DailyReportMail;
-
 use App\Models\ActionLog;
 use App\Models\Broadcast;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
 use App\Models\PersonStatus;
-
 use Illuminate\Console\Command;
 
 class ClubhouseDailyReportCommand extends Command
@@ -48,12 +46,14 @@ class ClubhouseDailyReportCommand extends Command
             ->get();
 
         $settings = setting([
-            'OnlineTrainingEnabled',
+            'DashboardPeriod',
+            'LoginManageOnPlayaEnabled',
             'OnlineTrainingDisabledAllowSignups',
+            'OnlineTrainingEnabled',
             'PhotoUploadEnable',
             'TicketingPeriod',
             'TimesheetCorrectionEnable',
-            'DashboardPeriod',
+            'TrainingSeasonalRoleEnabled',
         ]);
 
         $settingLogs = ActionLog::findForQuery(

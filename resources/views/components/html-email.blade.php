@@ -31,20 +31,28 @@
 
         table {
             border-collapse: separate;
-            mso-table-lspace: 0pt;
-            mso-table-rspace: 0pt;
             width: 100%;
         }
 
-        table td {
+        td {
             font-family: sans-serif;
             font-size: 14px;
             vertical-align: top;
+            padding: 5px;
         }
 
-        table th {
+        th {
             text-align: left;
+            padding: 5px;
         }
+
+        thead, tbody, tfoot, tr, td, th {
+            border-color: inherit;
+            border-style: solid;
+            border-width: 0;
+        }
+
+
 
         /* -------------------------------------
               BODY & CONTAINER
@@ -262,11 +270,10 @@
             border-bottom: 2px solid #dee2e6;
             color: #495057;
             background-color: #e9ecef;
-            border-color: #dee2e6;
         }
 
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(0, 0, 0, 0.05);
+        .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background-color: #eff8fd;
         }
 
         .table-sm {

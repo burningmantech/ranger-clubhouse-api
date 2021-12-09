@@ -537,6 +537,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'TrainingSeasonalRoleEnabled' => [
+            'description' => "Enable Training Seasonal Role",
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
+        ],
+
         'TrainingAcademyEmail' => [
             'description' => 'Training Academy Email',
             'type' => self::TYPE_EMAIL,
@@ -629,10 +635,10 @@ class Setting extends ApiModel
 
         $settings = [];
         foreach (self::DESCRIPTIONS as $name => $desc) {
-           $settings[] = $rows[$name] ?? new Setting(['name' => $name]);
-         }
+            $settings[] = $rows[$name] ?? new Setting(['name' => $name]);
+        }
 
-        usort($settings, fn ($a, $b) => strcasecmp($a->name, $b->name));
+        usort($settings, fn($a, $b) => strcasecmp($a->name, $b->name));
 
         return $settings;
     }
@@ -722,16 +728,16 @@ class Setting extends ApiModel
 
     public function getDescriptionAttribute()
     {
-       return self::DESCRIPTIONS[$this->name]['description'] ?? null;
+        return self::DESCRIPTIONS[$this->name]['description'] ?? null;
     }
 
     public function getOptionsAttribute()
     {
-       return self::DESCRIPTIONS[$this->name]['options'] ?? null;
+        return self::DESCRIPTIONS[$this->name]['options'] ?? null;
     }
 
     public function getIsCredentialAttribute()
     {
-        return  self::DESCRIPTIONS[$this->name]['is_credential'] ?? false;
+        return self::DESCRIPTIONS[$this->name]['is_credential'] ?? false;
     }
 }

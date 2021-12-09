@@ -754,9 +754,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Retrieve the person's assigned roles. Add MANAGE if the person has MANAGE_ON_PLAYA
-     * and the Login Management On Playa setting is enabled.
+     * Retrieve the person's assigned roles.
      *
+     * Add MANAGE if person has MANAGE_ON_PLAYA and if LoginManageOnPlayaEnabled is true
+     * Add TRAINER if person has TRAINER_SEASONAL and if TrainingSeasonalRoleEnabled is true
      */
 
     public function retrieveRoles(): void
@@ -765,6 +766,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         if (in_array(Role::MANAGE_ON_PLAYA, $this->roles) && setting('LoginManageOnPlayaEnabled')) {
             $this->roles[] = Role::MANAGE;
+        }
+
+        if (in_array(Role::TRAINER_SEASONAL, $this->roles) && setting('TrainingSeasonalRoleEnabled')) {
+            $this->roles[] = Role::TRAINER;
         }
     }
 
