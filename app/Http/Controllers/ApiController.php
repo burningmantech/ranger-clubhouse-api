@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-
-use Illuminate\Database\Eloquent\Collection;
-
-use App\Http\Controllers\Controller;
-
+use App\Http\RestApi\DeserializeRecord;
+use App\Http\RestApi\SerializeRecord;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\Role;
-
-use App\Http\RestApi\SerializeRecord;
-use App\Http\RestApi\DeserializeRecord;
+use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ApiController extends Controller
 {
@@ -43,13 +40,13 @@ class ApiController extends Controller
             if (in_array($this->user->status, Person::LOCKED_STATUSES)) {
                 // A user should not be able to login when not authorized.
                 // However, a user could be logged in when their account is disabled.
-                throw new \Illuminate\Auth\Access\AuthorizationException('Account is disabled.');
+                throw new AuthorizationException('Account is disabled.');
             }
 
             $this->user->retrieveRoles();
             // Update the time the person was last seen. Avoid auditing and perform a faster-ish update
             // then doing $user->last_seen_at = now(); $user->save();
-            DB::table('person')->where('id', $this->user->id)->update([ 'last_seen_at' => now() ]);
+            DB::table('person')->where('id', $this->user->id)->update(['last_seen_at' => now()]);
         }
     }
 
@@ -70,13 +67,13 @@ class ApiController extends Controller
         return Person::findOrFail($id);
     }
 
-    public function getYear():int
+    public function getYear(): int
     {
-        $query = request()->validate([ 'year' => 'required|digits:4']);
+        $query = request()->validate(['year' => 'required|digits:4']);
         return intval($query['year']);
     }
 
-    public function userHasRole($roles) : bool
+    public function userHasRole($roles): bool
     {
         if (!$this->user) {
             return false;
@@ -90,7 +87,8 @@ class ApiController extends Controller
         return DeserializeRecord::fromRest(request(), $record, $this->user);
     }
 
-    public function fromRest($record) {
+    public function fromRest($record)
+    {
         $resourceName = $record->getResourceSingle();
         $fields = request()->input($resourceName);
 
@@ -114,7 +112,7 @@ class ApiController extends Controller
     public function toRestFiltered($resource, $meta = null, $resourceName = null)
     {
         $user = $this->user;
-        if ($resource instanceof \Illuminate\Database\Eloquent\Collection) {
+        if ($resource instanceof Collection) {
             if ($resource->isEmpty()) {
                 $results = [];
             } else {
@@ -129,7 +127,7 @@ class ApiController extends Controller
             $resourceName = $resource->getResourceSingle();
         }
 
-        $json = [ $resourceName => $results ];
+        $json = [$resourceName => $results];
         if ($meta) {
             $json['meta'] = $meta;
         }
@@ -144,13 +142,13 @@ class ApiController extends Controller
      * @param mixed $resource an array, eloquent collection, or similar to return
      * @param mixed $meta any meta information
      * @param mixed $resourceName name of the resource, used when the collection is empty.
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
-    public function success($resource=null, $meta=null, $resourceName = null)
+    public function success($resource = null, $meta = null, $resourceName = null)
     {
         if ($resource === null) {
-            return response()->json([ 'status' => 'success' ]);
+            return response()->json(['status' => 'success']);
         }
 
         if (is_iterable($resource)) {
@@ -162,12 +160,12 @@ class ApiController extends Controller
                 $rows[] = $row->toArray();
             }
 
-            $result = [ $resourceName => $rows ];
+            $result = [$resourceName => $rows];
         } else {
             if ($resourceName == '') {
                 $resourceName = $resource->getResourceSingle();
             }
-            $result = [ $resourceName => $resource ];
+            $result = [$resourceName => $resource];
         }
 
         if ($meta) {
@@ -179,7 +177,7 @@ class ApiController extends Controller
 
     public function error($message, $status = 400)
     {
-        return response()->json([ 'error' => $message ], $status);
+        return response()->json(['error' => $message], $status);
     }
 
     public function restDeleteSuccess()
@@ -187,32 +185,34 @@ class ApiController extends Controller
         return response()->json([], 204);
     }
 
-    public function restError($item, $status=422)
+    public function restError($item, $status = 422)
     {
         if (gettype($item) == 'string') {
-            $payload = [ [ 'title' => $item ] ];
+            $payload = [['title' => $item]];
         } else {
             $payload = [];
             foreach ($item->getErrors() as $column => $messages) {
                 foreach ($messages as $message) {
                     $payload[] = [
-                        'title'   => $message,
-                        'source'  => [
+                        'title' => $message,
+                        'source' => [
                             'pointer' => "/data/attributes/${column}",
                         ],
-                        'status'  => $status,
+                        'status' => $status,
                     ];
                 }
             }
         }
-        return response()->json([ 'errors' => $payload ], $status);
+        return response()->json(['errors' => $payload], $status);
     }
 
-    public function userCanViewEmail() {
-        return $this->userHasRole([ Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ]);
+    public function userCanViewEmail()
+    {
+        return $this->userHasRole([Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]);
     }
 
-    public function log($event, $message, $data=null, $targetPersonId=null) {
+    public function log($event, $message, $data = null, $targetPersonId = null)
+    {
         ActionLog::record(
             $this->user,
             $event,
@@ -226,11 +226,11 @@ class ApiController extends Controller
      * Tells the user (via Handler::render) the operation is not authorized
      *
      * @param $message string to send back
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
 
     public function notPermitted($message)
     {
-        throw new \Illuminate\Auth\Access\AuthorizationException($message);
+        throw new AuthorizationException($message);
     }
 }

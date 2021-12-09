@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\PersonRole;
-
 class Role extends ApiModel
 {
     protected $table = 'role';
@@ -28,6 +25,7 @@ class Role extends ApiModel
     const TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
     const SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
     const MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
+    const TRAINER_SEASONAL = 109; // Treated as TRAINER if setting TrainingSeasonalRoleEnabled is true
 
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 

@@ -4,48 +4,73 @@
     <p>
         Report generated at {{now()}} (server time UTC-7)
     </p>
-    <h3>Clubhouse Settings</h3>
-    <table class="table" style="width: auto">
+    <table class="table table-striped" style="width: auto">
+        <thead>
+            <tr>
+                <th>Clubhouse Setting</th>
+                <th>Value / Indicator</th>
+            </tr>
+        </thead>
         <tbody>
         <tr>
-            <td style="width: 20%">Dashboard Period</td>
+            <td>Dashboard Period</td>
             <td>
                 {!! ($settings['DashboardPeriod'] != 'auto') ? $dashboardPeriod : "<b style='color: red'>FORCED: {$settings['DashboardPeriod']}</b>" !!}
             </td>
         </tr>
         <tr>
-            <td style="width: 20%">Online Training</td>
+            <td>Online Training</td>
             <td>
                 @if ($dashboardPeriod == 'after-event')
-                    {!!($settings['OnlineTrainingEnabled'] ?? false) ? 'Enabled' : 'DISABLED'  !!}
+                    {!!($settings['OnlineTrainingEnabled'] ?? false) ? 'Enabled' : 'Disabled'  !!}
                     (ok for After Event period)
                 @else
-                    {!! ($settings['OnlineTrainingEnabled'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                    {!! ($settings['OnlineTrainingEnabled'] ?? false) ? "Enabled (normal for pre-event/event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
                 @endif
             </td>
         </tr>
         <tr>
-            <td style="width: 20%">Photo Uploading</td>
+            <td>Photo Uploading</td>
             <td>
                 {!! ($settings['PhotoUploadEnable'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
             </td>
         </tr>
         <tr>
-            <td style="width: 20%">Signups without OT</td>
+            <td>Signups without OT</td>
             <td>
                 {!! ($settings['OnlineTrainingDisabledAllowSignups'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal)' !!}
             </td>
         </tr>
         <tr>
-            <td style="width: 20%;">Ticketing Period</td>
+            <td style="width: 25%;">Ticketing Period</td>
             <td>
                 {{$settings['TicketingPeriod'] ?? "NOT SET"}}
             </td>
         </tr>
         <tr>
-            <td style="width: 20%;">Timesheet Corrections</td>
+            <td style="width: 25%;">Timesheet Corrections</td>
             <td>
                 {{($settings['TimesheetCorrectionEnable'] ?? false) ? "Enabled" : "Disabled"}}
+            </td>
+        </tr>
+        <tr>
+            <td>Training Seasonal</td>
+            <td>
+                @if ($dashboardPeriod == 'after-event')
+                    {!!($settings['TrainingSeasonalRoleEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL for after event)</b>' : 'Disabled (normal for after event)'  !!}
+                @else
+                    {!! ($settings['TrainingSeasonalRoleEnabled'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL for pre-event/event)</b>' !!}
+                @endif
+            </td>
+        </tr>
+        <tr>
+            <td>Login Mgmt On Playa</td>
+            <td>
+                @if ($dashboardPeriod == 'event')
+                    {!! ($settings['LoginManageOnPlayaEnabled'] ?? false) ? "Enabled (normal for event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                @else
+                    {!!($settings['LoginManageOnPlayaEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal for pre-event/after-event)'  !!}
+                @endif
             </td>
         </tr>
         </tbody>
