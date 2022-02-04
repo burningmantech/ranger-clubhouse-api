@@ -16,6 +16,9 @@ class Scheduling
     const BPGUID_MISSING = 'bpguid-missing';
     // Online Training has not been completed
     const OT_MISSING = 'ot-missing';
+    // Online Training is not available at the moment
+    const OT_DISABLED = 'ot-disabled';
+
     // Callsign is unapproved
     const CALLSIGN_UNAPPROVED = 'callsign-unapproved';
     // Photo is missing or been rejected
@@ -23,7 +26,16 @@ class Scheduling
     // Person is a past prospective.
     const PAST_PROSPECTIVE = 'past-prospective';
 
-    public static function retrieveSignUpPermission(Person $person, int $year)
+    /**
+     * Determine if the person is allowed to sign up for shifts, and if not, let them know
+     * what requirements are missing.
+     *
+     * @param Person $person
+     * @param int $year
+     * @return array
+     */
+
+    public static function retrieveSignUpPermission(Person $person, int $year): array
     {
         $personId = $person->id;
         $status = $person->status;
@@ -37,9 +49,14 @@ class Scheduling
             ];
         }
 
+        $otEnabled = setting('OnlineTrainingEnabled');
+
         $isAuditor = ($status == Person::AUDITOR);
         if ($isAuditor && setting('OnlineTrainingOnlyForAuditors')) {
-            return ['online_training_only' => true];
+            return [
+                'online_training_only' => true,
+                'online_training_enabled' => $otEnabled
+            ];
         }
 
         $isPNV = ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
@@ -53,7 +70,7 @@ class Scheduling
         }
 
         if (setting('OnlineTrainingDisabledAllowSignups')) {
-            // OT not required
+            // OT not required - DANGEROUS
             $otCompleted = true;
         } else {
             $otCompleted = PersonOnlineTraining::didCompleteForYear($personId, current_year());
@@ -63,25 +80,25 @@ class Scheduling
         $canSignUpForAllShifts = true;
 
         $requirements = [];
-        $trainingRequirements = [];
 
         if ($isAuditor || $isPNV) {
             if (!$person->hasReviewedPi()) {
-                // Auditors & PNVS have to have reviewed their Personal information first.
+                // Auditors & PNVs MUST review their Personal information first before doing anything else.
+                // Everyone is allowed to review at their leisure.
                 $requirements[] = self::PI_UNREVIEWED;
             }
 
             if (!$otCompleted) {
                 // .. and must pass Online Training before doing anything else
-                $requirements[] = self::OT_MISSING;
+                $requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
             }
-        } else {
-            if (!$isNonRanger && !$otCompleted) {
-                $trainingRequirements[] = self::OT_MISSING;
-            }
+        } else if (!$isNonRanger && !$otCompleted) {
+            // Online training not completed. Bad Ranger, no biscuit.
+            $requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
         }
 
         if (!$isAuditor) {
+            // PNVs, Rangers, and Non-Rangers must have an approved callsign, and an approved photo
             if (!$callsignApproved) {
                 $requirements[] = self::CALLSIGN_UNAPPROVED;
             }
@@ -111,15 +128,12 @@ class Scheduling
             // hard requirements are not met
             $canSignUpForTraining = false;
             $canSignUpForAllShifts = false;
-        } else if (!empty($trainingRequirements)) {
-            $canSignUpForTraining = false; // only training effected
         }
-
-        $requirements = array_merge($requirements, $trainingRequirements);
 
         return [
             // Can the person sign up for all (except training) shifts?
             'all_signups_allowed' => $canSignUpForAllShifts,
+            'online_training_enabled' => $otEnabled,
             // Can the person sign up for training?
             'training_signups_allowed' => $canSignUpForTraining,
             'requirements' => $requirements,
@@ -132,7 +146,8 @@ class Scheduling
      * @param Person $person
      * @return bool true if the person does not have any weekend shift signups.
      */
-    public static function recommendBurnWeekendShift(Person $person)
+
+    public static function recommendBurnWeekendShift(Person $person): bool
     {
         $status = $person->status;
         if ($status == Person::ALPHA
