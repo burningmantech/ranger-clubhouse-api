@@ -34,7 +34,7 @@
         "facade/ignition": "^2.3.6",
         "fakerphp/faker": "^1.12",
         "filp/whoops": "^2.9.0",
-        "mockery/mockery": "~1.4.2",
+        "mockery/mockery": "~1.5.0",
         "nunomaduro/collision": "^5.0",
         "phpunit/phpunit": "^9.5"
     },
