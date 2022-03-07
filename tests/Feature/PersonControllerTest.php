@@ -1202,7 +1202,8 @@ class PersonControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
 
         $personUS = Person::factory()->create([
-            'country' => 'US'
+            'country' => 'US',
+            'email' => $this->faker->email,
         ]);
 
         Timesheet::factory()->create([
@@ -1225,7 +1226,8 @@ class PersonControllerTest extends TestCase
         ]);
 
         $personCA = Person::factory()->create([
-            'country' => 'CA'
+            'country' => 'CA',
+            'email' => $this->faker->email,
         ]);
 
         $response = $this->json('GET', 'person/by-location', ['year' => date('Y')]);
@@ -1235,6 +1237,7 @@ class PersonControllerTest extends TestCase
             'people' => [
                 [
                     'id' => $personCA->id,
+                    'email' => $personCA->email,
                     'callsign' => $personCA->callsign,
                     'status' => $personCA->status,
                     'city' => $personCA->city,
@@ -1245,6 +1248,75 @@ class PersonControllerTest extends TestCase
                 ],
                 [
                     'id' => $personUS->id,
+                    'email' => $personUS->email,
+                    'callsign' => $personUS->callsign,
+                    'status' => $personUS->status,
+                    'city' => $personUS->city,
+                    'state' => $personUS->state,
+                    'country' => 'US',
+                    'worked' => 1,
+                    'signed_up' => 1,
+                ]
+            ]
+        ]);
+    }
+
+    /*
+     * Test People By Location, but don't show email to people who can't see emails.
+     */
+
+    public function testPeopleByLocationNoEmail()
+    {
+        $this->addRole(Role::MANAGE);
+
+        $personUS = Person::factory()->create([
+            'country' => 'US',
+            'email' => $this->faker->email,
+        ]);
+
+        Timesheet::factory()->create([
+            'person_id' => $personUS->id,
+            'on_duty' => date('Y-m-d 10:00:00'),
+            'off_duty' => date('Y-m-d 11:00:00'),
+            'position_id' => Position::DIRT
+        ]);
+
+        $slot = Slot::factory()->create([
+            'position_id' => Position::DIRT_GREEN_DOT,
+            'begins' => date('Y-m-d 13:00:00'),
+            'ends' => date('Y-m-d 14:00:00'),
+            'max' => 10
+        ]);
+
+        PersonSlot::factory()->create([
+            'person_id' => $personUS->id,
+            'slot_id' => $slot->id,
+        ]);
+
+        $personCA = Person::factory()->create([
+            'country' => 'CA',
+            'email' => $this->faker->email,
+        ]);
+
+        $response = $this->json('GET', 'person/by-location', ['year' => date('Y')]);
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'people' => [
+                [
+                    'id' => $personCA->id,
+                    'email' => '',
+                    'callsign' => $personCA->callsign,
+                    'status' => $personCA->status,
+                    'city' => $personCA->city,
+                    'state' => $personCA->state,
+                    'country' => 'CA',
+                    'worked' => 0,
+                    'signed_up' => 0,
+                ],
+                [
+                    'id' => $personUS->id,
+                    'email' => '',
                     'callsign' => $personUS->callsign,
                     'status' => $personUS->status,
                     'city' => $personUS->city,

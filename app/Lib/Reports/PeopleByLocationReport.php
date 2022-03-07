@@ -13,7 +13,7 @@ class PeopleByLocationReport
      * @param $year
      * @return array
      */
-    public static function execute($year): array
+    public static function execute($year, $includeEmail): array
     {
         return DB::table('person')
             ->select(
@@ -22,7 +22,7 @@ class PeopleByLocationReport
                 'first_name',
                 'last_name',
                 'status',
-                'email',
+                $includeEmail ? 'email' : DB::raw("'' as email"),
                 'city',
                 'state',
                 'zip',
