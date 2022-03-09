@@ -363,6 +363,26 @@ class BulkUploadControllerTest extends TestCase
             'bmid',
             ['person_id' => $this->user->id, 'year' => $year, 'meals' => 'event+post']
         );
+
+        // The meals should turn into all if already has event+post, and pre is added.
+        $response = $this->json('POST', 'bulk-upload', [
+            'action' => 'meals',
+            'records' => "$callsign,+pre",
+            'commit' => 1,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['results' => [
+            [
+                'callsign' => $callsign,
+                'status' => 'success'
+            ]
+        ]]);
+        $this->assertDatabaseHas(
+            'bmid',
+            ['person_id' => $this->user->id, 'year' => $year, 'meals' => 'all']
+        );
+
     }
 
     /*
