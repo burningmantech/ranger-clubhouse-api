@@ -11,32 +11,18 @@
 
 namespace App\Models;
 
+use App\Helpers\SqlHelper;
+use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
-
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
 use InvalidArgumentException;
 use NumberFormatter;
-use Tymon\JWTAuth\Contracts\JWTSubject;
-
-use App\Helpers\SqlHelper;
-
-use Carbon\Carbon;
-
-use App\Models\Alert;
-use App\Models\ApiModel;
-use App\Models\PersonEvent;
-use App\Models\PersonPhoto;
-use App\Models\PersonPosition;
-use App\Models\PersonRole;
-use App\Models\PersonStatus;
-use App\Models\Role;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 
 class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
@@ -263,15 +249,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'osha30',
     ];
 
-    const SEARCH_FIELDS = [
-        'email',
-        'name',
-        'first_name',
-        'last_name',
-        'callsign',
-        'formerly_known_as'
-    ];
-
     // Various associated person tables
     const ASSOC_TABLES = [
         //'access_document_changes',
@@ -352,8 +329,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $languages;
 
-    /*
-     * setup before methods
+    /**
+     * Setup various before save or create callback methods
      */
 
     public static function boot()
@@ -361,6 +338,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         parent::boot();
 
         self::creating(function ($model) {
+            // Set the create date to the current time
             $model->create_date = now();
         });
 
@@ -383,8 +361,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             }
 
             /*
-             * When the status is updated to Past Prospecitve and the callsign is
-             * not being changed, reset the the callsign and unapprove it.
+             * When the status is updated to Past Prospective and the callsign is
+             * not being changed, reset the callsign and un-approve it.
              */
 
             if ($model->isDirty('status')
@@ -399,10 +377,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
-     * @return mixed
+     * @return int
      */
 
-    public function getJWTIdentifier(): string
+    public function getJWTIdentifier(): int
     {
         return $this->getKey();
     }
@@ -412,6 +390,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      *
      * @return array
      */
+
     public function getJWTCustomClaims(): array
     {
         return [];
@@ -427,17 +406,43 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->belongsTo(PersonPhoto::class);
     }
 
-    public static function findByEmail(string $email)
+    public function person_role()
+    {
+        return $this->hasMany(PersonRole::class);
+    }
+
+    /**
+     * Find an account by its email.
+     *
+     * @param string $email
+     * @return Person|null
+     */
+
+    public static function findByEmail(string $email) : ?Person
     {
         return self::where('email', $email)->first();
     }
 
-    public static function findByCallsign(string $callsign)
+    /**
+     * Find a record by callsign
+     *
+     * @param string $callsign
+     * @return Person|null
+     */
+
+    public static function findByCallsign(string $callsign) : ?Person
     {
         return self::where('callsign', $callsign)->first();
     }
 
-    public static function findIdByCallsign(string $callsign)
+    /**
+     * Look up an account id by its callsign
+     *
+     * @param string $callsign
+     * @return int|null
+     */
+
+    public static function findIdByCallsign(string $callsign) : ?int
     {
         $row = self::select('id')->where('callsign', $callsign)->first();
         if ($row) {
@@ -447,9 +452,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return null;
     }
 
-    public function person_role() {
-        return $this->hasMany(PersonRole::class);
-    }
 
     public function save($options = [])
     {
@@ -487,7 +489,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function findAllByCallsigns(array $callsigns)
     {
-        $normalizedCallsigns = array_map(fn ($name) => Person::normalizeCallsign($name), $callsigns);
+        $normalizedCallsigns = array_map(fn($name) => Person::normalizeCallsign($name), $callsigns);
         $rows = self::whereIn('callsign_normalized', $normalizedCallsigns)->get();
 
         return $rows->reduce(function ($keys, $row) {
@@ -501,15 +503,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return self::where('email', $email)->exists();
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find people based on criteria:
+     * query: string to search for
+     * search_fields: list of fields to search - callsign, name, formerly_known_as, email (comma separated)
+     * statuses: list of statuses to match (comma separated)
+     * limit: number of results to limit query to
+     * offset: record offset in search
+     *
+     * @param array $query
+     * @return array
+     */
+
+    public static function findForQuery(array $query): array
     {
         if (isset($query['query'])) {
+            $orderCallsigns = true;
+            $orderRealName = true;
+            $orderEmail = true;
+            $orderFKA = true;
+
             // remove duplicate spaces
             $q = trim(preg_replace('/\s+/', ' ', $query['query']));
             $normalized = self::normalizeCallsign($q);
             $metaphone = metaphone(self::spellOutNumbers($normalized));
 
-            if (substr($q, 0, 1) == '+') {
+            if (str_starts_with($q, '+')) {
                 // Search by number
                 $q = ltrim($q, '+');
                 $person = self::find(intval($q));
@@ -529,40 +548,63 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             $emailOnly = (stripos($q, '@') !== false);
             if ($emailOnly) {
-                // Force to email only search if atsign is present
+                // Force email only search if @ is present
                 $sql = self::where(function ($sql) use ($likeQuery, $q) {
                     $sql->where('email', $q);
                     $sql->orWhere('email', 'like', $likeQuery);
                 });
+                $orderCallsigns = false;
+                $orderFKA = false;
+                $orderRealName = false;
             } elseif (isset($query['search_fields'])) {
                 $fields = explode(',', $query['search_fields']);
 
+                $orderCallsigns = false;
+                $orderRealName = false;
+                $orderEmail = false;
+                $orderFKA = false;
+
+                foreach ($fields as $field) {
+                    switch ($field) {
+                        case 'callsign':
+                            $orderCallsigns = true;
+                            break;
+                        case 'name':
+                            $orderRealName = true;
+                            break;
+                        case 'formerly_known_as':
+                            $orderFKA = true;
+                            break;
+                        case 'email':
+                            $orderEmail = true;
+                            break;
+                    }
+                }
+
+
                 $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
                     foreach ($fields as $field) {
-                        if (!in_array($field, self::SEARCH_FIELDS)) {
-                            throw new InvalidArgumentException("Search field '$field' is not allowed.");
-                        }
+                        switch ($field) {
+                            case 'callsign':
+                                $sql->orWhere('callsign_normalized', $normalized);
+                                $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
+                                $sql->orWhere('callsign_soundex', $metaphone);
+                                $sql->orWhere('callsign_soundex', 'like', $metaphone . '%');
+                                break;
 
-                        if ($field == 'name') {
-                            $sql->orWhere('first_name', 'like', $likeQuery);
-                            $sql->orWhere('last_name', 'like', $likeQuery);
+                            case 'name':
+                                $sql->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE " . SqlHelper::quote($likeQuery));
+                                $sql->orWhere('last_name', 'like', SqlHelper::quote($q . '%'));
+                                break;
 
-                            if (strpos($q, ' ') !== false) {
-                                $name = explode(' ', $q);
-                                $sql->orWhere(function ($cond) use ($name) {
-                                    $cond->where([
-                                        ['first_name', 'like', '%' . $name[0] . '%'],
-                                        ['last_name', 'like', '%' . $name[1] . '%']
-                                    ]);
-                                });
-                            }
-                        } elseif ($field == 'callsign') {
-                            $sql->orWhere('callsign_normalized', $normalized);
-                            $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
-                            $sql->orWhere('callsign_soundex', $metaphone);
-                            $sql->orWhere('callsign_soundex', 'like', $metaphone . '%');
-                        } else {
-                            $sql->orWhere($field, 'like', $likeQuery);
+                            case 'email':
+                            case 'formerly_known_as':
+                                $sql->orWhere($field, 'like', $likeQuery);
+                                break;
+
+
+                            default:
+                                throw new InvalidArgumentException("Search field '$field' is invalid.");
                         }
                     }
                 });
@@ -570,36 +612,46 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $sql = self::where('callsign', 'like', $likeQuery);
             }
 
-            $orderBy = "CASE";
             if ($emailOnly) {
-                $orderBy .= " WHEN email=" . SqlHelper::quote($q) . " THEN CONCAT('01', callsign)";
-                $orderBy .= " WHEN email like " . SqlHelper::quote($q . '%') . " THEN CONCAT('02', callsign)";
-                $orderBy .= " WHEN email like " . SqlHelper::quote($likeQuery) . " THEN CONCAT('03', callsign)";
+                $sql->orderBy('email');
             } else {
+                $orderBy = "CASE";
                 /*
-                 * Sort priority is
-                 * - Exact callsign match
+                 * Callsign sort priority is
+                 *  - Exact callsign match
                  * - Beginning of callsign match
                  * - Substring callsign match
                  * - Exact phonetic callsign match
                  * - Beginning of phonetic match
                  * - substring phonetic match
                  * - Everything else
-                 *
                  */
-                $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
-                $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
-                $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
-                $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('04', callsign)";
-                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('05', callsign)";
-                $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
-            }
-            $orderBy .= " ELSE CONCAT('06', callsign) END";
+                if ($orderCallsigns) {
+                    $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
+                    $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
+                    $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
+                    $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('04', callsign)";
+                    $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('05', callsign)";
+                    $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
+                }
 
-            $sql->orderBy(DB::raw($orderBy));
+                if ($orderRealName) {
+                    $orderBy .= " WHEN CONCAT(first_name, ' ', last_name) LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('12', first_name, ' ', last_name)";
+                    $orderBy .= " WHEN CONCAT(last_name) LIKE " . SqlHelper::quote($q . "%") . " THEN CONCAT('11', 'last_name')";
+                }
+
+                if ($orderFKA) {
+                    $orderBy .= " WHEN formerly_known_as LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('20', formerly_known_as)";
+                }
+
+                if ($orderEmail) {
+                    $orderBy .= " WHEN email LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('30', email)";
+                }
+                $orderBy .= " ELSE CONCAT('99', callsign) END";
+                $sql->orderBy(DB::raw($orderBy));
+            }
         } else {
-            $sql = self::query();
-            $sql->orderBy('callsign');
+            $sql = self::orderBy('callsign');
         }
 
         if (isset($query['statuses'])) {
@@ -631,21 +683,28 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         ];
     }
 
-    public static function normalizeCallsign($callsign)
+    /**
+     * Normalize a callsign by removing spaces, and converting to lowercase
+     *
+     * @param string $callsign
+     * @return string
+     */
+
+    public static function normalizeCallsign(string $callsign): string
     {
         return strtolower(preg_replace('/[^\w]/', '', $callsign));
     }
 
     /**
-     * Search for matching callsigns
-     *
+     * Search for callsign types
      *
      * @param string $query string to match against callsigns
      * @param string $type callsign search type
+     * @param int $limit
      * @return mixed person id & callsigns which match
      */
 
-    public static function searchCallsigns(string $query, string $type, $limit)
+    public static function searchCallsigns(string $query, string $type, int $limit): mixed
     {
         $like = '%' . $query . '%';
 
@@ -748,7 +807,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->tpassword;
     }
 
-    public function getRolesAttribute()
+    /**
+     * Return the role ids (used by Person record serialization)
+     *
+     * @return ?array
+     */
+
+    public function getRolesAttribute(): ?array
     {
         return $this->roles;
     }
@@ -798,10 +863,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return in_array($role, $this->roles);
     }
 
+    /**
+     * Is the person an Admin?
+     *
+     * @return bool
+     */
+
     public function isAdmin(): bool
     {
         return $this->hasRole(Role::ADMIN);
     }
+
+    /**
+     * Is the person a prospective new volunteer? (prospector or alpha status)
+     *
+     * @return bool
+     */
 
     public function isPNV(): bool
     {
@@ -810,14 +887,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
     }
 
+    /**
+     * Is the person an auditor?
+     *
+     * @return bool
+     */
+
     public function isAuditor(): bool
     {
         return ($this->status == Person::AUDITOR);
     }
 
-    /*
-     * creates a random string by calling random.org, and falls back on a home-rolled.
-     * @return the string.
+    /**
+     * Creates a 10 character random alphanumeric string. Use primarily to generate
+     * a temporary password.
+     *
+     * @return string
      */
 
     public static function generateRandomString(): string
@@ -833,27 +918,51 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $token;
     }
 
+    /**
+     * Obtain the pseudo-field languages
+     *
+     * @return mixed
+     */
+
     public function getLanguagesAttribute()
     {
         return $this->languages;
     }
+
+    /**
+     * Set the pseudo-field languages
+     *
+     * @param $value
+     * @return void
+     */
 
     public function setLanguagesAttribute($value)
     {
         $this->languages = $value;
     }
 
+    /**
+     * Set pseudo-field has_reviewed_pi.
+     *
+     * @param $value
+     * @return void
+     */
+
     public function setHasReviewedPiAttribute($value)
     {
         $this->has_reviewed_pi = $value;
     }
 
-    /*
-     * Account created prior to 2010 have a 0000-00-00 date. Return null if that's
-     * the case
+    /**
+     * Obtain the create_date field.
+     *
+     * Accounts created prior to 2010 have a 0000-00-00 date. Return null if that's
+     * the case.
+     *
+     * @return Carbon|null
      */
 
-    public function getCreateDateAttribute()
+    public function getCreateDateAttribute(): ?Carbon
     {
         if ($this->attributes == null) {
             return null;
@@ -874,11 +983,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Change the status.
-     * TODO figure out a better way to do this.
+     * Change the account status and adjust the positions & roles if need be.
      *
+     * TODO figure out a better way to do this. Mostly copied from Clubhouse 1.
+     *
+     * @param string $newStatus
+     * @param string $oldStatus
+     * @param string $reason
      */
-    public function changeStatus($newStatus, $oldStatus, $reason)
+
+    public function changeStatus(string $newStatus, string $oldStatus, string $reason)
     {
         if ($newStatus == $oldStatus) {
             return;
@@ -909,7 +1023,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 break;
 
             case Person::ALPHA:
-                // grant the alpha the alpha position
+                // grant the alpha position
                 PersonPosition::addIdsToPerson($personId, [Position::ALPHA], $changeReason);
                 break;
 
@@ -922,8 +1036,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
                 // Remove all roles
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
-
-                // Remove asset authorization and lock user out of system
                 break;
 
             case Person::BONKED:
@@ -938,6 +1050,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             // If you are one of the below, the only role you get is login
             // and position is Training
+
             case Person::RETIRED:
             case Person::AUDITOR:
             case Person::PROSPECTIVE:
@@ -972,7 +1085,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      *
      * If the person was bonked, append a 'B'.
      * If the person is an auditor, append a '(NR)'
-     * If the new callsign already exits, find one that does not exists by appending a number to the last name.
+     * If the new callsign already exits, find one that does not exist by appending a number to the last name.
      *
      * e.g. Jane Smith, year 2019 -> SmithJ19
      *           or Smith1J19, Smith2J19, etc if SmithJ19 already exists.
@@ -1006,9 +1119,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /**
      * Store a normalized and metaphone version of the callsign
+     *
+     * @param string $value
      */
 
-    public function setCallsignAttribute($value)
+    public function setCallsignAttribute(string $value)
     {
         $value = trim($value);
         $this->attributes['callsign'] = $value;
@@ -1030,23 +1145,35 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Normalize shirt sizes
+     * Normalize long sleeve shirt sizes
+     *
+     * @return string
      */
 
-    public function getLongsleeveshirtSizeStyleAttribute()
+    public function getLongsleeveshirtSizeStyleAttribute(): string
     {
-        return empty($this->attributes['longsleeveshirt_size_style']) ? 'Unknown' : $this->attributes['longsleeveshirt_size_style'];
+        return $this->attributes['longsleeveshirt_size_style'] ?? 'Unknown';
     }
 
-    public function getTeeshirtSizeStyleAttribute()
+    /**
+     * Normalize T-Shirt sizes
+     *
+     * @return string
+     */
+
+    public function getTeeshirtSizeStyleAttribute(): string
     {
-        return empty($this->attributes['teeshirt_size_style']) ? 'Unknown' : $this->attributes['teeshirt_size_style'];
+        return $this->attributes['teeshirt_size_style'] ?? 'Unknown';
     }
 
-    /*
+    /**
      * Summarize gender - used by the Shift Lead Report
+     *
+     * @param ?string $gender
+     * @return string
      */
-    public static function summarizeGender($gender)
+
+    public static function summarizeGender(?string $gender): string
     {
         $check = trim(strtolower($gender));
 
@@ -1084,27 +1211,60 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $gender;
     }
 
-    public function formerlyKnownAsArray($filter = false)
+    /**
+     * Split the FKA into an array
+     *
+     * @param bool $filter
+     * @return array
+     */
+
+    public function formerlyKnownAsArray(bool $filter = false): array
     {
         return self::splitCommas($this->formerly_known_as, $filter);
     }
 
-    public function knownPnvsArray()
+    /**
+     * Split the Known PNVs into an array
+     *
+     * @return array
+     */
+
+    public function knownPnvsArray(): array
     {
         return self::splitCommas($this->known_pnvs);
     }
 
-    public function knownRangersArray()
+    /**
+     * Split the Known Rnagers into an array
+     *
+     * @return array
+     */
+
+    public function knownRangersArray(): array
     {
         return self::splitCommas($this->known_rangers);
     }
 
-    public function hasReviewedPi()
+    /**
+     * Has the person reviewed their personal information?
+     *
+     * @return bool
+     */
+    public function hasReviewedPi(): bool
     {
         return ($this->reviewed_pi_at && $this->reviewed_pi_at->year == current_year());
     }
 
-    public static function splitCommas($str, $filter = false)
+    /**
+     * Split a string into an array and filter out callsign indicators
+     * (i.e., remove year, bonk indicator, and non-ranger suffixes)
+     *
+     * @param ?string $str
+     * @param bool $filter
+     * @return array
+     */
+
+    public static function splitCommas(?string $str, bool $filter = false): array
     {
         if (empty($str)) {
             return [];
@@ -1120,14 +1280,28 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }));
     }
 
+    /**
+     * Set pronouns_custom field to a string value or empty string
+     *
+     * @param $value
+     * @return void
+     */
+
     public function setPronounsCustomAttribute($value)
     {
-        $this->attributes['pronouns_custom'] = !empty($value) ? $value : '';
+        $this->attributes['pronouns_custom'] = $value ?? '';
     }
+
+    /**
+     * Set pronouns field to a string value or empty string
+     *
+     * @param $value
+     * @return void
+     */
 
     public function setPronounsAttribute($value)
     {
-        $this->attributes['pronouns'] = !empty($value) ? $value : '';
+        $this->attributes['pronouns'] = $value ?? '';
     }
 
     /**

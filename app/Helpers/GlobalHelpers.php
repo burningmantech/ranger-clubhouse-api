@@ -3,14 +3,12 @@
  * Global Helpers used everywhere throughout the application.
  */
 
-use App\Helpers\SqlHelper;
-
 use App\Models\ErrorLog;
 use App\Models\Setting;
 use Carbon\Carbon;
-
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
-
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 if (!function_exists('setting')) {
     /**
@@ -31,16 +29,16 @@ if (!function_exists('setting')) {
 /**
  * Send an email. Alias for Mail:to()->send() with exception handling.
  *
- * @param mixed $email string, string with a comma(s), or string array of email addresses to send
+ * @param string|array $email string, string with a comma(s), or string array of email addresses to send
  * @param Mailable $message the message to send
  * @param bool $queueMail true if the email is to be queued for delivery
- * @return boolean true if mail was successfully queued, false if an exception happened.
+ * @return bool true if mail was successfully queued, false if an exception happened.
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to($email, $message, $queueMail = false)
+    function mail_to(string|array $email, Mailable $message, bool $queueMail = false) : bool
     {
-        if (is_string($email) && strpos($email, ',') !== false) {
+        if (is_string($email) && str_contains($email, ',')) {
             $email = explode(',', $email);
         }
 
@@ -52,7 +50,7 @@ if (!function_exists('mail_to')) {
                 $to->send($message);
             }
             return true;
-        } catch (Swift_TransportException $e) {
+        } catch (TransportExceptionInterface $e) {
             ErrorLog::recordException($e, 'email-exception', [
                 'type' => 'mail-to',
                 'email' => $email,

@@ -284,7 +284,10 @@ class BulkUploader
                             $meals = substr($meals, 1, strlen($meals) - 1);
                             $matrix = [];
                             foreach (explode('+', $bmid->meals) as $week) {
-                                $matrix[$week] = true;
+                                // Deal with '+thing' which turns into [ "", "thing"]
+                                if (!empty($week)) {
+                                    $matrix[$week] = true;
+                                }
                             }
                             $matrix[$meals] = true;
                             if (count($matrix) == 3) {
