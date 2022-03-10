@@ -7,22 +7,24 @@
 namespace App\Lib;
 
 use App\Helpers\SqlHelper;
-
-use App\Models\Broadcast;
-use App\Models\BroadcastMessage;
-
+use App\Mail\ClubhouseNewMessageMail;
+use App\Mail\RBSMail;
 use App\Models\Alert;
 use App\Models\AlertPerson;
+use App\Models\Broadcast;
+use App\Models\BroadcastMessage;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
-
+use Exception;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-
-use App\Mail\ClubhouseNewMessageMail;
-use App\Mail\RBSMail;
+use InvalidArgumentException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
 
 class RBS
 {
@@ -58,19 +60,19 @@ class RBS
 
     const ATTRIBUTES = [
         Broadcast::TYPE_GENERAL => [
-            'has_status'    => true,
+            'has_status' => true,
             'has_restrictions' => true,
         ],
 
         Broadcast::TYPE_POSITION => [
-            'has_status'    => true,
-            'has_position'  => true,
-            'alerts' => [ Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_MUSTER, Alert::SHIFT_CHANGE_PRE_EVENT, Alert::SHIFT_MUSTER_PRE_EVENT ]
+            'has_status' => true,
+            'has_position' => true,
+            'alerts' => [Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_MUSTER, Alert::SHIFT_CHANGE_PRE_EVENT, Alert::SHIFT_MUSTER_PRE_EVENT]
         ],
 
         Broadcast::TYPE_SLOT => [
-            'has_slot'  => true,
-            'alerts'   => [ Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_CHANGE_PRE_EVENT ]
+            'has_slot' => true,
+            'alerts' => [Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_CHANGE_PRE_EVENT]
         ],
 
         /*
@@ -79,7 +81,7 @@ class RBS
          */
 
         Broadcast::TYPE_SLOT_EDIT => [
-            'alerts'  => [ Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_CHANGE_PRE_EVENT ],
+            'alerts' => [Alert::TRAINING, Alert::SHIFT_CHANGE, Alert::SHIFT_CHANGE_PRE_EVENT],
         ],
 
         /*
@@ -89,25 +91,25 @@ class RBS
          * the message. No Clubhouse message created.
          */
 
-         Broadcast::TYPE_ONSHIFT => [
-             'alert_id' => Alert::ON_SHIFT,
-             'is_simple'   => true,
-             'sms_only' => true,
-         ],
+        Broadcast::TYPE_ONSHIFT => [
+            'alert_id' => Alert::ON_SHIFT,
+            'is_simple' => true,
+            'sms_only' => true,
+        ],
 
-         Broadcast::TYPE_RECRUIT_DIRT => [
-             'alert_id'   => Alert::SHIFT_MUSTER,
-             'is_simple' => true,
-         ],
+        Broadcast::TYPE_RECRUIT_DIRT => [
+            'alert_id' => Alert::SHIFT_MUSTER,
+            'is_simple' => true,
+        ],
 
         Broadcast::TYPE_RECRUIT_POSITION => [
-            'alert_id'            => Alert::SHIFT_MUSTER,
-            'is_simple'           => true,
+            'alert_id' => Alert::SHIFT_MUSTER,
+            'is_simple' => true,
             'has_muster_position' => true
         ],
 
         Broadcast::TYPE_EMERGENCY => [
-            'alert_id'   => Alert::EMEREGENCY_BROADCAST,
+            'alert_id' => Alert::EMEREGENCY_BROADCAST,
             'is_simple' => true,
         ],
     ];
@@ -121,7 +123,7 @@ class RBS
     // Prefix and Suffix added to most SMS messages.
     const SMS_PREFIX = ''; // No prefix currently
     const SMS_SUFFIX = ' TXT STOP to unsub'; // 18 characters
-    const SMS_LIMIT  = 142; // 160 sms limit - length(SMS_PREFIX + SMS_SUFFIX)
+    const SMS_LIMIT = 142; // 160 sms limit - length(SMS_PREFIX + SMS_SUFFIX)
 
 
     /*
@@ -144,7 +146,7 @@ class RBS
             $smsColumn = 'sms_off_playa';
         }
 
-        $stopColumn = $smsColumn.'_stopped';
+        $stopColumn = $smsColumn . '_stopped';
         $verifiedColumn = $smsColumn . '_verified';
 
         $phoneNumbers = [];
@@ -183,7 +185,7 @@ class RBS
             $phoneNumbers[] = $phone;
             $recipients[] = (object)[
                 'person' => $person,
-                'phone'  => $phone,
+                'phone' => $phone,
             ];
         }
 
@@ -203,10 +205,10 @@ class RBS
                 } catch (SMSException $e) {
                     // meh - usually the Internet is spotty
                     ErrorLog::recordException($e, 'sms-exception', [
-                            'type'          => 'broadcast',
-                            'broadcast_id'  => $broadcastId,
-                            'phone_numbers' => $phoneNumbers
-                     ]);
+                        'type' => 'broadcast',
+                        'broadcast_id' => $broadcastId,
+                        'phone_numbers' => $phoneNumbers
+                    ]);
                     $status = Broadcast::STATUS_SERVICE_FAIL;
                     $fails++;
                 }
@@ -221,9 +223,9 @@ class RBS
             }
         }
 
-        Broadcast::where('id', $broadcastId)->update([ 'sms_failed' => $fails ]);
+        Broadcast::where('id', $broadcastId)->update(['sms_failed' => $fails]);
 
-        return [ $sent, $fails ];
+        return [$sent, $fails];
     }
 
     /*
@@ -246,7 +248,7 @@ class RBS
         if (!$sandbox) {
             // Wrap the message in an HTML email template
             $body = (new RBSMail($subject, $message, $alert))->render();
-            list($mailer, $emailMessage) = self::setupSMTP($from, $subject, $body);
+            $mailer = self::setupSMTP();
         }
 
         $force = ($alert->id == Alert::EMEREGENCY_BROADCAST);
@@ -270,25 +272,22 @@ class RBS
                 $sent++;
             } else {
                 // Sender format is "Callsign (Real Name)"
-                $to = [ $email => $person->callsign.' ('.$person->first_name.' '.$person->last_name.')'];
-                $emailMessage->setTo($to);
+                $emailMessage = self::createEmail($from,
+                    new Address($email, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
+                    $subject, $body);
                 try {
-                    if ($mailer->send($emailMessage)) {
-                        $status = Broadcast::STATUS_SENT;
-                        $sent++;
-                    } else {
-                        $status = Broadcast::STATUS_SERVICE_FAIL;
-                        $fails++;
-                    }
-                } catch (\Swift_TransportException $e) {
+                    $mailer->send($emailMessage);
+                    $status = Broadcast::STATUS_SENT;
+                    $sent++;
+                } catch (TransportExceptionInterface $e) {
                     $fails++;
                     $status = Broadcast::STATUS_SERVICE_FAIL;
                     ErrorLog::recordException($e, 'email-exception', [
-                            'type'                 => 'broadcast',
-                            'broadcast_id'         => $broadcastId,
-                            'email'                => $email,
-                            'person_id'            => $person->id
-                     ]);
+                        'type' => 'broadcast',
+                        'broadcast_id' => $broadcastId,
+                        'email' => $email,
+                        'person_id' => $person->id
+                    ]);
                 }
             }
 
@@ -296,14 +295,14 @@ class RBS
             BroadcastMessage::record($broadcastId, $status, $personId, 'email', $email, 'outbound');
         }
 
-        Broadcast::where('id', $broadcastId)->update([ 'email_failed' => $fails ]);
+        Broadcast::where('id', $broadcastId)->update(['email_failed' => $fails]);
 
         if (!$sandbox) {
             // Close the SMTP connection
-            $mailer->getTransport()->stop();
+            unset($mailer);
         }
 
-        return [ $sent, $fails ];
+        return [$sent, $fails];
     }
 
     /*
@@ -321,14 +320,14 @@ class RBS
             $phoneNumbers = $sms->pluck('address')->toArray();
             try {
                 // Try to annoy people again.
-                $status = SMSService::broadcast($phoneNumbers, $broadcast->sms_message);
+                SMSService::broadcast($phoneNumbers, $broadcast->sms_message);
                 foreach ($sms as $message) {
                     $message->update(['status' => Broadcast::STATUS_SENT]);
                 }
             } catch (SMSException $e) {
                 ErrorLog::recordException($e, 'sms-exception', [
-                    'type'          => 'broadcast-retry',
-                    'broadcast_id'  => $broadcast->id,
+                    'type' => 'broadcast-retry',
+                    'broadcast_id' => $broadcast->id,
                     'phone_numbers' => $phoneNumbers
                 ]);
             }
@@ -339,28 +338,28 @@ class RBS
             $alert = Alert::find($broadcast->alert_id);
             $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert))->render();
 
-            list($mailer, $emailMessage) = RBS::setupSMTP($broadcast->sender_address, $broadcast->subject, $body);
+            $mailer = self::setupSMTP();
 
             foreach ($emails as $message) {
                 $person = $message->person;
-                $to = [ $message->address => $person->callsign.' ('.$person->first_name.' '.$person->last_name.')' ];
-                $emailMessage->setTo($to);
+                $emailMessage = self::createEmail($broadcast->sender_address,
+                    new Address($message->address, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
+                    $broadcast->subject, $body  );
                 try {
-                    if ($mailer->send($emailMessage)) {
-                        $message->update([ 'status' =>  Broadcast::STATUS_SENT ]);
-                    }
-                } catch (\Swift_TransportException $e) {
+                    $mailer->send($emailMessage);
+                        $message->update(['status' => Broadcast::STATUS_SENT]);
+                } catch (TransportExceptionInterface $e) {
                     ErrorLog::recordException($e, 'email-exception', [
-                        'type'                 => 'broadcast-retry',
-                        'broadcast_id'         => $broadcast->id,
+                        'type' => 'broadcast-retry',
+                        'broadcast_id' => $broadcast->id,
                         'broadcast_message_id' => $message->id,
-                        'email'                => $message->address
-                     ]);
+                        'email' => $message->address
+                    ]);
                 }
             }
 
             // Close the SMTP connection.
-            $mailer->getTransport()->stop();
+            unset($mailer);
         }
 
         // Update the fail counters
@@ -372,22 +371,15 @@ class RBS
     }
 
     /*
-     * Setup a Swift Mailer mailer & message object.
+     * Set up a Symphony Mailer object
      *
-     * @param string $from sender email address
-     * @param string $subject email subject
-     * @param string $message email body
      * @return array mailer & email message objects
      */
 
-    public static function setupSMTP($from, $subject, $message)
+    public static function setupSMTP() : Mailer
     {
         $mailerType = config('mail.driver');
         $smtpServer = config('mail.host');
-
-        if (empty($from)) {
-            $from = 'do-not-reply@burningman.org';
-        }
 
         if ($mailerType == 'smtp') {
             // talk with a SMTP server
@@ -396,7 +388,7 @@ class RBS
             $smtpPort = config('mail.port');
             $smtpProtocol = config('mail.encryption');
 
-            $transport = new \Swift_SmtpTransport($smtpServer, $smtpPort, $smtpProtocol);
+            $transport = new EsmtpTransport($smtpServer, $smtpPort, $smtpProtocol == 'tls');
             $transport->setUsername($smtpUsername);
             $transport->setPassword($smtpPassword);
         } else {
@@ -404,26 +396,41 @@ class RBS
             if (empty($smtpServer)) {
                 $smtpServer = 'localhost';
             }
-            $transport = new \Swift_SmtpTransport($smtpServer, 25);
+            $transport = new EsmtpTransport($smtpServer, 25);
         }
 
-        $mailer = new \Swift_Mailer($transport);
-
         /*
-         * Limit the transport X messages per connection
-         * https://us-west-2.console.aws.amazon.com/ses/home
-         */
+        * Limit the transport X messages per connection
+        * https://us-west-2.console.aws.amazon.com/ses/home
+        */
 
         $limit = config('mail.messages_per_connection') ?? 50;
-        $mailer->registerPlugin(new \Swift_Plugins_AntiFloodPlugin($limit));
+        $transport->setRestartThreshold($limit);
+        return new Mailer($transport);
+    }
 
-        $emailMessage = new \Swift_Message();
-        $emailMessage->setFrom($from);
-        $emailMessage->setSubject($subject);
+    /**
+     * Create an email message
+     *
+     * @param ?string $from
+     * @param string|Address $to
+     * @param string $subject
+     * @param string $message
+     * @return Email
+     */
+
+    public static function createEmail(?string $from, string|Address $to, string $subject, string $message): Email
+    {
+        $emailMessage = new Email();
+        if (empty($from)) {
+            $from = 'do-not-reply@burningman.org';
+        }
+        $emailMessage->from($from);
+        $emailMessage->to($to);
+        $emailMessage->subject($subject);
         // Always send out HTML emails, because people like them fancy styled emails
-        $emailMessage->setBody($message, 'text/html');
-
-        return [ $mailer,  $emailMessage ];
+        $emailMessage->html($message);
+        return $emailMessage;
     }
 
     /*
@@ -446,11 +453,11 @@ class RBS
             if (!$clubhouseSandbox) {
                 $pm = new PersonMessage;
                 $pm->forceFill([
-                    'person_id'         => $person->id,
-                    'message_from'      => $from,
+                    'person_id' => $person->id,
+                    'message_from' => $from,
                     'creator_person_id' => $senderId,
-                    'subject'           => $subject,
-                    'body'              => $message
+                    'subject' => $subject,
+                    'body' => $message
                 ]);
                 $pm->saveWithoutValidation();
             }
@@ -497,7 +504,7 @@ class RBS
         $onSite = $params['on_site'] ?? false;
         $positionSignedup = $params['position_signed_up'] ?? 'any';
         $attending = $params['attending'] ?? false;
-        $training  = $params['training'] ?? '';
+        $training = $params['training'] ?? '';
 
         $isEmergency = $broadcastType == Broadcast::TYPE_EMERGENCY;
 
@@ -506,96 +513,96 @@ class RBS
          */
 
         switch ($broadcastType) {
-        /* Allcom, Allcom -> Khaki: EMERGENCY. ALL HANDS ON DECK.
-         *            *insert klaxon bell here*
-         * alert preference is IGNORED - emergency broadcast cannot be opted out of.
-         */
-        case Broadcast::TYPE_EMERGENCY:
-            $sql = DB::table('person');
-            self::addOnSiteCond($sql);
-            self::addNotOnDutyJoin($sql);
-            break;
+            /* Allcom, Allcom -> Khaki: EMERGENCY. ALL HANDS ON DECK.
+             *            *insert klaxon bell here*
+             * alert preference is IGNORED - emergency broadcast cannot be opted out of.
+             */
+            case Broadcast::TYPE_EMERGENCY:
+                $sql = DB::table('person');
+                self::addOnSiteCond($sql);
+                self::addNotOnDutyJoin($sql);
+                break;
 
-        // Broadcast to people on shift
-        case Broadcast::TYPE_ONSHIFT:
-            $sql = DB::table('timesheet')
+            // Broadcast to people on shift
+            case Broadcast::TYPE_ONSHIFT:
+                $sql = DB::table('timesheet')
                     ->join('person', 'person.id', '=', 'timesheet.person_id')
                     ->whereYear('timesheet.on_duty', current_year())
                     ->whereNull('timesheet.off_duty')
                     ->whereRaw('IFNULL(alert_person.use_sms, TRUE) IS TRUE')
                     ->where('person.sms_on_playa_verified', true)
                     ->where('person.sms_on_playa_stopped', false);
-            break;
+                break;
 
-        // Recruit people for a unstaffed Dirt shift. Basically anyone
-        // who might be on playa and who is not on shift.
-        case Broadcast::TYPE_RECRUIT_DIRT:
-            $sql = DB::table('person');
-            self::addOnSiteCond($sql);
-            self::addNotOnDutyJoin($sql);
-            break;
-
-        // Allcom, Allcom -> Clubhouse, Non Emergency - usually off playa.
-        case Broadcast::TYPE_GENERAL:
-            $sql = DB::table('person');
-            if ($onSite) {
+            // Recruit people for a unstaffed Dirt shift. Basically anyone
+            // who might be on playa and who is not on shift.
+            case Broadcast::TYPE_RECRUIT_DIRT:
+                $sql = DB::table('person');
                 self::addOnSiteCond($sql);
-            }
-            break;
-
-        // For Edit Slots and alerting people to shift time change or cancellation.
-        // TODO: move this into SlotController.
-        case Broadcast::TYPE_SLOT_EDIT:
-            $personIds = $params['person_ids'] ?? null;
-            if (empty($personIds)) {
-                throw new \InvalidArgumentException("Person ids cannot be missing or empty");
-            }
-            $sql = DB::table('person')->whereIn('id', $personIds);
-            self::addAlertPrefJoin($sql);
-            break;
-
-        // Broadcast to people who hold a specific position
-        case Broadcast::TYPE_POSITION:
-        case Broadcast::TYPE_RECRUIT_POSITION:
-            $isRecruitPosition = ($broadcastType == Broadcast::TYPE_RECRUIT_POSITION);
-
-            $positionId  = $params['position_id'];
-
-            $sql = DB::table('person_position')
-                ->join('person', function ($j) {
-                    $j->on('person.id', '=', 'person_position.person_id');
-                    $j->where('person.status', 'active');
-                })
-                ->where('person_position.position_id', $positionId);
-
-            if ($onSite || $isRecruitPosition) {
-                self::addOnSiteCond($sql);
-            }
-
-            if ($isRecruitPosition) {
-                // A shift muster shouldn't target people who are on duty.
                 self::addNotOnDutyJoin($sql);
-            } elseif ($positionSignedup != 'any') {
-                // Is the person signed up for shift this year?
-                $cond = "EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE YEAR(begins)=$year AND slot.position_id=$positionId AND person_slot.person_id=person.id LIMIT 1)";
-                if ($positionSignedup == 'not-signed-up') {
-                    $cond = "NOT $cond";
+                break;
+
+            // Allcom, Allcom -> Clubhouse, Non Emergency - usually off playa.
+            case Broadcast::TYPE_GENERAL:
+                $sql = DB::table('person');
+                if ($onSite) {
+                    self::addOnSiteCond($sql);
+                }
+                break;
+
+            // For Edit Slots and alerting people to shift time change or cancellation.
+            // TODO: move this into SlotController.
+            case Broadcast::TYPE_SLOT_EDIT:
+                $personIds = $params['person_ids'] ?? null;
+                if (empty($personIds)) {
+                    throw new InvalidArgumentException("Person ids cannot be missing or empty");
+                }
+                $sql = DB::table('person')->whereIn('id', $personIds);
+                self::addAlertPrefJoin($sql);
+                break;
+
+            // Broadcast to people who hold a specific position
+            case Broadcast::TYPE_POSITION:
+            case Broadcast::TYPE_RECRUIT_POSITION:
+                $isRecruitPosition = ($broadcastType == Broadcast::TYPE_RECRUIT_POSITION);
+
+                $positionId = $params['position_id'];
+
+                $sql = DB::table('person_position')
+                    ->join('person', function ($j) {
+                        $j->on('person.id', '=', 'person_position.person_id');
+                        $j->where('person.status', 'active');
+                    })
+                    ->where('person_position.position_id', $positionId);
+
+                if ($onSite || $isRecruitPosition) {
+                    self::addOnSiteCond($sql);
                 }
 
-                $sql->whereRaw($cond);
-            }
-            break;
+                if ($isRecruitPosition) {
+                    // A shift muster shouldn't target people who are on duty.
+                    self::addNotOnDutyJoin($sql);
+                } elseif ($positionSignedup != 'any') {
+                    // Is the person signed up for shift this year?
+                    $cond = "EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE YEAR(begins)=$year AND slot.position_id=$positionId AND person_slot.person_id=person.id LIMIT 1)";
+                    if ($positionSignedup == 'not-signed-up') {
+                        $cond = "NOT $cond";
+                    }
 
-        // Send to all shift sign ups
-        case Broadcast::TYPE_SLOT:
-            $slotId = $params['slot_id'];
-            $sql = DB::table('person_slot')
-                ->join('person', 'person.id', '=', 'person_slot.person_id')
-                ->where('person_slot.slot_id', $slotId);
-            break;
+                    $sql->whereRaw($cond);
+                }
+                break;
 
-        default:
-            throw new \InvalidArgumentException("Unknown type [$broadcastType]");
+            // Send to all shift sign ups
+            case Broadcast::TYPE_SLOT:
+                $slotId = $params['slot_id'];
+                $sql = DB::table('person_slot')
+                    ->join('person', 'person.id', '=', 'person_slot.person_id')
+                    ->where('person_slot.slot_id', $slotId);
+                break;
+
+            default:
+                throw new InvalidArgumentException("Unknown type [$broadcastType]");
         }
 
         $isSimple = $attrs['is_simple'] ?? false;
@@ -657,7 +664,7 @@ class RBS
             $trainingCond .= " (SELECT 1 FROM trainee_status
                 INNER JOIN slot on slot.id = trainee_status.slot_id
                 WHERE trainee_status.person_id = person.id
-                     AND slot.position_id = ".Position::TRAINING."
+                     AND slot.position_id = " . Position::TRAINING . "
                      AND YEAR(slot.begins) = $year";
             if ($training == 'passed') {
                 $trainingCond .= " AND passed=1";
@@ -695,8 +702,8 @@ class RBS
         $rows = $sql->select($cols)->orderBy('person.callsign')->get();
 
         $smsColumn = $alert->on_playa ? 'sms_on_playa' : 'sms_off_playa';
-        $verifyColumn = $smsColumn.'_verified';
-        $stopColumn = $smsColumn.'_stopped';
+        $verifyColumn = $smsColumn . '_verified';
+        $stopColumn = $smsColumn . '_stopped';
 
         foreach ($rows as $row) {
             if (!$sendSms) {
@@ -726,7 +733,7 @@ class RBS
          */
 
         if (!$sendClubhouse && !$isEmergency) {
-            $rows = $rows->filter(fn ($row) => ($sendSms && $row->use_sms) || ($sendEmail && $row->use_email))
+            $rows = $rows->filter(fn($row) => ($sendSms && $row->use_sms) || ($sendEmail && $row->use_email))
                 ->values();
         }
 
@@ -748,7 +755,7 @@ class RBS
         $year = current_year();
         $laborDay = date('Y-m-d', strtotime("September $year first monday"));
 
-        return [strtotime($laborDay." - 14 days"), strtotime($laborDay." + 5 days")];
+        return [strtotime($laborDay . " - 14 days"), strtotime($laborDay . " + 5 days")];
     }
 
     /*
@@ -823,8 +830,8 @@ class RBS
 
         // Can SMS be used?
         if (($alert == null || $alert->use_sms == true)
-          && ($phoneNumber != '' && $person->{$smsColumn . '_verified'} == true && $person->{$smsColumn . '_stopped'} == false)
-         ) {
+            && ($phoneNumber != '' && $person->{$smsColumn . '_verified'} == true && $person->{$smsColumn . '_stopped'} == false)
+        ) {
             $sendSMS = true;
         } else {
             $sendSMS = false;
@@ -849,7 +856,7 @@ class RBS
             $limit = (RBS::SMS_LIMIT - (strlen($smsMessage) + 3));
             $size = strlen($smsMessage);
             $size = $size > $limit ? $limit : $size;
-            $smsMessage .= substr($subject, 0, $size).'  '.RBS::SMS_SUFFIX;
+            $smsMessage .= substr($subject, 0, $size) . '  ' . RBS::SMS_SUFFIX;
 
             try {
                 if (!$smsSandboxed) {
@@ -859,9 +866,9 @@ class RBS
                 }
             } catch (SMSException $e) {
                 ErrorLog::recordException($e, 'sms-exception', [
-                    'type'    => 'clubhouse-notify',
-                    'phone'   => $phoneNumber
-                 ]);
+                    'type' => 'clubhouse-notify',
+                    'phone' => $phoneNumber
+                ]);
                 $status = Broadcast::STATUS_SERVICE_FAIL;
             }
 
@@ -881,11 +888,11 @@ class RBS
                     mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message), true);
                 }
                 $status = Broadcast::STATUS_SENT;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 ErrorLog::recordException($e, 'email-exception', [
-                    'type'  => 'clubhouse-notify',
+                    'type' => 'clubhouse-notify',
                     'email' => $message->address
-                 ]);
+                ]);
                 $status = Broadcast::STATUS_SERVICE_FAIL;
                 $emailFail = 1;
             }
@@ -896,21 +903,21 @@ class RBS
         }
 
         $broadcast = Broadcast::create([
-            'sender_id'       => $senderId,
-            'alert_id'        => $alertId,
-            'sms_message'     => $smsMessage,
-            'sender_address'  => 'do-not-reply@burningman.org',
-            'email_message'   => $message,
-            'subject'         => $subject,
+            'sender_id' => $senderId,
+            'alert_id' => $alertId,
+            'sms_message' => $smsMessage,
+            'sender_address' => 'do-not-reply@burningman.org',
+            'email_message' => $message,
+            'subject' => $subject,
             'recipient_count' => 1,
-            'sms_failed'      => $smsFail,
-            'email_failed'    => $emailFail,
-            'sent_sms'        => $sendSMS,
-            'sent_email'      => $sendEmail,
-            'sent_clubhouse'  => 0
+            'sms_failed' => $smsFail,
+            'email_failed' => $emailFail,
+            'sent_sms' => $sendSMS,
+            'sent_email' => $sendEmail,
+            'sent_clubhouse' => 0
         ]);
 
         // Link the BroadcastMessage with the Broadcast
-        BroadcastMessage::whereIn('id', $logIds)->update([ 'broadcast_id' => $broadcast->id ]);
+        BroadcastMessage::whereIn('id', $logIds)->update(['broadcast_id' => $broadcast->id]);
     }
 }
