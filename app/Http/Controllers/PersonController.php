@@ -676,7 +676,7 @@ class PersonController extends ApiController
 
         $year = $params['year'] ?? current_year();
 
-        return response()->json(['people' => PeopleByLocationReport::execute($year)]);
+        return response()->json(['people' => PeopleByLocationReport::execute($year, $this->userCanViewEmail())]);
     }
 
     /*
