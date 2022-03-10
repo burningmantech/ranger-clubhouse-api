@@ -2,17 +2,21 @@
 
 namespace App\Exceptions;
 
-use Exception;
-
 use App\Http\RestApi;
 use App\Models\ErrorLog;
-
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-
-use Illuminate\Support\Str;
-
-use \Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
-
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
+use Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
+use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Throwable;
 
 
@@ -24,12 +28,12 @@ class Handler extends ExceptionHandler
      * @var array
      */
     protected $dontReport = [
-        \Illuminate\Auth\Access\AuthorizationException::class,
-        \Illuminate\Auth\AuthenticationException::class,
-        \Illuminate\Database\Eloquent\ModelNotFoundException::class,
-        \Illuminate\Validation\ValidationException::class,
-        \InvalidArgumentException::class,
-        \Tymon\JWTAuth\Exceptions\TokenExpiredException::class,
+        AuthorizationException::class,
+        AuthenticationException::class,
+        ModelNotFoundException::class,
+        ValidationException::class,
+        InvalidArgumentException::class,
+        TokenExpiredException::class,
         CommandRuntimeException::class,
     ];
 
@@ -48,7 +52,7 @@ class Handler extends ExceptionHandler
             return;
         }
 
-        if ($exception instanceof \Symfony\Component\Process\Exception\ProcessSignaledException) {
+        if ($exception instanceof ProcessSignaledException) {
             // May see this when an ECS instance is being shutdown -- don't report it.
             if ($exception->getSignal() == 9) {
                 return;
@@ -67,9 +71,9 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  Throwable  $e
-     * @return \Illuminate\Http\JsonResponse
+     * @param Request $request
+     * @param Throwable $e
+     * @return JsonResponse
      */
     public function render($request, Throwable $e)
     {
@@ -77,40 +81,40 @@ class Handler extends ExceptionHandler
          * Handle JWT exceptions.
          */
 
-        if ($e instanceof \Tymon\JWTAuth\Exceptions\TokenExpiredException) {
+        if ($e instanceof TokenExpiredException) {
             return response()->json(['token_expired'], $e->getStatusCode());
-        } elseif ($e instanceof \Tymon\JWTAuth\Exceptions\TokenInvalidException) {
+        } elseif ($e instanceof TokenInvalidException) {
             return response()->json(['token_invalid'], $e->getStatusCode());
         }
 
         // Record not found
-        if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+        if ($e instanceof ModelNotFoundException) {
             $className = last(explode('\\', $e->getModel()));
-            return response()->json([ 'error' => "$className was not found" ], 404);
+            return response()->json(['error' => "$className was not found"], 404);
         }
 
         // Required parameters not present and/or do not pass validation.
-        if ($e instanceof \Illuminate\Validation\ValidationException) {
+        if ($e instanceof ValidationException) {
             return RestApi::error(response(), 422, $e->validator->getMessageBag());
         }
 
         // Parameters given to a method are not valid.
-        if ($e instanceof \InvalidArgumentException) {
+        if ($e instanceof InvalidArgumentException) {
             return RestApi::error(response(), 422, $e->getMessage());
         }
 
         // No authorization token / not logged in
-        if ($e instanceof \Illuminate\Auth\AuthenticationException) {
-            return response()->json([ 'error' => 'Not authenticated.'], 401);
+        if ($e instanceof AuthenticationException) {
+            return response()->json(['error' => 'Not authenticated.'], 401);
         }
 
         // User does not have the appropriate roles.
-        if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+        if ($e instanceof AuthorizationException) {
             $message = $e->getMessage();
             if ($message == '') {
                 $message = 'Not permitted';
             }
-            return response()->json([ 'error' => $message ], 403);
+            return response()->json(['error' => $message], 403);
         }
 
         /*
@@ -120,7 +124,7 @@ class Handler extends ExceptionHandler
          * - Something, something, something, bad.
          */
         if ($this->isHttpException($e)) {
-            $statusCode = (int) $e->getStatusCode();
+            $statusCode = (int)$e->getStatusCode();
 
             switch ($statusCode) {
                 case 404:
@@ -134,7 +138,7 @@ class Handler extends ExceptionHandler
 
 
         // Bad SQL statement, no biscuit!
-        if ($e instanceof \Illuminate\Database\QueryException) {
+        if ($e instanceof QueryException) {
             if (app()->isLocal() || app()->runningUnitTests()) {
                 // For development return the full SQL statement
                 $className = class_basename($e);
