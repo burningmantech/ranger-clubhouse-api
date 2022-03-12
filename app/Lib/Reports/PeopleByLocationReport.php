@@ -15,14 +15,13 @@ class PeopleByLocationReport
      */
     public static function execute($year, $includeEmail): array
     {
-        return DB::table('person')
+        $sql = DB::table('person')
             ->select(
                 'id',
                 'callsign',
                 'first_name',
                 'last_name',
                 'status',
-                $includeEmail ? 'email' : DB::raw("'' as email"),
                 'city',
                 'state',
                 'zip',
@@ -33,9 +32,11 @@ class PeopleByLocationReport
             ->orderBy('country')
             ->orderBy('state')
             ->orderBy('city')
-            ->orderBy('zip')
-            ->get()
-            ->toArray();
+            ->orderBy('zip');
+        if ($includeEmail) {
+            $sql->addSelect('email');
+        }
+        return $sql->get()->toArray();
     }
 
 }

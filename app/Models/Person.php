@@ -1208,7 +1208,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         // Can't determine - return the value
-        return $gender;
+        return $gender ?? '';
     }
 
     /**
