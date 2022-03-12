@@ -1305,7 +1305,6 @@ class PersonControllerTest extends TestCase
             'people' => [
                 [
                     'id' => $personCA->id,
-                    'email' => '',
                     'callsign' => $personCA->callsign,
                     'status' => $personCA->status,
                     'city' => $personCA->city,
@@ -1316,7 +1315,6 @@ class PersonControllerTest extends TestCase
                 ],
                 [
                     'id' => $personUS->id,
-                    'email' => '',
                     'callsign' => $personUS->callsign,
                     'status' => $personUS->status,
                     'city' => $personUS->city,
@@ -1325,6 +1323,13 @@ class PersonControllerTest extends TestCase
                     'worked' => 1,
                     'signed_up' => 1,
                 ]
+            ]
+        ]);
+
+        $response->assertJsonMissing([
+            'people' => [
+                [ 'email' => $personCA->email ],
+                [ 'email' => $personUS->email ]
             ]
         ]);
     }
