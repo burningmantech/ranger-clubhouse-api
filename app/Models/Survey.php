@@ -2,12 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
-use App\Models\Position;
-use App\Models\SurveyGroup;
-use App\Models\Slot;
-
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -51,10 +45,10 @@ class Survey extends ApiModel
     /**
      * Find all the surveys
      *
-     * @return Survey[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
 
-    public static function findAll()
+    public static function findAll(): \Illuminate\Database\Eloquent\Collection
     {
         return self::orderBy('year')->get();
     }
@@ -63,10 +57,10 @@ class Survey extends ApiModel
      * Find all the surveys for a given year
      *
      * @param int $year
-     * @return Survey[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
 
-    public static function findAllForYear(int $year)
+    public static function findAllForYear(int $year): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('year', $year)->orderBy('type')->get();
     }
@@ -81,7 +75,7 @@ class Survey extends ApiModel
      * @throws ModelNotFoundException
      */
 
-    public static function findForTypePositionYear(string $type, int $positionId, int $year)
+    public static function findForTypePositionYear(string $type, int $positionId, int $year): ?Survey
     {
         return self::where('type', $type)
             ->where('position_id', $positionId)
@@ -94,10 +88,10 @@ class Survey extends ApiModel
      * Find all the surveys based on the give criteria
      *
      * @param array $query
-     * @return Survey[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
 
-    public static function findForQuery(array $query)
+    public static function findForQuery(array $query): \Illuminate\Database\Eloquent\Collection
     {
         $year = $query['year'] ?? null;
         $positionId = $query['position_id'] ?? null;
@@ -161,7 +155,8 @@ class Survey extends ApiModel
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function retrieveSlots()
+
+    public function retrieveSlots(): \Illuminate\Database\Eloquent\Collection
     {
         return Slot::select(
             'id',
@@ -186,7 +181,7 @@ class Survey extends ApiModel
      * @return Collection
      */
 
-    public static function retrieveAllForTrainer(int $personId)
+    public static function retrieveAllForTrainer(int $personId): Collection
     {
         return Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
             ->with(['position:id,title'])
@@ -211,9 +206,9 @@ class Survey extends ApiModel
      *
      * @param int $personId
      * @param int $year
-     * @return Survey[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public static function findAllForTrainerYear(int $personId, int $year)
+    public static function findAllForTrainerYear(int $personId, int $year): \Illuminate\Database\Eloquent\Collection
     {
         return Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
             ->with(['position:id,title'])
@@ -221,12 +216,21 @@ class Survey extends ApiModel
             ->get();
     }
 
-    public static function hasTrainerSurveyForPosition(int $positionId) {
+    /**
+     * Does a trainer survey exists for a training position?
+     *
+     * @param int $positionId
+     * @return bool
+     */
+
+    public static function hasTrainerSurveyForPosition(int $positionId): bool
+    {
         return self::where('type', self::TRAINER)
-                    ->where('year', current_year())
-                    ->where('position_id', $positionId)
-                    ->exists();
+            ->where('year', current_year())
+            ->where('position_id', $positionId)
+            ->exists();
     }
+
     /**
      * Find any unanswered surveys for a person who has passed training in a given year.
      *
@@ -235,7 +239,7 @@ class Survey extends ApiModel
      * @return array
      */
 
-    public static function retrieveUnansweredForPersonYear(int $personId, int $year)
+    public static function retrieveUnansweredForPersonYear(int $personId, int $year): array
     {
         $slots = TraineeStatus::select('trainee_status.*')
             ->join('slot', 'slot.id', 'trainee_status.slot_id')

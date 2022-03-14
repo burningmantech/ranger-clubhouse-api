@@ -1006,7 +1006,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
     {
-        $person = Person::factory()->create(['status' => Person::AUDITOR, 'reviewed_pi_at' => now()]);
+        $person = Person::factory()->create(['status' => Person::AUDITOR, 'pi_reviewed_for_dashboard_at' => now()]);
         $this->actingAs($person);
         $this->markOnlineTrainingPassed($person);
 
