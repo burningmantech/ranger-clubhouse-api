@@ -163,6 +163,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'lms_course_expiry' => 'datetime',
 
         'reviewed_pi_at' => 'datetime',
+        'pi_reviewed_for_dashboard_at' => 'datetime',
     ];
 
     /*
@@ -1235,7 +1236,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Split the Known Rnagers into an array
+     * Split the Known Rangers into an array
      *
      * @return array
      */
@@ -1252,7 +1253,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
     public function hasReviewedPi(): bool
     {
-        return ($this->reviewed_pi_at && $this->reviewed_pi_at->year == current_year());
+        return ($this->pi_reviewed_for_dashboard_at
+            && $this->pi_reviewed_for_dashboard_at->year == current_year());
     }
 
     /**
