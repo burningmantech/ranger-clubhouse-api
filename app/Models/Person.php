@@ -453,6 +453,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return null;
     }
 
+    /**
+     * Find a person by their LMS ID.
+     *
+     * @param string $lmsId
+     * @return ?Person
+     */
+
+    public static function findByLmsID(string $lmsId) : ?Person
+    {
+        return self::where('lms_id', $lmsId)->first();
+    }
+
 
     public function save($options = [])
     {

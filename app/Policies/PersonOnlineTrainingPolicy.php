@@ -13,7 +13,7 @@ class PersonOnlineTrainingPolicy
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
     }
@@ -22,10 +22,11 @@ class PersonOnlineTrainingPolicy
      * Determine whether the user can view the online trainings.
      *
      * @param Person $user
-     * @param \App\App\Models\PersonOnlineTraining $personOT
-     * @return mixed
+     * @param PersonOnlineTraining $personOT
+     * @return bool
      */
-    public function view(Person $user, PersonOnlineTraining $personOT)
+
+    public function view(Person $user, PersonOnlineTraining $personOT): bool
     {
         return false;
     }
@@ -34,9 +35,9 @@ class PersonOnlineTrainingPolicy
      * Determine whether the user can create online training.
      *
      * @param Person $user
-     * @return mixed
+     * @return bool
      */
-    public function store(Person $user)
+    public function store(Person $user): bool
     {
         return false;
     }
@@ -45,10 +46,10 @@ class PersonOnlineTrainingPolicy
      * Determine whether the user can update the online training.
      *
      * @param Person $user
-     * @param \App\App\Models\PersonOnlineTraining $personOT
-     * @return mixed
+     * @param PersonOnlineTraining $personOT
+     * @return bool
      */
-    public function update(Person $user, PersonOnlineTraining $personOT)
+    public function update(Person $user, PersonOnlineTraining $personOT): bool
     {
         return false;
     }
@@ -57,21 +58,21 @@ class PersonOnlineTrainingPolicy
      * Determine whether the user can delete the online training.
      *
      * @param Person $user
-     * @param \App\App\Models\PersonOnlineTraining $personOT
-     * @return mixed
+     * @param PersonOnlineTraining $personOT
+     * @return bool
      */
-    public function delete(Person $user, PersonOnlineTraining $personOT)
+    public function delete(Person $user, PersonOnlineTraining $personOT): bool
     {
         return false;
     }
 
-    /*
+    /**
      * Can the user import the online training course completions?
      */
 
-    public function import(Person $user)
+    public function import(Person $user) : bool
     {
-        return false; // only admins
+        return false; // only tech ninjas
     }
 
     /*
@@ -89,7 +90,7 @@ class PersonOnlineTrainingPolicy
 
     public function courses(Person $user)
     {
-        return false; // only admins
+        return false;
     }
 
     /*
@@ -98,7 +99,16 @@ class PersonOnlineTrainingPolicy
 
     public function enrollment(Person $user)
     {
-        return false; // only admins
+        return false;
+    }
+
+    /*
+     * Can the user update the course types
+     */
+
+    public function setCourseType(Person $user)
+    {
+        return false;
     }
 
     /*
