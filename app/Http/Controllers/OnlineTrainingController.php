@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
 use App\Lib\Moodle;
-
 use App\Mail\OnlineTrainingEnrollmentMail;
-
 use App\Models\Person;
 use App\Models\PersonOnlineTraining;
-use App\Models\Timesheet;
-
+use App\Models\Setting;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -23,7 +18,7 @@ class OnlineTrainingController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function index()
+    public function index(): JsonResponse
     {
         $query = request()->validate([
             'year' => 'required|integer',
@@ -38,11 +33,12 @@ class OnlineTrainingController extends ApiController
     /**
      * Create an online training account (if none exists)
      *
+     * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function setupPerson(Person $person)
+    public function setupPerson(Person $person): JsonResponse
     {
         $this->authorize('setupPerson', [PersonOnlineTraining::class, $person]);
 
@@ -50,14 +46,16 @@ class OnlineTrainingController extends ApiController
          * Any active Ranger with 2 or more years experience gets to take the half course.
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
          */
+        /*
         if ($person->status == Person::ACTIVE
             && count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) >= 2) {
             $courseId = setting('MoodleHalfCourseId');
             $type = 'half';
         } else {
-            $courseId = setting('MoodleFullCourseId');
-            $type = 'full';
-        }
+        */
+        $courseId = setting('MoodleFullCourseId');
+        $type = 'full';
+        /* }*/
 
         $password = null;
         $exists = true;
@@ -93,7 +91,29 @@ class OnlineTrainingController extends ApiController
             'status' => $exists ? 'exists' : 'created',
             'password' => $password,
             'course_type' => $type,
-            'expiry_date' => (string) $person->lms_course_expiry,
+            'expiry_date' => (string)$person->lms_course_expiry,
+        ]);
+    }
+
+    /**
+     * Attempt to scan the Moodle enrollments and associate any account that does not have a user id
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function linkUsers(): JsonResponse
+    {
+        $this->authorize('linkUsers', PersonOnlineTraining::class);
+
+        $fullId = setting('MoodleFullCourseId');
+        $halfId = setting('MoodleHalfCourseId');
+
+        $lms = new Moodle();
+
+        return response()->json([
+            'full_course' => !empty($fullId) ? $lms->linkUsersInCourse($fullId) : [],
+            'half_course' => !empty($halfId) ? $lms->linkUsersInCourse($halfId) : [],
         ]);
     }
 
@@ -104,15 +124,15 @@ class OnlineTrainingController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function config()
+    public function config(): JsonResponse
     {
         $this->authorize('config', PersonOnlineTraining::class);
 
         $otSettings = setting([
             'OnlineTrainingDisabledAllowSignups',
             'OnlineTrainingEnabled',
-            'LMSHalfCourseId',
-            'LMSFullCourseId'
+            'MoodleFullCourseId',
+            'MoodleHalfCourseId'
         ]);
 
         return response()->json($otSettings);
@@ -125,31 +145,69 @@ class OnlineTrainingController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function courses()
+    public function courses(): JsonResponse
     {
         $this->authorize('courses', PersonOnlineTraining::class);
 
-        $lms = new LMS();
-        return response()->json(['courses' => $lms->retrieveAvailableCourses()]);
+        $lms = new Moodle();
+        $fullCourse = setting('MoodleFullCourseId');
+        $halfCourse = setting('MoodleHalfCourseId');
+        $courses = $lms->retrieveAvailableCourses();
+        foreach ($courses as $course) {
+            if ($course->id == $fullCourse) {
+                $course->is_full_course = true;
+            }
+            if ($course->id == $halfCourse) {
+                $course->is_half_course = true;
+            }
+        }
+        return response()->json(['courses' => $courses]);
+    }
+
+    /**
+     * Retrieve all available courses
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function setCourseType(): JsonResponse
+    {
+        $this->authorize('setCourseType', PersonOnlineTraining::class);
+
+        $params = request()->validate([
+            'course_id' => 'integer|required',
+            'type' => 'string|required'
+        ]);
+
+        $setting = Setting::findOrFail($params['type'] == 'full' ? 'MoodleFullCourseId' : 'MoodleHalfCourseId');
+        $setting->value = (string)$params['course_id'];
+        $setting->auditReason = "online course update";
+        if (!$setting->save()) {
+            return $this->restError($setting);
+        }
+        Setting::kickQueues();
+        return $this->success();
     }
 
     /**
      * Retrieve everyone who is enrolled.
      *
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function enrollment()
+    public function enrollment(): JsonResponse
     {
         $this->authorize('enrollment', PersonOnlineTraining::class);
-        $lms = new LMS();
+        $lms = new Moodle();
 
-        $fullId = setting('LMSFullCourseId');
-        $halfId = setting('LMSHalfCourseId');
+        $fullId = setting('MoodleFullCourseId');
+        $halfId = setting('MoodleHalfCourseId');
 
         return response()->json([
-            'full_course' => !empty($fullId) ? $lms->retrieveCourseEnrollment($fullId) : [],
-            'half_course' => !empty($halfId) ? $lms->retrieveCourseEnrollment($halfId): [],
+            'full_course' => !empty($fullId) ? $lms->retrieveCourseEnrollmentWithCompletion($fullId) : [],
+            'half_course' => !empty($halfId) ? $lms->retrieveCourseEnrollmentWithCompletion($halfId) : [],
         ]);
     }
 }

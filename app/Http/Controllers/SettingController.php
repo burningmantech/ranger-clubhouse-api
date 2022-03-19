@@ -74,14 +74,7 @@ class SettingController extends ApiController
             return $this->restError($setting);
         }
 
-        if (!app()->isLocal()) {
-            try {
-                // Kick the queue workers to pick up the new settings
-                Artisan::call('queue:restart');
-            } catch (Exception $e) {
-                ErrorLog::recordException($e, 'setting-queue-restart-exception');
-            }
-        }
+        Setting::kickQueues();
 
         return $this->success($setting);
     }

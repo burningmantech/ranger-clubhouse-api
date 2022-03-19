@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -21,7 +22,7 @@ class Setting extends ApiModel
 
     protected $rules = [
         'name' => 'required|string',
-        'value' => 'required|string|nullable'
+        'value' => 'string|nullable'
     ];
 
     public $appends = [
@@ -230,16 +231,16 @@ class Setting extends ApiModel
 
         'MoodleHalfCourseId' => [
             'description' => 'Moodle training course ID for active Rangers (2+ years)',
-            'type' => self::TYPE_INTEGER,
+            'type' => self::TYPE_STRING,
         ],
 
         'MoodleFullCourseId' => [
-            'description' => 'Moodle half training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
-            'type' => self::TYPE_INTEGER,
+            'description' => 'Moodle full training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
+            'type' => self::TYPE_STRING,
         ],
 
         'MoodleServiceName' => [
-            'description' => 'Moodle ervice name to use',
+            'description' => 'Moodle service name to use',
             'type' => self::TYPE_STRING,
         ],
 
@@ -615,7 +616,7 @@ class Setting extends ApiModel
         }
 
         // Lookup the value
-        return Setting::where('name', $name)->firstOrNew(['name' => $name]);
+        return Setting::firstOrNew(['name' => $name]);
     }
 
     public static function findOrFail($name)
@@ -641,6 +642,18 @@ class Setting extends ApiModel
         usort($settings, fn($a, $b) => strcasecmp($a->name, $b->name));
 
         return $settings;
+    }
+
+    public static function kickQueues()
+    {
+        if (!app()->isLocal()) {
+            try {
+                // Kick the queue workers to pick up the new settings
+                Artisan::call('queue:restart');
+            } catch (\Exception $e) {
+                ErrorLog::recordException($e, 'setting-queue-restart-exception');
+            }
+        }
     }
 
     public static function getValue($name, $throwOnEmpty = false)

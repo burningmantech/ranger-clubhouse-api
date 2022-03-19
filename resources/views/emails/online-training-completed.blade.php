@@ -1,33 +1,37 @@
 <x-html-email :isPublicEmail="true">
-<p>
-        Hello {{$person->callsign}},
-    </p>
-
     <p>
-        Congratulations! You have successfully completed Part 1 of Ranger Training (online).
-        You are cleared to sign up for Part 2 of Ranger Training (face-to-face).
+        @if ($person->isPNV())
+            Hello Potential Ranger Volunteer {{$person->callsign}},
+        @elseif ($person->isAuditor())
+            Hello Auditor {{@$person->first_name}},
+        @else
+            Hello Ranger {{$person->callsign}},
+        @endif
     </p>
-
+    <p>
+        Congratulations! You have successfully completed the Ranger Online Training Course.
+        You are cleared to sign up for the In-Person Training.
+    </p>
     @if ($person->isPNV())
         <p>
-            Visit the <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>
-            to see what additional tasks you need to complete in order to become a Black Rock Ranger.
+            <b>Visit the</b> <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>
+            <b>to see what additional steps you need to complete in order to become a Black Rock Ranger.</b>
         </p>
     @elseif ($person->isAuditor())
         <p>
             Visit the <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>
-            to sign up to audit Part 2 of Ranger Training.
+            to audit the Ranger In-Person Training.
         </p>
         <p>
-            <b>NOTE: Since you are an auditor, you are NOT on the path to becoming a Black Rock Ranger this year.</b>
+            <b>NOTE: You are an auditor, you are NOT on the path to becoming a Black Rock Ranger this year.</b>
         </p>
     @else
         <p>
-            All Rangers must complete Part 2 of Ranger Training (face-to-face) before being allowed to work a shift.
+            <b>All Rangers MUST complete an In-Person Training before being allowed to work a shift on playa.</b>
         </p>
         <p>
             Visit the <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>
-            to sign up for Part 2 of Ranger Training.
+            to sign up for the In-Person Training.
         </p>
     @endif
     <p>
