@@ -7,6 +7,7 @@ use App\Mail\OnlineTrainingEnrollmentMail;
 use App\Models\Person;
 use App\Models\PersonOnlineTraining;
 use App\Models\Setting;
+use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -46,16 +47,16 @@ class OnlineTrainingController extends ApiController
          * Any active Ranger with 2 or more years experience gets to take the half course.
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
          */
-        /*
+
         if ($person->status == Person::ACTIVE
+            && !setting('OnlineTrainingFullCourseForVets')
             && count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) >= 2) {
             $courseId = setting('MoodleHalfCourseId');
             $type = 'half';
         } else {
-        */
-        $courseId = setting('MoodleFullCourseId');
-        $type = 'full';
-        /* }*/
+            $courseId = setting('MoodleFullCourseId');
+            $type = 'full';
+        }
 
         $password = null;
         $exists = true;
@@ -89,6 +90,7 @@ class OnlineTrainingController extends ApiController
 
         return response()->json([
             'status' => $exists ? 'exists' : 'created',
+            'username' => $person->lms_username,
             'password' => $password,
             'course_type' => $type,
             'expiry_date' => (string)$person->lms_course_expiry,
@@ -131,8 +133,9 @@ class OnlineTrainingController extends ApiController
         $otSettings = setting([
             'OnlineTrainingDisabledAllowSignups',
             'OnlineTrainingEnabled',
+            'OnlineTrainingFullCourseForVets',
             'MoodleFullCourseId',
-            'MoodleHalfCourseId'
+            'MoodleHalfCourseId',
         ]);
 
         return response()->json($otSettings);

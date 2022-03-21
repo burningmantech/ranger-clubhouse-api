@@ -225,6 +225,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'lms_id',
         'lms_course',
         'lms_course_expiry',
+        'lms_username',
 
         'active_next_event',
         'has_note_on_file',
