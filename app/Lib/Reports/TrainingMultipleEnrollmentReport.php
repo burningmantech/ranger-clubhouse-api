@@ -26,6 +26,16 @@ class TrainingMultipleEnrollmentReport
     public static function execute($position, int $year): array
     {
         $positionId = $position->id;
+        $rows = DB::select('SELECT
+                  p.id
+                FROM slot s
+                  LEFT JOIN person_slot AS ps ON ps.slot_id=s.id
+                  LEFT JOIN person        AS p  ON ps.person_id=p.id
+                WHERE YEAR(s.begins) = ? AND s.position_id = ?
+                GROUP BY p.id
+                HAVING COUNT(s.id) > 1', [$year, $positionId]);
+
+        $multipleIds = array_column($rows, 'id');
         $byPerson = DB::table('person')
             ->select(
                 'person.id as person_id',
@@ -42,20 +52,7 @@ class TrainingMultipleEnrollmentReport
             ->leftJoin('position', 'position.id', '=', 'slot.position_id')
             ->whereYear('slot.begins', $year)
             ->where('position.id', $positionId)
-            ->whereRaw(
-                'person.id IN (
-                SELECT
-                  p.id
-                FROM person p
-                  LEFT JOIN person_slot AS ps ON ps.person_id=p.id
-                  LEFT JOIN slot        AS s  ON s.id=ps.slot_id
-                  LEFT JOIN position    AS po ON po.id = s.position_id
-                WHERE YEAR(s.begins) = ? AND po.id = ?
-                GROUP BY p.id
-                HAVING COUNT(s.id) > 1
-              )',
-                [$year, $positionId]
-            )
+            ->whereIn('person.id', $multipleIds)
             ->orderBy('person.callsign', 'asc')
             ->orderBy('date', 'ASC')
             ->get()
