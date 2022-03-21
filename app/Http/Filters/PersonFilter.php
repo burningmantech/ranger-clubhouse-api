@@ -110,6 +110,7 @@ class PersonFilter
         'lms_id',
         'lms_course',
         'lms_course_expiry',
+        'lms_username'
     ];
 
     const INTAKE_FIELDS = [

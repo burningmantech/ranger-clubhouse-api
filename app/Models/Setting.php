@@ -218,6 +218,12 @@ class Setting extends ApiModel
             'default' => false
         ],
 
+        'OnlineTrainingFullCourseForVets' => [
+            'description' => 'Require the full course for vets',
+            'type' => self::TYPE_BOOL,
+            'default' => false
+        ],
+
         'MoodleDomain' => [
             'description' => 'The LMS domain name',
             'type' => self::TYPE_STRING

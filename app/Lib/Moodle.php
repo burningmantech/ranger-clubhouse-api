@@ -27,7 +27,7 @@ class Moodle
 
     const WS_COURSE_AVAILABLE = 'core_course_get_courses';
     const WS_COURSE_COMPLETION = 'core_completion_get_course_completion_status';
-    const WS_SEARCH_USERS = 'tool_lp_search_users';
+    const WS_SEARCH_USERS = 'core_user_get_users';
     const WS_CREATE_USERS = 'core_user_create_users';
     const WS_ENROLL_USERS = 'enrol_manual_enrol_users';
     const WS_ENROLLED_USERS = 'core_enrol_get_enrolled_users';
@@ -75,15 +75,17 @@ class Moodle
     }
 
     /**
-     * Find user(s) by a querying all fields.
+     * Find user(s) by email address.
      *
      * @param $query
-     * @return mixed
+     * @return array
      */
 
-    public function findPersonByQuery($query)
+    public function findPersonByEmail($query): mixed
     {
-        $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, ['query' => $query, 'capability' => '']);
+        $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, [
+            'criteria' => [['key' => 'email', 'value' => $query]]
+        ]);
         return $result->users;
     }
 
@@ -166,20 +168,20 @@ class Moodle
                 continue;
             }
 
-            $student->person = (object) ['id' => $person->id, 'callsign' => $person->callsign, 'status' => $person->status];
+            $student->person = (object)['id' => $person->id, 'callsign' => $person->callsign, 'status' => $person->status];
         }
 
         usort($students, function ($a, $b) {
-           if (isset($a->person) && isset($b->person)) {
-               return strcasecmp($a->person->callsign, $b->person->callsign);
-           }
-           if (isset($a->person)) {
-               return 1;
-           }
-           if (isset($b->person)) {
-               return 1;
-           }
-           return strcasecmp($a->email, $b->email);
+            if (isset($a->person) && isset($b->person)) {
+                return strcasecmp($a->person->callsign, $b->person->callsign);
+            }
+            if (isset($a->person)) {
+                return 1;
+            }
+            if (isset($b->person)) {
+                return 1;
+            }
+            return strcasecmp($a->email, $b->email);
         });
         return $students;
     }
@@ -220,7 +222,7 @@ class Moodle
                 ->get();
             foreach ($peopleCompleted as $person) {
                 $completedAlready[$person->person_id] = true;
-             }
+            }
         }
 
         foreach ($students as $student) {
@@ -281,7 +283,7 @@ class Moodle
         $ids = [];
         foreach ($users as $user) {
             if (!empty($user->idnumber)) {
-                $ids[] = (int) $user->idnumber;
+                $ids[] = (int)$user->idnumber;
             }
         }
 
@@ -297,7 +299,7 @@ class Moodle
 
         $peopleById = [];
         foreach ($people as $person) {
-            $peopleById[(int) $person->id] = $person;
+            $peopleById[(int)$person->id] = $person;
         }
 
         foreach ($users as $row) {
@@ -315,10 +317,10 @@ class Moodle
     }
 
     /**
-     * Try to link the Clubhouse account with Docebo.
+     * Try to link the Clubhouse account with Moodle.
      *
      * @param Person $person account to link
-     * @return bool true if the Docebo user was found
+     * @return bool true if the Moodle user was found
      */
 
     public function findPerson(Person $person): bool
@@ -330,9 +332,13 @@ class Moodle
         /*
          * Look up by email
          */
-        $result = $this->findPersonByQuery($person->email);
+        $result = $this->findPersonByEmail($person->email);
         if (!empty($result)) {
-            self::setLmsID($person, $result->id);
+            $user = $result[0];
+            $person->lms_username = $user->username;
+            $person->lms_id = $user->id;
+            $person->auditReason = 'linked moodle account';
+            $person->saveWithoutValidation();
             return true;
         }
 
@@ -368,16 +374,19 @@ class Moodle
      * @return bool
      */
 
-    public function createUser(Person $person,  &$password): bool
+    public function createUser(Person $person, &$password): bool
     {
         $password = self::generatePassword($person);
 
+        $username = str_ireplace('(NR)', '', $person->callsign);
+        $username = strtolower(trim($username));
+        $username = preg_replace('/[^\w]/', '', $username);
         $result = $this->requestWebService(
             'POST', self::WS_CREATE_USERS,
             [
                 'users' => [[
-                    'username' => $person->email,
-                    'email' => $person->email,
+                    'username' => $username,
+                    'email' => strtolower($person->email),
                     'password' => $password,
                     'firstname' => $person->first_name,
                     'lastname' => $person->last_name,
@@ -385,8 +394,14 @@ class Moodle
                 ]]
             ]
         );
-        self::setLmsID($person, $result[0]->id);
-        ActionLog::record(Auth::user(), 'lms-user-create', '', ['lms_id' => $person->lms_id], $person->id);
+        $person->lms_username = $username;
+        $person->lms_id = $result[0]->id;
+        $person->auditReason = 'moodle account creation';
+        $person->saveWithoutValidation();
+        ActionLog::record(Auth::user(), 'lms-user-create', '', [
+            'lms_id' => $person->lms_id,
+            'lms_username' => $username,
+        ], $person->id);
         return true;
     }
 
@@ -437,7 +452,9 @@ class Moodle
         foreach ($students as $student) {
             if (!empty($student->idnumber)) {
                 $person = Person::find($student->idnumber);
-                if ($person && $person->lms_id == $student->id) {
+                if ($person
+                    && $person->lms_id == $student->id
+                    && $person->lms_username == $student->username) {
                     // Looks good!
                     continue;
                 }
@@ -450,6 +467,7 @@ class Moodle
             }
             $person->lms_course = $courseId;
             $person->lms_id = $student->id;
+            $person->lms_username = $student->username;
             $person->auditReason = 'moodle user id association';
             $person->saveWithoutValidation();
             $clubhouseId = $person->id;
@@ -482,7 +500,6 @@ class Moodle
         ];
 
         $query = array_merge($query, $data);
-
         $url = $this->domain . self::WEB_SERVICE_URL . '?' . http_build_query($query);
         $client = Http::connectTimeout(10);
         $response = match ($method) {
@@ -531,22 +548,5 @@ class Moodle
         }
 
         return $json;
-    }
-
-    /**
-     * Set the person's LMS ID
-     *
-     * @param Person $p
-     * @param $lmsId
-     * @return void
-     */
-
-    public static function setLmsId(Person $p, $lmsId)
-    {
-        if ($p->lms_id == $lmsId) {
-            return;
-        }
-        $p->lms_id = $lmsId;
-        $p->saveWithoutValidation();
     }
 }
