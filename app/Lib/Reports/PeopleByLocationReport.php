@@ -15,6 +15,7 @@ class PeopleByLocationReport
      */
     public static function execute($year, $includeEmail): array
     {
+        $slotIds = DB::table('slot')->whereYear('begins', $year)->where('position_id', '!=', Position::ALPHA)->pluck('id')->toArray();
         $sql = DB::table('person')
             ->select(
                 'id',
@@ -27,12 +28,16 @@ class PeopleByLocationReport
                 'zip',
                 'country',
                 DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE person_id=person.id AND YEAR(on_duty)=$year LIMIT 1) as worked"),
-                DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id AND YEAR(slot.begins)=$year AND slot.position_id != " . Position::ALPHA . " WHERE person_slot.person_id=person.id LIMIT 1) AS signed_up ")
             )
             ->orderBy('country')
             ->orderBy('state')
             ->orderBy('city')
             ->orderBy('zip');
+        if (empty($slotIds)) {
+            $sql->addSelect(DB::raw('false as signed_up'));
+        } else {
+            $sql->addSelect(DB::raw("EXISTS (SELECT 1 FROM person_slot WHERE person_id=person.id AND slot_id IN (".implode(',', $slotIds).") LIMIT 1) AS signed_up "));
+        }
         if ($includeEmail) {
             $sql->addSelect('email');
         }
