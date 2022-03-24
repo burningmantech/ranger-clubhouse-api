@@ -20,3 +20,10 @@ updates:
       interval: "weekly"
     labels:
       - "Task"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "Task"
