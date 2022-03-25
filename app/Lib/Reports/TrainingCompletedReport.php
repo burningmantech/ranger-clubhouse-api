@@ -2,8 +2,6 @@
 
 
 namespace App\Lib\Reports;
-
-
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
 
@@ -43,13 +41,12 @@ class TrainingCompletedReport
                     slot.id as slot_id,
                     slot.description as slot_description,
                     slot.begins as slot_begins
-                FROM person, trainee_status, slot
-                INNER JOIN position ON slot.position_id = position.id
-                WHERE person.id = trainee_status.person_id
-                     AND slot.id = trainee_status.slot_id
-                     AND position.id IN ($positionIds)
-                     AND YEAR(slot.begins) = :year
-                     AND passed = 1
+                FROM slot
+                JOIN trainee_status ON slot.id=trainee_status.slot_id
+                JOIN person ON trainee_status.person_id=person.id
+                WHERE YEAR(slot.begins) = :year
+                    AND slot.position_id IN ($positionIds)
+                    AND passed = 1
                  ORDER BY slot.begins, description, callsign",
             [
                 'year' => $year

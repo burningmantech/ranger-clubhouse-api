@@ -173,6 +173,9 @@ class PersonController extends ApiController
 
         if ($person->has_reviewed_pi) {
             $person->reviewed_pi_at = now();
+            if (setting('DashboardPeriod') != 'after-event') {
+                $person->pi_reviewed_for_dashboard_at = now();
+            }
         }
 
         if (!$person->save()) {
@@ -676,7 +679,7 @@ class PersonController extends ApiController
 
         $year = $params['year'] ?? current_year();
 
-        return response()->json(['people' => PeopleByLocationReport::execute($year)]);
+        return response()->json(['people' => PeopleByLocationReport::execute($year, $this->userCanViewEmail())]);
     }
 
     /*

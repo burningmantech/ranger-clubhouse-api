@@ -17,26 +17,24 @@
         "ext-tokenizer": "*",
         "ext-xml": "*",
         "ext-zip": "*",
-        "aws/aws-sdk-php": "^3.154",
-        "doctrine/dbal": "^3.0",
-        "fideloper/proxy": "~4.2",
-        "fruitcake/laravel-cors": "^2.0.2",
-        "guzzlehttp/guzzle": "^7.0.1",
-        "intervention/image": "^2.5",
-        "laravel/framework": "^8.0",
-        "laravel/tinker": "^2.0.0",
-        "league/flysystem-aws-s3-v3": "^1.0",
-        "league/fractal": "^0.19.2",
-        "twilio/sdk": "^6.0",
-        "tymon/jwt-auth": "^1.0"
+        "aws/aws-sdk-php": "^3.215.0",
+        "doctrine/dbal": "^3.3.3",
+        "guzzlehttp/guzzle": "^7.4.2",
+        "intervention/image": "^2.7.1",
+        "laravel/framework": "^9.5.1",
+        "laravel/tinker": "^2.7.1",
+        "league/flysystem-aws-s3-v3": "^3.0.11",
+        "league/fractal": "^0.20",
+        "php-open-source-saver/jwt-auth": "^1.4.1",
+        "twilio/sdk": "^6.35.1"
     },
     "require-dev": {
-        "facade/ignition": "^2.3.6",
-        "fakerphp/faker": "^1.12",
-        "filp/whoops": "^2.9.0",
-        "mockery/mockery": "~1.4.2",
-        "nunomaduro/collision": "^5.0",
-        "phpunit/phpunit": "^9.5"
+        "spatie/laravel-ignition": "^1.1.0",
+        "fakerphp/faker": "^1.19",
+        "filp/whoops": "^2.14.5",
+        "mockery/mockery": "~1.5.0",
+        "nunomaduro/collision": "^6.1",
+        "phpunit/phpunit": "^9.5.19"
     },
     "autoload": {
         "files": [

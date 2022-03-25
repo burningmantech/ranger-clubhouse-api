@@ -105,10 +105,11 @@ class Milestones
                 $milestones['needs_full_training'] = true;
                 break;
             case Person::ACTIVE:
-                if ($isBinary) {
-                    // Binaries have to take a full day's training
+                if ($isBinary || setting('OnlineTrainingFullCourseForVets')) {
+                    // Binaries have to take a full day's training, or
+                    // everyone is being forced to take the full version.
                     $milestones['needs_full_training'] = true;
-                    $milestones['is_binary'] = true;
+                    $milestones['is_binary'] = $isBinary;
                 }
                 break;
             case Person::INACTIVE:

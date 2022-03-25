@@ -75,6 +75,7 @@ class PersonFilter
 
         'languages',
         'reviewed_pi_at',
+        'pi_reviewed_for_dashboard_at',
         'has_reviewed_pi', // psuedo field
     ];
 
@@ -109,6 +110,7 @@ class PersonFilter
         'lms_id',
         'lms_course',
         'lms_course_expiry',
+        'lms_username'
     ];
 
     const INTAKE_FIELDS = [

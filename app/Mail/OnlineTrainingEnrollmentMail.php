@@ -10,9 +10,6 @@ class OnlineTrainingEnrollmentMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $person;
-    public $courseType;
-    public $password;
     public $otUrl;
 
     /**
@@ -20,11 +17,8 @@ class OnlineTrainingEnrollmentMail extends Mailable
      *
      * @return void
      */
-    public function __construct($person, $courseType, $password)
+    public function __construct(public $person, public $courseType, public $password)
     {
-        $this->person = $person;
-        $this->courseType = $courseType;
-        $this->password = $password;
         $this->otUrl = setting('OnlineTrainingUrl');
     }
 
@@ -38,7 +32,7 @@ class OnlineTrainingEnrollmentMail extends Mailable
         return $this->from([
             'address' => setting('TrainingAcademyEmail'),
             'name' => 'The Ranger Training Academy'
-        ])->subject('Enrolled in Part 1 of Ranger Training (online)')
+        ])->subject('Enrolled In The Ranger Online Course')
             ->view('emails.online-training-enrollment');
     }
 }
