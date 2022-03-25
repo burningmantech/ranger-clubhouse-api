@@ -125,7 +125,7 @@ jobs:
 
     name: Test Docker image
 
-    needs: [check-syntax, docker, unit]
+    needs: [check-syntax, docker-build, unit]
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -150,7 +150,7 @@ jobs:
   deploy-staging:
     name: Deploy code from master branch to the staging environment
 
-    needs: [check-syntax, unit, docker, test-docker]
+    needs: [check-syntax, unit, docker-build, test-docker]
     if: github.ref == 'refs/heads/master'
 
     runs-on: ubuntu-latest
