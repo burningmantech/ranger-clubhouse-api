@@ -2,14 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-
-use App\Models\ApiModel;
-use App\Models\Person;
-
-use Carbon\Carbon;
 
 class AccessDocument extends ApiModel
 {
@@ -29,6 +24,13 @@ class AccessDocument extends ApiModel
         self::QUALIFIED,
         self::CLAIMED,
         self::BANKED
+    ];
+
+    const CHECK_STATUSES = [
+        self::QUALIFIED,
+        self::CLAIMED,
+        self::BANKED,
+        self::SUBMITTED
     ];
 
     const INVALID_STATUSES = [
@@ -292,6 +294,7 @@ class AccessDocument extends ApiModel
      * Find all available (qualified, claimed, banked) deliverables (tickets & vehicle pass) for a person
      *
      * @param int $personId
+     * @return AccessDocument[]|Collection|\Illuminate\Support\Collection
      */
 
     public static function findAllAvailableDeliverablesForPerson(int $personId)
@@ -382,11 +385,13 @@ class AccessDocument extends ApiModel
         return $wap;
     }
 
-    /*
+    /**
      * Find the work access pass for folks
+     * @param $personIds
+     * @return array
      */
 
-    public static function findWAPForPersonIds($personIds)
+    public static function findWAPForPersonIds($personIds): array
     {
         $waps = self::whereIn('person_id', $personIds)
             ->whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
@@ -427,7 +432,7 @@ class AccessDocument extends ApiModel
      * @param bool $accessAnyTime
      * @param string $reason
      */
-    public static function updateWAPsForPerson(int $personId, Carbon|string|null $accessDate,
+    public static function updateWAPsForPerson(int  $personId, Carbon|string|null $accessDate,
                                                bool $accessAnyTime, string $reason)
     {
         if (empty($accessDate)) {
@@ -557,7 +562,7 @@ class AccessDocument extends ApiModel
      * Return true if the document expired
      */
 
-    public function getPastExpireDateAttribute() : bool
+    public function getPastExpireDateAttribute(): bool
     {
         return ($this->expiry_date && $this->expiry_date->year < current_year());
     }
@@ -628,7 +633,7 @@ class AccessDocument extends ApiModel
         $this->attributes['country'] = $value ?? '';
     }
 
-    public function hasAddress() : bool
+    public function hasAddress(): bool
     {
         foreach (['street1', 'city', 'state', 'postal_code'] as $field) {
             if (empty($this->{$field})) {
