@@ -84,7 +84,7 @@ class Schedule extends ApiModel
      * @return array
      */
 
-    public static function findForQuery(int $personId, int $year, $query = []): array
+    public static function findForQuery(int $personId, int $year, array $query = []): array
     {
         $now = (string)now();
         $onlySignups = $query['only_signups'] ?? false;
