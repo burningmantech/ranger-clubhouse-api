@@ -42,9 +42,9 @@ class Kernel extends ConsoleKernel
             $schedule->command('clubhouse:moodle-completion')->cron('0,15,30,45 * * 3-9 *')->onOneServer();
 
             // Run the Rangers Who Need WAPs Report
-            // At 02:30 on Monday, Wednesday, and Friday July through August.
+            // At 02:30 on Mondays July through August.
             $schedule->command('clubhouse:ranger-waps-report')
-                ->cron('30 2 * 7-8 1,3,5')
+                ->cron('30 2 * 7-8 1')
                 ->onOneServer();
         }
     }
