@@ -247,10 +247,10 @@ class MarcatoExport
             $person->email,
             self::BUDGET_CODE,
             $bmid->title1 ?? '',
+            '', // Notes
             $person->callsign,
-            '', // Supervisor - pulled from Salesforce, intentionally left blank
+       //     self::buildPhotoName($person), -- removed
             $arrivalDate,
-            self::buildPhotoName($person),
             ($bmid->showers || $bmid->want_showers) ? '100' : '',
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
