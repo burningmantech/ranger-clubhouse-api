@@ -10,7 +10,6 @@ use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -42,17 +41,19 @@ class BMIDManagement
         /*
          * Find people who have signed up shifts starting before their WAP access date
          */
+        $slotIds = DB::table('slot')
+            ->whereYear('begins', $year)
+            ->where('begins', '>', "$year-08-15")
+            ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+            ->pluck('id');
+
 
         $ids = DB::table('person_slot')
             ->select('person_slot.person_id')
-            ->join('slot', 'slot.id', 'person_slot.slot_id')
-            ->join('position', 'position.id', 'slot.position_id')
             ->join('access_document', 'access_document.person_id', 'person_slot.person_id')
-            ->whereYear('slot.begins', $year)
-            ->whereNotIn('slot.position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+            ->whereIn('person_slot.slot_id', $slotIds)
             ->whereIn('access_document.type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
-            ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
-            ->where('slot.begins', '>', "$year-08-15")
+            ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
             ->where('access_document.access_any_time', false)
             ->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
@@ -66,18 +67,20 @@ class BMIDManagement
          * Find people who signed up early shifts yet do not have a WAP
          */
 
+        $slotIds = DB::table('slot')
+                ->whereYear('begins', $year)
+                ->where('begins', '>', "$year-08-10")
+                ->pluck('id');
+
         $ids = DB::table('person_slot')
             ->select('person_slot.person_id')
-            ->join('slot', 'slot.id', 'person_slot.slot_id')
-            ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('slot.begins', $year)
-            ->where('slot.begins', '>', "$year-08-10")
+            ->whereIn('person_slot.slot_id', $slotIds)
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('access_document')
                     ->whereColumn('access_document.person_id', 'person_slot.person_id')
                     ->whereIn('type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
-                    ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED]);
+                    ->whereIn('status', AccessDocument::CHECK_STATUSES);
             })->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
 
@@ -92,12 +95,12 @@ class BMIDManagement
             ->join('access_document as rpt', function ($j) {
                 $j->on('wap.person_id', 'rpt.person_id')
                     ->where('rpt.type', AccessDocument::RPT)
-                    ->whereIn('rpt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED]);
+                    ->whereIn('rpt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
             })->join('person', function ($j) {
                 $j->on('person.id', 'wap.person_id')
                     ->where('person.status', '!=', Person::ALPHA);
             })->where('wap.type', AccessDocument::WAP)
-            ->whereIn('wap.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED])
+            ->whereIn('wap.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->where('wap.access_date', '<', $boxOfficeOpenDate)
             ->groupBy('wap.person_id')
             ->pluck('wap.person_id');
