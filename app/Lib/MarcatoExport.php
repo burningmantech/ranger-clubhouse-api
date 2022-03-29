@@ -17,17 +17,16 @@ use RuntimeException;
 
 class MarcatoExport
 {
-    const BUDGET_CODE = 'BUDGET-CODE-XXX';
+    const BUDGET_CODE = 'Rangers 660';
     const CSV_HEADERS = [
         'Name',
         'Email',
-        'Playa Name/Radio Handle',
         'Company',
         'Position',
-        'Supervisor',
-        'Playa Arrival Date: This is REQUIRED for those getting a BMID',
         'Notes',
-        'Shower Access For Entire Event - Shower - Tue10',
+        'Playa Name/Radio Handle',
+        'Arrival Date',
+        'Shower Access For Entire Event - Shower - Tue9',
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',
@@ -246,9 +245,9 @@ class MarcatoExport
         return [
             $person->first_name . ' ' . $person->last_name,
             $person->email,
-            $person->callsign,
             self::BUDGET_CODE,
             $bmid->title1 ?? '',
+            $person->callsign,
             '', // Supervisor - pulled from Salesforce, intentionally left blank
             $arrivalDate,
             self::buildPhotoName($person),
