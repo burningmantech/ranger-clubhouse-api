@@ -507,6 +507,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'TAS_WAP_Report_Email' => [
+            'description' => 'Email address(es) to send nightly WAPS Needed Report to',
+            'type' => self::TYPE_EMAIL
+        ],
+
         'ThankYouCardsHash' => [
             'description' => 'Thank You card page password. SHA-256 encoded.',
             'type' => self::TYPE_STRING,

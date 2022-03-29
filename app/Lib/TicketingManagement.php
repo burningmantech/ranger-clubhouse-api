@@ -2,24 +2,26 @@
 
 namespace App\Lib;
 
-use Illuminate\Support\Facades\DB;
-
 use App\Models\AccessDocument;
+use Illuminate\Support\Facades\DB;
 
 
 class TicketingManagement
 {
-    /*
- * Retrieve all access documents, group by people, that are claimed, qualified, or banked
- *
- * Return an array. Each element is an associative array:
- *
- * person info: id,callsign,status,first_name,last_name,email
- *     if $includeDelivery is true include - street1,city,state,zip,country
- * documents: array of access documents
- */
+    /**
+     * Retrieve all access documents, group by people, that are claimed, qualified, or banked
+     *
+     * Return an array. Each element is an associative array:
+     *
+     * person info: id,callsign,status,first_name,last_name,email
+     *     if $includeDelivery is true include - street1,city,state,zip,country
+     * documents: array of access documents
+     *
+     * @param $forDelivery
+     * @return array
+     */
 
-    public static function retrieveCurrentByPerson($forDelivery)
+    public static function retrieveCurrentByPerson($forDelivery): array
     {
         $currentYear = current_year();
 
