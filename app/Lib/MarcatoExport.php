@@ -30,6 +30,7 @@ class MarcatoExport
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',
+        'mvr',
         'title2',
         'title3'
     ];
@@ -108,10 +109,12 @@ class MarcatoExport
     {
         if ($this->csvFile) {
             unlink($this->csvFile);
+            $this->csvFile = null;
         }
 
         if ($this->photoZip) {
             unlink($this->photoZip);
+            $this->photoZip = null;
         }
     }
 
@@ -144,7 +147,7 @@ class MarcatoExport
         $this->createPhotoZipfile();
 
         $zip = new ZipArchive();
-        $result = $zip->open($this->exportFile, ZipArchive::CREATE);
+        $result = $zip->open($this->exportFile, ZipArchive::CREATE|ZipArchive::OVERWRITE);
         if ($result !== true) {
             throw new \RuntimeException("Failed to create zip archive result=[$result]");
         }
@@ -162,7 +165,7 @@ class MarcatoExport
     public function createPhotoZipfile()
     {
         $zip = new ZipArchive();
-        $result = $zip->open($this->photoZip, ZipArchive::OVERWRITE);
+        $result = $zip->open($this->photoZip, ZipArchive::CREATE|ZipArchive::OVERWRITE);
         if ($result !== true) {
             throw new RuntimeException("Failed to create zip file [{$this->photoZip}] result=[$result]");
         }
@@ -182,6 +185,7 @@ class MarcatoExport
         $zip->close();
 
         unset($zip);
+
         gc_collect_cycles();
     }
 
@@ -247,14 +251,14 @@ class MarcatoExport
             $person->email,
             self::BUDGET_CODE,
             $bmid->title1 ?? '',
-            '', // Notes
+            self::buildPhotoName($person),
             $person->callsign,
-       //     self::buildPhotoName($person), -- removed
             $arrivalDate,
             ($bmid->showers || $bmid->want_showers) ? '100' : '',
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
+            $bmid->org_vehicle_insurance ? 'yes' : 'no',
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];
