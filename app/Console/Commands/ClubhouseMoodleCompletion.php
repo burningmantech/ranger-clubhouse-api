@@ -20,7 +20,7 @@ class ClubhouseMoodleCompletion extends Command
      *
      * @var string
      */
-    protected $description = 'Query the Moodle server and mark those who have completed online training';
+    protected $description = 'Query the Moodle server and mark those who have completed online course';
 
     /**
      * Execute the console command.
@@ -30,7 +30,7 @@ class ClubhouseMoodleCompletion extends Command
     public function handle()
     {
         if (setting('OnlineTrainingEnabled') == false) {
-            $this->info("Online training is disabled. Aborting.");
+            $this->info("Online course is disabled. Aborting.");
             return;
         }
 
