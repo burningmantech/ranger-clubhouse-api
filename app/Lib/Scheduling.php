@@ -14,7 +14,7 @@ class Scheduling
     const PI_UNREVIEWED = 'pi-unreviewed';
     // BPGUID has not been linked.
     const BPGUID_MISSING = 'bpguid-missing';
-    // Online Training has not been completed
+    // Online Course has not been completed
     const OT_MISSING = 'ot-missing';
     // Online Training is not available at the moment
     const OT_DISABLED = 'ot-disabled';

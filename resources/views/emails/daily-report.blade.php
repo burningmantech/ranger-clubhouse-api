@@ -206,7 +206,7 @@
             </td>
         </tr>
         <tr>
-            <td>Online Training</td>
+            <td>Online Course</td>
             <td>
                 @if ($dashboardPeriod == 'after-event')
                     {!!($settings['OnlineTrainingEnabled'] ?? false) ? 'Enabled' : 'Disabled'  !!}

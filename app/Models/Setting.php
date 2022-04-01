@@ -185,41 +185,41 @@ class Setting extends ApiModel
         ],
 
         'OnlineTrainingEnabled' => [
-            'description' => 'Enable online training link',
+            'description' => 'Enable online course link',
             'type' => self::TYPE_BOOL
         ],
 
         'OnlineTrainingUrl' => [
-            'description' => 'Online Training Url',
+            'description' => 'Online course Url',
             'type' => self::TYPE_STRING
         ],
 
         'OnlineTrainingDisabledAllowSignups' => [
-            'description' => 'Enable shift signups even if Online Training is disabled (VERY DANGEROUS)',
+            'description' => 'Enable shift signups even if the Online Course is disabled (VERY DANGEROUS)',
             'type' => self::TYPE_BOOL,
             'default' => false,
         ],
 
         'OnlineTrainingOnlyForAuditors' => [
-            'description' => 'Auditor are only allowed to take Online Training',
+            'description' => 'Auditor are only allowed to take the Online Course',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingOnlyForBinaries' => [
-            'description' => 'Only require Online Training and not Face-to-Face training for vets (2+ years)',
+            'description' => 'Only require Online Course and not In-Person training for vets (2+ years)',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingOnlyForVets' => [
-            'description' => 'Only require Online Training and not Face-to-Face training for binaries (0-1 years)',
+            'description' => 'Only require the Online Course and not In-Person training for binaries (0-1 years)',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingFullCourseForVets' => [
-            'description' => 'Require the full course for vets',
+            'description' => 'Require the full online course for vets',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
@@ -236,12 +236,12 @@ class Setting extends ApiModel
         ],
 
         'MoodleHalfCourseId' => [
-            'description' => 'Moodle training course ID for active Rangers (2+ years)',
+            'description' => 'Moodle online course ID for active Rangers (2+ years)',
             'type' => self::TYPE_STRING,
         ],
 
         'MoodleFullCourseId' => [
-            'description' => 'Moodle full training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
+            'description' => 'Moodle full online course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
             'type' => self::TYPE_STRING,
         ],
 
