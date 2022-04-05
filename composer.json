@@ -17,24 +17,24 @@
         "ext-tokenizer": "*",
         "ext-xml": "*",
         "ext-zip": "*",
-        "aws/aws-sdk-php": "^3.215.0",
-        "doctrine/dbal": "^3.3.3",
+        "aws/aws-sdk-php": "^3.218.2",
+        "doctrine/dbal": "^3.3.4",
         "guzzlehttp/guzzle": "^7.4.2",
         "intervention/image": "^2.7.1",
-        "laravel/framework": "^9.5.1",
-        "laravel/tinker": "^2.7.1",
-        "league/flysystem-aws-s3-v3": "^3.0.11",
+        "laravel/framework": "^9.6.0",
+        "laravel/tinker": "^2.7.2",
+        "league/flysystem-aws-s3-v3": "^3.0.13",
         "league/fractal": "^0.20",
         "php-open-source-saver/jwt-auth": "^1.4.1",
-        "twilio/sdk": "^6.35.1"
+        "twilio/sdk": "^6.36.0"
     },
     "require-dev": {
-        "spatie/laravel-ignition": "^1.1.0",
+        "spatie/laravel-ignition": "^1.2.0",
         "fakerphp/faker": "^1.19",
         "filp/whoops": "^2.14.5",
         "mockery/mockery": "~1.5.0",
         "nunomaduro/collision": "^6.1",
-        "phpunit/phpunit": "^9.5.19"
+        "phpunit/phpunit": "^9.5.20"
     },
     "autoload": {
         "files": [

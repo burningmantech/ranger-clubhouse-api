@@ -17,7 +17,7 @@ class ClubhouseGroundHogDayCommand extends Command
      *
      * @var string
      */
-    protected $signature = '';
+    protected $signature = 'clubhouse:groundhog-day';
 
     /**
      * The console command description.
