@@ -2,23 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-
 use App\Lib\PotentialClubhouseAccountFromSalesforce;
 use App\Lib\SalesforceClubhouseInterface;
-
+use App\Mail\WelcomeMail;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonIntakeNote;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
-
-use App\Mail\WelcomeMail;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 
 class SalesforceController extends ApiController
 {
-    public function config() {
+    public function config()
+    {
         return response()->json([
             'config' => [
                 'SFEnableWritebacks' => setting('SFEnableWritebacks'),
@@ -27,12 +26,13 @@ class SalesforceController extends ApiController
         ]);
     }
 
-    public function import() {
+    public function import()
+    {
         $params = request()->validate([
-            'create_accounts'     => 'sometimes|boolean|required',
-            'showall'             => 'sometimes|boolean',
-            'update_sf'           => 'sometimes|boolean',
-            'non_test_accounts'   => 'sometimes|boolean',
+            'create_accounts' => 'sometimes|boolean|required',
+            'showall' => 'sometimes|boolean',
+            'update_sf' => 'sometimes|boolean',
+            'non_test_accounts' => 'sometimes|boolean',
             'reset_test_accounts' => 'sometimes|boolean',
         ]);
 
@@ -65,8 +65,8 @@ class SalesforceController extends ApiController
         $sfch = new SalesforceClubhouseInterface();
         if (!$sfch->auth('production')) {
             return response()->json([
-                'status'    => 'error',
-                'message'   => "Authentication error: {$sfch->sf->errorMessage}"
+                'status' => 'error',
+                'message' => "Authentication error: {$sfch->sf->errorMessage}"
             ]);
         }
 
@@ -74,11 +74,11 @@ class SalesforceController extends ApiController
         if ($r == false) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Query accounts failed '.  $sfch->sf->errorMessage
+                'message' => 'Query accounts failed ' . $sfch->sf->errorMessage
             ]);
         }
 
-        $accounts = [ ];
+        $accounts = [];
         $errors = [];
 
         foreach ($r->records as $id => $obj) {
@@ -95,10 +95,10 @@ class SalesforceController extends ApiController
             // Only reset accounts if we're not doing anything else.
             // Some of these checks are redundant w/ the above but we're
             // being extra careful here 'cause the gun is loaded
-           if ($resetTestAccounts) {
-               $pca->status = "reset";
-               $sfch->updateSalesforceVCStatus($pca);
-           }
+            if ($resetTestAccounts) {
+                $pca->status = "reset";
+                $sfch->updateSalesforceVCStatus($pca);
+            }
 
             if (($pca->status == "ready" || $pca->status == 'existing') && $createAccounts) {
                 if (!$this->importPerson($sfch, $pca, $updateSf)) {
@@ -107,31 +107,31 @@ class SalesforceController extends ApiController
             }
 
             $account = [
-                'status'                        => $pca->status,
-                'message'                       => $pca->message,
-                'applicant_type'                => $pca->applicant_type,
-                'salesforce_ranger_object_id'   => $pca->salesforce_ranger_object_id,
+                'status' => $pca->status,
+                'message' => $pca->message,
+                'applicant_type' => $pca->applicant_type,
+                'salesforce_ranger_object_id' => $pca->salesforce_ranger_object_id,
                 'salesforce_ranger_object_name' => $pca->salesforce_ranger_object_name,
-                'first_name'                    => $pca->firstname,
-                'last_name'                     => $pca->lastname,
-                'street1'                       => $pca->street1,
-                'city'                          => $pca->city,
-                'state'                         => $pca->state,
-                'zip'                           => $pca->zip,
-                'country'                       => $pca->country,
-                'phone'                         => $pca->phone,
-                'email'                         => $pca->email,
-                'emergency_contact'             => $pca->emergency_contact,
-                'bpguid'                        => $pca->bpguid,
-                'sfuid'                         => $pca->sfuid,
-                'chuid'                         => $pca->chuid,
-                'longsleeveshirt_size_style'    => $pca->longsleeveshirt_size_style,
-                'teeshirt_size_style'           => $pca->teeshirt_size_style,
-                'known_pnv_names'               => $pca->known_pnv_names,
-                'known_ranger_names'            => $pca->known_ranger_names,
-                'callsign'                      => $pca->callsign,
-                'vc_status'                     => $pca->vc_status,
-                'why_ranger_comments'           => $pca->why_ranger_comments,
+                'first_name' => $pca->firstname,
+                'last_name' => $pca->lastname,
+                'street1' => $pca->street1,
+                'city' => $pca->city,
+                'state' => $pca->state,
+                'zip' => $pca->zip,
+                'country' => $pca->country,
+                'phone' => $pca->phone,
+                'email' => $pca->email,
+                'emergency_contact' => $pca->emergency_contact,
+                'bpguid' => $pca->bpguid,
+                'sfuid' => $pca->sfuid,
+                'chuid' => $pca->chuid,
+                'longsleeveshirt_size_style' => $pca->longsleeveshirt_size_style,
+                'teeshirt_size_style' => $pca->teeshirt_size_style,
+                'known_pnv_names' => $pca->known_pnv_names,
+                'known_ranger_names' => $pca->known_ranger_names,
+                'callsign' => $pca->callsign,
+                'vc_status' => $pca->vc_status,
+                'vc_comments' => $pca->vc_comments,
             ];
 
             if ($pca->existingPerson) {
@@ -143,12 +143,13 @@ class SalesforceController extends ApiController
         }
 
         return response()->json([
-            'status'    => 'success',
-            'accounts'  => $accounts,
+            'status' => 'success',
+            'accounts' => $accounts,
         ]);
     }
 
-    private function importPerson($sfch, $pca, $updateSf) {
+    private function importPerson($sfch, $pca, $updateSf)
+    {
         if ($pca->status == 'existing') {
             $person = $pca->existingPerson;
             $isNew = false;
@@ -157,26 +158,26 @@ class SalesforceController extends ApiController
             $isNew = true;
         }
 
-        $person->callsign          = $pca->callsign;
+        $person->callsign = $pca->callsign;
         $person->callsign_approved = 1;
-        $person->first_name        = $pca->firstname;
-        $person->last_name         = $pca->lastname;
-        $person->street1           = $pca->street1;
-        $person->city              = $pca->city;
-        $person->state             = $pca->state;
-        $person->zip               = $pca->zip;
-        $person->country           = $pca->country;
-        $person->home_phone        = $pca->phone;
-        $person->email             = $pca->email;
-        $person->bpguid            = $pca->bpguid;
-        $person->sfuid             = $pca->sfuid;
+        $person->first_name = $pca->firstname;
+        $person->last_name = $pca->lastname;
+        $person->street1 = $pca->street1;
+        $person->city = $pca->city;
+        $person->state = $pca->state;
+        $person->zip = $pca->zip;
+        $person->country = $pca->country;
+        $person->home_phone = $pca->phone;
+        $person->email = $pca->email;
+        $person->bpguid = $pca->bpguid;
+        $person->sfuid = $pca->sfuid;
         $person->emergency_contact = $pca->emergency_contact;
 
         $person->known_rangers = $pca->known_ranger_names;
         $person->known_pnvs = $pca->known_pnv_names;
 
         $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
-        $person->teeshirt_size_style        = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
+        $person->teeshirt_size_style = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
 
         if ($isNew) {
             $person->password = 'abcdef';
@@ -192,9 +193,9 @@ class SalesforceController extends ApiController
             if (!$person->save()) {
                 $message = [];
                 foreach ($person->getErrors() as $column => $errors) {
-                    $message[] = "$column: ".implode(' & ', $errors);
+                    $message[] = "$column: " . implode(' & ', $errors);
                 }
-                $pca->message = ($isNew ? 'Creation' : 'Update').' error: '.implode(', ', $message);
+                $pca->message = ($isNew ? 'Creation' : 'Update') . ' error: ' . implode(', ', $message);
                 $pca->status = "failed";
                 ErrorLog::record('salesforce-import-fail', [
                     'person' => $person,
@@ -202,10 +203,10 @@ class SalesforceController extends ApiController
                 ]);
                 return false;
             }
-        } catch (\Illuminate\Database\QueryException $e) {
-            $pca->message = "SQL Error: ".$e->getMessage();
+        } catch (QueryException $e) {
+            $pca->message = "SQL Error: " . $e->getMessage();
             $pca->status = "failed";
-            ErrorLog::recordException($e, 'salesforce-import-fail', [ 'person' => $person ]);
+            ErrorLog::recordException($e, 'salesforce-import-fail', ['person' => $person]);
             return false;
         }
 
@@ -227,8 +228,8 @@ class SalesforceController extends ApiController
         $pca->chuid = $person->id;
         $pca->status = 'succeeded';
 
-        if (!empty($pca->why_ranger_comments)) {
-            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->why_ranger_comments);
+        if (!empty($pca->vc_comments)) {
+            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->vc_comments);
         }
 
         if ($updateSf) {
