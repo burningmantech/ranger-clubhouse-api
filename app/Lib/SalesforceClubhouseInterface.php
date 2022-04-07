@@ -44,8 +44,7 @@ namespace App\Lib;
  * so we can make sure we're not dealing with a duplicate record.
  */
 
-use App\Lib\SalesforceConnector;
-use App\Lib\PotentialClubhouseAccountFromSalesforce;
+use Illuminate\Support\Facades\Log;
 
 // ------------- SalesForceClubhouseInterface class -------------------
 
@@ -257,11 +256,10 @@ class SalesforceClubhouseInterface
     /*
 	 * Update a given Salesforce field ("forcefield"?!) to a given value.
 	 */
-    private function updateSalesforceField($id, $field, $value)
+    public function updateSalesforceField($id, $field, $value)
     {
         if (setting('SFEnableWritebacks')) {
-            $js = json_encode([$field => $value]);
-            $this->sf->objUpdate("Ranger__c", $id, $js);
+            $this->sf->objUpdate("Ranger__c", $id, [$field => $value]);
             if ($this->debug) {
                 Log::debug("updateSalesforceField: updated $field for $id to $value");
             }

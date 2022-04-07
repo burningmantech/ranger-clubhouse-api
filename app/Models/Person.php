@@ -512,7 +512,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }, []);
     }
 
-    public static function emailExists($email)
+    /**
+     * Does a record exist with the given email?
+     *
+     * @param string $email
+     * @return bool
+     */
+
+    public static function emailExists(string $email): bool
     {
         return self::where('email', $email)->exists();
     }
@@ -526,10 +533,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * offset: record offset in search
      *
      * @param array $query
+     * @param bool $canViewEmail
      * @return array
      */
 
-    public static function findForQuery(array $query): array
+    public static function findForQuery(array $query, bool $canViewEmail = false): array
     {
         if (isset($query['query'])) {
             $orderCallsigns = true;
@@ -561,12 +569,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $likeQuery = '%' . $q . '%';
 
             $emailOnly = (stripos($q, '@') !== false);
-            if ($emailOnly) {
+            if ($emailOnly && $canViewEmail) {
                 // Force email only search if @ is present
-                $sql = self::where(function ($sql) use ($likeQuery, $q) {
-                    $sql->where('email', $q);
-                    $sql->orWhere('email', 'like', $likeQuery);
-                });
+                $sql = self::where('email', $q);
                 $orderCallsigns = false;
                 $orderFKA = false;
                 $orderRealName = false;
@@ -596,7 +601,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 }
 
 
-                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
+                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone, $canViewEmail) {
                     foreach ($fields as $field) {
                         switch ($field) {
                             case 'callsign':
@@ -612,6 +617,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                                 break;
 
                             case 'email':
+                                if ($canViewEmail) {
+                                    $sql->orWhere($field, 'like', $likeQuery);
+                                }
+                                break;
                             case 'formerly_known_as':
                                 $sql->orWhere($field, 'like', $likeQuery);
                                 break;
