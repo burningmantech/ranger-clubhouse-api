@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Lib\AppreciationProgress;
 use App\Lib\BulkLookup;
 use App\Lib\Milestones;
 use App\Lib\Reports\AlphaShirtsReport;
@@ -45,7 +44,8 @@ class PersonController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', Person::class);
 
@@ -59,7 +59,8 @@ class PersonController extends ApiController
             'basic' => 'sometimes|boolean',
         ]);
 
-        $results = Person::findForQuery($params);
+        $canViewEmail = $this->userCanViewEmail();
+        $results = Person::findForQuery($params, $canViewEmail);
         $people = $results['people'];
         $meta = ['limit' => $results['limit'], 'total' => $results['total']];
 
@@ -69,11 +70,10 @@ class PersonController extends ApiController
             }
 
             $rows = [];
-            $canViewEmail = $this->userCanViewEmail();
             $searchFields = $params['search_fields'] ?? '';
             $query = trim($params['query'] ?? '');
 
-            if (stripos($searchFields, 'email') !== false) {
+            if ($canViewEmail && stripos($searchFields, 'email') !== false) {
                 $searchingForEmail = stripos($query, '@') !== false;
             } else {
                 $searchingForEmail = false;
@@ -91,13 +91,12 @@ class PersonController extends ApiController
 
                 if ($canViewEmail) {
                     $row['email'] = $person->email;
-                }
-
-                if ($searchingForEmail) {
-                    if (strcasecmp($person->email, $query) == 0) {
-                        $row['email_match'] = 'full';
-                    } elseif (stripos($person->email, $query) !== false) {
-                        $row['email_match'] = 'partial';
+                    if ($searchingForEmail) {
+                        if (strcasecmp($person->email, $query) == 0) {
+                            $row['email_match'] = 'full';
+                        } elseif (stripos($person->email, $query) !== false) {
+                            $row['email_match'] = 'partial';
+                        }
                     }
                 }
 
@@ -121,18 +120,18 @@ class PersonController extends ApiController
         }
     }
 
-    /*
+    /**
      * Create a person
      * TODO
      */
 
-    public function store(Request $request)
+    public function store()
     {
         $this->authorize('store');
         throw new RuntimeException('unimplemented');
     }
 
-    /*
+    /**
      * Show a specific person - include roles, and languages.
      */
 
@@ -145,11 +144,15 @@ class PersonController extends ApiController
         return $this->toRestFiltered($person);
     }
 
-    /*
+    /**
      * Update a person record. Also update the person_language table at the same time.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(Person $person)
+    public function update(Person $person): JsonResponse
     {
         $this->authorize('update', $person);
 
@@ -203,10 +206,15 @@ class PersonController extends ApiController
         return $this->toRestFiltered($person);
     }
 
-    /*
+    /**
      * Remove the person from the clubhouse
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Person $person)
+
+    public function destroy(Person $person): JsonResponse
     {
         $this->authorize('delete', $person);
 
@@ -214,11 +222,14 @@ class PersonController extends ApiController
             function () use ($person) {
                 $personId = $person->id;
 
-                DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
 
                 foreach (Person::ASSOC_TABLES as $table) {
                     DB::table($table)->where('person_id', $personId)->delete();
                 }
+
+                // Ensure slot signed up counts are adjusted.
+
+                DB::update('UPDATE slot SET signed_up = (SELECT COUNT(*) FROM person_slot WHERE slot_id=slot.id) WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
 
                 // Photos require a bit of extra work.
                 PersonPhoto::deleteAllForPerson($personId);
@@ -247,11 +258,15 @@ class PersonController extends ApiController
         return $this->restError('The year could not be found.', 404);
     }
 
-    /*
+    /**
      * Change password
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function password(Request $request, Person $person)
+    public function password(Person $person): JsonResponse
     {
         $this->authorize('password', $person);
 
@@ -273,7 +288,7 @@ class PersonController extends ApiController
             $rules['password_old'] = 'required|string';
         }
 
-        $passwords = $request->validate($rules);
+        $passwords = request()->validate($rules);
 
         if (!empty($token)) {
             if ($person->tpassword != $token || $person->tpassword_expire <= now()->timestamp) {
@@ -289,11 +304,15 @@ class PersonController extends ApiController
         return $this->success();
     }
 
-    /*
+    /**
      * Retrieve the positions held
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function positions(Person $person)
+    public function positions(Person $person): JsonResponse
     {
         $params = request()->validate([
             'include_training' => 'sometimes|boolean',
@@ -315,11 +334,15 @@ class PersonController extends ApiController
         return response()->json(['positions' => $positions]);
     }
 
-    /*
+    /**
      * Update the positions held
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function updatePositions(Person $person)
+    public function updatePositions(Person $person): JsonResponse
     {
         $this->authorize('updatePositions', $person);
         $params = request()->validate(
@@ -370,22 +393,30 @@ class PersonController extends ApiController
         return response()->json(['positions' => PersonPosition::findForPerson($personId)]);
     }
 
-    /*
-    * Retrieve the roles held, and return a list of role ids
-    */
+    /**
+     * Retrieve the roles held, and return a list of role ids
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
 
-    public function roles(Person $person)
+    public function roles(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
         return response()->json(['roles' => PersonRole::findRolesForPerson($person->id)]);
     }
 
-    /*
+    /**
      * Update the roles held
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function updateRoles(Person $person)
+    public function updateRoles(Person $person): JsonResponse
     {
         $this->authorize('updateRoles', $person);
         $params = request()->validate(
@@ -432,22 +463,30 @@ class PersonController extends ApiController
         return response()->json(['roles' => PersonRole::findRolesForPerson($personId)]);
     }
 
-    /*
+    /**
      * Return the count of  unread messages
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function unreadMessageCount(Person $person)
+    public function unreadMessageCount(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
         return response()->json(['unread_message_count' => PersonMessage::countUnread($person->id)]);
     }
 
-    /*
+    /**
      * Retrieve user information needed for user login, or to show/edit a person.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function userInfo(Person $person)
+    public function userInfo(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
@@ -508,12 +547,13 @@ class PersonController extends ApiController
 
     /**
      * Return the years person has worked and has sign ups
+     *
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function years(Person $person)
+    public function years(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $personId = $person->id;
@@ -525,11 +565,15 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Calculate how many earned credits for a given year
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function credits(Person $person)
+    public function credits(Person $person): JsonResponse
     {
         $params = request()->validate([
             'year' => 'integer|required'
@@ -542,11 +586,11 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Provide summary for a person
      */
 
-    public function timesheetSummary(Person $person)
+    public function timesheetSummary(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $year = $this->getYear();
@@ -555,21 +599,29 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Find the person's mentees
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function mentees(Person $person)
+    public function mentees(Person $person): JsonResponse
     {
         $this->authorize('mentees', $person);
         return response()->json(['mentees' => PersonMentor::retrieveAllForPerson($person->id)]);
     }
 
-    /*
+    /**
      * Retrieve a person's mentors
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function mentors(Person $person)
+    public function mentors(Person $person): JsonResponse
     {
         $this->authorize('mentors', $person);
 
@@ -582,7 +634,7 @@ class PersonController extends ApiController
      * Note: method does not require authorization/login. see routes/api.php
      */
 
-    public function register()
+    public function register(): JsonResponse
     {
         if (setting('AuditorRegistrationDisabled')) {
             throw new InvalidArgumentException("Auditor registration is disabled at this time.");
@@ -669,7 +721,7 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function peopleByLocation()
+    public function peopleByLocation(): JsonResponse
     {
         $this->authorize('peopleByLocation', [Person::class]);
 
@@ -682,11 +734,14 @@ class PersonController extends ApiController
         return response()->json(['people' => PeopleByLocationReport::execute($year, $this->userCanViewEmail())]);
     }
 
-    /*
+    /**
      * People By Role report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function peopleByRole()
+    public function peopleByRole(): JsonResponse
     {
         $this->authorize('peopleByRole', [Person::class]);
 
@@ -708,8 +763,8 @@ class PersonController extends ApiController
     }
 
     /**
-     *
      * Languages Spoken On Site Report
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
@@ -743,7 +798,7 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function milestones(Person $person)
+    public function milestones(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         return response()->json(['milestones' => Milestones::buildForPerson($person)]);

@@ -176,6 +176,9 @@ class SalesforceConnector
      * Fields is an array of name -> value to be updated.
      * Returns TRUE on success, FALSE on error.
      *
+     * @param $objname
+     * @param $objid
+     * @param $fields
      * @return bool
      */
 
