@@ -21,7 +21,7 @@
         <b>Password: </b> {{$password}}
     </p>
     <p>
-        <b>The Online Course website: </b> <a href="$otUrl">{{$otUrl}}</a>
+        <b>The Online Course website: </b> <a href="{{$otUrl}}">{{$otUrl}}</a>
     </p>
     <p>
         Note: the above credentials are ONLY for the Online Course website, NOT the Clubhouse.
