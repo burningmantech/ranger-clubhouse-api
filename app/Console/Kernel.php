@@ -27,7 +27,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        if (config('clubhouse.DeploymentEnvironment') == 'Production') {
+        if (config('clubhouse.DeploymentEnvironment') == 'Production'
+        && !env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME')) {
             // Let someone know what's been happening in the Clubhouse
             $schedule->command('clubhouse:daily-report')->dailyAt('03:00')->onOneServer();
 

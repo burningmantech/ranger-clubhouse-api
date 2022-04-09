@@ -1,11 +1,8 @@
 <?php
 
-// ------------- PotentialClubhouseAccountFromSalesforce class ----------
-
 namespace App\Lib;
 
 use App\Models\Person;
-use App\Lib\ReservedCallsigns;
 
 class PotentialClubhouseAccountFromSalesforce
 {
@@ -29,7 +26,7 @@ class PotentialClubhouseAccountFromSalesforce
         //                'Birthdate',
         'BPGUID__c',
         'SFUID__c',
-        // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionaire.
+        // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionnaire.
         // *sigh*
         //        'Emergency_Contact_Name__c',
         //        'Emergency_Contact_Phone__c',
@@ -79,20 +76,23 @@ class PotentialClubhouseAccountFromSalesforce
         $this->message = "";
     }
 
-    /*
-    * Convert a potential Ranger account from Salesforce into the info
-    * we need to create a Clubhouse account, sanity checking as we go.
-    *
-    * "sobj" is a Salesforce object, with all of its horrible naming.
-    * We populate the fields in $this (which have more sane names) and
-    * clean up the data.
-    *
-    * At the end, $this->status and $this->message are set accordingly,
-    * depending on whether this potential account is good to go.
-    *
-    * Return TRUE if ok to import, FALSE otherwise.
-    */
-    public function convertFromSalesforceObject($sobj)
+    /**
+     * Convert a potential Ranger account from Salesforce into the info
+     * we need to create a Clubhouse account, sanity checking as we go.
+     *
+     * "sobj" is a Salesforce object, with all of its horrible naming.
+     * We populate the fields in $this (which have more sane names) and
+     * clean up the data.
+     *
+     * At the end, $this->status and $this->message are set accordingly,
+     * depending on whether this potential account is good to go.
+     *
+     * Return TRUE if ok to import, FALSE otherwise.
+     * @param $sobj
+     * @return bool
+     */
+
+    public function convertFromSalesforceObject($sobj): bool
     {
         /*
         * The following just copies the various fields from the SF object
@@ -185,13 +185,14 @@ class PotentialClubhouseAccountFromSalesforce
         return $ok;
     }
 
-    /*
-    * See if this account already exists in some form.
-    * This means: (1) callsign is unique, (2) email is unique, (3) bpguid is
-    * unique, (4) sfguid is unique.
-    * Sets this->status and this->message appropriately.
-    * Only do this for accounts that are presumed ready for import.
-    */
+    /**
+     * See if this account already exists in some form.
+     * This means: (1) callsign is unique, (2) email is unique, (3) bpguid is
+     * unique, (4) sfguid is unique.
+     * Sets this->status and this->message appropriately.
+     * Only do this for accounts that are presumed ready for import.
+     */
+
     public function checkIfAlreadyExists()
     {
         if ($this->status != self::STATUS_READY) {
@@ -228,9 +229,16 @@ class PotentialClubhouseAccountFromSalesforce
         $person = $this->sfuidAlreadyExists();
         if ($person) {
             $this->checkExisting('SFUID', $person);
-            return;
         }
     }
+
+    /**
+     * Double check to see if the existing Clubhouse account is safe to update.
+     *
+     * @param $type
+     * @param $person
+     * @return void
+     */
 
     public function checkExisting($type, $person)
     {
@@ -245,29 +253,34 @@ class PotentialClubhouseAccountFromSalesforce
         $this->existingPerson = $person;
     }
 
-    /*
-    * See if an account with this exact email exists.
-    * return account that has the email otherwise null
-    */
-    public function emailAlreadyExists()
+    /**
+     * See if an account with this exact email exists.
+     * return account that has the email otherwise null
+     * @return Person|null
+     */
+
+    public function emailAlreadyExists(): ?Person
     {
         return Person::where('email', $this->email)->first();
     }
 
-    /*
-    * See if an account with this exact callsign exists.
-    * Return account that has the callsign otherwise null;
-    */
-    public function callsignAlreadyExists()
+    /**
+     * See if an account with this exact callsign exists.
+     * Return account that has the callsign otherwise null;
+     * @return Person|null
+     */
+
+    public function callsignAlreadyExists(): ?Person
     {
         return Person::where('callsign', $this->callsign)->first();
     }
 
-    /*
-    * See if this callsign is on the reserved List.
-    * Return TRUE if so, FALSE otherwise.
-    */
-    public function callsignIsReserved()
+    /**
+     * See if this callsign is on the reserved List.
+     * @return bool TRUE if so, FALSE otherwise.
+     */
+
+    public function callsignIsReserved(): bool
     {
         $callsign = $this->callsign;
         $reservedCallsigns = self::getReservedCallsigns("cooked");
@@ -278,29 +291,36 @@ class PotentialClubhouseAccountFromSalesforce
         return false;
     }
 
-    /*
-    * See if an account with this exact BPGUID already exists.
-    * Return person if so, null otherwise.
-    */
-    public function bpguidAlreadyExists()
+    /**
+     * See if an account with this exact BPGUID already exists.
+     * Return person if so, null otherwise.
+     * @return Person|null
+     */
+
+    public function bpguidAlreadyExists(): ?Person
     {
         return Person::where('bpguid', $this->bpguid)->first();
     }
 
-    /*
-    * See if an account with this exact SFUID already exists.
-    * Return person if so, null otherwise.
-    */
-    public function sfuidAlreadyExists()
+    /**
+     * See if an account with this exact SFUID already exists.
+     * Return person if so, null otherwise.
+     * @return Person|null
+     */
+
+    public function sfuidAlreadyExists(): ?Person
     {
         return Person::where('sfuid', $this->sfuid)->first();
     }
 
-    /*
-    * Street addresses in salesforce can contain \r\n,
-    * so we get rid of the \rs and convert the \ns to space.
-    */
-    public static function sanitizeStreet($s)
+    /**
+     * Street addresses in salesforce can contain \r\n,
+     * so we get rid of the \rs and convert the \ns to space.
+     * @param $s
+     * @return string
+     */
+
+    public static function sanitizeStreet($s): string
     {
         $s = str_replace("\r", "", $s);
         $s = str_replace("\n", " ", $s);
@@ -319,37 +339,46 @@ class PotentialClubhouseAccountFromSalesforce
         return self::fixMultibyteCrap($s);
     }
 
-    /*
-    * Shirt size and style from Salesforce uses multibyte strings.
-    * In particular, 0xe28099 for an apostrophe and, occasionally,
-    * 0xc2a0 for non-breaking space.  What did I do wrong such that
-    * I'm spending a sunny Saturday afternoon dealing with this crap?
-    */
-    public static function fixMultibyteCrap($s)
+    /**
+     * Shirt size and style from Salesforce uses multibyte strings.
+     * In particular, 0xe28099 for an apostrophe and, occasionally,
+     * 0xc2a0 for non-breaking space.  What did I do wrong such that
+     * I'm spending a sunny Saturday afternoon dealing with this crap?
+     * @param $s
+     * @return string
+     */
+
+    public static function fixMultibyteCrap($s): string
     {
         $x = mb_ereg_replace("’", '', $s);
         $x = str_replace("\xc2\xa0", ' ', $x);
         return $x;
     }
 
-    /*
+    /**
      * "Cook" a callsign by converting to lower case and removing
      * spaces and special characters.
+     * @param $callsign
+     * @return string
      */
-    public static function cookCallsign($callsign)
+
+    public static function cookCallsign($callsign): string
     {
         $callsign = str_replace([' ', '-', '!', '?', '.'], '', $callsign);
         $callsign = strtolower($callsign);
         return $callsign;
     }
 
-    /*
+    /**
      * Gets an array of reserved callsigns and words which shouldn't be handles.
      * If style is "raw" (default), you get what's in the file with
      * minimum processing.  If it's "cooked", spaces and dashes are
      * eliminated and everything reduced to lower case.
+     * @param string $style
+     * @return array
      */
-    public static function getReservedCallsigns($style = "raw")
+
+    public static function getReservedCallsigns($style = "raw"): array
     {
         $reservedCallsigns = array_merge(
             ReservedCallsigns::LOCATIONS,

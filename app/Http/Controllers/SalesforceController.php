@@ -12,11 +12,19 @@ use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 
 class SalesforceController extends ApiController
 {
-    public function config()
+    /**
+     * Return the SF configuration settings
+     *
+     * @return JsonResponse
+     */
+
+    public function config(): JsonResponse
     {
         return response()->json([
             'config' => [
@@ -26,8 +34,18 @@ class SalesforceController extends ApiController
         ]);
     }
 
-    public function import()
+    /**
+     * Import (or query) Salesforce records
+     *
+     * @return JsonResponse
+     */
+
+    public function import(): JsonResponse
     {
+        if (env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME')) {
+            throw new InvalidArgumentException('Salesforce actions are not allowed on the training server');
+        }
+
         $params = request()->validate([
             'create_accounts' => 'sometimes|boolean|required',
             'showall' => 'sometimes|boolean',
@@ -56,14 +74,13 @@ class SalesforceController extends ApiController
             $createAccounts = false;
             $resetTestAccounts = false;
             $updateSf = false;
-            $nonTestAccounts = false;
             $queryOptions = 'showall';
-        } else if ($createAccounts || $nonTestAccounts) {
+        } else if ($nonTestAccounts) {
             $queryOptions = '';
         }
 
         $sfch = new SalesforceClubhouseInterface();
-        if (!$sfch->auth('production')) {
+        if (!$sfch->auth()) {
             return response()->json([
                 'status' => 'error',
                 'message' => "Authentication error: {$sfch->sf->errorMessage}"
@@ -79,7 +96,6 @@ class SalesforceController extends ApiController
         }
 
         $accounts = [];
-        $errors = [];
 
         foreach ($r->records as $id => $obj) {
             $pca = new PotentialClubhouseAccountFromSalesforce;
@@ -97,13 +113,11 @@ class SalesforceController extends ApiController
             // being extra careful here 'cause the gun is loaded
             if ($resetTestAccounts) {
                 $pca->status = "reset";
-                $sfch->updateSalesforceVCStatus($pca);
+                $sfch->updateSalesforceVCStatus($pca, false);
             }
 
             if (($pca->status == "ready" || $pca->status == 'existing') && $createAccounts) {
-                if (!$this->importPerson($sfch, $pca, $updateSf)) {
-                    $account['message'] = $pca->message;
-                }
+                $this->importPerson($sfch, $pca, $updateSf);
             }
 
             $account = [
@@ -148,7 +162,16 @@ class SalesforceController extends ApiController
         ]);
     }
 
-    private function importPerson($sfch, $pca, $updateSf)
+    /**
+     * Import a SF Ranger record into the Clubhouse
+     *
+     * @param $sfch
+     * @param $pca
+     * @param $updateSf
+     * @return bool
+     */
+
+    private function importPerson($sfch, $pca, $updateSf): bool
     {
         if ($pca->status == 'existing') {
             $person = $pca->existingPerson;
@@ -233,8 +256,8 @@ class SalesforceController extends ApiController
         }
 
         if ($updateSf) {
-            $sfch->updateSalesforceVCStatus($pca);
-            $sfch->updateSalesforceClubhouseImportStatusMessage($pca);
+            $sfch->updateSalesforceVCStatus($pca, $isNew);
+            $sfch->updateSalesforceClubhouseImportStatusMessage($pca, $isNew);
             $sfch->updateSalesforceClubhouseUserID($pca);
 
             if ($pca->status != 'succeeded') {
