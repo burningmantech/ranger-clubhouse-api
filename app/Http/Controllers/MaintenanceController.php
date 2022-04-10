@@ -34,6 +34,7 @@ class MaintenanceController extends ApiController
     public function updatePositions()
     {
         $allRangersPositions = Position::where('all_rangers', true)
+            ->where('active', true)
             ->orderBy('title')
             ->get()
             ->keyBy('id');
