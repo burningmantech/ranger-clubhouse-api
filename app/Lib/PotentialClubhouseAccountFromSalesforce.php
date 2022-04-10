@@ -144,7 +144,9 @@ class PotentialClubhouseAccountFromSalesforce
         $this->vc_comments = trim(@$sobj->VC_Comments__c);
 
         if ($this->vc_status == "Released to Upload"
-            && $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
+            && ($this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
+                || $this->applicant_type == "Prospective New Volunteer - Black Rock Ranger Redux"
+            )
         ) {
             $this->status = self::STATUS_READY;
         } else if ($this->vc_status == "Clubhouse Record Created") {
