@@ -208,7 +208,6 @@ class SalesforceController extends ApiController
             $oldStatus = $person->status;
         }
 
-        $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
         $person->status = Person::PROSPECTIVE;
         $person->auditReason = 'salesforce import';
 
@@ -233,6 +232,7 @@ class SalesforceController extends ApiController
             return false;
         }
 
+
         if ($isNew) {
             // Record the initial status for tracking through the Unified Flagging View
             PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
@@ -243,17 +243,18 @@ class SalesforceController extends ApiController
             $person->changeStatus(Person::PROSPECTIVE, $oldStatus, 'salesforce import');
         }
 
+        if (!empty($pca->vc_comments)) {
+            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->vc_comments);
+        }
+
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
+            $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
             mail_to($person->email, new WelcomeMail($person, $inviteToken), true);
         }
 
         $pca->chuid = $person->id;
         $pca->status = 'succeeded';
-
-        if (!empty($pca->vc_comments)) {
-            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->vc_comments);
-        }
 
         if ($updateSf) {
             $sfch->updateSalesforceVCStatus($pca, $isNew);
