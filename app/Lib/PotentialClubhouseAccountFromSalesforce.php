@@ -354,6 +354,7 @@ class PotentialClubhouseAccountFromSalesforce
     {
         $x = mb_ereg_replace("’", '', $s);
         $x = str_replace("\xc2\xa0", ' ', $x);
+        $x = str_replace("'", '', $x);
         return $x;
     }
 
