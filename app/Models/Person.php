@@ -21,6 +21,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Normalizer;
 use NumberFormatter;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
@@ -715,6 +716,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign(string $callsign): string
     {
+        // Change diacritics into ascii characters (e.g., é -> e)
+        $callsign = preg_replace('/[\x{0300}-\x{036f}]/u', "", Normalizer::normalize($callsign , Normalizer::FORM_D));
         return strtolower(preg_replace('/[^\w]/', '', $callsign));
     }
 
