@@ -18,6 +18,11 @@ cd /var/www/application;
 echo "Waiting for database to come online...";
 php artisan db:wait;
 
+if [ ! -z "${RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME}" ]; then
+    echo "Creating training database";
+    php artisan clubhouse:create-training-db;
+fi
+
 echo "Purging obsoleted Clubhouse settings ...";
 php artisan clubhouse:purge-settings
 

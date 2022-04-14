@@ -5,6 +5,10 @@
 #
 # Handles all Laravel scheduled jobs as defined in app/Console/Kernel.php -- does not handle queued jobs.
 
+# Allow set up to finish in peace.
+# (app optimizations, migrations, training database generated and/or loaded)
+sleep 120;
+
 echo "Starting Clubhouse schedule worker...";
 
 php /var/www/application/artisan db:wait;

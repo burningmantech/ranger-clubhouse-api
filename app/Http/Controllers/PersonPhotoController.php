@@ -271,7 +271,7 @@ class PersonPhotoController extends ApiController
     {
         $this->authorize('upload', [PersonPhoto::class, $person]);
 
-        if (env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME')) {
+        if (is_ghd_server()) {
             throw new \InvalidArgumentException('Photo uploading is not allowed on the training server');
         }
 

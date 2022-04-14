@@ -42,7 +42,7 @@ class SalesforceController extends ApiController
 
     public function import(): JsonResponse
     {
-        if (env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME')) {
+        if (is_ghd_server()) {
             throw new InvalidArgumentException('Salesforce actions are not allowed on the training server');
         }
 
