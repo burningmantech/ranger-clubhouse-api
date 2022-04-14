@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
 use App\Models\ErrorLog;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class ErrorLogController extends ApiController
 {
@@ -13,8 +12,11 @@ class ErrorLogController extends ApiController
      * Record an error trapped by the client
      *
      * Does not require authorization.
+     *
+     * @return JsonResponse
      */
-    public function record()
+
+    public function record(): JsonResponse
     {
         $data = request()->input('data');
         $url = request()->input('url');
@@ -23,10 +25,10 @@ class ErrorLogController extends ApiController
 
         $record = [
             'error_type' => $errorType,
-            'ip'         => request_ip(),
-            'url'        => $url,
+            'ip' => request_ip(),
+            'url' => $url,
             'user_agent' => request()->userAgent(),
-            'data'       => $data,
+            'data' => $data,
         ];
 
         if (is_numeric($personId)) {
@@ -36,39 +38,50 @@ class ErrorLogController extends ApiController
         $log = new ErrorLog($record);
         $log->save();
 
-        return response('success', 200);
+        return $this->success();
     }
 
     /**
      * Retrieve the error log
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-     public function index()
-     {
-         $this->authorize('index', ErrorLog::class);
+    public function index(): JsonResponse
+    {
+        $this->authorize('index', ErrorLog::class);
 
-         $params = request()->validate([
-             'person_id'  => 'sometimes|integer',
-             'sort'       => 'sometimes|string',
+        $params = request()->validate([
+            'person_id' => 'sometimes|integer',
+            'sort' => 'sometimes|string',
 
-             'starts_at'  => 'sometimes|datetime',
-             'ends_at'    => 'sometimes|datetime',
+            'starts_at' => 'sometimes|datetime',
+            'ends_at' => 'sometimes|datetime',
 
-             'error_type' => 'sometimes|string',
+            'error_type' => 'sometimes|string',
 
-             'page'       => 'sometimes|integer',
-             'page_size'  => 'sometimes|integer',
+            'page' => 'sometimes|integer',
+            'page_size' => 'sometimes|integer',
         ]);
 
-         $result = ErrorLog::findForQuery($params);
+        $result = ErrorLog::findForQuery($params);
+
         return $this->success($result['error_logs'], $result['meta'], 'error_logs');
     }
 
-    public function purge() {
+    /**
+     * Purge the error log
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function purge(): JsonResponse
+    {
         $this->authorize('purge', ErrorLog::class);
 
         ErrorLog::truncate();
 
-        return response()->json([ 'status' => 'success' ]);
+        return response()->json(['status' => 'success']);
     }
 }

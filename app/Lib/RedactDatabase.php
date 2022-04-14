@@ -13,16 +13,13 @@ use Illuminate\Support\Facades\DB;
  *
  * @package App\Lib
  */
-
-class RedactDatabase {
-    public static function execute($year) {
-
-       // $salt = '123456';
-       // $sha = sha1($salt . 'donothing');
-
+class RedactDatabase
+{
+    public static function execute($year)
+    {
         // No fruit-cup.. err.. Personal Information for you tonight!
         DB::table('person')->update([
-            'on_site'    => false,
+            'on_site' => false,
             'home_phone' => '123-456-7890',
             'alt_phone' => '123-456-7890',
             'sms_on_playa' => '',
@@ -31,17 +28,17 @@ class RedactDatabase {
             'street2' => '',
             'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),
             'behavioral_agreement' => false,
-            'message'   => '',
+            'message' => '',
             'bpguid' => 'DEAD-BEEF',
             'sfuid' => '',
             'camp_location' => 'D-Lot',
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
             'tpassword' => '',
-          //  'password' => "$salt:$sha",
+            //  'password' => "$salt:$sha",
         ]);
 
         // Zap training notes
-        DB::table('trainee_status')->update([ 'notes' => '', 'rank' => null ]);
+        DB::table('trainee_status')->update(['notes' => '', 'rank' => null]);
 
         // And nuke a bunch of tables
         $tables = [
@@ -65,11 +62,11 @@ class RedactDatabase {
             DB::statement("TRUNCATE $table");
         }
 
-        DB::delete("DELETE FROM action_logs WHERE event not in ('person-slot-add', 'person-slot-remove')");
+        DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
+
         // Zap all the Clubhouse message archives including the current table
         $rows = DB::select('SHOW TABLES LIKE "person_message%"');
-        foreach($rows as $row)
-        {
+        foreach ($rows as $row) {
             foreach ($row as $col => $name) {
                 DB::statement("TRUNCATE $name");
             }
@@ -82,19 +79,20 @@ class RedactDatabase {
                 $credentials[] = $name;
             }
         }
-        DB::table('setting')->whereIn('name', $credentials)->update([ 'value' => '' ]);
+        DB::table('setting')->whereIn('name', $credentials)->update(['value' => '']);
 
         $settings = [
-            'BroadcastClubhouseNotify'         => 'false',
-            'BroadcastClubhouseSandbox'        => 'true',
-            'OnlineTrainingEnabled'           => 'false',
+            'AllowSignupsWithoutPhoto' => 'true',
+            'AuditorRegistrationDisabled' => 'true',
+            'BroadcastClubhouseNotify' => 'false',
+            'BroadcastClubhouseSandbox' => 'true',
+            'HQWindowInterfaceEnabled' => 'true',
+            'MealInfoAvailable' => 'true',
             'OnlineTrainingDisabledAllowSignups' => 'true',
-            'AllowSignupsWithoutPhoto'          => 'true',
-            'MealInfoAvailable'                => 'true',
-            'RadioInfoAvailable'               => 'true',
-            'TicketingPeriod'                  => 'offseason',
-            'TimesheetCorrectionEnable'        => 'true',
-            'HQWindowInterface'
+            'OnlineTrainingEnabled' => 'false',
+            'RadioInfoAvailable' => 'true',
+            'TicketingPeriod' => 'offseason',
+            'TimesheetCorrectionEnable' => 'true',
         ];
 
         foreach ($settings as $name => $value) {
@@ -104,7 +102,7 @@ class RedactDatabase {
                 $setting->name = $name;
             }
 
-            $setting->value =  $value;
+            $setting->value = $value;
             $setting->saveWithoutValidation();
         }
     }

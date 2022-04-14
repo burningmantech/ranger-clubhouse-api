@@ -65,6 +65,26 @@ return [
             ]
         ],
 
+        'mysql_clone_from' => [
+            'driver' => 'mysql',
+            'host' => env('RANGER_DB_CLONE_FROM_HOST_NAME', 'localhost'),
+            'port' => env('RANGER_DB_CLONE_FROM_PORT', '3306'),
+            'database' => env('RANGER_DB_CLONE_FROM_DATABASE_NAME', 'rangers-ghd'),
+            'username' => env('RANGER_DB_CLONE_FROM_USER_NAME', 'rangers'),
+            'password' => env('RANGER_DB_CLONE_FROM_PASSWORD', 'donothing'),
+            'unix_socket' => env('RANGER_DB_CLONE_FROM_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+            'timezone' => '-07:00',
+            // Turn on persistent connections.
+            'options' => [
+                \PDO::ATTR_PERSISTENT => true
+            ]
+        ],
+
         'mysql_testing' => [
             'driver' => 'mysql',
             'host' => env('RANGER_DB_HOST_NAME', 'localhost'),

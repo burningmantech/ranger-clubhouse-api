@@ -6,7 +6,13 @@
 
 . "$(dirname "$0")/.common.sh";
 
-env_file="${wd}/.env";
+if [ -f "${wd}/.env.docker" ]; then
+    env_file="${wd}/.env.docker"
+else
+    env_file="${wd}/.env";
+fi
+
+echo "* Using ${env_file}"
 
 if [ ! -f "${env_file}" ]; then
     touch "${env_file}";

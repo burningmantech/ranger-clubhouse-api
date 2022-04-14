@@ -4,7 +4,6 @@
 # Start Clubhouse queue worker -- handles all Laravel queue jobs
 #
 
-
 echo "Starting Clubhouse queue worker...";
 
 php /var/www/application/artisan db:wait;
