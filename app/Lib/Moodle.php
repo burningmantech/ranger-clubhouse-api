@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Normalizer;
 use RuntimeException;
 
 class Moodle
@@ -357,12 +358,21 @@ class Moodle
 
     public static function generatePassword(Person $person): string
     {
-        $password = ucfirst(preg_replace('/[^\w]/', '', $person->last_name) . ucfirst(substr($person->first_name, 0, 1))) . '!';
+        $letters = 'abcdefghijk';
+        $lastName = ucfirst(strtolower(Person::convertDiacritics($person->last_name)));
+        $firstName = Person::convertDiacritics($person->first_name);
+        $password = ucfirst(preg_replace('/[^\w]/', '', $lastName) . ucfirst(substr($firstName, 0, 1))) . '!';
         $password .= ((string)rand(0, 9) . (string)rand(0, 9) . (string)rand(0, 9));
 
-        while (strlen($password) < 8) {
-            $password .= substr(str_shuffle("abcdef"), 0, 1);
+        while (strlen($password) < 10) {
+            $password .= substr(str_shuffle($letters), 0, 1);
         }
+
+        // Ensure at least one lower case letter appears.
+        if (!preg_match("/[a-z]/", $password)) {
+            $password .= substr(str_shuffle($letters), 0, 1);
+        }
+
         return $password;
     }
 
@@ -380,7 +390,8 @@ class Moodle
 
         $username = str_ireplace('(NR)', '', $person->callsign);
         $username = strtolower(trim($username));
-        $username = preg_replace('/[^\w]/', '', $username);
+        $username = preg_replace('/[^\w]/', '', Person::convertDiacritics($username));
+
         $result = $this->requestWebService(
             'POST', self::WS_CREATE_USERS,
             [

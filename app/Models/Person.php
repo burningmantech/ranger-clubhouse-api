@@ -21,6 +21,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Normalizer;
 use NumberFormatter;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
@@ -420,7 +421,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return Person|null
      */
 
-    public static function findByEmail(string $email) : ?Person
+    public static function findByEmail(string $email): ?Person
     {
         return self::where('email', $email)->first();
     }
@@ -432,7 +433,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return Person|null
      */
 
-    public static function findByCallsign(string $callsign) : ?Person
+    public static function findByCallsign(string $callsign): ?Person
     {
         return self::where('callsign', $callsign)->first();
     }
@@ -444,7 +445,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return int|null
      */
 
-    public static function findIdByCallsign(string $callsign) : ?int
+    public static function findIdByCallsign(string $callsign): ?int
     {
         $row = self::select('id')->where('callsign', $callsign)->first();
         if ($row) {
@@ -461,7 +462,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return ?Person
      */
 
-    public static function findByLmsID(string $lmsId) : ?Person
+    public static function findByLmsID(string $lmsId): ?Person
     {
         return self::where('lms_id', $lmsId)->first();
     }
@@ -715,7 +716,19 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign(string $callsign): string
     {
-        return strtolower(preg_replace('/[^\w]/', '', $callsign));
+        return strtolower(preg_replace('/[^\w]/', '', self::convertDiacritics($callsign)));
+    }
+
+    /**
+     * Convert any diacritics into ascii (é -> e, ü -> u)
+     *
+     * @param string $value
+     * @return string
+     */
+
+    public static function convertDiacritics(string $value): string
+    {
+        return preg_replace('/[\x{0300}-\x{036f}]/u', '', Normalizer::normalize($value, Normalizer::FORM_D));
     }
 
     /**
@@ -778,7 +791,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function isValidPassword(string $password): bool
     {
         $encyptedPw = $this->password;
-        if (strpos($encyptedPw, ':') === false) {
+        if (!str_contains($encyptedPw, ':')) {
             return false;
         }
 
@@ -1118,13 +1131,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function resetCallsign(): bool
     {
+        $lastName = self::convertDiacritics($this->last_name);
+        $firstLetter = substr(self::convertDiacritics($this->first_name), 0, 1);
         $year = current_year() % 100;
         for ($tries = 0; $tries < 10; $tries++) {
-            $newCallsign = $this->last_name;
+            $newCallsign = $lastName;
             if ($tries > 0) {
                 $newCallsign .= $tries + 1;
             }
-            $newCallsign .= substr($this->first_name, 0, 1) . $year;
+            $newCallsign .=  $firstLetter . $year;
             if ($this->status == Person::BONKED) {
                 $newCallsign .= 'B';
             } else if ($this->status == Person::AUDITOR) {

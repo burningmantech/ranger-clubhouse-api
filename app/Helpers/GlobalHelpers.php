@@ -36,8 +36,18 @@ if (!function_exists('setting')) {
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to(string|array $email, Mailable $message, bool $queueMail = false) : bool
+    function mail_to(string|array $email, Mailable $message, bool $queueMail = false): bool
     {
+        if (is_ghd_server()) {
+            ErrorLog::recordException(new InvalidArgumentException('Attempted to send email in training server'),
+                'email-exception', [
+                    'type' => 'mail-to',
+                    'email' => $email,
+                    'message' => $message
+                ]);
+            return false;
+        }
+
         if (is_string($email) && str_contains($email, ',')) {
             $email = explode(',', $email);
         }
@@ -110,5 +120,17 @@ if (!function_exists('request_ip')) {
     function request_ip(): string
     {
         return implode(',', request()->getClientIps());
+    }
+}
+
+if (!function_exists('is_ghd_server')) {
+    /**
+     * Is this a Ground Hog Day server?
+     * @return bool
+     */
+
+    function is_ghd_server(): bool
+    {
+        return !empty(config('clubhouse.GroundhogDayTime'));
     }
 }
