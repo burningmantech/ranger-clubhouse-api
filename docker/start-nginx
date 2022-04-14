@@ -18,7 +18,7 @@ cd /var/www/application;
 echo "Waiting for database to come online...";
 php artisan db:wait;
 
-if [ ! -z "${RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME}" ]; then
+if [ -n "${RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME-}" ]; then
     echo "Creating training database";
     php artisan clubhouse:create-training-db;
 fi
@@ -34,6 +34,15 @@ php artisan event:cache;
 
 echo "Performing database migrations...";
 php artisan migrate --force;
+
+echo "Starting queue runners and scheduler"
+supervisorctl start clubhouse-worker
+supervisorctl start clubhouse-scheduler
+
+echo "Starting php-fpm"
+supervisorctl start php-fpm
+
+sleep 5
 
 echo "Starting Nginx...";
 exec nginx "$@";
