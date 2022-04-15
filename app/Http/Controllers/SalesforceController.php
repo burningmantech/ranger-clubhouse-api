@@ -11,10 +11,10 @@ use App\Models\PersonIntakeNote;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use InvalidArgumentException;
 
 class SalesforceController extends ApiController
 {
@@ -38,13 +38,12 @@ class SalesforceController extends ApiController
      * Import (or query) Salesforce records
      *
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function import(): JsonResponse
     {
-        if (is_ghd_server()) {
-            throw new InvalidArgumentException('Salesforce actions are not allowed on the training server');
-        }
+        prevent_if_ghd_server('Salesforce import');
 
         $params = request()->validate([
             'create_accounts' => 'sometimes|boolean|required',

@@ -6,6 +6,7 @@
 use App\Models\ErrorLog;
 use App\Models\Setting;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -134,3 +135,21 @@ if (!function_exists('is_ghd_server')) {
         return !empty(config('clubhouse.GroundhogDayTime'));
     }
 }
+
+if (!function_exists('prevent_if_ghd_server')) {
+    /**
+     * Thrown an exception if running on the GHD server (training server).
+     * @param $action
+     * @throws AuthorizationException
+     */
+
+    function prevent_if_ghd_server($action)
+    {
+        if (!is_ghd_server()) {
+            return;
+        }
+
+        throw new AuthorizationException("$action is prevented on the training server.");
+    }
+}
+

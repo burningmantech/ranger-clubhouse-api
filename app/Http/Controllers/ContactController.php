@@ -28,6 +28,8 @@ class ContactController extends ApiController
             'message' => 'required|string',
         ]);
 
+        prevent_if_ghd_server('Ranger contact');
+
         $recipient = $this->findPerson($params['recipient_id']);
         $sender = $this->user;
         $type = $params['type'];
