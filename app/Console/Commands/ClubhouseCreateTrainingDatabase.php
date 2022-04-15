@@ -49,7 +49,7 @@ class ClubhouseCreateTrainingDatabase extends Command
         $cloneSql = "clone.sql.gz";
 
         $this->info("Dumping from $cloneDb");
-        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table -e --ignore-table=$cloneDb.log -q $cloneDb | gzip > $cloneSql")) {
+        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table -e --ignore-table=$cloneDb.log --single-transaction --skip-add-locks --quick $cloneDb | gzip > $cloneSql")) {
             $this->error("Cannot dump database host=[$cloneHost] user=[$cloneUser] db=[$cloneDb]");
             return 1;
         }
