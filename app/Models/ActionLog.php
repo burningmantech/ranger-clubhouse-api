@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use DateTime;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Model;
 
 class ActionLog extends Model
 {
@@ -88,7 +87,7 @@ class ActionLog extends Model
         }
 
         if ($lastDay) {
-            $sql->whereRaw('created_at >= ?', [ now()->subHours(24) ]);
+            $sql->whereRaw('created_at >= ?', [now()->subHours(24)]);
         }
 
         // How many total for the query
@@ -158,11 +157,22 @@ class ActionLog extends Model
         ];
     }
 
-    public static function record($person, $event, $message, $data = null, $targetPersonId = null)
+    /**
+     * Record a Clubhouse event
+     *
+     * @param $user - user performing the action
+     * @param $event - event that happened.
+     * @param $message - optional message/reason
+     * @param $data - relevant data to log
+     * @param $targetPersonId - the target id who the action was taken against
+     * @return void
+     */
+
+    public static function record($user, $event, $message, $data = null, $targetPersonId = null)
     {
         $log = new ActionLog;
         $log->event = $event;
-        $log->person_id = $person ? $person->id : null;
+        $log->person_id = $user?->id;
         $log->message = $message ?? '';
         $log->target_person_id = $targetPersonId;
 
@@ -170,17 +180,19 @@ class ActionLog extends Model
             $log->data = $data;
         }
 
-        $log->created_at = now();
+        // We want the real time, not the simulated GHD time returned by now().
+        $log->created_at = new Carbon(new DateTime);
         $log->save();
     }
 
     /**
      * Prepare a date for array / JSON serialization.
      *
-     * @param  \DateTimeInterface  $date
+     * @param DateTimeInterface $date
      * @return string
      */
-    protected function serializeDate(DateTimeInterface $date)
+
+    protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
     }

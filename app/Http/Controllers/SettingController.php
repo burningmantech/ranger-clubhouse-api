@@ -69,11 +69,9 @@ class SettingController extends ApiController
      */
     public function update(Setting $setting): JsonResponse
     {
-        if (is_ghd_server()) {
-            throw new InvalidArgumentException('Settings cannot be changed in a training server.');
-        }
-
         $this->authorize('update', $setting);
+        prevent_if_ghd_server('Settings update');
+
         $this->fromRest($setting);
 
         $setting->auditReason = "setting update $setting->name";

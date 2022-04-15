@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\ApiController;
-use Illuminate\Support\Facades\DB;
-
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
-
-use RuntimeException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class MaintenanceController extends ApiController
 {
@@ -160,17 +157,18 @@ class MaintenanceController extends ApiController
 
         // Log what was done
         foreach ($people as $person) {
-            $this->log('person-update', 'maintenance - marked off site', [ 'id' => $person->id, 'on_site' => [true, false]], $person->id);
+            $this->log('person-update', 'maintenance - marked off site', ['id' => $person->id, 'on_site' => [true, false]], $person->id);
         }
 
         return response()->json(['count' => $people->count()]);
     }
 
-    /*
+    /**
      * Reset all PNVs (Alphas/Bonks/Prospecitves) to Past Prospective status, reset callsign, and marked unapproved.
+     * @return JsonResponse
      */
 
-    public function resetPNVs()
+    public function resetPNVs(): JsonResponse
     {
         $pnvs = Person::whereIn('status', [Person::ALPHA, Person::BONKED, Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST])
             ->orderBy('callsign')
@@ -201,11 +199,12 @@ class MaintenanceController extends ApiController
         return response()->json(['people' => $people]);
     }
 
-    /*
+    /**
      * Reset all Past Prospectives with approved callsigns to LastFirstYY and mark the callsign as unapproved.
+     * @return JsonResponse
      */
 
-    public function resetPassProspectives()
+    public function resetPassProspectives(): JsonResponse
     {
         $pp = Person::where('status', Person::PAST_PROSPECTIVE)
             ->where('callsign_approved', true)
@@ -235,12 +234,17 @@ class MaintenanceController extends ApiController
         return response()->json(['people' => $people]);
     }
 
-    /*
+    /**
      * Archive Clubhouse messages
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function archiveMessages()
+    public function archiveMessages(): JsonResponse
     {
+        prevent_if_ghd_server('Message archiving');
+
         $year = current_year();
         $prevYear = $year - 1;
         $table = "person_message_$prevYear";

@@ -43,6 +43,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('setupPerson', [PersonOnlineTraining::class, $person]);
 
+        prevent_if_ghd_server('Online Course setup');
+
         /*
          * Any active Ranger with 2 or more years experience gets to take the half course.
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
@@ -107,6 +109,7 @@ class OnlineTrainingController extends ApiController
     public function linkUsers(): JsonResponse
     {
         $this->authorize('linkUsers', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Online Course admin');
 
         $fullId = setting('MoodleFullCourseId');
         $halfId = setting('MoodleHalfCourseId');
@@ -152,6 +155,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('courses', PersonOnlineTraining::class);
 
+        prevent_if_ghd_server('Online Course admin');
+
         $lms = new Moodle();
         $fullCourse = setting('MoodleFullCourseId');
         $halfCourse = setting('MoodleHalfCourseId');
@@ -178,6 +183,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('setCourseType', PersonOnlineTraining::class);
 
+        prevent_if_ghd_server('Online Course admin');
+
         $params = request()->validate([
             'course_id' => 'integer|required',
             'type' => 'string|required'
@@ -203,6 +210,8 @@ class OnlineTrainingController extends ApiController
     public function enrollment(): JsonResponse
     {
         $this->authorize('enrollment', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Online Course admin');
+
         $lms = new Moodle();
 
         $fullId = setting('MoodleFullCourseId');

@@ -197,6 +197,7 @@ class RbsController extends ApiController
 
     public function details(): JsonResponse
     {
+        prevent_if_ghd_server('RBS stats');
         $params = request()->validate([
             'type' => 'required|string'
         ]);
@@ -304,6 +305,7 @@ class RbsController extends ApiController
     public function unknownPhones(): JsonResponse
     {
         $this->authorize('unknownPhones', Broadcast::class);
+        prevent_if_ghd_server('Unknown phones listing');
 
         $params = request()->validate([
             'year' => 'required|integer'
@@ -393,6 +395,8 @@ class RbsController extends ApiController
 
     public function transmit(): JsonResponse
     {
+        prevent_if_ghd_server('RBS transmission');
+
         $params = request()->validate([
             'type' => 'required|string',
             'send_sms' => 'sometimes|boolean',

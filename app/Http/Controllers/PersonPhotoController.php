@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
+use App\Mail\PhotoApprovedMail;
+use App\Mail\PhotoRejectedMail;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonPhoto;
 use App\Models\Role;
-
-use App\Mail\PhotoApprovedMail;
-use App\Mail\PhotoRejectedMail;
-
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
 use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManagerStatic as Image;
 use InvalidArgumentException;
@@ -30,10 +25,13 @@ use RuntimeException;
 class PersonPhotoController extends ApiController
 {
     /**
-     * Display a listing of photos based on search criteria
+     * Return a list of photos based on the given criteria
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $this->authorize('index', PersonPhoto::class);
 
@@ -56,9 +54,12 @@ class PersonPhotoController extends ApiController
 
     /**
      * Retrieve the review configuration.
+     * @return JsonResponse
+     *
+     * @throws AuthorizationException
      */
 
-    public function reviewConfig()
+    public function reviewConfig(): JsonResponse
     {
         $this->authorize('reviewConfig', PersonPhoto::class);
 
@@ -91,10 +92,14 @@ class PersonPhotoController extends ApiController
     }
 
     /**
-     * Display the record.
+     * Return a photo record
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(PersonPhoto $personPhoto)
+    public function show(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('show', $personPhoto);
         $personPhoto->load(PersonPhoto::PERSON_TABLES);
@@ -103,11 +108,17 @@ class PersonPhotoController extends ApiController
 
     /**
      * Update a record
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(PersonPhoto $personPhoto)
+    public function update(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+        prevent_if_ghd_server('Photo updating');
+
         $person = $personPhoto->person;
         if (!$personPhoto->person) {
             throw new InvalidArgumentException('Record is not linked to a person.');
@@ -152,9 +163,11 @@ class PersonPhotoController extends ApiController
      * it back to the server.
      */
 
-    public function replace(PersonPhoto $personPhoto)
+    public function replace(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+
+        prevent_if_ghd_server('Photo replacement');
 
         $params = request()->validate(['image' => 'required']);
 
@@ -198,11 +211,17 @@ class PersonPhotoController extends ApiController
 
     /**
      * Activate a record - i.e. set the photo as the current photo for a person
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function activate(PersonPhoto $personPhoto)
+    public function activate(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+
+        prevent_if_ghd_server('Photo activation');
 
         $person = $personPhoto->person;
 
@@ -221,11 +240,16 @@ class PersonPhotoController extends ApiController
     /**
      * Remove a record.
      *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function destroy(PersonPhoto $personPhoto)
+    public function destroy(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('destroy', $personPhoto);
+
+        prevent_if_ghd_server('Photo deletion');
 
         try {
             // Remove the files.
@@ -271,9 +295,7 @@ class PersonPhotoController extends ApiController
     {
         $this->authorize('upload', [PersonPhoto::class, $person]);
 
-        if (is_ghd_server()) {
-            throw new \InvalidArgumentException('Photo uploading is not allowed on the training server');
-        }
+        prevent_if_ghd_server('Photo Uploading');
 
         if (!setting('PhotoUploadEnable')
             && !$this->userHasRole([Role::ADMIN, Role:: VC])) {
@@ -380,12 +402,14 @@ class PersonPhotoController extends ApiController
     {
         $this->authorize('rejectPreview', $personPhoto);
 
+        prevent_if_ghd_server('Photo rejection');
+
         $params = request()->validate([
             'reject_reasons' => 'sometimes|array',
             'reject_message' => 'sometimes|string'
         ]);
 
-        $mail = new PhotoRejectedMail($personPhoto->person,$params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
+        $mail = new PhotoRejectedMail($personPhoto->person, $params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
         return response()->json(['mail' => $mail->render()]);
     }
 

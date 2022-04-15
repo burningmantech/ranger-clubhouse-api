@@ -26,9 +26,7 @@ class Clubhouse1LogController extends ApiController
     {
         $this->authorize('isAdmin');
 
-        if (is_ghd_server()) {
-            throw new InvalidArgumentException('Clubhouse 1 Log is not available on the training server');
-        }
+        prevent_if_ghd_server('Clubhouse 1 Log viewing');
 
         $params = request()->validate([
             'sort' => 'sometimes|string',

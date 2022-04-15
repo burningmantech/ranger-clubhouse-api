@@ -31,7 +31,6 @@ use App\Models\Timesheet;
 use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -636,6 +635,8 @@ class PersonController extends ApiController
 
     public function register(): JsonResponse
     {
+        prevent_if_ghd_server('Account registration');
+
         if (setting('AuditorRegistrationDisabled')) {
             throw new InvalidArgumentException("Auditor registration is disabled at this time.");
         }
