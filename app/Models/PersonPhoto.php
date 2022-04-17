@@ -2,21 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
-use App\Models\Person;
-use App\Models\ErrorLog;
-
-
+use Aws\Credentials\Credentials;
+use Aws\Rekognition\RekognitionClient;
 use Exception;
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-
-
-use Aws\Rekognition\RekognitionClient;
-use Aws\Credentials\Credentials;
+use Intervention\Image\ImageManagerStatic as Image;
 use RuntimeException;
 
 /*
@@ -51,6 +46,7 @@ class PersonPhoto extends ApiModel
     protected $appends = [
         'image_url',
         'orig_url',
+        'profile_url',
         'reject_labels',
         'analysis_details'
     ];
@@ -62,12 +58,19 @@ class PersonPhoto extends ApiModel
 
     const NOT_REQUIRED = 'not-required'; // Not stored within the database, used by scheduling gate keeping logic
 
+    const SIZE_BMID = 'bmid';
+    const SIZE_PROFILE = 'profile';
+    const SIZE_ORIGINAL = 'original';
+
     // Image ratio is 7 by 9 for 350px by 450px
     const BMID_WIDTH = 350;
     const BMID_HEIGHT = 450;
 
     const ORIG_MAX_WIDTH = 1050;
     const ORIG_MAX_HEIGHT = 1350;
+
+    const PROFILE_HEIGHT = 180;
+    const PROFILE_WIDTH = 140;
 
     const PERSON_TABLES = [
         'person:id,callsign,status,first_name,last_name',
@@ -304,13 +307,69 @@ class PersonPhoto extends ApiModel
     }
 
     /**
+     * Process an image
+     */
+
+    public static function processImage($imageParam, $personId, string $type = self::SIZE_BMID): array
+    {
+        $filename = $imageParam->getClientOriginalName();
+
+        switch ($type) {
+            case self::SIZE_BMID:
+                $width = PersonPhoto::BMID_WIDTH;
+                $height = PersonPhoto::BMID_HEIGHT;
+                break;
+
+            case self::SIZE_ORIGINAL:
+                $width = PersonPhoto::ORIG_MAX_WIDTH;
+                $height = PersonPhoto::ORIG_MAX_HEIGHT;
+                break;
+
+            case self::SIZE_PROFILE:
+                $width = self::PROFILE_WIDTH;
+                $height = self::PROFILE_HEIGHT;
+                break;
+
+            default:
+                throw new RuntimeException("Unknown type [$type]");
+        }
+
+        try {
+            $image = Image::make($imageParam);
+
+            // correct image orientation
+            $image->orientate();
+            $image->resize($width, $height, function ($constrain) {
+                $constrain->aspectRatio();
+                $constrain->upsize();
+            });
+
+            $contents = $image->stream('jpg', 75)->getContents();
+            $width = $image->width();
+            $height = $image->height();
+            $image->destroy();  // free up memory
+            $image = null; // and kill the object
+            gc_collect_cycles();     // Images can be huge, garbage collect.
+
+            return [$contents, $width, $height];
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'person-photo-convert-exception', [
+                'target_person_id' => $personId,
+                'filename' => $filename
+            ]);
+
+            return [null, 0, 0];
+        }
+    }
+
+    /**
      * Retrieve the (approved) image url for the given person
      *
      * @param $personId
      * @return string
      */
 
-    public static function retrieveImageUrlForPerson(int $personId) : string
+    public static function retrieveImageUrlForPerson(int $personId): string
     {
         $photo = self::join('person', function ($j) use ($personId) {
             $j->on('person.id', 'person_photo.person_id');
@@ -348,16 +407,16 @@ class PersonPhoto extends ApiModel
 
         foreach ($rows as $row) {
             try {
+                $row->deleteAllVersions();
                 // Remove the files.
-                $row->deleteImage();
-                $row->deleteOrigImage();
             } catch (Exception $e) {
                 ErrorLog::record('person-photo-delete-exception', [
                     'person_id' => $userId,
                     'target_person_id' => $personId,
                     'person_photo_id' => $row->id,
                     'image_filename' => $row->image_filename,
-                    'orig_filename' => $row->orig_filename
+                    'orig_filename' => $row->orig_filename,
+                    'profile_filename' => $row->profile_filename,
                 ]);
             }
 
@@ -365,19 +424,43 @@ class PersonPhoto extends ApiModel
         }
     }
 
+    public function deleteAllVersions()
+    {
+        $this->deleteImage();
+        $this->deleteOrigImage();
+        $this->deleteProfileImage();
+    }
+
     public function setUploadedAtToNow()
     {
         $this->uploaded_at = now();
     }
 
-    public function getImageUrlAttribute() : string
+    public function getImageUrlAttribute(): string
     {
-        return self::storage()->url(self::storagePath($this->image_filename));
+        if (!empty($this->image_filename)) {
+            return self::storage()->url(self::storagePath($this->image_filename));
+        }
+
+        return '';
     }
 
-    public function getOrigUrlAttribute() : string
+    public function getOrigUrlAttribute(): string
     {
-        return self::storage()->url(self::storagePath($this->orig_filename));
+        if (!empty($this->orig_filename)) {
+            return self::storage()->url(self::storagePath($this->orig_filename));
+        }
+
+        return '';
+    }
+
+    public function getProfileUrlAttribute(): string
+    {
+        if (!empty($this->profile_name)) {
+            return self::storage()->url(self::storagePath($this->profile_filename));
+        }
+
+        return '';
     }
 
     /**
@@ -401,7 +484,7 @@ class PersonPhoto extends ApiModel
      * @return array
      */
 
-    public static function retrieveInfo(Person $person) : array
+    public static function retrieveInfo(Person $person): array
     {
         $photo = $person->person_photo;
 
@@ -444,7 +527,7 @@ class PersonPhoto extends ApiModel
     /**
      * Obtain the photo storage object
      *
-     * @return \Illuminate\Contracts\Filesystem\Filesystem
+     * @return Filesystem
      */
 
     public static function storage()
@@ -465,14 +548,22 @@ class PersonPhoto extends ApiModel
      * @return bool - true if succesful
      */
 
-    public function storeImage($contents, $timestamp, $isOrig)
+    public function storeImage($contents, $timestamp, $type)
     {
-        if ($isOrig) {
-            $file = "photo-{$this->person_id}-{$timestamp}-orig.jpg";
-            $this->orig_filename = $file;
-        } else {
-            $file = "photo-{$this->person_id}-{$timestamp}.jpg";
-            $this->image_filename = $file;
+        switch ($type) {
+            case self::SIZE_ORIGINAL:
+                $file = "photo-{$this->person_id}-{$timestamp}-orig.jpg";
+                $this->orig_filename = $file;
+                break;
+            case self::SIZE_BMID:
+                $file = "photo-{$this->person_id}-{$timestamp}.jpg";
+                $this->image_filename = $file;
+                break;
+
+            case self::SIZE_PROFILE:
+                $file = "photo-{$this->person_id}-{$timestamp}-profile.jpg";
+                $this->profile_filename = $file;
+                break;
         }
 
         return self::storage()->put(self::storagePath($file), $contents);
@@ -483,18 +574,19 @@ class PersonPhoto extends ApiModel
      *
      * @return bool
      */
-    public function imageExists() : bool
+    public function imageExists(): bool
     {
         return self::storage()->exists(self::storagePath($this->image_filename));
     }
+
     /**
      * Return the contents of the image.
      *
      * @return string
-     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     * @throws FileNotFoundException
      */
 
-    public function readImage() : string
+    public function readImage(): string
     {
         return self::storage()->get(self::storagePath($this->image_filename));
     }
@@ -505,7 +597,9 @@ class PersonPhoto extends ApiModel
 
     public function deleteImage()
     {
-        self::storage()->delete(self::storagePath($this->image_filename));
+        if (!empty($this->image_filename)) {
+            self::storage()->delete(self::storagePath($this->image_filename));
+        }
     }
 
     /**
@@ -514,9 +608,21 @@ class PersonPhoto extends ApiModel
 
     public function deleteOrigImage()
     {
-        self::storage()->delete(self::storagePath($this->orig_filename));
+        if (!empty($this->orig_filename)) {
+            self::storage()->delete(self::storagePath($this->orig_filename));
+        }
     }
 
+    /**
+     * Delete the profile photo from storage
+     */
+
+    public function deleteProfileImage()
+    {
+        if (!empty($this->profile_filename)) {
+            self::storage()->delete(self::storagePath($this->profile_filename));
+        }
+    }
 
     public function setRejectReasonsAttribute($value)
     {

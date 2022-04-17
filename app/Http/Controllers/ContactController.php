@@ -131,7 +131,7 @@ class ContactController extends ApiController
             return $this->success();
         }
 
-        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? ''));
+        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? ''), true);
         return $this->success();
     }
 }
