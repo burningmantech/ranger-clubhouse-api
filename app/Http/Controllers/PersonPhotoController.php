@@ -407,7 +407,7 @@ class PersonPhotoController extends ApiController
 
         foreach ($prevSubmitted as $submitted) {
             try {
-                $photo->deleteAllVersions();
+                $submitted->deleteAllVersions();
             } catch (Exception $e) {
                 ErrorLog::recordException($e, 'person-photo-delete-exception', [
                     'target_person_id' => $personId,
