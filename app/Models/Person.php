@@ -100,7 +100,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /*
      * No messages status are those that should not receive any messages
-     * either Clubhouse Messaging or the RBS
+     * either Clubhouse Messages or from the RBS
      */
 
     const NO_MESSAGES_STATUSES = [
@@ -113,6 +113,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         Person::UBERBONKED
     ];
 
+    /*
+     * No street address required statuses. To deal with legacy accounts.
+     */
+
+    const ONLY_BASIC_PII_REQUIRED_STATUSES = [
+        self::DECEASED,
+        self::DISMISSED,
+        self::RESIGNED,
+        self::RETIRED,
+    ];
 
     /**
      * The database table name.
@@ -284,7 +294,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'trainer_status'
     ];
 
-    protected $rules = [
+    const GENERAL_VALIDATIONS = [
         'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',
         'status' => 'required|string',
@@ -296,24 +306,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'email' => 'required|string|max:50',
 
-        'street1' => 'required|string|nullable|max:128',
-        'street2' => 'sometimes|string|nullable|max:128',
-        'apt' => 'sometimes|string|nullable|max:10',
-        'city' => 'required|string|max:50',
-
-        'state' => 'state_for_country:live_only',
-        'country' => 'required|string|max:25',
-
-        'home_phone' => 'sometimes|string|max:25',
-        'alt_phone' => 'sometimes|string|nullable|max:25',
+        'has_reviewed_pi' => 'sometimes|boolean',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
         'gender' => 'sometimes|string|nullable|max:32',
         'pronouns' => 'sometimes|string|nullable',
         'pronouns_custom' => 'sometimes|string|nullable',
 
-        'has_reviewed_pi' => 'sometimes|boolean',
+        'home_phone' => 'sometimes|string|max:25',
+        'alt_phone' => 'sometimes|string|nullable|max:25',
     ];
+
+    const ADDRESS_VALIDATIONS = [
+        'street1' => 'required|string|nullable|max:128',
+        'street2' => 'sometimes|string|nullable|max:128',
+        'apt' => 'sometimes|string|nullable|max:10',
+        'city' => 'required|string|max:50',
+        'state' => 'state_for_country:live_only',
+        'country' => 'required|string|max:25',
+    ];
+
+    const ALL_VALIDATIONS = [
+        ...self::GENERAL_VALIDATIONS,
+        ...self::ADDRESS_VALIDATIONS
+    ];
+
+    protected $rules = self::ALL_VALIDATIONS;
 
     public $has_reviewed_pi;
 
@@ -374,6 +392,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $model->resetCallsign();
                 $model->callsign_approved = false;
             }
+
         });
     }
 
@@ -471,15 +490,24 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function save($options = [])
     {
         $isNew = !$this->exists;
+
         if ($isNew) {
             // Creating record = require callsign & email
             $this->rules['callsign'] = 'required|string|unique:person,callsign';
             $this->rules['email'] = 'required|string|unique:person,email';
         } else {
+            // Allow the Admins and VCs to bypass personal info validations to deal with
+            // moldy defunct accounts with little PII
+            if (in_array($this->status, self::ONLY_BASIC_PII_REQUIRED_STATUSES)
+                && (!Auth::id() || Auth::user()?->hasRole([Role::ADMIN, Role::VC]))) {
+                $this->rules = self::GENERAL_VALIDATIONS;
+            }
+
             if ($this->isDirty('callsign')) {
                 // updating a callsign on an existing record
                 $this->rules['callsign'] = 'required|string|unique:person,callsign,' . $this->id;
             }
+            
             if ($this->isDirty('email')) {
                 $this->rules['email'] = 'required|string|unique:person,email,' . $this->id;
             }
@@ -487,12 +515,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $result = parent::save($options);
 
-        if ($isNew) {
-            // Kill the rules in case the newly recreated record is updated further, otherwise
-            // the callsign & email rules will be acted upon and always fail.
-            unset($this->rules['callsign']);
-            unset($this->rules['email']);
-        }
+        // Reset the validations in the case the record is acted upon further this session.
+        $this->rules = self::ALL_VALIDATIONS;
 
         return $result;
     }
@@ -1139,7 +1163,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             if ($tries > 0) {
                 $newCallsign .= $tries + 1;
             }
-            $newCallsign .=  $firstLetter . $year;
+            $newCallsign .= $firstLetter . $year;
             if ($this->status == Person::BONKED) {
                 $newCallsign .= 'B';
             } else if ($this->status == Person::AUDITOR) {
