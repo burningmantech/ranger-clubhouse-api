@@ -21,7 +21,7 @@ class PotentialClubhouseAccountFromSalesforce
         'MailingState',
         'MailingCountry',
         'MailingPostalCode',
-        'npe01__HomeEmail__c',
+        //'npe01__HomeEmail__c', -- This is a backup in case the Ranger Record Contact Email is blank. Totally optional.
         'Phone',
         //                'Birthdate',
         'BPGUID__c',
@@ -160,7 +160,7 @@ class PotentialClubhouseAccountFromSalesforce
             return false;
         }
 
-        $ok = true;
+        $errors = [];
         foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
             if ($req == 'MailingState'
                 && !in_array($sobj->Ranger_Info__r->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
@@ -168,23 +168,28 @@ class PotentialClubhouseAccountFromSalesforce
             }
 
             if (!isset($sobj->Ranger_Info__r->$req)) {
-                $this->status = self::STATUS_INVALID;
-                $this->message =
-                    "Missing required field $req";
-                $ok = false;
-                break;
+                $errors[] = "Missing required field $req";
+                continue;
             }
+
             $x = trim($sobj->Ranger_Info__r->$req);
             if ($x == "") {
-                $this->status = "invalid";
-                $this->message =
-                    "Blank required field $req";
-                $ok = false;
-                break;
+                $errors[] = "Blank required field $req";
+                continue;
             }
         }
 
-        return $ok;
+        if (empty($this->email)) {
+            $errors[] = "No email address found. Both Ranger record Contact Email field and Contact Record Home Email fields are blank.";
+        }
+
+        if (!empty($errors)) {
+            $this->status = self::STATUS_INVALID;
+            $this->message = implode(' / ', $errors);
+            return false;
+        }
+
+        return true;
     }
 
     /**
