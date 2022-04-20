@@ -142,7 +142,7 @@ class ReservedCallsigns
         'Double Oh Seven',
         'E S D',
         'Echelon', 'Eschelon',
-        'Exodous',
+        'Exodus',
         'Gate',
         'Green Dot',
         'Greeters',
