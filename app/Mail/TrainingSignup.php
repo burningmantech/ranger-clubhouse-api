@@ -12,7 +12,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-class TrainingSignup extends Mailable
+class TrainingSignup extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -29,6 +29,7 @@ class TrainingSignup extends Mailable
      {
          $this->slot = $slot;
          $this->fromEmail = $fromEmail;
+         parent::__construct();
      }
 
     /**

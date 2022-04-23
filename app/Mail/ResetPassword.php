@@ -7,7 +7,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Person;
 
-class ResetPassword extends Mailable
+class ResetPassword extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -42,6 +42,7 @@ class ResetPassword extends Mailable
 
         $host = request()->getSchemeAndHttpHost();
         $this->resetURL = "{$host}/client/login?token={$token}";
+        parent::__construct();
     }
 
     /**
@@ -49,7 +50,8 @@ class ResetPassword extends Mailable
      *
      * @return $this
      */
-    public function build()
+
+    public function build(): static
     {
         return $this->subject('Ranger Clubhouse password reset')->view('emails.reset-password');
     }

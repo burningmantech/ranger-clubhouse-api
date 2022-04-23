@@ -4,11 +4,9 @@ namespace App\Mail;
 
 use App\Models\Person;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class UpdateMailingListSubscriptionsMail extends Mailable
+class UpdateMailingListSubscriptionsMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -19,6 +17,8 @@ class UpdateMailingListSubscriptionsMail extends Mailable
      */
     public function __construct(public Person $person, public Person $user, public string $oldEmail, public string $additionalLists)
     {
+        parent::__construct();
+
     }
 
     /**
@@ -28,7 +28,7 @@ class UpdateMailingListSubscriptionsMail extends Mailable
      */
     public function build()
     {
-        return $this->from('do-not-reply@burningman.org')
+        return $this->from(setting('DoNotReplyEmail'))
             ->subject("Update mailing list subscriptions for {$this->person->callsign}")
             ->view('emails.update-mailing-list-subscriptions');
     }

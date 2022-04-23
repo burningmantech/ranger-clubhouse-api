@@ -180,4 +180,16 @@ class PersonPolicy
     {
         return ($user->id == $person->id) || $user->hasRole(Role::MANAGE);
     }
+
+    /**
+     * Can the user (re)send a Welcome Mail
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function sendWelcomeEmail(Person $user): bool
+    {
+        return $user->hasRole([ Role::ADMIN, Role::VC]);
+    }
 }

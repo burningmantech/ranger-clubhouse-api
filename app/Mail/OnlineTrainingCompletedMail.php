@@ -3,10 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class OnlineTrainingCompletedMail extends Mailable
+class OnlineTrainingCompletedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -21,6 +20,7 @@ class OnlineTrainingCompletedMail extends Mailable
     public function __construct($person)
     {
         $this->person = $person;
+        parent::__construct();
     }
 
     /**

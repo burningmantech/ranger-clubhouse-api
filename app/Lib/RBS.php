@@ -14,10 +14,12 @@ use App\Models\AlertPerson;
 use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
 use App\Models\ErrorLog;
+use App\Models\MailLog;
 use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
 use Exception;
+use RuntimeException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -256,6 +258,11 @@ class RBS
         $fails = 0;
         $sent = 0;
 
+        if (empty($from)) {
+            $from = setting('DoNotReplyEmail');
+        }
+
+
         foreach ($people as $person) {
             // Skip if user has not set email as a delivery mechanism
             if (!$person->use_email && !$force) {
@@ -274,11 +281,21 @@ class RBS
                 // Sender format is "Callsign (Real Name)"
                 $emailMessage = self::createEmail($from,
                     new Address($email, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
-                    $subject, $body);
+                    $subject,
+                    $body);
+                error_log("**** FROM $from");
                 try {
-                    $mailer->send($emailMessage);
+                    $sentMessage = $mailer->send($emailMessage);
                     $status = Broadcast::STATUS_SENT;
                     $sent++;
+                    MailLog::create([
+                        'person_id' => $personId,
+                        'sender_id' => $senderId,
+                        'from_email' => $from,
+                        'to_email' => $email,
+                        'broadcast_id' => $broadcastId,
+                        'message_id' => $sentMessage->getMessageId()
+                    ]);
                 } catch (TransportExceptionInterface $e) {
                     $fails++;
                     $status = Broadcast::STATUS_SERVICE_FAIL;
@@ -342,12 +359,22 @@ class RBS
 
             foreach ($emails as $message) {
                 $person = $message->person;
-                $emailMessage = self::createEmail($broadcast->sender_address,
+                $emailMessage = self::createEmail(
+                    $broadcast->sender_address,
                     new Address($message->address, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
-                    $broadcast->subject, $body  );
+                    $broadcast->subject,
+                    $body);
                 try {
-                    $mailer->send($emailMessage);
-                        $message->update(['status' => Broadcast::STATUS_SENT]);
+                    $sentMessage = $mailer->send($emailMessage);
+                    $message->update(['status' => Broadcast::STATUS_SENT]);
+                    MailLog::create([
+                        'person_id' => $person->id,
+                        'broadcast_id' => $broadcast->id,
+                        'from_email' => $broadcast->sender_address,
+                        'to_email' => $message->address,
+                        'message_id' => $sentMessage->getMessageId()
+                    ]);
+
                 } catch (TransportExceptionInterface $e) {
                     ErrorLog::recordException($e, 'email-exception', [
                         'type' => 'broadcast-retry',
@@ -370,33 +397,31 @@ class RBS
         $broadcast->save();
     }
 
-    /*
+    /**
      * Set up a Symphony Mailer object
      *
-     * @return array mailer & email message objects
+     * @return EsmtpTransport
      */
 
-    public static function setupSMTP() : Mailer
+    public static function setupSMTP(): EsmtpTransport
     {
-        $mailerType = config('mail.driver');
-        $smtpServer = config('mail.host');
+        $mailer = config('mail.mailers.' . config('mail.default'));
+        $smtpServer = $mailer['host'];
 
-        if ($mailerType == 'smtp') {
-            // talk with a SMTP server
-            $smtpUsername = config('mail.username');
-            $smtpPassword = config('mail.password');
-            $smtpPort = config('mail.port');
-            $smtpProtocol = config('mail.encryption');
+        if ($mailer['transport'] !== 'smtp') {
+            throw new RuntimeException("Unknown transport type " . $mailer['transport']);
+        }
 
-            $transport = new EsmtpTransport($smtpServer, $smtpPort, $smtpProtocol == 'tls');
+        // talk with a SMTP server
+        $smtpUsername = $mailer['username'] ?? '';
+        $smtpPassword = $mailer['password'] ?? '';
+        $smtpPort = $mailer['port'] ?? 25;
+        $smtpProtocol = $mailer['encryption'] ?? '';
+
+        $transport = new EsmtpTransport($smtpServer, $smtpPort, $smtpProtocol == 'tls');
+        if (!empty($smtpUsername)) {
             $transport->setUsername($smtpUsername);
             $transport->setPassword($smtpPassword);
-        } else {
-            // Chatting with the localhost server
-            if (empty($smtpServer)) {
-                $smtpServer = 'localhost';
-            }
-            $transport = new EsmtpTransport($smtpServer, 25);
         }
 
         /*
@@ -406,7 +431,7 @@ class RBS
 
         $limit = config('mail.messages_per_connection') ?? 50;
         $transport->setRestartThreshold($limit);
-        return new Mailer($transport);
+        return $transport;
     }
 
     /**
@@ -423,7 +448,7 @@ class RBS
     {
         $emailMessage = new Email();
         if (empty($from)) {
-            $from = 'do-not-reply@burningman.org';
+            $from = setting('DoNotReplyEmail');
         }
         $emailMessage->from($from);
         $emailMessage->to($to);
@@ -558,7 +583,7 @@ class RBS
                     throw new InvalidArgumentException("Person ids cannot be missing or empty");
                 }
                 $sql = DB::table('person')->whereIn('id', $personIds);
-                self::addAlertPrefJoin($sql);
+                self::addAlertPrefJoin($sql, $alertId);
                 break;
 
             // Broadcast to people who hold a specific position
@@ -885,7 +910,7 @@ class RBS
             $email = $person->email;
             try {
                 if (!$emailSandboxed) {
-                    mail_to($email, new ClubhouseNewMessageMail($person, $from, $subject, $message), true);
+                    mail_to_person($person, new ClubhouseNewMessageMail($person, $from, $subject, $message), true);
                 }
                 $status = Broadcast::STATUS_SENT;
             } catch (Exception $e) {
@@ -906,7 +931,7 @@ class RBS
             'sender_id' => $senderId,
             'alert_id' => $alertId,
             'sms_message' => $smsMessage,
-            'sender_address' => 'do-not-reply@burningman.org',
+            'sender_address' => setting('DoNotReplyEmail'),
             'email_message' => $message,
             'subject' => $subject,
             'recipient_count' => 1,

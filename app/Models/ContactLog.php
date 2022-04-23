@@ -34,6 +34,7 @@ class ContactLog extends ApiModel
                 ->whereYear('sent_at', $year)
                 ->orderBy('sent_at')->get();
     }
+
     public static function findForRecipientYear($personId, $year)
     {
          return self::with([ 'sender_person:id,callsign' ])

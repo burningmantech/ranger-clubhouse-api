@@ -4,10 +4,12 @@
  */
 
 use App\Models\ErrorLog;
+use App\Models\Person;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -37,17 +39,9 @@ if (!function_exists('setting')) {
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to(string|array $email, Mailable $message, bool $queueMail = false): bool
+    function mail_to(string|array $email, Mailable $message, bool $queueMail = false, $personId = null): bool
     {
-        if (is_ghd_server()) {
-            ErrorLog::recordException(new InvalidArgumentException('Attempted to send email in training server'),
-                'email-exception', [
-                    'type' => 'mail-to',
-                    'email' => $email,
-                    'message' => $message
-                ]);
-            return false;
-        }
+        prevent_if_ghd_server('Sending email');
 
         if (is_string($email) && str_contains($email, ',')) {
             $email = explode(',', $email);
@@ -70,6 +64,13 @@ if (!function_exists('mail_to')) {
 
             return false;
         }
+    }
+}
+
+if (!function_exists('mail_to_person')) {
+    function mail_to_person(Person $person, Mailable $message, bool $queueMail = false)
+    {
+        return mail_to($person->email, $message, $queueMail, $person->id);
     }
 }
 

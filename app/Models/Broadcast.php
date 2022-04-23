@@ -2,14 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
-use App\Models\Person;
-
-use Illuminate\Support\Facades\DB;
-use App\Helpers\SqlHelper;
-
-class Broadcast extends ApiModel {
+class Broadcast extends ApiModel
+{
     protected $table = "broadcast";
 
     // allow mass assignment
@@ -19,15 +13,15 @@ class Broadcast extends ApiModel {
      * Broadcast Types
      */
 
-    const TYPE_GENERAL   = 'general';    // General non-emergency announcement, like the allcom mailing list.
+    const TYPE_GENERAL = 'general';    // General non-emergency announcement, like the allcom mailing list.
     const TYPE_SLOT_EDIT = 'slot-edit';  // Slot time change or deletion cancellation (comes from Edit Slots page)
-    const TYPE_POSITION  = 'position';   // People who hold a position
-    const TYPE_SLOT      = 'slot';       // People who are signed up for a shift
+    const TYPE_POSITION = 'position';   // People who hold a position
+    const TYPE_SLOT = 'slot';       // People who are signed up for a shift
 
-    const TYPE_ONSHIFT          = 'onshift';    // Send to people on shift (radio repeater down, city split happening)
-    const TYPE_RECRUIT_DIRT     = 'recruit-dirt'; // Request for more people for a shift, dirt
+    const TYPE_ONSHIFT = 'onshift';    // Send to people on shift (radio repeater down, city split happening)
+    const TYPE_RECRUIT_DIRT = 'recruit-dirt'; // Request for more people for a shift, dirt
     const TYPE_RECRUIT_POSITION = 'recruit-position'; // Request for more people based on position
-    const TYPE_EMERGENCY        = 'emergency'; // All hands on deck - limited to playa.
+    const TYPE_EMERGENCY = 'emergency'; // All hands on deck - limited to playa.
 
 
     // Message was handed off to the SMTP server,
@@ -66,31 +60,36 @@ class Broadcast extends ApiModel {
 
     public $people;
 
-    public function sender() {
+    public function sender()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public function retry_person() {
+    public function retry_person()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public function alert() {
+    public function alert()
+    {
         return $this->belongsTo(Alert::class);
     }
 
-    public function messages() {
+    public function messages()
+    {
         return $this->hasMany(BroadcastMessage::class);
     }
 
-    public function failed_messages() {
+    public function failed_messages()
+    {
         return $this->hasMany(BroadcastMessage::class)->where('status', Broadcast::STATUS_SERVICE_FAIL);
     }
 
     public static function findWithFailedMessages($broadcastId)
     {
         return self::where('id', $broadcastId)
-                ->with('failed_messages', 'failed_messages.person:id,callsign,status')
-                ->firstOrFail();
+            ->with('failed_messages', 'failed_messages.person:id,callsign,status')
+            ->firstOrFail();
     }
 
     public static function findLogs($query)
@@ -108,11 +107,11 @@ class Broadcast extends ApiModel {
         if ($year) {
             $sql->whereYear('created_at', $year);
         } else if ($lastDay) {
-            $sql->whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)', [ now() ]);
+            $sql->whereRaw('created_at >= DATE_SUB(?, INTERVAL 1 DAY)', [now()]);
         }
 
         if ($failedOnly) {
-            $sql->where(function($q) {
+            $sql->where(function ($q) {
                 $q->where('sms_failed', '>', 0);
                 $q->orWhere('email_failed', '>', 0);
             });
@@ -122,9 +121,9 @@ class Broadcast extends ApiModel {
 
         foreach ($logs as $log) {
             $messages = BroadcastMessage::where('broadcast_id', $log->id)
-                ->with([ 'person:id,callsign,first_name,last_name' ])
+                ->with(['person:id,callsign,first_name,last_name'])
                 ->get()
-                ->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+                ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
 
             $people = [];
             foreach ($messages as $message) {
@@ -132,13 +131,13 @@ class Broadcast extends ApiModel {
                 if (!isset($people[$personId])) {
                     $people[$personId] = [
                         'first_name' => $message->person->first_name,
-                        'last_name'  => $message->person->last_name,
-                        'callsign'   => $message->person->callsign,
+                        'last_name' => $message->person->last_name,
+                        'callsign' => $message->person->callsign,
                     ];
                 }
 
                 $people[$personId][$message->address_type] = [
-                    'status'  => $message->status,
+                    'status' => $message->status,
                     'address' => $message->address
                 ];
             }
@@ -148,7 +147,8 @@ class Broadcast extends ApiModel {
         return $logs;
     }
 
-    public function getPeopleAttribute() {
+    public function getPeopleAttribute()
+    {
         return $this->people;
     }
 }

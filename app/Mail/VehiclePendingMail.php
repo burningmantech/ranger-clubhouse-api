@@ -3,11 +3,10 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Str;
 
-class VehiclePendingMail extends Mailable
+class VehiclePendingMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -21,6 +20,7 @@ class VehiclePendingMail extends Mailable
     public function __construct($pending)
     {
         $this->pending = $pending;
+        parent::__construct();
     }
 
     /**
@@ -31,7 +31,7 @@ class VehiclePendingMail extends Mailable
     public function build()
     {
         $count = count($this->pending);
-        return $this->subject('[Clubhouse] '.$count.' '.Str::plural('vehicle', $count).' pending review')
-                ->view('emails.vehicle-pending');
+        return $this->subject('[Clubhouse] ' . $count . ' ' . Str::plural('vehicle', $count) . ' pending review')
+            ->view('emails.vehicle-pending');
     }
 }

@@ -6,11 +6,11 @@ use App\Mail\ContactMail;
 use App\Mail\UpdateMailingListSubscriptionsMail;
 use App\Models\Alert;
 use App\Models\AlertPerson;
-use App\Models\ContactLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class ContactController extends ApiController
 {
@@ -38,22 +38,20 @@ class ContactController extends ApiController
         // The sender has to be active or inactive
         $status = $sender->status;
         if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
-            $this->notPermitted('sender is not active status');
+            $this->notPermitted("User status [$status] is not permitted to send contact emails");
         }
 
         // The recipient has to be not suspended, and active or inactive
         $status = $recipient->status;
         if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
-            $this->notPermitted('recipient is not active status');
+            $this->notPermitted("Recipient status [$status] is not permitted to receive contact emails");
         }
 
-        if ($params['type'] == 'mentor') {
-            $subject = "[rangers] Your mentor, Ranger {$sender->callsign}, wishes to get in contact.";
-            $action = 'mentee-contact';
+        if ($type == 'mentor') {
+            $subject = "Your mentor, Ranger {$sender->callsign}, wishes to get in contact.";
             $alertId = Alert::MENTOR_CONTACT;
         } else {
-            $subject = "[rangers] Ranger {$sender->callsign} wishes to get in contact.";
-            $action = 'ranger-contact';
+            $subject = "Ranger {$sender->callsign} wishes to get in contact.";
             $alertId = Alert::RANGER_CONTACT;
         }
 
@@ -64,38 +62,11 @@ class ContactController extends ApiController
         }
 
         $mail = new ContactMail($sender, $recipient, $subject, $message);
-        if (!mail_to($recipient->email, $mail, true)) {
+        if (!mail_to_person($recipient, $mail, true)) {
             return $this->error('Failed to send email');
         }
 
-        ContactLog::record($sender->id, $recipient->id, $action, $recipient->email, $subject, $message);
-
         return $this->success();
-    }
-
-    /**
-     * Retrieve the contact logs for a person and year
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function showLog()
-    {
-        $this->authorize('isAdmin');
-
-        $params = request()->validate([
-            'person_id' => 'required|integer',
-            'year' => 'required|integer',
-        ]);
-
-        $personId = $params['person_id'];
-        $year = $params['year'];
-
-        return response()->json([
-            'sent_logs' => ContactLog::findForSenderYear($personId, $year),
-            'received_logs' => ContactLog::findForRecipientYear($personId, $year)
-        ]);
     }
 
     /**
@@ -105,12 +76,12 @@ class ContactController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function updateMailingLists(Person $person)
+    public function updateMailingLists(Person $person): JsonResponse
     {
         $this->authorize('updateMailingLists', $person);
 
         if (!in_array($person->status, Person::ACTIVE_STATUSES)) {
-            throw new \InvalidArgumentException('Person does not have an active/current status');
+            throw new InvalidArgumentException('Person does not have an active/current status');
         }
 
         $params = request()->validate([
