@@ -14,19 +14,14 @@ class SlotSignup extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $slot;
-    public $fromEmail;
-
     /**
      * Create a new message instance.
      *
      * @param
      * @return void
      */
-    public function __construct($slot, $fromEmail)
+    public function __construct(public $slot)
     {
-        $this->slot = $slot;
-        $this->fromEmail = $fromEmail;
         parent::__construct();
     }
 
@@ -38,7 +33,7 @@ class SlotSignup extends ClubhouseMailable
     public function build()
     {
         return $this
-            ->from($this->fromEmail)
+            ->from(setting('DoNotReplyEmail'))
             ->subject('Shift Signup')
             ->view('emails.slot-signup');
     }

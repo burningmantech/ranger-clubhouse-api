@@ -13,8 +13,6 @@ class WelcomeMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $person;
-    public $inviteToken;
     public $inviteUrl;
 
     /**
@@ -23,10 +21,8 @@ class WelcomeMail extends ClubhouseMailable
      * @return void
      */
 
-    public function __construct($person, $inviteToken)
+    public function __construct(public $person, public $inviteToken)
     {
-        $this->person = $person;
-        $this->inviteToken = $inviteToken;
         $host = request()->getSchemeAndHttpHost();
         $this->inviteUrl = "{$host}/client/login?token={$inviteToken}&welcome=1";
         parent::__construct();
@@ -39,7 +35,7 @@ class WelcomeMail extends ClubhouseMailable
      */
     public function build()
     {
-        return $this->from(setting('VCEmail'), 'The Black Rock Rangers')
+        return $this->from(setting('DoNotReplyEmail'), 'The Black Rock Rangers')
             ->subject('Welcome to the Black Rock Rangers Secret Clubhouse!')
             ->view('emails.welcome');
     }

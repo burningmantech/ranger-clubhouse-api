@@ -30,7 +30,7 @@ class PhotoApprovedMail extends ClubhouseMailable
      */
     public function build()
     {
-        return $this->from(setting('VCEmail'), 'The Volunteer Coordinators')
+        return $this->from(setting('DoNotReplyEmail'), 'The Volunteer Coordinators')
             ->subject('Ranger Clubhouse photo submission APPROVED.')
             ->view('emails.photo-approved');
     }

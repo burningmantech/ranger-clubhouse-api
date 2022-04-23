@@ -29,10 +29,8 @@ class OnlineTrainingEnrollmentMail extends ClubhouseMailable
      */
     public function build()
     {
-        return $this->from([
-            'address' => setting('TrainingAcademyEmail'),
-            'name' => 'The Ranger Training Academy'
-        ])->subject('Enrolled In The Ranger Online Course')
+        return $this->from(setting('DoNotReplyEmail'), 'The Ranger Training Academy')
+        ->subject('Enrolled In The Ranger Online Course')
             ->view('emails.online-training-enrollment');
     }
 }

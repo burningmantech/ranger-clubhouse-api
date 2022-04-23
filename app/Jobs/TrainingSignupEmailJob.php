@@ -48,7 +48,7 @@ class TrainingSignupEmailJob implements ShouldQueue
         $slot = $this->slot;
 
         if (PersonSlot::haveSlot($person->id, $slot->id)) {
-            mail_to_person($person, new TrainingSignup($slot, setting('TrainingSignupFromEmail')));
+            mail_to_person($person, new TrainingSignup($slot));
         }
     }
 }
