@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\Person;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +27,6 @@ class RedactDatabase
             'sms_off_playa' => '',
             'street1' => '123 Any St.',
             'street2' => '',
-            'email' => DB::raw("concat(replace(callsign, ' ', ''), '@nomail.none')"),
             'behavioral_agreement' => false,
             'message' => '',
             'bpguid' => 'DEAD-BEEF',
@@ -36,6 +36,16 @@ class RedactDatabase
             'tpassword' => '',
             //  'password' => "$salt:$sha",
         ]);
+
+        DB::table('person')->where('status', Person::ACTIVE)
+            ->update([
+                'email' => DB::raw("concat(substring(callsign_normalized, 1, 38), '@nomail.none')"),
+            ]);
+
+        DB::table('person')->where('status', '!=', Person::ACTIVE)
+            ->update([
+                'email' => DB::raw("concat(substring(callsign_normalized, 1, 34), '-', id, '@nomail.none')"),
+            ]);
 
         // Zap training notes
         DB::table('trainee_status')->update(['notes' => '', 'rank' => null]);
@@ -49,6 +59,7 @@ class RedactDatabase
             'broadcast',
             'contact_log',
             'log',
+            'mail_log',
             'motd',
             'mentee_status',
             'person_intake',
