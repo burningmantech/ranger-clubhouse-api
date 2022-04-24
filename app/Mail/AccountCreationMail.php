@@ -7,11 +7,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class AccountCreationMail extends Mailable
+class AccountCreationMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -30,8 +28,10 @@ class AccountCreationMail extends Mailable
     {
         $this->status = $status;
         $this->details = $details;
-        $this->person  = $person;
+        $this->person = $person;
         $this->intent = $intent;
+
+        parent::__construct();
     }
 
     /**
@@ -42,8 +42,8 @@ class AccountCreationMail extends Mailable
     public function build()
     {
         return $this
-                ->from('do-not-reply@burningman.org')
-                ->subject('[clubhouse notification] account creation '.$this->status)
-                ->view('emails.account-creation');
+            ->from(setting('DoNotReplyEmail'))
+            ->subject('[clubhouse notification] account creation ' . $this->status)
+            ->view('emails.account-creation');
     }
 }

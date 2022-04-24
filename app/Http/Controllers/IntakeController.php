@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeMail;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
@@ -174,5 +175,27 @@ class IntakeController extends ApiController
         }
         $person_intake_note->delete();
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Resend Welcome Message to PNV
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function sendWelcomeEmail(Person $person): JsonResponse
+    {
+        $this->authorize('sendWelcomeEmail', $person);
+
+        if ($person->status != Person::PROSPECTIVE) {
+            return response()->json([ 'status' => 'not-prospective'], 401);
+        }
+
+        $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
+        mail_to_person($person, new WelcomeMail($person, $inviteToken), true);
+
+        return response()->json([ 'status' => 'success' ]);
     }
 }

@@ -439,7 +439,7 @@ class RbsController extends ApiController
             $sendClubhouse = false;
             $sendEmail = !isset($attrs['sms_only']);
             $sendSMS = true;
-            $from = 'do-not-reply@burningman.org';
+            $from = setting('DoNotReply');
         }
 
         $userId = $this->user->id;

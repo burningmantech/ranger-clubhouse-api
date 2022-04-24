@@ -133,6 +133,12 @@ class Setting extends ApiModel
             ]
         ],
 
+        'DoNotReplyEmail' => [
+          'description' => 'Most generated Clubhouse emails have a reply to of do-not-reply@XXX.org',
+          'type' => self::TYPE_EMAIL,
+          'default' => 'do-not-reply@burningmail.burningman.org'
+        ],
+
         'EditorUrl' => [
             'description' => 'The script URL of the WYSIWYG editor (currently TinyMCE)',
             'type' => self::TYPE_URL

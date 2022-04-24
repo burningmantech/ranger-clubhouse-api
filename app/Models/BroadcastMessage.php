@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use App\Models\ApiModel;
-use App\Models\Person;
+use Illuminate\Database\Eloquent\Collection;
 
 class BroadcastMessage extends ApiModel
 {
@@ -15,16 +13,21 @@ class BroadcastMessage extends ApiModel
 
     const DEFAULT_PAGE_SIZE = 50;
 
-    public function person() {
+    public function person()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findUnknownPhonesForYear($year)
+    /**
+     * @param $year
+     * @return Collection
+     */
+    public static function findUnknownPhonesForYear($year): Collection
     {
         return self::where('status', Broadcast::STATUS_UNKNOWN_PHONE)
-                ->whereYear('created_at', $year)
-                ->orderBy('created_at', 'desc')
-                ->get();
+            ->whereYear('created_at', $year)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public static function findForQuery($query)
@@ -35,7 +38,6 @@ class BroadcastMessage extends ApiModel
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
         $direction = !empty($query['direction']) ? $query['direction'] : null;
-        $status = !empty($query['status']) ? $query['status'] : null;
         $isAsc = ($query['order'] ?? '') == 'asc';
 
         $sql = self::query();
@@ -56,6 +58,10 @@ class BroadcastMessage extends ApiModel
             $sql->where('direction', $direction);
         }
 
+        if ($status){
+            $sql->where('status', $status);
+        }
+
         $total = $sql->count();
 
         // Figure out pagination
@@ -65,18 +71,18 @@ class BroadcastMessage extends ApiModel
         }
 
         $sql->offset($page * $pageSize)->limit($pageSize);
-        $sql->with([ 'person:id,callsign' ])
-           ->orderBy('created_at', $isAsc ? 'asc' : 'desc');
+        $sql->with(['person:id,callsign'])
+            ->orderBy('created_at', $isAsc ? 'asc' : 'desc');
 
         $rows = $sql->get();
 
         return [
-            'messages'    => $rows,
-            'total'       => $total,
-            'total_pages' => (int) (($total + ($pageSize - 1))/$pageSize),
-            'page_size'   => $pageSize,
-            'page'        => $page + 1,
-         ];
+            'messages' => $rows,
+            'total' => $total,
+            'total_pages' => (int)(($total + ($pageSize - 1)) / $pageSize),
+            'page_size' => $pageSize,
+            'page' => $page + 1,
+        ];
     }
 
     /*
@@ -93,13 +99,13 @@ class BroadcastMessage extends ApiModel
      * @param return the id of the newly created broadcast_message row
      */
 
-    public static function record($broadcastId, $status, $personId, $type, $address, $direction, $message=null)
+    public static function record($broadcastId, $status, $personId, $type, $address, $direction, $message = null)
     {
         $columns = [
-            'direction'    => $direction,
-            'status'       => $status,
+            'direction' => $direction,
+            'status' => $status,
             'address_type' => $type,
-            'address'      => $address
+            'address' => $address
         ];
 
         if ($broadcastId) {
@@ -122,9 +128,9 @@ class BroadcastMessage extends ApiModel
     public static function countFail($broadcastId, $addressType)
     {
         return self::where('broadcast_id', $broadcastId)
-                ->where('address_type', $addressType)
-                ->where('status', Broadcast::STATUS_SERVICE_FAIL)
-                ->count();
+            ->where('address_type', $addressType)
+            ->where('status', Broadcast::STATUS_SERVICE_FAIL)
+            ->count();
     }
 
 }

@@ -6,7 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class PhotoPendingMail extends Mailable
+class PhotoPendingMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -20,6 +20,7 @@ class PhotoPendingMail extends Mailable
     public function __construct($pendingPhotos)
     {
         $this->pendingPhotos = $pendingPhotos;
+        parent::__construct();
     }
 
     /**

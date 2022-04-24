@@ -114,7 +114,6 @@ Route::group([
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
 
-    Route::get('contact/log', 'ContactController@showLog');
     Route::post('contact/send', 'ContactController@send');
     Route::post('contact/{person}/update-mailing-lists', 'ContactController@updateMailingLists');
 
@@ -138,6 +137,7 @@ Route::group([
     Route::post('intake/{person}/note', 'IntakeController@appendNote');
     Route::post('intake/{person_intake_note}/update-note', 'IntakeController@updateNote');
     Route::delete('intake/{person_intake_note}/delete-note', 'IntakeController@deleteNote');
+    Route::post('intake/{person}/send-welcome-email', 'IntakeController@sendWelcomeEmail');
 
     Route::post('maintenance/update-positions', 'MaintenanceController@updatePositions');
     Route::post('maintenance/mark-off-site', 'MaintenanceController@markOffSite');
@@ -153,6 +153,7 @@ Route::group([
     Route::get('online-training', 'OnlineTrainingController@index');
     Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
 
+    Route::get('mail-log', 'MailLogController@index');
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
     Route::resource('messages', 'PersonMessageController', ['only' => ['index', 'store', 'destroy']]);
 

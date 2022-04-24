@@ -267,7 +267,7 @@ class Moodle
             $ot->save();
 
             if (!in_array($person->status, Person::LOCKED_STATUSES)) {
-                mail_to($person->email, new OnlineTrainingCompletedMail($person));
+                mail_to_person($person, new OnlineTrainingCompletedMail($person));
             }
         }
     }

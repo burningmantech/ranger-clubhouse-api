@@ -40,8 +40,23 @@ class AddIndexesToTables extends Migration
      */
     public function down()
     {
-        Schema::table('tables', function (Blueprint $table) {
-            //
+        Schema::table('timesheet', function (Blueprint $table) {
+            $table->dropIndex([ 'position_id', 'on_duty' ]);
+            $table->dropIndex([ 'person_id', 'on_duty' ]);
+            $table->dropIndex([ 'person_id', 'position_id' ]);
+            $table->dropIndex([ 'on_duty' ]);
+        });
+
+        Schema::table('position_credit', function (Blueprint $table) {
+            $table->dropIndex([ 'position_id', 'start_time']);
+        });
+
+        Schema::table('person', function (Blueprint $table) {
+            $table->dropIndex(['status']);
+        });
+
+        Schema::table('asset_person', function (Blueprint $table) {
+            $table->dropIndex([ 'person_id', 'checked_out' ]);
         });
     }
 }

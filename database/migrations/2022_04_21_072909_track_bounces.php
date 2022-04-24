@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      *
@@ -14,7 +13,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('person', function (Blueprint $table) {
-            $table->datetime('pi_reviewed_for_dashboard_at')->nullable(true);
+            $table->boolean('is_bouncing')->default(false)->nullable(false);
         });
     }
 
@@ -26,7 +25,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('person', function (Blueprint $table) {
-            $table->dropColumn('pi_reviewed_for_dashboard_at');
+            $table->dropColumn('is_bouncing');
         });
     }
 };

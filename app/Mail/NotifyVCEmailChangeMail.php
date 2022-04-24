@@ -3,11 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class NotifyVCEmailChangeMail extends Mailable
+class NotifyVCEmailChangeMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -23,6 +21,7 @@ class NotifyVCEmailChangeMail extends Mailable
     {
         $this->person = $person;
         $this->oldEmail = $oldEmail;
+        parent::__construct();
     }
 
     /**

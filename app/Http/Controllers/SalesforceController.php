@@ -249,7 +249,7 @@ class SalesforceController extends ApiController
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
             $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
-            mail_to($person->email, new WelcomeMail($person, $inviteToken), true);
+            mail_to_person($person, new WelcomeMail($person, $inviteToken), true);
         }
 
         $pca->chuid = $person->id;
