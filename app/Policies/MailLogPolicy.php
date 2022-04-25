@@ -25,4 +25,12 @@ class MailLogPolicy
         return false;
     }
 
+    /**
+     * Determine whether the user can see mail Log stats
+     */
+    public function stats(Person $user): bool
+    {
+        return false;
+    }
+
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class MailLog extends ApiModel
 {
@@ -45,7 +46,7 @@ class MailLog extends ApiModel
         $sql = self::query();
 
         if ($personId) {
-            $sql->where(function ($q) use($personId) {
+            $sql->where(function ($q) use ($personId) {
                 $q->where('person_id', $personId);
                 $q->orWhere('sender_id', $personId);
             });
@@ -91,6 +92,60 @@ class MailLog extends ApiModel
                 'page_size' => $pageSize,
                 'page' => $page + 1,
             ]
+        ];
+    }
+
+    /**
+     * Retrieve the years for a person or the website
+     *
+     * @param $personId
+     * @return array
+     */
+
+    public static function retrieveYears($personId): array
+    {
+        $sql = self::selectRaw("YEAR(created_at) as year")
+            ->groupBy("year")
+            ->orderBy("year", "asc");
+
+        if ($personId) {
+            $sql->where(function ($q) use ($personId) {
+                $q->where('person_id', $personId)
+                    ->orWhere('sender_id', $personId);
+            });
+        }
+
+        $years = $sql->pluck('year')->toArray();
+        sort($years, SORT_NUMERIC);
+        return $years;
+    }
+
+    public static function countStats($personId, $condCallback): int
+    {
+        $sql = DB::table('mail_log');
+        if ($personId) {
+            $sql->where(function ($q) use ($personId) {
+                $q->where('person_id', $personId)
+                    ->orWhere('sender_id', $personId);
+            });
+        }
+        $condCallback($sql);
+        return $sql->count();
+    }
+
+    /**
+     * Retrieve the sending stats for the last 24 hours, 7 days, and current year.
+     *
+     * @param $personId
+     * @return int[]
+     */
+
+    public static function retrieveStats($personId): array
+    {
+        return [
+            'last_24' => self::countStats($personId, fn($sql) => $sql->where('created_at', '>=', now()->subDay(1))),
+            'week' => self::countStats($personId, fn($sql) => $sql->where('created_at', '>=', now()->subDays(7))),
+            'year' => self::countStats($personId, fn($sql) => $sql->whereYear('created_at', current_year())),
         ];
     }
 

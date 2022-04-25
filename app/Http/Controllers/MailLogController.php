@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MailLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Psy\Util\Json;
 
 class MailLogController extends ApiController
 {
@@ -28,5 +29,24 @@ class MailLogController extends ApiController
 
         $result = MailLog::findForQuery($query);
         return $this->success($result['mail_log'], $result['meta'], 'mail_log');
+    }
+
+    /**
+     * Retrieve the stats for either the person or website
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function stats(): JsonResponse
+    {
+        $this->authorize('stats', MailLog::class);
+
+        $query = request()->validate(['person_id' => 'sometimes|integer']);
+        $personId = $query['person_id'] ?? null;
+
+        return response()->json([
+            'years' => MailLog::retrieveYears($personId),
+            'counts' => MailLog::retrieveStats($personId),
+        ]);
     }
 }
