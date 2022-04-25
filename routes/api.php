@@ -153,7 +153,9 @@ Route::group([
     Route::get('online-training', 'OnlineTrainingController@index');
     Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
 
+    Route::get('mail-log/stats', 'MailLogController@stats');
     Route::get('mail-log', 'MailLogController@index');
+
     Route::patch('messages/{person_message}/markread', 'PersonMessageController@markread');
     Route::resource('messages', 'PersonMessageController', ['only' => ['index', 'store', 'destroy']]);
 
