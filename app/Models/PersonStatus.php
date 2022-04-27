@@ -94,7 +94,7 @@ class PersonStatus extends ApiModel
 
     public static function findStatusForIdsTime($personIds, $time)
     {
-        return self::whereIn('person_id', $personIds)
+        return self::whereIntegerInRaw('person_id', $personIds)
             ->where('created_at', '<=', $time)
             ->whereRaw("created_at = (SELECT ps.created_at FROM person_status ps WHERE ps.person_id=person_status.person_id AND ps.created_at <= ? ORDER BY ps.created_at DESC LIMIT 1)", [(string)$time])
             ->get()

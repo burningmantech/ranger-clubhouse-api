@@ -114,7 +114,7 @@ class AccessDocumentDelivery extends ApiModel
 
     public static function retrieveForPersonIdsYear($personIds, $year)
     {
-        return self::whereIn('person_id', $personIds)->where('year', $year)->get()->keyBy('person_id');
+        return self::whereIntegerInRaw('person_id', $personIds)->where('year', $year)->get()->keyBy('person_id');
     }
 
     public function hasAddress() {

@@ -277,7 +277,7 @@ class PersonMentor extends ApiModel
 
     public static function retrieveAllMentorsForIds(array $peopleIds, int $year) : array
     {
-        $peopleGroups = self::whereIn('person_id', $peopleIds)
+        $peopleGroups = self::whereIntegerInRaw('person_id', $peopleIds)
             ->with('mentor:id,callsign')
             ->orderBy('person_id')
             ->orderBy('mentor_year')

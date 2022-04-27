@@ -45,7 +45,7 @@ class PersonIntakeNote extends ApiModel
      */
 
     public static function retrieveHistoryForPersonIds($pnvIds, int $year) {
-        return self::whereIn('person_id', $pnvIds)
+        return self::whereIntegerInRaw('person_id', $pnvIds)
                 ->where('year', '<=', $year)
                 ->orderBy('person_id')
                 ->orderBy('created_at')
@@ -62,7 +62,7 @@ class PersonIntakeNote extends ApiModel
      * @return Collection
      */
     public static function findAllForPersonType(int $personId, string $type) {
-        return self::whereIn('person_id', $personId)
+        return self::where('person_id', $personId)
             ->where('type', $type)
             ->orderBy('created_at')
             ->with('person_source:id,callsign')

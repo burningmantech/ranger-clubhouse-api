@@ -107,7 +107,7 @@ class PositionCredit extends ApiModel
         $sql = self::whereYear('start_time', $year)->orderBy('start_time');
 
         if (!empty($positionIds)) {
-            $sql->whereIn('position_id', $positionIds);
+            $sql->whereIntegerInRaw('position_id', $positionIds);
         }
 
         $rows = $sql->get();

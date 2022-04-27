@@ -218,7 +218,7 @@ class Moodle
         }
 
         if (!empty($peopleIds)) {
-            $peopleCompleted = PersonOnlineTraining::whereIn('person_id', $peopleIds)
+            $peopleCompleted = PersonOnlineTraining::whereIntegerInRaw('person_id', $peopleIds)
                 ->whereYear('completed_at', current_year())
                 ->get();
             foreach ($peopleCompleted as $person) {
@@ -293,7 +293,7 @@ class Moodle
         }
 
         $people = Person::select('id', 'callsign', 'status', 'email', 'lms_id')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
             ->get();
 
         $found = [];

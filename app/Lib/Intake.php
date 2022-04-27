@@ -79,7 +79,7 @@ class Intake
             ->whereYear('created_at', $year)
             ->where('created_at', '>=', "$year-02-01")
             ->where('new_status', Person::PAST_PROSPECTIVE)
-            ->whereIn('person_id', $pnvIds)
+            ->whereIntegerInRaw('person_id', $pnvIds)
             ->orderBy('created_at')
             ->with('person:id,callsign')
             ->get()
@@ -95,7 +95,7 @@ class Intake
             ->where('person_photo.status', PersonPhoto::APPROVED)
             ->join('person', 'person.person_photo_id', 'person_photo.id')
             ->whereYear('person_photo.uploaded_at', $year)
-            ->whereIn('person_photo.person_id', $pnvIds)
+            ->whereIntegerInRaw('person_photo.person_id', $pnvIds)
             ->with('person:id,callsign')
             ->get();
 
@@ -105,7 +105,7 @@ class Intake
             self::setSpigotDate($dates, 'photo_approved', $photo->reviewed_at ?? $photo->uploaded_at, $photo->person);
         }
 
-        $onlineTraining = PersonOnlineTraining::whereIn('person_id', $pnvIds)
+        $onlineTraining = PersonOnlineTraining::whereIntegerInRaw('person_id', $pnvIds)
             ->whereYear('completed_at', $year)
             ->with('person:id,callsign')
             ->get();
@@ -123,8 +123,8 @@ class Intake
             ->toArray();
 
         if (!empty($trainingSlotIds)) {
-            $trainingSignups = PersonSlot::whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $trainingSlotIds)
+            $trainingSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
                 ->with('person:id,callsign')
                 ->get()
                 ->groupBy('person_id');
@@ -136,8 +136,8 @@ class Intake
             // Grab the passing PNVs
             $trainingPass = TraineeStatus::select('trainee_status.*', 'slot.begins')
                 ->join('slot', 'slot.id', 'trainee_status.slot_id')
-                ->whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $trainingSlotIds)
+                ->whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
                 ->where('passed', true)
                 ->with('person:id,callsign')
                 ->get()
@@ -157,8 +157,8 @@ class Intake
             ->toArray();
 
         if (!empty($alphaSlotIds)) {
-            $alphaSignups = PersonSlot::whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $alphaSlotIds)
+            $alphaSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $alphaSlotIds)
                 ->with('person:id,callsign')
                 ->get()
                 ->groupBy('person_id');
@@ -222,14 +222,14 @@ class Intake
     public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true)
     {
         // Find the ALL intake records for the folks in question.
-        $peopleIntake = PersonIntake::whereIn('person_id', $pnvIds)
+        $peopleIntake = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)
             ->where('year', '<=', $year)
             ->orderBy('person_id')
             ->orderBy('year')
             ->get()
             ->groupBy('person_id');
 
-        $personStatuses = PersonStatus::whereIn('person_id', $pnvIds)
+        $personStatuses = PersonStatus::whereIntegerInRaw('person_id', $pnvIds)
             ->whereIn('new_status', [Person::AUDITOR, Person::PROSPECTIVE, Person::ALPHA])
             ->whereYear('created_at', '<=', $year)
             ->orderBy('person_id')
@@ -244,7 +244,7 @@ class Intake
         $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA);
 
         // Find the people
-        $people = Person::whereIn('id', $pnvIds)->orderBy('callsign')->get();
+        $people = Person::whereIntegerInRaw('id', $pnvIds)->orderBy('callsign')->get();
 
         $pnvs = [];
         foreach ($people as $person) {

@@ -42,7 +42,7 @@ class GrantPasses
             $prospectiveIds = DB::table('person_slot')
                 ->select('person_id')
                 ->join('person', 'person.id', 'person_slot.person_id')
-                ->whereIn('slot_id', $slotIds)
+                ->whereIntegerInRaw('slot_id', $slotIds)
                 ->whereIn('status', [Person::PROSPECTIVE, Person::ALPHA])
                 ->groupBy('person_id')
                 ->get()
@@ -58,7 +58,7 @@ class GrantPasses
         }
 
         $people = Person::select('id', 'callsign', 'status')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
             ->whereNotExists(function ($q) {
                 $q->selectRaw(1)
                     ->from('access_document')
@@ -112,7 +112,7 @@ class GrantPasses
         $slotIds = DB::table('slot')->whereYear('begins', $year)->pluck('id');
         $signUpIds = DB::table('person_slot')
             ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot_id', $slotIds)
+            ->whereIntegerInRaw('slot_id', $slotIds)
             ->whereIn('person.status', Person::ACTIVE_STATUSES)
             ->groupBy('person_slot.person_id')
             ->pluck('person_id');
@@ -120,7 +120,7 @@ class GrantPasses
         $personIds = $signUpIds->merge($workedIds)->unique()->toArray();
 
         $people = Person::select('person.id', 'person.callsign', 'person.status')
-            ->whereIn('person.id', $personIds)
+            ->whereIntegerInRaw('person.id', $personIds)
             ->where(function ($check) {
                 $check->whereNotExists(function ($wap) {
                     $wap->selectRaw(1)
@@ -177,7 +177,7 @@ class GrantPasses
         }
 
         $people = Person::select('id', 'callsign', 'status')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
             ->orderBy('callsign')
             ->get();
 

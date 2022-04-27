@@ -433,7 +433,7 @@ class Timesheet extends ApiModel
 
     public static function retrieveAllForPositionIds(array $personIds, int $positionId)
     {
-        return self::whereIn('person_id', $personIds)
+        return self::whereIntegerInRaw('person_id', $personIds)
             ->where('position_id', $positionId)
             ->orderBy('on_duty')
             ->get()

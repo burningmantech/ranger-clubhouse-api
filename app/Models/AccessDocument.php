@@ -393,7 +393,7 @@ class AccessDocument extends ApiModel
 
     public static function findWAPForPersonIds($personIds): array
     {
-        $waps = self::whereIn('person_id', $personIds)
+        $waps = self::whereIntegerInRaw('person_id', $personIds)
             ->whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED, self::SUBMITTED])
             ->orderBy('source_year')

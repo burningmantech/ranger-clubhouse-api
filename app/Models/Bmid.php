@@ -212,7 +212,7 @@ class Bmid extends ApiModel
         }
 
         // Bulk look up
-        $bmids = Bmid::where('year', $year)->whereIn('person_id', $personIds)->get();
+        $bmids = Bmid::where('year', $year)->whereIntegerInRaw('person_id', $personIds)->get();
         $bmidsByPerson = $bmids->keyBy('person_id');
 
         // Figure out which people do not have BMIDs yet.
@@ -265,7 +265,7 @@ class Bmid extends ApiModel
         // Figure out who has signed up for the year.
         $ids = DB::table('person')
             ->select('id')
-            ->whereIn('id', $personIds)
+            ->whereIntegerInRaw('id', $personIds)
             ->whereRaw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE person.id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
             ->get()
             ->pluck('id');
@@ -277,7 +277,7 @@ class Bmid extends ApiModel
         // The provisions are special - by default, the items are opt-out so treat an item qualified as
         // the same as claimed.
 
-        $itemsByPersonId = AccessDocument::whereIn('person_id', $bmids->pluck('person_id'))
+        $itemsByPersonId = AccessDocument::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->whereIn('type', [AccessDocument::ALL_EAT_PASS, AccessDocument::EVENT_EAT_PASS, AccessDocument::WET_SPOT])
             ->get()

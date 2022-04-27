@@ -42,7 +42,7 @@ class TrainerStatus extends ApiModel
     }
 
     public static function findBySlotPersonIds($slotId, $personIds) {
-        return self::where('slot_id', $slotId)->whereIn('person_id', $personIds)->get();
+        return self::where('slot_id', $slotId)->whereIntegerInRaw('person_id', $personIds)->get();
     }
 
     /**

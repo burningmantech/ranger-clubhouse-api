@@ -161,7 +161,7 @@ class OnDutyShiftLeadReport
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
                 Position::ONE_GERLACH_PATROL_DIRT
             ])    // Don't need report on dirt
-            ->whereIn('person_position.person_id', $personIds)
+            ->whereIntegerInRaw('person_position.person_id', $personIds)
             ->get()
             ->groupBy('person_id');
 

@@ -106,7 +106,7 @@ class Slot extends ApiModel
     public static function findOrFail($slotId)
     {
         if (is_array($slotId)) {
-            $rows = self::baseSql()->whereIn('id', $slotId)->get();
+            $rows = self::baseSql()->whereIntegerInRaw('id', $slotId)->get();
             if ($rows->isEmpty()) {
                 throw (new ModelNotFoundException)->setModel(__CLASS__, $slotId);
             }
@@ -138,7 +138,7 @@ class Slot extends ApiModel
         }
 
         $ids = $rows->pluck('id');
-        $entries = Timesheet::whereIn('person_id', $ids)
+        $entries = Timesheet::whereIntegerInRaw('person_id', $ids)
             ->whereNull('off_duty')
             ->with('position:id,title')
             ->get();

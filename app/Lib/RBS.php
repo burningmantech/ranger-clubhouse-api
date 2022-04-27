@@ -582,7 +582,7 @@ class RBS
                 if (empty($personIds)) {
                     throw new InvalidArgumentException("Person ids cannot be missing or empty");
                 }
-                $sql = DB::table('person')->whereIn('id', $personIds);
+                $sql = DB::table('person')->whereIntegerInRaw('id', $personIds);
                 self::addAlertPrefJoin($sql, $alertId);
                 break;
 
@@ -943,6 +943,6 @@ class RBS
         ]);
 
         // Link the BroadcastMessage with the Broadcast
-        BroadcastMessage::whereIn('id', $logIds)->update(['broadcast_id' => $broadcast->id]);
+        BroadcastMessage::whereIntegerInRaw('id', $logIds)->update(['broadcast_id' => $broadcast->id]);
     }
 }
