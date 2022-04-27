@@ -45,15 +45,14 @@ class GroundHogDay
         $slotIds = DB::table('slot')->select('id')->whereYear('begins', '>', $year)->get()->pluck('id')->toArray();
         if (!empty($slotIds)) {
             // kill future year signups
-            DB::table('person_slot')->whereIn('slot_id', $slotIds)->delete();
+            DB::table('person_slot')->whereIntegerInRaw('slot_id', $slotIds)->delete();
         }
         DB::table('slot')->whereYear('begins', '>', $year)->delete();
 
         DB::table('position_credit')->whereYear('start_time', '>', $year);
 
         // Remove all future training info
-        DB::table('trainee_status')->whereIn('slot_id', $slotIds)->delete();
-
+        DB::table('trainee_status')->whereIntegerInRaw('slot_id', $slotIds)->delete();
 
         // Kill all assets
         DB::table('asset')->whereYear('created_at', '>', $year);
@@ -62,8 +61,7 @@ class GroundHogDay
         DB::table('asset_person')->where('checked_out', '>', $groundHogDay)->delete();
         DB::table('asset_person')->where('checked_in', '>=', $groundHogDay)->update(['checked_in' => null]);
 
-
-        DB::table('person')->whereIn('id', $peopleIds)
+        DB::table('person')->whereIntegerInRaw('id', $peopleIds)
             ->update([
                 'on_site' => true,
                 'behavioral_agreement' => true,

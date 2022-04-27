@@ -276,7 +276,7 @@ class Survey extends ApiModel
 
             // Find all the sessions the person taught (aka marked as attended)
             $taught = TrainerStatus::join('slot', 'slot.id', 'trainer_status.trainer_slot_id')
-                ->whereIn('slot.position_id', $positionIds)
+                ->whereIntegerInRaw('slot.position_id', $positionIds)
                 ->whereYear('slot.begins', $year)
                 ->where('trainer_status.person_id', $personId)
                 ->where('trainer_status.status', TrainerStatus::ATTENDED)
@@ -287,7 +287,7 @@ class Survey extends ApiModel
                 $slotIds = $taught->pluck('slot_id')->unique()->toArray();
                 $trainerSlots = TrainerStatus::select('trainer_status.*')
                     ->join('slot', 'slot.id', 'trainer_status.slot_id')
-                    ->whereIn('slot_id', $slotIds)
+                    ->whereIntegerInRaw('slot_id', $slotIds)
                     ->where('trainer_status.person_id', '!=', $personId)
                     ->where('trainer_status.status', TrainerStatus::ATTENDED)
                     // is there a survey available?

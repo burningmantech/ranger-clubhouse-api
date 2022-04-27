@@ -100,7 +100,7 @@ class MentorController extends ApiController
         $year = current_year();
 
         $people = Person::findOrFail($ids)->keyBy('id');
-        $allMentors = PersonMentor::whereIn('person_id', $ids)->where('mentor_year', $year)->get()->groupBy('person_id');
+        $allMentors = PersonMentor::whereIntegerInRaw('person_id', $ids)->where('mentor_year', $year)->get()->groupBy('person_id');
 
         $results = [];
         foreach ($alphas as $alpha) {
@@ -152,7 +152,7 @@ class MentorController extends ApiController
                 }
             }
 
-            $callsigns = Person::select('id', 'callsign')->whereIn('id', $mentorIds)->get()->keyBy('id');
+            $callsigns = Person::select('id', 'callsign')->whereIntegerInRaw('id', $mentorIds)->get()->keyBy('id');
             usort($mentors, function ($a, $b) use ($callsigns) {
                 return strcasecmp($callsigns[$a['mentor_id']]->callsign, $callsigns[$b['mentor_id']]->callsign);
             });

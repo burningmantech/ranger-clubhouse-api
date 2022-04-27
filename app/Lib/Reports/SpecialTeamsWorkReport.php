@@ -51,7 +51,7 @@ class SpecialTeamsWorkReport
         }
 
         $rows = $sql->get();
-        $peopleByIds = Person::whereIn('id', $rows->pluck('person_id')->unique())->get()->keyBy('id');
+        $peopleByIds = Person::whereIntegerInRaw('id', $rows->pluck('person_id')->unique())->get()->keyBy('id');
         $rows = $rows->groupBy('person_id');
 
         $results = [];

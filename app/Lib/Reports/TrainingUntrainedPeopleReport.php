@@ -83,7 +83,7 @@ class TrainingUntrainedPeopleReport
         $untrainedSignedup = [];
         if (!empty($peopleSignedUp)) {
             $rows = Person::select('id', 'callsign', 'first_name', 'last_name', 'email')
-                ->whereIn('id', array_keys($peopleSignedUp))->get();
+                ->whereIntegerInRaw('id', array_keys($peopleSignedUp))->get();
             foreach ($rows as $row) {
                 $row->slots = array_map(function ($slot) {
                     return [

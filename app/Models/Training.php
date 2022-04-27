@@ -487,8 +487,8 @@ class Training extends Position
         }
 
         $people = DB::table('person_position')
-            ->whereIn('position_id', $trained->pluck('id')->toArray())
-            ->whereIn('person_id', $personIds)
+            ->whereIntegerInRaw('position_id', $trained->pluck('id')->toArray())
+            ->whereIntegerInRaw('person_id', $personIds)
             ->get()
             ->keyBy('person_id');
 

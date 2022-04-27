@@ -95,7 +95,7 @@ class PeopleByPositionReport
             $positions[] = $position;
         }
         $people = DB::table('person')
-            ->whereIn('id', array_keys($allPeople))
+            ->whereIntegerInRaw('id', array_keys($allPeople))
             ->select('id', 'callsign', 'status', 'on_site')
             ->get();
 

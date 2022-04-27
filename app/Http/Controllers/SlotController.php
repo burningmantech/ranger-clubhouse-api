@@ -139,7 +139,7 @@ class SlotController extends ApiController
         ]);
 
         $attributes = $params['attributes'];
-        $slots = Slot::whereIn('id', $params['ids'])->get();
+        $slots = Slot::whereIntegerInRaw('id', $params['ids'])->get();
 
         DB::transaction(function () use ($slots, $attributes) {
             foreach ($slots as $slot) {
@@ -194,7 +194,7 @@ class SlotController extends ApiController
         if (!$delta && !$position) {
             return $this->restError('Must specify new position or a day/time delta');
         }
-        $sourceSlots = Slot::whereIn('id', $params['ids'])->get();
+        $sourceSlots = Slot::whereIntegerInRaw('id', $params['ids'])->get();
         $results = array();
         try {
             DB::transaction(function () use ($sourceSlots, $delta, $position, $activate, $attributes, &$results) {

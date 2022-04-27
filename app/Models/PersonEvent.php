@@ -118,6 +118,6 @@ class PersonEvent extends ApiModel
 
     public static function findAllForIdsYear($ids, $year)
     {
-        return self::where('year', $year)->whereIn('person_id', $ids)->get();
+        return self::where('year', $year)->whereIntegerInRaw('person_id', $ids)->get();
     }
 }

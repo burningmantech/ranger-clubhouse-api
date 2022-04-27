@@ -51,14 +51,14 @@ class BMIDManagement
         $ids = DB::table('person_slot')
             ->select('person_slot.person_id')
             ->join('access_document', 'access_document.person_id', 'person_slot.person_id')
-            ->whereIn('person_slot.slot_id', $slotIds)
+            ->whereIntegerInRaw('person_slot.slot_id', $slotIds)
             ->whereIn('access_document.type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
             ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
             ->where('access_document.access_any_time', false)
             ->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
 
-        $shiftsBeforeWap = Person::whereIn('id', $ids)
+        $shiftsBeforeWap = Person::whereIntegerInRaw('id', $ids)
             ->where('status', '!=', Person::ALPHA)
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
@@ -74,7 +74,7 @@ class BMIDManagement
 
         $ids = DB::table('person_slot')
             ->select('person_slot.person_id')
-            ->whereIn('person_slot.slot_id', $slotIds)
+            ->whereIntegerInRaw('person_slot.slot_id', $slotIds)
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('access_document')
@@ -84,7 +84,7 @@ class BMIDManagement
             })->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
 
-        $shiftsNoWap = Person::whereIn('id', $ids)
+        $shiftsNoWap = Person::whereIntegerInRaw('id', $ids)
             ->where('status', '!=', Person::ALPHA)
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
@@ -105,7 +105,7 @@ class BMIDManagement
             ->groupBy('wap.person_id')
             ->pluck('wap.person_id');
 
-        $rptBeforeBoxOfficeOpens = Person::whereIn('id', $ids)
+        $rptBeforeBoxOfficeOpens = Person::whereIntegerInRaw('id', $ids)
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
 
@@ -159,7 +159,7 @@ class BMIDManagement
                     ->where('begins', '>=', "$year-08-10")
                     ->pluck('id');
 
-                $signedUpIds = PersonSlot::whereIn('slot_id', $slotIds)
+                $signedUpIds = PersonSlot::whereIntegerInRaw('slot_id', $slotIds)
                     ->join('person', function ($j) {
                         $j->whereRaw('person.id=person_slot.person_id');
                         $j->whereIn('person.status', Person::ACTIVE_STATUSES);
@@ -179,7 +179,7 @@ class BMIDManagement
                     $j->whereRaw('person.id=trainee_status.person_id');
                     $j->whereIn('person.status', Person::ACTIVE_STATUSES);
                 })
-                    ->whereIn('slot_id', $slotIds)
+                    ->whereIntegerInRaw('slot_id', $slotIds)
                     ->where('passed', 1)
                     ->distinct('trainee_status.person_id')
                     ->pluck('trainee_status.person_id')

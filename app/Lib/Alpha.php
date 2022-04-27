@@ -68,7 +68,7 @@ class Alpha
 
         $potentialIds = $sql->get()->groupBy('person_id')->keys();
 
-        $sql = Person::whereIn('id', $potentialIds)->with('person_photo')->orderBy('callsign');
+        $sql = Person::whereIntegerInRaw('id', $potentialIds)->with('person_photo')->orderBy('callsign');
         if ($haveTraining) {
             $sql->whereRaw("EXISTS
                 (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id
@@ -111,7 +111,7 @@ class Alpha
                 $j->whereYear('slot.begins', $year);
                 $j->where('slot.position_id', Position::ALPHA);
             })
-            ->whereIn('person_slot.person_id', $people->pluck('id')->toArray())
+            ->whereIntegerInRaw('person_slot.person_id', $people->pluck('id')->toArray())
             ->orderBy('slot.begins')
             ->get()
             ->groupBy('person_id');
@@ -145,7 +145,7 @@ class Alpha
     {
         $year = current_year();
 
-        $intakeHistory = PersonIntake::whereIn('person_id', $pnvIds)
+        $intakeHistory = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)
             ->orderBy('person_id')
             ->orderBy('year')
             ->get()
@@ -306,7 +306,7 @@ class Alpha
             ->get();
 
         // Next, find the Alpha sign ups
-        $rows = PersonSlot::whereIn('slot_id', $slots->pluck('id')->toArray())
+        $rows = PersonSlot::whereIntegerInRaw('slot_id', $slots->pluck('id')->toArray())
             ->with(['person', 'person.person_photo'])
             ->get()
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)

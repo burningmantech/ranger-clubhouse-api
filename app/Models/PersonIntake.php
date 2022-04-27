@@ -43,7 +43,7 @@ class PersonIntake extends ApiModel
 
     public static function retrievePersonnelIssueForIdsYear($personIds, $year) {
         return self::select('person_id')
-                ->whereIn('person_id', $personIds)
+                ->whereIntegerInRaw('person_id', $personIds)
                 ->where('personnel_rank', 4)
                 ->where('year', $year)
                 ->pluck('person_id')

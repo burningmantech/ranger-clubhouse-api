@@ -81,7 +81,7 @@ class AccessDocumentController extends ApiController
             'ids.*' => 'integer',
         ]);
 
-        $rows = AccessDocument::whereIn('id', $params['ids'])
+        $rows = AccessDocument::whereIntegerInRaw('id', $params['ids'])
             ->where('status', AccessDocument::CLAIMED)
             ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
             ->get();
@@ -207,7 +207,7 @@ class AccessDocumentController extends ApiController
             'statuses.*.status' => 'required|string'
         ]);
 
-        $rows = AccessDocument::whereIn('id', array_column($params['statuses'], 'id'))->get();
+        $rows = AccessDocument::whereIntegerInRaw('id', array_column($params['statuses'], 'id'))->get();
 
         $personId = $rows[0]->person_id;
         foreach ($rows as $row) {

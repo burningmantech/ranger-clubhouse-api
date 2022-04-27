@@ -109,7 +109,7 @@ class SurveyReports
             $trainers = [];
         } else {
             $trainers = Person::select('id', 'callsign', 'person_photo_id')
-                ->whereIn('id', $trainerIds)
+                ->whereIntegerInRaw('id', $trainerIds)
                 ->with('person_photo')
                 ->get();
         }
