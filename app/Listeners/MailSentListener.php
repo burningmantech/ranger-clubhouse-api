@@ -30,9 +30,9 @@ class MailSentListener
 
         foreach ($email->getTo() as $to) {
             $toEmail = $to->getAddress();
-            $person = Person::findByEmail($toEmail);
-            if ($person) {
-                $personId = $person->id;
+            // Don't bother looking up team/cadre mailing lists emails.
+            if (!preg_match('/^ranger-(.*)-(list|cadre|team)@.*burningman\.(com|org)$/i', $toEmail)) {
+                $personId = Person::findByEmail($toEmail)?->id;
             } else {
                 $personId = null;
             }

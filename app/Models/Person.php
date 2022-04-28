@@ -1353,7 +1353,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setPronounsCustomAttribute($value)
+    public function setPronounsCustomAttribute($value): void
     {
         $this->attributes['pronouns_custom'] = $value ?? '';
     }
@@ -1365,7 +1365,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setPronounsAttribute($value)
+    public function setPronounsAttribute($value): void
     {
         $this->attributes['pronouns'] = $value ?? '';
     }

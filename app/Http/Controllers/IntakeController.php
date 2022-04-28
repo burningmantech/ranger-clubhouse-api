@@ -2,20 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\WelcomeMail;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
-
 use App\Lib\Intake;
-
-use App\Models\Role;
+use App\Mail\WelcomeMail;
 use App\Models\Person;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
-
-use App\Http\Controllers\ApiController;
-
+use App\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class IntakeController extends ApiController
 {
@@ -25,7 +20,8 @@ class IntakeController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('isIntake');
         $year = $this->getYear();
@@ -41,9 +37,9 @@ class IntakeController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function spigot()
+    public function spigot(): JsonResponse
     {
-        $this->authorize('isIntake');
+        $this->authorize('isVC');
 
         return response()->json(['days' => Intake::retrieveSpigotFlowForYear($this->getYear())]);
     }
@@ -57,7 +53,7 @@ class IntakeController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function history(Person $person)
+    public function history(Person $person): JsonResponse
     {
         $this->authorize('isIntake');
         $year = $this->getYear();
@@ -73,7 +69,7 @@ class IntakeController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function appendNote(Person $person)
+    public function appendNote(Person $person): JsonResponse
     {
         $params = request()->validate([
             'year' => 'required|integer',
@@ -86,30 +82,11 @@ class IntakeController extends ApiController
         ]);
 
         $type = $params['type'];
-        switch ($type) {
-            case 'vc':
-                $role = Role::VC;
-                break;
-            case 'mentor':
-                $role = Role::MENTOR;
-                break;
-            case 'personnel':
-                $role = Role::ADMIN;
-                break;
-            default:
-                $role = Role::INTAKE;
-                break;
-
-        }
-
-        if (!$this->userHasRole($role)) {
-            $this->notPermitted("Not authorized");
-        }
-
         $year = $params['year'];
         $personId = $person->id;
-
         $note = $params['note'] ?? null;
+
+        $this->checkIntakePermissions($type);
 
         if ($note) {
             PersonIntakeNote::record($personId, $year, $type, $note);
@@ -140,18 +117,20 @@ class IntakeController extends ApiController
     }
 
     /**
-     * Update the on an intake note. Only allowed by the note's creator.
+     * Update the on an intake note.
      *
-     * @param PersonIntakeNote $note
+     * @param PersonIntakeNote $person_intake_note
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function updateNote(PersonIntakeNote $person_intake_note)
+    public function updateNote(PersonIntakeNote $person_intake_note): JsonResponse
     {
-        if ($person_intake_note->person_source_id != $this->user->id || $person_intake_note->is_log) {
-            $this->notPermitted('Not authorized to update note.');
+        if ($person_intake_note->is_log) {
+            $this->notPermitted('Cannot update a log note.');
         }
+
+        $this->checkIntakePermissions($person_intake_note->type);
 
         $params = request()->validate(['note' => 'required|string']);
 
@@ -163,14 +142,15 @@ class IntakeController extends ApiController
     /**
      * Delete an intake note. Only allowed by the note's creator.
      *
-     * @param PersonIntakeNote $note
+     * @param PersonIntakeNote $person_intake_note
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
     public function deleteNote(PersonIntakeNote $person_intake_note)
     {
-        if ($person_intake_note->person_source_id != $this->user->id || $person_intake_note->is_log) {
+        $this->checkIntakePermissions($person_intake_note->type);
+        if ($person_intake_note->is_log) {
             $this->notPermitted('Not authorized to delete note.');
         }
         $person_intake_note->delete();
@@ -190,12 +170,43 @@ class IntakeController extends ApiController
         $this->authorize('sendWelcomeEmail', $person);
 
         if ($person->status != Person::PROSPECTIVE) {
-            return response()->json([ 'status' => 'not-prospective'], 401);
+            return response()->json(['status' => 'not-prospective'], 401);
         }
 
         $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
         mail_to_person($person, new WelcomeMail($person, $inviteToken), true);
 
-        return response()->json([ 'status' => 'success' ]);
+        return response()->json(['status' => 'success']);
+    }
+
+    /**
+     * Check to see if the user can do a intake note thing
+     *
+     * @param string $type
+     * @return void
+     * @throws AuthorizationException
+     */
+
+    private function checkIntakePermissions(string $type): void
+    {
+        switch ($type) {
+            case 'vc':
+                $role = Role::VC;
+                break;
+            case 'mentor':
+                $role = Role::MENTOR;
+                break;
+            case 'personnel':
+                $role = Role::ADMIN;
+                break;
+            default:
+                $role = Role::INTAKE;
+                break;
+
+        }
+
+        if (!$this->userHasRole($role)) {
+            $this->notPermitted("Not authorized");
+        }
     }
 }

@@ -18,9 +18,6 @@ class TrainingSignupEmailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $person;
-    public $slot;
-
     /**
      * Create a new job instance.
      *
@@ -28,10 +25,8 @@ class TrainingSignupEmailJob implements ShouldQueue
      * @param Slot $slot enrolled training session.
      * @return void
      */
-    public function __construct(Person $person, Slot $slot)
+    public function __construct(public Person $person, public Slot $slot)
     {
-        $this->person = $person;
-        $this->slot = $slot;
     }
 
     /**
@@ -42,7 +37,8 @@ class TrainingSignupEmailJob implements ShouldQueue
      *
      * @return void
      */
-    public function handle()
+
+    public function handle(): void
     {
         $person = $this->person;
         $slot = $this->slot;

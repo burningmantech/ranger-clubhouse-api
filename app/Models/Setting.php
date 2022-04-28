@@ -323,6 +323,18 @@ class Setting extends ApiModel
             'type' => self::TYPE_FLOAT,
         ],
 
+        'SandmanRequireAffidavit' => [
+            'description' => 'Require the Sandman Affidavit be signed in order to work a Sandman shift',
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
+        ],
+
+        'SandmanRequirePerimeterExperience' => [
+            'description' => 'Require a Sandman to have worked a Burn Perimeter or Sandman positions within the last few years',
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
+        ],
+
         'SFEnableWritebacks' => [
             'description' => 'Enable Salesforce Object Update',
             'type' => self::TYPE_BOOL,

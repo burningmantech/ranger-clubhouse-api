@@ -149,6 +149,10 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole(Role::INTAKE);
         });
 
+        Gate::define('isVC', function (Person $user) {
+            return $user->hasRole(Role::VC);
+        });
+
         Gate::resource('person', 'PersonPolicy');
     }
 }

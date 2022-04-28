@@ -288,7 +288,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        $result = Schedule::deleteFromSchedule($person->id, $slotId);
+        $result = Schedule::deleteFromSchedule($person->id, $slot);
         if ($result['status'] == 'success') {
             $data = ['slot_id' => $slotId];
             if ($forced) {

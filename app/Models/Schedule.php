@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Jobs\AlertWhenSignUpsEmptyJob;
+use App\Jobs\TrainingSignupEmailJob;
 use App\Lib\WorkSummary;
 use Carbon\Carbon;
 use Exception;
@@ -260,31 +262,34 @@ class Schedule extends ApiModel
      * @throws Exception
      */
 
-    public static function deleteFromSchedule(int $personId, int $slotId): array
+    public static function deleteFromSchedule(int $personId, Slot $slot): array
     {
         $personSlot = PersonSlot::where([
             ['person_id', $personId],
-            ['slot_id', $slotId]
+            ['slot_id', $slot->id]
         ])->firstOrFail();
+
 
         try {
             DB::beginTransaction();
-            $slot = $personSlot->belongsTo(Slot::class, 'slot_id')
-                ->lockForUpdate()
-                ->firstOrFail();
             $personSlot->delete();
-
-            if ($slot->signed_up > 0) {
-                $slot->update(['signed_up' => ($slot->signed_up - 1)]);
-            }
-
+            $signedUp = DB::table('person_slot')->where('slot_id', $slot->id)->count();
+            $slot->signed_up = $signedUp;
+            $slot->saveWithoutValidation();
             DB::commit();
         } catch (Exception $e) {
             DB::rollback();
             throw $e;
         }
 
-        return ['status' => self::SUCCESS, 'signed_up' => $slot->signed_up];
+        if (!$signedUp && $slot->position->alert_when_empty) {
+            $menteeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
+            if ($menteeSlot && $menteeSlot->signed_up > 0) {
+                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)/*->delay(now()->addMinutes(5))*/;
+            }
+        }
+
+        return ['status' => self::SUCCESS, 'signed_up' => $signedUp];
     }
 
     /**

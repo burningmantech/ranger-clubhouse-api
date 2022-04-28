@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 class PersonIntakeNote extends ApiModel
@@ -14,7 +13,7 @@ class PersonIntakeNote extends ApiModel
 
     protected $auditModel = true;
 
-    protected $guarded = [ ];
+    protected $guarded = [];
 
     protected $casts = [
         'created_at' => 'datetime',
@@ -22,15 +21,15 @@ class PersonIntakeNote extends ApiModel
     ];
 
     protected $rules = [
-        'note'   => 'sometimes|string|nullable|max:64000'
+        'note' => 'sometimes|string|nullable|max:64000'
     ];
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function person_source()
+    public function person_source(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -44,14 +43,15 @@ class PersonIntakeNote extends ApiModel
      * @return Collection
      */
 
-    public static function retrieveHistoryForPersonIds($pnvIds, int $year) {
+    public static function retrieveHistoryForPersonIds($pnvIds, int $year): Collection
+    {
         return self::whereIntegerInRaw('person_id', $pnvIds)
-                ->where('year', '<=', $year)
-                ->orderBy('person_id')
-                ->orderBy('created_at')
-                ->with('person_source:id,callsign')
-                ->get()
-                ->groupBy('person_id');
+            ->where('year', '<=', $year)
+            ->orderBy('person_id')
+            ->orderBy('created_at')
+            ->with('person_source:id,callsign')
+            ->get()
+            ->groupBy('person_id');
     }
 
     /**
@@ -61,7 +61,8 @@ class PersonIntakeNote extends ApiModel
      * @param string $type
      * @return Collection
      */
-    public static function findAllForPersonType(int $personId, string $type) {
+    public static function findAllForPersonType(int $personId, string $type): Collection
+    {
         return self::where('person_id', $personId)
             ->where('type', $type)
             ->orderBy('created_at')
@@ -79,7 +80,7 @@ class PersonIntakeNote extends ApiModel
      * @param bool $isLog true if the note is an audit note about the rank
      * @return void
      */
-    public static function record(int $personId, int $year, string $noteType, string $note, bool $isLog = false) : void
+    public static function record(int $personId, int $year, string $noteType, string $note, bool $isLog = false): void
     {
         $user = Auth::user();
 
