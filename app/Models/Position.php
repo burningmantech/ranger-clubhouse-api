@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends ApiModel
 {
@@ -231,7 +232,10 @@ class Position extends ApiModel
     const SANDMAN_YEAR_CUTOFF = 5;
 
     protected $fillable = [
+        'active',
+        'alert_when_empty',
         'all_rangers',
+        'contact_email',
         'count_hours',
         'max',
         'min',
@@ -239,11 +243,9 @@ class Position extends ApiModel
         'on_sl_report',
         'prevent_multiple_enrollments',
         'short_title',
-        'contact_email',
         'title',
         'training_position_id',
         'type',
-        'active',
     ];
 
     protected $casts = [
@@ -251,7 +253,8 @@ class Position extends ApiModel
         'new_user_eligible' => 'bool',
         'on_sl_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
-        'active' => 'bool'
+        'active' => 'bool',
+        'alert_when_empty' => 'bool',
     ];
 
     protected $rules = [
@@ -262,17 +265,18 @@ class Position extends ApiModel
         'training_position_id' => 'nullable|exists:position,id'
     ];
 
-    public function training_positions()
+    public function training_positions(): HasMany
     {
         return $this->hasMany(Position::class, 'training_position_id');
     }
 
     /**
      * Find  positions based on criteria
-     * @param $query
-     * @return Position[]|Collection
+     * @param array $query
+     * @return Collection
      */
-    public static function findForQuery($query)
+
+    public static function findForQuery(array $query) : Collection
     {
         $type = $query['type'] ?? null;
 
@@ -290,14 +294,16 @@ class Position extends ApiModel
      * Optionally exclude Dirt Training (for ART module support)
      * Return only the id & title.
      *
-     * @param false $excludeDirt
+     * @param bool $excludeDirt
      * @return array
      */
-    public static function findAllTrainings($excludeDirt = false): array
+
+    public static function findAllTrainings(bool $excludeDirt = false): array
     {
         $sql = self::select('id', 'title')
             ->where('type', Position::TYPE_TRAINING)
             ->where('title', 'not like', '%trainer%')
+            ->where('active', true)
             ->orderBy('title');
 
         if ($excludeDirt) {
@@ -310,9 +316,11 @@ class Position extends ApiModel
     /**
      * Retrieve the title for a position. Return a position id if the
      * position was not found.
+     * @param int $id
+     * @return string
      */
 
-    public static function retrieveTitle($id): string
+    public static function retrieveTitle(int $id): string
     {
         $row = self::find($id);
 
@@ -321,20 +329,21 @@ class Position extends ApiModel
 
     /**
      * Find all positions which reference the given training position
-     * @param $positionId position
-     * @return Position[]|Collection
+     * @param int $positionId
+     * @return Collection
      */
 
-    public static function findTrainedPositions(int $positionId)
+    public static function findTrainedPositions(int $positionId): Collection
     {
         return self::select('id', 'title')->where('training_position_id', $positionId)->get();
     }
 
-    /*
+    /**
      * Find all positions with working (started) slots
+     * @return Collection
      */
 
-    public static function findAllWithInProgressSlots()
+    public static function findAllWithInProgressSlots(): Collection
     {
         $now = (string)now();
         return self::where('type', '!=', self::TYPE_TRAINING)
@@ -354,17 +363,21 @@ class Position extends ApiModel
      * @return bool true if the person is qualified
      */
 
-    public static function isSandmanQualified(Person $person, &$reason)
+    public static function isSandmanQualified(Person $person, &$reason): bool
     {
-        $event = PersonEvent::findForPersonYear($person->id, current_year());
-        if (!$event || !$event->sandman_affidavit) {
-            $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
-            return false;
+        if (setting('SandmanRequireAffidavit')) {
+            $event = PersonEvent::findForPersonYear($person->id, current_year());
+            if (!$event || !$event->sandman_affidavit) {
+                $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
+                return false;
+            }
         }
 
-        if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
-            $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
-            return false;
+        if (setting('SandmanRequirePerimeterExperience')) {
+            if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
+                $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
+                return false;
+            }
         }
 
         return true;
@@ -376,7 +389,8 @@ class Position extends ApiModel
      *
      * @return string
      */
-    public function getSubtypeAttribute()
+
+    public function getSubtypeAttribute(): string
     {
         $id = $this->id;
 

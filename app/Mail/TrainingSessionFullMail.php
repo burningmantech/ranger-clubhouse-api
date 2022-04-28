@@ -32,7 +32,7 @@ class TrainingSessionFullMail extends ClubhouseMailable
     public function build()
     {
         return $this
-            ->subject('[clubhouse notification] Training Session Full')
+            ->subject('Training Session Full')
             ->view('emails.training-session-full');
     }
 }

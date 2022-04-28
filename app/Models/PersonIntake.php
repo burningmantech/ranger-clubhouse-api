@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-use Illuminate\Support\Facades\Auth;
-use App\Helpers\SqlHelper;
-
 class PersonIntake extends ApiModel
 {
     protected $table = 'person_intake';
@@ -28,9 +23,9 @@ class PersonIntake extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForPersonYearOrNew($personId, $year)
+    public static function findForPersonYearOrNew($personId, $year): PersonIntake
     {
-        $ps = self::where([ 'person_id' => $personId, 'year' => $year ])->first();
+        $ps = self::where(['person_id' => $personId, 'year' => $year])->first();
         if ($ps) {
             return $ps;
         }
@@ -41,28 +36,33 @@ class PersonIntake extends ApiModel
         return $ps;
     }
 
-    public static function retrievePersonnelIssueForIdsYear($personIds, $year) {
+    public static function retrievePersonnelIssueForIdsYear($personIds, $year): array
+    {
         return self::select('person_id')
-                ->whereIntegerInRaw('person_id', $personIds)
-                ->where('personnel_rank', 4)
-                ->where('year', $year)
-                ->pluck('person_id')
-                ->toArray();
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->where('personnel_rank', 4)
+            ->where('year', $year)
+            ->pluck('person_id')
+            ->toArray();
     }
 
-    public function setRrnRankAttribute($value) {
+    public function setRrnRankAttribute($value)
+    {
         $this->attributes['rrn_rank'] = empty($value) ? null : $value;
     }
 
-    public function setMentorRankAttribute($value) {
+    public function setMentorRankAttribute($value)
+    {
         $this->attributes['mentor_rank'] = empty($value) ? null : $value;
     }
 
-    public function setVcRankAttribute($value) {
+    public function setVcRankAttribute($value)
+    {
         $this->attributes['vc_rank'] = empty($value) ? null : $value;
     }
 
-    public function setPersonnelRankAttribute($value) {
+    public function setPersonnelRankAttribute($value)
+    {
         $this->attributes['personnel_rank'] = empty($value) ? null : $value;
     }
 

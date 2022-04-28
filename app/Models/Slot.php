@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class Slot extends ApiModel
 {
     const WITH_POSITION_TRAINER = [
-        'position:id,title,type,contact_email,prevent_multiple_enrollments',
+        'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_empty',
         'trainer_slot:id,position_id,description,begins,ends',
         'trainer_slot.position:id,title'
     ];
