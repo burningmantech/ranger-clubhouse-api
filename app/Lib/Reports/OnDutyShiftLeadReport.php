@@ -159,7 +159,6 @@ class OnDutyShiftLeadReport
             ->where('position.on_sl_report', 1)
             ->whereNotIn('position.id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
-                Position::ONE_GERLACH_PATROL_DIRT
             ])    // Don't need report on dirt
             ->whereIntegerInRaw('person_position.person_id', $personIds)
             ->get()
@@ -196,38 +195,33 @@ class OnDutyShiftLeadReport
             $ranger->is_greendot_shift = (
                 $positionId == Position::DIRT_GREEN_DOT
                 || $positionId == Position::GREEN_DOT_MENTOR
-                || $positionId == Position::ONE_GREEN_DOT
             );
 
             if (!$havePositions) {
                 continue;
             }
 
-            $ranger->is_troubleshooter = $havePositions->whereIn('position_id', [Position::TROUBLESHOOTER, Position::ONE_TROUBLESHOOTER])->count() != 0;
-            $ranger->is_rsl = $havePositions->whereIn('position_id', [Position::RSC_SHIFT_LEAD, Position::ONE_SHIFT_LEAD])->count() != 0;
+            $ranger->is_troubleshooter = $havePositions->where('position_id', Position::TROUBLESHOOTER)->count() != 0;
+            $ranger->is_rsl = $havePositions->where('position_id', Position::RSC_SHIFT_LEAD)->count() != 0;
             $ranger->is_ood = $havePositions->contains('position_id', Position::OOD);
 
             // Determine if the person is a GD AND if they have been trained this year.
             $haveGDPosition = $havePositions->contains(function ($pos) {
                 $pid = $pos->position_id;
-                return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR || $pid == Position::ONE_GREEN_DOT);
+                return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR);
             });
 
             // The check for the mentee shift is a hack to prevent past years from showing
             // a GD Mentee as a qualified GD.
             if ($haveGDPosition) {
-                if ($year == 2021) {
-                    $ranger->is_greendot = $havePositions->contains('position_id', Position::ONE_GREEN_DOT);
-                } else {
-                    $ranger->is_greendot = isset($greenDotTrainingPassed[$row->person_id]);
-                    if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
-                        $ranger->is_greendot = false; // just in case
-                        // Not trained - remove the GD positions
-                        $havePositions = $havePositions->filter(function ($pos) {
-                            $pid = $pos->position_id;
-                            return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
-                        });
-                    }
+                $ranger->is_greendot = isset($greenDotTrainingPassed[$row->person_id]);
+                if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
+                    $ranger->is_greendot = false; // just in case
+                    // Not trained - remove the GD positions
+                    $havePositions = $havePositions->filter(function ($pos) {
+                        $pid = $pos->position_id;
+                        return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
+                    });
                 }
             }
 
@@ -250,7 +244,7 @@ class OnDutyShiftLeadReport
             ->join('person', 'person.id', 'timesheet.person_id')
             ->whereYear('timesheet.on_duty', current_year())
             ->whereNull('timesheet.off_duty')
-            ->whereIn('timesheet.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::ONE_GREEN_DOT])
+            ->whereIn('timesheet.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR])
             ->get();
 
         $total = $greenDots->count();
