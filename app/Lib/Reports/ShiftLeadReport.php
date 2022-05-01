@@ -8,7 +8,6 @@ use App\Models\Slot;
 use App\Models\Training;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ShiftLeadReport
@@ -20,7 +19,6 @@ class ShiftLeadReport
     const DIRT_AND_GREEN_DOT_POSITIONS = [
         Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
         Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE,
-        Position::ONE_GERLACH_PATROL_DIRT, Position::ONE_GREEN_DOT
     ];
 
     /**
@@ -56,7 +54,7 @@ class ShiftLeadReport
             'green_dot_total' => $totalGreenDots,
             'green_dot_females' => $femaleGreenDots,
 
-            'positions' =>  $positions,
+            'positions' => $positions,
             'slots' => $slots,
         ];
     }
@@ -69,6 +67,7 @@ class ShiftLeadReport
             DB::raw("IF(slot.begins < '$now' AND slot.ends > '$now', TIMESTAMPDIFF(second, '$now', ends),0) as remaining"),
         )->join('position', 'position.id', 'slot.position_id')
             ->with('position')
+            ->where('position.active', true)
             ->orderBy('slot.begins');
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 45);
@@ -79,6 +78,7 @@ class ShiftLeadReport
         } else {
             $sql->where('position.type', Position::TYPE_FRONTLINE);
         }
+
 
         $rows = $sql->get();
 
@@ -128,6 +128,7 @@ class ShiftLeadReport
                 $j->on('person_event.person_id', 'person.id');
                 $j->where('person_event.year', $year);
             })
+            ->where('position.active', true)
             ->orderBy('slot.begins');
 
         // Only report on active positions for the current year. Previous years may reference
@@ -171,7 +172,6 @@ class ShiftLeadReport
             ->where('position.on_sl_report', 1)
             ->whereNotIn('position.id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
-                Position::ONE_GERLACH_PATROL_DIRT
             ])    // Don't need report on dirt
             ->whereIn('person_position.person_id', $personIds)
             ->get()
@@ -207,35 +207,30 @@ class ShiftLeadReport
             $ranger->is_greendot_shift = (
                 $positionId == Position::DIRT_GREEN_DOT
                 || $positionId == Position::GREEN_DOT_MENTOR
-                || $positionId == Position::ONE_GREEN_DOT
             );
 
             if ($havePositions) {
-                $ranger->is_troubleshooter = $havePositions->whereIn('position_id', [Position::TROUBLESHOOTER, Position::ONE_TROUBLESHOOTER])->count() != 0;
-                $ranger->is_rsl = $havePositions->whereIn('position_id', [Position::RSC_SHIFT_LEAD, Position::ONE_SHIFT_LEAD])->count() != 0;
+                $ranger->is_troubleshooter = $havePositions->where('position_id', Position::TROUBLESHOOTER)->count() != 0;
+                $ranger->is_rsl = $havePositions->where('position_id', Position::RSC_SHIFT_LEAD)->count() != 0;
                 $ranger->is_ood = $havePositions->contains('position_id', Position::OOD);
 
                 // Determine if the person is a GD AND if they have been trained this year.
                 $haveGDPosition = $havePositions->contains(function ($pos) {
                     $pid = $pos->position_id;
-                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR || $pid == Position::ONE_GREEN_DOT);
+                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR);
                 });
 
                 // The check for the mentee shift is a hack to prevent past years from showing
                 // a GD Mentee as a qualified GD.
                 if ($haveGDPosition) {
-                    if ($year == 2021) {
-                        $ranger->is_greendot = $havePositions->contains('position_id', Position::ONE_GREEN_DOT);
-                    } else {
-                        $ranger->is_greendot = isset($greenDotTrainingPassed[$row->person_id]);
-                        if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
-                            $ranger->is_greendot = false; // just in case
-                            // Not trained - remove the GD positions
-                            $havePositions = $havePositions->filter(function ($pos) {
-                                $pid = $pos->position_id;
-                                return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
-                            });
-                        }
+                    $ranger->is_greendot = isset($greenDotTrainingPassed[$row->person_id]);
+                    if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
+                        $ranger->is_greendot = false; // just in case
+                        // Not trained - remove the GD positions
+                        $havePositions = $havePositions->filter(function ($pos) {
+                            $pid = $pos->position_id;
+                            return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
+                        });
                     }
                 }
 
@@ -260,7 +255,7 @@ class ShiftLeadReport
             ->select('person.id', 'person.gender')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::ONE_GREEN_DOT]);
+            ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR]);
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 
@@ -330,7 +325,7 @@ class ShiftLeadReport
 
     public static function addSlot($slot, &$slots, Carbon $shiftStart)
     {
-         $slots[$slot->id] ??= [
+        $slots[$slot->id] ??= [
             'begins' => (string)$slot->begins,
             'ends' => (string)$slot->ends,
             'begins_day_before' => $slot->begins->day != $shiftStart->day,

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -157,7 +159,7 @@ class Bmid extends ApiModel
         });
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -194,7 +196,7 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public static function findForPersonYear($personId, $year)
+    public static function findForPersonYear($personId, $year) : ?Bmid
     {
         return self::where('person_id', $personId)->where('year', $year)->first();
     }
@@ -239,7 +241,15 @@ class Bmid extends ApiModel
         return $bmids;
     }
 
-    public static function bulkLoadRelationships($bmids, $personIds)
+    /**
+     * Populate BMIDs with access date, desired provisions, and job provisions
+     *
+     * @param $bmids
+     * @param $personIds
+     * @return void
+     */
+
+    public static function bulkLoadRelationships($bmids, $personIds): void
     {
         $year = current_year();
 
@@ -305,7 +315,13 @@ class Bmid extends ApiModel
         }
     }
 
-    public static function firstOrNewForPersonYear($personId, $year)
+    /**
+     * @param $personId
+     * @param $year
+     * @return Bmid
+     */
+
+    public static function firstOrNewForPersonYear($personId, $year): Bmid
     {
         $row = self::firstOrNew(['person_id' => $personId, 'year' => $year]);
         $row->loadRelationships();
@@ -313,7 +329,14 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find access documents matching the criteria.
+     *
+     * @param $query
+     * @return Collection
+     */
+
+    public static function findForQuery($query): Collection
     {
         $sql = self::query();
 
@@ -329,8 +352,13 @@ class Bmid extends ApiModel
         return $bmids;
     }
 
+    /**
+     * Update any access documents with new access date
+     *
+     * @return void
+     */
 
-    public function updateWap()
+    public function updateWap(): void
     {
         AccessDocument::updateWAPsForPerson($this->person_id, $this->access_date, $this->access_any_time, 'set via BMID update');
 

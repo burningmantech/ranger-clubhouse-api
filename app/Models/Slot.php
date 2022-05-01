@@ -53,7 +53,7 @@ class Slot extends ApiModel
 
     // Don't track changes to the signed up count.
     public $auditExclude = [
-      'signed_up'
+        'signed_up'
     ];
 
     public static function findForQuery($query)
@@ -209,10 +209,7 @@ class Slot extends ApiModel
         $rows = DB::table('slot')
             ->select('position_id', 'begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
             ->whereYear('begins', $year)
-            ->whereIn('position_id', [
-                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT,
-                Position::ONE_GERLACH_PATROL_DIRT
-            ])
+            ->whereIn('position_id', [Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT])
             ->orderBy('begins')
             ->get();
 
