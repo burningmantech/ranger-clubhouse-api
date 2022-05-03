@@ -117,6 +117,7 @@ class Position extends ApiModel
     const INTERCEPT_OPERATOR = 66;
 
     const OPERATOR = 56;
+    const OPERATOR_SMOOTH = 142;
     const RSC_WESL = 109;
 
     const LEAL = 7;
