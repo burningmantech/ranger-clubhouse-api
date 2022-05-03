@@ -131,10 +131,11 @@ class ShiftLeadReport
             ->where('position.active', true)
             ->orderBy('slot.begins');
 
+        $isCurrentYear = ($year == current_year());
         // Only report on active positions for the current year. Previous years may reference
         // positions that have been deactivated since.
 
-        if ($shiftStart->year == current_year()) {
+        if ($isCurrentYear) {
             $sql->where('position.active', true);
         }
 
@@ -166,16 +167,18 @@ class ShiftLeadReport
 
         $personIds = $rows->pluck('person_id')->toArray();
 
-        $peoplePositions = DB::table('position')
+        $sql = DB::table('position')
             ->select('person_position.person_id', 'position.short_title', 'position.id as position_id')
             ->join('person_position', 'position.id', 'person_position.position_id')
             ->where('position.on_sl_report', 1)
             ->whereNotIn('position.id', [
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
             ])    // Don't need report on dirt
-            ->whereIn('person_position.person_id', $personIds)
-            ->get()
-            ->groupBy('person_id');
+            ->whereIn('person_position.person_id', $personIds);
+        if ($isCurrentYear) {
+            $sql->where('position.active', true);
+        }
+        $peoplePositions = $sql->get()->groupBy('person_id');
 
         $greenDotTrainingPassed = Training::didIdsPassForYear($personIds, Position::GREEN_DOT_TRAINING, $year);
         $rangers = [];
