@@ -40,6 +40,8 @@ Route::group([
 
     Route::match(['GET', 'POST'], 'sms/inbound', 'SmsController@inbound');
 
+    Route::post('mail-log/sns', 'MailLogController@snsNotification');
+
     // Only used for development.
     if (app()->isLocal()) {
         // Serve up files in exports, photos, and staging
