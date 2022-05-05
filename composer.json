@@ -12,14 +12,16 @@
     "ext-ctype": "*",
     "ext-exif": "*",
     "ext-gd": "*",
-    "ext-json": "*",
     "ext-intl": "*",
+    "ext-json": "*",
     "ext-mbstring": "*",
     "ext-pdo": "*",
     "ext-pdo_mysql": "*",
     "ext-tokenizer": "*",
     "ext-xml": "*",
     "ext-zip": "*",
+    "ext-zlib": "*",
+    "aws/aws-php-sns-message-validator": "^1.7",
     "aws/aws-sdk-php": "^3.218.2",
     "doctrine/dbal": "^3.3.4",
     "guzzlehttp/guzzle": "^7.4.2",
@@ -29,8 +31,7 @@
     "league/flysystem-aws-s3-v3": "^3.0.13",
     "league/fractal": "^0.20",
     "php-open-source-saver/jwt-auth": "^1.4.1",
-    "twilio/sdk": "^6.36.0",
-    "ext-zlib": "*"
+    "twilio/sdk": "^6.36.0"
   },
   "require-dev": {
     "spatie/laravel-ignition": "^1.2.0",

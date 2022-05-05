@@ -36,7 +36,14 @@ class MailLog extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query)
+    /**
+     * Retrieve mail log records based on the given criteria
+     *
+     * @param $query
+     * @return array
+     */
+
+    public static function findForQuery($query): array
     {
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
@@ -98,11 +105,11 @@ class MailLog extends ApiModel
     /**
      * Retrieve the years for a person or the website
      *
-     * @param $personId
+     * @param int|null $personId
      * @return array
      */
 
-    public static function retrieveYears($personId): array
+    public static function retrieveYears(?int $personId): array
     {
         $sql = self::selectRaw("YEAR(created_at) as year")
             ->groupBy("year")
@@ -120,7 +127,15 @@ class MailLog extends ApiModel
         return $years;
     }
 
-    public static function countStats($personId, $condCallback): int
+    /**
+     * Calculate the statistics for either the website or a person.
+     *
+     * @param ?int $personId
+     * @param callable $condCallback
+     * @return int
+     */
+
+    public static function countStats(?int $personId, callable $condCallback): int
     {
         $sql = DB::table('mail_log');
         if ($personId) {
@@ -149,10 +164,48 @@ class MailLog extends ApiModel
         ];
     }
 
+    /**
+     * Mark any records matching the Message-ID header as having bounced.
+     *
+     * @param string $messageId
+     * @return void
+     */
+
+    public static function markAsBounced(string $messageId)
+    {
+        DB::table('mail_log')->where('message_id', $messageId)->update(['did_bounce' => true]);
+    }
+
+    /**
+     * Mark any records matching the Message-ID header as having a complaint
+     * (aka determined to be spam by the recipient's mail server).
+     *
+     * @param string $messageId
+     * @return void
+     */
+
+    public static function markAsComplaint(string $messageId)
+    {
+        DB::table('mail_log')->where('message_id', $messageId)->update(['did_complain' => true]);
+    }
+
+    /**
+     * Gzip up the body attribute
+     *
+     * @param $value
+     * @return void
+     */
+
     public function setBodyAttribute($value)
     {
         $this->attributes['body'] = !empty($value) ? gzencode($value) : '';
     }
+
+    /**
+     * Get the subject attribute either from this record or the associated broadcast record
+     *
+     * @return string
+     */
 
     public function getSubjectAttribute(): string
     {
@@ -162,6 +215,14 @@ class MailLog extends ApiModel
 
         return $this->attributes['subject'];
     }
+
+    /**
+     * Get the body attribute. Either return the associated broadcast record's
+     * body attribute, or return a gunzip'ed version. Decode the body is the original
+     * value was printable-encoded.
+     *
+     * @return string
+     */
 
     public function getBodyAttribute(): string
     {
