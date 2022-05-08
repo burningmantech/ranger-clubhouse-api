@@ -80,14 +80,24 @@ class MailLogController extends ApiController
             return response()->json([], 200);
         }
 
+        $sns = json_decode(request()->getContent());
+
         // Temporary logging.. just until the things are stable.
-        error_log('sns-message-notification', ['message' => $message]);
+        ErrorLog::record('sns-message-notification', ['message' => $sns]);
 
-        switch ($message['Type']) {
+        switch ($sns->Type) {
             case 'Notification':
-                $messageId = $message['Message']['mail']['messageId'];
+                $body = json_decode($sns->Message);
+                $messageId = $body->mail->commonHeaders->messageId ?? "";
 
-                switch ($message['Message']['notificationType']) {
+                if (empty($messageId)) {
+                    ErrorLog::record('sns-message-no-id', [ 'message', $sns]);
+                    return response()->json([], 200);
+                }
+
+                $messageId = str_replace(['<', '>'], '', $messageId);
+
+                switch ($body->notificationType) {
                     case 'Bounce':
                         MailLog::markAsBounced($messageId);
                         break;
@@ -97,7 +107,7 @@ class MailLogController extends ApiController
                         break;
 
                     default:
-                        ErrorLog::record('sns-message-unknown-type', ['message' => $message]);
+                        ErrorLog::record('sns-message-unknown-type', ['message' => $body]);
                         break;
                 }
                 break;
@@ -106,14 +116,14 @@ class MailLogController extends ApiController
                 // Ping the URL provided to ack the subscription.
                 try {
                     $client = new Client;
-                    $client->get($message['SubscribeURL']);
+                    $client->get($sns->SubscribeURL);
                 } catch (GuzzleException $e) {
-                    ErrorLog::recordException($e, 'sns-subscription-ping-exception', ['message' => $message]);
+                    ErrorLog::recordException($e, 'sns-subscription-ping-exception', ['message' => $sns]);
                 }
                 return response()->json(['success' => true]);
 
             default:
-                ErrorLog::record('sns-notification-unknown-type', ['message' => $message]);
+                ErrorLog::record('sns-notification-unknown-type', ['message' => $sns]);
                 break;
         }
 
