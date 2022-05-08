@@ -60,6 +60,11 @@ class BulkUploader
         'event_radio' => self::PROCESS_PROVISIONS_ACTION,
         'wet_spot' => self::PROCESS_PROVISIONS_ACTION,
 
+        'job_all_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
+        'job_event_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
+        'job_event_radio' => self::PROCESS_PROVISIONS_ACTION,
+        'job_wet_spot' => self::PROCESS_PROVISIONS_ACTION,
+
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
         'wap' => self::PROCESS_WAP_ACTION,
@@ -514,11 +519,16 @@ class BulkUploader
         }
     }
 
-    public static function processProvisions($records, $type, $commit, $reason)
+    public static function processProvisions($records, $type, $commit, $reason): void
     {
         $sourceYear = current_year();
         $expiryYear = $sourceYear + 3;
 
+        $isJobProvision = str_starts_with($type, 'job_');
+        if ($isJobProvision) {
+            $type = str_replace('job_', '', $type);
+
+        }
         if (!in_array($type, AccessDocument::PROVISION_TYPES)) {
             throw new InvalidArgumentException('Unknown provision type');
         }
@@ -539,10 +549,14 @@ class BulkUploader
             $existing = null;
 
             if (!$isEventRadio) {
-                $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes);
+                $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isJobProvision);
                 if ($existing && !$commit) {
                     $record->status = self::STATUS_WARNING;
-                    $record->details = 'Has ' . $existing->getTypeLabel() . ' earned year ' . $existing->source_year . '. Existing item will be cancelled and replaced.';
+                    if ($isJobProvision) {
+                        $record->details = 'Already has ' . $existing->getTypeLabel() . ' job provision. Existing item will be cancelled and replaced.';
+                    } else {
+                        $record->details = 'Has ' . $existing->getTypeLabel() . ' earned year ' . $existing->source_year . '. Existing item will be cancelled and replaced.';
+                    }
                     continue;
                 }
             }
@@ -554,7 +568,7 @@ class BulkUploader
 
             $ad = null;
             if ($isEventRadio) {
-                $ad = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO);
+                $ad = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO, $isJobProvision);
             }
 
             if (!$ad) {
@@ -564,6 +578,7 @@ class BulkUploader
                     'status' => AccessDocument::QUALIFIED,
                     'expiry_date' => $expiryYear,
                     'source_year' => $sourceYear,
+                    'is_job_provision' => $isJobProvision,
                 ]);
             }
 
@@ -577,6 +592,7 @@ class BulkUploader
             if (!$existing) {
                 continue;
             }
+
             $existing->status = AccessDocument::CANCELLED;
             $existing->additional_comments = $existing->auditReason = 'Replaced by item #' . $ad->id . ' via bulk uploader';
             $record->status = self::STATUS_WARNING;

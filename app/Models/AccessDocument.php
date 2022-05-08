@@ -214,6 +214,21 @@ class AccessDocument extends ApiModel
     }
 
     /**
+     * Save function. Don't allow a job provision to be banked.
+     * @param $options
+     * @return bool
+     */
+
+    public function save($options = []) {
+        if ($this->is_job_provision && $this->status == self::BANKED) {
+            $this->addError('status', 'Item is a job provision and cannot be banked');
+            return false;
+        }
+
+        return parent::save($options);
+    }
+
+    /**
      * Find records matching a given criteria.
      *
      * Query parameters are:
@@ -318,20 +333,26 @@ class AccessDocument extends ApiModel
      * @return AccessDocument|null
      */
 
-    public static function findAvailableTypeForPerson(int $personId, array|string $type): ?AccessDocument
+    public static function findAvailableTypeForPerson(int $personId, array|string $type, $isJobProvision = null): ?AccessDocument
     {
         if (!is_array($type)) {
             $type = [$type];
         }
 
-        return self::where('person_id', $personId)
+        $sql = self::where('person_id', $personId)
             ->whereIn('type', $type)
             ->whereIn('status', [
                 self::QUALIFIED,
                 self::CLAIMED,
                 self::BANKED,
                 self::SUBMITTED
-            ])->first();
+            ]);
+
+        if ($isJobProvision !== null) {
+            $sql->where('is_job_provision', $isJobProvision);
+        }
+
+        return $sql->first();
     }
 
     /**
