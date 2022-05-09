@@ -45,6 +45,43 @@
         <p>No errors were logged.</p>
     @endif
 
+    <h3>Email Issues ({{count($emailIssues)}})</h3>
+    @if (count($emailIssues) > 0)
+        <table class="table table-sm table-striped">
+            <thead>
+            <tr>
+                <th>Timestamp (UTC-7)</th>
+                <th>Person</th>
+                <th>Event</th>
+                <th>To Email</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            @foreach ($emailIssues as $log)
+                <tr>
+                    <td>{{$log->created_at}}</td>
+                    <td>
+                        @if ($log->person)
+                            {{$log->person->callsign}}
+                        @else
+                            Person #{{$log->person_id}}
+                        @endif
+                    </td>
+                    <td>
+                        {{$log->event}}
+                    </td>
+                    <td>
+                        {{$log->data?->to_email}}
+                    </td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @else
+        <p>No errors were logged.</p>
+    @endif
+
     <h3>Setting Changes ({{count($settingLogs)}})</h3>
     @if (count($settingLogs) == 0)
         <p>No settings were changed</p>

@@ -65,9 +65,26 @@ class ClubhouseDailyReportCommand extends Command
             false
         )['action_logs'];
 
-        mail_to(setting('DailyReportEmail'), new DailyReportMail(
-            $failedBroadcasts, $errorLogs, $roleLogs, $statusLogs, $settings, $settingLogs, EventDate::calculatePeriod()
-        ));
+        $emailIssues = ActionLog::findForQuery(
+            [
+                'lastday' => true,
+                'page_size' => 1000,
+                'events' => ['email-bouncing', 'email-complaint'],
+            ],
+            false
+        )['action_logs'];
+
+        mail_to(setting('DailyReportEmail'),
+            new DailyReportMail(
+                $failedBroadcasts,
+                $errorLogs,
+                $roleLogs,
+                $statusLogs,
+                $settings,
+                $settingLogs,
+                $emailIssues,
+                EventDate::calculatePeriod()
+            ));
 
         return true;
     }

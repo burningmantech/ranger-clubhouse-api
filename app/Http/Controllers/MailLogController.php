@@ -13,6 +13,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class MailLogController extends ApiController
 {
@@ -63,16 +64,19 @@ class MailLogController extends ApiController
      * See https://docs.aws.amazon.com/ses/latest/dg/notification-contents.html
      *
      * @return JsonResponse
-     *
      */
 
     public function snsNotification(): JsonResponse
     {
-        $message = Message::fromRawPostData();
-
-        $validator = new MessageValidator();
+        try {
+            $message = Message::fromRawPostData();
+        } catch (InvalidArgumentException $e) {
+            ErrorLog::recordException($e, 'sns-message-exception', [ 'content' => request()->getContent() ]);
+            return response()->json([], 200);
+        }
 
         try {
+            $validator = new MessageValidator();
             $validator->validate($message);
         } catch (InvalidSnsMessageException $e) {
             ErrorLog::recordException($e, 'sns-message-validation-exception', [
@@ -111,7 +115,7 @@ class MailLogController extends ApiController
                                 'message_id', $messageId,
                                 'bounce_type' => $body->bounce->bounceType,
                                 'mail_log_id' => $mailLog?->id,
-                                'message'=> $sns,
+                                'message' => $sns,
                             ], $person?->id);
                         }
                         break;
@@ -128,7 +132,7 @@ class MailLogController extends ApiController
                                 'to_email' => $to->emailAddress,
                                 'message_id', $messageId,
                                 'mail_log_id' => $mailLog?->id,
-                                'message'=> $sns,
+                                'message' => $sns,
                             ], $person?->id);
                         }
                         break;

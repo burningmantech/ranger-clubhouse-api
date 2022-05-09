@@ -205,6 +205,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'message',
 
         'email',
+        'is_bouncing',
         'first_name',
         'mi',
         'last_name',
@@ -273,6 +274,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'bmid',
         'broadcast_message',
         //'contact_log',
+        'mail_log',
         'manual_review',
         'mentee_status',
         'person_event',
