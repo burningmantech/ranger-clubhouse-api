@@ -167,26 +167,38 @@ class MailLog extends ApiModel
     /**
      * Mark any records matching the Message-ID header as having bounced.
      *
+     * @param string $email
      * @param string $messageId
-     * @return void
+     * @return MailLog|null
      */
 
-    public static function markAsBounced(string $messageId)
+    public static function markAsBounced(string $email, string $messageId): ?MailLog
     {
-        DB::table('mail_log')->where('message_id', $messageId)->update(['did_bounce' => true]);
+        $mailLog = self::where('message_id', $messageId)->where('to_email', $email)->first();
+        if ($mailLog) {
+            $mailLog->update(['did_complain' => true]);
+        }
+
+        return $mailLog;
     }
 
     /**
      * Mark any records matching the Message-ID header as having a complaint
      * (aka determined to be spam by the recipient's mail server).
      *
+     * @param string $email
      * @param string $messageId
-     * @return void
+     * @return ?MailLog
      */
 
-    public static function markAsComplaint(string $messageId)
+    public static function markAsComplaint(string $email, string $messageId): ?MailLog
     {
-        DB::table('mail_log')->where('message_id', $messageId)->update(['did_complain' => true]);
+        $mailLog = self::where('message_id', $messageId)->where('to_email', $email)->first();
+        if ($mailLog) {
+            $mailLog->update(['did_bounce' => true]);
+        }
+
+        return $mailLog;
     }
 
     /**

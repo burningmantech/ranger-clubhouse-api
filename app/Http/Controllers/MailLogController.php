@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ErrorLog;
 use App\Models\MailLog;
+use App\Models\Person;
 use Aws\Sns\Exception\InvalidSnsMessageException;
 use Aws\Sns\Message;
 use Aws\Sns\MessageValidator;
@@ -91,7 +92,7 @@ class MailLogController extends ApiController
                 $messageId = $body->mail->commonHeaders->messageId ?? "";
 
                 if (empty($messageId)) {
-                    ErrorLog::record('sns-message-no-id', [ 'message', $sns]);
+                    ErrorLog::record('sns-message-no-id', [ 'message' => $sns]);
                     return response()->json([], 200);
                 }
 
@@ -99,11 +100,37 @@ class MailLogController extends ApiController
 
                 switch ($body->notificationType) {
                     case 'Bounce':
-                        MailLog::markAsBounced($messageId);
+                        foreach ($body->bounce->bouncedRecipients as $to) {
+                            $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
+                            $person = Person::findByEmail($to->emailAddress);
+                            if ($body->bounce->bounceType == 'Permanent') {
+                                if ($person) {
+                                    $person->is_bouncing = true;
+                                    $person->saveWithoutValidation();
+                                }
+                            }
+
+                            ErrorLog::record('email-bouncing', [
+                                'to' => $to->emailAddress,
+                                'person_id' => $person?->id,
+                                'message_id', $messageId,
+                                'bounce_type' => $body->bounce->bounceType,
+                                'mail_log_id' => $mailLog?->id,
+                                'message'=> $sns,
+                            ]);
+                        }
                         break;
 
                     case 'Complaint':
-                        MailLog::markAsComplaint($messageId);
+                        foreach ($body->complaint->complainedRecipients as $to) {
+                            $mailLog = MailLog::markAsComplaint($to->emailAddress, $messageId);
+                            ErrorLog::record('email-complaint', [
+                                'to' => $to->emailAddress,
+                                'message_id', $messageId,
+                                'mail_log_id' => $mailLog?->id,
+                                'message'=> $sns,
+                            ]);
+                        }
                         break;
 
                     default:

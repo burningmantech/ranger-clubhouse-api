@@ -30,7 +30,8 @@ class PersonFilter
         'timestamp',
         'sfuid',
         'logged_in_at',
-        'last_seen_at'
+        'last_seen_at',
+        'is_bouncing'
     ];
 
      const CERTIFICATIONS_FIELDS = [
