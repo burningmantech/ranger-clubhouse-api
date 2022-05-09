@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\MailLog;
 use App\Models\Person;
@@ -83,25 +84,21 @@ class MailLogController extends ApiController
 
         $sns = json_decode(request()->getContent());
 
-        // Temporary logging.. just until the things are stable.
-        ErrorLog::record('sns-message-notification', ['message' => $sns]);
-
         switch ($sns->Type) {
             case 'Notification':
                 $body = json_decode($sns->Message);
                 $messageId = $body->mail->commonHeaders->messageId ?? "";
-
-                if (empty($messageId)) {
-                    ErrorLog::record('sns-message-no-id', [ 'message' => $sns]);
-                    return response()->json([], 200);
-                }
 
                 $messageId = str_replace(['<', '>'], '', $messageId);
 
                 switch ($body->notificationType) {
                     case 'Bounce':
                         foreach ($body->bounce->bouncedRecipients as $to) {
-                            $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
+                            if (!empty($messageId)) {
+                                $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
+                            } else {
+                                $mailLog = null;
+                            }
                             $person = Person::findByEmail($to->emailAddress);
                             if ($body->bounce->bounceType == 'Permanent') {
                                 if ($person) {
@@ -109,27 +106,30 @@ class MailLogController extends ApiController
                                     $person->saveWithoutValidation();
                                 }
                             }
-
-                            ErrorLog::record('email-bouncing', [
-                                'to' => $to->emailAddress,
-                                'person_id' => $person?->id,
+                            ActionLog::record(null, 'email-bouncing', '', [
+                                'to_email' => $to->emailAddress,
                                 'message_id', $messageId,
                                 'bounce_type' => $body->bounce->bounceType,
                                 'mail_log_id' => $mailLog?->id,
                                 'message'=> $sns,
-                            ]);
+                            ], $person?->id);
                         }
                         break;
 
                     case 'Complaint':
                         foreach ($body->complaint->complainedRecipients as $to) {
-                            $mailLog = MailLog::markAsComplaint($to->emailAddress, $messageId);
-                            ErrorLog::record('email-complaint', [
-                                'to' => $to->emailAddress,
+                            if (!empty($messageId)) {
+                                $mailLog = MailLog::markAsComplaint($to->emailAddress, $messageId);
+                            } else {
+                                $mailLog = null;
+                            }
+                            $person = Person::findByEmail($to->emailAddress);
+                            ActionLog::record(null, 'email-complaint', '', [
+                                'to_email' => $to->emailAddress,
                                 'message_id', $messageId,
                                 'mail_log_id' => $mailLog?->id,
                                 'message'=> $sns,
-                            ]);
+                            ], $person?->id);
                         }
                         break;
 
