@@ -66,75 +66,71 @@ class MailLogController extends ApiController
     {
         $sns = json_decode(request()->getContent());
 
-        ErrorLog::record('sns-notification', [ 'body' => request()->getContent()]);
+        // Look like two different message format might be seen, deal with both
+        if (isset($sns->Type) && $sns->Type == 'SubscriptionConfirmation') {
+            // Ping the URL provided to ack the subscription.
+            try {
+                $client = new Client;
+                $client->get($sns->SubscribeURL);
+            } catch (GuzzleException $e) {
+                ErrorLog::recordException($e, 'sns-subscription-ping-exception', ['message' => $sns]);
+            }
+            return response()->json(['success' => true]);
+        }
 
-        switch ($sns->Type) {
-            case 'Notification':
-                $body = json_decode($sns->Message);
-                $messageId = $body->mail->commonHeaders->messageId ?? "";
+        if (!isset($sns->notificationType)) {
+            ErrorLog::record('sns-unknown-format', ['body' => request()->getContent()]);
+            return response()->json([], 200);
+        }
 
-                $messageId = str_replace(['<', '>'], '', $messageId);
+        $messageId = $sns->mail->commonHeaders->messageId ?? "";
 
-                switch ($body->notificationType) {
-                    case 'Bounce':
-                        foreach ($body->bounce->bouncedRecipients as $to) {
-                            if (!empty($messageId)) {
-                                $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
-                            } else {
-                                $mailLog = null;
-                            }
-                            $person = Person::findByEmail($to->emailAddress);
-                            if ($body->bounce->bounceType == 'Permanent') {
-                                if ($person) {
-                                    $person->is_bouncing = true;
-                                    $person->saveWithoutValidation();
-                                }
-                            }
-                            ActionLog::record(null, 'email-bouncing', '', [
-                                'to_email' => $to->emailAddress,
-                                'message_id', $messageId,
-                                'bounce_type' => $body->bounce->bounceType,
-                                'mail_log_id' => $mailLog?->id,
-                                'message' => $sns,
-                            ], $person?->id);
-                        }
-                        break;
+        $messageId = str_replace(['<', '>'], '', $messageId);
 
-                    case 'Complaint':
-                        foreach ($body->complaint->complainedRecipients as $to) {
-                            if (!empty($messageId)) {
-                                $mailLog = MailLog::markAsComplaint($to->emailAddress, $messageId);
-                            } else {
-                                $mailLog = null;
-                            }
-                            $person = Person::findByEmail($to->emailAddress);
-                            ActionLog::record(null, 'email-complaint', '', [
-                                'to_email' => $to->emailAddress,
-                                'message_id', $messageId,
-                                'mail_log_id' => $mailLog?->id,
-                                'message' => $sns,
-                            ], $person?->id);
-                        }
-                        break;
-
-                    default:
-                        ErrorLog::record('sns-message-unknown-type', ['message' => $body]);
-                        break;
+        switch ($sns->notificationType) {
+            case 'Bounce':
+                $bounceType = $sns->bounce->bounceType;
+                $isPermanent = $bounceType == 'Permanent';
+                foreach ($sns->bounce->bouncedRecipients as $to) {
+                    if (!empty($messageId)) {
+                        $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
+                    } else {
+                        $mailLog = null;
+                    }
+                    $person = Person::findByEmail($to->emailAddress);
+                    if ($isPermanent && $person) {
+                        $person->is_bouncing = true;
+                        $person->saveWithoutValidation();
+                    }
+                    ActionLog::record(null, 'email-bouncing', '', [
+                        'to_email' => $to->emailAddress,
+                        'message_id', $messageId,
+                        'bounce_type' => $bounceType,
+                        'mail_log_id' => $mailLog?->id,
+                        'message' => $sns,
+                    ], $person?->id);
                 }
                 break;
 
-            case 'SubscriptionConfirmation':
-                // Ping the URL provided to ack the subscription.
-                try {
-                    $client = new Client;
-                    $client->get($sns->SubscribeURL);
-                } catch (GuzzleException $e) {
-                    ErrorLog::recordException($e, 'sns-subscription-ping-exception', ['message' => $sns]);
+            case 'Complaint':
+                foreach ($sns->complaint->complainedRecipients as $to) {
+                    if (!empty($messageId)) {
+                        $mailLog = MailLog::markAsComplaint($to->emailAddress, $messageId);
+                    } else {
+                        $mailLog = null;
+                    }
+                    $person = Person::findByEmail($to->emailAddress);
+                    ActionLog::record(null, 'email-complaint', '', [
+                        'to_email' => $to->emailAddress,
+                        'message_id', $messageId,
+                        'mail_log_id' => $mailLog?->id,
+                        'message' => $sns,
+                    ], $person?->id);
                 }
-                return response()->json(['success' => true]);
+                break;
 
             default:
-                ErrorLog::record('sns-notification-unknown-type', ['message' => $sns]);
+                ErrorLog::record('sns-message-unknown-type', ['message' => $body]);
                 break;
         }
 
