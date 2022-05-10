@@ -104,7 +104,7 @@ class MailLogController extends ApiController
                     }
                     ActionLog::record(null, 'email-bouncing', '', [
                         'to_email' => $to->emailAddress,
-                        'message_id', $messageId,
+                        'message_id' => $messageId,
                         'bounce_type' => $bounceType,
                         'mail_log_id' => $mailLog?->id,
                         'message' => $sns,
