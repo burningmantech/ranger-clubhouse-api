@@ -176,7 +176,7 @@ class MailLog extends ApiModel
     {
         $mailLog = self::where('message_id', $messageId)->where('to_email', $email)->first();
         if ($mailLog) {
-            $mailLog->update(['did_complain' => true]);
+            $mailLog->update(['did_bounce' => true]);
         }
 
         return $mailLog;
@@ -195,7 +195,7 @@ class MailLog extends ApiModel
     {
         $mailLog = self::where('message_id', $messageId)->where('to_email', $email)->first();
         if ($mailLog) {
-            $mailLog->update(['did_bounce' => true]);
+            $mailLog->update(['did_complain' => true]);
         }
 
         return $mailLog;
