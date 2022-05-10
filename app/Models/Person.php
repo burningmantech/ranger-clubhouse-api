@@ -383,6 +383,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $model->pronouns_custom = '';
             }
 
+            // Clear the bouncing flag when the email changes.
+            if ($model->isDirty('email')) {
+                $model->is_bouncing = false;
+            }
+
             /*
              * When the status is updated to Past Prospective and the callsign is
              * not being changed, reset the callsign and un-approve it.
