@@ -6,14 +6,10 @@ use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\MailLog;
 use App\Models\Person;
-use Aws\Sns\Exception\InvalidSnsMessageException;
-use Aws\Sns\Message;
-use Aws\Sns\MessageValidator;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use InvalidArgumentException;
 
 class MailLogController extends ApiController
 {
@@ -68,24 +64,6 @@ class MailLogController extends ApiController
 
     public function snsNotification(): JsonResponse
     {
-        try {
-            $message = Message::fromRawPostData();
-        } catch (InvalidArgumentException $e) {
-            ErrorLog::recordException($e, 'sns-message-exception', [ 'content' => request()->getContent() ]);
-            return response()->json([], 200);
-        }
-
-        try {
-            $validator = new MessageValidator();
-            $validator->validate($message);
-        } catch (InvalidSnsMessageException $e) {
-            ErrorLog::recordException($e, 'sns-message-validation-exception', [
-                'message' => $message
-            ]);
-
-            return response()->json([], 200);
-        }
-
         $sns = json_decode(request()->getContent());
 
         switch ($sns->Type) {
