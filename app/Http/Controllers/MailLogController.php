@@ -66,6 +66,8 @@ class MailLogController extends ApiController
     {
         $sns = json_decode(request()->getContent());
 
+        ErrorLog::record('sns-notification', [ 'body' => request()->getContent()]);
+
         switch ($sns->Type) {
             case 'Notification':
                 $body = json_decode($sns->Message);
