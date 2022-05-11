@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
+use App\Lib\Alpha;
+use App\Lib\ProspectiveNewVolunteer;
 use App\Models\Person;
 use App\Models\PersonMentor;
-
-use App\Lib\Alpha;
-use http\Exception\RuntimeException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
@@ -16,9 +14,12 @@ class MentorController extends ApiController
 {
     /**
      * Retrieve all potential alphas
+     *
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function mentees()
+
+    public function mentees(): JsonResponse
     {
         $this->authorize('isMentor');
         $params = request()->validate([
@@ -48,17 +49,20 @@ class MentorController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function alphas()
+    public function alphas(): JsonResponse
     {
         $this->authorize('isMentor');
         return response()->json(['alphas' => Alpha::retrieveAllAlphas()]);
     }
 
-    /*
+    /**
      * Find all the current year alpha shift and who is signed up (if any)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function alphaSchedule()
+    public function alphaSchedule(): JsonResponse
     {
         $this->authorize('isMentor');
         $year = $this->getYear();
@@ -66,23 +70,29 @@ class MentorController extends ApiController
         return response()->json(['slots' => Alpha::retrieveAlphaScheduleForYear($year)]);
     }
 
-    /*
+    /**
      * Find the current mentors and if they are on duty.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function mentors()
+    public function mentors(): JsonResponse
     {
         $this->authorize('isMentor');
         return response()->json(['mentors' => Alpha::retrieveMentors()]);
     }
 
-    /*
+    /**
      * Assign or update the mentors a person
+     *
+     * @throws AuthorizationException
      */
 
-    public function mentorAssignment()
+    public function mentorAssignment(): JsonResponse
     {
         $this->authorize('isMentor');
+
         $params = request()->validate([
             'assignments.*.person_id' => 'required|integer',
             'assignments.*.status' => [
@@ -172,7 +182,8 @@ class MentorController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function verdicts()
+
+    public function verdicts(): JsonResponse
     {
         $this->authorize('isMentor');
 
@@ -180,12 +191,13 @@ class MentorController extends ApiController
     }
 
     /**
-     *  Mint Shiny Pennies, Bonk Alphas for fun and profit!
+     * Mint Shiny Pennies, Bonk Alphas for fun and profit!
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function convert()
+    public function convertAlphas(): JsonResponse
     {
         $this->authorize('isMentor');
 
@@ -223,4 +235,38 @@ class MentorController extends ApiController
 
         return response()->json(['alphas' => $results]);
     }
+
+    /**
+     * Find prospective accounts who are eligible to become Alphas
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function eligibleAlphas() : JsonResponse
+    {
+        $this->authorize('isMentor');
+
+        return response()->json([ 'prospectives' => ProspectiveNewVolunteer::retrievePotentialAlphas() ]);
+    }
+
+    /**
+     * Find prospective accounts who are eligible to become Alphas
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function convertProspectives() : JsonResponse
+    {
+        $this->authorize('isMentor');
+
+        $params = request()->validate([
+            'prospectives' => 'required|array',
+            'prospectives.*' => 'integer'
+        ]);
+
+        return response()->json([ 'alphas' => ProspectiveNewVolunteer::convertProspectivesToAlphas($params['prospectives']) ]);
+    }
+
 }
