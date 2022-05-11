@@ -216,10 +216,11 @@ class Intake
      *
      * @param array $pnvIds PNV ids to find
      * @param int $year
+     * @param bool $onlyFlagged
      * @return array
      */
 
-    public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true)
+    public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true): array
     {
         // Find the ALL intake records for the folks in question.
         $peopleIntake = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)

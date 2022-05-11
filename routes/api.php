@@ -163,10 +163,13 @@ Route::group([
 
     Route::get('mentor/alphas', 'MentorController@alphas');
     Route::get('mentor/alpha-schedule', 'MentorController@alphaSchedule');
+    Route::get('mentor/eligible-alphas', 'MentorController@eligibleAlphas');
     Route::get('mentor/mentees', 'MentorController@mentees');
     Route::get('mentor/mentors', 'MentorController@mentors');
     Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
-    Route::post('mentor/convert', 'MentorController@convert');
+    Route::post('mentor/convert-alphas', 'MentorController@convertAlphas');
+    Route::post('mentor/convert-prospectives', 'MentorController@convertProspectives');
+
     Route::get('mentor/verdicts', 'MentorController@verdicts');
 
     Route::get('motd/bulletin', 'MotdController@bulletin');
