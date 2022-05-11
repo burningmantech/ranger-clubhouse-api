@@ -62,17 +62,19 @@
                 <tr>
                     <td>{{$log->created_at}}</td>
                     <td>
-                        @if ($log->person)
-                            {{$log->person->callsign}}
+                        @if ($log->target_person)
+                            {{$log->target_person->callsign}}
+                        @elseif ($log->target_person_id)
+                            Person #{{$log->target_person_id}}
                         @else
-                            Person #{{$log->person_id}}
+                            <i>- unknown -</i>
                         @endif
                     </td>
                     <td>
                         {{$log->event}}
                     </td>
                     <td>
-                        {{$log->data?->to_email}}
+                        {{$log->data['to_email']}}
                     </td>
                 </tr>
             @endforeach
