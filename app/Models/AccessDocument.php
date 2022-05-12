@@ -556,10 +556,13 @@ class AccessDocument extends ApiModel
      * Add a comment to the comments column.
      */
 
-    public function addComment($comment, $callsign)
+    public function addComment($comment, $user)
     {
+        if ($user instanceof Person) {
+            $user = $user->callsign;
+        }
         $date = date('n/j/y G:i:s');
-        $this->comments = "$date $callsign: $comment\n{$this->comments}";
+        $this->comments = "$date $user: $comment\n{$this->comments}";
     }
 
     /**

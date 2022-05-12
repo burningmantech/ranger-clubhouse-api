@@ -84,7 +84,7 @@ class GrantPasses
     public static function grantWAPsToRangers(): mixed
     {
         $people = self::findRangersWhoNeedWAPs();
-        self::grantAccessDocumentToPeople($people, AccessDocument::WAP, null, current_year());
+        self::grantAccessDocumentToPeople($people, AccessDocument::WAP, setting('TAS_DefaultWAPDate'), current_year());
 
         return $people;
     }
