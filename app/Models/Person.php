@@ -762,6 +762,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function convertDiacritics(string $value): string
     {
+        $value = preg_replace('/©/', '@', $value);
         return preg_replace('/[\x{0300}-\x{036f}]/u', '', Normalizer::normalize($value, Normalizer::FORM_D));
     }
 
