@@ -1,11 +1,10 @@
 <?php
 
-
 namespace App\Lib\Reports;
-
 
 use App\Models\Position;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -73,7 +72,7 @@ class ShiftCoverageReport
         [Position::RSCI, 'RSCI', self::CALLSIGNS],
         [Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS],
         [Position::RSC_WESL, 'WESL', self::CALLSIGNS],
-        [[ Position::OPERATOR, Position::OPERATOR_SMOOTH], 'Opr', self::CALLSIGNS, [ Position::OPERATOR_SMOOTH => 'Smooth']],
+        [[Position::OPERATOR, Position::OPERATOR_SMOOTH], 'Opr', self::CALLSIGNS, [Position::OPERATOR_SMOOTH => 'Smooth']],
         [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE], 'TS', self::CALLSIGNS, [Position::TROUBLESHOOTER_MENTEE => 'Mentee']],
         [[Position::LEAL, Position::LEAL_PARTNER], 'LEAL', self::CALLSIGNS, [Position::LEAL_PARTNER => 'Partner']],
         [[Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN], 'GDL', self::CALLSIGNS, [Position::GREEN_DOT_LEAD_INTERN => 'Intern']],
@@ -129,7 +128,7 @@ class ShiftCoverageReport
         'gerlach-patrol' => [Position::GERLACH_PATROL, self::GERLACH_PATROL],
         'echelon' => [Position::ECHELON_FIELD, self::ECHELON],
         'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
-        'command' => [[Position::DIRT, Position::DIRT_POST_EVENT,Position::OPERATOR_SMOOTH], self::COMMAND],
+        'command' => [[Position::DIRT, Position::DIRT_POST_EVENT, Position::OPERATOR_SMOOTH], self::COMMAND],
     ];
 
     public static function execute(int $year, string $type): array
@@ -180,7 +179,15 @@ class ShiftCoverageReport
         ];
     }
 
-    public static function getShiftsByPosition($year, $positionId)
+    /**
+     * Get shifts by position for a given year.
+     *
+     * @param $year
+     * @param $positionId
+     * @return Collection
+     */
+
+    public static function getShiftsByPosition($year, $positionId): Collection
     {
         $sql = DB::table('slot')
             ->select('slot.*',
@@ -198,41 +205,46 @@ class ShiftCoverageReport
         return $sql->orderBy('begins')->get();
     }
 
-    /*
-      * Return list of Rangers scheduled for a given position
-      * and time range.
-      */
+    /**
+     * Return list of Rangers scheduled for a given position and time range.
+     *
+     * @param $positionId
+     * @param $begins
+     * @param $ends
+     * @param $flag
+     * @param $parenthetical
+     * @return array|int
+     */
 
-    public static function getSignUps($positionId, $begins, $ends, $flag, $parenthetical)
+    public static function getSignUps($positionId, $begins, $ends, $flag, $parenthetical): array|int
     {
         $begins = Carbon::parse($begins)->addMinutes(90);
         $ends = Carbon::parse($ends)->subMinutes(90);
 
         $sql = DB::table('slot')
-            ->join('person_slot', 'slot.id', 'person_slot.slot_id')
-            ->join('person', 'person.id', 'person_slot.person_id')
-            ->where(function ($q) use ($begins, $ends) {
-                // Shift spans the entire period
-                $q->where(function ($q) use ($begins, $ends) {
+            // Shift spans the entire period
+            ->where(function ($w) use ($begins, $ends) {
+                $w->where(function ($q) use ($begins, $ends) {
                     $q->where('slot.begins', '<=', $begins);
                     $q->where('slot.ends', '>=', $ends);
-                });
-                // Shift happens within the period
-                $q->orwhere(function ($q) use ($begins, $ends) {
-                    $q->where('slot.begins', '>=', $begins);
-                    $q->where('slot.ends', '<=', $ends);
-                });
-                // Shift ends within the period
-                $q->orwhere(function ($q) use ($begins, $ends) {
-                    $q->where('slot.ends', '>', $begins);
-                    $q->where('slot.ends', '<=', $ends);
-                });
-                // Shift begins within the period
-                $q->orwhere(function ($q) use ($begins, $ends) {
-                    $q->where('slot.begins', '>=', $begins);
-                    $q->where('slot.begins', '<', $ends);
-                });
+                })
+                    // Shift happens within the period
+                    ->orwhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.begins', '>=', $begins);
+                        $q->where('slot.ends', '<=', $ends);
+                    })
+                    // Shift ends within the period
+                    ->orwhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.ends', '>', $begins);
+                        $q->where('slot.ends', '<=', $ends);
+                    })
+                    // Shift begins within the period
+                    ->orwhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.begins', '>=', $begins);
+                        $q->where('slot.begins', '<', $ends);
+                    });
             });
+
 
         if (is_array($positionId)) {
             $sql->whereIn('slot.position_id', $positionId);
@@ -240,39 +252,64 @@ class ShiftCoverageReport
             $sql->where('slot.position_id', $positionId);
         }
 
-        if ($flag == self::COUNT) {
-            return $sql->count('person.id');
+        $slots = $sql->get();
+
+        if ($slots->isEmpty()) {
+            if ($flag == self::COUNT) {
+                return 0;
+            }
+
+            return [];
         }
 
-        $rows = $sql->select('person.id', 'callsign', 'callsign_pronounce', 'slot.begins', 'slot.ends', 'slot.position_id')
-            ->orderBy('slot.begins')
-            ->orderBy('slot.ends', 'desc')
-            ->orderBy('person.callsign')
+        $slotIds = $slots->pluck('id');
+        if ($flag == self::COUNT) {
+            return DB::table('person_slot')->whereIntegerInRaw('slot_id', $slotIds)->count();
+        }
+
+        $slotsById = $slots->keyBy('id');
+
+        $people = DB::table('person_slot')
+            ->whereIntegerInRaw('slot_id', $slotIds)
+            ->select('person_slot.*', 'person.callsign', 'person.callsign_pronounce')
+            ->join('person', 'person.id', 'person_slot.person_id')
             ->get();
 
         $shifts = [];
-        $groups = $rows->groupBy('begins');
-
-        foreach ($groups as $begins => $rows) {
-            $people = $rows->map(function ($row) use ($parenthetical) {
-                $i = [
-                    'id' => $row->id,
-                    'callsign' => $row->callsign,
-                    'parenthetical' => $parenthetical[$row->position_id] ?? '',
+        foreach ($people as $personSlot) {
+            $slot = $slotsById[$personSlot->slot_id];
+            $begins = (string)$slot->begins;
+            if (!isset($shifts[$begins])) {
+                $shifts[$begins] = [
+                    'people' => [],
+                    'begins' => $begins,
+                    'ends' => (string)$slot->ends,
                 ];
+            }
 
-                if (!empty($row->callsign_pronounce)) {
-                    $i['callsign_pronounce'] = $row->callsign_pronounce;
-                }
-
-                return $i;
-            });
-
-            $shifts[] = [
-                'people' => $people,
-                'begins' => (string)$begins,
-                'ends' => (string)$rows[0]->ends
+            $p = [
+                'id' => $personSlot->person_id,
+                'callsign' => $personSlot->callsign,
             ];
+
+            $parens = $parenthetical[$slot->position_id] ?? null;
+            if ($parens) {
+                $p['parenthetical'] = $parens;
+            }
+
+            if (!empty($personSlot->callsign_pronounce)) {
+                $p['callsign_pronounce'] = $personSlot->callsign_pronounce;
+            }
+
+            $shifts[$begins]['people'][] = $p;
+        }
+
+        ksort($shifts);
+
+        $shifts = array_values($shifts);
+
+        foreach ($shifts as $shift) {
+            usort($shift['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
         }
 
         return $shifts;
