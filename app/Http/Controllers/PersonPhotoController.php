@@ -197,7 +197,7 @@ class PersonPhotoController extends ApiController
         if ($personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, PersonPhoto::SIZE_PROFILE) === false) {
             ErrorLog::record('person-photo-store-error', [
                 'person_id' => $this->user->id,
-                'target_person_id' => $personId,
+                'target_person_id' => $personPhoto->person_id,
             ]);
 
             return response()->json(['status' => 'storage-fail'], 500);

@@ -2,7 +2,9 @@
 
 namespace App\Lib\Reports;
 
+use App\Models\Certification;
 use App\Models\Person;
+use App\Models\PersonCertification;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Training;
@@ -40,15 +42,17 @@ class ShiftLeadReport
         $positions = [];
         $slots = [];
 
+        $certifications = Certification::where('on_sl_report', true)->get();
+
         return [
             // Positions and head counts
             'incoming_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, false, $positions, $slots),
             'below_min_positions' => self::retrievePositionsScheduled($shiftStart, $shiftEnd, true, $positions, $slots),
 
             // People signed up
-            'non_dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::NON_DIRT, $positions, $slots),
-            'command_staff_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::COMMAND, $positions, $slots),
-            'dirt_signups' => self::retrieveRangersScheduled($shiftStart, $shiftEnd, self::DIRT_AND_GREEN_DOT, $positions, $slots),
+            'non_dirt_signups' => self::retrievePeopleScheduled($shiftStart, $shiftEnd, self::NON_DIRT, $positions, $slots, $certifications),
+            'command_staff_signups' => self::retrievePeopleScheduled($shiftStart, $shiftEnd, self::COMMAND, $positions, $slots, $certifications),
+            'dirt_signups' => self::retrievePeopleScheduled($shiftStart, $shiftEnd, self::DIRT_AND_GREEN_DOT, $positions, $slots, $certifications),
 
             // Green Dot head counts
             'green_dot_total' => $totalGreenDots,
@@ -100,12 +104,14 @@ class ShiftLeadReport
      * @param string $type
      * @param $positions
      * @param $slots
+     * @param $certifications
      * @return array
      */
 
-    public static function retrieveRangersScheduled(Carbon $shiftStart, Carbon $shiftEnd, string $type, &$positions, &$slots): array
+    public static function retrievePeopleScheduled(Carbon $shiftStart, Carbon $shiftEnd, string $type, &$positions, &$slots, $certifications): array
     {
         $year = $shiftStart->year;
+
 
         $sql = Slot::select(
             'slot.*',
@@ -158,7 +164,6 @@ class ShiftLeadReport
         }
 
         $sql->orderBy('callsign');
-
         $rows = $sql->get();
 
         if ($rows->count() == 0) {
@@ -175,17 +180,40 @@ class ShiftLeadReport
                 Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
             ])    // Don't need report on dirt
             ->whereIn('person_position.person_id', $personIds);
+
         if ($isCurrentYear) {
             $sql->where('position.active', true);
         }
+
         $peoplePositions = $sql->get()->groupBy('person_id');
 
         $greenDotTrainingPassed = Training::didIdsPassForYear($personIds, Position::GREEN_DOT_TRAINING, $year);
         $rangers = [];
 
+        if ($certifications->isNotEmpty()) {
+            $peopleCertifications = PersonCertification::whereIn('certification_id', $certifications->pluck('id'))
+                ->whereIntegerInRaw('person_id', $personIds)
+                ->get()
+                ->groupBy('person_id');
+        } else {
+            $peopleCertifications = collect([]);
+        }
+
+        $certificationsById = $certifications->keyBy('id');
+
         foreach ($rows as $row) {
             self::addSlot($row, $slots, $shiftStart);
             self::addPosition($row->position, $positions);
+
+            $certs = [];
+            $personCerts = $peopleCertifications->get($row->person_id);
+            if ($personCerts){
+                foreach ($personCerts as $pc) {
+                    $cert = $certificationsById[$pc->certification_id];
+                    $certs[] = $cert->sl_title ?? $cert->title;
+                }
+                usort($certs, fn ($a,$b) => strcasecmp($a,$b));
+            }
 
             $ranger = (object)[
                 'id' => $row->person_id,
@@ -199,7 +227,9 @@ class ShiftLeadReport
                 'signed_motorpool_agreement' => $row->signed_motorpool_agreement,
                 'org_vehicle_insurance' => $row->org_vehicle_insurance,
                 'years' => $row->years,
+                'certifications' => $certs,
             ];
+
             $rangers[] = $ranger;
 
             $havePositions = $peoplePositions[$row->person_id] ?? null;

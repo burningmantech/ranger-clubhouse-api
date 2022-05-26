@@ -116,6 +116,9 @@ Route::group([
     Route::get('callsigns', 'CallsignsController@index');
     Route::get('handles', 'HandleController@index');
 
+    Route::post('certification/people', 'CertificationController@peopleReport');
+    Route::resource('certification', 'CertificationController');
+
     Route::post('contact/send', 'ContactController@send');
     Route::post('contact/{person}/update-mailing-lists', 'ContactController@updateMailingLists');
 
@@ -217,6 +220,8 @@ Route::group([
     Route::get('person/{person}/event-info', 'PersonController@eventInfo');
 
     Route::resource('person', 'PersonController', ['only' => ['index', 'show', 'store', 'update', 'destroy']]);
+
+    Route::resource('person-certification', 'PersonCertificationController');
 
     Route::resource('person-event', 'PersonEventController');
 

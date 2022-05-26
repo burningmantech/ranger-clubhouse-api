@@ -4,24 +4,10 @@ namespace App\Http\RestApi;
 
 use Illuminate\Database\Eloquent\Model;
 
-use Carbon\Carbon;
-
 class SerializeRecord
 {
-
-    /*
-     * The record to be serialized
-     * @var Model
-     */
-
-     const DATETIME_FORMAT = 'Y-m-d H:i:s';
-     const DATE_FORMAT = 'Y-m-d';
-
-    protected $record;
-
-    public function __construct(Model $record)
+    public function __construct(protected Model $record)
     {
-        $this->record = $record;
     }
 
     /*
@@ -39,68 +25,28 @@ class SerializeRecord
     public function toRest(Model $authorizedUser = null): array
     {
         $modelName = class_basename($this->record);
-
+        $recordArray = $this->record->toArray();
         if ($authorizedUser) {
-            $modelFilter = "\\App\\Http\\Filters\\".$modelName."Filter";
+            $modelFilter = "\\App\\Http\\Filters\\" . $modelName . "Filter";
             $columns = (new $modelFilter($this->record))->serialize($authorizedUser);
-        } else {
-            $appends = $this->record->getAppends();
-            $fillable = $this->record->getFillable();
 
-            if (empty($appends) && empty($fillable)) {
-                // Use the actual set attributes if appends & fillables are empty
-                $columns = array_keys($this->record->getAttributes());
+            $key = $this->record->getKey();
+            if (is_array($key)) {
+                // Composite key.
+                $result = $key;
             } else {
-                if ($fillable) {
-                    $columns = $fillable;
-                } else {
-                    $columns = [];
-                }
-
-                if ($appends) {
-                    $columns = array_merge($columns, $appends);
-                }
+                $result = [$this->record->getKeyName() => $key];
             }
-        }
-
-        $attributes = [ 'id' => $this->record->getKey() ];
-
-        $casts = $this->record->getCasts();
-        foreach ($columns as $column) {
-            $value = $this->record->$column;
-
-            if ($value !== null) {
-                if ($casts && isset($casts[$column])) {
-                    switch ($casts[$column]) {
-                    case 'date':
-                        $value = $value->format(self::DATE_FORMAT);
-                        break;
-                    case 'datetime':
-                        $value = $value->format(self::DATETIME_FORMAT);
-                        break;
-
-                    case 'timestamp':
-                        $value = Carbon::createFromTimestamp($value)->format(self::DATETIME_FORMAT);
-                        break;
-
-                    default:
-                        if ($value instanceof Carbon) {
-                            $value = $value->format(self::DATETIME_FORMAT);
-                        }
-                        break;
-                    }
-                } else if ($value instanceof Carbon) {
-                    $value = $value->format(self::DATETIME_FORMAT);
-                }
+            foreach ($columns as $col) {
+                $result[$col] = $recordArray[$col] ?? null;
             }
-
-            $attributes[$column] = $value;
+            return $result;
+        } else {
+            return $recordArray;
         }
-
-        return $attributes;
     }
 
-    public function toRestError()
+    public function toRestError(): array
     {
         $record = $this->record;
         $errors = $record->getErrors();
@@ -110,13 +56,13 @@ class SerializeRecord
             foreach ($errors->keys() as $key) {
                 foreach ($errors->get($key) as $message) {
                     $errorList[] = [
-                        'message'   => $message,
-                        'column'    => $key,
+                        'message' => $message,
+                        'column' => $key,
                     ];
                 }
             }
         }
 
-        return [ 'errors' => $errorList ];
+        return ['errors' => $errorList];
     }
 }

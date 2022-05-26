@@ -277,6 +277,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'mail_log',
         'manual_review',
         'mentee_status',
+        'person_certification',
         'person_event',
         'person_intake',
         'person_intake_note',
@@ -494,7 +495,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
 
-    public function save($options = [])
+    public function save($options = []) : bool
     {
         $isNew = !$this->exists;
 

@@ -219,7 +219,7 @@ class AccessDocument extends ApiModel
      * @return bool
      */
 
-    public function save($options = []) {
+    public function save($options = []) : bool {
         if ($this->is_job_provision && $this->status == self::BANKED) {
             $this->addError('status', 'Item is a job provision and cannot be banked');
             return false;

@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Database\Eloquent\Collection;
 

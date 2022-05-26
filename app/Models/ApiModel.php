@@ -92,7 +92,8 @@ abstract class ApiModel extends Model
      *
      * @return array [ 'column-name' => [ 'oldValue', 'newValue' ]]
      */
-    public function getChangedValues()
+
+    public function getChangedValues(): array
     {
         $changes = [];
         foreach ($this->getDirty() as $field => $newValue) {
@@ -165,7 +166,7 @@ abstract class ApiModel extends Model
         ActionLog::record(Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
     }
 
-    public function save($options = [])
+    public function save($options = []): bool
     {
         if (!$this->validate()) {
             return false;

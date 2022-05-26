@@ -240,7 +240,7 @@ class Vehicle extends ApiModel
      * @return bool
      */
 
-    public function save($options = [])
+    public function save($options = []) : bool
     {
         if (!empty($this->callsign)) {
             // Find the callsign

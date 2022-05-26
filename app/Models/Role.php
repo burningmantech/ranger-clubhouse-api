@@ -26,6 +26,7 @@ class Role extends ApiModel
     const SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
     const MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
     const TRAINER_SEASONAL = 109; // Treated as TRAINER if setting TrainingSeasonalRoleEnabled is true
+    const CERTIFICATION_MGMT = 110; // Person can add certifications on a person's behalf, and view detailed info (card number, notes, etc.)
 
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 

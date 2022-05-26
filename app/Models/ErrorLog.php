@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-use App\Models\ApiModel;
-
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -102,7 +99,8 @@ class ErrorLog extends ApiModel
         try {
             self::create($error);
         } catch (QueryException $e) {
-            Log::emergency("error log create exception $e");
+            //Log::emergency("error log create exception ".$e->getMessage());
+            //error_log('ERROR LOG '.$e->getTraceAsString());
         }
     }
 
