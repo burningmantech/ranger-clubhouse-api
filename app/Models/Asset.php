@@ -94,7 +94,7 @@ class Asset extends ApiModel
         return $this->hasOne(AssetPerson::class, 'asset_id')->whereNull('checked_in');
     }
 
-    public function save($options = [])
+    public function save($options = []) : bool
     {
         // Ensure the barcode is unique for the year
         if (!$this->exists || $this->isDirty('barcode') || $this->isDirty('create_date')) {

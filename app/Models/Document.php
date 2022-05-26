@@ -24,7 +24,7 @@ class Document extends ApiModel
         'body' => 'required|string'
     ];
 
-    public function save($options = [])
+    public function save($options = []) : bool
     {
         if (!$this->exists || $this->isDirty('tag')) {
             $this->rules['tag'] = [
