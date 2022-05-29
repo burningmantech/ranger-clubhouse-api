@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Position;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class PositionFactory extends Factory
 {
@@ -13,7 +12,7 @@ class PositionFactory extends Factory
     public function definition()
     {
         return [
-            'title' => (string)Str::uuid(),
+            'title' => $this->faker->unique()->word(),
             'max' => 1,
             'min' => 0,
             'active' => true
