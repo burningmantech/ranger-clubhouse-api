@@ -66,6 +66,35 @@ class AccessDocumentController extends ApiController
     }
 
     /**
+     * Add a comment to a given set of access documents.
+     * (primarily used by the export feature to record who did an export.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function bulkComment() : JsonResponse
+    {
+        $this->authorize('bulkComment', AccessDocument::class);
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'comment' => 'required|string'
+        ]);
+
+        $comment = $params['comment'];
+        $rows = AccessDocument::whereIntegerInRaw('id', $params['ids'])
+            ->get();
+
+        foreach ($rows as $row) {
+            $row->addComment($comment, $this->user);
+            $row->saveWithoutValidation();
+        }
+
+        return response()->json([ 'status' => 'success']);
+    }
+
+    /**
      * Mark a list of claimed documents as submitted. Intended to run immediately after
      * the CSV upload was done.
      *

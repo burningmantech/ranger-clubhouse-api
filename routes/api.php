@@ -65,6 +65,7 @@ Route::group([
     Route::get('access-document/current', 'AccessDocumentController@current');
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
+    Route::post('access-document/bulk-comment', 'AccessDocumentController@bulkComment');
     Route::post('access-document/grant-waps', 'AccessDocumentController@grantWAPs');
     Route::post('access-document/grant-alpha-waps', 'AccessDocumentController@grantAlphaWAPs');
     Route::post('access-document/grant-vps', 'AccessDocumentController@grantVehiclePasses');
@@ -109,7 +110,8 @@ Route::group([
     Route::get('broadcast', 'BroadcastController@index');
     Route::get('broadcast/messages', 'BroadcastController@messages');
 
-    Route::post('bulk-upload', 'BulkUploadController@update');
+    Route::get('bulk-upload/actions', 'BulkUploadController@actions');
+    Route::post('bulk-upload', 'BulkUploadController@process');
 
     Route::resource('document', 'DocumentController');
 

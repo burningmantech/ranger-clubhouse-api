@@ -93,6 +93,11 @@ class AccessDocumentPolicy
         return ($user->id == $personId);
     }
 
+    public function bulkComment(Person $user)
+    {
+        return false;
+    }
+
     public function markSubmitted(Person $user)
     {
         return false;

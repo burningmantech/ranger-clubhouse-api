@@ -6,16 +6,17 @@ use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\ActionLog;
 use App\Models\Bmid;
+use App\Models\Certification;
 use App\Models\Person;
+use App\Models\PersonCertification;
 use App\Models\PersonEvent;
-
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
-
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
+use RuntimeException;
 
 class BulkUploader
 {
@@ -32,11 +33,95 @@ class BulkUploader
     const PROCESS_PROVISIONS_ACTION = 'processProvisions';
     const PROCESS_TICKETS_ACTION = 'processTickets';
     const PROCESS_WAP_ACTION = 'processWAPs';
+    const CERTIFICATION_ACTION = 'processCertifications';
+
+    const HELP_CALLSIGN = 'callsign';
+    const HELP_RADIO = 'callsign,radio count';
+    const HELP_CERTIFICATION = "callsign,issued on date,card number,trained on date\ndate format = YYYY-MM-DD\nAll fields, other than the callsign, are optional and may be left blank.
+    Examples: hubcap,,12345 to record the card number\nhubcap,2022-01-4,,2021-12-20 to record the issued on and trained on dates.";
+
+    // Note: certification actions will be added by the BulkUploadControl actions method.
+
+    const ACTION_DESCRIPTIONS = [
+        [
+            'label' => 'Earned Provisions Actions',
+            'options' => [
+                ['id' => 'all_eat_pass', 'label' => 'Award All Eat Pass (Earned)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'event_eat_pass', 'label' => 'Award Event Eat Pass (Earned)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'wet_spot', 'label' => 'Award Wet Spot (Earned)', 'help' => self::HELP_CALLSIGN],
+                [
+                    'id' => 'event_radio',
+                    'label' => 'Event Radio eligibility (Earned)',
+                    'help' => self::HELP_RADIO
+                ]
+            ]
+        ],
+        [
+            'label' => 'Allocated Provisions Actions',
+            'options' => [
+                ['id' => 'alloc_all_eat_pass', 'label' => 'Grant All Eat Pass (Allocated)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_event_eat_pass', 'label' => 'Grant Event Eat Pass (Allocated)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_wet_spot', 'label' => 'Grant Wet Spot (Allocated)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_event_radio', 'label' => 'Grant Event Radio (Allocated)', 'help' => self::HELP_RADIO]
+            ]
+        ],
+        [
+            'label' => 'BMID Actions',
+            'options' => [
+                ['id' => 'meals', 'label' => 'Set meals on BMID',
+                    'help' => "callsign,meals\nmeals = pre, post, event, all\nAdd plus (+) or minus (-) to add or subtract a meal period\n(e.g., hubcap,-event will remove the event week meal period",
+                ],
+                ['id' => 'showers', 'label' => 'Set showers on BMID',
+                    'help' => "callsign,y/n/1/0"
+                ],
+                ['id' => 'bmidsubmitted', 'label' => 'Mark BMID as submitted', 'help' => self::HELP_CALLSIGN],
+            ]
+        ],
+        [
+            'label' => 'Ticket Actions',
+            'options' => [
+                [
+                    'id' => 'tickets',
+                    'label' => 'Create Access Documents',
+                    'help' => "callsign,type[,wap date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)",
+                ],
+                [
+                    'id' => 'wap',
+                    'label' => 'Update WAP dates',
+                    'help' => "callsign,date\ndate = YYYY-MM-DD or any (for anytime access)"
+                ],
+            ]
+        ],
+        [
+            'label' => 'Vehicle Paperwork Flags',
+            'options' => [
+                ['id' => 'signed_motorpool_agreement', 'label' => 'Signed Motorpool Agreement (gators/golf carts)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'org_vehicle_insurance', 'label' => 'Has Org Vehicle Insurance (MVR)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'may_request_stickers', 'label' => 'May Request Vehicle Use Items', 'help' => self::HELP_CALLSIGN],
+            ]
+        ],
+        [
+            'label' => 'Affidavits',
+            'options' => [
+                ['id' => 'sandman_affidavit', 'label' => 'Signed Sandman Affidavit', 'help' => self::HELP_CALLSIGN]
+            ]
+        ],
+        [
+            'label' => 'Change Status',
+            'options' => [
+                ['id' => 'active', 'label' => 'set as active', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alpha', 'label' => 'set as alpha', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'inactive', 'label' => 'set as inactive', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'prospective', 'label' => 'set as prospective', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'retired', 'label' => 'set as retired', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'vintage', 'label' => 'set vintage flag', 'help' => self::HELP_CALLSIGN]
+            ]
+        ],
+
+    ];
 
     const ACTIONS = [
         'vintage' => self::CHANGE_PERSON_COLUMN_ACTION,
-        'osha10' => self::CHANGE_PERSON_COLUMN_ACTION,
-        'osha30' => self::CHANGE_PERSON_COLUMN_ACTION,
 
         'org_vehicle_insurance' => self::CHANGE_EVENT_COLUMN_ACTION,
         'signed_motorpool_agreement' => self::CHANGE_EVENT_COLUMN_ACTION,
@@ -60,10 +145,10 @@ class BulkUploader
         'event_radio' => self::PROCESS_PROVISIONS_ACTION,
         'wet_spot' => self::PROCESS_PROVISIONS_ACTION,
 
-        'job_all_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
-        'job_event_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
-        'job_event_radio' => self::PROCESS_PROVISIONS_ACTION,
-        'job_wet_spot' => self::PROCESS_PROVISIONS_ACTION,
+        'alloc_all_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
+        'alloc_event_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
+        'alloc_event_radio' => self::PROCESS_PROVISIONS_ACTION,
+        'alloc_wet_spot' => self::PROCESS_PROVISIONS_ACTION,
 
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
@@ -123,9 +208,13 @@ class BulkUploader
             $record->person = $callsigns[Person::normalizeCallsign($record->callsign)] ?? null;
         }
 
-        $processAction = self::ACTIONS[$action] ?? null;
-        if (!$processAction) {
-            throw new InvalidArgumentException('Unknown action');
+        if (str_starts_with($action, 'cert-')) {
+            $processAction = self::CERTIFICATION_ACTION;
+        } else {
+            $processAction = self::ACTIONS[$action] ?? null;
+            if (!$processAction) {
+                throw new InvalidArgumentException('Unknown action');
+            }
         }
 
         self::$processAction($records, $action, $commit, $reason);
@@ -186,7 +275,7 @@ class BulkUploader
         }
     }
 
-    public static function changePersonColumn($records, $action, $commit, $reason)
+    public static function changePersonColumn($records, $action, $commit, $reason): void
     {
         foreach ($records as $record) {
             $person = $record->person;
@@ -207,7 +296,7 @@ class BulkUploader
         }
     }
 
-    public static function changeEventColumn($records, $action, $commit, $reason)
+    public static function changeEventColumn($records, $action, $commit, $reason): void
     {
         $year = current_year();
         foreach ($records as $record) {
@@ -348,7 +437,7 @@ class BulkUploader
 
             $data = $record->data;
             if (empty($data)) {
-                $record->status =  self::STATUS_FAILED;
+                $record->status = self::STATUS_FAILED;
                 $record->details = 'missing ticket type';
                 continue;
             }
@@ -524,9 +613,9 @@ class BulkUploader
         $sourceYear = current_year();
         $expiryYear = $sourceYear + 3;
 
-        $isJobProvision = str_starts_with($type, 'job_');
-        if ($isJobProvision) {
-            $type = str_replace('job_', '', $type);
+        $isAllocated = str_starts_with($type, 'alloc_');
+        if ($isAllocated) {
+            $type = str_replace('alloc_', '', $type);
 
         }
         if (!in_array($type, AccessDocument::PROVISION_TYPES)) {
@@ -549,11 +638,11 @@ class BulkUploader
             $existing = null;
 
             if (!$isEventRadio) {
-                $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isJobProvision);
+                $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
                 if ($existing && !$commit) {
                     $record->status = self::STATUS_WARNING;
-                    if ($isJobProvision) {
-                        $record->details = 'Already has ' . $existing->getTypeLabel() . ' job provision. Existing item will be cancelled and replaced.';
+                    if ($isAllocated) {
+                        $record->details = 'Already has ' . $existing->getTypeLabel() . ' allocated provision. Existing item will be cancelled and replaced.';
                     } else {
                         $record->details = 'Has ' . $existing->getTypeLabel() . ' earned year ' . $existing->source_year . '. Existing item will be cancelled and replaced.';
                     }
@@ -568,7 +657,7 @@ class BulkUploader
 
             $ad = null;
             if ($isEventRadio) {
-                $ad = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO, $isJobProvision);
+                $ad = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO, $isAllocated);
             }
 
             if (!$ad) {
@@ -578,7 +667,7 @@ class BulkUploader
                     'status' => AccessDocument::QUALIFIED,
                     'expiry_date' => $expiryYear,
                     'source_year' => $sourceYear,
-                    'is_job_provision' => $isJobProvision,
+                    'is_allocated' => $isAllocated,
                 ]);
             }
 
@@ -599,6 +688,135 @@ class BulkUploader
             $record->details = "Existing item #" . $existing->id . " " . $existing->getTypeLabel()
                 . " cancelled and replaced with #" . $ad->id . " " . $ad->getTypeLabel();
             $existing->saveWithoutValidation();
+        }
+    }
+
+    /**
+     * Process uploading certification records
+     *
+     * @param $records
+     * @param $type
+     * @param $commit
+     * @param $reason
+     * @return void
+     */
+
+    public static function processCertifications($records, $type, $commit, $reason): void
+    {
+        $id = str_replace('cert-', '', $type);
+
+        $cert = Certification::find($id);
+        if (!$cert) {
+            throw new RuntimeException("Certification ID [$id] for bulk uploading cannot be found?!?");
+        }
+
+        foreach ($records as $record) {
+            $person = $record->person;
+            if (!$person) {
+                continue;
+            }
+
+            $record->status = self::STATUS_SUCCESS; // assume success
+
+            $data = $record->data;
+            $fieldCount = count($data);
+            $cardNumber = null;
+            $trainedOn = null;
+            $issuedOn = null;
+
+            switch ($fieldCount) {
+                case 3:
+                    $trainedOn = $data[2];
+                    if (!self::dateIsValid($trainedOn)) {
+                        $record->status = self::STATUS_FAILED;
+                        $record->details = 'Invalid trained on date';
+                    }
+                // fall-thru
+                case 2:
+                    $cardNumber = $data[1];
+                // fall-thru
+                case 1:
+                    $issuedOn = $data[0];
+                    if (!self::dateIsValid($issuedOn)) {
+                        $record->status = self::STATUS_FAILED;
+                        $record->details = 'Invalid issued on date';
+                    }
+                    break;
+            }
+
+            $personId = $record->person->id;
+            $pc = PersonCertification::findCertificationForPerson($cert->id, $personId);
+            if ($pc && $record->status == self::STATUS_SUCCESS) {
+                $fields = [];
+                if (!empty($cardNumber)) {
+                    $fields[] = 'Card number';
+                }
+
+                if (!empty($trainedOn)) {
+                    $fields[] = 'Trained on date';
+                }
+
+                if (!empty($issuedOn)) {
+                    $fields[] = 'Issued on date';
+                }
+
+                $record->details = 'Certification already exists. ';
+                if (empty($fields)) {
+                    $record->details .= 'No record fields will be updated.';
+                } else {
+                    $record->details .= implode(", ", $fields) . " will be updated.";
+                }
+                $record->status = self::STATUS_WARNING;
+            }
+
+            if (!$commit) {
+                continue;
+            }
+
+            if (!$pc) {
+                $pc = new PersonCertification;
+                $pc->person_id = $personId;
+                $pc->certification_id = $cert->id;
+                $pc->recorder_id = Auth::id();
+            }
+
+            if (!empty($cardNumber)) {
+                $pc->card_number = $cardNumber;
+            }
+
+            if (!empty($trainedOn)) {
+                $pc->trained_on = $trainedOn;
+            }
+
+            if (!empty($issuedOn)) {
+                $pc->issued_on = $issuedOn;
+            }
+
+
+            $pc->auditReason = $reason;
+            $pc->saveWithoutValidation();
+            $record->status = self::STATUS_SUCCESS;
+        }
+    }
+
+    /**
+     * If the date is non-blank, see if it's valid.
+     *
+     * @param string|null $date
+     * @return bool
+     */
+
+    public static function dateIsValid(string|null $date): bool
+    {
+        if (empty($date)) {
+            return true;
+        }
+
+        try {
+            Carbon::parse($date);
+            return true; // looks good
+        } catch (InvalidFormatException) {
+            return false; // wah, wah.
         }
     }
 }
