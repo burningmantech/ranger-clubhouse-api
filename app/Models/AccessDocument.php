@@ -114,7 +114,7 @@ class AccessDocument extends ApiModel
     protected $fillable = [
         'person_id',
         'type',
-        'is_job_provision',
+        'is_allocated',
         'status',
         'source_year',
         'access_date',
@@ -141,7 +141,7 @@ class AccessDocument extends ApiModel
         'modified_date' => 'datetime',
         'past_expire_date' => 'boolean',
         'access_any_time' => 'boolean',
-        'is_job_provision' => 'boolean',
+        'is_allocated' => 'boolean',
     ];
 
     protected $hidden = [
@@ -220,8 +220,8 @@ class AccessDocument extends ApiModel
      */
 
     public function save($options = []) : bool {
-        if ($this->is_job_provision && $this->status == self::BANKED) {
-            $this->addError('status', 'Item is a job provision and cannot be banked');
+        if ($this->is_allocated && $this->status == self::BANKED) {
+            $this->addError('status', 'Item is an allocated provision and cannot be banked');
             return false;
         }
 
@@ -330,10 +330,11 @@ class AccessDocument extends ApiModel
      *
      * @param int $personId
      * @param array|string $type
+     * @param null $isAllocated
      * @return AccessDocument|null
      */
 
-    public static function findAvailableTypeForPerson(int $personId, array|string $type, $isJobProvision = null): ?AccessDocument
+    public static function findAvailableTypeForPerson(int $personId, array|string $type, $isAllocated = null): ?AccessDocument
     {
         if (!is_array($type)) {
             $type = [$type];
@@ -348,8 +349,8 @@ class AccessDocument extends ApiModel
                 self::SUBMITTED
             ]);
 
-        if ($isJobProvision !== null) {
-            $sql->where('is_job_provision', $isJobProvision);
+        if ($isAllocated !== null) {
+            $sql->where('is_allocated', $isAllocated);
         }
 
         return $sql->first();

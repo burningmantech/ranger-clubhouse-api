@@ -2,10 +2,9 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-
 use App\Models\Position;
-
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class PositionFactory extends Factory
 {
@@ -14,7 +13,7 @@ class PositionFactory extends Factory
     public function definition()
     {
         return [
-            'title' => $this->faker->text(10),
+            'title' => (string)Str::uuid(),
             'max' => 1,
             'min' => 0,
             'active' => true

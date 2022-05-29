@@ -42,11 +42,23 @@ class Certification extends ApiModel
     }
 
     /**
+     * Find a certification by its title.
+     *
+     * @param string $title
+     * @return Certification|null
+     */
+
+    public static function findByTitle(string $title) : ?Certification
+    {
+        return self::where('title', $title)->first();
+    }
+
+    /**
      * Get the total number of people who have this certification.
      * @return int
      */
 
-    public function getTotalPeopleAttribute() : int
+    public function getTotalPeopleAttribute(): int
     {
         return PersonCertification::where('certification_id', $this->id)->count();
     }

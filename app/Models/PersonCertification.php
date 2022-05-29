@@ -56,6 +56,19 @@ class PersonCertification extends ApiModel
         return $this->belongsTo(Certification::class);
     }
 
+    /**
+     * Find a certification for a given person
+     *
+     * @param int $certificationId
+     * @param int $personId
+     * @return PersonCertification|null
+     */
+
+    public static function findCertificationForPerson(int $certificationId, int $personId) : ?PersonCertification
+    {
+        return self::where('person_id', $personId)->where('certification_id', $certificationId)->first();
+    }
+
     public function save($options = []): bool
     {
         if ($this->isDirty('certification_id') || $this->isDirty('person_id')) {

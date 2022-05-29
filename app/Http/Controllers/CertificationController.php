@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\PersonCertification;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class CertificationController extends ApiController
 {
@@ -92,6 +93,7 @@ class CertificationController extends ApiController
     {
         $this->authorize('delete', $certification);
         $certification->delete();
+        DB::table('person_certification')->where('certification_id', $certification->id)->delete();
         return $this->restDeleteSuccess();
     }
 
