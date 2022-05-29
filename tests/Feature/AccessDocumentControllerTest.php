@@ -65,8 +65,6 @@ class AccessDocumentControllerTest extends TestCase
 
     public function testShowNonExistentAccessDocumentFailure()
     {
-        $ad = $this->createAccessDocument();
-
         $response = $this->json('GET', "access-document/99999999");
         $response->assertStatus(404);
     }
