@@ -10,6 +10,7 @@ use App\Models\Setting;
 use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class OnlineTrainingController extends ApiController
 {
@@ -221,5 +222,38 @@ class OnlineTrainingController extends ApiController
             'full_course' => !empty($fullId) ? $lms->retrieveCourseEnrollmentWithCompletion($fullId) : [],
             'half_course' => !empty($halfId) ? $lms->retrieveCourseEnrollmentWithCompletion($halfId) : [],
         ]);
+    }
+
+    /**
+     * Mark a person as having completed the online course.
+     * (Very dangerous, only use this superpower for good.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function markCompleted(Person $person): JsonResponse
+    {
+        $this->authorize('markCompleted', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Mark online course as completed');
+
+        $personId = $person->id;
+        $year = current_year();
+
+        if (PersonOnlineTraining::didCompleteForYear($personId, $year)) {
+            return throw new InvalidArgumentException("Person has already completed online training for $year");
+        }
+
+        $ot = new PersonOnlineTraining([
+            'person_id' => $personId,
+            'completed_at' => now(),
+            'type' => PersonOnlineTraining::MOODLE
+        ]);
+
+        $ot->auditReason = 'force marked completed';
+        if (!$ot->save()) {
+            return $this->restError($ot);
+        }
+
+        return response()->json(['status' => 'success']);
     }
 }
