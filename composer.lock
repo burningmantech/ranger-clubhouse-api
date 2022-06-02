@@ -116,16 +116,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.224.0",
+            "version": "3.224.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "bc5eb18414ef703c5f39a5a009a437c74c228306"
+                "reference": "a2e6461261a92570128e6c2b6fb1896f3d16b424"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/bc5eb18414ef703c5f39a5a009a437c74c228306",
-                "reference": "bc5eb18414ef703c5f39a5a009a437c74c228306",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/a2e6461261a92570128e6c2b6fb1896f3d16b424",
+                "reference": "a2e6461261a92570128e6c2b6fb1896f3d16b424",
                 "shasum": ""
             },
             "require": {
@@ -201,9 +201,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.224.0"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.224.2"
             },
-            "time": "2022-05-27T20:23:28+00:00"
+            "time": "2022-06-01T18:17:06+00:00"
         },
         {
             "name": "brick/math",
@@ -1519,16 +1519,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v9.14.1",
+            "version": "v9.15.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "2ca86f96118635a79ee3389013ccab110ae14bea"
+                "reference": "dc32641f5963578858fb71a9d2fbf995fe1e1ea3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/2ca86f96118635a79ee3389013ccab110ae14bea",
-                "reference": "2ca86f96118635a79ee3389013ccab110ae14bea",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/dc32641f5963578858fb71a9d2fbf995fe1e1ea3",
+                "reference": "dc32641f5963578858fb71a9d2fbf995fe1e1ea3",
                 "shasum": ""
             },
             "require": {
@@ -1694,7 +1694,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2022-05-25T18:18:07+00:00"
+            "time": "2022-05-31T14:56:46+00:00"
         },
         {
             "name": "laravel/serializable-closure",
@@ -2896,16 +2896,16 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v4.13.2",
+            "version": "v4.14.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "210577fe3cf7badcc5814d99455df46564f3c077"
+                "reference": "34bea19b6e03d8153165d8f30bba4c3be86184c1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/210577fe3cf7badcc5814d99455df46564f3c077",
-                "reference": "210577fe3cf7badcc5814d99455df46564f3c077",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/34bea19b6e03d8153165d8f30bba4c3be86184c1",
+                "reference": "34bea19b6e03d8153165d8f30bba4c3be86184c1",
                 "shasum": ""
             },
             "require": {
@@ -2946,9 +2946,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v4.13.2"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v4.14.0"
             },
-            "time": "2021-11-30T19:35:32+00:00"
+            "time": "2022-05-31T20:59:12+00:00"
         },
         {
             "name": "php-open-source-saver/jwt-auth",
@@ -6092,16 +6092,16 @@
         },
         {
             "name": "twilio/sdk",
-            "version": "6.37.1",
+            "version": "6.37.2",
             "source": {
                 "type": "git",
                 "url": "git@github.com:twilio/twilio-php.git",
-                "reference": "366d62aac5a8adb456adff299223b74c4cd06442"
+                "reference": "1c30c4407ba0a45a9b4460ee0bf81494dfef5c6b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/366d62aac5a8adb456adff299223b74c4cd06442",
-                "reference": "366d62aac5a8adb456adff299223b74c4cd06442",
+                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/1c30c4407ba0a45a9b4460ee0bf81494dfef5c6b",
+                "reference": "1c30c4407ba0a45a9b4460ee0bf81494dfef5c6b",
                 "shasum": ""
             },
             "require": {
@@ -6137,7 +6137,7 @@
                 "sms",
                 "twilio"
             ],
-            "time": "2022-05-18T21:07:30+00:00"
+            "time": "2022-06-01T19:08:55+00:00"
         },
         {
             "name": "vlucas/phpdotenv",

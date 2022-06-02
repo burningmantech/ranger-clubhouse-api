@@ -4,6 +4,7 @@ namespace App\Lib\Reports;
 
 use App\Models\Person;
 use App\Models\Position;
+use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\DB;
 
 class SandmanQualificationReport {
@@ -38,12 +39,25 @@ class SandmanQualificationReport {
                     ->get()
                     ->pluck('id');
 
+        $trainerSlotIds = DB::table('slot')->whereYear('begins', $year)
+            ->where('position_id', Position::SANDMAN_TRAINER)
+            ->where('active', true)
+            ->get()
+            ->pluck('id');
+
         $trainedByPersonId = DB::table('trainee_status')
                 ->whereIn('slot_id', $trainingIds)
                 ->whereIntegerInRaw('person_id', $personIds)
                 ->where('passed', true)
                 ->get()
                 ->keyBy('person_id');
+
+        $trainerByPersonIds = DB::table('trainer_status')
+            ->whereIn('slot_id', $trainingIds)
+            ->whereIntegerInRaw('person_id', $trainerSlotIds)
+            ->where('status', TrainerStatus::ATTENDED)
+            ->get()
+            ->keyBy('person_id');
 
         $sandmanSlotIds = DB::table('slot')
                 ->whereYear('begins', $year)
@@ -80,7 +94,7 @@ class SandmanQualificationReport {
 
         foreach ($sandPeople as $person) {
             $id = $person->id;
-            $person->is_trained = $trainedByPersonId->has($id);
+            $person->is_trained = $trainedByPersonId->has($id) || $trainerByPersonIds->has($id);
             $person->is_signed_up = $sandmanShiftByPersonId->has($id);
             $person->has_experience = $pastWork->has($id);
         }
