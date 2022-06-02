@@ -13,9 +13,10 @@ use App\Models\Schedule;
 use App\Models\Slot;
 use App\Models\Survey;
 use App\Models\Timesheet;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 use App\Models\Training;
 use App\Models\Vehicle;
-
 use Carbon\Carbon;
 
 class Milestones
@@ -70,7 +71,7 @@ class Milestones
             $milestones['training'] = ['status' => 'no-shift'];
         }
 
-        usort($artTrainings, fn ($a, $b) => strcasecmp($a->position_title, $b->position_title));
+        usort($artTrainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $milestones['art_trainings'] = $artTrainings;
 
@@ -87,6 +88,7 @@ class Milestones
                     $milestones['online_training_only'] = true;
                 }
                 break;
+
             case Person::ALPHA:
             case Person::PROSPECTIVE:
             case Person::BONKED:
@@ -104,6 +106,7 @@ class Milestones
                 }
                 $milestones['needs_full_training'] = true;
                 break;
+
             case Person::ACTIVE:
                 if ($isBinary) {
                     // Binaries have to take a full day's training, or
@@ -116,10 +119,12 @@ class Milestones
                     $milestones['needs_full_online_course'] = true;
                 }
                 break;
+
             case Person::INACTIVE:
                 // Inactives need a full day's training
                 $milestones['needs_full_training'] = true;
                 break;
+
             case Person::INACTIVE_EXTENSION:
             case Person::RETIRED:
             case Person::RESIGNED:
@@ -169,6 +174,16 @@ class Milestones
                 if ($event->may_request_stickers) {
                     $milestones['vehicle_requests_allowed'] = true;
                     $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
+                }
+
+                if (PersonPosition::havePosition($person->id, Position::SANDMAN)) {
+                    if ($event->sandman_affidavit) {
+                        $milestones['sandman_affidavit_signed'] = true;
+                    } else if (TraineeStatus::didPersonPassForYear($person->id, Position::SANDMAN_TRAINING, $year)
+                        || TrainerStatus::didPersonTeachForYear($person->id, Position::SANDMAN_TRAINING, $year)) {
+                        // Sandpeople! Put the affidavit in your walk, head-to-toe let your whole body talk.
+                        $milestones['sandman_affidavit_unsigned'] = true;
+                    }
                 }
             }
         }

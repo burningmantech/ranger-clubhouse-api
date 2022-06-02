@@ -6,6 +6,9 @@ use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\Position;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 use InvalidArgumentException;
 
 /*
@@ -17,6 +20,8 @@ class Agreements
 {
     const TERM_LIFETIME = 'lifetime';   // column stored in person
     const TERM_ANNUAL = 'annual';       // column stored in person_event
+
+    const SANDMAN_AFFIDAVIT = 'sandman-affidavit';
 
     /**
      * A document list available to most Rangers and PNVs.
@@ -52,6 +57,11 @@ class Agreements
             'setting' => 'RadioCheckoutAgreementEnabled',
             'term' => self::TERM_ANNUAL,
             'column' => 'asset_authorized',
+        ],
+
+        self::SANDMAN_AFFIDAVIT => [
+            'term' => self::TERM_ANNUAL,
+            'column' => 'sandman_affidavit',
         ]
     ];
 
@@ -70,7 +80,7 @@ class Agreements
         foreach (self::DOCUMENTS as $tag => $paper) {
             $term = $paper['term'];
 
-            if (!self::isDocumentVisible($paper, $personEvent)) {
+            if (!self::isDocumentVisible($tag, $paper, $personEvent)) {
                 continue;
             }
 
@@ -190,13 +200,28 @@ class Agreements
     /**
      * Is the document visible? (however, it may not be ready to be signed)
      *
+     * @param $tag
      * @param $doc
      * @param $personEvent
      * @return bool
      */
 
-    public static function isDocumentVisible($doc, $personEvent): bool
+    public static function isDocumentVisible($tag, $doc, $personEvent): bool
     {
+        if ($tag == self::SANDMAN_AFFIDAVIT) {
+            // Special case, only available after sandman training has happened.
+            $year = current_year();
+            if (TraineeStatus::didPersonPassForYear($personEvent->person_id, Position::SANDMAN_TRAINING, $year)) {
+                return true;
+            }
+
+            if (TrainerStatus::didPersonTeachForYear($personEvent->person_id, Position::SANDMAN_TRAINING, $year)) {
+                return true;
+            }
+
+            return false;
+        }
+
         $peColumn = $doc['person_event'] ?? null;
 
         if ($doc['setting'] ?? null) {
