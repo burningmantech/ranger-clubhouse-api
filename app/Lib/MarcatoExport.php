@@ -254,7 +254,7 @@ class MarcatoExport
             self::buildPhotoName($person),
             $person->callsign,
             $arrivalDate,
-            ($bmid->showers || $bmid->want_showers) ? '100' : '',
+            ($bmid->showers || $bmid->earned_shower || $bmid->allocated_showers) ? '100' : '',
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
@@ -296,8 +296,10 @@ class MarcatoExport
              * Make a note of what provisions were set
              */
 
-            if ($bmid->want_showers) {
-                $showers = '[showers claimed]';
+            if ($bmid->allocated_showers) {
+                $showers = '[showers allocated]';
+            } else if ($bmid->earned_showers) {
+                $showers = '[showers earned]';
             } else if ($bmid->showers) {
                 $showers = '[showers set]';
             } else {
@@ -308,9 +310,13 @@ class MarcatoExport
             if (!empty($bmid->meals)) {
                 $meals[] = $bmid->meals . ' set';
             }
-            if (!empty($bmid->want_meals)) {
-                $meals[] = $bmid->want_meals . ' claimed';
+            if (!empty($bmid->earned_meals)) {
+                $meals[] = $bmid->earned_meals . ' earned';
             }
+            if (!empty($bmid->allocated_meals)) {
+                $meals[] = $bmid->allocated_meals . ' allocated';
+            }
+
             if (empty($meals)) {
                 $meals[] = 'none';
             }
@@ -324,7 +330,7 @@ class MarcatoExport
              */
 
             $items = [];
-            if ($bmid->want_showers || $bmid->showers) {
+            if ($bmid->allocated_showers || $bmid->earned_showers || $bmid->showers) {
                 $items[] = AccessDocument::WET_SPOT;
             }
 
@@ -332,9 +338,13 @@ class MarcatoExport
                 $items[] = AccessDocument::ALL_EAT_PASS;
                 $items[] = AccessDocument::EVENT_EAT_PASS;
             } else {
+                if (!empty($bmid->allocated_meals)) {
+                    $items[] = ($bmid->allocated_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
+                }
+
                 // Currently only two meal provision types, All Eat, and Event Week
-                if (!empty($bmid->want_meals)) {
-                    $items[] = ($bmid->want_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
+                if (!empty($bmid->earned_meals)) {
+                    $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
                 }
 
                 // Was person given event week meals?
@@ -355,5 +365,4 @@ class MarcatoExport
             $bmid->saveWithoutValidation();
         }
     }
-
 }

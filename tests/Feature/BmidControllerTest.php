@@ -338,8 +338,8 @@ class BmidControllerTest extends TestCase
             'bmid' => [
                 'person_id' => $person->id,
                 'year' => $this->year,
-                'want_showers' => true,
-                'want_meals' => Bmid::MEALS_EVENT,
+                'earned_showers' => true,
+                'earned_meals' => Bmid::MEALS_EVENT,
             ]
         ]);
 

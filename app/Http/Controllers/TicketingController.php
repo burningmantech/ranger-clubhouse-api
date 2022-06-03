@@ -9,14 +9,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
-
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-
 use InvalidArgumentException;
 
 class TicketingController extends ApiController
@@ -76,23 +73,28 @@ class TicketingController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Retrieve the ticketing package
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function package(Person $person)
+    public function package(Person $person): JsonResponse
     {
-
         $this->authorize('index', [AccessDocument::class, $person->id]);
-
         return response()->json(['package' => AccessDocument::buildPackageForPerson($person->id)]);
     }
 
-    /*
+    /**
      * Update the SO WAP list
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function storeWAPSO(Person $person)
+    public function storeWAPSO(Person $person): JsonResponse
     {
         $personId = $person->id;
         $this->authorize('storeSOSWAP', [AccessDocument::class, $personId]);
@@ -167,7 +169,7 @@ class TicketingController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
 
     public function delivery(Person $person): JsonResponse

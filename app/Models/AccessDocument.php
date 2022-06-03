@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 class AccessDocument extends ApiModel
@@ -151,12 +152,15 @@ class AccessDocument extends ApiModel
 
     protected $appends = [
         'past_expire_date',
-        'has_staff_credential'
+        'has_staff_credential',
+        'is_superseded'
     ];
 
     protected $attributes = [
         'delivery_method' => 'none'
     ];
+
+    public bool $is_superseded = false;
 
     public static function boot()
     {
@@ -208,7 +212,7 @@ class AccessDocument extends ApiModel
         });
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -219,7 +223,8 @@ class AccessDocument extends ApiModel
      * @return bool
      */
 
-    public function save($options = []) : bool {
+    public function save($options = []): bool
+    {
         if ($this->is_allocated && $this->status == self::BANKED) {
             $this->addError('status', 'Item is an allocated provision and cannot be banked');
             return false;
@@ -302,12 +307,60 @@ class AccessDocument extends ApiModel
             $year = 2019;
         }
 
+        $docs = self::findForQuery(['person_id' => $personId]);
+
+        self::markSupersededProvisions($docs);
+
         return [
-            'access_documents' => self::findForQuery(['person_id' => $personId]),
+            'access_documents' => $docs,
             'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
             'year_earned' => $year,
             'period' => setting('TicketingPeriod')
         ];
+    }
+
+    /**
+     * Scan a list of provisions and mark any earned provisions which are superseded by allocated provisions.
+     *
+     * @param $docs
+     * @return void
+     */
+
+    public static function markSupersededProvisions($docs) : void
+    {
+        $earned = $docs->filter(fn ($d) => !$d->is_allocated && $d->isProvision());
+        $allocated = $docs->filter(fn ($d) => $d->is_allocated && $d->isProvision());
+
+        $meal = $allocated->first(fn ($m) => $m->type == self::EVENT_EAT_PASS || $m->type == self::ALL_EAT_PASS);
+        $radio = $allocated->first(fn ($r) => $r->type == self::EVENT_RADIO);
+        $showers = $allocated->first(fn ($r) => $r->type == self::WET_SPOT);
+
+        foreach ($earned as $e) {
+            switch ($e->type) {
+                case self::EVENT_RADIO:
+                    if ($radio) {
+                        $e->is_superseded = true;
+                    }
+                    break;
+                case self::WET_SPOT:
+                    if ($showers) {
+                        $e->is_superseded = true;
+                    }
+                    break;
+
+                case self::EVENT_EAT_PASS:
+                    if ($meal) {
+                        $e->is_superseded = true;
+                    }
+                    break;
+
+                case self::ALL_EAT_PASS:
+                    if ($meal && $meal->type == self::ALL_EAT_PASS) {
+                        $e->is_superseded = true;
+                    }
+                    break;
+            }
+        }
     }
 
     /**
@@ -371,7 +424,13 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
             ->get();
 
+        self::markSupersededProvisions($rows);
+
         foreach ($rows as $row) {
+            if ($row->is_superseded) {
+                continue;
+            }
+
             $row->status = self::SUBMITTED;
             $changes = $row->getChangedValues();
             $row->additional_comments = 'Consumed by BMID export';
@@ -693,5 +752,14 @@ class AccessDocument extends ApiModel
         }
 
         return true;
+    }
+
+    public function isProvision(): bool {
+        return in_array($this->type, self::PROVISION_TYPES);
+    }
+
+    public function getIsSupersededAttribute(): bool
+    {
+        return $this->is_superseded;
     }
 }
