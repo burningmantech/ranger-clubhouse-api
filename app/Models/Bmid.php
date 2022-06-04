@@ -87,8 +87,11 @@ class Bmid extends ApiModel
     protected $has_signups = false;
     protected $org_vehicle_insurance = false;
 
-    protected $want_meals = '';
-    protected $want_showers = false;
+    protected $allocated_meals = '';
+    protected $earned_meals = '';
+
+    protected $allocated_showers = false;
+    protected $earned_showers = false;
 
     protected $fillable = [
         'person_id',
@@ -125,16 +128,19 @@ class Bmid extends ApiModel
         'modified_datetime' => 'datetime',
         'access_date' => 'datetime:Y-m-d',
         'access_any_time' => 'bool',
-        'want_showers' => 'bool',
+        'earned_showers' => 'bool',
+        'allocated_showers' => 'bool',
     ];
 
     protected $appends = [
         'access_any_time',
         'access_date',
+        'allocated_meals',
+        'allocated_showers',
+        'earned_meals',
+        'earned_showers',
         'has_signups',
         'org_vehicle_insurance',
-        'want_meals',
-        'want_showers',
         'wap_id',
         'wap_status',
         'wap_type',
@@ -196,7 +202,7 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public static function findForPersonYear($personId, $year) : ?Bmid
+    public static function findForPersonYear($personId, $year): ?Bmid
     {
         return self::where('person_id', $personId)->where('year', $year)->first();
     }
@@ -299,17 +305,37 @@ class Bmid extends ApiModel
                 continue;
             }
 
+            AccessDocument::markSupersededProvisions($items);
+
             foreach ($items as $item) {
-                switch ($item->type) {
-                    case AccessDocument::ALL_EAT_PASS:
-                        $bmid->want_meals = self::MEALS_ALL;
-                        break;
-                    case AccessDocument::EVENT_EAT_PASS:
-                        $bmid->want_meals = self::MEALS_EVENT;
-                        break;
-                    case AccessDocument::WET_SPOT:
-                        $bmid->want_showers = true;
-                        break;
+                if ($item->is_superseded) {
+                    continue;
+                }
+
+                if ($item->is_allocated) {
+                    switch ($item->type) {
+                        case AccessDocument::ALL_EAT_PASS:
+                            $bmid->allocated_meals = self::MEALS_ALL;
+                            break;
+                        case AccessDocument::EVENT_EAT_PASS:
+                            $bmid->allocated_meals = self::MEALS_EVENT;
+                            break;
+                        case AccessDocument::WET_SPOT:
+                            $bmid->allocated_showers = true;
+                            break;
+                    }
+                } else {
+                    switch ($item->type) {
+                        case AccessDocument::ALL_EAT_PASS:
+                            $bmid->earned_meals = self::MEALS_ALL;
+                            break;
+                        case AccessDocument::EVENT_EAT_PASS:
+                            $bmid->earned_meals = self::MEALS_EVENT;
+                            break;
+                        case AccessDocument::WET_SPOT:
+                            $bmid->earned_showers = true;
+                            break;
+                    }
                 }
             }
         }
@@ -440,19 +466,29 @@ class Bmid extends ApiModel
         return $this->wap ? $this->wap->type : null;
     }
 
-    public function getHasSignupsAttribute()
+    public function getHasSignupsAttribute(): bool
     {
         return $this->has_signups;
     }
 
-    public function getWantMealsAttribute()
+    public function getEarnedMealsAttribute()
     {
-        return $this->want_meals;
+        return $this->earned_meals;
     }
 
-    public function getWantShowersAttribute()
+    public function getAllocatedMealsAttribute()
     {
-        return $this->want_showers;
+        return $this->allocated_meals;
+    }
+
+    public function getEarnedShowersAttribute()
+    {
+        return $this->earned_showers;
+    }
+
+    public function getAllocatedShowersAttribute()
+    {
+        return $this->allocated_showers;
     }
 
     /**
@@ -460,6 +496,7 @@ class Bmid extends ApiModel
      *
      * @return bool
      */
+
     public function isPrintable(): bool
     {
         if (!$this->person || !in_array($this->person->status, self::ALLOWED_PERSON_STATUSES)) {
@@ -489,32 +526,57 @@ class Bmid extends ApiModel
     /**
      * Builds a "meal matrix" indicating which weeks the person can
      * have meals. This is a union between what has been set by the
-     * BMID administrator, and what the person claimed.
+     * BMID administrator, the allocated provisions, and claimed earned provisions.
      *
      * @return array
      */
 
     public function buildMealsMatrix(): array
     {
-        if ($this->meals == self::MEALS_ALL || $this->want_meals == self::MEALS_ALL) {
+        if ($this->meals == self::MEALS_ALL
+            || $this->earned_meals == self::MEALS_ALL
+            || $this->allocated_meals == self::MEALS_ALL) {
             return [self::MEALS_PRE => true, self::MEALS_EVENT => true, self::MEALS_POST => true];
         }
 
         $matrix = [];
-        foreach (explode('+', $this->meals) as $week) {
-            $matrix[$week] = true;
-        }
-
-        if (!empty($this->want_meals)) {
-            $matrix[$this->want_meals] = true;
-        }
+        self::populateMealMatrix($this->meals, $matrix);
+        self::populateMealMatrix($this->earned_meals, $matrix);
+        self::populateMealMatrix($this->allocated_meals, $matrix);
 
         return $matrix;
+    }
+
+    public static function populateMealMatrix($meals, &$matrix)
+    {
+        if (empty($meals)) {
+            return;
+        }
+
+        foreach (explode('+', $meals) as $week) {
+            $matrix[$week] = true;
+        }
     }
 
     public function effectiveMeals(): string
     {
         $meals = $this->buildMealsMatrix();
-        return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', array_keys($meals));
+        if (count($meals) == 3) {
+            return self::MEALS_ALL;
+        }
+
+        $sorted = [];
+        if ($meals[self::MEALS_PRE] ?? null) {
+            $sorted[] = self::MEALS_PRE;
+        }
+        if ($meals[self::MEALS_EVENT] ?? null) {
+            $sorted[] = self::MEALS_EVENT;
+        }
+
+        if ($meals[self::MEALS_POST] ?? null) {
+            $sorted[] = self::MEALS_POST;
+        }
+
+        return implode('+', $sorted);
     }
 }

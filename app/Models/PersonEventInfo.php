@@ -76,7 +76,7 @@ class PersonEventInfo extends ApihouseResult
 
         if ($bmid) {
             $info->meals = $bmid->effectiveMeals();
-            $info->showers = $bmid->showers || $bmid->want_showers;
+            $info->showers = $bmid->showers || $bmid->earned_showers || $bmid->allocated_showers;
          } else {
             $info->meals = '';
             $info->showers = false;
