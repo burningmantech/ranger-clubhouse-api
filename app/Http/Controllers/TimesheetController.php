@@ -17,6 +17,7 @@ use App\Lib\Reports\TimesheetByCallsignReport;
 use App\Lib\Reports\TimesheetByPositionReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
+use App\Lib\Reports\TopHourEarnersReport;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
@@ -31,7 +32,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
-use Psy\Util\Json;
 
 class TimesheetController extends ApiController
 {
@@ -457,7 +457,7 @@ class TimesheetController extends ApiController
         $response = [
             'status' => 'success',
             'timesheet_id' => $timesheet->id,
-            'on_duty' => (string) $timesheet->on_duty,
+            'on_duty' => (string)$timesheet->on_duty,
         ];
 
         if ($signonForced) {
@@ -916,9 +916,30 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function retentionReport() : JsonResponse {
+    public function retentionReport(): JsonResponse
+    {
         $this->authorize('retentionReport', Timesheet::class);
 
         return response()->json(RangerRetentionReport::execute());
     }
+
+    /**
+     * The Top Hour Earners report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function topHourEarnersReport(): JsonResponse
+    {
+        $this->authorize('topHourEarnersReport', Timesheet::class);
+        $params = request()->validate([
+            'start_year' => 'integer|gte:2010',
+            'end_year' => 'integer|gte:2010',
+            'limit' => 'integer|gt:0|lt:300'
+        ]);
+
+        return response()->json(['top_earners' => TopHourEarnersReport::execute($params['start_year'], $params['end_year'], $params['limit'])]);
+    }
+
 }

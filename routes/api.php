@@ -332,6 +332,7 @@ Route::group([
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
     Route::get('timesheet/potential-shirts-earned', 'TimesheetController@potentialShirtsEarnedReport');
     Route::get('timesheet/sanity-checker', 'TimesheetController@sanityChecker');
+    Route::get('timesheet/top-hour-earners', 'TimesheetController@topHourEarnersReport');
     Route::get('timesheet/by-callsign', 'TimesheetController@timesheetByCallsign');
     Route::get('timesheet/by-position', 'TimesheetController@timesheetByPosition');
     Route::get('timesheet/retention-report', 'TimesheetController@retentionReport');
