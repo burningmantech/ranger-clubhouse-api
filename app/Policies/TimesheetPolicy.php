@@ -112,7 +112,7 @@ class TimesheetPolicy
      * Can the user see the timesheet correction requests?
      */
 
-    public function correctionRequests(Person $user)
+    public function correctionRequests(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -121,7 +121,7 @@ class TimesheetPolicy
      * Can the user see the timesheet unconfirmed people?
      */
 
-    public function unconfirmedPeople(Person $user)
+    public function unconfirmedPeople(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -130,7 +130,7 @@ class TimesheetPolicy
      * Can the user see the timesheet unconfirmed people?
      */
 
-    public function sanityChecker(Person $user)
+    public function sanityChecker(Person $user): bool
     {
         return $user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
     }
@@ -139,7 +139,7 @@ class TimesheetPolicy
      * Can the user run a freaking years report?
      */
 
-    public function freakingYearsReport(Person $user)
+    public function freakingYearsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -148,7 +148,7 @@ class TimesheetPolicy
      * Can the user run a freaking years report?
      */
 
-    public function shirtsEarnedReport(Person $user)
+    public function shirtsEarnedReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -157,7 +157,7 @@ class TimesheetPolicy
      * Can the user run a potential shirts earned report?
      */
 
-    public function potentialShirtsEarnedReport(Person $user)
+    public function potentialShirtsEarnedReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -166,7 +166,7 @@ class TimesheetPolicy
      * Can the user run a radio eligibility report?
      */
 
-    public function radioEligibilityReport(Person $user)
+    public function radioEligibilityReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -175,7 +175,7 @@ class TimesheetPolicy
      * Can the user bulk sign in and/or out people?
      */
 
-    public function bulkSignInOut(Person $user)
+    public function bulkSignInOut(Person $user): bool
     {
         return false;
     }
@@ -184,7 +184,7 @@ class TimesheetPolicy
      * Can the user run the hours/credit report
      */
 
-    public function hoursCreditsReport(Person $user)
+    public function hoursCreditsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -193,7 +193,7 @@ class TimesheetPolicy
      * Can the user run the Special Teams report
      */
 
-    public function specialTeamsReport(Person $user)
+    public function specialTeamsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -202,7 +202,7 @@ class TimesheetPolicy
      * Can the user run the Thank You cards report
      */
 
-    public function thankYou(Person $user)
+    public function thankYou(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -211,7 +211,7 @@ class TimesheetPolicy
      * Can the user run the Timesheet By Callsign report
      */
 
-    public function timesheetByCallsign(Person $user)
+    public function timesheetByCallsign(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -220,7 +220,7 @@ class TimesheetPolicy
      * Can the user run the Timesheet Totals report
      */
 
-    public function timesheetTotals(Person $user)
+    public function timesheetTotals(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -229,7 +229,7 @@ class TimesheetPolicy
      * Can the user run the Timesheet By Position Report
      */
 
-    public function timesheetByPosition(Person $user)
+    public function timesheetByPosition(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -240,12 +240,19 @@ class TimesheetPolicy
      * @param Person $user
      * @return bool
      */
-    public function onDutyShiftLeadReport(Person $user)
+    public function onDutyShiftLeadReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
 
-    public function retentionReport(Person $user) {
+    public function retentionReport(Person $user): bool
+    {
         return false;
     }
+
+    public function topHourEarnersReport(Person $user): bool
+    {
+        return false;
+    }
+
 }

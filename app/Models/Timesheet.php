@@ -200,11 +200,11 @@ class Timesheet extends ApiModel
     /**
      * Find the (still) on duty timesheet for a person
      *
-     * @param $personId
+     * @param int $personId
      * @return Timesheet|null
      */
 
-    public static function findPersonOnDuty(int $personId): Timesheet|null
+    public static function findPersonOnDuty(int $personId): ?Timesheet
     {
         return self::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -611,13 +611,13 @@ class Timesheet extends ApiModel
      * Eloquent will insist on using Carbon::parse(null) which yields the current time. Sigh.
      */
 
-    public function setOffDutyToNullAndSave(string $reason) : void
+    public function setOffDutyToNullAndSave(string $reason): void
     {
-        $oldValue = (string) $this->off_duty;
-        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [ $this->id ]);
-        ActionLog::record(Auth::user(),  'timesheet-update', $reason, [
+        $oldValue = (string)$this->off_duty;
+        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [$this->id]);
+        ActionLog::record(Auth::user(), 'timesheet-update', $reason, [
             'id' => $this->id,
-            'off_duty' => [ $oldValue, null ]
+            'off_duty' => [$oldValue, null]
         ], $this->person_id);
 
         $this->refresh();
@@ -705,7 +705,8 @@ class Timesheet extends ApiModel
         return $this->_additional_notes;
     }
 
-    public function getPhotoUrlAttribute() {
+    public function getPhotoUrlAttribute()
+    {
         return $this->photo_url;
     }
 }

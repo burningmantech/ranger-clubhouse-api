@@ -107,6 +107,20 @@ class AccessDocument extends ApiModel
         self::WET_SPOT_POG => 'Wet Spot Pog',
     ];
 
+    const SHORT_TICKET_LABELS = [
+        self::STAFF_CREDENTIAL => 'SC',
+        self::RPT => 'RPT',
+        self::GIFT => 'GIFT',
+        self::VEHICLE_PASS => 'VP',
+        self::WAP => 'WAP',
+        self::WAPSO => 'WAPSO',
+
+        self::ALL_EAT_PASS => 'ALL-EAT',
+        self::EVENT_EAT_PASS => 'EVENT-EAT',
+        self::EVENT_RADIO => 'RADIO',
+        self::WET_SPOT => 'WETSPOT',
+    ];
+
     const DELIVERY_NONE = 'none';
     const DELIVERY_POSTAL = 'postal';
     const DELIVERY_EMAIL = 'email';
