@@ -68,9 +68,9 @@ class OnlineTrainingController extends ApiController
         if (empty($person->lms_id)) {
             // See if the person already has an online account setup
             $lms = new Moodle();
-            if ($lms->findPerson($person) == false) {
+            if (!$lms->findPerson($person)) {
                 // Nope, create the user
-                if ($lms->createUser($person, $password) == false) {
+                if (!$lms->createUser($person, $password)) {
                     // Crap, failed.
                     return response()->json(['status' => 'fail']);
                 }
@@ -78,7 +78,9 @@ class OnlineTrainingController extends ApiController
             }
         }
 
-        if ($person->lms_course != $courseId) {
+        // TODO before 2023: put back $person->lms_course != $courseId
+        // 2022 - half course implemented 1/2 way thru the training season and messed things up.
+        if (empty($person->lms_course)) {
             if (!$lms) {
                 $lms = new Moodle;
             }
