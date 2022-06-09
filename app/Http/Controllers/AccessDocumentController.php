@@ -428,6 +428,7 @@ class AccessDocumentController extends ApiController
 
         $user = $this->user->callsign;
         $rows = AccessDocument::whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
+            ->where('is_allocated', false)
             ->with('person:id,callsign,status')
             ->get();
         $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
@@ -456,6 +457,25 @@ class AccessDocumentController extends ApiController
                     $this->saveAccessDocument($ad, $documents);
                     break;
             }
+        }
+
+        // Expire or use all allocated items.
+        $rows = AccessDocument::where('is_allocated', true)
+            ->whereIn('status', [ AccessDocument::SUBMITTED, AccessDocument::QUALIFIED, AccessDocument::BANKED ])
+            ->with('person:id,callsign,status')
+            ->get();
+
+        foreach ($rows as $row) {
+            if ($row->type == AccessDocument::SUBMITTED) {
+                $row->status = AccessDocument::USED;
+                $ad->addComment($reasonUsed, $user);
+                $ad->auditReason = $reasonUsed;
+            } else {
+                $row->status = AccessDocument::EXPIRED;
+                $row->addComment($reasonExpired, $user);
+                $ad->auditReason = $reasonExpired;
+            }
+            $this->saveAccessDocument($ad, $documents);
         }
 
         return response()->json(['access_documents' => $documents]);

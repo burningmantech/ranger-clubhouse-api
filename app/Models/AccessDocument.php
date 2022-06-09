@@ -50,6 +50,12 @@ class AccessDocument extends ApiModel
 
     const ALL_EAT_PASS = 'all_eat_pass';
     const EVENT_EAT_PASS = 'event_eat_pass';
+    const PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
+    const POST_EVENT_EAT_PASS = 'post_event_eat_pass';
+    const PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
+    const PRE_POST_EAT_PASS = 'pre_post_eat_pass';
+    const EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
+
     const EVENT_RADIO = 'event_radio';
     const WET_SPOT = 'wet_spot';
     const WET_SPOT_POG = 'wet_spot_pog'; // unused currently, might be used someday by the HQ Window Interface
@@ -70,13 +76,43 @@ class AccessDocument extends ApiModel
     const PROVISION_TYPES = [
         self::ALL_EAT_PASS,
         self::EVENT_EAT_PASS,
+        self::PRE_EVENT_EAT_PASS,
+        self::POST_EVENT_EAT_PASS,
+        self::PRE_EVENT_EVENT_EAT_PASS,
+        self::EVENT_POST_EAT_PASS,
+        self::PRE_POST_EAT_PASS,
+
         self::EVENT_RADIO,
         self::WET_SPOT,
+    ];
+
+    const MEAL_TYPES = [
+        self::ALL_EAT_PASS,
+        self::EVENT_EAT_PASS,
+        self::PRE_EVENT_EAT_PASS,
+        self::POST_EVENT_EAT_PASS,
+        self::PRE_EVENT_EVENT_EAT_PASS,
+        self::EVENT_POST_EAT_PASS,
+        self::PRE_POST_EAT_PASS
+    ];
+
+    const MEAL_MATRIX = [
+        self::ALL_EAT_PASS => 'pre+event+post',
+        self::EVENT_EAT_PASS => 'event',
+        self::PRE_EVENT_EAT_PASS => 'pre',
+        self::POST_EVENT_EAT_PASS => 'post',
+        self::PRE_EVENT_EVENT_EAT_PASS => 'pre+event',
+        self::EVENT_POST_EAT_PASS => 'event+post',
+        self::PRE_POST_EAT_PASS => 'pre+post'
     ];
 
     const EAT_PASSES = [
         self::ALL_EAT_PASS,
         self::EVENT_EAT_PASS,
+        self::PRE_EVENT_EAT_PASS,
+        self::POST_EVENT_EAT_PASS,
+        self::PRE_EVENT_EVENT_EAT_PASS,
+        self::EVENT_POST_EAT_PASS,
     ];
 
     const HAS_ACCESS_DATE_TYPES = [
@@ -102,6 +138,12 @@ class AccessDocument extends ApiModel
 
         self::ALL_EAT_PASS => 'All Eat Pass',
         self::EVENT_EAT_PASS => 'Event Week Eat Pass',
+
+        self::PRE_EVENT_EAT_PASS => 'Pre-Event Eat Pass',
+        self::POST_EVENT_EAT_PASS => 'Post-Event Eat Pass',
+        self::PRE_EVENT_EVENT_EAT_PASS => 'Pre+Post Eat Pass',
+        self::EVENT_POST_EAT_PASS => 'Event+Post Eat Pass',
+
         self::EVENT_RADIO => 'Event Radio',
         self::WET_SPOT => 'Wet Spot Access',
         self::WET_SPOT_POG => 'Wet Spot Pog',
@@ -117,6 +159,11 @@ class AccessDocument extends ApiModel
 
         self::ALL_EAT_PASS => 'ALL-EAT',
         self::EVENT_EAT_PASS => 'EVENT-EAT',
+        self::PRE_EVENT_EAT_PASS => 'PRE-EAT',
+        self::POST_EVENT_EAT_PASS => 'POST-EAT',
+        self::PRE_EVENT_EVENT_EAT_PASS => 'PRE+EVENT-EAT',
+        self::EVENT_POST_EAT_PASS => 'EVENT+POST-EAT',
+
         self::EVENT_RADIO => 'RADIO',
         self::WET_SPOT => 'WETSPOT',
     ];
@@ -205,11 +252,10 @@ class AccessDocument extends ApiModel
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
                     break;
-                case self::EVENT_EAT_PASS:
-                case self::WET_SPOT:
-                case self::ALL_EAT_PASS:
-                case self::WET_SPOT_POG:
-                    $model->delivery_method = self::DELIVERY_NONE;
+                default:
+                    if (in_array($model->type, self::PROVISION_TYPES)) {
+                        $model->delivery_method = self::DELIVERY_NONE;
+                    }
                     break;
             }
 
@@ -340,14 +386,20 @@ class AccessDocument extends ApiModel
      * @return void
      */
 
-    public static function markSupersededProvisions($docs) : void
+    public static function markSupersededProvisions($docs): void
     {
-        $earned = $docs->filter(fn ($d) => !$d->is_allocated && $d->isProvision());
-        $allocated = $docs->filter(fn ($d) => $d->is_allocated && $d->isProvision());
+        $earned = $docs->filter(fn($d) => !$d->is_allocated && $d->isProvision());
+        $allocated = $docs->filter(fn($d) => $d->is_allocated && $d->isProvision());
 
-        $meal = $allocated->first(fn ($m) => $m->type == self::EVENT_EAT_PASS || $m->type == self::ALL_EAT_PASS);
-        $radio = $allocated->first(fn ($r) => $r->type == self::EVENT_RADIO);
-        $showers = $allocated->first(fn ($r) => $r->type == self::WET_SPOT);
+        $meals = $allocated->where(fn($m) => in_array($m->type, self::MEAL_TYPES));
+        $radio = $allocated->first(fn($r) => $r->type == self::EVENT_RADIO);
+        $showers = $allocated->first(fn($r) => $r->type == self::WET_SPOT);
+
+        $mealMatrix = [];
+
+        foreach ($meals as $meal) {
+            Bmid::populateMealMatrix(self::MEAL_MATRIX[$meal->type], $mealMatrix);
+        }
 
         foreach ($earned as $e) {
             switch ($e->type) {
@@ -363,13 +415,13 @@ class AccessDocument extends ApiModel
                     break;
 
                 case self::EVENT_EAT_PASS:
-                    if ($meal) {
+                    if ($mealMatrix['event'] ?? false) {
                         $e->is_superseded = true;
                     }
                     break;
 
                 case self::ALL_EAT_PASS:
-                    if ($meal && $meal->type == self::ALL_EAT_PASS) {
+                    if (count($mealMatrix) === 3) {
                         $e->is_superseded = true;
                     }
                     break;
@@ -768,7 +820,8 @@ class AccessDocument extends ApiModel
         return true;
     }
 
-    public function isProvision(): bool {
+    public function isProvision(): bool
+    {
         return in_array($this->type, self::PROVISION_TYPES);
     }
 

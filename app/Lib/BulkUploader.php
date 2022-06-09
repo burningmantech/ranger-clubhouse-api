@@ -46,12 +46,12 @@ class BulkUploader
         [
             'label' => 'Earned Provisions Actions',
             'options' => [
-                ['id' => 'all_eat_pass', 'label' => 'Award All Eat Pass (Earned)', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'event_eat_pass', 'label' => 'Award Event Eat Pass (Earned)', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'wet_spot', 'label' => 'Award Wet Spot (Earned)', 'help' => self::HELP_CALLSIGN],
+                ['id' => AccessDocument::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => AccessDocument::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => AccessDocument::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
                 [
-                    'id' => 'event_radio',
-                    'label' => 'Event Radio eligibility (Earned)',
+                    'id' => AccessDocument::EVENT_RADIO,
+                    'label' => 'Earned Event Radio',
                     'help' => self::HELP_RADIO
                 ]
             ]
@@ -59,10 +59,15 @@ class BulkUploader
         [
             'label' => 'Allocated Provisions Actions',
             'options' => [
-                ['id' => 'alloc_all_eat_pass', 'label' => 'Grant All Eat Pass (Allocated)', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_event_eat_pass', 'label' => 'Grant Event Eat Pass (Allocated)', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_wet_spot', 'label' => 'Grant Wet Spot (Allocated)', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_event_radio', 'label' => 'Grant Event Radio (Allocated)', 'help' => self::HELP_RADIO]
+                ['id' => 'alloc_'.AccessDocument::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_'.AccessDocument::WET_SPOT_POG, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
             ]
         ],
         [
@@ -145,11 +150,6 @@ class BulkUploader
         'event_radio' => self::PROCESS_PROVISIONS_ACTION,
         'wet_spot' => self::PROCESS_PROVISIONS_ACTION,
 
-        'alloc_all_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
-        'alloc_event_eat_pass' => self::PROCESS_PROVISIONS_ACTION,
-        'alloc_event_radio' => self::PROCESS_PROVISIONS_ACTION,
-        'alloc_wet_spot' => self::PROCESS_PROVISIONS_ACTION,
-
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
         'wap' => self::PROCESS_WAP_ACTION,
@@ -210,6 +210,8 @@ class BulkUploader
 
         if (str_starts_with($action, 'cert-')) {
             $processAction = self::CERTIFICATION_ACTION;
+        } else if (str_starts_with($action, 'alloc_')) {
+            $processAction = self::PROCESS_PROVISIONS_ACTION;
         } else {
             $processAction = self::ACTIONS[$action] ?? null;
             if (!$processAction) {
