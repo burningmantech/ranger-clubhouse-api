@@ -295,7 +295,7 @@ class Bmid extends ApiModel
 
         $itemsByPersonId = AccessDocument::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-            ->whereIn('type', [AccessDocument::ALL_EAT_PASS, AccessDocument::EVENT_EAT_PASS, AccessDocument::WET_SPOT])
+            ->whereIn('type', [...AccessDocument::MEAL_TYPES, AccessDocument::WET_SPOT])
             ->get()
             ->groupBy('person_id');
 
@@ -306,37 +306,37 @@ class Bmid extends ApiModel
             }
 
             AccessDocument::markSupersededProvisions($items);
+            $allocatedMeals = [];
+            $earnedMeals = [];
 
             foreach ($items as $item) {
                 if ($item->is_superseded) {
                     continue;
                 }
 
-                if ($item->is_allocated) {
-                    switch ($item->type) {
-                        case AccessDocument::ALL_EAT_PASS:
-                            $bmid->allocated_meals = self::MEALS_ALL;
-                            break;
-                        case AccessDocument::EVENT_EAT_PASS:
-                            $bmid->allocated_meals = self::MEALS_EVENT;
-                            break;
-                        case AccessDocument::WET_SPOT:
-                            $bmid->allocated_showers = true;
-                            break;
-                    }
-                } else {
-                    switch ($item->type) {
-                        case AccessDocument::ALL_EAT_PASS:
-                            $bmid->earned_meals = self::MEALS_ALL;
-                            break;
-                        case AccessDocument::EVENT_EAT_PASS:
-                            $bmid->earned_meals = self::MEALS_EVENT;
-                            break;
-                        case AccessDocument::WET_SPOT:
-                            $bmid->earned_showers = true;
-                            break;
+                $isMeal = in_array($item->type, AccessDocument::MEAL_TYPES);
+                if ($isMeal) {
+                    if ($item->is_allocated) {
+                        self::populateMealMatrix(AccessDocument::MEAL_MATRIX[$item->type], $allocatedMeals);
+                    } else {
+                        self::populateMealMatrix(AccessDocument::MEAL_MATRIX[$item->type], $earnedMeals);
                     }
                 }
+                if ($item->is_allocated) {
+                    if ($item->type == AccessDocument::WET_SPOT) {
+                        $bmid->allocated_showers = true;
+                    }
+                } else if ($item->type == AccessDocument::WET_SPOT) {
+                    $bmid->earned_showers = true;
+                }
+            }
+
+            if (!empty($allocatedMeals)) {
+                $bmid->allocated_meals = self::sortMeals($allocatedMeals);
+            }
+
+            if (!empty($earnedMeals)) {
+                $bmid->earned_meals = self::sortMeals($earnedMeals);
             }
         }
     }
@@ -560,7 +560,11 @@ class Bmid extends ApiModel
 
     public function effectiveMeals(): string
     {
-        $meals = $this->buildMealsMatrix();
+        return self::sortMeals($this->buildMealsMatrix());
+    }
+
+    public static function sortMeals($meals)
+    {
         if (count($meals) == 3) {
             return self::MEALS_ALL;
         }
