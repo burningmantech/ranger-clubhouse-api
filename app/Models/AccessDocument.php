@@ -493,9 +493,9 @@ class AccessDocument extends ApiModel
         self::markSupersededProvisions($rows);
 
         foreach ($rows as $row) {
-            if ($row->is_superseded) {
+           /* if ($row->is_superseded) {
                 continue;
-            }
+            }*/
 
             $row->status = self::SUBMITTED;
             $changes = $row->getChangedValues();
