@@ -81,11 +81,11 @@ class TicketsAndProvisionsProgress
             $thresholds['AllYouCanEatEventWeekThreshold'], self::MEASURE_HOURS);
 
         $progress->calculateItem(self::ITEM_SHOWER_POG,
-            $hours, $expectedHours,
+            $timesheetSummary->event_duration, $timesheetSummary->event_duration + $remaining->event_duration,
             $thresholds['ShowerPogThreshold'], self::MEASURE_HOURS);
 
         $progress->calculateItem(self::ITEM_SHOWER_ACCESS,
-            $hours, $expectedHours,
+            $timesheetSummary->event_duration, $timesheetSummary->event_duration + $remaining->event_duration,
             $thresholds['ShowerAccessThreshold'], self::MEASURE_HOURS);
 
         $progress->calculateItem(self::ITEM_TSHIRT,

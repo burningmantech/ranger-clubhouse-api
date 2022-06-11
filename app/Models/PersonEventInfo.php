@@ -15,6 +15,7 @@ class PersonEventInfo extends ApihouseResult
     public $trainings;
     public $radio_eligible;
     public $radio_max;
+    public $radio_banked;
     public $meals;
     public $showers;
     public $radio_info_available;
@@ -62,13 +63,27 @@ class PersonEventInfo extends ApihouseResult
         $info->radio_info_available = setting('RadioInfoAvailable');
 
         if ($info->radio_info_available) {
-            $radio = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO);
-            if ($radio) {
+            $radios = AccessDocument::where('type', AccessDocument::EVENT_RADIO)
+                        ->where('person_id', $personId)
+                        ->where('status', [ AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                        ->get();
+            if ($radios->isNotEmpty()) {
                 $info->radio_eligible = true;
-                $info->radio_max = $radio->item_count;
-                $info->radio_status = $radio->status;
+                $max = 0;
+                foreach ($radios as $radio) {
+                    if ($max < $radio->item_count) {
+                        $max = $radio->item_count;
+                    }
+                }
+                $info->radio_max = $max;
+                $info->radio_banked = false;
             } else {
                 $info->radio_eligible = false;
+                $info->radio_max = 0;
+                $info->radio_banked = AccessDocument::where('type', AccessDocument::EVENT_RADIO)
+                    ->where('person_id', $personId)
+                    ->where('status', AccessDocument::BANKED)
+                    ->exists();
             }
         }
 

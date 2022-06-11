@@ -305,15 +305,11 @@ class Bmid extends ApiModel
                 continue;
             }
 
-            AccessDocument::markSupersededProvisions($items);
+            //AccessDocument::markSupersededProvisions($items);
             $allocatedMeals = [];
             $earnedMeals = [];
 
             foreach ($items as $item) {
-                if ($item->is_superseded) {
-                    continue;
-                }
-
                 $isMeal = in_array($item->type, AccessDocument::MEAL_TYPES);
                 if ($isMeal) {
                     if ($item->is_allocated) {
