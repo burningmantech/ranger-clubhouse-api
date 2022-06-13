@@ -26,7 +26,7 @@ class Training extends Position
     const PENDING = 'pending'; // Training hasn't happened yet, or still within the grace period.
     const NO_SHIFT = 'no-shift'; // No training sign up was found
 
-    const GRACE_PERIOD_HOURS = 12;
+    const GRACE_PERIOD_HOURS = 72;
 
     /**
      * Is the person trained for a position in a given year?
