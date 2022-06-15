@@ -59,15 +59,15 @@ class BulkUploader
         [
             'label' => 'Allocated Provisions Actions',
             'options' => [
-                ['id' => 'alloc_'.AccessDocument::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_'.AccessDocument::WET_SPOT_POG, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
+                ['id' => 'alloc_' . AccessDocument::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . AccessDocument::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
             ]
         ],
         [
@@ -639,17 +639,15 @@ class BulkUploader
             $personId = $record->person->id;
             $existing = null;
 
-            if (!$isEventRadio) {
-                $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
-                if ($existing && !$commit) {
-                    $record->status = self::STATUS_WARNING;
-                    if ($isAllocated) {
-                        $record->details = 'Already has ' . $existing->getTypeLabel() . ' allocated provision. Existing item will be cancelled and replaced.';
-                    } else {
-                        $record->details = 'Has ' . $existing->getTypeLabel() . ' earned year ' . $existing->source_year . '. Existing item will be cancelled and replaced.';
-                    }
-                    continue;
+            $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
+            if ($existing && !$commit) {
+                $record->status = self::STATUS_WARNING;
+                if ($isAllocated) {
+                    $record->details = 'Already has ' . $existing->getTypeLabel() . ' allocated provision. Existing item will be cancelled and replaced.';
+                } else {
+                    $record->details = 'Has ' . $existing->getTypeLabel() . ' earned year ' . $existing->source_year . '. Existing item will be cancelled and replaced.';
                 }
+                continue;
             }
 
             $record->status = self::STATUS_SUCCESS;
@@ -657,21 +655,14 @@ class BulkUploader
                 continue;
             }
 
-            $ad = null;
-            if ($isEventRadio) {
-                $ad = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO, $isAllocated);
-            }
-
-            if (!$ad) {
-                $ad = new AccessDocument([
-                    'person_id' => $person->id,
-                    'type' => $type,
-                    'status' => AccessDocument::QUALIFIED,
-                    'expiry_date' => $expiryYear,
-                    'source_year' => $sourceYear,
-                    'is_allocated' => $isAllocated,
-                ]);
-            }
+            $ad = new AccessDocument([
+                'person_id' => $person->id,
+                'type' => $type,
+                'status' => AccessDocument::QUALIFIED,
+                'expiry_date' => $expiryYear,
+                'source_year' => $sourceYear,
+                'is_allocated' => $isAllocated,
+            ]);
 
             if ($isEventRadio) {
                 $ad->item_count = empty($record->data) ? 1 : (int)$record->data[0];

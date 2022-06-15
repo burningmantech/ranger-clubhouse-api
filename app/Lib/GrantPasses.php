@@ -98,7 +98,15 @@ class GrantPasses
     public static function findRangersWhoNeedWAPs(): mixed
     {
         $year = current_year();
-        $startYear = $year - 3;
+        if ($year == 2022) {
+            $startYear = 2017;
+        } else if ($year == 2023) {
+            $startYear = 2018;
+        } else if ($year == 2024){
+            $startYear = 2019;
+        } else {
+            $startYear = $year - 3;
+        }
 
         // Find everyone who worked in the last three years
         $workedIds = DB::table('timesheet')
@@ -178,6 +186,7 @@ class GrantPasses
 
         $people = Person::select('id', 'callsign', 'status')
             ->whereIntegerInRaw('id', $ids)
+            ->whereNotIn('status',  [ Person::DISMISSED, Person::DECEASED ])
             ->orderBy('callsign')
             ->get();
 

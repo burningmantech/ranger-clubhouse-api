@@ -125,7 +125,6 @@ class AccessDocument extends ApiModel
         self::WAP,
         self::WAPSO,
         self::VEHICLE_PASS,
-        self::EVENT_RADIO
     ];
 
     const TYPE_LABELS = [
