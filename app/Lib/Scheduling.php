@@ -94,7 +94,8 @@ class Scheduling
             }
         } else if (!$isNonRanger && !$otCompleted) {
             // Online training not completed. Bad Ranger, no biscuit.
-            $requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+            //$requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+            $canSignUpForTraining = false;
         }
 
         if (!$isAuditor) {

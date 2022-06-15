@@ -701,7 +701,7 @@ class BulkUploadControllerTest extends TestCase
         $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status' => 'success',
+                'status' => 'warning',
             ]
         ]]);
 

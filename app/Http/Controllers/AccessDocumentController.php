@@ -6,6 +6,7 @@ use App\Lib\GrantPasses;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
+use App\Models\Person;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -403,6 +404,10 @@ class AccessDocumentController extends ApiController
 
         $documents = [];
         foreach ($rows as $row) {
+            if ($row->person->status == Person::DISMISSED
+            || $row->person->status == Person::DECEASED) {
+                continue;
+            }
             $row->access_date = $accessDate;
             $row->addComment("changed access date to $accessDate via maintenance function", $user);
             $this->saveAccessDocument($row, $documents);
