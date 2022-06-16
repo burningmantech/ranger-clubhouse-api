@@ -2,12 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\Slot;
-
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 
 class TraineeStatus extends ApiModel
 {
@@ -28,11 +23,13 @@ class TraineeStatus extends ApiModel
         'ends' => 'date'
     ];
 
-    public function person() {
+    public function person()
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public function slot() {
+    public function slot()
+    {
         return $this->belongsTo(Slot::class);
     }
 
@@ -40,13 +37,13 @@ class TraineeStatus extends ApiModel
      * Find trainee_status records with joined slot for a person & year.
      * (Note: record returned will be a merged trainee_state & slot row.
      *
-     * @param integer $personId person id to find
-     * @param integer $year year to look up
-     * @param integer $positionId
-     * @return TraineeStatus[]|Collection
+     * @param int $personId person id to find
+     * @param int $year year to look up
+     * @param ?int $positionId
+     * @return Collection
      */
 
-    public static function findForPersonYear(int $personId, int $year, ?int $positionId = null)
+    public static function findForPersonYear(int $personId, int $year, ?int $positionId = null): Collection
     {
         // Find the first training that passed
         $sql = self::join('slot', 'slot.id', 'trainee_status.slot_id')
@@ -55,13 +52,14 @@ class TraineeStatus extends ApiModel
                 $q->on('person_slot.slot_id', 'trainee_status.slot_id');
                 $q->where('person_slot.person_id', $personId);
             })
-            ->where('trainee_status.person_id', $personId)
             ->whereYear('slot.begins', $year)
-            ->orderBy('trainee_status.passed', 'asc')
+            ->where('slot.active', true)
+            ->where('trainee_status.person_id', $personId)
+            ->orderBy('trainee_status.passed')
             ->orderBy('slot.begins');
 
         if ($positionId) {
-            $ids = [ $positionId ];
+            $ids = [$positionId];
             if ($positionId == Position::HQ_FULL_TRAINING) {
                 $ids[] = Position::HQ_REFRESHER_TRAINING;
             }
@@ -80,7 +78,7 @@ class TraineeStatus extends ApiModel
      * @return bool
      */
 
-    public static function didPersonPassForYear(int $personId, int $positionId, int $year) : bool
+    public static function didPersonPassForYear(int $personId, int $positionId, int $year): bool
     {
         $positionIds = [$positionId];
 
@@ -109,11 +107,12 @@ class TraineeStatus extends ApiModel
      * @return bool
      */
 
-    public static function didPersonPassSession(int $personId, int $slotId) : bool {
+    public static function didPersonPassSession(int $personId, int $slotId): bool
+    {
         return self::where('person_id', $personId)
-                    ->where('passed', true)
-                    ->where('slot_id', $slotId)
-                    ->exists();
+            ->where('passed', true)
+            ->where('slot_id', $slotId)
+            ->exists();
     }
 
     /**
@@ -121,7 +120,7 @@ class TraineeStatus extends ApiModel
      * @param int $slotId
      */
 
-    public static function deleteForSlot(int $slotId) : void
+    public static function deleteForSlot(int $slotId): void
     {
         self::where('slot_id', $slotId)->delete();
     }

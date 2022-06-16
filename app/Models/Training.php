@@ -330,6 +330,7 @@ class Training extends Position
             $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
                 ->whereIn('position_id', $ids)
                 ->whereYear('begins', $year)
+                ->where('slot.active', true)
                 ->where('person_slot.person_id', $personId)
                 ->orderBy('begins', 'desc')
                 ->first();
