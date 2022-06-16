@@ -163,12 +163,22 @@ class Slot extends ApiModel
         return $rows;
     }
 
-    public static function findFirstSignUp($personId, $positionId, $year)
+    /**
+     * Find all the signs up for a given person, position, and year.
+     *
+     * @param $personId
+     * @param $positionId
+     * @param $year
+     * @return ?Slot
+     */
+
+    public static function findFirstSignUp($personId, $positionId, $year): ?Slot
     {
         return self::join('person_slot', function ($q) use ($personId) {
             $q->on('person_slot.slot_id', 'slot.id');
             $q->where('person_slot.person_id', $personId);
         })->where('position_id', $positionId)
+            ->where('slot.active', true)
             ->whereYear('begins', $year)
             ->where('slot.position_id', $positionId)
             ->orderBy('begins')
