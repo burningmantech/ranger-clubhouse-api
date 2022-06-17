@@ -72,6 +72,7 @@ Route::group([
     Route::post('access-document/set-staff-credentials-access-date', 'AccessDocumentController@setStaffCredentialsAccessDate');
     Route::post('access-document/clean-access-documents', 'AccessDocumentController@cleanAccessDocsFromPriorEvent');
     Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
+    Route::post('access-document/unbank-access-documents', 'AccessDocumentController@unbankAccessDocuments');
     Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
     Route::patch('access-document/statuses', 'AccessDocumentController@statuses');
     Route::resource('access-document', 'AccessDocumentController');

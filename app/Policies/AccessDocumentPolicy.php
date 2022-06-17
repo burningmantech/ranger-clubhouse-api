@@ -142,4 +142,9 @@ class AccessDocumentPolicy
     {
         return ($user->id == $personId);
     }
+
+    public function unbankAccessDocuments(Person $user)
+    {
+        return false;
+    }
 }

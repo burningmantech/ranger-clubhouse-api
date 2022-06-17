@@ -74,7 +74,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function bulkComment() : JsonResponse
+    public function bulkComment(): JsonResponse
     {
         $this->authorize('bulkComment', AccessDocument::class);
         $params = request()->validate([
@@ -92,7 +92,7 @@ class AccessDocumentController extends ApiController
             $row->saveWithoutValidation();
         }
 
-        return response()->json([ 'status' => 'success']);
+        return response()->json(['status' => 'success']);
     }
 
     /**
@@ -405,7 +405,7 @@ class AccessDocumentController extends ApiController
         $documents = [];
         foreach ($rows as $row) {
             if ($row->person->status == Person::DISMISSED
-            || $row->person->status == Person::DECEASED) {
+                || $row->person->status == Person::DECEASED) {
                 continue;
             }
             $row->access_date = $accessDate;
@@ -466,7 +466,7 @@ class AccessDocumentController extends ApiController
 
         // Expire or use all allocated items.
         $rows = AccessDocument::where('is_allocated', true)
-            ->whereIn('status', [ AccessDocument::SUBMITTED, AccessDocument::QUALIFIED, AccessDocument::BANKED ])
+            ->whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED, AccessDocument::BANKED])
             ->with('person:id,callsign,status')
             ->get();
 
@@ -644,5 +644,34 @@ class AccessDocumentController extends ApiController
         }
 
         $documents[] = $result;
+    }
+
+    /**
+     * Find all banked items and set the status to qualified.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function unbankAccessDocuments(): JsonResponse
+    {
+        $this->authorize('unbankAccessDocuments', AccessDocument::class);
+
+        $rows = AccessDocument::where('status', AccessDocument::BANKED)
+            ->with('person:id,callsign')
+            ->get();
+
+        $documents = [];
+        foreach ($rows as $row) {
+            $row->auditReason = 'maintenance - unbank items';
+            $row->status = AccessDocument::QUALIFIED;
+            $row->addComment('marked as qualified via maintenance function', $this->user->callsign);
+            $row->saveWithoutValidation();
+            $this->saveAccessDocument($row, $documents, true);
+        }
+
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+
+        return response()->json(['access_documents' => $documents]);
     }
 }
