@@ -427,7 +427,17 @@ class BulkUploader
         }
     }
 
-    public static function processTickets($records, $action, $commit, $reason)
+    /**
+     * Process ticket actions (create Staff Credentials, Reduced Priced Tickets, etc)
+     *
+     * @param $records
+     * @param $action
+     * @param $commit
+     * @param $reason
+     * @return void
+     */
+
+    public static function processTickets($records, $action, $commit, $reason): void
     {
         $year = current_year();
 
@@ -534,13 +544,23 @@ class BulkUploader
             $record->status = self::STATUS_SUCCESS;
             if ($commit) {
                 if (self::saveModel($ad, $record)) {
-                    AccessDocumentChanges::log($ad, Auth::user()->id, $ad, 'create');
+                    AccessDocumentChanges::log($ad, Auth::id(), $ad, 'create');
                 }
             }
         }
     }
 
-    public static function processWAPs($records, $action, $commit, $reason)
+    /**
+     * Process WAP actions
+     *
+     * @param $records
+     * @param $action
+     * @param $commit
+     * @param $reason
+     * @return void
+     */
+
+    public static function processWAPs($records, $action, $commit, $reason): void
     {
         $year = current_year();
         $low = 5;
@@ -662,6 +682,7 @@ class BulkUploader
                 'expiry_date' => $expiryYear,
                 'source_year' => $sourceYear,
                 'is_allocated' => $isAllocated,
+                'additional_comments' => 'created via bulk uploader'
             ]);
 
             if ($isEventRadio) {
