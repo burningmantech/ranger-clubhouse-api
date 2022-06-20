@@ -42,7 +42,7 @@ class VehicleController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function store()
+    public function store(): JsonResponse
     {
         $vehicle = new Vehicle;
         $this->fromRestFiltered($vehicle);
@@ -63,7 +63,7 @@ class VehicleController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function show(Vehicle $vehicle)
+    public function show(Vehicle $vehicle): JsonResponse
     {
         $this->authorize('show', $vehicle);
         $vehicle->loadRelationships();
@@ -77,7 +77,7 @@ class VehicleController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function update(Vehicle $vehicle)
+    public function update(Vehicle $vehicle): JsonResponse
     {
         $this->authorize('update', $vehicle);
         $this->fromRest($vehicle);
@@ -97,7 +97,8 @@ class VehicleController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function destroy(Vehicle $vehicle)
+
+    public function destroy(Vehicle $vehicle): JsonResponse
     {
         $this->authorize('delete', $vehicle);
         $vehicle->delete();
@@ -116,5 +117,18 @@ class VehicleController extends ApiController
         $this->authorize('paperwork', [Vehicle::class]);
 
         return response()->json(['people' => VehiclePaperworkReport::execute()]);
+    }
+
+    /**
+     * Retrieve the vehicle request configuration
+     *
+     * @return JsonResponse
+     */
+
+    public function config() : JsonResponse
+    {
+        return response()->json([ 'config' => [
+            'personal_vehicle_document_url' => setting('RangerPersonalVehiclePolicyUrl')
+        ]]);
     }
 }
