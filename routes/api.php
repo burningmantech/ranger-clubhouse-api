@@ -235,9 +235,6 @@ Route::group([
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
 
-    Route::get('vehicle/paperwork', 'VehicleController@paperwork');
-    Route::resource('vehicle', 'VehicleController');
-
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
 
@@ -349,4 +346,8 @@ Route::group([
     Route::resource('timesheet-missing', 'TimesheetMissingController');
 
     Route::resource('help', 'HelpController');
+
+    Route::get('vehicle/config', 'VehicleController@config');
+    Route::get('vehicle/paperwork', 'VehicleController@paperwork');
+    Route::resource('vehicle', 'VehicleController');
 });

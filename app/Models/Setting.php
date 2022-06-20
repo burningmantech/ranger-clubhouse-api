@@ -318,6 +318,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'RangerPersonalVehiclePolicyUrl' => [
+            'description' => 'Ranger Personal Vehicle Document URL (used by Me > Vehicles)',
+            'type' => self::TYPE_STRING,
+        ],
+
         'RpTicketThreshold' => [
             'description' => 'Credit threshold for a reduced price ticket. Shown on the Schedule and Ticket announce pages',
             'type' => self::TYPE_FLOAT,
