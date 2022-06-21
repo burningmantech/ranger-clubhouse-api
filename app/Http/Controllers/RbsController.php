@@ -476,7 +476,7 @@ class RbsController extends ApiController
         // Send out the emails
         $emailsQueued = 0;
         if ($sendEmail) {
-            RBSTransmitEmailJob::dispatch($alert, $broadcastId, $userId, $people, $from, $subject, $message);
+            RBSTransmitEmailJob::dispatch($alert, $broadcastId, $userId, $people, $subject, $message);
             foreach ($people as $person) {
                 if ($person->use_email) {
                     $emailsQueued++;

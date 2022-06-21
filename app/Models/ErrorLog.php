@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class ErrorLog extends ApiModel
 {
@@ -13,9 +12,9 @@ class ErrorLog extends ApiModel
     // Allow mass assignment.
     protected $guarded = [];
 
-    protected $casts = [
+   /* protected $casts = [
         'data' => 'array'
-    ];
+    ];*/
 
     public function person()
     {
@@ -65,7 +64,6 @@ class ErrorLog extends ApiModel
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'backtrace' => $e->getTrace(),
             ]
         ];
 
@@ -73,7 +71,6 @@ class ErrorLog extends ApiModel
         $req = request();
         if ($req) {
             $data['method'] = $req->method();
-            $data['parameters'] = $req->all();
             $data['url'] = $req->fullUrl();
         }
 
@@ -81,7 +78,7 @@ class ErrorLog extends ApiModel
 
         $error = [
             'error_type' => $error_type,
-            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE),
+            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE|JSON_UNESCAPED_UNICODE),
         ];
 
         // Include the IP, user_agent and URL location
@@ -93,7 +90,7 @@ class ErrorLog extends ApiModel
 
         // Who is the user?
         if (Auth::check()) {
-            $error['person_id'] = Auth::user()->id;
+            $error['person_id'] = Auth::id();
         }
 
         try {
