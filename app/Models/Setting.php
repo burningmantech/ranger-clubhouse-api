@@ -102,15 +102,6 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
-        'BroadcastSMSService' => [
-            'description' => 'Ranger Broadcast SMS Service',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['twilio', 'deliver SMS messages via Twilio'],
-                ['sandbox', 'No SMS sent - developer mode'],
-            ]
-        ],
-
         'BroadcastSMSSandbox' => [
             'description' => 'Sandbox SMS messages',
             'type' => self::TYPE_BOOL,
@@ -604,11 +595,6 @@ class Setting extends ApiModel
             'description' => 'Twilio Service ID of SMS Channel',
             'type' => self::TYPE_STRING,
             'is_credential' => true,
-        ],
-
-        'TwilioStatusCallbackUrl' => [
-            'description' => 'Twilio Status Callback URL (not implemented currently)',
-            'type' => self::TYPE_STRING,
         ],
 
         'VCEmail' => [

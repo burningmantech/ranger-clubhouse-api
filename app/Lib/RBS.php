@@ -19,11 +19,10 @@ use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
 use Exception;
-use RuntimeException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -243,7 +242,7 @@ class RBS
      * @return array [ success count, failed count ]
      */
 
-    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $from, $subject, $message)
+    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $subject, $message)
     {
         $sandbox = setting('BroadcastMailSandbox');
 
@@ -258,10 +257,7 @@ class RBS
         $fails = 0;
         $sent = 0;
 
-        if (empty($from)) {
-            $from = setting('DoNotReplyEmail');
-        }
-
+        $from = setting('DoNotReplyEmail');
 
         foreach ($people as $person) {
             // Skip if user has not set email as a delivery mechanism
@@ -283,7 +279,6 @@ class RBS
                     new Address($email, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
                     $subject,
                     $body);
-                error_log("**** FROM $from");
                 try {
                     $sentMessage = $mailer->send($emailMessage);
                     $status = Broadcast::STATUS_SENT;
@@ -299,7 +294,7 @@ class RBS
                 } catch (TransportExceptionInterface $e) {
                     $fails++;
                     $status = Broadcast::STATUS_SERVICE_FAIL;
-                    ErrorLog::recordException($e, 'email-exception', [
+                    ErrorLog::recordException($e, 'rbs-email-exception', [
                         'type' => 'broadcast',
                         'broadcast_id' => $broadcastId,
                         'email' => $email,
@@ -405,7 +400,7 @@ class RBS
 
     public static function setupSMTP(): EsmtpTransport
     {
-        $mailer = config('mail.mailers.' . config('mail.default'));
+        $mailer = config('mail.mailers.smtp');
         $smtpServer = $mailer['host'];
 
         if ($mailer['transport'] !== 'smtp') {
@@ -416,9 +411,9 @@ class RBS
         $smtpUsername = $mailer['username'] ?? '';
         $smtpPassword = $mailer['password'] ?? '';
         $smtpPort = $mailer['port'] ?? 25;
-        $smtpProtocol = $mailer['encryption'] ?? '';
 
-        $transport = new EsmtpTransport($smtpServer, $smtpPort, $smtpProtocol == 'tls');
+        // Leave encryption option false, connection will be upgraded to TLS during the connection negotiation.
+        $transport = new EsmtpTransport($smtpServer, $smtpPort, false);
         if (!empty($smtpUsername)) {
             $transport->setUsername($smtpUsername);
             $transport->setPassword($smtpPassword);
