@@ -147,4 +147,9 @@ class AccessDocumentPolicy
     {
         return false;
     }
+
+    public function statistics(Person $user)
+    {
+        return false;
+    }
 }
