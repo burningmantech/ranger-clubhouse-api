@@ -314,6 +314,7 @@ Route::group([
 
     Route::get('ticketing/info', 'TicketingController@ticketingInfo');
     Route::get('ticketing/thresholds', 'TicketingController@thresholds');
+    Route::get('ticketing/statistics', 'TicketingController@statistics');
     Route::get('ticketing/{person}/package', 'TicketingController@package');
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');

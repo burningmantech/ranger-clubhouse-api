@@ -9,6 +9,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\TicketingStatistics;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
@@ -221,5 +222,19 @@ class TicketingController extends ApiController
         ]);
 
         return response()->json(['thresholds' => $thresholds]);
+    }
+
+    /**
+     * Retrieve ticketing statistics
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function statistics() : JsonResponse
+    {
+        $this->authorize('statistics', AccessDocument::class);
+
+        return response()->json([ 'statistics' => TicketingStatistics::execute()]);
     }
 }
