@@ -102,62 +102,81 @@ class GrantPasses
             $startYear = 2017;
         } else if ($year == 2023) {
             $startYear = 2018;
-        } else if ($year == 2024){
+        } else if ($year == 2024) {
             $startYear = 2019;
         } else {
             $startYear = $year - 3;
         }
 
         // Find everyone who worked in the last three years
-        $workedIds = DB::table('timesheet')
-            ->join('person', 'person.id', 'timesheet.person_id')
-            ->whereYear('timesheet.on_duty', '>=', $startYear)
-            ->whereIn('person.status', [Person::ACTIVE, Person::INACTIVE])
-            ->groupBy('timesheet.person_id')
-            ->pluck('timesheet.person_id');
+        $timesheetIds = DB::table('timesheet')
+            ->whereYear('on_duty', '>=', $startYear)
+            ->groupBy('person_id')
+            ->pluck('person_id');
+
+        $workedIds = DB::table('person')
+            ->whereIntegerInRaw('id', $timesheetIds)
+            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
+            ->pluck('id');
 
         // .. and find everyone signed up this year.
         $slotIds = DB::table('slot')->whereYear('begins', $year)->pluck('id');
         $signUpIds = DB::table('person_slot')
-            ->join('person', 'person.id', 'person_slot.person_id')
             ->whereIntegerInRaw('slot_id', $slotIds)
-            ->whereIn('person.status', Person::ACTIVE_STATUSES)
-            ->groupBy('person_slot.person_id')
+            ->groupBy('person_id')
             ->pluck('person_id');
+
+        $signUpIds = DB::table('person')
+            ->whereIntegerInRaw('id', $signUpIds)
+            ->whereIn('status', Person::ACTIVE_STATUSES)
+            ->pluck('id');
 
         $personIds = $signUpIds->merge($workedIds)->unique()->toArray();
 
-        $people = Person::select('person.id', 'person.callsign', 'person.status')
-            ->whereIntegerInRaw('person.id', $personIds)
+        // Pull any WAPs (qualified, claimed, submitted) or RPT & SCs (qualified, claimed, submitted, banked)
+        $accessDocuments = DB::table('access_document')
+            ->whereIntegerInRaw('person_id', $personIds)
             ->where(function ($check) {
-                $check->whereNotExists(function ($wap) {
-                    $wap->selectRaw(1)
-                        ->from('access_document')
-                        ->whereColumn('access_document.person_id', 'person.id')
-                        ->where('type', AccessDocument::WAP)
-                        ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-                        ->limit(1);
+                $check->where(function ($wap) {
+                    $wap->where('type', AccessDocument::WAP)
+                        ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
                 });
-                $check->where(function ($tickets) {
-                    $tickets->orWhereExists(function ($rpt) {
-                        $rpt->selectRaw(1)
-                            ->from('access_document')
-                            ->whereColumn('access_document.person_id', 'person.id')
-                            ->where('access_document.type', AccessDocument::RPT)
-                            ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
-                            ->limit(1);
-                    });
-                    $tickets->orWhereNotExists(function ($sc) {
-                        $sc->selectRaw(1)
-                            ->from('access_document')
-                            ->whereColumn('access_document.person_id', 'person.id')
-                            ->where('access_document.type', AccessDocument::STAFF_CREDENTIAL)
-                            ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
-                            ->limit(1);
-                    });
+                $check->orWhere(function ($ticket) {
+                    $ticket->whereIn('type', [AccessDocument::RPT, AccessDocument::STAFF_CREDENTIAL])
+                        ->whereIn('status', AccessDocument::CHECK_STATUSES);
                 });
-            })->orderBy('callsign')
+            })->get()
+            ->groupBy('person_id');
+
+        $potentials = DB::table('person')
+            ->select('person.id', 'person.callsign', 'person.status')
+            ->whereIntegerInRaw('person.id', $personIds)
+            ->orderBy('callsign')
             ->get();
+
+        $people = [];
+        foreach ($potentials as $person) {
+            $id = $person->id;
+
+            $docs = $accessDocuments->get($id);
+            if (!$docs) {
+                // Gotta have at least a RPT
+                continue;
+            }
+
+            $wap = $docs->firstWhere('type', AccessDocument::WAP);
+            if ($wap) {
+                // Has a WAP already, nothing to see here.
+                continue;
+            }
+
+            $rpt = $docs->firstWhere('type', AccessDocument::RPT);
+            $sc = $docs->firstWhere('type', AccessDocument::STAFF_CREDENTIAL);
+            if ($rpt && !$sc) {
+                // Has to have a RPT in order to get a WAP.
+                $people[] = $person;
+            }
+        }
 
         return $people;
     }
@@ -186,7 +205,7 @@ class GrantPasses
 
         $people = Person::select('id', 'callsign', 'status')
             ->whereIntegerInRaw('id', $ids)
-            ->whereNotIn('status',  [ Person::DISMISSED, Person::DECEASED ])
+            ->whereNotIn('status', [Person::DISMISSED, Person::DECEASED])
             ->orderBy('callsign')
             ->get();
 

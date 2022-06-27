@@ -27,6 +27,7 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
      *
      * @return mixed
      */
+
     public function handle(): mixed
     {
         $email = setting('TAS_WAP_Report_Email');
@@ -34,11 +35,7 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
             return true;
         }
 
-        $people = GrantPasses::findRangersWhoNeedWAPs();
-
-        if (!empty($people)) {
-            mail_to($email, new RangersWhoNeedWorkAccessPassesMail($people));
-        }
+        mail_to($email, new RangersWhoNeedWorkAccessPassesMail(GrantPasses::findRangersWhoNeedWAPs()));
 
         return true;
     }
