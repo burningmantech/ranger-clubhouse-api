@@ -177,7 +177,7 @@ class BMIDManagement
                     ->from('access_document')
                     ->whereColumn('access_document.person_id', 'person_slot.person_id')
                     ->whereIn('type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
-                    ->whereIn('status', AccessDocument::CHECK_STATUSES);
+                    ->whereIn('status', AccessDocument::CURRENT_STATUSES);
             })->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
 

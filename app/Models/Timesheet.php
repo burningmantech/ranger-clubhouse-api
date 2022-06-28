@@ -204,7 +204,7 @@ class Timesheet extends ApiModel
      * @return Timesheet|null
      */
 
-    public static function findPersonOnDuty(int $personId): ?Timesheet
+    public static function findPersonOnDuty(int $personId): Timesheet|null
     {
         return self::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -221,7 +221,7 @@ class Timesheet extends ApiModel
      * @return bool
      */
 
-    public static function isPersonSignIn(int $personId, $positionIds): bool
+    public static function isPersonSignedIn(int $personId, $positionIds): bool
     {
         $sql = self::where('person_id', $personId)->whereNull('off_duty');
         if (is_array($positionIds)) {
@@ -290,7 +290,8 @@ class Timesheet extends ApiModel
     {
         $everything = ($type == self::YEARS_ALL);
 
-        $sql = self::selectRaw("YEAR(on_duty) as year")
+        $sql = DB::table('timesheet')
+            ->selectRaw("YEAR(on_duty) as year")
             ->where('person_id', $personId)
             ->groupBy("year")
             ->orderBy("year", "asc");

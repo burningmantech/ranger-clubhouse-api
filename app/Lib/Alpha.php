@@ -203,7 +203,7 @@ class Alpha
             'teeshirt_size_style' => $person->teeshirt_size_style,
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
-            'on_alpha_shift' => Timesheet::isPersonSignIn($personId, Position::ALPHA)
+            'on_alpha_shift' => Timesheet::isPersonSignedIn($personId, Position::ALPHA)
         ];
 
         if ($photoApproved) {
