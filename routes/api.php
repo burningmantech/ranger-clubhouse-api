@@ -66,6 +66,7 @@ Route::group([
     Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
     Route::post('access-document/bulk-comment', 'AccessDocumentController@bulkComment');
+    Route::get('access-document/wap-candidates', 'AccessDocumentController@wapCandidates');
     Route::post('access-document/grant-waps', 'AccessDocumentController@grantWAPs');
     Route::post('access-document/grant-alpha-waps', 'AccessDocumentController@grantAlphaWAPs');
     Route::post('access-document/grant-vps', 'AccessDocumentController@grantVehiclePasses');

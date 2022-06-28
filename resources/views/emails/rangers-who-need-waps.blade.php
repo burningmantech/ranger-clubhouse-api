@@ -9,14 +9,45 @@
             <tr>
                 <th>Person</th>
                 <th>Status</th>
+                <th>Has RPT?</th>
+                <th>Years worked {{$startYear}} &amp; later</th>
+                <th>Schedule</th>
             </tr>
             </thead>
 
             <tbody>
             @foreach ($people as $person)
                 <tr>
-                    <td>{{$person->callsign}}</td>
+                    <td>
+                        <a href="https://ranger-clubhouse.burningman.org/client/person/{{$person->id}}">{{$person->callsign}}</a>
+                    </td>
                     <td>{{$person->status}}</td>
+                    <td>
+                        @if ($person->has_rpt)
+                            @foreach ($person->tickets as $ticket)
+                                RAD-{{$ticket->id}} {{$ticket->getShortTypeLabel()}} {{$ticket->status}}<br>
+                            @endforeach
+                        @else
+                            NO RPT
+                        @endif
+                    </td>
+                    <td>
+                        @if (empty($person->years))
+                            No years
+                        @else
+                            {{implode(', ', $person->years)}}
+                        @endif
+                    </td>
+                    <td>
+                        @if (count($person->schedule))
+                            {{count($person->schedule)}} sign up(s):<br>
+                            @foreach($person->schedule as $slot)
+                                {{$slot->begins}} {{$slot->position_title}} {{$slot->description}}<br>
+                            @endforeach
+                        @else
+                            No Sign Ups
+                        @endif
+                    </td>
                 </tr>
             @endforeach
             </tbody>

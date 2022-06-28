@@ -35,7 +35,8 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
             return true;
         }
 
-        mail_to($email, new RangersWhoNeedWorkAccessPassesMail(GrantPasses::findRangersWhoNeedWAPs()));
+        list ($people,$startYear) = GrantPasses::findRangersWhoNeedWAPs();
+        mail_to($email, new RangersWhoNeedWorkAccessPassesMail($people,$startYear));
 
         return true;
     }

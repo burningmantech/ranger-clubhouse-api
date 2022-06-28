@@ -27,7 +27,7 @@ class AccessDocument extends ApiModel
         self::BANKED
     ];
 
-    const CHECK_STATUSES = [
+    const CURRENT_STATUSES = [
         self::QUALIFIED,
         self::CLAIMED,
         self::BANKED,
@@ -776,6 +776,11 @@ class AccessDocument extends ApiModel
     public function getTypeLabel()
     {
         return self::TYPE_LABELS[$this->type] ?? $this->type;
+    }
+
+    public function getShortTypeLabel()
+    {
+        return self::SHORT_TICKET_LABELS[$this->type] ?? $this->type;
     }
 
     public function setStreet1Attribute($value)

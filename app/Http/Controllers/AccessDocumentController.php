@@ -329,7 +329,7 @@ class AccessDocumentController extends ApiController
 
     /**
      * Grant Work Access Passes to people who don't already have them.
-     * Criteria are that you have worked in the last three years, are
+     * Criteria are that you have worked in the last three events (not years), are
      * of status active, inactive, or vintage OR... (this is the UNION below)
      * they have signed up for something (training, whatever),
      * AND they don't have a current staff credential or other WAP
@@ -337,11 +337,26 @@ class AccessDocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function grantWAPs(): JsonResponse
     {
         $this->authorize('grantWAPs', [AccessDocument::class]);
-        $people = GrantPasses::grantWAPsToRangers();
-        return response()->json(['people' => $people]);
+        list ($people,$startYear) = GrantPasses::grantWAPsToRangers();
+        return response()->json(['people' => $people, 'start_year' => $startYear ]);
+    }
+
+    /**
+     * Find Rangers who might need a WAP.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function wapCandidates() : JsonResponse
+    {
+        $this->authorize('wapCandidates', [AccessDocument::class]);
+        list ($people,$startYear) = GrantPasses::findRangersWhoNeedWAPs();
+        return response()->json(['people' => $people, 'start_year' => $startYear ]);
     }
 
     /**

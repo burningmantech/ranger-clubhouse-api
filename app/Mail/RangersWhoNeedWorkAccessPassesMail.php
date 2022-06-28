@@ -9,7 +9,7 @@ class RangersWhoNeedWorkAccessPassesMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public $people)
+    public function __construct(public $people, public $startYear)
     {
         parent::__construct();
     }
@@ -21,6 +21,6 @@ class RangersWhoNeedWorkAccessPassesMail extends ClubhouseMailable
      */
     public function build()
     {
-        return $this->subject('[Clubhouse] Rangers Who Need WAPs ' . date('Y-m-d'))->view('emails.rangers-who-need-waps');
+        return $this->subject('Ranger WAP Candidates ' . date('Y-m-d'))->view('emails.rangers-who-need-waps');
     }
 }

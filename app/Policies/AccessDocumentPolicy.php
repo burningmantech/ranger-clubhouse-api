@@ -152,4 +152,9 @@ class AccessDocumentPolicy
     {
         return false;
     }
+
+    public function wapCandidates(Person $user)
+    {
+        return false;
+    }
 }
