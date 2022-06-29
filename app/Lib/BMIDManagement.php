@@ -80,36 +80,30 @@ class BMIDManagement
                 ->groupBy('person_id');
 
             foreach ($people as $person) {
-                $hasBadAC = null;
+                $hasBadACs = [];
+                $qualified = null;
+
                 $docs = $accessDocs->get($person->id);
 
-                $qualified = $docs?->first(fn($ad) => $ad->status == AccessDocument::SUBMITTED);
-                if (!$qualified) {
-                    $qualified = $docs?->first(fn($ad) => $ad->status == AccessDocument::CLAIMED);
-                }
-
-                if (!$qualified && $docs) {
-                    $earliest = null;
-                    foreach ($docs as $doc) {
-                        if ($doc->access_any_time) {
-                            $earliest = $doc;
+                if ($docs) {
+                    foreach ($docs as $candidate) {
+                        if (!$qualified) {
+                            $qualified = $candidate;
+                            continue;
+                        }
+                        if ($candidate->access_any_time) {
+                            $qualified = $candidate;
                             break;
-                        } else if (!$doc->access_date) {
-                            // Blagh, no access date set. Skip it
-                            $hasBadAC = $doc;
+                        }
+                        if (!$candidate->access_date) {
+                            // D'oh. No access date set.
+                            $hasBadACs[] = $candidate;
                             continue;
                         }
-
-                        if (!$earliest) {
-                            $earliest = $doc;
-                            continue;
-                        }
-
-                        if ($doc->access_date->lt($earliest->access_date)) {
-                            $earliest = $doc;
+                        if ($candidate->access_date->lt($qualified->access_date)) {
+                            $qualified = $candidate;
                         }
                     }
-                    $qualified = $earliest;
                 }
 
                 if ($qualified) {
@@ -118,7 +112,7 @@ class BMIDManagement
                         continue;
                     }
 
-                    // Check to see if a person has a sign up before access date.
+                    // Check to see if a person has a sign-up before access date.
                     $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
                         ->where('begins', '>=', "$year-08-15 00:00:00")
                         ->where('begins', '<', (string)$qualified->access_date)
@@ -142,16 +136,20 @@ class BMIDManagement
                 } else {
                     // No access document, feh.
                     $person->reason = "No qualified, claimed, submitted WAP or Staff Credential.";
-                    $hasBankedSC = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
+                    $banked = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
                         ->where('status', AccessDocument::BANKED)
                         ->where('person_id', $person->id)
-                        ->exists();
-                    if ($hasBankedSC) {
-                        $person->reason .= " RAD-{$hasBankedSC->id} Staff Credential has been banked.";
+                        ->get();
+
+                    foreach ($banked as $ac) {
+                        $person->reason .= " RAD-{$ac->id} Staff Credential banked.";
                     }
-                    if ($hasBadAC) {
-                        $label = $hasBadAC->getTypeLabel();
-                        $person->reason .= " RAD-{$hasBadAC->id} {$label} status {$qualified->status} has no access date.";
+
+                    if (!empty($hasBadACs)) {
+                        foreach ($hasBadACs as $ac) {
+                            $label = $ac->getTypeLabel();
+                            $person->reason .= " RAD-{$ac->id} {$label} status {$ac->status} has no access date.";
+                        }
                     }
                     $shiftsBeforeWap[] = $person;
                 }
@@ -279,7 +277,7 @@ class BMIDManagement
      * @return Bmid[]|array|Collection
      */
 
-    public static function retrieveCategoryToManage(int $year, string $filter)
+    public static function retrieveCategoryToManage(int $year, string $filter): Collection|array
     {
         switch ($filter) {
             case 'alpha':
@@ -360,6 +358,15 @@ class BMIDManagement
                         $q->orWhereNotNull('title3');
                         $q->orWhereNotNull('meals');
                         $q->orWhere('showers', true);
+                        $q->orWhereExists(function ($provision) {
+                            $provision->selectRaw(1)
+                                ->from('access_document')
+                                ->where('access_document.person_id', 'bmid.person_id')
+                                ->whereIn('access_document.status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
+                                ->whereIn('access_document.type', [AccessDocument::WET_SPOT, ...AccessDocument::MEAL_TYPES])
+                                ->limit(1)
+                                ->get();
+                        });
                     })
                     ->get(['person_id'])
                     ->pluck('person_id')
