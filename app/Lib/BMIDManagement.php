@@ -87,31 +87,26 @@ class BMIDManagement
 
                 if ($docs) {
                     foreach ($docs as $candidate) {
-                        if (!$qualified) {
-                            $qualified = $candidate;
-                            continue;
-                        }
-                        if ($candidate->access_any_time) {
-                            $qualified = $candidate;
-                            break;
-                        }
-                        if (!$candidate->access_date) {
+                        if (!$candidate->access_date && !$candidate->access_any_time) {
                             // D'oh. No access date set.
                             $hasBadACs[] = $candidate;
                             continue;
                         }
-                        if ($candidate->access_date->lt($qualified->access_date)) {
+                        if (!$qualified) {
+                            $qualified = $candidate;
+                        } elseif ($candidate->access_any_time) {
+                            $qualified = $candidate;
+                        } elseif ($candidate->access_date->lt($qualified->access_date)) {
                             $qualified = $candidate;
                         }
                     }
                 }
 
-                if ($qualified) {
-                    if ($qualified->access_any_time) {
-                        // Not an issue.
-                        continue;
-                    }
+                if ($qualified && $qualified->access_any_time) {
+                    continue;
+                }
 
+                if ($qualified) {
                     // Check to see if a person has a sign-up before access date.
                     $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
                         ->where('begins', '>=', "$year-08-15 00:00:00")
@@ -136,6 +131,19 @@ class BMIDManagement
                 } else {
                     // No access document, feh.
                     $person->reason = "No qualified, claimed, submitted WAP or Staff Credential.";
+
+                    $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                        ->where('begins', '>=', "$year-08-15 00:00:00")
+                        ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+                        ->where('person_slot.person_id', $person->id)
+                        ->with('position:id,title')
+                        ->orderBy('begins')
+                        ->first();
+
+                    if ($slot) {
+                        $person->reason .= " First shift {$slot->position->title} {$slot->begins}";
+                    }
+
                     $banked = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
                         ->where('status', AccessDocument::BANKED)
                         ->where('person_id', $person->id)
