@@ -64,7 +64,7 @@ class PersonController extends ApiController
         $meta = ['limit' => $results['limit'], 'total' => $results['total']];
 
         if ($params['basic'] ?? false) {
-            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
+            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER])) {
                 $this->notPermitted("Not authorized for basic search.");
             }
 

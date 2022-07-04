@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Jobs\AlertWhenSignUpsEmptyJob;
-use App\Jobs\TrainingSignupEmailJob;
 use App\Lib\WorkSummary;
 use Carbon\Carbon;
 use Exception;
@@ -285,7 +284,8 @@ class Schedule extends ApiModel
         if (!$signedUp && $slot->position->alert_when_empty) {
             $menteeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
             if ($menteeSlot && $menteeSlot->signed_up > 0) {
-                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)/*->delay(now()->addMinutes(5))*/;
+                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)/*->delay(now()->addMinutes(5))*/
+                ;
             }
         }
 
@@ -518,7 +518,7 @@ class Schedule extends ApiModel
     public static function summarizeShiftSignups(Person $person): array
     {
         $year = current_year();
-        list ($rows, $positions) = self::findForQuery($person->id, $year, [ 'only_signups' => true]);
+        list ($rows, $positions) = self::findForQuery($person->id, $year, ['only_signups' => true]);
 
         $positionsById = [];
         foreach ($positions as $position) {
@@ -588,8 +588,8 @@ class Schedule extends ApiModel
             'only_signups' => true
         ];
 
-        if ($remaining){
-            $query['remaining']  = true;
+        if ($remaining) {
+            $query['remaining'] = true;
         }
         $now = now();
 
@@ -637,7 +637,7 @@ class Schedule extends ApiModel
             $summary->computeTotals($row->position_id, $row->slot_begins_time, $row->slot_ends_time, $position->count_hours);
         }
 
-        return (object) [
+        return (object)[
             'pre_event_duration' => $summary->pre_event_duration,
             'pre_event_credits' => $summary->pre_event_credits,
             'event_duration' => $summary->event_duration,

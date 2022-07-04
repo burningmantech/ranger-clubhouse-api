@@ -12,7 +12,7 @@ class PersonPolicy
     use HandlesAuthorization;
 
     const AUTHORIZED_ROLES = [
-        Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER
+        Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER
     ];
 
     /*
