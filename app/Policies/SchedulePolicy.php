@@ -4,15 +4,15 @@ namespace App\Policies;
 
 use App\Models\Person;
 use App\Models\Role;
-
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SchedulePolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user) {
-        if ($user->hasRole([Role::MANAGE, Role::ADMIN, Role::VC, Role::TRAINER, Role::MENTOR])) {
+    public function before(Person $user)
+    {
+        if ($user->hasRole([Role::MANAGE, Role::ADMIN, Role::VC, Role::TRAINER, Role::MENTOR, Role::ART_TRAINER])) {
             return true;
         }
     }
@@ -20,11 +20,12 @@ class SchedulePolicy
     /**
      * Determine whether the user can view the personSchedule.
      *
-     * @param  \App\Models\Person  $user
-     * @param  \App\PersonSchedule  $personSchedule
-     * @return mixed
+     * @param Person $user
+     * @param Person $person
+     * @return bool
      */
-    public function view(Person $user, Person $person)
+
+    public function view(Person $user, Person $person) : bool
     {
         return ($user->id == $person->id);
     }
@@ -32,10 +33,12 @@ class SchedulePolicy
     /**
      * Determine whether the user can create personSchedules.
      *
-     * @param  \App\Models\Person  $user
-     * @return mixed
+     * @param Person $user
+     * @param Person $person
+     * @return bool
      */
-    public function create(Person $user, Person $person)
+
+    public function create(Person $user, Person $person) : bool
     {
         return ($user->id == $person->id);
     }
@@ -43,11 +46,12 @@ class SchedulePolicy
     /**
      * Determine whether the user can update the personSchedule.
      *
-     * @param  \App\Models\Person  $user
-     * @param  \App\PersonSchedule  $personSchedule
-     * @return mixed
+     * @param Person $user
+     * @param Person $person
+     * @return bool
      */
-    public function update(Person $user, Person $person)
+
+    public function update(Person $user, Person $person) : bool
     {
         return ($user->id == $person->id);
     }
@@ -55,11 +59,12 @@ class SchedulePolicy
     /**
      * Determine whether the user can delete the personSchedule.
      *
-     * @param  \App\Models\Person  $user
-     * @param  \App\PersonSchedule  $personSchedule
-     * @return mixed
+     * @param Person $user
+     * @param Person $person
+     * @return bool
      */
-    public function delete(Person $user, Person $person)
+
+    public function delete(Person $user, Person $person) : bool
     {
         return ($user->id == $person->id);
     }
