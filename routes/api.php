@@ -299,6 +299,9 @@ Route::group([
 
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
+
+    Route::post('training-session/{training_session}/graduate-candidates', 'TrainingSessionController@graduateCandidates');
+    Route::get('training-session/{training_session}/graduation-candidates', 'TrainingSessionController@graduationCandidates');
     Route::post('training-session/{training_session}/score-student', 'TrainingSessionController@scoreStudent');
     Route::post('training-session/{training_session}/trainer-status', 'TrainingSessionController@trainerStatus');
     Route::get('training-session/{training_session}/trainers', 'TrainingSessionController@trainers');

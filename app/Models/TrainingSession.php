@@ -2,28 +2,28 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\PersonPosition;
-use App\Models\Position;
-use App\Models\Slot;
-use App\Models\TraineeStatus;
-
 /*
  * Extended Model
  *
  * Holds the training session information (aka a slot with extras)
  */
 
+use Illuminate\Support\Collection;
+
 class TrainingSession extends Slot
 {
     // don't calculate slot credits
     protected $hidden = ['credits'];
 
-    /*
+    /**
      * Find all the training sessions (slots) for a training (position) and year
+     *
+     * @param int $trainingId
+     * @param int $year
+     * @return Collection
      */
 
-    public static function findAllForTrainingYear($trainingId, $year)
+    public static function findAllForTrainingYear(int $trainingId, int $year): Collection
     {
         $positionIds = [$trainingId];
 
@@ -38,7 +38,7 @@ class TrainingSession extends Slot
             ->get();
     }
 
-    /*
+    /**
      * Find the students for a training session
      *
      * The student information has the structure:
@@ -59,20 +59,13 @@ class TrainingSession extends Slot
      * rank: trainer ranking - NULL, 1 to 4
      * passed: person has passed or failed training
      *
+     * @return array
      */
 
-    public function retrieveStudents()
+    public function retrieveStudents(): array
     {
-        // Find everyone signed up
-        $people = PersonSlot::with([
-            'person',
-            'person.person_position:person_id,position_id'
-        ])->where('slot_id', $this->id)->get();
-
+        $people = $this->retrieveBasicStudentRoster();
         $personIds = $people->pluck('person_id')->toArray();
-        $people = $people->sortBy(function ($p) {
-            return $p->person->callsign;
-        }, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
         $isDirtTraining = ($this->position_id == Position::TRAINING);
 
@@ -163,7 +156,24 @@ class TrainingSession extends Slot
         return $students;
     }
 
-    /*
+    /**
+     * Retrieve the people signed up for this training.
+     *
+     * @return Collection
+     */
+
+    public function retrieveBasicStudentRoster(): Collection
+    {
+        // Find everyone signed up
+        $people = PersonSlot::with([
+            'person',
+            'person.person_position'
+        ])->where('slot_id', $this->id)->get();
+
+        return $people->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    /**
      * Retrieve all the trainers for this session
      *
      * The trainer's information has  structure:
@@ -172,9 +182,10 @@ class TrainingSession extends Slot
      * position_title: the position title for the slot
      * trainers: found trainer array (id, callsign, first_name, last_name, email)
      *
+     * @return array
      */
 
-    public function retrieveTrainers()
+    public function retrieveTrainers(): array
     {
         $trainerPositions = Position::TRAINERS[$this->position_id] ?? null;
         if (!$trainerPositions) {
@@ -231,13 +242,78 @@ class TrainingSession extends Slot
                 'position_title' => $trainerPosition->title,
                 'trainers' => $instructors,
                 'is_primary_trainer' => ($this->isArt() || (
-                    $trainerPositionId == Position::TRAINER_UBER ||
-                    $trainerPositionId == Position::TRAINER
+                        $trainerPositionId == Position::TRAINER_UBER ||
+                        $trainerPositionId == Position::TRAINER
                     ))
             ];
         }
 
         return $trainers;
+    }
+
+    /**
+     * Report on which students can graduate.
+     *
+     * @return array|null
+     */
+
+    public function graduationCandidates(): ?array
+    {
+        $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->position_id] ?? null;
+        if (!$graduate) {
+            return null;
+        }
+
+        $fullyGraduatedPosition = $graduate['veteran'] ?? null;
+        $position = $graduate['position'];
+
+        $students = $this->retrieveBasicStudentRoster();
+
+        $people = [];
+        $traineeStatusByIds = TraineeStatus::where('slot_id', $this->id)->get()->keyBy('person_id');
+
+        foreach ($students as $student) {
+            $person = $student->person;
+            if ($person->status == Person::AUDITOR) {
+                $status = 'auditor';
+            } else {
+                $positionsGranted = $person->person_position->keyBy('position_id');
+                if ($fullyGraduatedPosition && $positionsGranted->has($fullyGraduatedPosition)) {
+                    $status = 'fully-graduated';
+                } else if ($positionsGranted->has($position)) {
+                    $status = 'graduated';
+                } else if ($traineeStatusByIds->has($person->id)) {
+                    $status = 'candidate';
+                } else {
+                    $status = 'not-passed';
+                }
+            }
+
+            $people[] = [
+                'id' => $person->id,
+                'callsign' => $person->callsign,
+                'status' => $person->status,
+                'eligibility' => $status
+            ];
+        }
+
+        $result = [
+            'status' => 'success',
+            'people' => $people,
+            'position' => [
+                'id' => $position,
+                'title' => Position::retrieveTitle($position)
+            ]
+        ];
+
+        if ($fullyGraduatedPosition) {
+            $result['fully_graduated_position'] = [
+                'id' => $fullyGraduatedPosition,
+                'title' => Position::retrieveTitle($fullyGraduatedPosition)
+            ];
+        }
+
+        return $result;
     }
 
     public function getTrainersAttribute()

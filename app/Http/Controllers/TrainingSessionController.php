@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
+use App\Models\PersonPosition;
 use App\Models\PersonSlot;
+use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use App\Models\Training;
 use App\Models\TrainingSession;
-use App\Models\TraineeNote;
-
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class TrainingSessionController extends ApiController
 {
@@ -24,7 +23,7 @@ class TrainingSessionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function show(TrainingSession $training_session)
+    public function show(TrainingSession $training_session): JsonResponse
     {
         $this->authorize('show', $training_session);
 
@@ -42,7 +41,7 @@ class TrainingSessionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function sessions()
+    public function sessions(): JsonResponse
     {
         $params = request()->validate([
             'training_id' => 'required|integer',
@@ -75,7 +74,7 @@ class TrainingSessionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function scoreStudent(TrainingSession $training_session)
+    public function scoreStudent(TrainingSession $training_session): JsonResponse
     {
         $this->authorize('score', $training_session);
 
@@ -133,7 +132,8 @@ class TrainingSessionController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function trainerStatus(TrainingSession $training_session)
+
+    public function trainerStatus(TrainingSession $training_session): JsonResponse
     {
         $this->authorize('trainerStatus', $training_session);
 
@@ -162,7 +162,7 @@ class TrainingSessionController extends ApiController
      * @return JsonResponse
      */
 
-    public function trainers(TrainingSession $training_session)
+    public function trainers(TrainingSession $training_session): JsonResponse
     {
         $trainerGroups = $training_session->retrieveTrainers();
 
@@ -191,7 +191,7 @@ class TrainingSessionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function updateNote(TraineeNote $trainee_note)
+    public function updateNote(TraineeNote $trainee_note): JsonResponse
     {
         if ($trainee_note->person_source_id != $this->user->id || $trainee_note->is_log) {
             $this->notPermitted('Not authorized to update note.');
@@ -212,7 +212,7 @@ class TrainingSessionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function deleteNote(TraineeNote $trainee_note)
+    public function deleteNote(TraineeNote $trainee_note): JsonResponse
     {
         if ($trainee_note->person_source_id != $this->user->id || $trainee_note->is_log) {
             $this->notPermitted('Not authorized to delete note.');
@@ -220,4 +220,85 @@ class TrainingSessionController extends ApiController
         $trainee_note->delete();
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Retrieve graduation candidates
+     *
+     * @param TrainingSession $training_session
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function graduationCandidates(TrainingSession $training_session): JsonResponse
+    {
+        $this->authorize('graduationCandidates', $training_session);
+
+        $result = $training_session->graduationCandidates();
+        if (!$result) {
+            return response()->json(['status' => 'no-positions ']);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Retrieve graduation candidates
+     *
+     * @param TrainingSession $training_session
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function graduateCandidates(TrainingSession $training_session): JsonResponse
+    {
+        $this->authorize('graduateCandidates', $training_session);
+
+        $candidates = $training_session->graduationCandidates();
+        if (!$candidates) {
+            throw new InvalidArgumentException('ART has no positions to graduate to.');
+        }
+
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer'
+        ]);
+
+        $ids = $params['ids'];
+        $people = $candidates['people'];
+        $peopleById = [];
+        foreach ($people as $candidate) {
+            $peopleById[$candidate['id']] = $candidate;
+        }
+
+        $results = [];
+        $positionId = $candidates['position']['id'];
+
+        foreach ($ids as $id) {
+            $candidate = $peopleById[$id] ?? null;
+            if (!$candidate) {
+                $results[] = [
+                    'id' => $id,
+                    'status' => 'not-found'
+                ];
+                continue;
+            }
+
+            $status = $candidate['status'];
+            if ($status !== 'candidate') {
+                $results[] = [
+                    'id' => $id,
+                    'status' => $status
+                ];
+            }
+
+            PersonPosition::addIdsToPerson($id, [$positionId], 'granted via trainee graduation');
+            $results[] = [
+                'id' => $id,
+                'status' => 'success'
+            ];
+        }
+
+        return response()->json(['people' => $results]);
+    }
+
 }
