@@ -76,7 +76,7 @@ class Scheduling
             $otCompleted = PersonOnlineTraining::didCompleteForYear($personId, current_year());
         }
 
-        $canSignUpForTraining = $otCompleted;
+        $canSignUpForTraining = $isNonRanger || $otCompleted;
         $canSignUpForAllShifts = true;
 
         $requirements = [];

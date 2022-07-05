@@ -21,7 +21,7 @@ use Carbon\Carbon;
 
 class Milestones
 {
-    public static function buildForPerson(Person $person)
+    public static function buildForPerson(Person $person): array
     {
         $status = $person->status;
 
@@ -30,6 +30,8 @@ class Milestones
 
         $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
         $period = EventDate::calculatePeriod();
+        $isBinary = Timesheet::isPersonBinary($person);
+        $isNonRanger = ($status == Person::NON_RANGER);
 
         $settings = setting([
             'MotorpoolPolicyEnable',
@@ -40,7 +42,7 @@ class Milestones
         ]);
 
         $milestones = [
-            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
+            'online_training_passed' => $isNonRanger || PersonOnlineTraining::didCompleteForYear($person->id, $year),
             'online_training_enabled' => $settings['OnlineTrainingEnabled'],
             'online_training_url' => $settings['OnlineTrainingUrl'],
             'behavioral_agreement' => $person->behavioral_agreement,
@@ -75,7 +77,6 @@ class Milestones
 
         $milestones['art_trainings'] = $artTrainings;
 
-        $isBinary = Timesheet::isPersonBinary($person);
 
         if (in_array($status, Person::ACTIVE_STATUSES)) {
             // Only require Online Training to be passed in order to work? (2021 social distancing training)
@@ -141,10 +142,12 @@ class Milestones
                 break;
         }
 
-        if (in_array($status, Person::ACTIVE_STATUSES)) {
-            // note, some inactives are active trainers yet do not work on playa.
-            $milestones['is_trainer'] = PersonPosition::havePosition($person->id, Position::TRAINERS[Position::TRAINING]);
 
+        if (in_array($status, Person::ACTIVE_STATUSES) || $isNonRanger) {
+            if (!$isNonRanger) {
+                // note, some inactives are active trainers yet do not work on playa.
+                $milestones['is_trainer'] = PersonPosition::havePosition($person->id, Position::TRAINERS[Position::TRAINING]);
+            }
             $ticketingPeriod = setting('TicketingPeriod');
             $milestones['ticketing_period'] = $ticketingPeriod;
             if ($ticketingPeriod == 'open' || $ticketingPeriod == 'closed') {
@@ -161,7 +164,9 @@ class Milestones
             }
 
             if ($period != EventDate::AFTER_EVENT) {
-                $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
+                if (!$isNonRanger) {
+                    $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
+                }
                 $milestones['shift_signups'] = Schedule::summarizeShiftSignups($person);
                 // Person is *not* signed up - figure out if weekend shirts are available
                 $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
@@ -176,7 +181,7 @@ class Milestones
                     $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
                 }
 
-                if (PersonPosition::havePosition($person->id, Position::SANDMAN)) {
+                if (!$isNonRanger && PersonPosition::havePosition($person->id, Position::SANDMAN)) {
                     if ($event->sandman_affidavit) {
                         $milestones['sandman_affidavit_signed'] = true;
                     } else if (TraineeStatus::didPersonPassForYear($person->id, Position::SANDMAN_TRAINING, $year)
