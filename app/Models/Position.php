@@ -218,6 +218,22 @@ class Position extends ApiModel
 
     const SANDMAN_YEAR_CUTOFF = 5;
 
+    const ART_GRADUATE_TO_POSITIONS = [
+        self::TOW_TRUCK_TRAINING => [
+            'veteran' => self::TOW_TRUCK_DRIVER,
+            'position' => self::TOW_TRUCK_MENTEE,
+        ],
+
+        self::SANDMAN_TRAINING => [
+            'position' => self::SANDMAN,
+        ],
+
+        self::GREEN_DOT_TRAINING => [
+            'veteran' => self::DIRT_GREEN_DOT,
+            'position' => self::GREEN_DOT_MENTEE,
+        ],
+    ];
+
     protected $fillable = [
         'active',
         'alert_when_empty',

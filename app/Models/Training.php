@@ -17,7 +17,8 @@ class Training extends Position
 {
     protected $appends = [
         'is_art',
-        'slug'
+        'slug',
+        'graduation_info'
     ];
 
     const FAIL = 'fail';        // Person was not marked as pass
@@ -606,5 +607,36 @@ class Training extends Position
     public function getSlugAttribute(): string
     {
         return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
+    }
+
+    /**
+     * Obtain graduation information if any
+     *
+     * @return array|null
+     */
+
+    public function getGraduationInfoAttribute() : ?array
+    {
+        $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->id] ?? null;
+        if (!$graduate) {
+            return null;
+        }
+
+        $position = $graduate['position'];
+        $result = [
+            'position' => [
+                'id' => $position,
+                'title' => Position::retrieveTitle($position)
+            ]
+        ];
+        $fullyGraduatedPosition = $graduate['veteran'] ?? null;
+        if ($fullyGraduatedPosition) {
+            $result['fully_graduated_position'] = [
+                'id' => $fullyGraduatedPosition,
+                'title' => Position::retrieveTitle($fullyGraduatedPosition)
+            ];
+        }
+
+        return $result;
     }
 }
