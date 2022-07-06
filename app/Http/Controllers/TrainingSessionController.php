@@ -271,7 +271,7 @@ class TrainingSessionController extends ApiController
         }
 
         $results = [];
-        $positionId = $candidates['position']['id'];
+        $positionIds = array_map(fn($p) => $p['id'], $candidates['positions']);
 
         foreach ($ids as $id) {
             $candidate = $peopleById[$id] ?? null;
@@ -291,7 +291,7 @@ class TrainingSessionController extends ApiController
                 ];
             }
 
-            PersonPosition::addIdsToPerson($id, [$positionId], 'granted via trainee graduation');
+            PersonPosition::addIdsToPerson($id, $positionIds, 'granted via graduate trainee');
             $results[] = [
                 'id' => $id,
                 'status' => 'success'

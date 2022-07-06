@@ -212,9 +212,7 @@ class TrainingSession extends Slot
                 ->where('slot_id', $trainerSlot->id)
                 ->get();
 
-            $rows = $rows->sortBy(function ($p) {
-                return $p->person->callsign;
-            }, SORT_NATURAL | SORT_FLAG_CASE)->values();
+            $rows = $rows->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
             if (!$rows->isEmpty()) {
                 $trainerStatuses = TrainerStatus::findBySlotPersonIds($this->id, $rows->pluck('person_id'))->keyBy('person_id');
@@ -265,7 +263,7 @@ class TrainingSession extends Slot
         }
 
         $fullyGraduatedPosition = $graduate['veteran'] ?? null;
-        $position = $graduate['position'];
+        $positions = $graduate['positions'];
 
         $students = $this->retrieveBasicStudentRoster();
 
@@ -277,10 +275,10 @@ class TrainingSession extends Slot
             if ($person->status == Person::AUDITOR) {
                 $status = 'auditor';
             } else {
-                $positionsGranted = $person->person_position->keyBy('position_id');
-                if ($fullyGraduatedPosition && $positionsGranted->has($fullyGraduatedPosition)) {
+                $positionsGranted = $person->person_position;
+                if ($fullyGraduatedPosition && $positionsGranted->firstWhere('position_id', $fullyGraduatedPosition)) {
                     $status = 'fully-graduated';
-                } else if ($positionsGranted->has($position)) {
+                } else if ($positionsGranted->contains(fn ($p) => in_array($p->position_id, $positions))) {
                     $status = 'graduated';
                 } else if ($traineeStatusByIds->has($person->id)) {
                     $status = 'candidate';
@@ -297,13 +295,11 @@ class TrainingSession extends Slot
             ];
         }
 
+
         $result = [
             'status' => 'success',
             'people' => $people,
-            'position' => [
-                'id' => $position,
-                'title' => Position::retrieveTitle($position)
-            ]
+            'positions' => array_map(fn($p) => [ 'id' => $p, 'title' => Position::retrieveTitle($p)], $positions)
         ];
 
         if ($fullyGraduatedPosition) {
@@ -316,7 +312,7 @@ class TrainingSession extends Slot
         return $result;
     }
 
-    public function getTrainersAttribute()
+    public function getTrainersAttribute(): array
     {
         return $this->retrieveTrainers();
     }

@@ -615,20 +615,17 @@ class Training extends Position
      * @return array|null
      */
 
-    public function getGraduationInfoAttribute() : ?array
+    public function getGraduationInfoAttribute(): ?array
     {
         $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->id] ?? null;
         if (!$graduate) {
             return null;
         }
 
-        $position = $graduate['position'];
         $result = [
-            'position' => [
-                'id' => $position,
-                'title' => Position::retrieveTitle($position)
-            ]
+            'positions' => array_map(fn($p) => ['id' => $p, 'title' => Position::retrieveTitle($p)], $graduate['positions'])
         ];
+
         $fullyGraduatedPosition = $graduate['veteran'] ?? null;
         if ($fullyGraduatedPosition) {
             $result['fully_graduated_position'] = [
