@@ -107,7 +107,7 @@ class TicketingManagement
                     case AccessDocument::RPT:
                         $deliveryType = $deliveryMethod;
                         if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
-                            $errors[] = 'delivery method missing';
+                            $errors[] = 'missing delivery method';
                         }
                         break;
 
@@ -118,7 +118,7 @@ class TicketingManagement
                         } else if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
                         } else if ($deliveryMethod == AccessDocument::DELIVERY_POSTAL) {
-                            if ($row->hasAddress()) {
+                            /*if ($row->hasAddress()) {
                                 $row->delivery_address = [
                                     'street' => $row->street,
                                     'city' => $row->city,
@@ -129,7 +129,7 @@ class TicketingManagement
                                 ];
                             } else {
                                 $errors[] = 'missing mailing address';
-                            }
+                            }*/
                             $deliveryType = AccessDocument::DELIVERY_POSTAL;
                         } else {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;

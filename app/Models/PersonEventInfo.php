@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApihouseResult;
-
-use App\Models\Bmid;
-use App\Models\PersonOnlineTraining;
-
 class PersonEventInfo extends ApihouseResult
 {
     public $person_id;
@@ -58,24 +53,18 @@ class PersonEventInfo extends ApihouseResult
             $info->trainings[] = Training::retrieveEducation($personId, $position, $year);
         }
 
-        usort($info->trainings, fn($a, $b) => strcmp($a->position_title, $b->position_title));
+        usort($info->trainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $info->radio_info_available = setting('RadioInfoAvailable');
 
         if ($info->radio_info_available) {
             $radios = AccessDocument::where('type', AccessDocument::EVENT_RADIO)
                         ->where('person_id', $personId)
-                        ->where('status', [ AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                        ->whereIn('status', [ AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
                         ->get();
             if ($radios->isNotEmpty()) {
                 $info->radio_eligible = true;
-                $max = 0;
-                foreach ($radios as $radio) {
-                    if ($max < $radio->item_count) {
-                        $max = $radio->item_count;
-                    }
-                }
-                $info->radio_max = $max;
+                $info->radio_max = $radios->max('item_count');
                 $info->radio_banked = false;
             } else {
                 $info->radio_eligible = false;
