@@ -53,7 +53,7 @@ class PersonEventInfo extends ApihouseResult
             $info->trainings[] = Training::retrieveEducation($personId, $position, $year);
         }
 
-        usort($info->trainings, fn($a, $b) => strcmp($a->position_title, $b->position_title));
+        usort($info->trainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $info->radio_info_available = setting('RadioInfoAvailable');
 
