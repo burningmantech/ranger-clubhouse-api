@@ -509,7 +509,7 @@ class Schedule extends ApiModel
 
 
     /**
-     * Count the number of working (i.e. non-training) signups the person has in the current year.
+     * Count the number of signups which earns credits or is not a training shift.
      *
      * @param Person $person
      * @return array
@@ -524,14 +524,14 @@ class Schedule extends ApiModel
         foreach ($positions as $position) {
             $positionsById[(int)$position->id] = $position;
         }
-        $rows = $rows->filter(function ($r) use ($positionsById) {
-            return $positionsById[(int)$r->position_id]->type != Position::TYPE_TRAINING;
-        });
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
         }
+
+        // Skip any training shifts which don't earn credits.
+        $rows = $rows->filter(fn($r) => $r->credits > 0 || $positionsById[(int)$r->position_id]->type != Position::TYPE_TRAINING);
 
         $totalDuration = 0.0;
         $countedDuration = 0.0;
