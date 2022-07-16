@@ -278,8 +278,8 @@ class PersonController extends ApiController
         $requireOld = $this->isUser($person) && !$this->userHasRole(Role::ADMIN);
 
         $rules = [
-            'password' => 'required|string|confirmed',
-            'password_confirmation' => 'required|string',
+            'password' => 'required|string|confirmed|max:30',
+            'password_confirmation' => 'required|string|max:30',
         ];
 
         $token = request()->input('temp_token');
