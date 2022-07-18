@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\PositionCredit;
-use App\Http\Controllers\ApiController;
-
-use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class PositionCreditController extends ApiController
 {
-    /*
+    /**
      * Show all the position credits for a year
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'year' => 'required|integer',
@@ -24,11 +27,14 @@ class PositionCreditController extends ApiController
         return $this->success(PositionCredit::findForYear($params['year']), null, 'position_credit');
     }
 
-    /*
+    /**
      * Create a new position credit
      *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store(Request $request)
+
+    public function store(): JsonResponse
     {
         $this->authorize('store', PositionCredit::class);
 
@@ -45,8 +51,13 @@ class PositionCreditController extends ApiController
 
     /**
      * Show a single position credit
+     *
+     * @param PositionCredit $position_credit
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function show(PositionCredit $position_credit)
+
+    public function show(PositionCredit $position_credit): JsonResponse
     {
         $this->authorize('view', PositionCredit::class);
         $position_credit->loadRelations();
@@ -55,8 +66,13 @@ class PositionCreditController extends ApiController
 
     /**
      * Update a position credit
+     *
+     * @param PositionCredit $position_credit
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function update(Request $request, PositionCredit $position_credit)
+
+    public function update(PositionCredit $position_credit): JsonResponse
     {
         $this->authorize('update', PositionCredit::class);
         $this->fromRest($position_credit);
@@ -71,8 +87,13 @@ class PositionCreditController extends ApiController
 
     /**
      * Remove a position credit
+     *
+     * @param PositionCredit $position_credit
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(PositionCredit $position_credit)
+
+    public function destroy(PositionCredit $position_credit): JsonResponse
     {
         $this->authorize('delete', PositionCredit::class);
         $position_credit->delete();
@@ -84,8 +105,12 @@ class PositionCreditController extends ApiController
      * #1: Copy with a date delta, e.g. add 364 days (to align with Labor Day) to last year's credits.
      *     Set deltaDays, deltaHours, deltaMinutes as appropriate.
      * #2: Create credit values for a new position based on another position.  Set newPositionId.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function copy()
+
+    public function copy(): JsonResponse
     {
         $this->authorize('store', PositionCredit::class);
         $params = request()->validate([

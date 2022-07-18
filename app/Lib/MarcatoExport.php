@@ -5,15 +5,11 @@ namespace App\Lib;
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\BmidExport;
-
 use Carbon\Carbon;
-
-use Illuminate\Support\Facades\Auth;
-
-use ZipArchive;
-
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use RuntimeException;
+use ZipArchive;
 
 class MarcatoExport
 {
@@ -30,7 +26,7 @@ class MarcatoExport
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',
-        'mvr',
+  //      'mvr', - removed per conversation with Bliss on July 18th, 2022
         'title2',
         'title3'
     ];
@@ -258,7 +254,7 @@ class MarcatoExport
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
-            $bmid->org_vehicle_insurance ? 'yes' : 'no',
+  //          $bmid->org_vehicle_insurance ? 'yes' : 'no',
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];
