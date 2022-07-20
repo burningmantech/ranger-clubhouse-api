@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\GrantPasses;
+use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
@@ -233,6 +234,7 @@ class AccessDocumentController extends ApiController
     public function statuses(): JsonResponse
     {
         $params = request()->validate([
+            'statuses' => 'required|array',
             'statuses.*.id' => 'required|integer|exists:access_document,id',
             'statuses.*.status' => 'required|string'
         ]);
@@ -341,8 +343,8 @@ class AccessDocumentController extends ApiController
     public function grantWAPs(): JsonResponse
     {
         $this->authorize('grantWAPs', [AccessDocument::class]);
-        list ($people,$startYear) = GrantPasses::grantWAPsToRangers();
-        return response()->json(['people' => $people, 'start_year' => $startYear ]);
+        list ($people, $startYear) = GrantPasses::grantWAPsToRangers();
+        return response()->json(['people' => $people, 'start_year' => $startYear]);
     }
 
     /**
@@ -352,11 +354,11 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function wapCandidates() : JsonResponse
+    public function wapCandidates(): JsonResponse
     {
         $this->authorize('wapCandidates', [AccessDocument::class]);
-        list ($people,$startYear) = GrantPasses::findRangersWhoNeedWAPs();
-        return response()->json(['people' => $people, 'start_year' => $startYear ]);
+        list ($people, $startYear) = GrantPasses::findRangersWhoNeedWAPs();
+        return response()->json(['people' => $people, 'start_year' => $startYear]);
     }
 
     /**
@@ -688,5 +690,19 @@ class AccessDocumentController extends ApiController
         usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
 
         return response()->json(['access_documents' => $documents]);
+    }
+
+    /**
+     * Find all unclaimed tickets and people who may or may not be signed up
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function unclaimedTicketsWithSignups(): JsonResponse
+    {
+        $this->authorize('unclaimedTicketsWithSignups', AccessDocument::class);
+
+        return response()->json(['tickets' => UnclaimedTicketsWithSignupsReport::execute()]);
     }
 }

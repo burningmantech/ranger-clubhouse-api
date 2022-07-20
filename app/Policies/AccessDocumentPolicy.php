@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Person;
 use App\Models\AccessDocument;
+use App\Models\Person;
 use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -154,6 +154,11 @@ class AccessDocumentPolicy
     }
 
     public function wapCandidates(Person $user)
+    {
+        return false;
+    }
+
+    public function unclaimedTicketsWithSignups(Person $user)
     {
         return false;
     }

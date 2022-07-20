@@ -33,7 +33,8 @@ class TicketingController extends ApiController
             'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
             'RpTicketThreshold', 'ScTicketThreshold',
             'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
-            'TAS_Pickup_Locations'
+            'TAS_Pickup_Locations',
+            'TAS_PayByDateTime'
         ]);
 
         return response()->json([
@@ -63,6 +64,8 @@ class TicketingController extends ApiController
                 'sc_credits' => $settings['ScTicketThreshold'],
 
                 'pickup_locations' => $settings['TAS_Pickup_Locations'],
+
+                'paid_by' => $settings['TAS_PayByDateTime'],
 
                 'faqs' => [
                     'ticketing' => $settings['TAS_Ticket_FAQ'],
