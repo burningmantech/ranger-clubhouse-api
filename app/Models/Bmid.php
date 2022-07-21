@@ -559,7 +559,19 @@ class Bmid extends ApiModel
         return self::sortMeals($this->buildMealsMatrix());
     }
 
-    public static function sortMeals($meals)
+    public function effectiveShowers(): bool
+    {
+        return $this->showers || $this->allocated_showers || $this->earned_showers;
+    }
+
+    /**
+     * Sort the meals into the expected order: pre-event, event, and post-event weeks.
+     *
+     * @param $meals
+     * @return string
+     */
+
+    public static function sortMeals($meals): string
     {
         if (count($meals) == 3) {
             return self::MEALS_ALL;

@@ -26,7 +26,6 @@ class TicketingStatistics
 
             'people_tickets_submitted' => AccessDocument::where('status', AccessDocument::SUBMITTED)
                 ->whereIn('type', AccessDocument::TICKET_TYPES)
-                ->whereRaw("NOT EXISTS (select 1 from access_document as claimed WHERE claimed.person_id=access_document.person_id and (claimed.status='claimed' or claimed.status = 'banked') LIMIT 1)")
                 ->distinct()
                 ->count('access_document.person_id'),
 
