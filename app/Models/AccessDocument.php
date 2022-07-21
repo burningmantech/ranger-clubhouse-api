@@ -277,7 +277,7 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Save function. Don't allow a job provision to be banked.
+     * Save function. Don't allow an allocated provision to be banked.
      * @param $options
      * @return bool
      */
@@ -486,15 +486,15 @@ class AccessDocument extends ApiModel
     {
         $rows = self::whereIn('type', $type)
             ->where('person_id', $personId)
-            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED])
             ->get();
 
         self::markSupersededProvisions($rows);
 
         foreach ($rows as $row) {
-           /* if ($row->is_superseded) {
-                continue;
-            }*/
+            /* if ($row->is_superseded) {
+                 continue;
+             }*/
 
             $row->status = self::SUBMITTED;
             $changes = $row->getChangedValues();
@@ -519,21 +519,15 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED, self::SUBMITTED])
             ->orderBy('source_year')
             ->get();
-        $wap = null;
 
-        foreach ($rows as $row) {
-            if ($row->status == self::CLAIMED || $row->status == self::SUBMITTED) {
-                return $row;
-            }
-
-            if ($wap == null || $row->access_date == null) {
-                $wap = $row;
-            } elseif ($wap->access_date && $wap->access_date->gt($row->access_date)) {
-                $wap = $row;
-            }
+        $wap = self::wapCandidate($rows->filter(
+            fn($row) => ($row->status == self::CLAIMED || $row->status == self::SUBMITTED))
+        );
+        if ($wap) {
+            return $wap;
         }
 
-        return $wap;
+        return self::wapCandidate($rows);
     }
 
     /**
@@ -554,25 +548,35 @@ class AccessDocument extends ApiModel
         $people = [];
 
         foreach ($waps as $personId => $rows) {
-            $wap = null;
-            foreach ($rows as $row) {
-                if ($row->status == self::CLAIMED || $row->status == self::SUBMITTED) {
-                    $wap = $row;
-                    break;
-                }
-                if ($wap == null || $wap->access_date == null) {
-                    $wap = $row;
-                } else if ($wap->access_date == null) {
-                    continue;
-                } else if ($wap->access_date->gt($row->access_date)) {
-                    $wap = $row;
-                }
+            // A person may have a SC & WAP.. Happens when the person needs to arrive sooner than
+            // what the submitted SC is. Access dates cannot change once the SC has been submitted.
+            $wap = self::wapCandidate($rows->filter(
+                fn($row) => ($row->status == self::CLAIMED || $row->status == self::SUBMITTED))
+            );
+            if (!$wap) {
+                $wap = self::wapCandidate($rows);
             }
 
             $people[$personId] = $wap;
         }
 
         return $people;
+    }
+
+    public static function wapCandidate($rows)
+    {
+        $wap = null;
+        foreach ($rows as $row) {
+            if ($row->access_any_time) {
+                return $row;
+            }
+            if ($wap == null) {
+                $wap = $row;
+            } else if ($wap->access_date && $wap->access_date->gt($row->access_date)) {
+                $wap = $row;
+            }
+        }
+        return $wap;
     }
 
     /**

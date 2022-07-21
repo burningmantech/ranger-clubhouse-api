@@ -8,6 +8,7 @@ use App\Models\BmidExport;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 use RuntimeException;
 use ZipArchive;
 
@@ -26,7 +27,7 @@ class MarcatoExport
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',
-  //      'mvr', - removed per conversation with Bliss on July 18th, 2022
+        //      'mvr', - removed per conversation with Bliss on July 18th, 2022
         'title2',
         'title3'
     ];
@@ -61,11 +62,11 @@ class MarcatoExport
         foreach ($marcato->bmids as $bmid) {
             $bmid->load('person.person_photo');
             if (!$bmid->person->person_photo) {
-                throw new \InvalidArgumentException("{$bmid->person->callsign} does not have a photo record");
+                throw new InvalidArgumentException("{$bmid->person->callsign} does not have a photo record");
             }
 
             if (!$bmid->person->person_photo->imageExists()) {
-                throw new \InvalidArgumentException("{$bmid->person->callsign} has photo record but image file is missing.");
+                throw new InvalidArgumentException("{$bmid->person->callsign} has photo record but image file is missing.");
             }
         }
 
@@ -125,7 +126,7 @@ class MarcatoExport
     {
         $file = tempnam(sys_get_temp_dir(), $name);
         if ($file === false) {
-            throw new \RuntimeException("Failed to create temporary file [$name]");
+            throw new RuntimeException("Failed to create temporary file [$name]");
         }
         return $file;
     }
@@ -143,9 +144,9 @@ class MarcatoExport
         $this->createPhotoZipfile();
 
         $zip = new ZipArchive();
-        $result = $zip->open($this->exportFile, ZipArchive::CREATE|ZipArchive::OVERWRITE);
+        $result = $zip->open($this->exportFile, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         if ($result !== true) {
-            throw new \RuntimeException("Failed to create zip archive result=[$result]");
+            throw new RuntimeException("Failed to create zip archive result=[$result]");
         }
         $zip->addFile($this->csvFile, $this->datestamp . '.csv');
         $zip->addFile($this->photoZip, $this->datestamp . '_ranger_photos.zip');
@@ -161,7 +162,7 @@ class MarcatoExport
     public function createPhotoZipfile()
     {
         $zip = new ZipArchive();
-        $result = $zip->open($this->photoZip, ZipArchive::CREATE|ZipArchive::OVERWRITE);
+        $result = $zip->open($this->photoZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         if ($result !== true) {
             throw new RuntimeException("Failed to create zip file [{$this->photoZip}] result=[$result]");
         }
@@ -219,9 +220,9 @@ class MarcatoExport
             if (empty($c)) {
                 return '';
             }
-            return is_string($c) ?  '"' . str_replace('"', '""', $c) . '"' : $c;
+            return is_string($c) ? '"' . str_replace('"', '""', $c) . '"' : $c;
         }, $columns);
-        fwrite($fh, implode(',', $quoted).PHP_EOL);
+        fwrite($fh, implode(',', $quoted) . PHP_EOL);
     }
 
     /**
@@ -254,7 +255,7 @@ class MarcatoExport
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
-  //          $bmid->org_vehicle_insurance ? 'yes' : 'no',
+            //          $bmid->org_vehicle_insurance ? 'yes' : 'no',
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];
@@ -275,11 +276,10 @@ class MarcatoExport
     }
 
     /**
-     * Mark each BMID as submitted, note what showers & meals were set,
-     * and mark any provision items as submitted.
+     * Mark each BMID as submitted, note what showers & meals were set, and mark any provision items as submitted.
      */
 
-    public function markSubmitted()
+    public function markSubmitted(): void
     {
         $user = Auth::user()->callsign;
         $uploadDate = date('n/j/y G:i:s');
@@ -292,14 +292,19 @@ class MarcatoExport
              * Make a note of what provisions were set
              */
 
+            $showers = [];
+            if ($bmid->showers) {
+                $showers[] = 'set';
+            }
+
+            if ($bmid->earned_showers) {
+                $showers[] = 'earned';
+            }
             if ($bmid->allocated_showers) {
-                $showers = '[showers allocated]';
-            } else if ($bmid->earned_showers) {
-                $showers = '[showers earned]';
-            } else if ($bmid->showers) {
-                $showers = '[showers set]';
-            } else {
-                $showers = '[showers none]';
+                $showers[] = 'allocated';
+            }
+            if (empty($showers)) {
+                $showers[] = 'none';
             }
 
             $meals = [];
@@ -326,35 +331,26 @@ class MarcatoExport
              */
 
             $items = [];
-            if ($bmid->allocated_showers || $bmid->earned_showers || $bmid->showers) {
+            if ($bmid->effectiveShowers()) {
                 $items[] = AccessDocument::WET_SPOT;
             }
 
-            if ($bmid->meals == Bmid::MEALS_ALL) {
-                $items[] = AccessDocument::ALL_EAT_PASS;
-                $items[] = AccessDocument::EVENT_EAT_PASS;
-            } else {
-                if (!empty($bmid->allocated_meals)) {
-                    $items[] = ($bmid->allocated_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
-                }
-
+            if (!empty($bmid->meals) || !empty($bmid->allocated_meals)) {
+                // Person is working.. consume all the meals.
+                $items = [...$items, ...AccessDocument::MEAL_TYPES];
+            } else if (!empty($bmid->earned_meals)) {
                 // Currently only two meal provision types, All Eat, and Event Week
-                if (!empty($bmid->earned_meals)) {
-                    $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
-                }
-
-                // Was person given event week meals?
-                if (stripos($bmid->meals, 'event') !== false) {
-                    $items[] = AccessDocument::EVENT_EAT_PASS;
-                }
+                $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
             }
+
 
             if (!empty($items)) {
                 $items = array_unique($items);
                 AccessDocument::markSubmittedForBMID($bmid->person_id, $items);
             }
 
-            $meals = '[meals ' . implode(',', $meals) . ']';
+            $meals = '[meals ' . implode(', ', $meals) . ']';
+            $showers = '[showers ' . implode(', ', $showers) . ']';
             $bmid->notes = "$uploadDate $user: Exported $meals $showers\n$bmid->notes";
             $bmid->auditReason = 'exported to print';
             $bmid->batch = $batchInfo;

@@ -444,7 +444,7 @@ class Setting extends ApiModel
 
         'TAS_PayByDateTime' => [
             'description' => 'The date and time items have to be paid for. Shown on the Ticketing is closed page',
-            'type' => self::TYPE_STRING,
+            'type' => self::TYPE_DATETIME,
         ],
 
         'TAS_Pickup_Locations' => [

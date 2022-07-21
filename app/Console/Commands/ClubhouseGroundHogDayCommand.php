@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class ClubhouseGroundHogDayCommand extends Command
 {
-    const GROUNDHOG_DATETIME = "2019-08-30 17:50:00";
     const GROUNDHOG_DATABASE = "rangers_ghd";
 
     /**
@@ -52,12 +51,12 @@ class ClubhouseGroundHogDayCommand extends Command
 
     public function handle(): bool
     {
-        $groundHogDay = Carbon::parse($this->option('day') ?? self::GROUNDHOG_DATETIME);
+        $groundHogDay = Carbon::parse($this->option('day') ?? ((date('Y') - 1) . '-08-30 18:00:00'));
         $ghdname = $this->option('tempdb') ?? self::GROUNDHOG_DATABASE;
         $noRedact = $this->option('no-redact') ?? false;
 
         $year = $groundHogDay->year;
-        $dumpDate = $groundHogDay->format('YYYY-MM-DD');
+        $dumpDate = $groundHogDay->format('Y-m-d');
 
         // The current database is the Ground Hog Day database.
         // Create the groundhog day database
