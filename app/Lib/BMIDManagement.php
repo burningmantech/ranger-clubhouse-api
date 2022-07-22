@@ -188,7 +188,7 @@ class BMIDManagement
             ->pluck('person_slot.person_id');
 
         $shiftsNoWap = Person::whereIntegerInRaw('id', $ids)
-            ->whereNotIn('status', [Person::ALPHA, Person::AUDITOR, Person::PAST_PROSPECTIVE])
+            ->whereNotIn('status', [Person::ALPHA, Person::PROSPECTIVE, Person::AUDITOR, Person::PAST_PROSPECTIVE])
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
 
