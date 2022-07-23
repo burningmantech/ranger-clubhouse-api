@@ -14,8 +14,6 @@ use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\Training;
-
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -53,7 +51,7 @@ class Alpha
      * @return array
      */
 
-    public static function retrieveMentees($noBonks, $year, $haveTraining)
+    public static function retrieveMentees($noBonks, $year, $haveTraining): array
     {
         $sql = PersonStatus::whereIn('new_status', [Person::ALPHA, Person::PROSPECTIVE])
             ->whereYear('created_at', $year)
@@ -91,7 +89,7 @@ class Alpha
      * @return array
      */
 
-    public static function buildAlphaInformation($people, int $year)
+    public static function buildAlphaInformation($people, int $year): array
     {
         if ($people->isEmpty()) {
             return [];
@@ -141,7 +139,8 @@ class Alpha
      * @param mixed $pnvIds ids to retrieve the intake history for
      * @return array
      */
-    public static function retrieveIntakeHistory($pnvIds)
+
+    public static function retrieveIntakeHistory($pnvIds): array
     {
         $year = current_year();
 
@@ -174,7 +173,7 @@ class Alpha
      * @return object
      */
 
-    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings)
+    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings): object
     {
         $personId = $person->id;
         $photoApproved = $person->person_photo && $person->person_photo->status == PersonPhoto::APPROVED;
@@ -237,6 +236,7 @@ class Alpha
         $ignoreFlag = false;
         $potential->rrn_team = Intake::buildIntakeTeam('rrn', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
         $potential->vc_team = Intake::buildIntakeTeam('vc', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
+        $potential->personnel_team = Intake::buildIntakeTeam('personnel', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
 
         if (!empty($teamHistory)) {
             foreach ($teamHistory as $history) {
@@ -294,10 +294,10 @@ class Alpha
      * Retrieve all the Alpha slots in a given year with sign ups and their intake data.
      *
      * @param int $year
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public static function retrieveAlphaScheduleForYear(int $year)
+    public static function retrieveAlphaScheduleForYear(int $year) : Collection
     {
         // Find the Alpha slots
         $slots = Slot::whereYear('begins', $year)
@@ -340,7 +340,7 @@ class Alpha
      * @return Collection
      */
 
-    public static function retrieveVerdicts()
+    public static function retrieveVerdicts(): Collection
     {
         $year = current_year();
 
