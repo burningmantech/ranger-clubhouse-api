@@ -496,12 +496,7 @@ class PersonController extends ApiController
 
         $timesheet = Timesheet::findPersonOnDuty($personId);
         if ($timesheet) {
-            $onduty = [
-                'id' => $timesheet->position_id,
-                'title' => $timesheet->position->title,
-                'type' => $timesheet->position->type,
-                'subtype' => $timesheet->position->subtype,
-            ];
+            $onduty = $timesheet->buildOnDutyInfo();
         } else {
             $onduty = null;
         }
@@ -542,6 +537,22 @@ class PersonController extends ApiController
         }
 
         return response()->json(['user_info' => $data]);
+    }
+
+    /**
+     * Check see if the person is on duty.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function onDuty(Person $person)
+    {
+        $this->authorize('view', $person);
+
+        $timesheet = Timesheet::findPersonOnDuty($person->id);
+        return response()->json(['onduty' => $timesheet?->buildOnDutyInfo()]);
     }
 
     /**
