@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
@@ -125,9 +126,9 @@ class Setting extends ApiModel
         ],
 
         'DoNotReplyEmail' => [
-          'description' => 'Most generated Clubhouse emails have a reply to of do-not-reply@XXX.org',
-          'type' => self::TYPE_EMAIL,
-          'default' => 'do-not-reply@burningmail.burningman.org'
+            'description' => 'Most generated Clubhouse emails have a reply to of do-not-reply@XXX.org',
+            'type' => self::TYPE_EMAIL,
+            'default' => 'do-not-reply@burningmail.burningman.org'
         ],
 
         'EditorUrl' => [
@@ -280,12 +281,12 @@ class Setting extends ApiModel
         ],
 
         'PhotoUploadEnable' => [
-            'description' => 'Enable Photo Uploading',
+            'description' => 'Enable Photo Uploading. If disabled, Admins and VCs will still be able to upload photos on another person\'s behalf.',
             'type' => self::TYPE_BOOL,
         ],
 
         'RadioCheckoutAgreementEnabled' => [
-            'description' => 'Allows the Radio Checkout Agreement to be signed',
+            'description' => 'Allows the Radio Checkout Agreement to be signed.',
             'type' => self::TYPE_BOOL,
         ],
 
@@ -675,7 +676,7 @@ class Setting extends ApiModel
             try {
                 // Kick the queue workers to pick up the new settings
                 Artisan::call('queue:restart');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 ErrorLog::recordException($e, 'setting-queue-restart-exception');
             }
         }

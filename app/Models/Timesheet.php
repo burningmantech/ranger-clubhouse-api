@@ -710,4 +710,20 @@ class Timesheet extends ApiModel
     {
         return $this->photo_url;
     }
+
+    /**
+     * Build on duty information
+     *
+     * @return array
+     */
+
+    public function buildOnDutyInfo(): array
+    {
+        return [
+            'id' => $this->position_id,
+            'title' => $this->position->title,
+            'type' => $this->position->type,
+            'subtype' => $this->position->subtype,
+        ];
+    }
 }

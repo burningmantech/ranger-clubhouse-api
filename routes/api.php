@@ -208,6 +208,7 @@ Route::group([
     Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');
     Route::get('person/{person}/schedule/log', 'PersonScheduleController@scheduleLog');
+    Route::get('person/{person}/onduty', 'PersonController@onDuty');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', ['only' => ['index', 'store', 'destroy']]);
 
     Route::get('person/{person}/positions', 'PersonController@positions');
