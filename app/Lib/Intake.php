@@ -3,19 +3,18 @@
 namespace App\Lib;
 
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
-use App\Models\PersonStatus;
-use App\Models\PersonMentor;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
+use App\Models\PersonMentor;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
-use App\Models\Position;
-use App\Models\Training;
-use App\Models\Timesheet;
-use App\Models\Slot;
 use App\Models\PersonSlot;
+use App\Models\PersonStatus;
+use App\Models\Position;
+use App\Models\Slot;
+use App\Models\Timesheet;
 use App\Models\TraineeStatus;
-
+use App\Models\Training;
 use Carbon\Carbon;
 
 class Intake
@@ -402,7 +401,15 @@ class Intake
         return $pnvs;
     }
 
-    public static function wasAuditorInYear($statuses, $year)
+    /**
+     * Figure out if a person was an auditor in a given year.
+     *
+     * @param $statuses
+     * @param $year
+     * @return bool
+     */
+
+    public static function wasAuditorInYear($statuses, $year): bool
     {
         $possible = null;
         foreach ($statuses as $row) {
@@ -444,7 +451,6 @@ class Intake
         }
 
         if (!empty($notes)) {
-            $haveNote = false;
             foreach ($notes as $note) {
                 if ($note->type != $type) {
                     continue;
@@ -463,9 +469,7 @@ class Intake
             $result[] = $info;
         }
 
-        usort($result, function ($a, $b) {
-            return $a['year'] <=> $b['year'];
-        });
+        usort($result, fn($a, $b) => $a['year'] <=> $b['year']);
         return $result;
     }
 }
