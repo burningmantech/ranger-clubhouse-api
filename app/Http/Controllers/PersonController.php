@@ -139,6 +139,7 @@ class PersonController extends ApiController
         $this->authorize('view', $person);
         $personId = $person->id;
         $person->languages = PersonLanguage::retrieveForPerson($personId);
+        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
@@ -201,6 +202,7 @@ class PersonController extends ApiController
         }
 
         $person->languages = PersonLanguage::retrieveForPerson($person->id);
+        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
