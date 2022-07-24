@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -204,14 +201,15 @@ class Vehicle extends ApiModel
      * @return Vehicle[]|Collection
      */
 
-    public static function findAllPending() {
+    public static function findAllPending()
+    {
         return self::where('status', self::PENDING)
-                ->where('type', self::PERSONAL)
-                ->where('event_year', current_year())
-                ->with([ 'person:id,callsign'])
-                ->get()
-                ->sortBy('person.callsign')
-                ->values();
+            ->where('type', self::PERSONAL)
+            ->where('event_year', current_year())
+            ->with(['person:id,callsign'])
+            ->get()
+            ->sortBy('person.callsign')
+            ->values();
     }
 
     public function person()
@@ -240,7 +238,7 @@ class Vehicle extends ApiModel
      * @return bool
      */
 
-    public function save($options = []) : bool
+    public function save($options = []): bool
     {
         if (!empty($this->callsign)) {
             // Find the callsign
@@ -256,7 +254,8 @@ class Vehicle extends ApiModel
         }
 
 
-        if ($this->isDirty('license_state') || $this->isDirty('license_number')) {
+        if (($this->isDirty('license_state') || $this->isDirty('license_number'))
+            && !empty($this->license_number)) {
             $checkSql = self::where([
                 'license_state' => $this->license_state,
                 'license_number' => $this->license_number,
