@@ -33,7 +33,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use RuntimeException;
 
 class PersonController extends ApiController
 {
@@ -121,20 +120,27 @@ class PersonController extends ApiController
 
     /**
      * Create a person
-     * TODO
+     *  TODO
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $this->authorize('store');
-        throw new RuntimeException('unimplemented');
-    }
+        return response()->json([ 'message' => 'not implemented'], 501);
+   }
 
     /**
      * Show a specific person - include roles, and languages.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(Person $person)
+    public function show(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $personId = $person->id;
@@ -191,7 +197,7 @@ class PersonController extends ApiController
 
         // Alert VCs when the email address changes for a prospective.
         if ($emailChanged
-            && $person->status == Person::PROSPECTIVE
+            && ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA)
             && $person->id == $this->user->id) {
             mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
         }
@@ -243,12 +249,14 @@ class PersonController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /*
-     * Return the person's training status, BMID & radio privs
-     * for a given year.
+    /**
+     * Return the person's training status, provisions, signatures for a given year.
+     *
+     * @param Person $person
+     * @return JsonResponse
      */
 
-    public function eventInfo(Person $person)
+    public function eventInfo(Person $person): JsonResponse
     {
         $year = $this->getYear();
         $eventInfo = PersonEventInfo::findForPersonYear($person, $year);
@@ -549,7 +557,7 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function onDuty(Person $person)
+    public function onDuty(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 

@@ -21,6 +21,14 @@ use Carbon\Carbon;
 
 class Milestones
 {
+    /**
+     * Build up the various milestones completed or pending for a given person.
+     * Use heavily by the dashboards.
+     *
+     * @param Person $person
+     * @return array
+     */
+
     public static function buildForPerson(Person $person): array
     {
         $status = $person->status;
@@ -194,18 +202,5 @@ class Milestones
         }
 
         return $milestones;
-    }
-
-    /**
-     * Is the given time within a 12 hour grace period?
-     * @param Carbon|string $time
-     * @param $now
-     * @return bool
-     */
-    private static function isTimeWithinGracePeriod($time, $now): bool
-    {
-        $time = is_string($time) ? Carbon::parse($time) : $time->clone();
-
-        return $time->addHours(12)->gt($now);
     }
 }
