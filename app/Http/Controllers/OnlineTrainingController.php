@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Mail\OnlineTrainingEnrollmentMail;
 use App\Models\Person;
@@ -65,28 +66,32 @@ class OnlineTrainingController extends ApiController
         $exists = true;
         $lms = null;
 
-        if (empty($person->lms_id)) {
-            // See if the person already has an online account setup
-            $lms = new Moodle();
-            if (!$lms->findPerson($person)) {
-                // Nope, create the user
-                if (!$lms->createUser($person, $password)) {
-                    // Crap, failed.
-                    return response()->json(['status' => 'fail']);
+        try {
+            if (empty($person->lms_id)) {
+                // See if the person already has an online account setup
+                $lms = new Moodle();
+                if (!$lms->findPerson($person)) {
+                    // Nope, create the user
+                    if (!$lms->createUser($person, $password)) {
+                        // Crap, failed.
+                        return response()->json(['status' => 'fail']);
+                    }
+                    $exists = false;
                 }
-                $exists = false;
-            }
-        }
-
-        // TODO before 2023: put back $person->lms_course != $courseId
-        // 2022 - half course implemented 1/2 way thru the training season and messed things up.
-        if (empty($person->lms_course)) {
-            if (!$lms) {
-                $lms = new Moodle;
             }
 
-            // Enroll the person in the course
-            $lms->enrollPerson($person, $courseId);
+            // TODO before 2023: put back $person->lms_course != $courseId
+            // 2022 - half course implemented 1/2 way thru the training season and messed things up.
+            if (empty($person->lms_course)) {
+                if (!$lms) {
+                    $lms = new Moodle;
+                }
+
+                // Enroll the person in the course
+                $lms->enrollPerson($person, $courseId);
+            }
+        } catch (MoodleDownForMaintenanceException $e) {
+            return response()->json([ 'status' => 'down-for-maintenance' ]);
         }
 
         if (!$exists) {

@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Mail\OnlineTrainingCompletedMail;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
@@ -209,10 +210,7 @@ class Moodle
     public function processCourseCompletion(int $courseId): void
     {
         $enrolled = $this->retrieveCourseEnrollment($courseId);
-        if ($enrolled == null) {
-            // Down for maintenance.
-            return;
-        }
+
         $students = $this->findClubhouseUsers($enrolled);
 
         $peopleIds = [];
@@ -531,6 +529,7 @@ class Moodle
      * @param $response
      * @param $url
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public static function decodeResponse($response, $url): mixed
@@ -539,8 +538,9 @@ class Moodle
             $body = $response->body();
             if (str_contains(strtolower($body), 'undergoing maintenance')) {
                 ErrorLog::record('lms-down-for-maintenance');
-                return null;
+                throw new MoodleDownForMaintenanceException();
             }
+
             $status = $response->status();
             ErrorLog::record('lms-request-failure', [
                 'status' => $status,
