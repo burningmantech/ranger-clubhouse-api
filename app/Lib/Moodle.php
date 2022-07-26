@@ -11,7 +11,6 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Normalizer;
 use RuntimeException;
 
 class Moodle
@@ -210,6 +209,10 @@ class Moodle
     public function processCourseCompletion(int $courseId): void
     {
         $enrolled = $this->retrieveCourseEnrollment($courseId);
+        if ($enrolled == null) {
+            // Down for maintenance.
+            return;
+        }
         $students = $this->findClubhouseUsers($enrolled);
 
         $peopleIds = [];
@@ -533,10 +536,15 @@ class Moodle
     public static function decodeResponse($response, $url): mixed
     {
         if ($response->failed()) {
+            $body = $response->body();
+            if (str_contains(strtolower($body), 'undergoing maintenance')) {
+                ErrorLog::record('lms-down-for-maintenance');
+                return null;
+            }
             $status = $response->status();
             ErrorLog::record('lms-request-failure', [
                 'status' => $status,
-                'body' => $response->body(),
+                'body' => $body,
                 'url' => $url,
             ]);
             throw new RuntimeException('HTTP LMS request status error status=' . $status);
