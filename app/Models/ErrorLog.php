@@ -41,7 +41,7 @@ class ErrorLog extends ApiModel
             $error['url'] = $req->fullUrl();
         }
 
-        $error['data'] = $data;
+        $error['data'] = json_encode($data);
 
         self::create($error);
     }
