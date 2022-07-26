@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-
+use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
+use Illuminate\Console\Command;
 
 class ClubhouseMoodleCompletion extends Command
 {
@@ -23,10 +23,11 @@ class ClubhouseMoodleCompletion extends Command
     protected $description = 'Query the Moodle server and mark those who have completed online course';
 
     /**
-     * Execute the console command.
+     * Scan the Moodle courses to see who completed.
      *
      * @return mixed
      */
+
     public function handle()
     {
         if (setting('OnlineTrainingEnabled') == false) {
@@ -45,7 +46,12 @@ class ClubhouseMoodleCompletion extends Command
             }
 
             $this->info("Scanning course id #{$courseId}");
-            $moodle->processCourseCompletion($courseId);
+            try {
+                $moodle->processCourseCompletion($courseId);
+            } catch (MoodleDownForMaintenanceException $e) {
+                $this->error("Moodle down for maintenance");
+                return;
+            }
         }
     }
 }
