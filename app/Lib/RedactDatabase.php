@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\AccessDocument;
 use App\Models\Person;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,7 @@ class RedactDatabase
         $tables = [
             'access_document_changes',
             'access_document_delivery',
-            'access_document',
+//            'access_document',
             'broadcast_message',
             'broadcast',
             'contact_log',
@@ -72,6 +73,12 @@ class RedactDatabase
         foreach ($tables as $table) {
             DB::statement("TRUNCATE $table");
         }
+
+        DB::table('access_document')
+            ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
+            ->delete();
+
+        DB::table('access_document')->update([ 'status' => AccessDocument::QUALIFIED]);
 
         DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
 
