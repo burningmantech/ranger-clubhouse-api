@@ -27,7 +27,7 @@ class ManagementOnPlayaCheck extends SanityCheck
 
     public static function issues(): array
     {
-        return ManagementCommon::issues(self::ON_PLAYA_POSITIONS, Role::MANAGE_ON_PLAYA);
+        return ManagementCommon::issues(self::ON_PLAYA_POSITIONS, Role::MANAGE_ON_PLAYA, Role::MANAGE);
     }
 
     public static function repair($peopleIds, ...$options): array
