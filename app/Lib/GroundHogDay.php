@@ -17,7 +17,7 @@ class GroundHogDay
      * @return void
      */
 
-    public static function build(string $groundHogDay)
+    public static function build(string $groundHogDay): void
     {
         $year = Carbon::parse($groundHogDay)->year;
 
