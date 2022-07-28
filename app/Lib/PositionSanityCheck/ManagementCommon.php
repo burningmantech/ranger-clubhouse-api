@@ -2,17 +2,15 @@
 
 namespace App\Lib\PositionSanityCheck;
 
-use App\Models\Position;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
-
-use App\Models\Role;
+use App\Models\Position;
 use Illuminate\Support\Facades\DB;
 
 class ManagementCommon
 {
-    public static function issues($positionIds, $roleId): array
+    public static function issues($positionIds, $roleId, $ignoreId = null): array
     {
         $year = current_year();
         $personIds = PersonPosition::whereIntegerInRaw('position_id', $positionIds)
@@ -27,6 +25,10 @@ class ManagementCommon
             ->with(['person_position' => function ($q) use ($positionIds) {
                 $q->whereIntegerInRaw('position_id', $positionIds);
             }]);
+
+        if ($ignoreId) {
+            $sql->whereRaw('NOT EXISTS (SELECT 1 FROM person_role WHERE person_role.person_id=person.id AND person_role.role_id=?)', [$ignoreId]);
+        }
 
         $rows = $sql->get();
 
