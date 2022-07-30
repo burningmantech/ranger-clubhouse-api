@@ -236,18 +236,13 @@ class PositionSanityCheckControllerTest extends TestCase
         $response->assertJson([
             [
                 'id'   => $person->id,
-                'messages' => [ 'added Sanctuary', 'added Gerlach Patrol - Green Dot' ]
+                'messages' => [ 'added Sanctuary' ]
             ]
         ]);
 
         $this->assertDatabaseHas('person_position', [
             'person_id' => $person->id,
             'position_id' => Position::SANCTUARY
-        ]);
-
-        $this->assertDatabaseHas('person_position', [
-            'person_id' => $person->id,
-            'position_id' => Position::GERLACH_PATROL_GREEN_DOT
         ]);
 
         $response = $this->json('POST', 'position/repair', [ 'repair' => 'management_role', 'people_ids' => [ $person->id ]]);
