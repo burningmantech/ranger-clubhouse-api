@@ -111,7 +111,6 @@ class PositionSanityCheckControllerTest extends TestCase
                     'callsign' => $person->callsign,
                     'has_dirt_green_dot' => 1,
                     'has_sanctuary' => 0,
-                    'has_gp_gd'=> 0
                 ]
             ],
 
