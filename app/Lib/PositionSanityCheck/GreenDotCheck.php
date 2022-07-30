@@ -14,10 +14,9 @@ class GreenDotCheck extends SanityCheck
         return  DB::select(
             "SELECT * FROM (SELECT p.id AS id, callsign, status, " .
             "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_dirt_green_dot, " .
-            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_sanctuary, " .
-            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_gp_gd " .
-            "FROM person p) t1 WHERE has_dirt_green_dot != has_sanctuary OR has_dirt_green_dot != has_gp_gd ORDER BY callsign",
-            [Position::DIRT_GREEN_DOT, Position::SANCTUARY, Position::GERLACH_PATROL_GREEN_DOT]
+            "EXISTS (SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_sanctuary " .
+            "FROM person p) t1 WHERE has_dirt_green_dot != has_sanctuary ORDER BY callsign",
+            [Position::DIRT_GREEN_DOT, Position::SANCTUARY]
         );
     }
 
@@ -31,17 +30,8 @@ class GreenDotCheck extends SanityCheck
 
             $hasDirt = PersonPosition::havePosition($personId, Position::DIRT_GREEN_DOT);
             $hasSanctuary = PersonPosition::havePosition($personId, Position::SANCTUARY);
-            $hasGPGD = PersonPosition::havePosition($personId, Position::GERLACH_PATROL_GREEN_DOT);
 
-            if (!$hasDirt && !$hasSanctuary) {
-                PersonPosition::removeIdsFromPerson(
-                    $personId,
-                    [Position::GERLACH_PATROL_GREEN_DOT],
-                    'position sanity checker repair'
-                );
-                $messages[] = 'removed Gerlach Patrol - Green Dot';
-
-            } else {
+            if (!$hasDirt || !$hasSanctuary) {
                 $positionIds = [];
 
                 if (!$hasDirt) {
@@ -52,10 +42,6 @@ class GreenDotCheck extends SanityCheck
                 if (!$hasSanctuary) {
                     $positionIds[] = Position::SANCTUARY;
                     $messages[] = 'added Sanctuary';
-                }
-                if (!$hasGPGD) {
-                    $positionIds[] = Position::GERLACH_PATROL_GREEN_DOT;
-                    $messages[] = 'added Gerlach Patrol - Green Dot';
                 }
                 PersonPosition::addIdsToPerson($personId, $positionIds, 'position sanity checker repair');
             }
