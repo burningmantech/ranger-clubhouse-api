@@ -77,6 +77,7 @@ class Position extends ApiModel
 
     const TROUBLESHOOTER = 91;
     const TROUBLESHOOTER_MENTEE = 127;
+    const TROUBLESHOOTER_LEAL = 147;
 
     // Trainer positions for Dirt
     const TRAINING = 13;

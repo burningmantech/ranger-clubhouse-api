@@ -73,7 +73,13 @@ class ShiftCoverageReport
         [Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS],
         [Position::RSC_WESL, 'WESL', self::CALLSIGNS],
         [[Position::OPERATOR, Position::OPERATOR_SMOOTH], 'Opr', self::CALLSIGNS, [Position::OPERATOR_SMOOTH => 'Smooth']],
-        [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE], 'TS', self::CALLSIGNS, [Position::TROUBLESHOOTER_MENTEE => 'Mentee']],
+        [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE, Position::TROUBLESHOOTER_LEAL],
+            'TS', self::CALLSIGNS,
+            [
+                Position::TROUBLESHOOTER_MENTEE => 'Mentee',
+                Position::TROUBLESHOOTER_LEAL => 'TSLEAL'
+            ]
+        ],
         [[Position::LEAL, Position::LEAL_PARTNER], 'LEAL', self::CALLSIGNS, [Position::LEAL_PARTNER => 'Partner']],
         [[Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN], 'GDL', self::CALLSIGNS, [Position::GREEN_DOT_LEAD_INTERN => 'Intern']],
         [[Position::TOW_TRUCK_DRIVER, Position::TOW_TRUCK_MENTEE], 'Tow', self::CALLSIGNS, [Position::TOW_TRUCK_MENTEE => 'Mentee']],
