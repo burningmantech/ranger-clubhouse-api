@@ -58,11 +58,12 @@ class Bmid extends ApiModel
 
     const ALLOWED_PERSON_STATUSES = [
         Person::ACTIVE,
+        Person::ALPHA,
         Person::INACTIVE,
         Person::INACTIVE_EXTENSION,
+        Person::NON_RANGER,
+        Person::PROSPECTIVE,
         Person::RETIRED,
-        Person::ALPHA,
-        Person::PROSPECTIVE
     ];
 
     const BADGE_TITLES = [
