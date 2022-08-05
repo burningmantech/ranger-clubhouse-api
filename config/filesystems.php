@@ -61,7 +61,7 @@ return [
         'photos-local' => [
             'driver' => 'local',
             'root' => storage_path(''),
-            'url' => env('APP_URL'),
+            'url' => env('APP_URL').'/',
             'visibility' => 'public',
         ],
 

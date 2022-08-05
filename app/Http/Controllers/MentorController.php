@@ -163,9 +163,7 @@ class MentorController extends ApiController
             }
 
             $callsigns = Person::select('id', 'callsign')->whereIntegerInRaw('id', $mentorIds)->get()->keyBy('id');
-            usort($mentors, function ($a, $b) use ($callsigns) {
-                return strcasecmp($callsigns[$a['mentor_id']]->callsign, $callsigns[$b['mentor_id']]->callsign);
-            });
+            usort($mentors, fn($a, $b) => strcasecmp($callsigns[$a['mentor_id']]->callsign, $callsigns[$b['mentor_id']]->callsign));
 
             $results[] = [
                 'person_id' => $person->id,

@@ -97,6 +97,7 @@ class Alpha
 
         list ($intakeHistory, $intakeNotes, $trainings) = self::retrieveIntakeHistory($people->pluck('id')->toArray());
 
+        $peopleIds = $people->pluck('id')->toArray();
         // Find out the signed up shifts
         $alphaSlots = DB::table('person_slot')
             ->select(
@@ -109,14 +110,16 @@ class Alpha
                 $j->whereYear('slot.begins', $year);
                 $j->where('slot.position_id', Position::ALPHA);
             })
-            ->whereIntegerInRaw('person_slot.person_id', $people->pluck('id')->toArray())
+            ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->orderBy('slot.begins')
             ->get()
             ->groupBy('person_id');
 
+        $signedIn = Timesheet::retrieveSignedInPeople(Position::ALPHA);
+
         $potentials = [];
         foreach ($people as $row) {
-            $person = self::buildPerson($row, $year, $intakeHistory, $intakeNotes, $trainings);
+            $person = self::buildPerson($row, $year, $intakeHistory, $intakeNotes, $trainings, $signedIn);
             $slot = $alphaSlots[$row->id] ?? null;
             if ($slot) {
                 // Only grab the first slot
@@ -173,7 +176,7 @@ class Alpha
      * @return object
      */
 
-    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings): object
+    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings, $signedIn): object
     {
         $personId = $person->id;
         $photoApproved = $person->person_photo && $person->person_photo->status == PersonPhoto::APPROVED;
@@ -202,7 +205,7 @@ class Alpha
             'teeshirt_size_style' => $person->teeshirt_size_style,
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
-            'on_alpha_shift' => Timesheet::isPersonSignedIn($personId, Position::ALPHA)
+            'on_alpha_shift' => !empty($signedIn[$personId])
         ];
 
         if ($photoApproved) {
@@ -275,14 +278,12 @@ class Alpha
      * @return array
      */
 
-    public static function retrieveAllAlphas()
+    public static function retrieveAllAlphas(): array
     {
         $rows = PersonPosition::where('position_id', Position::ALPHA)
             ->with(['person', 'person.person_photo'])
             ->get()
-            ->filter(function ($r) {
-                return $r->person != null;
-            })
+            ->filter(fn($r) => $r->person != null)
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
             ->pluck('person')
             ->values();
@@ -291,13 +292,13 @@ class Alpha
     }
 
     /**
-     * Retrieve all the Alpha slots in a given year with sign ups and their intake data.
+     * Retrieve all the Alpha slots in a given year with sign-ups and their intake data.
      *
      * @param int $year
      * @return Collection
      */
 
-    public static function retrieveAlphaScheduleForYear(int $year) : Collection
+    public static function retrieveAlphaScheduleForYear(int $year): Collection
     {
         // Find the Alpha slots
         $slots = Slot::whereYear('begins', $year)
@@ -326,8 +327,9 @@ class Alpha
 
         list ($intakeHistory, $intakeNotes, $trainings) = self::retrieveIntakeHistory($rows->pluck('person_id'));
 
+        $signedIn = Timesheet::retrieveSignedInPeople(Position::ALPHA);
         foreach ($rows as $row) {
-            $slotsById[$row->slot_id]->people[] = self::buildPerson($row->person, $year, $intakeHistory, $intakeNotes, $trainings);
+            $slotsById[$row->slot_id]->people[] = self::buildPerson($row->person, $year, $intakeHistory, $intakeNotes, $trainings, $signedIn);
         }
 
         return $slotInfo;
@@ -352,8 +354,6 @@ class Alpha
             ->orderBy('person.callsign')
             ->get();
 
-        return $people->filter(function ($p) {
-            return $p->mentor_status != PersonMentor::PENDING;
-        })->values();
+        return $people->filter(fn($p) => $p->mentor_status != PersonMentor::PENDING)->values();
     }
 }
