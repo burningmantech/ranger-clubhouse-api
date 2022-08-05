@@ -3,18 +3,26 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Slot extends ApiModel
 {
+    // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_empty',
         'trainer_slot:id,position_id,description,begins,ends',
         'trainer_slot.position:id,title'
     ];
+
     protected $table = 'slot';
+
     protected $auditModel = true;
+
     protected $fillable = [
         'active',
         'begins',
@@ -36,7 +44,6 @@ class Slot extends ApiModel
         'credits'
     ];
 
-    // related tables to be loaded with row
     protected $rules = [
         'begins' => 'required|date|before:ends',
         'description' => 'required|string|max:40',
@@ -46,6 +53,7 @@ class Slot extends ApiModel
         'position_id' => 'required|integer',
         'trainer_slot_id' => 'nullable|integer'
     ];
+
     protected $dates = [
         'ends',
         'begins',
@@ -56,7 +64,80 @@ class Slot extends ApiModel
         'signed_up'
     ];
 
-    public static function findForQuery($query)
+    public function trainer_slot(): BelongsTo
+    {
+        return $this->belongsTo(Slot::class, 'trainer_slot_id');
+    }
+
+    public function person_slot(): HasMany
+    {
+        return $this->hasMany(PersonSlot::class);
+    }
+
+    public function trainer_status(): HasMany
+    {
+        return $this->hasMany(TrainerStatus::class, 'trainer_slot_id');
+    }
+
+    public function trainee_statuses(): HasMany
+    {
+        return $this->hasMany(TraineeStatus::class);
+    }
+
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    public function loadRelationships()
+    {
+        $this->load(self::WITH_POSITION_TRAINER);
+    }
+
+    /**
+     * Override Eloquent find method to add associations always desired
+     *
+     * @param $id
+     * @param string[] $columns
+     * @return mixed
+     */
+
+    public static function find($id, $columns = ['*']): mixed
+    {
+        if (is_array($id)) {
+            return self::baseSql()->whereIntegerInRaw('id', $id)->get($columns);
+        }
+        return self::baseSql()->where('id', $id)->first($columns);
+    }
+
+    /**
+     * Override Eloquent findOrFail method to add associations always desired
+     *
+     * @param $id
+     * @param string[] $columns
+     * @return mixed
+     */
+
+    public static function findOrFail($id, $columns = ['*']) : mixed
+    {
+        if (is_array($id)) {
+            $rows = self::baseSql()->whereIntegerInRaw('id', $id)->get($columns);
+            if ($rows->isEmpty()) {
+                throw (new ModelNotFoundException)->setModel(__CLASS__, $id);
+            }
+            return $rows;
+        }
+        return self::baseSql()->where('id', $id)->firstOrFail($columns);
+    }
+
+    /**
+     * Find slots based on the given criteria
+     *
+     * @param $query
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public static function findForQuery($query): \Illuminate\Database\Eloquent\Collection
     {
         $sql = self::baseSql();
         $year = $query['year'] ?? null;
@@ -84,7 +165,14 @@ class Slot extends ApiModel
         return $sql->orderBy('begins')->get();
     }
 
-    public static function baseSql()
+    /**
+     * Add various select columns to calculate if the shift is started and/or ended, the duration
+     * in seconds and the associated trainer position (if training slot)
+     *
+     * @return Builder
+     */
+
+    public static function baseSql(): Builder
     {
         $now = now();
         return self::select(
@@ -95,27 +183,14 @@ class Slot extends ApiModel
         )->setBindings([$now, $now])->with(self::WITH_POSITION_TRAINER);
     }
 
-    public static function find($slotId)
-    {
-        if (is_array($slotId)) {
-            return self::baseSql()->whereIn('id', $slotId)->get();
-        }
-        return self::baseSql()->where('id', $slotId)->first();
-    }
+    /**
+     * Find all the slots with sign-ups for a given year.
+     *
+     * @param int $year
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
 
-    public static function findOrFail($slotId)
-    {
-        if (is_array($slotId)) {
-            $rows = self::baseSql()->whereIntegerInRaw('id', $slotId)->get();
-            if ($rows->isEmpty()) {
-                throw (new ModelNotFoundException)->setModel(__CLASS__, $slotId);
-            }
-            return $rows;
-        }
-        return self::baseSql()->where('id', $slotId)->firstOrFail();
-    }
-
-    public static function findWithSignupsForYear($year)
+    public static function findWithSignupsForYear(int $year): \Illuminate\Database\Eloquent\Collection
     {
         return self::whereYear('begins', $year)
             ->where('signed_up', '>', 0)
@@ -124,7 +199,16 @@ class Slot extends ApiModel
             ->get();
     }
 
-    public static function findSignUps($slotId, $includeOnDuty = false, $includePhoto = false)
+    /**
+     * Find all the signed up folks for a given slot.
+     *
+     * @param int $slotId
+     * @param bool $includeOnDuty
+     * @param bool $includePhoto
+     * @return Collection
+     */
+
+    public static function findSignUps(int $slotId, bool $includeOnDuty = false, bool $includePhoto = false): Collection
     {
         $rows = DB::table('person_slot')
             ->select('person.id', 'person.callsign')
@@ -191,22 +275,23 @@ class Slot extends ApiModel
      * @return array list of years
      */
 
-    public static function findYears()
+    public static function findYears(): array
     {
         return self::selectRaw('YEAR(begins) as year')
             ->groupBy(DB::raw('YEAR(begins)'))
-            ->pluck('year')->toArray();
+            ->pluck('year')
+            ->toArray();
     }
 
     /**
      * Check to see if an activated slot exists for a given position in the
      * current year.
      *
-     * @param integer $positionId Position to find
-     * @param bool true if a slot was found.
+     * @param int $positionId
+     * @return bool
      */
 
-    public static function haveActiveForPosition($positionId)
+    public static function haveActiveForPosition(int $positionId): bool
     {
         return self::whereYear('begins', current_year())
             ->where('position_id', $positionId)
@@ -214,7 +299,14 @@ class Slot extends ApiModel
             ->exists();
     }
 
-    public static function retrieveDirtTimes($year)
+    /**
+     * Retrieve all the dirt shifts for a given year
+     *
+     * @param int $year
+     * @return Collection
+     */
+
+    public static function retrieveDirtTimes(int $year): Collection
     {
         $rows = DB::table('slot')
             ->select('position_id', 'begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
@@ -238,85 +330,47 @@ class Slot extends ApiModel
         return $rows;
     }
 
-    public static function isPartOfSessionGroup($ourDescription, $theirDescription)
-    {
-        return (self::sessionGroupPart($ourDescription)
-            && self::sessionGroupPart($theirDescription)
-            && self::sessionGroupName($ourDescription) == self::sessionGroupName($theirDescription));
-    }
-
-    public static function sessionGroupPart($description)
-    {
-        $matched = preg_match('/\bPart (\d)\b/i', $description, $matches);
-
-        if (!$matched) {
-            return 0;
-        } else {
-            return (int)$matches[1];
-        }
-    }
-
-    public static function sessionGroupName($description)
-    {
-        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
-        return $matched ? $matches[1] : null;
-    }
-
-    public function position()
-    {
-        return $this->belongsTo(Position::class, 'position_id');
-    }
-
-    public function trainer_slot()
-    {
-        return $this->belongsTo(Slot::class, 'trainer_slot_id');
-    }
-
-    public function person_slot()
-    {
-        return $this->hasMany(PersonSlot::class);
-    }
-
-    public function trainer_status()
-    {
-        return $this->hasMany(TrainerStatus::class, 'trainer_slot_id');
-    }
-
-    public function trainee_statuses()
-    {
-        return $this->hasMany(TraineeStatus::class);
-    }
-
-    public function getPositionTitleAttribute()
-    {
-        return $this->position ? $this->position->title : "Position #{$this->position_id}";
-    }
-
-    public function loadRelationships()
-    {
-        $this->load(self::WITH_POSITION_TRAINER);
-    }
-
-    /*
-     * Humanized datetime formats - for sending emails
+    /**
+     * Retrieve the credits potential for the slot
+     *
+     * @return float
      */
 
     public function getCreditsAttribute(): float
     {
-        if ($this->position_id ?? null) {
+        if ($this->position_id) {
             return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
         }
+
         return 0.0;
     }
+
+    /**
+     * Retrieve the position title for the slot.
+     *
+     * @return string
+     */
+
+    public function getPositionTitleAttribute(): string
+    {
+        return $this->position ? $this->position->title : "Deleted #{$this->position_id}";
+    }
+
+    /**
+     * Is this slot an ART training slot?
+     *
+     * @return bool
+     */
 
     public function isArt(): bool
     {
         return ($this->position_id != Position::TRAINING);
     }
 
-    /*
-     * Check to see if the slot begins within the pre-event period and
-     * is not a training slot
+    /**
+     * Humanized the begins datetime  - for sending emails
+     *
+     * @return string
      */
 
     public function getBeginsHumanFormatAttribute(): string
@@ -324,8 +378,10 @@ class Slot extends ApiModel
         return $this->begins->format('l M d Y @ H:i');
     }
 
-    /*
-     * Find and return the session part number if it exists.
+    /**
+     * Humanized the ends datetime  - for sending emails
+     *
+     * @return string
      */
 
     public function getEndsHumanFormatAttribute(): string
@@ -333,43 +389,85 @@ class Slot extends ApiModel
         return $this->ends->format('l M d Y @ H:i');
     }
 
-    /*
-     * Grab the session name minus any "- Part N" suffix.
+    /**
+     * Check to see if the slot begins within the pre-event period and is not a training slot
      *
-     * "Pre-Event - Part 1" becomes "Pre-Event"
+     * @return bool
      */
 
     public function isPreEventRestricted(): bool
     {
         if (!$this->begins || !$this->position_id) {
+            // No begin time or position associated (might see this happen during validation)
             return false;
         }
 
         $eventDate = EventDate::findForYear($this->begins->year);
 
         if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {
+            // Event dates not set
             return false;
         }
 
         if ($this->begins->lt($eventDate->pre_event_slot_start) || $this->begins->gte($eventDate->pre_event_slot_end)) {
-            // Outside of Pre-Event period
+            // Huzzah! Outside of Pre-Event period
             return false;
         }
 
         return !$this->isTraining();
     }
 
-    /*
-     * Is the slot part of a session group?
+    /**
+     * Is this a training slot? (either trainer or trainee)
+     *
+     * @return bool
      */
 
     public function isTraining(): bool
     {
-        $position = $this->position;
-        if ($position == null) {
-            return false;
-        }
+        return $this->position?->type == "Training";
+    }
 
-        return $position->type == "Training" && stripos($position->title, "trainer") === false;
+    /**
+     * Is the slot part of a session group?
+     *
+     * @param $ourDescription
+     * @param $theirDescription
+     * @return bool
+     */
+
+    public static function isPartOfSessionGroup($ourDescription, $theirDescription): bool
+    {
+        return (self::sessionGroupPart($ourDescription)
+            && self::sessionGroupPart($theirDescription)
+            && self::sessionGroupName($ourDescription) == self::sessionGroupName($theirDescription));
+    }
+
+    /**
+     * Find and return the session part number if it exists.
+     *
+     * @param $description
+     * @return int
+     */
+
+    public static function sessionGroupPart($description): int
+    {
+        $matched = preg_match('/\bPart (\d)\b/i', $description, $matches);
+        return $matched ? (int)$matches[1] : 0;
+    }
+
+    /**
+     * Grab the session name minus any "- Part N" suffix.
+     *
+     * "Pre-Event - Part 1" becomes "Pre-Event"
+     *
+     * @param string $description
+     * @return mixed|null
+     */
+
+    public static function sessionGroupName(string $description): mixed
+    {
+        $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
+        return $matched ? $matches[1] : null;
     }
 }
