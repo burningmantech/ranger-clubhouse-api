@@ -214,7 +214,7 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Check to see if a person is signed into a position(s)
+     * Check to see if a person is signed in to a position(s)
      *
      * @param int $personId
      * @param $positionIds
@@ -231,6 +231,29 @@ class Timesheet extends ApiModel
         }
 
         return $sql->exists();
+    }
+
+    /**
+     * Find everyone who is signed in to a given position
+     *
+     * @param int $positionId
+     * @return array
+     */
+
+    public static function retrieveSignedInPeople(int $positionId): array
+    {
+        $rows = DB::table('timesheet')
+            ->select('person_id')
+            ->where('position_id', $positionId)
+            ->whereNull('off_duty')
+            ->get();
+
+        $people = [];
+        foreach ($rows as $row) {
+            $people[$row->person_id] = true;
+        }
+
+        return $people;
     }
 
     /**
