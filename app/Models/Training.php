@@ -106,6 +106,7 @@ class Training extends Position
                 'id' => $position->id,
                 'title' => $position->title,
                 'active' => $position->active,
+                'type' => $position->type,
             ];
 
             $personPositions[] = $info;
@@ -160,7 +161,7 @@ class Training extends Position
             if (!$trainer && $trainingId && !self::didPersonPassForYear($person, $trainingId, $year)) {
                 $info->is_untrained = true;
                 $info->training_position_id = $trainingId;
-                $info->training_title = Position::retrieveTitle($trainingId);
+                $info->training_title = ($trainingId == Position::TRAINING) ? "In-Person Training" : Position::retrieveTitle($trainingId);
             }
         }
 
@@ -170,7 +171,7 @@ class Training extends Position
     /**
      * Did the person pass training in a given year? check to see if they were a teacher or student.
      *
-     * @param Person $person person to check
+     * @param Person|int $person person to check
      * @param int $positionId position in question
      * @param int $year the year to check in
      * @return bool true if the person passed in the given year

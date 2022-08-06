@@ -2,10 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-use App\Models\ApiModel;
-use App\Models\Position;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -93,7 +89,7 @@ class PersonPosition extends ApiModel
 
     public static function findForPerson(int $personId, bool $includeMentee = false)
     {
-        $rows = self::select('position.id', 'position.title', 'position.training_position_id', 'position.active')
+        $rows = self::select('position.id', 'position.title', 'position.training_position_id', 'position.active', 'position.type')
             ->join('position', 'position.id', '=', 'person_position.position_id')
             ->where('person_id', $personId)
             ->orderBy('position.title')
@@ -104,7 +100,7 @@ class PersonPosition extends ApiModel
         }
 
         // Find mentee and alpha positions
-        $sql = Position::select('position.id', 'position.title', 'position.training_position_id')
+        $sql = Position::select('position.id', 'position.title', 'position.training_position_id', 'position.type')
             ->where('title', 'like', '%mentee%');
 
         if (Timesheet::hasAlphaEntry($personId)) {
