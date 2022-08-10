@@ -11,12 +11,13 @@ use InvalidArgumentException;
 class AssetController extends ApiController
 {
     /**
-     * Display assets based on criteria
+     * Find assets based on the given criteria
      *
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', Asset::class);
 
@@ -34,12 +35,13 @@ class AssetController extends ApiController
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a new asset
      *
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
         $this->authorize('store', Asset::class);
 
@@ -54,26 +56,28 @@ class AssetController extends ApiController
     }
 
     /**
-     * Display the specified resource.
+     * Show an asset
+     *
      * @param Asset $asset
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function show(Asset $asset)
+    public function show(Asset $asset): JsonResponse
     {
         $this->authorize('show', $asset);
         return $this->success($asset);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update an asset
+     *
      * @param Asset $asset
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function update(Asset $asset)
+    public function update(Asset $asset): JsonResponse
     {
         $this->authorize('update', $asset);
         $this->fromRest($asset);
@@ -85,13 +89,19 @@ class AssetController extends ApiController
         return $this->restError($asset);
     }
 
-    /*
-     * Remove the specified resource from storage.
+    /**
+     * Delete an asset
+     *
+     * @param Asset $asset
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Asset $asset)
+
+    public function destroy(Asset $asset): JsonResponse
     {
         $this->authorize('delete', $asset);
         $asset->delete();
+
         AssetPerson::where('asset_id', $asset->id)->delete();
 
         return $this->restDeleteSuccess();
@@ -105,7 +115,7 @@ class AssetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function history(Asset $asset)
+    public function history(Asset $asset): JsonResponse
     {
         $this->authorize('history', $asset);
         return response()->json(['asset_history' => AssetPerson::retrieveHistory($asset->id)]);
@@ -117,7 +127,8 @@ class AssetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function checkout()
+
+    public function checkout(): JsonResponse
     {
         $this->authorize('checkout', [Asset::class]);
 
@@ -163,12 +174,13 @@ class AssetController extends ApiController
 
     /**
      * Check in an asset
+     *
      * @param Asset $asset
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function checkin(Asset $asset)
+    public function checkin(Asset $asset): JsonResponse
     {
         $this->authorize('checkin', [Asset::class]);
         $asset_person = AssetPerson::findCheckedOutPerson($asset->id);
