@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\AssetPerson;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 class Asset extends ApiModel
@@ -41,7 +43,30 @@ class Asset extends ApiModel
         'barcode' => 'required',
     ];
 
-    public static function findForQuery($query)
+
+    public function asset_person(): BelongsTo
+    {
+        return $this->belongsTo(AssetPerson::class);
+    }
+
+    public function asset_history(): HasMany
+    {
+        return $this->hasMany(AssetPerson::class, 'asset_id')->orderBy('checked_out');
+    }
+
+    public function checked_out(): HasOne
+    {
+        return $this->hasOne(AssetPerson::class, 'asset_id')->whereNull('checked_in');
+    }
+
+    /**
+     * Find assets based on the given criteria
+     *
+     * @param $query
+     * @return Collection
+     */
+
+    public static function findForQuery($query): Collection
     {
         $year = $query['year'] ?? current_year();
         $sql = self::whereYear('create_date', $year);
@@ -72,29 +97,29 @@ class Asset extends ApiModel
         return $sql->orderBy('barcode')->get();
     }
 
-    public static function findByBarcodeYear($barcode, $year)
+    /**
+     * Find an asset based on a barcode and year
+     *
+     * @param string $barcode
+     * @param int $year
+     * @return ?Asset
+     */
+
+    public static function findByBarcodeYear(string $barcode, int $year): ?Asset
     {
         return self::where('barcode', $barcode)
             ->whereYear('create_date', $year)
             ->first();
     }
 
-    public function asset_person()
-    {
-        return $this->belongsTo(AssetPerson::class);
-    }
+    /**
+     * Save / Update an asset record. Check to ensure no duplicate barcodes will be created.
+     *
+     * @param $options
+     * @return bool
+     */
 
-    public function asset_history()
-    {
-        return $this->hasMany(AssetPerson::class, 'asset_id')->orderBy('checked_out');
-    }
-
-    public function checked_out()
-    {
-        return $this->hasOne(AssetPerson::class, 'asset_id')->whereNull('checked_in');
-    }
-
-    public function save($options = []) : bool
+    public function save($options = []): bool
     {
         // Ensure the barcode is unique for the year
         if (!$this->exists || $this->isDirty('barcode') || $this->isDirty('create_date')) {
@@ -114,15 +139,4 @@ class Asset extends ApiModel
 
         return parent::save($options);
     }
-
-    public function isBarcodeUnique()
-    {
-        $sql = self::where('barcode', $this->barcode)->whereYear('create_date', ($this->create_date ? $this->create_date->year : current_year()));
-        if ($this->id) {
-            $sql->where('id', '!=', $this->id);
-        }
-
-        return !$sql->exists();
-    }
-
 }
