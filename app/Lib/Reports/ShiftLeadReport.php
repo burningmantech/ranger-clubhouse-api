@@ -118,6 +118,7 @@ class ShiftLeadReport
             'person.id AS person_id',
             'person.callsign',
             'person.callsign_pronounce',
+            'person.on_site',
             'person.gender',
             'person.pronouns',
             'person.pronouns_custom',
@@ -223,6 +224,7 @@ class ShiftLeadReport
                 'gender' => Person::summarizeGender($row->gender),
                 'pronouns' => $row->pronouns,
                 'pronouns_custom' => $row->pronouns_custom,
+                'on_site' => $row->on_site,
                 'vehicle_blacklisted' => $row->vehicle_blacklisted,
                 'signed_motorpool_agreement' => $row->signed_motorpool_agreement,
                 'org_vehicle_insurance' => $row->org_vehicle_insurance,
@@ -309,7 +311,7 @@ class ShiftLeadReport
      * @param Carbon $shiftEnd
      * @param int $minAfterStart
      */
-    public static function buildShiftRange($sql, Carbon $shiftStart, Carbon $shiftEnd, int $minAfterStart)
+    public static function buildShiftRange($sql, Carbon $shiftStart, Carbon $shiftEnd, int $minAfterStart): void
     {
         $sql->where(function ($q) use ($shiftStart, $shiftEnd, $minAfterStart) {
             // all slots starting before and ending on or start the range
@@ -338,7 +340,7 @@ class ShiftLeadReport
      * @param $positions
      */
 
-    public static function addPosition($position, &$positions)
+    public static function addPosition($position, &$positions): void
     {
         $positions[$position->id] ??= [
             'title' => $position->title,
@@ -356,7 +358,7 @@ class ShiftLeadReport
      * @param Carbon $shiftStart
      */
 
-    public static function addSlot($slot, &$slots, Carbon $shiftStart)
+    public static function addSlot($slot, &$slots, Carbon $shiftStart): void
     {
         $slots[$slot->id] ??= [
             'begins' => (string)$slot->begins,
