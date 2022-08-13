@@ -175,6 +175,7 @@ class OnDutyShiftLeadReport
                 'callsign' => $row->callsign,
                 'callsign_pronounce' => $row->callsign_pronounce,
                 'gender' => Person::summarizeGender($row->gender),
+                'on_site' => true,  // Any person on duty is considered to be on site.
                 'pronouns' => $row->pronouns,
                 'pronouns_custom' => $row->pronouns_custom,
                 'vehicle_blacklisted' => $row->vehicle_blacklisted,
