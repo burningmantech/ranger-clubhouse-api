@@ -40,7 +40,13 @@ class Asset extends ApiModel
     ];
 
     protected $rules = [
-        'barcode' => 'required',
+        'barcode' => 'required|string|max:25',
+        'temp_id' => 'sometimes|nullable|string|max:25',
+        'subtype' => 'sometimes|nullable|string|max:25',
+        'model' => 'sometimes|nullable|string|max:25',
+        'color' => 'sometimes|nullable|string|max:25',
+        'style' => 'sometimes|nullable|string|max:25',
+        'category' => 'sometimes|nullable|string|max:25',
     ];
 
 
