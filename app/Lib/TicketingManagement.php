@@ -91,9 +91,9 @@ class TicketingManagement
                     break;
             }
 
-            if ($forDelivery) {
-                $deliveryMethod = $row->delivery_method;
+            $deliveryType = $row->delivery_method;
 
+            if ($forDelivery) {
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                         $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
@@ -105,8 +105,7 @@ class TicketingManagement
                         break;
 
                     case AccessDocument::RPT:
-                        $deliveryType = $deliveryMethod;
-                        if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
+                        if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
                         }
                         break;
@@ -115,9 +114,10 @@ class TicketingManagement
                     case AccessDocument::GIFT:
                         if ($row->type == AccessDocument::VEHICLE_PASS && $row->has_staff_credential) {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
+                        } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_POSTAL) {
+                            $deliveryType = AccessDocument::DELIVERY_NONE;
+                        } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
                             /*if ($row->hasAddress()) {
                                 $row->delivery_address = [
                                     'street' => $row->street,
