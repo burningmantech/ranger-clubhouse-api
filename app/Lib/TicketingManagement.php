@@ -92,8 +92,8 @@ class TicketingManagement
             }
 
             $deliveryType = $row->delivery_method;
-
             if ($forDelivery) {
+                // Override delivery methods if need be.
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                         $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
@@ -116,7 +116,6 @@ class TicketingManagement
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
                         } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
-                            $deliveryType = AccessDocument::DELIVERY_NONE;
                         } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
                             /*if ($row->hasAddress()) {
                                 $row->delivery_address = [
