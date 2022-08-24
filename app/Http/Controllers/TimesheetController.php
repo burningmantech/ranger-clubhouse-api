@@ -182,7 +182,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
         $timesheet = new Timesheet;
 
@@ -216,7 +217,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function update(Timesheet $timesheet)
+
+    public function update(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('update', $timesheet);
 
@@ -329,6 +331,7 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function updatePosition(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('updatePosition', $timesheet);
@@ -374,7 +377,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function destroy(Timesheet $timesheet)
+    public function destroy(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('destroy', $timesheet);
         $timesheet->delete();
@@ -396,7 +399,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function signin()
+    public function signin(): JsonResponse
     {
         $this->authorize('signin', [Timesheet::class]);
         $canForceSignon = $this->userHasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
@@ -870,7 +873,7 @@ class TimesheetController extends ApiController
     {
         $personId = $person->id;
 
-        // Confirm the person is allowed to sign into the position
+        // Confirm the person is allowed to sign in to the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
             $response = ['status' => 'position-not-held'];
             return false;
