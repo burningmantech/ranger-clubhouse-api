@@ -319,12 +319,12 @@ class Bmid extends ApiModel
                         self::populateMealMatrix(AccessDocument::MEAL_MATRIX[$item->type], $earnedMeals);
                     }
                 }
-                if ($item->is_allocated) {
-                    if ($item->type == AccessDocument::WET_SPOT) {
+                if ($item->type == AccessDocument::WET_SPOT) {
+                    if ($item->is_allocated) {
                         $bmid->allocated_showers = true;
+                    } else {
+                        $bmid->earned_showers = true;
                     }
-                } else if ($item->type == AccessDocument::WET_SPOT) {
-                    $bmid->earned_showers = true;
                 }
             }
 
@@ -339,6 +339,8 @@ class Bmid extends ApiModel
     }
 
     /**
+     * For a given person and year, find an existing record or create a new one.
+     *
      * @param $personId
      * @param $year
      * @return Bmid

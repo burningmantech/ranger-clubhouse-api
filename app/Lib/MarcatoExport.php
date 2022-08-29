@@ -251,7 +251,7 @@ class MarcatoExport
             self::buildPhotoName($person),
             $person->callsign,
             $arrivalDate,
-            ($bmid->showers || $bmid->earned_shower || $bmid->allocated_showers) ? '100' : '',
+            ($bmid->showers || $bmid->earned_showers || $bmid->allocated_showers) ? '100' : '',
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
