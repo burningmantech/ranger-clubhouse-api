@@ -98,7 +98,7 @@ class MentorController extends ApiController
             'assignments.*.status' => [
                 'required',
                 'string',
-                Rule::in([PersonMentor::PASS, PersonMentor::PENDING, PersonMentor::BONK])
+                Rule::in([PersonMentor::PASS, PersonMentor::PENDING, PersonMentor::BONK, PersonMentor::SELF_BONK])
             ],
             'assignments.*.mentor_ids' => 'present|array',
             'assignments.*.mentor_ids.*' => 'present|integer|exists:person,id'
