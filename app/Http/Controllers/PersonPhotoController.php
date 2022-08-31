@@ -158,8 +158,11 @@ class PersonPhotoController extends ApiController
     /**
      * Replace a photo (aka edit)
      *
-     * Ideally the client will take the original photo, edit it, and then send
-     * it back to the server.
+     * Ideally the client will take the original photo, edit it, and then send it back to the server.
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function replace(PersonPhoto $personPhoto): JsonResponse
@@ -292,11 +295,15 @@ class PersonPhotoController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /*
+    /**
      * Obtain the photo url and status
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function photo(Person $person)
+    public function photo(Person $person): JsonResponse
     {
         $this->authorize('photo', [PersonPhoto::class, $person]);
         return response()->json(['photo' => PersonPhoto::retrieveInfo($person)]);
