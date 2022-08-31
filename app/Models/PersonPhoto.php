@@ -5,9 +5,9 @@ namespace App\Models;
 use Aws\Credentials\Credentials;
 use Aws\Rekognition\RekognitionClient;
 use Exception;
-use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -198,27 +198,27 @@ class PersonPhoto extends ApiModel
 
     public $reject_history;
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function review_person()
+    public function review_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function upload_person()
+    public function upload_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function edit_person()
+    public function edit_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($params)
+    public static function findForQuery($params): array
     {
         $photoStatus = $params['status'] ?? null;
         $personStatus = $params['person_status'] ?? null;
@@ -385,7 +385,7 @@ class PersonPhoto extends ApiModel
      * @return Collection
      */
 
-    public static function findAllPending()
+    public static function findAllPending(): Collection
     {
         return self::where('status', self::SUBMITTED)
             ->orderBy('created_at')
@@ -396,10 +396,10 @@ class PersonPhoto extends ApiModel
     /**
      * Delete all the photos on file for the given person
      *
-     * @param $personId
+     * @param int $personId
      */
 
-    public static function deleteAllForPerson($personId)
+    public static function deleteAllForPerson(int $personId)
     {
         $userId = Auth::id();
 
@@ -470,7 +470,7 @@ class PersonPhoto extends ApiModel
      * @return string
      */
 
-    public static function retrieveStatus(Person $person)
+    public static function retrieveStatus(Person $person): string
     {
         $photo = $person->person_photo;
 
@@ -530,7 +530,7 @@ class PersonPhoto extends ApiModel
      * @return Filesystem
      */
 
-    public static function storage()
+    public static function storage(): Filesystem
     {
         $storage = config('clubhouse.PhotoStorage');
         if (!$storage) {
@@ -544,7 +544,7 @@ class PersonPhoto extends ApiModel
      *
      * @param $contents - raw image
      * @param $timestamp - timestamp image was uploaded
-     * @param $isOrig - is this the original image or one that was resized
+     * @param $type
      * @return bool - true if succesful
      */
 
@@ -574,6 +574,7 @@ class PersonPhoto extends ApiModel
      *
      * @return bool
      */
+
     public function imageExists(): bool
     {
         return self::storage()->exists(self::storagePath($this->image_filename));
@@ -583,7 +584,6 @@ class PersonPhoto extends ApiModel
      * Return the contents of the image.
      *
      * @return string
-     * @throws FileNotFoundException
      */
 
     public function readImage(): string
@@ -638,7 +638,7 @@ class PersonPhoto extends ApiModel
         return [];
     }
 
-    public function getRejectLabelsAttribute()
+    public function getRejectLabelsAttribute(): ?array
     {
         $reasons = $this->reject_reasons;
         if (empty($reasons)) {
@@ -664,7 +664,7 @@ class PersonPhoto extends ApiModel
      * @return array|string[]
      */
 
-    public function getAnalysisDetailsAttribute()
+    public function getAnalysisDetailsAttribute(): array
     {
         $status = $this->analysis_status;
         if ($status == 'failed') {
