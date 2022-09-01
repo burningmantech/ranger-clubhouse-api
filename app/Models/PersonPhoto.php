@@ -380,6 +380,27 @@ class PersonPhoto extends ApiModel
     }
 
     /**
+     * Retrieve the (approved) image url for the given person
+     *
+     * @param int $personId
+     * @return string
+     */
+
+    public static function retrieveProfileUrlForPerson(int $personId): string
+    {
+        $photo = self::join('person', function ($j) use ($personId) {
+            $j->on('person.id', 'person_photo.person_id');
+            $j->where('person.id', $personId);
+        })->where('person_photo.status', self::APPROVED)->first();
+
+        if (!$photo) {
+            return '';
+        }
+
+        return ($photo->profile_url ?? $photo->image_url) ?? '';
+    }
+
+    /**
      * Find all photos queued up for review.
      *
      * @return Collection
@@ -456,7 +477,7 @@ class PersonPhoto extends ApiModel
 
     public function getProfileUrlAttribute(): string
     {
-        if (!empty($this->profile_name)) {
+        if (!empty($this->profile_filename)) {
             return self::storage()->url(self::storagePath($this->profile_filename));
         }
 
@@ -491,14 +512,17 @@ class PersonPhoto extends ApiModel
         if ($photo) {
             $status = $photo->status;
             $url = $photo->image_url;
+            $profileUrl = $photo->profile_url;
         } else {
             $status = self::MISSING;
             $url = null;
+            $profileUrl = null;
         }
 
         $info = [
             'photo_status' => $status,
             'photo_url' => $url,
+            'profile_url' => $profileUrl,
             'upload_enabled' => setting('PhotoUploadEnable')
         ];
 

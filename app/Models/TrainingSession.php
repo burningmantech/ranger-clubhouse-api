@@ -108,7 +108,7 @@ class TrainingSession extends Slot
                 'last_name' => $person->last_name,
                 'status' => $status,
                 'current_status' => $person->status,
-                'photo_url' => PersonPhoto::retrieveImageUrlForPerson($person->id),
+                'photo_url' => PersonPhoto::retrieveProfileUrlForPerson($person->id),
                 'email' => $person->email,
                 'years' => $peopleYearsRangered[$person->id] ?? 0,
                 'position_ids' => $person->person_position->pluck('position_id'),

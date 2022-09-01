@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -101,32 +102,32 @@ class Timesheet extends ApiModel
 
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function reviewer_person()
+    public function reviewer_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function verified_person()
+    public function verified_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function position()
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
 
-    public function slot()
+    public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): Timesheet
     {
         return $this->load(self::RELATIONSHIPS);
     }
@@ -185,7 +186,7 @@ class Timesheet extends ApiModel
 
         if ($includePhoto) {
             foreach ($rows as $row) {
-                $row->photo_url = PersonPhoto::retrieveImageUrlForPerson($row->person_id);
+                $row->photo_url = PersonPhoto::retrieveProfileUrlForPerson($row->person_id);
                 $row->appends[] = 'photo_url';
             }
         }

@@ -239,7 +239,7 @@ class Slot extends ApiModel
 
         if ($includePhoto) {
             foreach ($rows as $row) {
-                $row->photo_url = PersonPhoto::retrieveImageUrlForPerson($row->id);
+                $row->photo_url = PersonPhoto::retrieveProfileUrlForPerson($row->id);
             }
 
         }
