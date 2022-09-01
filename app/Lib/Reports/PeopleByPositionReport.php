@@ -3,7 +3,6 @@
 namespace App\Lib\Reports;
 
 use App\Models\Person;
-use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
 
@@ -48,49 +47,53 @@ class PeopleByPositionReport
         );
         foreach ($positionQuery->get() as $pos) {
             $position = $pos->toArray();
-            if (!$position['new_user_eligible'] && !$position['all_rangers']) { // show people with the position
-                $pps = PersonPosition::where('position_id', $pos->id);
-                if ($onPlaya) {
-                    $pps = $pps->join('person', 'person.id', '=', 'person_position.person_id')
-                        ->where('person.on_site', true);
-                }
-                $personIds = $pps->pluck('person_id')->toArray();
-                $position['personIds'] = $personIds;
-            } else { // show Rangers (or all people) who don't have the position
-                if ($position['new_user_eligible']) {
-                    $missingPeopleQuery = Person::whereNotIn('status', $nonTrainingStatuses);
-                } elseif ($position['all_rangers']) {
-                    $missingPeopleQuery = Person::whereIn('status', $rangerStatuses);
+            $pps = DB::table('person_position')->where('position_id', $pos->id);
+            if ($onPlaya) {
+                $pps->join('person', 'person.id', '=', 'person_position.person_id')
+                    ->where('person.on_site', true);
+            }
+            $personIds = $pps->pluck('person_id')->toArray();
+            $position['personIds'] = $personIds;
+            foreach ($personIds as $pid) {
+                $allPeople[$pid] = true;
+            }
+            if ($pos->new_user_eligible || $pos->all_rangers) {
+                // show Rangers (or all people) who don't have the position
+                if ($pos->new_user_eligible) {
+                    $missingPeopleQuery = DB::table('person')->whereNotIn('status', $nonTrainingStatuses);
+                } else {
+                    $missingPeopleQuery = DB::table('person')->whereIn('status', $rangerStatuses);
                     // also show non-Rangers who have the position, suspiciously
                     $nonRangersQuery =
-                        PersonPosition::where('position_id', $pos->id)
-                            ->join('person', 'person.id', '=', 'person_position.person_id')
+                        DB::table('person_position')
+                            ->where('position_id', $pos->id)
+                            ->join('person', 'person.id', 'person_position.person_id')
                             ->whereNotIn('person.status', $rangerStatuses);
                     if ($onPlaya) {
-                        $nonRangersQuery = $nonRangersQuery->where('person.on_site', 'true');
+                       $nonRangersQuery->where('person.on_site', true);
                     }
                     $suspiciousPersonIds = $nonRangersQuery->pluck('person_id')->toArray();
                     if (!empty($suspiciousPersonIds)) {
-                        $position['personIds'] = $suspiciousPersonIds;
+                        $position['personIds'] = array_merge($position['personIds'], $suspiciousPersonIds);
                         foreach ($suspiciousPersonIds as $pid) {
                             $allPeople[$pid] = true;
                         }
                     }
                 }
                 if ($onPlaya) {
-                    $missingPeopleQuery = $missingPeopleQuery->where('on_site', true);
+                    $missingPeopleQuery->where('on_site', true);
                 }
-                $personIds = $missingPeopleQuery
+                $position['missingPersonIds'] = $missingPeopleQuery
                     ->whereNotExists(function ($query) use ($position) {
                         $query->select(DB::raw(1))
                             ->from('person_position')
                             ->where('position_id', $position['id'])
-                            ->whereRaw('person_position.person_id = person.id');
+                            ->whereColumn('person_position.person_id', 'person.id')
+                            ->limit(1);
                     })->pluck('id')->toArray();
-                $position['missingPersonIds'] = $personIds;
-            }
-            foreach ($personIds as $pid) {
-                $allPeople[$pid] = true;
+                foreach ($position['missingPersonIds'] as $pid) {
+                    $allPeople[$pid] = true;
+                }
             }
             $positions[] = $position;
         }

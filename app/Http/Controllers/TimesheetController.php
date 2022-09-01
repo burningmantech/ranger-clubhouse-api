@@ -490,7 +490,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function signoff(Timesheet $timesheet)
+    public function signoff(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('signoff', $timesheet);
 
@@ -519,7 +519,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function resignin(Timesheet $timesheet)
+    public function resignin(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('resignin', $timesheet);
 
@@ -547,7 +547,7 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      */
 
-    public function info()
+    public function info(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'required|integer'
@@ -615,7 +615,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function correctionRequests()
+
+    public function correctionRequests(): JsonResponse
     {
         $this->authorize('correctionRequests', [Timesheet::class]);
         $year = $this->getYear();
@@ -631,7 +632,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function unconfirmedPeople()
+
+    public function unconfirmedPeople(): JsonResponse
     {
         $this->authorize('unconfirmedPeople', [Timesheet::class]);
         $year = $this->getYear();
@@ -647,7 +649,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function sanityChecker()
+    public function sanityChecker(): JsonResponse
     {
         $this->authorize('sanityChecker', [Timesheet::class]);
         $year = $this->getYear();
@@ -661,7 +663,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function potentialShirtsEarnedReport()
+    public function potentialShirtsEarnedReport(): JsonResponse
     {
         $this->authorize('potentialShirtsEarnedReport', [Timesheet::class]);
 
@@ -676,11 +678,14 @@ class TimesheetController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Freaking years report!
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function freakingYearsReport()
+    public function freakingYearsReport(): JsonResponse
     {
         $this->authorize('freakingYearsReport', [Timesheet::class]);
 
@@ -695,11 +700,14 @@ class TimesheetController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Radio eligibility report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function radioEligibilityReport()
+    public function radioEligibilityReport(): JsonResponse
     {
         $this->authorize('radioEligibilityReport', [Timesheet::class]);
         $year = $this->getYear();
@@ -713,7 +721,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function bulkSignInOut()
+
+    public function bulkSignInOut(): JsonResponse
     {
         $this->authorize('bulkSignInOut', [Timesheet::class]);
 
@@ -856,7 +865,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function onDutyShiftLeadReport()
+    public function onDutyShiftLeadReport(): JsonResponse
     {
         $this->authorize('onDutyShiftLeadReport', [Timesheet::class]);
 
