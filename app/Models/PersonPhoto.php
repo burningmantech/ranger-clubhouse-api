@@ -363,24 +363,7 @@ class PersonPhoto extends ApiModel
     }
 
     /**
-     * Retrieve the (approved) image url for the given person
-     *
-     * @param $personId
-     * @return string
-     */
-
-    public static function retrieveImageUrlForPerson(int $personId): string
-    {
-        $photo = self::join('person', function ($j) use ($personId) {
-            $j->on('person.id', 'person_photo.person_id');
-            $j->where('person.id', $personId);
-        })->where('person_photo.status', self::APPROVED)->first();
-
-        return $photo ? $photo->image_url : '';
-    }
-
-    /**
-     * Retrieve the (approved) image url for the given person
+     * Retrieve the (approved) profile url for the given person
      *
      * @param int $personId
      * @return string
@@ -389,7 +372,7 @@ class PersonPhoto extends ApiModel
     public static function retrieveProfileUrlForPerson(int $personId): string
     {
         $photo = self::join('person', function ($j) use ($personId) {
-            $j->on('person.id', 'person_photo.person_id');
+            $j->on('person.person_photo_id', 'person_photo.id');
             $j->where('person.id', $personId);
         })->where('person_photo.status', self::APPROVED)->first();
 
