@@ -6,7 +6,6 @@ use App\Http\RestApi;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\Role;
-use Illuminate\Support\Facades\Log;
 
 class ActionLogController extends ApiController
 {
@@ -21,6 +20,7 @@ class ActionLogController extends ApiController
         $params = request()->validate([
             'sort' => 'sometimes|string',
             'events' => 'sometimes|array',
+            'message' => 'sometimes|string',
 
             'start_time' => 'sometimes|date',
             'end_time' => 'sometimes|date',

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use DateTime;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActionLog extends Model
 {
@@ -23,17 +24,24 @@ class ActionLog extends Model
 
     const PAGE_SIZE_DEFAULT = 50;
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function target_person()
+    public function target_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query, $redactData)
+    /**
+     * Retrieve action log records based on the given query criteria.
+     *
+     * @param array $query
+     * @param bool $redactData - true if the data column is to be redacted.
+     * @return array
+     */
+    public static function findForQuery(array $query, bool $redactData): array
     {
         $personId = $query['person_id'] ?? null;
         $page = $query['page'] ?? 1;
@@ -43,6 +51,7 @@ class ActionLog extends Model
         $startTime = $query['start_time'] ?? null;
         $endTime = $query['end_time'] ?? null;
         $lastDay = $query['lastday'] ?? false;
+        $message = $query['message'] ?? null;
 
         $sql = self::query();
 
@@ -58,10 +67,10 @@ class ActionLog extends Model
             $likeEvents = [];
 
             foreach ($events as $event) {
-                if (strpos($event, '%') === false) {
-                    $exactEvents[] = $event;
-                } else {
+                if (str_contains($event, '%')) {
                     $likeEvents[] = $event;
+                } else {
+                    $exactEvents[] = $event;
                 }
             }
 
@@ -88,6 +97,14 @@ class ActionLog extends Model
 
         if ($lastDay) {
             $sql->whereRaw('created_at >= ?', [now()->subHours(24)]);
+        }
+
+        if ($message) {
+            if (str_contains($message, '%')) {
+                $sql->where('message', 'like', $message);
+            } else {
+                $sql->where('message', $message);
+            }
         }
 
         // How many total for the query
@@ -168,7 +185,7 @@ class ActionLog extends Model
      * @return void
      */
 
-    public static function record($user, $event, $message, $data = null, $targetPersonId = null)
+    public static function record($user, $event, $message, $data = null, $targetPersonId = null): void
     {
         $log = new ActionLog;
         $log->event = $event;
