@@ -2,13 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-
-use App\Models\ApiModel;
-
-use App\Models\Person;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonStatus extends ApiModel
 {
@@ -20,12 +16,12 @@ class PersonStatus extends ApiModel
         'created_at' => 'datetime'
     ];
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function person_source()
+    public function person_source(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -34,13 +30,13 @@ class PersonStatus extends ApiModel
      * Record the change in a person's status.
      *
      * @param int $personId person to track
-     * @param string $oldStatus old status
+     * @param string|null $oldStatus old status
      * @param string $newStatus new status
-     * @param string $reason reason it changed
-     * @param int $personSourceId user who made the change
+     * @param string|null $reason reason it changed
+     * @param int|null $personSourceId user who made the change
      */
 
-    public static function record($personId, $oldStatus, $newStatus, $reason, $personSourceId)
+    public static function record(int $personId, ?string $oldStatus, string $newStatus, ?string $reason, ?int $personSourceId)
     {
         self::create([
             'person_id' => $personId,
@@ -58,7 +54,7 @@ class PersonStatus extends ApiModel
      * @return Collection
      */
 
-    public static function retrieveAllForId($personId)
+    public static function retrieveAllForId($personId): Collection
     {
         return self::where('person_id', $personId)
             ->with('person_source:id,callsign')
@@ -72,10 +68,10 @@ class PersonStatus extends ApiModel
      *
      * @param int $personId
      * @param string|Carbon $time
-     * @return PersonStatus
+     * @return ?PersonStatus
      */
 
-    public static function findForTime($personId, $time)
+    public static function findForTime(int $personId, string|Carbon $time): ?PersonStatus
     {
         return self::where('person_id', $personId)
             ->where('created_at', '<=', $time)
@@ -87,12 +83,12 @@ class PersonStatus extends ApiModel
      * Find the PersonStatus record that exists on or before the time given.
      * Used to determine a person's status at a given point in time.
      *
-     * @param array $personId
+     * @param array $personIds
      * @param string|Carbon $time
      * @return Collection
      */
 
-    public static function findStatusForIdsTime($personIds, $time)
+    public static function findStatusForIdsTime(array $personIds, string|Carbon $time): Collection
     {
         return self::whereIntegerInRaw('person_id', $personIds)
             ->where('created_at', '<=', $time)
