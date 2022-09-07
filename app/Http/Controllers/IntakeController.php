@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\Intake;
+use App\Lib\Reports\ShinyPennyReport;
 use App\Mail\WelcomeMail;
 use App\Models\Person;
 use App\Models\PersonIntake;
@@ -189,24 +190,30 @@ class IntakeController extends ApiController
 
     private function checkIntakePermissions(string $type): void
     {
-        switch ($type) {
-            case 'vc':
-                $role = Role::VC;
-                break;
-            case 'mentor':
-                $role = Role::MENTOR;
-                break;
-            case 'personnel':
-                $role = Role::ADMIN;
-                break;
-            default:
-                $role = Role::INTAKE;
-                break;
-
-        }
+        $role = match ($type) {
+            'vc' => Role::VC,
+            'mentor' => Role::MENTOR,
+            'personnel' => Role::ADMIN,
+            default => Role::INTAKE,
+        };
 
         if (!$this->userHasRole($role)) {
             $this->notPermitted("Not authorized");
         }
+    }
+
+    /**
+     * Report on Shiny Pennies for a given year.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function shinyPennyReport(): JsonResponse
+    {
+        $this->authorize('isVC');
+        $year = $this->getYear();
+
+        return response()->json(['people' => ShinyPennyReport::execute($year)]);
     }
 }

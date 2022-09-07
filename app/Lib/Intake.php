@@ -19,6 +19,11 @@ use Carbon\Carbon;
 
 class Intake
 {
+    const ABOVE_AVERAGE = 1;
+    const AVERAGE = 2;
+    const BELOW_AVERAGE = 3;
+    const FLAG = 4;
+
     /**
      * Retrieve all PNVs in a given year.
      *
@@ -26,13 +31,8 @@ class Intake
      * @return array
      */
 
-    const ABOVE_AVERAGE = 1;
-    const AVERAGE = 2;
-    const BELOW_AVERAGE = 3;
-    const FLAG = 4;
-
-    public static function retrieveAllForYear(int $year)
-    {
+     public static function retrieveAllForYear(int $year): array
+     {
         // Find any PNVs in a given year
         $pnvIds = PersonStatus::select('person_id')
             ->whereYear('created_at', $year)

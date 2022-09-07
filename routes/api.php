@@ -143,6 +143,7 @@ Route::group([
 
     Route::get('intake', 'IntakeController@index');
     Route::get('intake/spigot', 'IntakeController@spigot');
+    Route::get('intake/shiny-penny-report', 'IntakeController@shinyPennyReport');
     Route::get('intake/{person}/history', 'IntakeController@history');
     Route::post('intake/{person}/note', 'IntakeController@appendNote');
     Route::post('intake/{person_intake_note}/update-note', 'IntakeController@updateNote');
