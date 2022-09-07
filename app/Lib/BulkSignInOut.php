@@ -2,9 +2,9 @@
 
 namespace App\Lib;
 
-use App\Models\Position;
 use App\Models\Person;
 use App\Models\PersonPosition;
+use App\Models\Position;
 use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
@@ -180,6 +180,8 @@ class BulkSignInOut
                     // graveyard or swing shifts e.g., 23:45 -> 06:45
                     $signout = strtotime(date('Y/m/d ', $signin) . ' ' . date('H:i', $signout));
                     $signout = strtotime("+1 day", $signout);
+                } else {
+                    $signout = strtotime(date('Y/m/d ', $signin) . ' ' . date('H:i', $signout));
                 }
                 break;
 
