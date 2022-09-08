@@ -6,11 +6,16 @@ use App\Http\RestApi;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class ActionLogController extends ApiController
 {
     /**
      * Retrieve the action log
+     *
+     * @return JsonResponse|mixed
+     * @throws AuthorizationException
      */
 
     public function index()
@@ -47,6 +52,7 @@ class ActionLogController extends ApiController
         }
 
         $result = ActionLog::findForQuery($params, $redactData);
+
         return $this->success($result['action_logs'], $result['meta'], 'action_logs');
     }
 
@@ -54,9 +60,11 @@ class ActionLogController extends ApiController
      * Record analytics from the client
      *
      * Does not require authorization.
+     *
+     * @return JsonResponse
      */
 
-    public function record()
+    public function record(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
@@ -77,7 +85,6 @@ class ActionLogController extends ApiController
         ]);
         $log->save();
 
-        return response('success', 200);
+        return response()->json(['status' => 'success']);
     }
-
 }
