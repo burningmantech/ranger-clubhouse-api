@@ -2,9 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\ActionLog;
+use App\Models\Person;
 use App\Models\Role;
-use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ActionLogPolicy
@@ -20,18 +19,12 @@ class ActionLogPolicy
 
     /**
      * Determine whether the user can see action Log
+     * @param Person $user
+     * @return bool
      */
-    public function index(Person $user)
+
+    public function index(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
-
-    /**
-     * Determine whether the user can purge the log
-     */
-    public function purge(Person $user)
-    {
-        return false;
-    }
-
 }
