@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class PersonMentor extends ApiModel
@@ -22,29 +22,29 @@ class PersonMentor extends ApiModel
     const SELF_BONK = 'self-bonk';
     const PENDING = 'pending';
 
-    public function mentor()
+    public function mentor(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function haveMentees($personId)
+    public static function haveMentees($personId): bool
     {
         return self::where('mentor_id', $personId)->limit(1)->exists();
     }
 
     /**
-     * Retrieve all mentors for a person, check if the mentors want to be contacted or not.
+     * Retrieve all mentors for a person, check if the mentees want to be contacted or not.
      *
-     * @param $personId
+     * @param int $personId
      * @return array
      */
 
-    public static function retrieveAllForPerson(int $personId) : array
+    public static function retrieveAllForPerson(int $personId): array
     {
         $ids = PersonMentor::where('mentor_id', $personId)
             ->groupBy('person_id')
@@ -69,6 +69,7 @@ class PersonMentor extends ApiModel
             (SELECT DATE(sent_at) FROM contact_log WHERE person.id=contact_log.recipient_person_id AND mentor.id=contact_log.sender_person_id AND contact_log.action=:type ORDER BY contact_log.sent_at desc LIMIT 1) as last_contact_date
             FROM person_mentor
             JOIN person ON person.id=person_mentor.person_id
+            LEFT JOIN person_photo ON person.person_photo_id=person_photo.id
             LEFT JOIN person as mentor ON mentor.id=person_mentor.mentor_id
             LEFT JOIN alert_person ON alert_person.person_id=person_mentor.person_id AND
                     alert_person.alert_id=:alert_id
@@ -82,6 +83,11 @@ class PersonMentor extends ApiModel
                 'type' => 'mentee-contact',
             ]
         );
+
+        $photos = PersonPhoto::whereIntegerInRaw('person_id', $ids)
+                ->join('person', 'person.person_photo_id', 'person_photo.id')
+                ->get()
+                ->keyBy('person_id');
 
         $years = [];
         foreach ($rows as $row) {
@@ -99,7 +105,7 @@ class PersonMentor extends ApiModel
                  */
 
                 $status = $row->status;
-                if ($status != Person::ACTIVE && $status != Person::INACTIVE) {
+                if ($status != Person::ACTIVE && $status != Person::INACTIVE && $status != Person::INACTIVE_EXTENSION) {
                     $status = 'not active';
                     $canContact = 'none';
                 } else {
@@ -113,6 +119,7 @@ class PersonMentor extends ApiModel
                     'formerly_known_as' => $row->formerly_known_as,
                     'contact_status' => $canContact,
                     'mentor_status' => $row->mentor_status,
+                    'profile_url' => $photos->get($personId)?->profile_url,
                     'mentors' => []
                 ];
             }
@@ -155,12 +162,14 @@ class PersonMentor extends ApiModel
 
     /**
      * Find the mentors for a person
-     * @param $personId
+     *
+     * @param int $personId
      * @return array
      */
-    public static function retrieveMentorHistory($personId)
+
+    public static function retrieveMentorHistory(int $personId) : array
     {
-        $history = PersonMentor::with(['mentor:id,callsign'])
+        $history = PersonMentor::with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
             ->where('person_id', $personId)
             ->get()
             ->sortBy('mentor.callsign', SORT_NATURAL | SORT_FLAG_CASE)
@@ -174,6 +183,7 @@ class PersonMentor extends ApiModel
                 $people[] = [
                     'id' => $mentor->mentor_id,
                     'callsign' => $mentor->mentor->callsign,
+                    'profile_url' => $mentor->mentor->person_photo?->profile_url,
                     'person_mentor_id' => $mentor->id
                 ];
             }
@@ -185,18 +195,16 @@ class PersonMentor extends ApiModel
             ];
         }
 
-        usort($summary, function ($r) {
-            return $r['year'];
-        });
+        usort($summary, fn($a, $b) => $b['year']- $a['year']);
 
         return $summary;
     }
 
-    /*
+    /**
      * Find all possible mentees for year
      */
 
-    public static function findMenteesForYear($year, $includeEmail)
+    public static function findMenteesForYear($year, $includeEmail): array
     {
         $personColumns = 'person:id,callsign,first_name,last_name,status';
         if ($includeEmail) {
@@ -220,12 +228,10 @@ class PersonMentor extends ApiModel
                 ];
             }
 
-            $mentors = $group->map(function ($row) {
-                return [
-                    'id' => $row->mentor->id,
-                    'callsign' => $row->mentor->callsign,
-                ];
-            })->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
+            $mentors = $group->map(fn($row) => [
+                'id' => $row->mentor->id,
+                'callsign' => $row->mentor->callsign,
+            ])->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
 
 
             $person = [
@@ -245,18 +251,19 @@ class PersonMentor extends ApiModel
             $people[] = $person;
         }
 
-        usort($people, function ($a, $b) {
-            return strcasecmp($a['callsign'], $b['callsign']);
-        });
+        usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return $people;
     }
 
-    /*
+    /**
      * Find the year a person passed
+     *
+     * @param int $personId
+     * @return int|null
      */
 
-    public static function retrieveYearPassed($personId)
+    public static function retrieveYearPassed(int $personId): ?int
     {
         $row = DB::table('person_mentor')
             ->where('person_id', $personId)
@@ -264,7 +271,7 @@ class PersonMentor extends ApiModel
             ->orderBy('mentor_year', 'desc')
             ->first();
 
-        return $row ? $row->mentor_year : null;
+        return $row?->mentor_year;
     }
 
     /**
@@ -275,7 +282,7 @@ class PersonMentor extends ApiModel
      * @return array
      */
 
-    public static function retrieveAllMentorsForIds(array $peopleIds, int $year) : array
+    public static function retrieveAllMentorsForIds(array $peopleIds, int $year): array
     {
         $peopleGroups = self::whereIntegerInRaw('person_id', $peopleIds)
             ->with('mentor:id,callsign')
@@ -306,9 +313,7 @@ class PersonMentor extends ApiModel
             }
 
             foreach (array_keys($mentorsByYear) as $year) {
-                usort($mentorsByYear[$year]['mentors'], function ($a, $b) {
-                    return strcasecmp($a['callsign'], $b['callsign']);
-                });
+                usort($mentorsByYear[$year]['mentors'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
             }
             $mentees[$personId] = $mentorsByYear;
         }
