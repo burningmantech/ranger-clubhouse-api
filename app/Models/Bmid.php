@@ -269,7 +269,7 @@ class Bmid extends ApiModel
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
         foreach ($bmids as $bmid) {
             $event = $personEvents->get($bmid->person_id);
-            $bmid->has_approved_photo = $bmid->person?->person_photo?->isApproved();
+            $bmid->has_approved_photo = $bmid->person?->person_photo?->isApproved() ?? false;
             if ($event) {
                 $bmid->org_vehicle_insurance = $event->org_vehicle_insurance;
             }
