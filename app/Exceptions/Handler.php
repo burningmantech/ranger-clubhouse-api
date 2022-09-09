@@ -44,11 +44,12 @@ class Handler extends ExceptionHandler
      *
      * @param Throwable $exception
      * @return void
+     * @throws Throwable
      */
 
-    public function report(Throwable $exception)
+    public function report(Throwable $exception): void
     {
-        if (!$this->shouldReport($exception)) {
+        if ($this->shouldntReport($exception)) {
             return;
         }
 
@@ -75,16 +76,16 @@ class Handler extends ExceptionHandler
      * @param Throwable $e
      * @return JsonResponse
      */
-    public function render($request, Throwable $e)
+    public function render($request, Throwable $e): JsonResponse
     {
         /*
          * Handle JWT exceptions.
          */
 
         if ($e instanceof TokenExpiredException) {
-            return response()->json(['token_expired'], $e->getStatusCode());
+            return response()->json(['token_expired'], 401);
         } elseif ($e instanceof TokenInvalidException) {
-            return response()->json(['token_invalid'], $e->getStatusCode());
+            return response()->json(['token_invalid'], 401);
         }
 
         // Record not found
