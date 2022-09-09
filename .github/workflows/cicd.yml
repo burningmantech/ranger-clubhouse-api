@@ -77,9 +77,18 @@ jobs:
     timeout-minutes: 10
 
     steps:
-
       - name: Checkout source code
         uses: actions/checkout@v3
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+      - uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
       - name: Build Docker image
         run: ./bin/build ${{ secrets.GITHUB_TOKEN }}
