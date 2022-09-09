@@ -78,7 +78,6 @@ class Bmid extends ApiModel
         Position::DOUBLE_OH_7 => ['title3', '007']
     ];
 
-    const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid';
 
     protected $wap;
 
@@ -91,8 +90,10 @@ class Bmid extends ApiModel
     protected $allocated_meals = '';
     protected $earned_meals = '';
 
-    protected $allocated_showers = false;
-    protected $earned_showers = false;
+    protected bool $allocated_showers = false;
+    protected bool $earned_showers = false;
+
+    protected bool $has_approved_photo = false;
 
     protected $fillable = [
         'person_id',
@@ -140,6 +141,7 @@ class Bmid extends ApiModel
         'allocated_showers',
         'earned_meals',
         'earned_showers',
+        'has_approved_photo',
         'has_signups',
         'org_vehicle_insurance',
         'wap_id',
@@ -249,7 +251,7 @@ class Bmid extends ApiModel
     }
 
     /**
-     * Populate BMIDs with access date, desired provisions, and job provisions
+     * Populate BMIDs with access date, desired provisions, approved photo check, and job provisions
      *
      * @param $bmids
      * @param $personIds
@@ -261,12 +263,13 @@ class Bmid extends ApiModel
         $year = current_year();
 
         // Populate all the BMIDs with people..
-        $bmids->load([self::PERSON_WITH]);
+        $bmids->load(['person:id,callsign,status,first_name,last_name,email,bpguid,person_photo_id', 'person.person_photo:id,status']);
 
         // Load up the org insurance flags
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
         foreach ($bmids as $bmid) {
             $event = $personEvents->get($bmid->person_id);
+            $bmid->has_approved_photo = $bmid->person?->person_photo?->isApproved();
             if ($event) {
                 $bmid->org_vehicle_insurance = $event->org_vehicle_insurance;
             }
@@ -480,14 +483,19 @@ class Bmid extends ApiModel
         return $this->allocated_meals;
     }
 
-    public function getEarnedShowersAttribute()
+    public function getEarnedShowersAttribute(): bool
     {
         return $this->earned_showers;
     }
 
-    public function getAllocatedShowersAttribute()
+    public function getAllocatedShowersAttribute(): bool
     {
         return $this->allocated_showers;
+    }
+
+    public function getHasApprovedPhotoAttribute(): bool
+    {
+        return $this->has_approved_photo;
     }
 
     /**

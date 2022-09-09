@@ -785,4 +785,15 @@ class PersonPhoto extends ApiModel
         $path = (!app()->isLocal() && config('clubhouse.DeploymentEnvironment') == 'Staging') ? self::STORAGE_STAGING_DIR : self::STORAGE_DIR;
         return $path . $filename;
     }
+
+    /**
+     * Is the photo approved?
+     *
+     * @return bool
+     */
+
+    public function isApproved() : bool
+    {
+        return $this->status === self::APPROVED;
+    }
 }

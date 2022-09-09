@@ -16,6 +16,8 @@ use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
@@ -426,17 +428,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return [];
     }
 
-    public function person_position()
+    public function person_position(): HasMany
     {
         return $this->hasMany(PersonPosition::class);
     }
 
-    public function person_photo()
+    public function person_photo(): BelongsTo
     {
         return $this->belongsTo(PersonPhoto::class);
     }
 
-    public function person_role()
+    public function person_role(): HasMany
     {
         return $this->hasMany(PersonRole::class);
     }
@@ -495,7 +497,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
 
-    public function save($options = []) : bool
+    public function save($options = []): bool
     {
         $isNew = !$this->exists;
 
@@ -515,7 +517,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 // updating a callsign on an existing record
                 $this->rules['callsign'] = 'required|string|unique:person,callsign,' . $this->id;
             }
-            
+
             if ($this->isDirty('email')) {
                 $this->rules['email'] = 'required|string|unique:person,email,' . $this->id;
             }
