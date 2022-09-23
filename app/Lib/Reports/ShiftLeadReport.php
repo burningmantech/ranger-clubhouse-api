@@ -63,13 +63,10 @@ class ShiftLeadReport
         ];
     }
 
-    public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin, &$positions, &$slots)
+    public static function retrievePositionsScheduled(Carbon $shiftStart, Carbon $shiftEnd, $belowMin, &$positions, &$slots): array
     {
-        $now = (string)now();
-        $sql = Slot::select('slot.*',
-            DB::raw('TIMESTAMPDIFF(second,slot.begins,slot.ends) as duration'),
-            DB::raw("IF(slot.begins < '$now' AND slot.ends > '$now', TIMESTAMPDIFF(second, '$now', ends),0) as remaining"),
-        )->join('position', 'position.id', 'slot.position_id')
+        $sql = Slot::select('slot.*')
+            ->join('position', 'position.id', 'slot.position_id')
             ->with('position')
             ->where('position.active', true)
             ->orderBy('slot.begins');
