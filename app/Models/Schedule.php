@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\ScheduleSignUpException;
 use App\Jobs\AlertWhenSignUpsEmptyJob;
 use App\Lib\WorkSummary;
 use Carbon\Carbon;
@@ -9,27 +10,25 @@ use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class ScheduleException extends Exception
-{
-}
-
 class Schedule extends ApiModel
 {
     protected $fillable = [
+        'position_count_hours',
         'position_id',
         'position_title',
         'position_type',
-        'position_count_hours',
-        'slot_id',
         'slot_active',
         'slot_begins',
-        'slot_ends',
+        'slot_begins_time',
         'slot_description',
+        'slot_ends',
+        'slot_ends_time',
+        'slot_id',
         'slot_signed_up',
         'slot_url',
+        'timezone',
+        'timezone_abbr',
         'trainers',
-        'slot_begins_time',
-        'slot_ends_time',
     ];
 
     // And the rest are calculated
@@ -87,40 +86,23 @@ class Schedule extends ApiModel
 
     public static function findForQuery(int $personId, int $year, array $query = []): array
     {
-        $now = (string)now();
         $onlySignups = $query['only_signups'] ?? false;
         $remaining = $query['remaining'] ?? false;
-
-        $selectColumns = [
-            DB::raw('DISTINCT slot.id as id'),
-            'slot.position_id as position_id',
-            'slot.begins AS slot_begins',
-            'slot.ends AS slot_ends',
-            'slot.description AS slot_description',
-            'slot.signed_up AS slot_signed_up',
-            'slot.max AS slot_max_potential',    // used to compute sign up limit.
-            'slot.url AS slot_url',
-            'slot.active as slot_active',
-            'slot.trainer_slot_id',
-            'trainer_slot.signed_up AS trainer_count',
-            DB::raw('UNIX_TIMESTAMP(slot.begins) as slot_begins_time'),
-            DB::raw('UNIX_TIMESTAMP(slot.ends) as slot_ends_time'),
-            DB::raw("IF(slot.begins < '$now', TRUE, FALSE) as has_started"),
-            DB::raw("IF(slot.ends < '$now', TRUE, FALSE) as has_ended"),
-            DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned")
-        ];
 
         // Find all slots the person is eligible for AND all slots the person is already signed up for
         // Note: a person may be signed up for a position they no longer hold. e.g., Alpha, Green Dot Mentee, etc.
 
-        $sql = DB::table('slot')
-            ->select($selectColumns)
+        $sql = Slot::distinct('slot.id')
+            ->select('slot.*',
+                'trainer_slot.signed_up as trainer_count',
+                DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned")
+            )
             ->leftJoin('person_slot', function ($join) use ($personId) {
                 $join->where('person_slot.person_id', $personId)
                     ->on('slot.id', 'person_slot.slot_id');
             })->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->whereYear('slot.begins', $year)
-            ->orderBy('slot.begins', 'asc');
+            ->orderBy('slot.begins');
 
         if ($onlySignups) {
             $sql->whereNotNull('person_slot.person_id');
@@ -131,17 +113,43 @@ class Schedule extends ApiModel
             })->whereRaw('(person_slot.person_id IS NOT NULL OR person_position.person_id IS NOT NULL)');
         }
 
-        if ($remaining) {
-            // Include slots already started but have not ended.
-            $sql->where('slot.ends', '>=', now());
-        }
-
         $rows = $sql->get();
 
-        if (!$rows->isEmpty()) {
+        $slots = [];
+        $positionIds = [];
+        foreach ($rows as $row) {
+            if ($remaining && $row->has_ended) {
+                continue;
+            }
+
+            $positionIds[$row->position_id] = true;
+
+            $slots[] = [
+                'id' => $row->id,
+                'has_ended' => $row->has_ended,
+                'has_started' => $row->has_started,
+                'person_assigned' => $row->person_assigned,
+                'position_id' => $row->position_id,
+                'slot_active' => $row->active,
+                'slot_begins' => (string)$row->begins,
+                'slot_begins_time' => $row->begins_time,
+                'slot_description' => $row->description,
+                'slot_ends' => (string)$row->ends,
+                'slot_ends_time' => $row->ends_time,
+                'slot_max_potential' => $row->max,
+                'slot_signed_up' => $row->signed_up,
+                'slot_tz' => $row->timezone,
+                'slot_tz_abbr' => $row->timezone_abbr,
+                'slot_url' => $row->url,
+                'trainer_count' => $row->trainer_count,
+                'trainer_slot_id' => $row->trainer_slot_id,
+            ];
+        }
+
+        if (!empty($positionIds)) {
             $positions = DB::table('position')
                 ->select('id', 'title', 'type', 'contact_email', 'count_hours')
-                ->whereIn('id', $rows->pluck('position_id')->unique())
+                ->whereIn('id', array_keys($positionIds))
                 ->get()
                 ->toArray();
         } else {
@@ -150,7 +158,7 @@ class Schedule extends ApiModel
 
 
         // return an array of Schedule loaded from the rows
-        return [Schedule::hydrate($rows->toArray()), $positions];
+        return [Schedule::hydrate($slots), $positions];
     }
 
     /**
@@ -180,7 +188,7 @@ class Schedule extends ApiModel
      * and the slot exists.
      *
      * An array is returned with one of the following values:
-     *   - Success full sign up
+     *   - successful sign up
      *     status='success', signed_up=the signed up count include this person
      *   - Slot is maxed out
      *      status='full'
@@ -201,10 +209,8 @@ class Schedule extends ApiModel
             return ['status' => self::EXISTS, 'signed_up' => $slot->signed_up];
         }
 
-        $now = now();
-
-        if ($now->gt($slot->begins) && !$force) {
-            // Shift has already started, don't allow a sign up
+        if ($slot->has_started && !$force) {
+            // Shift has already started, don't allow a sign-up
             return ['status' => self::HAS_STARTED, 'signed_up' => $slot->signed_up];
         }
 
@@ -221,13 +227,13 @@ class Schedule extends ApiModel
             $updateSlot = Slot::where('id', $slot->id)->lockForUpdate()->first();
             if (!$updateSlot) {
                 // shouldn't happen but ya never know...
-                throw new ScheduleException(self::NO_SLOT);
+                throw new ScheduleSignUpException(self::NO_SLOT);
             }
 
             // Cannot exceed sign up limit unless it is forced.
             if ($updateSlot->signed_up >= $max) {
                 if (!$force) {
-                    throw new ScheduleException(self::FULL);
+                    throw new ScheduleSignUpException(self::FULL);
                 }
 
                 $isOvercapacity = true;
@@ -246,7 +252,7 @@ class Schedule extends ApiModel
                 'signed_up' => $updateSlot->signed_up,
                 'overcapacity' => $isOvercapacity,
             ];
-        } catch (ScheduleException $e) {
+        } catch (ScheduleSignUpException $e) {
             DB::rollback();
             return ['status' => $e->getMessage(), 'signed_up' => $updateSlot->signed_up];
         }
@@ -256,7 +262,7 @@ class Schedule extends ApiModel
      * Remove a sign-up for a person
      *
      * @param int $personId
-     * @param int $slotId
+     * @param Slot $slot
      * @return array
      * @throws Exception
      */
@@ -267,7 +273,6 @@ class Schedule extends ApiModel
             ['person_id', $personId],
             ['slot_id', $slot->id]
         ])->firstOrFail();
-
 
         try {
             DB::beginTransaction();
@@ -284,8 +289,7 @@ class Schedule extends ApiModel
         if (!$signedUp && $slot->position->alert_when_empty) {
             $menteeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
             if ($menteeSlot && $menteeSlot->signed_up > 0) {
-                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)/*->delay(now()->addMinutes(5))*/
-                ;
+                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)->delay(now()->addMinutes(5));
             }
         }
 
@@ -377,10 +381,10 @@ class Schedule extends ApiModel
      * @param $personId
      * @param $year
      * @param $positionId
-     * @return PersonSlot[]|\Illuminate\Database\Eloquent\Collection|Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
 
-    public static function findEnrolledSlots($personId, $year, $positionId): \Illuminate\Database\Eloquent\Collection|array|Collection
+    public static function findEnrolledSlots($personId, $year, $positionId): \Illuminate\Database\Eloquent\Collection
     {
         return PersonSlot::where('person_slot.person_id', $personId)
             ->join('slot', function ($query) use ($positionId, $year) {
@@ -393,6 +397,8 @@ class Schedule extends ApiModel
 
     /**
      * Find the slots where the person signed up beginning within +/- LOCATE_SHIFT_START_WITHIN minutes of now.
+     *
+     * NOTE: This assumes the slots retrieved are in the same timezone as the event.
      *
      * @param int $personId
      * @return array
@@ -433,6 +439,8 @@ class Schedule extends ApiModel
     /**
      * Find the (probable) slot id sign up for a person based on the position and time.
      *
+     * NOTE: This assumes the slots inspected are in the same timezone as the event.
+
      * @param integer $personId the person in question
      * @param integer $positionId the position to search for
      * @param string|Carbon $begins the time to look for.
@@ -455,7 +463,7 @@ class Schedule extends ApiModel
     }
 
     /**
-     * Does the person have a sign up occurring in the Burn Weekend?
+     * Does the person have a sign-up occurring in the Burn Weekend?
      *
      * @param Person $person
      * @return bool
@@ -562,7 +570,7 @@ class Schedule extends ApiModel
      * @return bool
      */
 
-    public static function hasSignupInPeriod(int $personId, $start, $end)
+    public static function hasSignupInPeriod(int $personId, $start, $end): bool
     {
         return DB::table('person_slot')
             ->join('slot', 'person_slot.slot_id', 'slot.id')
@@ -579,7 +587,8 @@ class Schedule extends ApiModel
      *
      * @param int $personId
      * @param int $year
-     * @return array
+     * @param bool $remaining
+     * @return object
      */
 
     public static function scheduleSummaryForPersonYear(int $personId, int $year, bool $remaining = false): object
@@ -737,6 +746,7 @@ class Schedule extends ApiModel
      *
      * @return int
      */
+
     public function getSlotDurationAttribute(): int
     {
         return $this->slot_ends_time - $this->slot_begins_time;

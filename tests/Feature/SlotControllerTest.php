@@ -197,14 +197,27 @@ class SlotControllerTest extends TestCase
     public function testRestrictedSlotUpdateFail()
     {
         $this->addRole(Role::EDIT_SLOTS);
-        $slot = $this->trainingSlots[0];
-        $response = $this->json('PUT', "slot/{$slot->id}", ['slot' =>
+        $year = $this->year;
+        $slot  = Slot::factory()->create(
             [
+                'begins' => date("$year-05-01 09:45:00"),
+                'ends' => date("$year-05-01 17:45:00"),
                 'position_id' => Position::DIRT,
-                'begins' => '2019-08-19 12:00:00',
-                'ends' => '2019-08-19 13:00:00',
+                'description' => "Dirt",
+                'signed_up' => 0,
+                'max' => 10,
+                'min' => 0,
             ]
-        ]);
+        );
+
+        $response = $this->json('PUT', "slot/{$slot->id}",
+            ['slot' =>
+                [
+                    'position_id' => Position::DIRT,
+                    'begins' => '2019-08-19 12:00:00',
+                    'ends' => '2019-08-19 13:00:00',
+                ]
+            ]);
 
         $response->assertStatus(422);
         $this->assertDatabaseMissing('slot', [

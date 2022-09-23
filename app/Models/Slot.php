@@ -3,13 +3,29 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @property Carbon $begins
+ * @property Carbon end
+ * @property int $position_id
+ * @property bool $active
+ * @property string $description
+ * @property int $max
+ * @property int $min
+ * @property int $signed_up
+ * @property string $timezone
+ * @property int|null $trainer_slot_id
+ * @property string $url
+ * @property-read float $credits
+ * @property-read bool $has_started
+ * @property-read bool $has_ended
+ * @property-read int $duration
+ * @property-read string $timezone_abbr
+ */
 class Slot extends ApiModel
 {
     // related tables to be loaded with row
@@ -23,6 +39,8 @@ class Slot extends ApiModel
 
     protected $auditModel = true;
 
+    protected $with = self::WITH_POSITION_TRAINER;
+
     protected $fillable = [
         'active',
         'begins',
@@ -32,16 +50,17 @@ class Slot extends ApiModel
         'min',
         'position_id',
         'signed_up',
+        'timezone',
         'trainer_slot_id',
         'url',
-        'begins_time',
-        'ends_time',
-        'has_started',
-        'has_ended'
     ];
 
     protected $appends = [
-        'credits'
+        'credits',
+        'has_started',
+        'has_ended',
+        'duration',
+        'timezone_abbr'
     ];
 
     protected $rules = [
@@ -95,42 +114,6 @@ class Slot extends ApiModel
     }
 
     /**
-     * Override Eloquent find method to add associations always desired
-     *
-     * @param $id
-     * @param string[] $columns
-     * @return mixed
-     */
-
-    public static function find($id, $columns = ['*']): mixed
-    {
-        if (is_array($id)) {
-            return self::baseSql()->whereIntegerInRaw('id', $id)->get($columns);
-        }
-        return self::baseSql()->where('id', $id)->first($columns);
-    }
-
-    /**
-     * Override Eloquent findOrFail method to add associations always desired
-     *
-     * @param $id
-     * @param string[] $columns
-     * @return mixed
-     */
-
-    public static function findOrFail($id, $columns = ['*']) : mixed
-    {
-        if (is_array($id)) {
-            $rows = self::baseSql()->whereIntegerInRaw('id', $id)->get($columns);
-            if ($rows->isEmpty()) {
-                throw (new ModelNotFoundException)->setModel(__CLASS__, $id);
-            }
-            return $rows;
-        }
-        return self::baseSql()->where('id', $id)->firstOrFail($columns);
-    }
-
-    /**
      * Find slots based on the given criteria
      *
      * @param $query
@@ -139,7 +122,8 @@ class Slot extends ApiModel
 
     public static function findForQuery($query): \Illuminate\Database\Eloquent\Collection
     {
-        $sql = self::baseSql();
+        $sql = self::with(self::WITH_POSITION_TRAINER);
+
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
         $positionId = $query['position_id'] ?? null;
@@ -163,24 +147,6 @@ class Slot extends ApiModel
         }
 
         return $sql->orderBy('begins')->get();
-    }
-
-    /**
-     * Add various select columns to calculate if the shift is started and/or ended, the duration
-     * in seconds and the associated trainer position (if training slot)
-     *
-     * @return Builder
-     */
-
-    public static function baseSql(): Builder
-    {
-        $now = now();
-        return self::select(
-            'slot.*',
-            DB::raw('IF(slot.begins < ?, TRUE, FALSE) as has_started'),
-            DB::raw('IF(slot.ends < ?, TRUE, FALSE) as has_ended'),
-            DB::raw('TIMESTAMPDIFF(SECOND, slot.begins, slot.ends) as duration')
-        )->setBindings([$now, $now])->with(self::WITH_POSITION_TRAINER);
     }
 
     /**
@@ -390,6 +356,117 @@ class Slot extends ApiModel
     }
 
     /**
+     * Has the shift started?
+     *
+     * @return bool
+     */
+
+    public function getHasStartedAttribute(): bool
+    {
+        return $this->begins_adjusted->lt(now());
+    }
+
+    /**
+     * Has the slot ended?
+     *
+     * @return bool
+     */
+
+    public function getHasEndedAttribute(): bool
+    {
+        return $this->ends_adjusted->lte(now());
+    }
+
+    /**
+     * Set the timezone, set null if the string is empty.
+     *
+     * @param string|null $timezone
+     * @return void
+     */
+
+    public function setTimezoneAttribute(?string $timezone): void
+    {
+        $this->attributes['timezone'] = empty($timezone) ? 'America/Los_Angeles' : $timezone;
+    }
+
+    /**
+     * Adjust the timezone if one was given.
+     *
+     * @param Carbon $time
+     * @return Carbon
+     */
+
+    public function adjustTimezone(Carbon $time): Carbon
+    {
+        return $time->clone()->shiftTimezone($this->timezone);
+    }
+
+    /**
+     * Get the beginning time timestamp
+     *
+     * @return int
+     */
+
+    public function getBeginsTimeAttribute(): int
+    {
+        return $this->begins_adjusted->timestamp;
+    }
+
+    /**
+     * Get the ending time timestamp
+     *
+     * @return int
+     */
+
+    public function getEndsTimeAttribute(): int
+    {
+        return $this->ends_adjusted->timestamp;
+    }
+
+    /**
+     * Obtain the timezone abbreviation
+     *
+     * @return string
+     */
+
+    public function getTimezoneAbbrAttribute(): string
+    {
+        return $this->begins_adjusted->format('T');
+    }
+
+    /**
+     * Calculate the slot duration (in seconds)
+     *
+     * @return int
+     */
+
+    public function getDurationAttribute(): int
+    {
+        return $this->ends->timestamp - $this->begins->timestamp;
+    }
+
+    /**
+     * How many seconds remaining in this shift?
+     *
+     * @return int
+     */
+
+    public function getRemainingAttribute(): int
+    {
+        return max(now()->timestamp - $this->ends_adjusted->timestamp, 0);
+    }
+
+    public function getBeginsAdjustedAttribute(): Carbon
+    {
+        return $this->adjustTimezone($this->begins);
+    }
+
+    public function getEndsAdjustedAttribute(): Carbon
+    {
+        return $this->adjustTimezone($this->ends);
+    }
+
+    /**
      * Check to see if the slot begins within the pre-event period and is not a training slot
      *
      * @return bool
@@ -397,7 +474,7 @@ class Slot extends ApiModel
 
     public function isPreEventRestricted(): bool
     {
-        if (!$this->begins || !$this->position_id) {
+        if (empty($this->begins) || !$this->position_id) {
             // No begin time or position associated (might see this happen during validation)
             return false;
         }
@@ -425,7 +502,7 @@ class Slot extends ApiModel
 
     public function isTraining(): bool
     {
-        return $this->position?->type == "Training";
+        return $this->position?->type == Position::TYPE_TRAINING;
     }
 
     /**
@@ -470,4 +547,5 @@ class Slot extends ApiModel
         $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
         return $matched ? $matches[1] : null;
     }
+
 }
