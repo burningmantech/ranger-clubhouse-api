@@ -198,7 +198,7 @@ class SlotControllerTest extends TestCase
     {
         $this->addRole(Role::EDIT_SLOTS);
         $year = $this->year;
-        $slot  = Slot::factory()->create(
+        $slot = Slot::factory()->create(
             [
                 'begins' => date("$year-05-01 09:45:00"),
                 'ends' => date("$year-05-01 17:45:00"),

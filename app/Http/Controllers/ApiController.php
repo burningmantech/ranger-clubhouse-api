@@ -185,7 +185,7 @@ class ApiController extends Controller
         return response()->json([], 204);
     }
 
-    public function restError($item, $status = 422)
+    public function restError($item, $status = 422): JsonResponse
     {
         if (gettype($item) == 'string') {
             $payload = [['title' => $item]];
@@ -206,7 +206,7 @@ class ApiController extends Controller
         return response()->json(['errors' => $payload], $status);
     }
 
-    public function userCanViewEmail()
+    public function userCanViewEmail(): bool
     {
         return $this->userHasRole([Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]);
     }

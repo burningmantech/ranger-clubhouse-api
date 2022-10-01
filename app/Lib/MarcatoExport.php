@@ -2,9 +2,9 @@
 
 namespace App\Lib;
 
-use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\BmidExport;
+use App\Models\Provision;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +15,7 @@ use ZipArchive;
 class MarcatoExport
 {
     const BUDGET_CODE = 'Rangers 660';
+
     const CSV_HEADERS = [
         'Name',
         'Email',
@@ -332,21 +333,21 @@ class MarcatoExport
 
             $items = [];
             if ($bmid->effectiveShowers()) {
-                $items[] = AccessDocument::WET_SPOT;
+                $items[] = Provision::WET_SPOT;
             }
 
             if (!empty($bmid->meals) || !empty($bmid->allocated_meals)) {
                 // Person is working.. consume all the meals.
-                $items = [...$items, ...AccessDocument::MEAL_TYPES];
+                $items = [...$items, ...Provision::MEAL_TYPES];
             } else if (!empty($bmid->earned_meals)) {
                 // Currently only two meal provision types, All Eat, and Event Week
-                $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? AccessDocument::ALL_EAT_PASS : AccessDocument::EVENT_EAT_PASS;
+                $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? Provision::ALL_EAT_PASS : Provision::EVENT_EAT_PASS;
             }
 
 
             if (!empty($items)) {
                 $items = array_unique($items);
-                AccessDocument::markSubmittedForBMID($bmid->person_id, $items);
+                Provision::markSubmittedForBMID($bmid->person_id, $items);
             }
 
             $meals = '[meals ' . implode(', ', $meals) . ']';

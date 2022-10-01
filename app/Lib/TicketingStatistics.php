@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Models\AccessDocument;
+use App\Models\Provision;
 
 class TicketingStatistics
 {
@@ -54,32 +55,27 @@ class TicketingStatistics
                 ->distinct()
                 ->count('person_id'),
 
-            'people_with_qualified_provisions' => AccessDocument::where('status', AccessDocument::QUALIFIED)
-                ->whereIn('type', AccessDocument::PROVISION_TYPES)
+            'people_with_qualified_provisions' => Provision::where('status', Provision::AVAILABLE)
                 ->where('is_allocated', false)
                 ->distinct()
                 ->count('person_id'),
 
-            'people_with_banked_provisions' => AccessDocument::where('status', AccessDocument::BANKED)
-                ->whereIn('type', AccessDocument::PROVISION_TYPES)
+            'people_with_banked_provisions' => Provision::where('status', Provision::BANKED)
                 ->distinct()
                 ->count('person_id'),
 
-            'people_with_allocated_provisions' => AccessDocument::whereIn('type', AccessDocument::PROVISION_TYPES)
-                ->where('status', AccessDocument::QUALIFIED)
+            'people_with_allocated_provisions' => Provision::whereIn('status', [ Provision::AVAILABLE, Provision::SUBMITTED])
                 ->where('is_allocated', true)
                 ->distinct()
                 ->count('person_id'),
 
-            'people_with_both_provisions' => AccessDocument::whereIn('type', AccessDocument::PROVISION_TYPES)
-                ->whereNotIn('status', AccessDocument::INVALID_STATUSES)
+            'people_with_both_provisions' => Provision::whereNotIn('status', Provision::INVALID_STATUSES)
                 ->whereExists(function ($sql) {
                     $sql->selectRaw(1)
-                        ->from('access_document as ad')
-                        ->whereColumn('ad.person_id', 'access_document.person_id')
-                        ->whereIn('ad.type', AccessDocument::PROVISION_TYPES)
-                        ->whereNotIn('ad.status', AccessDocument::INVALID_STATUSES)
-                        ->whereColumn('ad.is_allocated', '!=', 'access_document.is_allocated')
+                        ->from('provision as p')
+                        ->whereColumn('p.person_id', 'provision.person_id')
+                        ->whereNotIn('p.status', AccessDocument::INVALID_STATUSES)
+                        ->whereColumn('p.is_allocated', '!=', 'provision.is_allocated')
                         ->limit(1);
                 })
                 ->distinct()

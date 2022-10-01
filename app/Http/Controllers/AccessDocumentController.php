@@ -114,7 +114,6 @@ class AccessDocumentController extends ApiController
 
         $rows = AccessDocument::whereIntegerInRaw('id', $params['ids'])
             ->where('status', AccessDocument::CLAIMED)
-            ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
             ->get();
 
         $staffCredentials = $rows->where('type', AccessDocument::STAFF_CREDENTIAL)->keyBy('person_id');
@@ -261,8 +260,7 @@ class AccessDocumentController extends ApiController
             $adStatus = $ad->status;
             switch ($status) {
                 case AccessDocument::BANKED:
-                    if ((!in_array($adType, AccessDocument::TICKET_TYPES)
-                            && !in_array($adType, AccessDocument::PROVISION_TYPES))
+                    if (!in_array($adType, AccessDocument::TICKET_TYPES)
                         || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
                         throw new InvalidArgumentException('Illegal type and status combination');
                     }
@@ -275,10 +273,8 @@ class AccessDocumentController extends ApiController
                     break;
 
                 case AccessDocument::QUALIFIED:
-                    if ($adType != AccessDocument::WAP
-                        && $adType != AccessDocument::VEHICLE_PASS
-                        && !in_array($adType, AccessDocument::PROVISION_TYPES)) {
-                        throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass, or an Appreciation.');
+                    if ($adType != AccessDocument::WAP && $adType != AccessDocument::VEHICLE_PASS) {
+                        throw new InvalidArgumentException('Document is not a WAP or Vehicle Pass.');
                     }
 
                     if ($adStatus != AccessDocument::CLAIMED) {
@@ -308,7 +304,6 @@ class AccessDocumentController extends ApiController
 
         if ($haveTicket) {
             // Prevent people from trying to game the system and grab the VP without claiming any tickets.
-            $personId = $rows[0]->person_id;
             if (AccessDocument::noAvailableTickets($personId)) {
                 $vp = AccessDocument::where([
                     'person_id' => $personId,
@@ -520,7 +515,7 @@ class AccessDocumentController extends ApiController
         $user = $this->user->callsign;
 
         $rows = AccessDocument::where('status', AccessDocument::QUALIFIED)
-            ->whereIn('type', array_merge(AccessDocument::TICKET_TYPES, AccessDocument::PROVISION_TYPES))
+            ->whereIn('type', AccessDocument::TICKET_TYPES)
             ->with('person:id,callsign,status')
             ->get();
 
@@ -556,9 +551,7 @@ class AccessDocumentController extends ApiController
             $this->saveAccessDocument($ad, $documents);
         }
 
-        usort($documents, function ($a, $b) {
-            return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
-        });
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
 
         return response()->json(['access_documents' => $documents]);
     }
@@ -675,7 +668,7 @@ class AccessDocumentController extends ApiController
         $this->authorize('unbankAccessDocuments', AccessDocument::class);
 
         $rows = AccessDocument::where('status', AccessDocument::BANKED)
-            ->with('person:id,callsign')
+            ->with('person:id,callsign,status')
             ->get();
 
         $documents = [];

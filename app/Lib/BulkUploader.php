@@ -10,6 +10,7 @@ use App\Models\Certification;
 use App\Models\Person;
 use App\Models\PersonCertification;
 use App\Models\PersonEvent;
+use App\Models\Provision;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Exception;
@@ -46,11 +47,11 @@ class BulkUploader
         [
             'label' => 'Earned Provisions Actions',
             'options' => [
-                ['id' => AccessDocument::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => AccessDocument::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => AccessDocument::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
                 [
-                    'id' => AccessDocument::EVENT_RADIO,
+                    'id' => Provision::EVENT_RADIO,
                     'label' => 'Earned Event Radio',
                     'help' => self::HELP_RADIO
                 ]
@@ -59,15 +60,15 @@ class BulkUploader
         [
             'label' => 'Allocated Provisions Actions',
             'options' => [
-                ['id' => 'alloc_' . AccessDocument::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
+                ['id' => 'alloc_' . Provision::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
             ]
         ],
         [
@@ -456,7 +457,6 @@ class BulkUploader
 
             $type = trim($data[0]);
 
-
             /* This assumes we're being run in January or later! */
             $sourceYear = $year - 1;
             $expiryYear = $year;
@@ -640,13 +640,14 @@ class BulkUploader
             $type = str_replace('alloc_', '', $type);
 
         }
-        if (!in_array($type, AccessDocument::PROVISION_TYPES)) {
+
+        if (!in_array($type, Provision::ALL_TYPES)) {
             throw new InvalidArgumentException('Unknown provision type');
         }
 
-        $isEventRadio = ($type == AccessDocument::EVENT_RADIO);
-        if (in_array($type, AccessDocument::EAT_PASSES)) {
-            $existingTypes = AccessDocument::EAT_PASSES;
+        $isEventRadio = ($type == Provision::EVENT_RADIO);
+        if (in_array($type, Provision::MEAL_TYPES)) {
+            $existingTypes = Provision::MEAL_TYPES;
         } else {
             $existingTypes = [$type];
         }
@@ -659,7 +660,7 @@ class BulkUploader
             $personId = $record->person->id;
             $existing = null;
 
-            $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
+            $existing = Provision::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
             if ($existing && !$commit) {
                 $record->status = self::STATUS_WARNING;
                 if ($isAllocated) {
@@ -675,11 +676,11 @@ class BulkUploader
                 continue;
             }
 
-            $ad = new AccessDocument([
+            $ad = new Provision([
                 'person_id' => $person->id,
                 'type' => $type,
-                'status' => AccessDocument::QUALIFIED,
-                'expiry_date' => $expiryYear,
+                'status' => Provision::AVAILABLE,
+                'expires_on' => $expiryYear,
                 'source_year' => $sourceYear,
                 'is_allocated' => $isAllocated,
                 'additional_comments' => 'created via bulk uploader'
@@ -696,11 +697,11 @@ class BulkUploader
                 continue;
             }
 
-            $existing->status = AccessDocument::CANCELLED;
+            $existing->status = Provision::CANCELLED;
             $existing->additional_comments = $existing->auditReason = 'Replaced by item #' . $ad->id . ' via bulk uploader';
             $record->status = self::STATUS_WARNING;
-            $record->details = "Existing item #" . $existing->id . " " . $existing->getTypeLabel()
-                . " cancelled and replaced with #" . $ad->id . " " . $ad->getTypeLabel();
+            $record->details = "Existing provision RP-" . $existing->id . " " . $existing->getTypeLabel()
+                . " cancelled and replaced with RP-" . $ad->id . " " . $ad->getTypeLabel();
             $existing->saveWithoutValidation();
         }
     }

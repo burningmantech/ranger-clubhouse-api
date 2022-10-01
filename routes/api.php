@@ -250,6 +250,14 @@ Route::group([
 
     Route::resource('position', 'PositionController');
 
+    Route::post('provision/bank-provisions', 'ProvisionController@bankProvisions');
+    Route::post('provision/bulk-comment', 'ProvisionController@bulkComment');
+    Route::post('provision/clean-provisions', 'ProvisionController@cleanProvisionsFromPriorEvent');
+    Route::post('provision/expire-provisions', 'ProvisionController@expireProvisions');
+    Route::patch('provision/statuses', 'ProvisionController@statuses');
+    Route::post('provision/unbank-provisions', 'ProvisionController@unbankProvisions');
+    Route::resource('provision', 'ProvisionController');
+
     Route::get('rbs/config', 'RbsController@config');
     Route::get('rbs/details', 'RbsController@details');
     Route::get('rbs/receivers', 'RbsController@receivers');

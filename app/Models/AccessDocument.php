@@ -48,18 +48,6 @@ class AccessDocument extends ApiModel
     const WAP = 'work_access_pass';
     const WAPSO = 'work_access_pass_so';
 
-    const ALL_EAT_PASS = 'all_eat_pass';
-    const EVENT_EAT_PASS = 'event_eat_pass';
-    const PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
-    const POST_EVENT_EAT_PASS = 'post_event_eat_pass';
-    const PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
-    const PRE_POST_EAT_PASS = 'pre_post_eat_pass';
-    const EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
-
-    const EVENT_RADIO = 'event_radio';
-    const WET_SPOT = 'wet_spot';
-    const WET_SPOT_POG = 'wet_spot_pog'; // unused currently, might be used someday by the HQ Window Interface
-
     const TICKET_TYPES = [
         self::STAFF_CREDENTIAL,
         self::RPT,
@@ -71,48 +59,6 @@ class AccessDocument extends ApiModel
         self::RPT,
         self::GIFT,
         self::VEHICLE_PASS
-    ];
-
-    const PROVISION_TYPES = [
-        self::ALL_EAT_PASS,
-        self::EVENT_EAT_PASS,
-        self::PRE_EVENT_EAT_PASS,
-        self::POST_EVENT_EAT_PASS,
-        self::PRE_EVENT_EVENT_EAT_PASS,
-        self::EVENT_POST_EAT_PASS,
-        self::PRE_POST_EAT_PASS,
-
-        self::EVENT_RADIO,
-        self::WET_SPOT,
-    ];
-
-    const MEAL_TYPES = [
-        self::ALL_EAT_PASS,
-        self::EVENT_EAT_PASS,
-        self::PRE_EVENT_EAT_PASS,
-        self::POST_EVENT_EAT_PASS,
-        self::PRE_EVENT_EVENT_EAT_PASS,
-        self::EVENT_POST_EAT_PASS,
-        self::PRE_POST_EAT_PASS
-    ];
-
-    const MEAL_MATRIX = [
-        self::ALL_EAT_PASS => 'pre+event+post',
-        self::EVENT_EAT_PASS => 'event',
-        self::PRE_EVENT_EAT_PASS => 'pre',
-        self::POST_EVENT_EAT_PASS => 'post',
-        self::PRE_EVENT_EVENT_EAT_PASS => 'pre+event',
-        self::EVENT_POST_EAT_PASS => 'event+post',
-        self::PRE_POST_EAT_PASS => 'pre+post'
-    ];
-
-    const EAT_PASSES = [
-        self::ALL_EAT_PASS,
-        self::EVENT_EAT_PASS,
-        self::PRE_EVENT_EAT_PASS,
-        self::POST_EVENT_EAT_PASS,
-        self::PRE_EVENT_EVENT_EAT_PASS,
-        self::EVENT_POST_EAT_PASS,
     ];
 
     const HAS_ACCESS_DATE_TYPES = [
@@ -134,18 +80,6 @@ class AccessDocument extends ApiModel
         self::VEHICLE_PASS => 'Vehicle Pass',
         self::WAP => 'WAP',
         self::WAPSO => 'WAPSO',
-
-        self::ALL_EAT_PASS => 'All Eat Pass',
-        self::EVENT_EAT_PASS => 'Event Week Eat Pass',
-
-        self::PRE_EVENT_EAT_PASS => 'Pre-Event Eat Pass',
-        self::POST_EVENT_EAT_PASS => 'Post-Event Eat Pass',
-        self::PRE_EVENT_EVENT_EAT_PASS => 'Pre+Post Eat Pass',
-        self::EVENT_POST_EAT_PASS => 'Event+Post Eat Pass',
-
-        self::EVENT_RADIO => 'Event Radio',
-        self::WET_SPOT => 'Wet Spot Access',
-        self::WET_SPOT_POG => 'Wet Spot Pog',
     ];
 
     const SHORT_TICKET_LABELS = [
@@ -155,16 +89,6 @@ class AccessDocument extends ApiModel
         self::VEHICLE_PASS => 'VP',
         self::WAP => 'WAP',
         self::WAPSO => 'WAPSO',
-
-        self::ALL_EAT_PASS => 'ALL-EAT',
-        self::EVENT_EAT_PASS => 'EVENT-EAT',
-        self::PRE_EVENT_EAT_PASS => 'PRE-EAT',
-        self::POST_EVENT_EAT_PASS => 'POST-EAT',
-        self::PRE_EVENT_EVENT_EAT_PASS => 'PRE+EVENT-EAT',
-        self::EVENT_POST_EAT_PASS => 'EVENT+POST-EAT',
-
-        self::EVENT_RADIO => 'RADIO',
-        self::WET_SPOT => 'WETSPOT',
     ];
 
     const DELIVERY_NONE = 'none';
@@ -175,13 +99,11 @@ class AccessDocument extends ApiModel
     protected $fillable = [
         'person_id',
         'type',
-        'is_allocated',
         'status',
         'source_year',
         'access_date',
         'access_any_time',
         'name',
-        'item_count',
         'comments',
         'expiry_date',
         'modified_date',
@@ -202,7 +124,6 @@ class AccessDocument extends ApiModel
         'modified_date' => 'datetime',
         'past_expire_date' => 'boolean',
         'access_any_time' => 'boolean',
-        'is_allocated' => 'boolean',
     ];
 
     protected $hidden = [
@@ -213,24 +134,17 @@ class AccessDocument extends ApiModel
     protected $appends = [
         'past_expire_date',
         'has_staff_credential',
-        'is_superseded'
     ];
 
     protected $attributes = [
         'delivery_method' => 'none'
     ];
 
-    public bool $is_superseded = false;
-
     public static function boot()
     {
         parent::boot();
 
         self::saving(function ($model) {
-            if (empty($model->item_count)) {
-                $model->item_count = 0;
-            }
-
             if (empty($model->create_date)) {
                 $model->create_date = now();
             }
@@ -251,11 +165,6 @@ class AccessDocument extends ApiModel
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
                     break;
-                default:
-                    if (in_array($model->type, self::PROVISION_TYPES)) {
-                        $model->delivery_method = self::DELIVERY_NONE;
-                    }
-                    break;
             }
 
             // Only WAP SOs can have names
@@ -274,22 +183,6 @@ class AccessDocument extends ApiModel
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
-    }
-
-    /**
-     * Save function. Don't allow an allocated provision to be banked.
-     * @param $options
-     * @return bool
-     */
-
-    public function save($options = []): bool
-    {
-        if ($this->is_allocated && $this->status == self::BANKED) {
-            $this->addError('status', 'Item is an allocated provision and cannot be banked');
-            return false;
-        }
-
-        return parent::save($options);
     }
 
     /**
@@ -352,83 +245,6 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Build up a ticketing package for the person
-     *
-     * @param int $personId
-     * @return array
-     */
-
-    public static function buildPackageForPerson(int $personId): array
-    {
-        $year = event_year() - 1;
-        if ($year == 2020 || $year == 2021) {
-            // 2020 & 2021 didn't happen. :-(
-            $year = 2019;
-        }
-
-        $docs = self::findForQuery(['person_id' => $personId]);
-
-        self::markSupersededProvisions($docs);
-
-        return [
-            'access_documents' => $docs,
-            'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
-            'year_earned' => $year,
-            'period' => setting('TicketingPeriod')
-        ];
-    }
-
-    /**
-     * Scan a list of provisions and mark any earned provisions which are superseded by allocated provisions.
-     *
-     * @param $docs
-     * @return void
-     */
-
-    public static function markSupersededProvisions($docs): void
-    {
-        $earned = $docs->filter(fn($d) => !$d->is_allocated && $d->isProvision());
-        $allocated = $docs->filter(fn($d) => $d->is_allocated && $d->isProvision());
-
-        $meals = $allocated->where(fn($m) => in_array($m->type, self::MEAL_TYPES));
-        $radio = $allocated->first(fn($r) => $r->type == self::EVENT_RADIO);
-        $showers = $allocated->first(fn($r) => $r->type == self::WET_SPOT);
-
-        $mealMatrix = [];
-
-        foreach ($meals as $meal) {
-            Bmid::populateMealMatrix(self::MEAL_MATRIX[$meal->type], $mealMatrix);
-        }
-
-        foreach ($earned as $e) {
-            switch ($e->type) {
-                case self::EVENT_RADIO:
-                    if ($radio) {
-                        $e->is_superseded = true;
-                    }
-                    break;
-                case self::WET_SPOT:
-                    if ($showers) {
-                        $e->is_superseded = true;
-                    }
-                    break;
-
-                case self::EVENT_EAT_PASS:
-                    if ($mealMatrix['event'] ?? false) {
-                        $e->is_superseded = true;
-                    }
-                    break;
-
-                case self::ALL_EAT_PASS:
-                    if (count($mealMatrix) === 3) {
-                        $e->is_superseded = true;
-                    }
-                    break;
-            }
-        }
-    }
-
-    /**
      * Find all available (qualified, claimed, banked) deliverables (tickets & vehicle pass) for a person
      *
      * @param int $personId
@@ -441,37 +257,6 @@ class AccessDocument extends ApiModel
             ->whereIn('type', self::DELIVERABLE_TYPES)
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
             ->get();
-    }
-
-    /**
-     * Find a document that is available (qualified, claimed, banked, submitted) for the given person & type(s)
-     *
-     * @param int $personId
-     * @param array|string $type
-     * @param null $isAllocated
-     * @return AccessDocument|null
-     */
-
-    public static function findAvailableTypeForPerson(int $personId, array|string $type, $isAllocated = null): ?AccessDocument
-    {
-        if (!is_array($type)) {
-            $type = [$type];
-        }
-
-        $sql = self::where('person_id', $personId)
-            ->whereIn('type', $type)
-            ->whereIn('status', [
-                self::QUALIFIED,
-                self::CLAIMED,
-                self::BANKED,
-                self::SUBMITTED
-            ]);
-
-        if ($isAllocated !== null) {
-            $sql->where('is_allocated', $isAllocated);
-        }
-
-        return $sql->first();
     }
 
     /**
@@ -489,13 +274,8 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED])
             ->get();
 
-        self::markSupersededProvisions($rows);
 
         foreach ($rows as $row) {
-            /* if ($row->is_superseded) {
-                 continue;
-             }*/
-
             $row->status = self::SUBMITTED;
             $changes = $row->getChangedValues();
             $row->additional_comments = 'Consumed by BMID export';
@@ -512,7 +292,7 @@ class AccessDocument extends ApiModel
      * @return AccessDocument|null
      */
 
-    public static function findWAPForPerson(int $personId)
+    public static function findWAPForPerson(int $personId): ?AccessDocument
     {
         $rows = self::where('person_id', $personId)
             ->whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
@@ -563,7 +343,15 @@ class AccessDocument extends ApiModel
         return $people;
     }
 
-    public static function wapCandidate($rows)
+    /**
+     * Find the most appropriate WAP candidate record. The first record with any time access takes priority,
+     * followed by the earliest access date.
+     *
+     * @param $rows
+     * @return ?AccessDocument
+     */
+
+    public static function wapCandidate($rows): ?AccessDocument
     {
         $wap = null;
         foreach ($rows as $row) {
@@ -630,7 +418,7 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Count how many (current) Significant Other WAP's for a person & year
+     * Count how many (current) Significant Other WAPs for a person & year
      *
      * @param int $personId person to find
      * @return int
@@ -661,12 +449,13 @@ class AccessDocument extends ApiModel
     /**
      * Create a Significant Others Work Access Pass and claim it.
      *
-     * @param integer $personId person to create for
-     * @param integer $year year to create for
+     * @param int $personId person to create for
+     * @param int $year year to create for
      * @param string $name the SO's name.
+     * @return AccessDocument
      */
 
-    public static function createSOWAP($personId, $year, $name)
+    public static function createSOWAP(int $personId, int $year, string $name): AccessDocument
     {
         $wap = new AccessDocument;
         $wap->person_id = $personId;
@@ -681,11 +470,14 @@ class AccessDocument extends ApiModel
         return $wap;
     }
 
-    /*
+    /**
      * Add a comment to the comments column.
+     *
+     * @param string|null $comment
+     * @param $user
      */
 
-    public function addComment($comment, $user)
+    public function addComment(?string $comment, $user)
     {
         if ($user instanceof Person) {
             $user = $user->callsign;
@@ -695,7 +487,7 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Setter for expiry_date. Fixup the date if its only a year.
+     * Setter for expiry_date. Fix the date if it's only a year.
      *
      * @param $date
      */
@@ -817,6 +609,12 @@ class AccessDocument extends ApiModel
         $this->attributes['country'] = $value ?? '';
     }
 
+    /**
+     * Does the document have all the necessary address fields?
+     *
+     * @return bool
+     */
+
     public function hasAddress(): bool
     {
         foreach (['street1', 'city', 'state', 'postal_code'] as $field) {
@@ -826,15 +624,5 @@ class AccessDocument extends ApiModel
         }
 
         return true;
-    }
-
-    public function isProvision(): bool
-    {
-        return in_array($this->type, self::PROVISION_TYPES);
-    }
-
-    public function getIsSupersededAttribute(): bool
-    {
-        return $this->is_superseded;
     }
 }
