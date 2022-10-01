@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AccessDocument;
+use App\Models\Provision;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -12,11 +13,10 @@ return new class extends Migration {
         AccessDocument::VEHICLE_PASS,
         AccessDocument::WAP,
         AccessDocument::WAPSO,
-        AccessDocument::ALL_EAT_PASS,
-        AccessDocument::WET_SPOT,
-        AccessDocument::WET_SPOT_POG,
-        AccessDocument::EVENT_RADIO,
-        AccessDocument::EVENT_EAT_PASS
+        Provision::ALL_EAT_PASS,
+        Provision::WET_SPOT,
+        Provision::EVENT_RADIO,
+        Provision::EVENT_EAT_PASS
     ];
 
     /**
@@ -26,7 +26,7 @@ return new class extends Migration {
      */
     public function up()
     {
-        $enums = array_merge(self::ORIGINAL_ENUMS, AccessDocument::MEAL_TYPES);
+        $enums = array_merge(self::ORIGINAL_ENUMS, Provision::MEAL_TYPES);
         self::alterEnums(array_unique($enums));
     }
 

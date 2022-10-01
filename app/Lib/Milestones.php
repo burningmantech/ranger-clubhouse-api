@@ -2,7 +2,6 @@
 
 namespace App\Lib;
 
-use App\Models\AccessDocument;
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
@@ -159,7 +158,7 @@ class Milestones
             $ticketingPeriod = setting('TicketingPeriod');
             $milestones['ticketing_period'] = $ticketingPeriod;
             if ($ticketingPeriod == 'open' || $ticketingPeriod == 'closed') {
-                $milestones['ticketing_package'] = AccessDocument::buildPackageForPerson($person->id);
+                $milestones['ticketing_package'] = TicketAndProvisionsPackage::buildPackageForPerson($person->id);
             }
 
             // Timesheets!

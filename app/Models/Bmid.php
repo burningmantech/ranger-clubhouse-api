@@ -297,9 +297,9 @@ class Bmid extends ApiModel
         // The provisions are special - by default, the items are opt-out so treat an item qualified as
         // the same as claimed.
 
-        $itemsByPersonId = AccessDocument::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
-            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-            ->whereIn('type', [...AccessDocument::MEAL_TYPES, AccessDocument::WET_SPOT])
+        $itemsByPersonId = Provision::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
+            ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
+            ->whereIn('type', [...Provision::MEAL_TYPES, Provision::WET_SPOT])
             ->get()
             ->groupBy('person_id');
 
@@ -309,20 +309,19 @@ class Bmid extends ApiModel
                 continue;
             }
 
-            //AccessDocument::markSupersededProvisions($items);
             $allocatedMeals = [];
             $earnedMeals = [];
 
             foreach ($items as $item) {
-                $isMeal = in_array($item->type, AccessDocument::MEAL_TYPES);
+                $isMeal = in_array($item->type, Provision::MEAL_TYPES);
                 if ($isMeal) {
                     if ($item->is_allocated) {
-                        self::populateMealMatrix(AccessDocument::MEAL_MATRIX[$item->type], $allocatedMeals);
+                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $allocatedMeals);
                     } else {
-                        self::populateMealMatrix(AccessDocument::MEAL_MATRIX[$item->type], $earnedMeals);
+                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $earnedMeals);
                     }
                 }
-                if ($item->type == AccessDocument::WET_SPOT) {
+                if ($item->type == Provision::WET_SPOT) {
                     if ($item->is_allocated) {
                         $bmid->allocated_showers = true;
                     } else {
