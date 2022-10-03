@@ -2,15 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\PersonOnlineTraining;
-use Carbon\Carbon;
-use Tests\TestCase;
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
@@ -21,6 +15,10 @@ use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
 use App\Models\TraineeStatus;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 
 class TimesheetControllerTest extends TestCase
@@ -516,6 +514,7 @@ class TimesheetControllerTest extends TestCase
     public function testConfirmTimesheet()
     {
         $person = $this->targetPerson;
+        $this->actingAs($person);
 
         $response = $this->json('POST', 'timesheet/confirm', [
             'person_id' => $person->id,
@@ -543,6 +542,7 @@ class TimesheetControllerTest extends TestCase
     public function testUnconfirmTimesheet()
     {
         $person = $this->targetPerson;
+        $this->actingAs($person);
 
         PersonEvent::factory()->create([
             'person_id' => $person->id,
