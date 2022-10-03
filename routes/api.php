@@ -350,6 +350,7 @@ Route::group([
     Route::get('timesheet/by-callsign', 'TimesheetController@timesheetByCallsign');
     Route::get('timesheet/by-position', 'TimesheetController@timesheetByPosition');
     Route::get('timesheet/retention-report', 'TimesheetController@retentionReport');
+    Route::post('timesheet/repair-slot-assoc', 'TimesheetController@repairSlotAssociations');
     Route::get('timesheet/thank-you', 'TimesheetController@thankYou');
     Route::get('timesheet/totals', 'TimesheetController@timesheetTotals');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');

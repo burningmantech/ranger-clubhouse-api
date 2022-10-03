@@ -437,7 +437,7 @@ class Schedule extends ApiModel
     }
 
     /**
-     * Find the (probable) slot id sign up for a person based on the position and time.
+     * Find the (probable) slot  sign up for a person based on the position and time.
      *
      * NOTE: This assumes the slots inspected are in the same timezone as the event.
 
