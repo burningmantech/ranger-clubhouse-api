@@ -21,7 +21,8 @@ class TimesheetPolicy
     /*
      * Determine whether the user can view the timesheet.
      */
-    public function index(Person $user, $personId)
+
+    public function index(Person $user, $personId): bool
     {
         return $user->hasRole(Role::MANAGE) || ($user->id == $personId);
     }
@@ -30,7 +31,7 @@ class TimesheetPolicy
      * can the user create a timesheet
      */
 
-    public function store(Person $user, Timesheet $timesheet)
+    public function store(Person $user, Timesheet $timesheet): bool
     {
         return false;
     }
@@ -39,7 +40,7 @@ class TimesheetPolicy
      * Can the user update a timesheet?
      */
 
-    public function update(Person $user, Timesheet $timesheet)
+    public function update(Person $user, Timesheet $timesheet): bool
     {
         return $user->hasRole(Role::MANAGE) || ($user->id == $timesheet->person_id);
     }
@@ -48,7 +49,7 @@ class TimesheetPolicy
      * Can the user update the position on an active timesheet?
      */
 
-    public function updatePosition(Person $user, Timesheet $timesheet)
+    public function updatePosition(Person $user, Timesheet $timesheet): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -57,9 +58,9 @@ class TimesheetPolicy
      * Can a user confirm the timesheet?
      */
 
-    public function confirm(Person $user, $personId)
+    public function confirm(Person $user, $personId): bool
     {
-        return $user->hasRole(Role::MANAGE) || ($user->id == $personId);
+        return $user->hasRole(Role::TECH_NINJA) || ($user->id == $personId);
     }
 
     /*
@@ -67,7 +68,7 @@ class TimesheetPolicy
      * or admin, covered in before()
      */
 
-    public function destroy(Person $user, Timesheet $timesheet)
+    public function destroy(Person $user, Timesheet $timesheet): bool
     {
         return false;
     }
@@ -76,7 +77,7 @@ class TimesheetPolicy
      * Can user signin the person?
      */
 
-    public function signin(Person $user)
+    public function signin(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -85,7 +86,7 @@ class TimesheetPolicy
      * Can user re-signin the person?
      */
 
-    public function resignin(Person $user)
+    public function resignin(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -94,7 +95,7 @@ class TimesheetPolicy
      * Can user signoff the timesheet?
      */
 
-    public function signoff(Person $user, Timesheet $timesheet)
+    public function signoff(Person $user, Timesheet $timesheet): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -103,7 +104,7 @@ class TimesheetPolicy
      * Can user see a timesheet log?
      */
 
-    public function log(Person $user, $id)
+    public function log(Person $user, $id): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -251,6 +252,11 @@ class TimesheetPolicy
     }
 
     public function topHourEarnersReport(Person $user): bool
+    {
+        return false;
+    }
+
+    public function repairSlotAssociations(Person $user) : bool
     {
         return false;
     }

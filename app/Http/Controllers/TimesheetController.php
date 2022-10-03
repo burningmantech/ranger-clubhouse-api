@@ -18,6 +18,7 @@ use App\Lib\Reports\TimesheetByPositionReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
 use App\Lib\Reports\TopHourEarnersReport;
+use App\Lib\TimesheetSlotAssocRepair;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
@@ -31,6 +32,7 @@ use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class TimesheetController extends ApiController
@@ -253,9 +255,19 @@ class TimesheetController extends ApiController
             }
         }
 
-        if ($timesheet->isDirty('position_id')) {
+        if ($timesheet->isDirty('position_id') || $timesheet->isDirty('on_duty')) {
             // Find new sign up to associate with
             $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
+            if (!$timesheet->slot_id) {
+                $start = $timesheet->on_duty->clone()->subMinutes(45);
+                $end = $timesheet->on_duty->clone()->addMinutes(45);
+                $slot = DB::table('slot')
+                    ->select('id')
+                    ->whereBetween('begins', [$start, $end])
+                    ->where('position_id', $timesheet->position_id)
+                    ->first();
+                $timesheet->slot_id = $slot?->id;
+            }
         }
 
         $auditColumns = [];
@@ -574,7 +586,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function confirm()
+    public function confirm(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'required|integer',
@@ -954,4 +966,18 @@ class TimesheetController extends ApiController
         return response()->json(['top_earners' => TopHourEarnersReport::execute($params['start_year'], $params['end_year'], $params['limit'])]);
     }
 
+    /**
+     * Scan the timesheet entries for a given year and repair any broken the slot (sign-up) associations.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function repairSlotAssociations(): JsonResponse
+    {
+        $this->authorize('repairSlotAssociations', Timesheet::class);
+        $year = $this->getYear();
+
+        return response()->json(['entries' => TimesheetSlotAssocRepair::execute($year)]);
+    }
 }

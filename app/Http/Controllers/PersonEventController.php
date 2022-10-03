@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\PersonEvent;
-use App\Models\Role;
-
-use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 /*
  * Person Event records are special -- a record will always be returned even if the record does not
@@ -17,10 +16,11 @@ class PersonEventController extends ApiController
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', PersonEvent::class);
 
@@ -35,11 +35,12 @@ class PersonEventController extends ApiController
     /**
      * Display the person event
      *
-     * @param  \App\Models\PersonEvent  $personEvent
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @param PersonEvent $personEvent
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function show(PersonEvent $personEvent)
+
+    public function show(PersonEvent $personEvent): JsonResponse
     {
         $this->authorize('show', $personEvent);
 
@@ -50,16 +51,16 @@ class PersonEventController extends ApiController
      * Update (or create) a person event record
      *
      * @param PersonEvent $personEvent
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(PersonEvent $personEvent)
+    public function update(PersonEvent $personEvent): JsonResponse
     {
         $this->authorize('update', $personEvent);
         $this->fromRest($personEvent);
 
-         if (!$personEvent->save()) {
+        if (!$personEvent->save()) {
             return $this->restError($personEvent);
         }
 
@@ -69,10 +70,12 @@ class PersonEventController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\PersonEvent  $personEvent
-     * @return \Illuminate\Http\JsonResponse
+     * @param PersonEvent $personEvent
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(PersonEvent $personEvent)
+
+    public function destroy(PersonEvent $personEvent): JsonResponse
     {
         if ($personEvent->exists()) {
             $this->authorize('destroy', $personEvent);
