@@ -25,14 +25,12 @@ use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
-use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class TimesheetController extends ApiController
@@ -224,8 +222,6 @@ class TimesheetController extends ApiController
     {
         $this->authorize('update', $timesheet);
 
-        $person = $this->findPerson($timesheet->person_id);
-
         $this->fromRestFiltered($timesheet);
 
         $verifyInfo = [];
@@ -242,7 +238,7 @@ class TimesheetController extends ApiController
             $timesheet->reviewer_person_id = $userId;
         }
 
-        if ($timesheet->isDirty('notes')) {
+        if ($timesheet->isDirty('notes') && !$timesheet->isDirty('review_status')) {
             $timesheet->review_status = Timesheet::STATUS_PENDING;
         }
 
@@ -252,21 +248,6 @@ class TimesheetController extends ApiController
                 $timesheet->verified_person_id = $userId;
             } else if ($event->timesheet_confirmed) {
                 $markedUnconfirmed = true;
-            }
-        }
-
-        if ($timesheet->isDirty('position_id') || $timesheet->isDirty('on_duty')) {
-            // Find new sign up to associate with
-            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
-            if (!$timesheet->slot_id) {
-                $start = $timesheet->on_duty->clone()->subMinutes(45);
-                $end = $timesheet->on_duty->clone()->addMinutes(45);
-                $slot = DB::table('slot')
-                    ->select('id')
-                    ->whereBetween('begins', [$start, $end])
-                    ->where('position_id', $timesheet->position_id)
-                    ->first();
-                $timesheet->slot_id = $slot?->id;
             }
         }
 
@@ -355,7 +336,6 @@ class TimesheetController extends ApiController
 
         $positionId = $params['position_id'];
         $person = $timesheet->person;
-        $personId = $timesheet->person_id;
 
         $requiredPositionId = 0;
         $unqualifiedReason = null;
@@ -369,8 +349,6 @@ class TimesheetController extends ApiController
 
         $oldPositionId = $timesheet->position_id;
         $timesheet->position_id = $positionId;
-        // Find new sign up to associate with
-        $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($personId, $positionId, $timesheet->on_duty);
         $timesheet->auditReason = 'position update while on duty';
         $timesheet->saveOrThrow();
 
@@ -445,12 +423,6 @@ class TimesheetController extends ApiController
 
         $timesheet = new Timesheet($params);
         $timesheet->setOnDutyToNow();
-
-        if (!$timesheet->slot_id) {
-            // Try to associate a slot with the sign on
-            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
-        }
-
         $timesheet->auditReason = 'sign in';
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
