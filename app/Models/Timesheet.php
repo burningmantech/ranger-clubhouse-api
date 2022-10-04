@@ -4,11 +4,35 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-
+/**
+ * @property ?Carbon $off_duty
+ * @property ?Carbon $timesheet_confirmed_at
+ * @property ?Carbon $verified_at
+ * @property ?int $reviewer_person_id
+ * @property ?int $slot_id
+ * @property ?int $verified_person_id
+ * @property ?string $notes
+ * @property Carbon $on_duty
+ * @property Carbon $reviewed_at
+ * @property bool $is_non_ranger
+ * @property bool $timesheet_confirmed
+ * @property int $person_id
+ * @property int $position_id
+ * @property string $review_status
+ * @property-read int $duration
+ * @property-read float $credits
+ * @property-read ?Position $position
+ * @property-read ?Slot $slot
+ * @property-read ?Person $reviewer_person
+ * @property-read ?Person $verified_person
+ * @property  ?string $additional_notes
+ * @property ?string $additional_reviewer_notes
+ */
 class Timesheet extends ApiModel
 {
     protected $table = 'timesheet';
@@ -100,6 +124,31 @@ class Timesheet extends ApiModel
             }
         });
 
+        /*
+         * Associate the timesheet entry with a slot. Preference is given to a shift sign up, followed by
+         * a matching shift in the full schedule.
+         */
+
+        self::saving(function ($model) {
+            if (!$model->isDirty('slot_id')
+                && (
+                    ($model->isDirty('position_id') && $model->position_id)
+                    || ($model->isDirty('on_duty') && $model->on_duty))
+            ) {
+                // Find new sign up to associate with
+                $model->slot_id = Schedule::findSlotIdSignUpByPositionTime($model->person_id, $model->position_id, $model->on_duty);
+                if (!$model->slot_id) {
+                    $start = $model->on_duty->clone()->subMinutes(45);
+                    $end = $model->on_duty->clone()->addMinutes(45);
+                    $slot = DB::table('slot')
+                        ->select('id')
+                        ->whereBetween('begins', [$start, $end])
+                        ->where('position_id', $model->position_id)
+                        ->first();
+                    $model->slot_id = $slot?->id;
+                }
+            }
+        });
     }
 
     public function person(): BelongsTo
@@ -132,7 +181,14 @@ class Timesheet extends ApiModel
         return $this->load(self::RELATIONSHIPS);
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find timesheet entries based on the given criteria
+     *
+     * @param array $query
+     * @return Collection
+     */
+
+    public static function findForQuery(array $query): Collection
     {
         $sql = self::query();
 
@@ -202,10 +258,10 @@ class Timesheet extends ApiModel
      * Find the (still) on duty timesheet for a person
      *
      * @param int $personId
-     * @return Timesheet|null
+     * @return Model|null
      */
 
-    public static function findPersonOnDuty(int $personId): Timesheet|null
+    public static function findPersonOnDuty(int $personId): ?Model
     {
         return self::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -282,7 +338,7 @@ class Timesheet extends ApiModel
      * (used to help find a shift partner for missing timesheet entry requests)
      *
      * @param int $personId
-     * @param int $startTime
+     * @param Carbon|int $startTime
      * @param int $withinMinutes
      * @return Timesheet|null
      */
@@ -456,7 +512,7 @@ class Timesheet extends ApiModel
      * @return Collection group by person_id and sub-grouped by year
      */
 
-    public static function retrieveAllForPositionIds(array $personIds, int $positionId)
+    public static function retrieveAllForPositionIds(array $personIds, int $positionId): Collection
     {
         return self::whereIntegerInRaw('person_id', $personIds)
             ->where('position_id', $positionId)
@@ -464,9 +520,7 @@ class Timesheet extends ApiModel
             ->get()
             ->groupBy([
                 'person_id',
-                function ($row) {
-                    return $row->on_duty->year;
-                }
+                fn($row) => $row->on_duty->year
             ]);
     }
 
