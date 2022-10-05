@@ -1221,7 +1221,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Set the callsign pronunciation column. Remove quotes because people are too literal sometimes.
+     * Set the callsign pronunciation column. Remove quotes because people are too "literal" sometimes.
      *
      * @param string|null $value
      * @return void
@@ -1229,13 +1229,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function setCallsignPronounceAttribute(?string $value): void
     {
-        if (empty($value)) {
-            $value = '';
-        } else {
-            $value = trim(preg_replace("/['\"]/", '', trim($value)));
-        }
-
-        $this->attributes['callsign_pronounce'] = $value;
+        $this->attributes['callsign_pronounce'] = empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)));
     }
 
     /**
@@ -1269,6 +1263,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function summarizeGender(?string $gender): string
     {
+        if (empty($gender)) {
+            return '';
+        }
+
         $check = trim(strtolower($gender));
 
         // Female gender
@@ -1296,7 +1294,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return 'GF';
         }
 
-        // Gender, yes? what does that even mean?
+        // Gender, "yes"? what does that even mean?
         if ($check == 'yes') {
             return '';
         }
