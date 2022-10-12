@@ -509,10 +509,10 @@ class Timesheet extends ApiModel
      *
      * @param array $personIds
      * @param int $positionId
-     * @return Collection group by person_id and sub-grouped by year
+     * @return \Illuminate\Support\Collection group by person_id and sub-grouped by year
      */
 
-    public static function retrieveAllForPositionIds(array $personIds, int $positionId): Collection
+    public static function retrieveAllForPositionIds(array $personIds, int $positionId): \Illuminate\Support\Collection
     {
         return self::whereIntegerInRaw('person_id', $personIds)
             ->where('position_id', $positionId)
