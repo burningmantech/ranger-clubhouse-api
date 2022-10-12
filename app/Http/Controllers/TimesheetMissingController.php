@@ -81,6 +81,7 @@ class TimesheetMissingController extends ApiController
      * @param TimesheetMissing $timesheetMissing
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws Exception
      */
 
     public function update(TimesheetMissing $timesheetMissing): JsonResponse
