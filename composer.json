@@ -30,7 +30,7 @@
     "laravel/tinker": "^2.7.2",
     "league/flysystem-aws-s3-v3": "^3.0.13",
     "league/fractal": "^0.20",
-    "php-open-source-saver/jwt-auth": "^1.4.1",
+    "php-open-source-saver/jwt-auth": "^2.0.0",
     "twilio/sdk": "^6.36.0"
   },
   "require-dev": {
