@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
+use App\Lib\Reports\EventStats;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
@@ -951,5 +952,18 @@ class TimesheetController extends ApiController
         $year = $this->getYear();
 
         return response()->json(['entries' => TimesheetSlotAssocRepair::execute($year)]);
+    }
+
+    /**
+     * Event Statistics
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function eventStatsReport() : JsonResponse
+    {
+        $this->authorize('eventStatsReport', Timesheet::class);
+        return response()->json(['stats' => EventStats::execute($this->getYear())]);
     }
 }

@@ -337,6 +337,7 @@ Route::group([
     Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
+    Route::get('timesheet/event-stats', 'TimesheetController@eventStatsReport');
     Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
     Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');

@@ -261,4 +261,8 @@ class TimesheetPolicy
         return false;
     }
 
+    public function eventStatsReport(Person $user) : bool
+    {
+        return false;
+    }
 }
