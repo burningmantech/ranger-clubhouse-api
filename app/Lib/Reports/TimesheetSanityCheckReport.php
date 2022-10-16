@@ -151,6 +151,44 @@ class TimesheetSanityCheckReport
 
         $tooShort = $rows->map(fn($row) => self::buildEntry($row));
 
+        $alphaIds = DB::table('timesheet')
+            ->select('person_id')
+            ->whereYear('on_duty', $year)
+            ->where('position_id', Position::ALPHA)
+            ->groupBy('person_id')
+            ->havingRaw("COUNT(person_id) > 1")
+            ->get()
+            ->pluck('person_id');
+
+        $duplicateAlphas = [];
+        if (!empty($alphaIds)) {
+            $rows = Timesheet::whereYear('on_duty', $year)
+                ->whereIntegerInRaw('person_id', $alphaIds)
+                ->where('position_id', Position::ALPHA)
+                ->with($withBase)
+                ->orderBy('on_duty')
+                ->get()
+                ->groupBy('person_id');
+
+            foreach ($rows as $personId => $entries) {
+                $person = $entries[0]->person;
+                $duplicateAlphas[] = [
+                    'person' => [
+                        'id' => $person->id,
+                        'callsign' => $person->callsign,
+                    ],
+                    'entries' => $entries->map(fn($row) => [
+                        'id' => $row->id,
+                        'on_duty' => (string)$row->on_duty,
+                        'off_duty' => (string)$row->off_duty,
+                        'duration' => $row->duration,
+                        'credits' => $row->credits,
+                    ])->values()
+                ];
+            }
+            usort($duplicateAlphas, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+        }
+
         return [
             'on_duty' => $onDutyEntries,
             'end_before_start' => $endBeforeStartEntries,
@@ -158,6 +196,7 @@ class TimesheetSanityCheckReport
             'too_long' => $tooLongEntries,
             'too_long_for_shift' => $tooLongForShift,
             'too_short' => $tooShort,
+            'duplicate_alphas' => $duplicateAlphas,
         ];
     }
 
