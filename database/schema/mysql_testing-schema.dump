@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS `access_document`;
 CREATE TABLE `access_document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `person_id` int(11) NOT NULL,
-  `type` enum('gift_ticket','reduced_price_ticket','staff_credential','vehicle_pass','work_access_pass','work_access_pass_so','all_eat_pass','wet_spot','wet_spot_pog','event_radio','event_eat_pass') COLLATE utf8mb3_unicode_ci NOT NULL,
+  `type` enum('gift_ticket','reduced_price_ticket','staff_credential','vehicle_pass','work_access_pass','work_access_pass_so','all_eat_pass','wet_spot','event_radio','event_eat_pass','pre_event_eat_pass','post_event_eat_pass','pre_event_event_eat_pass','event_post_event_eat_pass','pre_post_eat_pass') COLLATE utf8mb3_unicode_ci DEFAULT NULL,
   `status` enum('qualified','claimed','banked','submitted','used','cancelled','expired') COLLATE utf8mb3_unicode_ci NOT NULL,
   `source_year` int(4) DEFAULT NULL,
   `access_date` datetime DEFAULT NULL,
@@ -28,8 +28,13 @@ CREATE TABLE `access_document` (
   `state` varchar(191) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
   `postal_code` varchar(191) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
   `country` varchar(191) COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `is_job_provision` tinyint(1) NOT NULL DEFAULT 0,
+  `is_allocated` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `person_id` (`person_id`,`type`)
+  KEY `person_id` (`person_id`,`type`),
+  KEY `access_document_type_status_index` (`type`,`status`),
+  KEY `access_document_person_id_status_index` (`person_id`,`status`),
+  KEY `access_document_person_id_source_year_index` (`person_id`,`source_year`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `access_document_changes`;
@@ -250,6 +255,22 @@ CREATE TABLE `cache_locks` (
   PRIMARY KEY (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `certification`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `certification` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sl_title` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `on_sl_report` tinyint(1) NOT NULL DEFAULT 0,
+  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_lifetime_certification` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `certification_on_sl_report_index` (`on_sl_report`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `contact_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -402,7 +423,7 @@ DROP TABLE IF EXISTS `mail_log`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `mail_log` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `person_id` int(11) NOT NULL,
+  `person_id` int(11) DEFAULT NULL,
   `sender_id` int(11) DEFAULT NULL,
   `from_email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `to_email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -414,9 +435,11 @@ CREATE TABLE `mail_log` (
   `broadcast_id` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
+  `did_complain` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `mail_log_person_id_created_at_index` (`person_id`,`created_at`),
-  KEY `mail_log_sender_id_created_at_index` (`sender_id`,`created_at`)
+  KEY `mail_log_sender_id_created_at_index` (`sender_id`,`created_at`),
+  KEY `mail_log_message_id_index` (`message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `manual_review`;
@@ -554,6 +577,26 @@ CREATE TABLE `person` (
   KEY `person_callsign_soundex_index` (`callsign_soundex`),
   KEY `person_lms_id_index` (`lms_id`),
   KEY `person_status_index` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `person_certification`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `person_certification` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `person_id` int(11) NOT NULL,
+  `recorder_id` int(11) DEFAULT NULL,
+  `certification_id` int(11) NOT NULL,
+  `issued_on` date DEFAULT NULL,
+  `trained_on` date DEFAULT NULL,
+  `card_number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `person_certification_person_id_index` (`person_id`),
+  KEY `person_certification_certification_id_index` (`certification_id`),
+  KEY `person_certification_person_id_certification_id_index` (`person_id`,`certification_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_event`;
@@ -882,6 +925,7 @@ CREATE TABLE `position` (
   `contact_email` varchar(200) COLLATE utf8mb3_unicode_ci DEFAULT NULL,
   `prevent_multiple_enrollments` tinyint(1) NOT NULL DEFAULT 0,
   `active` tinyint(1) NOT NULL DEFAULT 1,
+  `alert_when_empty` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -898,6 +942,24 @@ CREATE TABLE `position_credit` (
   PRIMARY KEY (`id`),
   KEY `position_credit_position_id_start_time_index` (`position_id`,`start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `provision`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `provision` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `person_id` int(11) NOT NULL,
+  `source_year` int(11) NOT NULL,
+  `type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'available',
+  `expires_on` date NOT NULL,
+  `comments` longtext COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_allocated` tinyint(1) NOT NULL DEFAULT 0,
+  `item_count` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `radio_eligible`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -949,6 +1011,7 @@ CREATE TABLE `slot` (
   `training_id` bigint(20) unsigned NOT NULL DEFAULT 0,
   `min` int(10) NOT NULL DEFAULT 1,
   `active` tinyint(1) NOT NULL DEFAULT 0,
+  `timezone` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'America/Los_Angeles',
   PRIMARY KEY (`id`),
   KEY `begins` (`begins`),
   KEY `position_id` (`position_id`)
@@ -1316,3 +1379,12 @@ INSERT INTO `migrations` VALUES (125,'2022_03_21_114028_add_lms_username_to_pers
 INSERT INTO `migrations` VALUES (126,'2022_04_16_200144_add_profile_image_to_person_photo',58);
 INSERT INTO `migrations` VALUES (127,'2022_04_21_072909_track_bounces',59);
 INSERT INTO `migrations` VALUES (128,'2022_04_21_073355_create_mail_log',59);
+INSERT INTO `migrations` VALUES (129,'2022_04_24_094422_change_person_id_on_mail_log',60);
+INSERT INTO `migrations` VALUES (130,'2022_04_27_165438_add_alert_when_empty_to_position',60);
+INSERT INTO `migrations` VALUES (131,'2022_04_28_173246_add_is_job_provision_to_access_document',60);
+INSERT INTO `migrations` VALUES (132,'2022_05_03_111156_add_did_complain_to_mail_log',60);
+INSERT INTO `migrations` VALUES (133,'2022_05_12_111452_create_certifications',60);
+INSERT INTO `migrations` VALUES (134,'2022_05_28_192502_rename_is_job_provision',60);
+INSERT INTO `migrations` VALUES (135,'2022_06_08_132121_add_more_meals_to_access_documents',60);
+INSERT INTO `migrations` VALUES (136,'2022_09_20_235413_add_timezone_to_slot',60);
+INSERT INTO `migrations` VALUES (137,'2022_09_28_172100_create_person_provision_table',60);
