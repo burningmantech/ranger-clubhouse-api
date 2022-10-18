@@ -12,9 +12,9 @@ class ErrorLog extends ApiModel
     // Allow mass assignment.
     protected $guarded = [];
 
-   /* protected $casts = [
-        'data' => 'array'
-    ];*/
+    /* protected $casts = [
+         'data' => 'array'
+     ];*/
 
     public function person()
     {
@@ -78,7 +78,7 @@ class ErrorLog extends ApiModel
 
         $error = [
             'error_type' => $error_type,
-            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE|JSON_UNESCAPED_UNICODE),
+            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE),
         ];
 
         // Include the IP, user_agent and URL location
@@ -159,14 +159,14 @@ class ErrorLog extends ApiModel
         }
 
         // Figure out pagination
-        $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
-        if (isset($query['page'])) {
-            $page = $query['page'] - 1;
-            if ($page < 0) {
-                $page = 0;
-            }
-        } else {
+        $pageSize = (int)($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
+        $page = (int)($query['page'] ?? 1);
+        $page = $page - 1;
+        if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize <= 0) {
+            $pageSize = self::PAGE_SIZE_DEFAULT;
         }
 
         $sql = $sql->offset($page * $pageSize)->limit($pageSize);
