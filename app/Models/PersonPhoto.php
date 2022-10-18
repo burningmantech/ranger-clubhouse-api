@@ -226,8 +226,8 @@ class PersonPhoto extends ApiModel
         $includeRejects = $params['include_rejects'] ?? null;
         $sort = $params['sort'] ?? '';
 
-        $page = $params['page'] ?? 1;
-        $pageSize = $params['page_size'] ?? 100;
+        $page = (int) ($params['page'] ?? 1);
+        $pageSize = (int) ($params['page_size'] ?? 100);
 
         $sql = self::select('person_photo.*', DB::raw("(SELECT 1 FROM person WHERE person.id=person_photo.person_id AND person.person_photo_id=person_photo.id LIMIT 1) AS is_active"))
             ->join('person', 'person.id', 'person_photo.person_id')

@@ -32,8 +32,8 @@ class BroadcastMessage extends ApiModel
 
     public static function findForQuery($query)
     {
-        $page = $query['page'] ?? 1;
-        $pageSize = $query['page_size'] ?? self::DEFAULT_PAGE_SIZE;
+        $page = (int) ($query['page'] ?? 1);
+        $pageSize = (int) ($query['page_size'] ?? self::DEFAULT_PAGE_SIZE);
         $status = $query['status'] ?? null;
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
@@ -68,6 +68,9 @@ class BroadcastMessage extends ApiModel
         $page = $page - 1;
         if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize <= 0) {
+            $pageSize = self::DEFAULT_PAGE_SIZE;
         }
 
         $sql->offset($page * $pageSize)->limit($pageSize);

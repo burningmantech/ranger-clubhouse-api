@@ -47,8 +47,8 @@ class MailLog extends ApiModel
     {
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
-        $page = $query['page'] ?? 1;
-        $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
+        $page = (int) ($query['page'] ?? 1);
+        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
 
         $sql = self::query();
 
@@ -83,6 +83,9 @@ class MailLog extends ApiModel
         $page = $page - 1;
         if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize < 0) {
+            $pageSize = self::PAGE_SIZE_DEFAULT;
         }
 
         $rows = $sql->with(['person:id,callsign', 'sender:id,callsign', 'broadcast'])
