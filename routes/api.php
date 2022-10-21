@@ -83,9 +83,13 @@ Route::group([
 
     Route::resource('action-log', 'ActionLogController', ['only' => 'index']);
 
-    Route::resource('clubhouse1-log', 'Clubhouse1LogController', ['only' => 'index']);
-
     Route::resource('alert', 'AlertController');
+
+    Route::post('award/bulk-grant-award', 'AwardController@bulkGrantAward');
+    Route::post('award/bulk-grant-service-years-award', 'AwardController@bulkGrantServiceYearsAward');
+    Route::resource('award', 'AwardController');
+
+    Route::resource('clubhouse1-log', 'Clubhouse1LogController', ['only' => 'index']);
 
     Route::post('asset/checkout', 'AssetController@checkout');
     Route::get('asset/{asset}/history', 'AssetController@history');
@@ -228,6 +232,8 @@ Route::group([
     Route::get('person/{person}/event-info', 'PersonController@eventInfo');
 
     Route::resource('person', 'PersonController', ['only' => ['index', 'show', 'store', 'update', 'destroy']]);
+
+    Route::resource('person-award', 'PersonAwardController');
 
     Route::resource('person-certification', 'PersonCertificationController');
 

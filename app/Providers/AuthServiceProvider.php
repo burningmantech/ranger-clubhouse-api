@@ -11,6 +11,7 @@ use App\Models\AlertPerson;
 use App\Models\Asset;
 use App\Models\AssetAttachment;
 use App\Models\AssetPerson;
+use App\Models\Award;
 use App\Models\Bmid;
 use App\Models\Broadcast;
 use App\Models\Document;
@@ -19,6 +20,7 @@ use App\Models\EventDate;
 use App\Models\Help;
 use App\Models\Motd;
 use App\Models\Person;
+use App\Models\PersonAward;
 use App\Models\PersonEvent;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
@@ -48,6 +50,7 @@ use App\Policies\AlertPolicy;
 use App\Policies\AssetAttachmentPolicy;
 use App\Policies\AssetPersonPolicy;
 use App\Policies\AssetPolicy;
+use App\Policies\AwardPolicy;
 use App\Policies\BmidPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\DocumentPolicy;
@@ -55,6 +58,7 @@ use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
 use App\Policies\HelpPolicy;
 use App\Policies\MotdPolicy;
+use App\Policies\PersonAwardPolicy;
 use App\Policies\PersonEventPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
@@ -91,6 +95,7 @@ class AuthServiceProvider extends ServiceProvider
         AccessDocumentDelivery::class => AccessDocumentDeliveryPolicy::class,
         ActionLog::class => ActionLogPolicy::class,
         Agreements::class => AgreementsPolicy::class,
+        Award::class => AwardPolicy::class,
         Alert::class => AlertPolicy::class,
         AlertPerson::class => AlertPersonPolicy::class,
         Asset::class => AssetPolicy::class,
@@ -104,6 +109,7 @@ class AuthServiceProvider extends ServiceProvider
         Help::class => HelpPolicy::class,
         Motd::class => MotdPolicy::class,
         Person::class => PersonPolicy::class,
+        PersonAward::class => PersonAwardPolicy::class,
         PersonEvent::class => PersonEventPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
