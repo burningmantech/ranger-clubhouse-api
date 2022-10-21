@@ -203,7 +203,7 @@ class SlotController extends ApiController
                         $title = $source->position->title;
                         throw new UnexpectedValueException(
                             "Clubhouse server doesn't yet know how to bulk-copy training or mentor/mentee shift pairs:"
-                            . " ${title}: {$source->description}: {$source->begins}");
+                            . " {$title}: {$source->description}: {$source->begins}");
                     }
                     $target = $source->replicate();
                     $target->fill($attributes);
@@ -218,7 +218,7 @@ class SlotController extends ApiController
                     $target->active = $activate;
                     $target->auditReason = 'slot copy';
                     $target->saveOrThrow();
-                    array_push($results, $target);
+                    $results[] = $target;
                 }
             });
         } catch (UnexpectedValueException $e) {
