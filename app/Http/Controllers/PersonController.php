@@ -807,7 +807,7 @@ class PersonController extends ApiController
 
     public function peopleByStatusChange(): JsonResponse
     {
-        $this->authorize('peopleByStatusChange', [Person::class]);
+        $this->authorize('peopleByStatusChange', Person::class);
         return response()->json(RecommendStatusChangeReport::execute($this->getYear()));
     }
 
