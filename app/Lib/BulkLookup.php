@@ -39,6 +39,8 @@ class BulkLookup
                     'status' => $person->status,
                     'email' => $person->email,
                     'last_worked' => last(Timesheet::findYears($person->id, Timesheet::YEARS_WORKED)),
+                    'vintage' => $person->vintage > 0,
+                    'years_worked' => count(Timesheet::findYears($person->id, Timesheet::YEARS_WORKED)),
                 ];
             } else {
                 $results[] = [
