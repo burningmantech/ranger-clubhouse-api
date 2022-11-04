@@ -67,6 +67,7 @@ class RedactDatabase
             'person_intake',
             'person_intake_note',
             'person_event',
+            'trainee_note',
             'vehicle',
             'survey_answer',
         ];
