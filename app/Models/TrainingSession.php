@@ -88,6 +88,8 @@ class TrainingSession extends Slot
         // Yarrr! Here be personnel issues matey..
         $personnelIssues = PersonIntake::retrievePersonnelIssueForIdsYear($personIds, $this->ends->year);
 
+        $positionsToReport = Position::where('on_trainer_report', true)->get()->keyBy('id');
+
         $students = [];
 
         foreach ($people as $row) {
@@ -101,6 +103,14 @@ class TrainingSession extends Slot
                 $status = 'unknown';
             }
 
+            $position_short_titles = $person->person_position
+                ->filter(fn($pp) => isset($positionsToReport[$pp->position_id]))
+                ->map(fn($pp) => !empty($positionsToReport[$pp->position_id]->short_title)
+                    ? $positionsToReport[$pp->position_id]->short_title
+                    : $positionsToReport[$pp->position_id]->title)
+                ->values()
+                ->toArray();
+
             $info = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
@@ -111,7 +121,11 @@ class TrainingSession extends Slot
                 'photo_url' => PersonPhoto::retrieveProfileUrlForPerson($person->id),
                 'email' => $person->email,
                 'years' => $peopleYearsRangered[$person->id] ?? 0,
+                // Remove this once the frontend is using team_short_titles.
                 'position_ids' => $person->person_position->pluck('position_id'),
+                // Currently we're just using position names as stand-ins for team names,
+                // but this will eventually be real team short titles.
+                'team_short_titles' => $position_short_titles,
                 'notes' => $traineeNotesByIds[$person->id] ?? [],
                 'fkas' => $person->formerlyKnownAsArray(true)
             ];
@@ -247,6 +261,25 @@ class TrainingSession extends Slot
         }
 
         return $trainers;
+    }
+
+    /**
+     * Retrieve the legend for team names to be shown with the report.
+     *
+     * This information has the following structure:
+     *
+     * title: the full position name, e.g. "Green Dot Sanctuary"
+     * short_title: an optional short position name, e.g. "GDSanc"
+     *
+     * @return array
+     */
+
+    public function retrieveTeamNameLegend(): array {
+        return Position::where('on_trainer_report', true)
+            ->select('title', 'short_title')
+            ->orderBy('title')
+            ->get()
+            ->toArray();
     }
 
     /**

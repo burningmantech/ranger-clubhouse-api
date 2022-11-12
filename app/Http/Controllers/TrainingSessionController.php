@@ -31,6 +31,7 @@ class TrainingSessionController extends ApiController
             'slot' => $training_session,
             'students' => $training_session->retrieveStudents(),
             'trainers' => $training_session->retrieveTrainers(),
+            'team_names' => $training_session->retrieveTeamNameLegend(),
         ]);
     }
 
