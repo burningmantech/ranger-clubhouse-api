@@ -51,12 +51,23 @@ class RedactDatabase
         // Zap training notes
         DB::table('trainee_status')->update(['notes' => '', 'rank' => null]);
 
+        DB::table('access_document')->update([
+            'name' => 'Some Recipient',
+            'comments' => '',
+            'street1' => '123 Off-playa Ave',
+            'street2' => '',
+            'city' => 'Any Town',
+            'postal_code' => '01234',
+        ]);
+        DB::table('access_document_changes')->update(['changes' => '']);
+        DB::table('access_document_delivery')->update([
+            'street' => '123 Off-playa Ave',
+            'city' => 'Any Town',
+            'postal_code' => '01234',
+        ]);
+
         // And nuke a bunch of tables
         $tables = [
-            'access_document',
-            'access_document_changes',
-            'access_document_delivery',
-//            'access_document',
             'broadcast_message',
             'broadcast',
             'contact_log',
