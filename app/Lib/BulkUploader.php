@@ -89,7 +89,7 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,wap date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and rpt",
                 ],
                 [
                     'id' => 'wap',
@@ -448,14 +448,16 @@ class BulkUploader
                 continue;
             }
 
+            $nextInd = 0;
             $data = $record->data;
+            $dataCount = count($data);
             if (empty($data)) {
                 $record->status = self::STATUS_FAILED;
                 $record->details = 'missing ticket type';
                 continue;
             }
 
-            $type = trim($data[0]);
+            $type = trim($data[$nextInd++]);
 
             /* This assumes we're being run in January or later! */
             $sourceYear = $year - 1;
@@ -478,9 +480,6 @@ class BulkUploader
             switch (strtoupper($type)) {
                 case 'CRED':
                     $type = AccessDocument::STAFF_CREDENTIAL;
-                    if (count($data) >= 2) {
-                        $accessDate = trim($data[1]);
-                    }
                     break;
 
                 case 'RPT':
@@ -497,9 +496,6 @@ class BulkUploader
 
                 case 'WAP':
                     $type = AccessDocument::WAP;
-                    if (count($data) >= 2) {
-                        $accessDate = trim($data[1]);
-                    }
                     break;
 
                 default:
@@ -508,12 +504,61 @@ class BulkUploader
                     continue 2;
             }
 
+            // Optionally pop an access date if this type supports them
+            if ($type == AccessDocument::STAFF_CREDENTIAL || $type == AccessDocument::WAP) {
+                if ($dataCount >= $nextInd + 1) {
+                    $accessDate = trim($data[$nextInd++]);
+                }
+            }
+            // Optionally pop a source year if this type supports them
+            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+                if ($dataCount >= $nextInd + 1) {
+                    $sourceYear = trim($data[$nextInd++]);
+                }
+            }
+            // Optionally pop an expiry year if this type supports them
+            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+                if ($dataCount >= $nextInd + 1) {
+                    $expiryYear = trim($data[$nextInd++]);
+                }
+            }
+            // Fail if there are additional unconsumed data columns
+            if ($dataCount != $nextInd) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Unexpected additional data for $type. See the required line format";
+                continue;
+            }
+
+            if (!is_numeric($sourceYear) || $sourceYear > 9999) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Expected a year for sourceYear, got $sourceYear";
+                continue;
+            }
+            if (!is_numeric($expiryYear) || $expiryYear > 9999) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Expected a year for expiryYear, got $expiryYear";
+                continue;
+            }
+            if ($expiryYear < $sourceYear) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Source year [$sourceYear] must not be after expiry year [$expiryYear]";
+                continue;
+            }
+
             if ($accessDate != null) {
+                // A date can't reasonably be specified in four or fewer characters.
+                // This is basically a protection against someone putting in a year rather than a date,
+                // since Carbon happily misinterprets YYYY as today at time YY:YY:00.
+                if (strlen($accessDate) <= 4) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = "Access date is invalid. Try YYYY-MM-DD format. [$accessDate]";
+                    continue;
+                }
                 try {
                     $accessDateCleaned = Carbon::parse($accessDate);
-                } catch (Exception $e) {
+                } catch (Exception) {
                     $record->status = self::STATUS_FAILED;
-                    $record->details = "Access date is invalid [$accessDate]";
+                    $record->details = "Access date is invalid. Try YYYY-MM-DD format. [$accessDate]";
                     continue;
                 }
 
