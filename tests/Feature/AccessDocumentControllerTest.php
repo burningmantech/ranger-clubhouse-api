@@ -241,7 +241,6 @@ class AccessDocumentControllerTest extends TestCase
 
     public function testGrantWAPs()
     {
-        $this->withoutExceptionHandling();
         $this->addAdminRole();
 
         $this->setting('TAS_DefaultWAPDate', date('Y-08-20'));

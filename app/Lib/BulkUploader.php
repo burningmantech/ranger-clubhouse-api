@@ -10,7 +10,9 @@ use App\Models\Certification;
 use App\Models\Person;
 use App\Models\PersonCertification;
 use App\Models\PersonEvent;
+use App\Models\PersonTeamLog;
 use App\Models\Provision;
+use App\Models\Team;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Exception;
@@ -35,6 +37,8 @@ class BulkUploader
     const PROCESS_TICKETS_ACTION = 'processTickets';
     const PROCESS_WAP_ACTION = 'processWAPs';
     const CERTIFICATION_ACTION = 'processCertifications';
+
+    const PROCESS_TEAM_MEMBERSHIP = 'processTeamMembership';
 
     const HELP_CALLSIGN = 'callsign';
     const HELP_RADIO = 'callsign,radio count';
@@ -123,8 +127,19 @@ class BulkUploader
                 ['id' => 'vintage', 'label' => 'set vintage flag', 'help' => self::HELP_CALLSIGN]
             ]
         ],
+        [
+            'label' => 'Team Membership',
+            'options' => [
+                [
+                    'id' => 'team_membership',
+                    'label' => 'Add Team Membership History',
+                    'help' => "callsign,team name,joined on,left on\njoined on = YYYY-MM-DD date the person joined the team.\nleft on= YYYY-MM-DD optional date the person left the time.\n\nThis action only records team membership history and does not effect current membership as managed thru \"Edit Teams/Positions\""
+                ]
+            ]
+        ],
 
     ];
+
 
     const ACTIONS = [
         'vintage' => self::CHANGE_PERSON_COLUMN_ACTION,
@@ -154,6 +169,8 @@ class BulkUploader
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
         'wap' => self::PROCESS_WAP_ACTION,
+
+        'team_membership' => self::PROCESS_TEAM_MEMBERSHIP,
     ];
 
     const MEALS_SORT = [
@@ -175,6 +192,7 @@ class BulkUploader
     {
         $lines = explode("\n", str_replace("\r", "", $recordsParam));
 
+        $callsigns = [];
         foreach ($lines as $line) {
             if (empty(trim($line))) {
                 continue;
@@ -877,6 +895,94 @@ class BulkUploader
             return true; // looks good
         } catch (InvalidFormatException) {
             return false; // wah, wah.
+        }
+    }
+
+    /**
+     * Process team membership. Format is:
+     *
+     * callsign,team name,joined date[,left date]
+     *
+     * date format is YYYY-MM-DD (no time of day)
+     *
+     * @param $records
+     * @param $type
+     * @param $commit
+     * @param $reason
+     */
+
+    public static function processTeamMembership($records, $type, $commit, $reason): void
+    {
+        foreach ($records as $record) {
+            $person = $record->person;
+            if (!$person) {
+                // person not found -- skip it.
+                continue;
+            }
+
+            $data = $record->data;
+            if (empty($data)) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing team membership info';
+                continue;
+            }
+
+            $teamName = trim($data[0]);
+            if (empty($teamName)) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing team name';
+                continue;
+            }
+
+            $team = Team::findByTitle($teamName);
+            if (!$team) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Team '$teamName' not found";
+                continue;
+            }
+
+            if (empty($data[1])) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing joined on date';
+                continue;
+            } else {
+                try {
+                    $joinedOn = Carbon::parse($data[1]);
+                } catch (InvalidFormatException $exception) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = 'Invalid joined on date';
+                    continue;
+                }
+            }
+
+            if (!empty($data[2])) {
+                try {
+                    $leftOn = Carbon::parse($data[2]);
+                } catch (InvalidFormatException $exception) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = 'Invalid left on date';
+                    continue;
+                }
+            } else {
+                $leftOn = null;
+            }
+
+            if ($record->status == self::STATUS_FAILED) {
+                continue;
+            }
+
+            if ($commit) {
+                $history = new PersonTeamLog([
+                    'person_id' => $person->id,
+                    'team_id' => $team->id,
+                    'joined_on' => $joinedOn,
+                    'left_on' => $leftOn
+                ]);
+
+                $history->save();
+            }
+
+            $record->status = self::STATUS_SUCCESS;
         }
     }
 }

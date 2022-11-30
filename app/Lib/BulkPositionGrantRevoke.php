@@ -41,12 +41,19 @@ class BulkPositionGrantRevoke
                 continue;
             }
 
-            $exists = PersonPosition::havePosition($person->id, $positionId);
-
             $result = [
                 'id' => $person->id,
                 'callsign'=> $person->callsign,
             ];
+
+            if (in_array($person->status, [...Person::LOCKED_STATUSES, Person::PAST_PROSPECTIVE])) {
+                $errors++;
+                $result['errors'] = "Has status [{$person->status}], position cannot be granted thru this interface";
+                $results[] = $result;
+                continue;
+            }
+
+            $exists = PersonPosition::havePosition($person->id, $positionId);
 
             if ($grant) {
                 if ($exists) {

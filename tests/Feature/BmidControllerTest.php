@@ -32,6 +32,7 @@ class BmidControllerTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
+
         $this->signInUser();
         $this->addRole(Role::EDIT_BMIDS);
 

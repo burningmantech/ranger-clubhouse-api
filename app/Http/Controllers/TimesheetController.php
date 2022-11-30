@@ -73,9 +73,7 @@ class TimesheetController extends ApiController
             }
         }
 
-        foreach ($years as $year => $positions) {
-            PositionCredit::warmYearCache($year, $positions);
-        }
+        PositionCredit::warmBulkYearCache($years);
 
         return $this->success($rows, null, 'timesheet');
     }
