@@ -9,32 +9,99 @@ class PeopleByRoleReport
     /**
      * Report on all assigned Clubhouse roles.
      *
+     * @param bool $explicitGrants
      * @return array
      */
 
-    public static function execute(): array
+    public static function execute(bool $explicitGrants = false): array
     {
-        $roleGroups = DB::table('role')
-            ->select('role.id as role_id', 'role.title', 'person.id as person_id', 'person.callsign')
-            ->join('person_role', 'person_role.role_id', 'role.id')
-            ->join('person', 'person.id', 'person_role.person_id')
-            ->orderBy('callsign')
-            ->get()
-            ->groupBy('role_id');
+        $rows = DB::table('role')
+            ->orderBy('title')
+            ->get();
 
         $roles = [];
-        foreach ($roleGroups as $roleId => $group) {
+        foreach ($rows as $role) {
+            $roleId = $role->id;
+            $roleGrants = DB::table('person_role')
+                ->select('person.id', 'person.callsign', 'person.status')
+                ->join('person', 'person.id', 'person_role.person_id')
+                ->where('role_id', $roleId)
+                ->get();
+
+            $positionGrants = DB::table('position_role')
+                ->select('person.id', 'person.callsign', 'person.status', 'position.id as position_id', 'position.title as position_title')
+                ->join('position', 'position.id', 'position_role.position_id')
+                ->join('person_position', 'person_position.position_id', 'position_role.position_id')
+                ->join('person', 'person.id', 'person_position.person_id')
+                ->where('role_id', $roleId)
+                ->where('position.active', true)
+                ->orderBy('position.title')
+                ->get();
+
+            $teamGrants = DB::table('team_role')
+                ->select('person.id', 'person.callsign', 'person.status', 'team.id as team_id', 'team.title as team_title')
+                ->join('team', 'team.id', 'team_role.team_id')
+                ->join('person_team', 'person_team.team_id', 'team_role.team_id')
+                ->join('person', 'person.id', 'person_team.person_id')
+                ->where('role_id', $roleId)
+                ->where('team.active', true)
+                ->orderBy('team.title')
+                ->get();
+
+            // Combine folks.
+            $people = [];
+            self::mergePeople($people, $roleGrants, fn($person) => $person->granted = true);
+
+            self::mergePeople($people, $positionGrants,
+                fn($person, $row) => $person->positions[] = [
+                    'id' => $row->position_id,
+                    'title' => $row->position_title
+                ]
+            );
+
+            self::mergePeople($people, $teamGrants,
+                fn($person, $row) => $person->teams[] = [
+                    'id' => $row->team_id,
+                    'title' => $row->team_title
+                ]
+            );
+
+            $people = array_values($people);
+            usort($people, fn($a, $b) => strcasecmp($a->callsign, $b->callsign));
+
             $roles[] = [
-                'id' => $roleId,
-                'title' => $group[0]->title,
-                'people' => $group->map(function ($row) {
-                    return ['id' => $row->person_id, 'callsign' => $row->callsign];
-                })->values()
+                'id' => $role->id,
+                'title' => $role->title,
+                'people' => $people,
             ];
         }
 
-        usort($roles, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-
         return $roles;
+    }
+
+    /**
+     * Merge the $rows folks into the $people
+     *
+     * @param $people
+     * @param $rows
+     * @param callable $entityCallback
+     */
+
+    public static function mergePeople(&$people, $rows, callable $entityCallback): void
+    {
+        foreach ($rows as $row) {
+            $personId = $row->id;
+            if (!isset($people[$personId])) {
+                $people[$personId] = (object)[
+                    'id' => $personId,
+                    'callsign' => $row->callsign,
+                    'status' => $row->status,
+                    'teams' => [],
+                    'positions' => []
+                ];
+            }
+
+            $entityCallback($people[$personId], $row);
+        }
     }
 }

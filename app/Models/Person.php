@@ -27,7 +27,6 @@ use Normalizer;
 use NumberFormatter;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-
 class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
 {
     use Authenticatable, Authorizable, Notifiable;
@@ -153,7 +152,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'tpassword',
         'tpassword_expire',
         'callsign_normalized',
-        'callsign_soundex'
+        'callsign_soundex',
+
+        'pivot' // Exclude pivot table references when building JSON response
     ];
 
     protected $casts = [
@@ -267,15 +268,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     // Various associated person tables
     const ASSOC_TABLES = [
-        //'access_document_changes',
-        'access_document_delivery',
         'access_document',
         'action_logs',
         'alert_person',
         'asset_person',
         'bmid',
         'broadcast_message',
-        //'contact_log',
         'mail_log',
         'manual_review',
         'mentee_status',
@@ -288,8 +286,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'person_message',
         'person_online_training',
         'person_position',
+        'person_position_log',
         'person_role',
         'person_slot',
+        'person_team',
+        'person_team_log',
         'radio_eligible',
         'timesheet',
         'timesheet_log',
@@ -346,7 +347,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public $roles;
-
 
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
@@ -496,7 +496,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return self::where('lms_id', $lmsId)->first();
     }
 
-
+    /**
+     * Attempt to save or create a record.
+     *
+     * @param $options
+     * @return bool
+     */
     public function save($options = []): bool
     {
         $isNew = !$this->exists;
@@ -901,15 +906,42 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function retrieveRoles(): void
     {
-        $this->roles = PersonRole::findRoleIdsForPerson($this->id);
-
-        if (in_array(Role::MANAGE_ON_PLAYA, $this->roles) && setting('LoginManageOnPlayaEnabled')) {
-            $this->roles[] = Role::MANAGE;
+        if ($this->roles) {
+            return;
         }
 
-        if (in_array(Role::TRAINER_SEASONAL, $this->roles) && setting('TrainingSeasonalRoleEnabled')) {
-            $this->roles[] = Role::TRAINER;
+        $roleSql = DB::table('person_role')
+            ->select('role_id')
+            ->where('person_id', $this->id);
+
+        // Find the granted roles via assigned positions
+        $positionSql = DB::table('person_position')
+            ->select('role_id')
+            ->where('person_id', $this->id)
+            ->join('position_role', 'position_role.position_id', 'person_position.position_id');
+
+        // Find the granted roles via assigned positions
+        $teamSql = DB::table('person_team')
+            ->select('role_id')
+            ->join('team_role', 'team_role.team_id', 'person_team.team_id')
+            ->where('person_team.person_id', $this->id);
+
+        $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
+        $roleIds = array_unique(array_map(fn($r) => (int)$r, $roleIds));
+
+        if (!in_array(Role::MANAGE, $roleIds)
+            && in_array(Role::MANAGE_ON_PLAYA, $roleIds)
+            && setting('LoginManageOnPlayaEnabled')) {
+            $roleIds[] = Role::MANAGE;
         }
+
+        if (!in_array(Role::TRAINER, $roleIds)
+            && in_array(Role::TRAINER_SEASONAL, $roleIds)
+            && setting('TrainingSeasonalRoleEnabled')) {
+            $roleIds[] = Role::TRAINER;
+        }
+
+        $this->roles = $roleIds;
     }
 
     /**

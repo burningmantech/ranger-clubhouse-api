@@ -705,6 +705,7 @@ class PersonControllerTest extends TestCase
                     $keepPosition->id,
                     $newPosition->id,
                 ],
+                'team_manager_ids' => [],
             ]
         );
 

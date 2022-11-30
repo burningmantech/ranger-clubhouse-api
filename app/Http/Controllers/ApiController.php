@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\DB;
 class ApiController extends Controller
 {
     /**
-     * @var Person
+     * @var ?Person
      */
-    protected $user;
+    protected ?Person $user = null;
 
     public function __construct()
     {
@@ -225,11 +225,11 @@ class ApiController extends Controller
     /**
      * Tells the user (via Handler::render) the operation is not authorized
      *
-     * @param $message string to send back
+     * @param string $message to send back
      * @throws AuthorizationException
      */
 
-    public function notPermitted($message)
+    public function notPermitted(string $message)
     {
         throw new AuthorizationException($message);
     }

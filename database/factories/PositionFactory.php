@@ -9,13 +9,16 @@ class PositionFactory extends Factory
 {
     protected $model = Position::class;
 
-    public function definition()
+    public function definition(): array
     {
         return [
             'title' => $this->faker->unique()->word(),
             'max' => 1,
             'min' => 0,
-            'active' => true
+            'active' => true,
+            'all_team_members' => false,
+            'public_team_position' => false,
+            'role_ids' => null,
         ];
     }
 }

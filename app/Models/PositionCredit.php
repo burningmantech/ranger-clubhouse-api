@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use DB;
+use Illuminate\Database\Eloquent\Collection;
 
 class PositionCredit extends ApiModel
 {
@@ -10,11 +10,11 @@ class PositionCredit extends ApiModel
     protected $auditModel = true;
 
     protected $fillable = [
-        'position_id',
-        'start_time',
-        'end_time',
         'credits_per_hour',
         'description',
+        'end_time',
+        'position_id',
+        'start_time',
     ];
 
     protected $casts = [
@@ -41,16 +41,19 @@ class PositionCredit extends ApiModel
     public int $start_timestamp;
     public int $end_timestamp;
 
-    public function position()
+    public function position(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
 
-    /*
+    /**
      * Find all credits for a given year
+     *
+     * @param int $year
+     * @return Collection
      */
 
-    public static function findForYear($year)
+    public static function findForYear(int $year): \Illuminate\Database\Eloquent\Collection
     {
         return self::with(self::RELATIONS)
             ->whereYear('start_time', $year)
@@ -62,18 +65,16 @@ class PositionCredit extends ApiModel
         $this->load(self::RELATIONS);
     }
 
-    /*
+    /**
      * Find all the credits for a given year and position, cache the results.
      *
-     * @param integer $year The year to search
-     * @return array PositionCredits
+     * @param int $year
+     * @param int $positionId
+     * @return mixed
      */
 
-    public static function findForYearPosition($year, $positionId)
+    public static function findForYearPosition(int $year, int $positionId): mixed
     {
-        $year = intval($year);
-        $positionId = intval($positionId);
-
         if (isset(self::$yearCache[$year][$positionId])) {
             return self::$yearCache[$year][$positionId];
         }
@@ -81,7 +82,8 @@ class PositionCredit extends ApiModel
         $rows = self::where('position_id', $positionId)
             ->whereYear('start_time', $year)
             ->whereYear('end_time', $year)
-            ->orderBy('start_time')->get();
+            ->orderBy('start_time')
+            ->get();
 
         foreach ($rows as $row) {
             // Cache the timestamp conversion
@@ -104,36 +106,53 @@ class PositionCredit extends ApiModel
 
     public static function warmYearCache(int $year, $positionIds)
     {
-        $sql = self::whereYear('start_time', $year)->orderBy('start_time');
+        self::warmBulkYearCache([$year => $positionIds]);
+    }
 
-        if (!empty($positionIds)) {
-            $sql->whereIntegerInRaw('position_id', $positionIds);
+    /**
+     * Warm the position credit cache with credits based on the given year and position ids.
+     * A performance optimization to help computeCredits() avoid extra lookups.
+     *
+     * @param $bulkYears
+     */
+
+    public static function warmBulkYearCache($bulkYears)
+    {
+        $sql = self::query();
+
+        foreach ($bulkYears as $year => $positionIds) {
+            $sql->orWhere(function ($q) use ($year, $positionIds) {
+                $q->whereYear('start_time', $year);
+                if (!empty($positionIds)) {
+                    $q->whereIn('position_id', $positionIds);
+                }
+            });
+
+            foreach ($positionIds as $id) {
+                self::$yearCache[$year][$id] ??= [];
+            }
         }
 
-        $rows = $sql->get();
+        $rows = $sql->orderBy('start_time')->get();
 
         foreach ($rows as $row) {
             // Cache the timestamp conversion
             $row->start_timestamp = $row->start_time->timestamp;
             $row->end_timestamp = $row->end_time->timestamp;
+            self::$yearCache[$row->start_time->year][$row->position_id][] = $row;
         }
 
-        self::$yearCache[$year] = $rows->groupBy('position_id');
-
-        foreach ($positionIds as $id) {
-            self::$yearCache[$year][$id] ??= [];
-        }
     }
 
-    /*
+    /**
      * Compute the credits for a position given the start and end times
      *
-     * @param integer $positionId the id of the position
-     * @param integer $startTime the starting time of the shift
-     * @param integer $endTime the ending time of the shift
-     * @param array $creditCache (optional) the position credits for the year
-     * @return float the earn credits
+     * @param int $positionId the id of the position
+     * @param int $startTime the starting time of the shift
+     * @param int $endTime the ending time of the shift
+     * @return float earned credits
      */
+
     public static function computeCredits(int $positionId, int $startTime, int $endTime, int $year): float
     {
         $credits = PositionCredit::findForYearPosition($year, $positionId);
@@ -158,9 +177,9 @@ class PositionCredit extends ApiModel
     public static function minutesOverlap(int $startA, int $endA, int $startB, int $endB): float
     {
         // latest start time
-        $start = $startA > $startB ? $startA : $startB;
-        // earlies end time
-        $ending = $endA > $endB ? $endB : $endA;
+        $start = max($startA, $startB);
+        // earliest end time
+        $ending = min($endA, $endB);
 
         if ($start >= $ending) {
             return 0; # no overlap

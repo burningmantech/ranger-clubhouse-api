@@ -2,17 +2,17 @@
 
 namespace App\Lib\PositionSanityCheck;
 
-use App\Models\Position;
 use App\Models\PersonPosition;
-
+use App\Models\Position;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class DeactivatedPositionCheck
 {
     public static function issues(): array
     {
         $rows = DB::select(
-           "SELECT
+            "SELECT
               person.id AS person_id, person.callsign, person.status,
               position.id AS position_id, position.title AS position_title
             FROM
@@ -28,7 +28,7 @@ class DeactivatedPositionCheck
 
         $positions = [];
         $people = [];
-        foreach($rows as $row) {
+        foreach ($rows as $row) {
             $position = self::position($row);
 
             if (!in_array($position, $positions)) {
@@ -36,13 +36,13 @@ class DeactivatedPositionCheck
             }
 
             $people[$row->position_id][] = [
-                "id"       => $row->person_id,
+                "id" => $row->person_id,
                 "callsign" => $row->callsign,
-                "status"   => $row->status
+                "status" => $row->status
             ];
         }
 
-        foreach($positions as $i=>$position) {
+        foreach ($positions as $i => $position) {
             $positions[$i]['people'] = $people[$position['id']];
         }
 
@@ -57,13 +57,13 @@ class DeactivatedPositionCheck
         // Validate position exists and is inactive
         $position = Position::where('id', $positionId)->where('active', 0)->get();
         if ($position->count() == 0) {
-            throw new Exception("Invalid position!");
+            throw new InvalidArgumentException("Invalid position!");
         }
 
         foreach ($peopleIds as $personId) {
             PersonPosition::removeIdsFromPerson($personId, [$positionId], 'position sanity check repair');
             $results[] = [
-                'id'       => $personId,
+                'id' => $personId,
                 'messages' => ['position removed']
             ];
         }
@@ -76,6 +76,6 @@ class DeactivatedPositionCheck
         return [
             'id' => $obj->position_id,
             'title' => $obj->position_title
-            ];
+        ];
     }
 }
