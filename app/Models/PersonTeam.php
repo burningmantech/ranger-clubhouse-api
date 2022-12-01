@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\DB;
  * @property bool $is_manager
  *
  */
-
 class PersonTeam extends ApiModel
 {
     use HasFactory;
@@ -97,9 +96,10 @@ class PersonTeam extends ApiModel
 
     public static function addPerson(int $teamId, int $personId, bool $isManager, ?string $reason): void
     {
-        self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId, 'is_manager' => $isManager]);
-        PersonTeamLog::addPerson($teamId, $personId);
-        ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
+        if (self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId, 'is_manager' => $isManager]) == 1) {
+            PersonTeamLog::addPerson($teamId, $personId);
+            ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
+        }
     }
 
     /**

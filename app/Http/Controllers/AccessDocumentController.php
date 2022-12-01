@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\GrantPasses;
+use App\Lib\Reports\ClaimedTicketsWithNoSignups;
 use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
@@ -697,5 +698,16 @@ class AccessDocumentController extends ApiController
         $this->authorize('unclaimedTicketsWithSignups', AccessDocument::class);
 
         return response()->json(['tickets' => UnclaimedTicketsWithSignupsReport::execute()]);
+    }
+
+    /**
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function claimedTicketsWithNoSignups(): JsonResponse
+    {
+        $this->authorize('claimedTicketsWithNoSignups', AccessDocument::class);
+        return response()->json(['people' => ClaimedTicketsWithNoSignups::execute()]);
     }
 }

@@ -66,8 +66,9 @@ class PositionRole extends ApiModel
         }
 
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
-        self::insertOrIgnore($data);
-        ActionLog::record(Auth::user(), 'position-role-add', $reason, $data);
+        if (self::insertOrIgnore($data) == 1) {
+            ActionLog::record(Auth::user(), 'position-role-add', $reason, $data);
+        }
     }
 
     /**

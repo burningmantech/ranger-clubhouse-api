@@ -20,11 +20,13 @@ use InvalidArgumentException;
 
 class TicketingController extends ApiController
 {
-    /*
+    /**
      * Retrieve the ticketing information
+     *
+     * @return JsonResponse
      */
 
-    public function ticketingInfo()
+    public function ticketingInfo(): JsonResponse
     {
         $settings = setting([
             'TicketingPeriod', 'TicketsAndStuffEnablePNV',

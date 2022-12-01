@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 
 class PersonOnlineTraining extends ApiModel
@@ -21,7 +22,7 @@ class PersonOnlineTraining extends ApiModel
     const MOODLE = 'moodle';
     const MANUAL_REVIEW = 'manual-review'; // prior to 2020
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }

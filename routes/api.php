@@ -77,6 +77,7 @@ Route::group([
     Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
     Route::patch('access-document/statuses', 'AccessDocumentController@statuses');
     Route::get('access-document/unclaimed-tickets-with-signups', 'AccessDocumentController@unclaimedTicketsWithSignups');
+    Route::get('access-document/claimed-tickets-with-no-signups', 'AccessDocumentController@claimedTicketsWithNoSignups');
     Route::resource('access-document', 'AccessDocumentController');
 
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');

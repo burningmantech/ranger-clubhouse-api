@@ -21,6 +21,10 @@ class ApiController extends Controller
      */
     protected ?Person $user = null;
 
+    /**
+     * @throws AuthorizationException
+     */
+
     public function __construct()
     {
         /*
@@ -50,6 +54,13 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * Is the given person the current user?
+     *
+     * @param $person
+     * @return bool
+     */
+
     public function isUser($person): bool
     {
         if (!$this->user)
@@ -58,7 +69,14 @@ class ApiController extends Controller
         return is_numeric($person) ? $this->user->id == $person : $this->user->id == $person->id;
     }
 
-    public function findPerson($id)
+    /**
+     * Retrieve a specific person, using the authorized user if the ids match.
+     *
+     * @param $id
+     * @return ?Person
+     */
+
+    public function findPerson($id) : ?Person
     {
         if ($this->isUser($id)) {
             return $this->user;
@@ -67,11 +85,24 @@ class ApiController extends Controller
         return Person::findOrFail($id);
     }
 
+    /**
+     * Convenience helper to get the year parameter.
+     *
+     * @return int
+     */
+
     public function getYear(): int
     {
         $query = request()->validate(['year' => 'required|digits:4']);
         return intval($query['year']);
     }
+
+    /**
+     * Does the user hold the role or roles?
+     *
+     * @param $roles
+     * @return bool
+     */
 
     public function userHasRole($roles): bool
     {
@@ -82,7 +113,14 @@ class ApiController extends Controller
         return $this->user->hasRole($roles);
     }
 
-    public function fromRestFiltered($record)
+    /**
+     * Load a model record using a filter
+     *
+     * @param $record
+     * @return mixed
+     */
+
+    public function fromRestFiltered($record): mixed
     {
         return DeserializeRecord::fromRest(request(), $record, $this->user);
     }
@@ -102,14 +140,14 @@ class ApiController extends Controller
      *
      * $table should be provided for a collection in case the set is empty
      *
-     * @param Collection|ApiModel $resource a row or collection to filter
+     * @param mixed $resource a row or collection to filter
      * @param array $meta Meta information to return
      * @param string $table name of the table or model.
      * @return array associative array built from $resource & $meat
      */
 
 
-    public function toRestFiltered($resource, $meta = null, $resourceName = null)
+    public function toRestFiltered(mixed $resource, $meta = null, $resourceName = null): JsonResponse
     {
         $user = $this->user;
         if ($resource instanceof Collection) {
@@ -145,7 +183,7 @@ class ApiController extends Controller
      * @return JsonResponse
      */
 
-    public function success($resource = null, $meta = null, $resourceName = null)
+    public function success($resource = null, $meta = null, $resourceName = null): JsonResponse
     {
         if ($resource === null) {
             return response()->json(['status' => 'success']);
@@ -175,15 +213,37 @@ class ApiController extends Controller
         return response()->json($result);
     }
 
-    public function error($message, $status = 400)
+    /**
+     * Send back a single error response
+     *
+     * @param $message
+     * @param $status
+     * @return JsonResponse
+     */
+
+    public function error($message, $status = 400): JsonResponse
     {
         return response()->json(['error' => $message], $status);
     }
 
-    public function restDeleteSuccess()
+    /**
+     * Respond with a successful deletion status
+     *
+     * @return JsonResponse
+     */
+
+    public function restDeleteSuccess(): JsonResponse
     {
         return response()->json([], 204);
     }
+
+    /**
+     * Respond a REST api error.
+     *
+     * @param $item
+     * @param $status
+     * @return JsonResponse
+     */
 
     public function restError($item, $status = 422): JsonResponse
     {
@@ -206,12 +266,28 @@ class ApiController extends Controller
         return response()->json(['errors' => $payload], $status);
     }
 
+    /**
+     * Can the user view another person's email address?
+     *
+     * @return bool
+     */
+
     public function userCanViewEmail(): bool
     {
         return $this->userHasRole([Role::ADMIN, Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]);
     }
 
-    public function log($event, $message, $data = null, $targetPersonId = null)
+    /**
+     * Record an action using the current user as the actor.
+     *
+     * @param $event
+     * @param $message
+     * @param $data
+     * @param $targetPersonId
+     * @return void
+     */
+
+    public function log($event, $message, $data = null, $targetPersonId = null): void
     {
         ActionLog::record(
             $this->user,
