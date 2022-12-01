@@ -10,12 +10,21 @@ use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class TimesheetMissingController extends ApiController
 {
-    public function index()
+    /**
+     * Retrieve Timesheet Missing request records based on the given criteria.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
@@ -39,11 +48,14 @@ class TimesheetMissingController extends ApiController
         return $this->success($rows, null, 'timesheet_missing');
     }
 
-    /*
+    /**
      * Create a new timesheet missing entry
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $timesheetMissing = new TimesheetMissing;
         $this->fromRestFiltered($timesheetMissing);
@@ -51,8 +63,8 @@ class TimesheetMissingController extends ApiController
         $this->authorize('store', $timesheetMissing);
 
         $timesheetMissing->create_person_id = $this->user->id;
-        if (!$timesheetMissing->review_status) {
-            $timesheetMissing->review_status = 'pending';
+        if (empty($timesheetMissing->review_status)) {
+            $timesheetMissing->review_status = TimesheetMissing::PENDING;
         }
 
         if ($timesheetMissing->save()) {
@@ -63,11 +75,16 @@ class TimesheetMissingController extends ApiController
         return $this->restError($timesheetMissing);
     }
 
-    /*
+    /**
      * Update a timesheet missing record
+     *
+     * @param TimesheetMissing $timesheetMissing
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws Exception
      */
 
-    public function update(TimesheetMissing $timesheetMissing)
+    public function update(TimesheetMissing $timesheetMissing): JsonResponse
     {
         $this->authorize('update', $timesheetMissing);
 
@@ -75,17 +92,15 @@ class TimesheetMissingController extends ApiController
 
         $this->fromRestFiltered($timesheetMissing);
 
-        if ($timesheetMissing->isDirty('review_status')
-            || $timesheetMissing->isDirty('reviewer_notes')) {
+        if ($timesheetMissing->isDirty('review_status') || $timesheetMissing->isDirty('reviewer_notes')) {
             $timesheetMissing->reviewed_at = now();
         }
 
-        if ($timesheetMissing->isDirty('notes')
-            && $timesheetMissing->review_status != 'pending') {
-            $timesheetMissing->review_status = 'pending';
+        if ($timesheetMissing->isDirty('additional_notes') && !$timesheetMissing->isDirty('review_status')) {
+            $timesheetMissing->review_status = TimesheetMissing::PENDING;
         }
 
-        $createNew = ($timesheetMissing->review_status == 'approved' && $timesheetMissing->create_entry);
+        $createNew = ($timesheetMissing->review_status == TimesheetMissing::APPROVED && $timesheetMissing->create_entry);
 
 
         if ($createNew) {
@@ -152,22 +167,30 @@ class TimesheetMissingController extends ApiController
         return $this->success($timesheetMissing);
     }
 
-    /*
+    /**
      * Return a single timesheet missing record.
+     *
+     * @param TimesheetMissing $timesheetMissing
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(TimesheetMissing $timesheetMissing)
+    public function show(TimesheetMissing $timesheetMissing): JsonResponse
     {
         $this->authorize('view', [TimesheetMissing::class, $timesheetMissing->person_id]);
         $timesheetMissing->loadRelationships();
         return $this->success($timesheetMissing);
     }
 
-    /*
+    /**
      * Delete a timesheet missing record.
+     *
+     * @param TimesheetMissing $timesheetMissing
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function destroy(TimesheetMissing $timesheetMissing)
+    public function destroy(TimesheetMissing $timesheetMissing): JsonResponse
     {
         $this->authorize('destroy', $timesheetMissing);
         $timesheetMissing->delete();

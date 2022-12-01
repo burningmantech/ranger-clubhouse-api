@@ -162,4 +162,9 @@ class AccessDocumentPolicy
     {
         return false;
     }
+
+    public function claimedTicketsWithNoSignups(Person $user)
+    {
+        return false;
+    }
 }

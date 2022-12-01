@@ -9,6 +9,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\TicketAndProvisionsPackage;
 use App\Lib\TicketingStatistics;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
@@ -19,11 +20,13 @@ use InvalidArgumentException;
 
 class TicketingController extends ApiController
 {
-    /*
+    /**
      * Retrieve the ticketing information
+     *
+     * @return JsonResponse
      */
 
-    public function ticketingInfo()
+    public function ticketingInfo(): JsonResponse
     {
         $settings = setting([
             'TicketingPeriod', 'TicketsAndStuffEnablePNV',
@@ -88,7 +91,7 @@ class TicketingController extends ApiController
     public function package(Person $person): JsonResponse
     {
         $this->authorize('index', [AccessDocument::class, $person->id]);
-        return response()->json(['package' => AccessDocument::buildPackageForPerson($person->id)]);
+        return response()->json(['package' => TicketAndProvisionsPackage::buildPackageForPerson($person->id)]);
     }
 
     /**
@@ -234,10 +237,10 @@ class TicketingController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function statistics() : JsonResponse
+    public function statistics(): JsonResponse
     {
         $this->authorize('statistics', AccessDocument::class);
 
-        return response()->json([ 'statistics' => TicketingStatistics::execute()]);
+        return response()->json(['statistics' => TicketingStatistics::execute()]);
     }
 }

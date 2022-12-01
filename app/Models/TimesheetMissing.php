@@ -3,12 +3,22 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-
-use App\Models\ApiModel;
-use App\Models\Position;
-use App\Models\Person;
-use App\Models\Timesheet;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+
+/**
+ * @property string $additional_notes
+ * @property string $additional_reviewer_notes
+ * @property Carbon $off_duty
+ * @property Carbon $on_duty
+ * @property ?string $partner
+ * @property int $person_id
+ * @property int $position_id
+ * @property string $review_status
+ * @property ?int $create_person_id
+ * @property ?string|Carbon $reviewed_at
+ */
 
 class TimesheetMissing extends ApiModel
 {
@@ -21,13 +31,13 @@ class TimesheetMissing extends ApiModel
 
     protected $fillable = [
         'additional_notes',
+        'additional_reviewer_notes',
         'off_duty',
         'on_duty',
         'partner',
         'person_id',
         'position_id',
         'review_status',
-        'additional_reviewer_notes',
 
         // Used for creating new entries when review_status == 'approved'
         'create_entry',
@@ -42,11 +52,11 @@ class TimesheetMissing extends ApiModel
 
     protected $dates = [
         'created_at',
-        'reviewed_at',
-        'on_duty',
-        'off_duty',
-        'new_on_duty',
         'new_off_duty',
+        'new_on_duty',
+        'off_duty',
+        'on_duty',
+        'reviewed_at',
     ];
 
     protected $appends = [
@@ -56,72 +66,89 @@ class TimesheetMissing extends ApiModel
     ];
 
     protected $rules = [
-        'notes'     => 'required|string',
-        'on_duty'   => 'required|date',
-        'off_duty'  => 'required|date|after:on_duty',
+        'on_duty' => 'required|date',
+        'off_duty' => 'required|date|after:on_duty',
         'person_id' => 'required|integer',
 
         'create_entry' => 'sometimes|boolean|nullable',
 
-        'new_on_duty'     => 'date|nullable|required_if:create_entry,true',
-        'new_off_duty'    => 'date|nullable|after:new_on_duty|required_if:create_entry,true',
+        'new_on_duty' => 'date|nullable|required_if:create_entry,true',
+        'new_off_duty' => 'date|nullable|after:new_on_duty|required_if:create_entry,true',
         'new_position_id' => 'integer|nullable|required_if:create_entry,true'
     ];
 
-    public $create_new;
-    public $new_off_duty;
-    public $new_on_duty;
-    public $new_position_id;
+    public ?string $new_off_duty;
+    public ?string $new_on_duty;
+    public ?int $new_position_id;
+    public bool $create_entry = false;
 
     const PARTNER_SHIFT_STARTS_WITHIN = 30;
 
-    const RELATIONSHIPS = [ 'position:id,title', 'reviewer_person:id,callsign' ];
+    const RELATIONSHIPS = ['position:id,title', 'reviewer_person:id,callsign'];
 
-    public function position()
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function reviewer_person()
+    public function reviewer_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function create_person()
+    public function create_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function partner_person()
+    public function partner_person(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'partner', 'callsign');
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find timesheet missing requests based on the criteria given.
+     *
+     * @param array $query
+     * @return Collection
+     */
+
+    public static function findForQuery(array $query): Collection
     {
+        $personId = $query['person_id'] ?? null;
+        $year = $query['year'] ?? null;
+
         $sql = self::with(self::RELATIONSHIPS);
 
-        if (isset($query['person_id'])) {
-            $sql = $sql->where('person_id', $query['person_id']);
+        if ($personId) {
+            $sql->where('person_id', $personId);
         }
 
-        if (isset($query['year'])) {
-            $sql = $sql->whereYear('on_duty', $query['year']);
+        if ($year) {
+            $sql->whereYear('on_duty', $year);
         }
 
-        return $sql->orderBy('on_duty', 'asc')->get();
+        return $sql->orderBy('on_duty')->get();
     }
 
-    public function loadRelationships() {
+
+    public function loadRelationships(): TimesheetMissing
+    {
         return $this->load(self::RELATIONSHIPS);
     }
 
-    public function getDurationAttribute()
+    /**
+     * Get duration in seconds.
+     *
+     * @return int
+     */
+
+    public function getDurationAttribute(): int
     {
         $on_duty = $this->getOriginal('on_duty');
         $off_duty = $this->getOriginal('off_duty');
@@ -129,20 +156,34 @@ class TimesheetMissing extends ApiModel
         return Carbon::parse($off_duty)->diffInSeconds(Carbon::parse($on_duty));
     }
 
-    public function getCreditsAttribute() {
+    /**
+     * Calculate how many credits this entry might be worth.
+     *
+     * @return float
+     */
+
+    public function getCreditsAttribute(): float
+    {
         return PositionCredit::computeCredits(
-                $this->position_id,
-                $this->on_duty->timestamp,
-                $this->off_duty->timestamp,
-                $this->on_duty->year);
+            $this->position_id,
+            $this->on_duty->timestamp,
+            $this->off_duty->timestamp,
+            $this->on_duty->year);
     }
 
-    public function setPartnerAttribute($value)
+    /**
+     * Set the partner column.
+     *
+     * @param string|null $value
+     * @return void
+     */
+
+    public function setPartnerAttribute(?string $value): void
     {
         $this->attributes['partner'] = empty($value) ? '' : $value;
     }
 
-    /*
+    /**
      * Figure out who the partners are and what their shifts were that started within
      * a certain period of on_duty.
      *
@@ -157,10 +198,13 @@ class TimesheetMissing extends ApiModel
      *    ... and the shift was found..
      *  on_duty, off_duty, position_id, position_title
      *
+     * @return array|null
      */
-    public function getPartnerInfoAttribute() {
+
+    public function getPartnerInfoAttribute(): ?array
+    {
         $name = preg_quote($this->partner, '/');
-        if (empty($this->partner) || preg_grep("/^\s*{$name}\s*$/i", [ 'na', 'n/a', 'no partner', 'none'])) {
+        if (empty($this->partner) || preg_grep("/^\s*{$name}\s*$/i", ['na', 'n/a', 'no partner', 'none'])) {
             return null;
         }
 
@@ -171,7 +215,7 @@ class TimesheetMissing extends ApiModel
         foreach ($people as $name) {
             $name = trim($name);
             $sql = Person::where('callsign', $name);
-            if (strpos($name, ' ') !== false) {
+            if (str_contains($name, ' ')) {
                 $sql = $sql->orWhere('callsign', str_replace(' ', '', $name));
             }
 
@@ -182,7 +226,7 @@ class TimesheetMissing extends ApiModel
                 $metaphone = metaphone($name);
                 $partner = Person::where('callsign_soundex', $metaphone)->get(['id', 'callsign'])->first();
                 if (!$partner) {
-                    $partners[] = [ 'callsign' => $name ];
+                    $partners[] = ['callsign' => $name];
                     continue;
                 }
             }
@@ -190,11 +234,11 @@ class TimesheetMissing extends ApiModel
             $partnerShift = Timesheet::findShiftWithinMinutes($partner->id, $this->on_duty, self::PARTNER_SHIFT_STARTS_WITHIN);
             if ($partnerShift) {
                 $info = [
-                    'timesheet_id'   => $partnerShift->id,
+                    'timesheet_id' => $partnerShift->id,
                     'position_title' => $partnerShift->position->title,
-                    'position_id'    => $partnerShift->position_id,
-                    'on_duty'        => (string)$partnerShift->on_duty,
-                    'off_duty'       => (string)$partnerShift->off_duty
+                    'position_id' => $partnerShift->position_id,
+                    'on_duty' => (string)$partnerShift->on_duty,
+                    'off_duty' => (string)$partnerShift->off_duty
                 ];
             } else {
                 $info = [];
@@ -221,62 +265,104 @@ class TimesheetMissing extends ApiModel
 
     public static function retrieveForPersonOrAllForYear($personId, $year)
     {
-        $sql = self::
-            with([
-                'position:id,title',
-                'person:id,callsign',
-                'create_person:id,callsign',
-                'reviewer_person:id,callsign',
-                'partner_person:id,callsign'
-            ])
-            ->whereYear('on_duty', $year)
+        $sql = self::with([
+            'position:id,title',
+            'person:id,callsign',
+            'create_person:id,callsign',
+            'reviewer_person:id,callsign',
+            'partner_person:id,callsign'
+        ])->whereYear('on_duty', $year)
             ->orderBy('on_duty');
 
         // Find for a person
         if ($personId !== null) {
             $sql = $sql->where('person_id', $personId);
         } else {
-            $sql = $sql->where('review_status', 'pending');
+            $sql = $sql->where('review_status', self::PENDING);
         }
 
         $rows = $sql->get();
 
-        return $rows->sortBy(function ($p) {
-            return $p->person->callsign;
-        }, SORT_NATURAL|SORT_FLAG_CASE)->values();
+        return $rows->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
 
-    public function setCreateEntryAttribute($value) {
+    /**
+     * Set the create entry pseudo-column
+     *
+     * @param $value
+     * @return void
+     */
+
+    public function setCreateEntryAttribute($value): void
+    {
         $this->create_entry = $value;
     }
 
-    public function setNewOnDutyAttribute($value) {
+    /**
+     * Set the new on duty pseudo-column
+     *
+     * @param $value
+     * @return void
+     */
+
+    public function setNewOnDutyAttribute($value): void
+    {
         $this->new_on_duty = $value;
     }
 
-    public function setNewOffDutyAttribute($value) {
+    /**
+     * Set the new off duty pseudo-column
+     *
+     * @param $value
+     * @return void
+     */
+
+    public function setNewOffDutyAttribute($value): void
+    {
         $this->new_off_duty = $value;
     }
 
-    public function setNewPositionIdAttribute($value) {
+    /**
+     * Set the new off position pseudo-column
+     *
+     * @param $value
+     * @return void
+     */
+
+    public function setNewPositionIdAttribute($value): void
+    {
         $this->new_position_id = $value;
     }
 
-    public function setAdditionalReviewerNotesAttribute($note)
+    /**
+     * Append reviewer notes
+     *
+     * @param string|null $note
+     * @return void
+     */
+
+    public function setAdditionalReviewerNotesAttribute(?string $note): void
     {
+        $note = empty($note) ? null : trim($note);
         if (empty($note)) {
             return;
         }
 
-        $user = Auth::user();
-        $callsign = $user ? $user->callsign : '(unknown)';
-
+        $callsign = Auth::user()?->callsign ?? '(unknown)';
         $date = date('Y/m/d H:m:s');
         $this->reviewer_notes = $this->reviewer_notes . "From $callsign on $date:\n$note\n\n";
     }
 
-    public function setAdditionalNotesAttribute($note)
+    /**
+     * Append to requester notes
+     *
+     * @param string|null $note
+     * @return void
+     */
+
+    public function setAdditionalNotesAttribute(?string $note): void
     {
+        $note = empty($note) ? null : trim($note);
         if (empty($note)) {
             return;
         }
@@ -284,5 +370,4 @@ class TimesheetMissing extends ApiModel
         $date = date('Y/m/d H:m:s');
         $this->notes = $this->notes . "$date:\n$note\n\n";
     }
-
 }

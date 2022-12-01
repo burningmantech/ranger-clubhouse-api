@@ -77,15 +77,20 @@ Route::group([
     Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
     Route::patch('access-document/statuses', 'AccessDocumentController@statuses');
     Route::get('access-document/unclaimed-tickets-with-signups', 'AccessDocumentController@unclaimedTicketsWithSignups');
+    Route::get('access-document/claimed-tickets-with-no-signups', 'AccessDocumentController@claimedTicketsWithNoSignups');
     Route::resource('access-document', 'AccessDocumentController');
 
     Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
 
     Route::resource('action-log', 'ActionLogController', ['only' => 'index']);
 
-    Route::resource('clubhouse1-log', 'Clubhouse1LogController', ['only' => 'index']);
-
     Route::resource('alert', 'AlertController');
+
+    Route::post('award/bulk-grant-award', 'AwardController@bulkGrantAward');
+    Route::post('award/bulk-grant-service-years-award', 'AwardController@bulkGrantServiceYearsAward');
+    Route::resource('award', 'AwardController');
+
+    Route::resource('clubhouse1-log', 'Clubhouse1LogController', ['only' => 'index']);
 
     Route::post('asset/checkout', 'AssetController@checkout');
     Route::get('asset/{asset}/history', 'AssetController@history');
@@ -199,6 +204,7 @@ Route::group([
 
     Route::get('person/{person}/tickets-provisions-progress', 'PersonController@ticketsProvisionsProgress');
     Route::get('person/{person}/credits', 'PersonController@credits');
+    Route::get('person/{person}/membership', 'PersonController@membership');
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/milestones', 'PersonController@milestones');
@@ -212,13 +218,15 @@ Route::group([
     Route::get('person/{person}/onduty', 'PersonController@onDuty');
     Route::resource('person/{person}/schedule', 'PersonScheduleController', ['only' => ['index', 'store', 'destroy']]);
 
-    Route::get('person/{person}/positions', 'PersonController@positions');
-    Route::post('person/{person}/positions', 'PersonController@updatePositions');
+    Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/photo', 'PersonPhotoController@photo');
     Route::post('person/{person}/photo', 'PersonPhotoController@upload');
-    Route::patch('person/{person}/password', 'PersonController@password');
+    Route::get('person/{person}/positions', 'PersonController@positions');
+    Route::post('person/{person}/positions', 'PersonController@updatePositions');
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
+    Route::get('person/{person}/teams', 'PersonController@teams');
+    Route::post('person/{person}/teams', 'PersonController@updateTeams');
 
     Route::get('person/{person}/status-history', 'PersonController@statusHistory');
     Route::get('person/{person}/years', 'PersonController@years');
@@ -228,6 +236,8 @@ Route::group([
     Route::get('person/{person}/event-info', 'PersonController@eventInfo');
 
     Route::resource('person', 'PersonController', ['only' => ['index', 'show', 'store', 'update', 'destroy']]);
+
+    Route::resource('person-award', 'PersonAwardController');
 
     Route::resource('person-certification', 'PersonCertificationController');
 
@@ -239,16 +249,28 @@ Route::group([
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
 
+    Route::resource('person-position-log', 'PersonPositionLogController');
+    Route::resource('person-team-log', 'PersonTeamLogController');
+
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
 
     Route::post('position/bulk-grant-revoke', 'PositionController@bulkGrantRevoke');
     Route::get('position/people-by-position', 'PositionController@peopleByPosition');
+    Route::get('position/people-by-teams', 'PositionController@peopleByTeamsReport');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
     Route::get('position/sanity-checker', 'PositionSanityCheckController@sanityChecker');
     Route::post('position/repair', 'PositionSanityCheckController@repair');
 
     Route::resource('position', 'PositionController');
+
+    Route::post('provision/bank-provisions', 'ProvisionController@bankProvisions');
+    Route::post('provision/bulk-comment', 'ProvisionController@bulkComment');
+    Route::post('provision/clean-provisions', 'ProvisionController@cleanProvisionsFromPriorEvent');
+    Route::post('provision/expire-provisions', 'ProvisionController@expireProvisions');
+    Route::patch('provision/statuses', 'ProvisionController@statuses');
+    Route::post('provision/unbank-provisions', 'ProvisionController@unbankProvisions');
+    Route::resource('provision', 'ProvisionController');
 
     Route::get('rbs/config', 'RbsController@config');
     Route::get('rbs/details', 'RbsController@details');
@@ -287,7 +309,6 @@ Route::group([
     Route::get('slot/{slot}/people', 'SlotController@people');
     Route::resource('slot', 'SlotController');
 
-
     Route::get('survey/questionnaire', 'SurveyController@questionnaire');
     Route::post('survey/submit', 'SurveyController@submit');
     Route::get('survey/trainer-surveys', 'SurveyController@trainerSurveys');
@@ -298,7 +319,11 @@ Route::group([
     Route::resource('survey', 'SurveyController');
 
     Route::resource('survey-group', 'SurveyGroupController');
+
     Route::resource('survey-question', 'SurveyQuestionController');
+
+    Route::get('team/people-by-teams', 'TeamController@peopleByTeamsReport');
+    Route::resource('team', 'TeamController');
 
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');
@@ -329,6 +354,7 @@ Route::group([
     Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
+    Route::get('timesheet/event-stats', 'TimesheetController@eventStatsReport');
     Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
     Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');
@@ -342,6 +368,7 @@ Route::group([
     Route::get('timesheet/by-callsign', 'TimesheetController@timesheetByCallsign');
     Route::get('timesheet/by-position', 'TimesheetController@timesheetByPosition');
     Route::get('timesheet/retention-report', 'TimesheetController@retentionReport');
+    Route::post('timesheet/repair-slot-assoc', 'TimesheetController@repairSlotAssociations');
     Route::get('timesheet/thank-you', 'TimesheetController@thankYou');
     Route::get('timesheet/totals', 'TimesheetController@timesheetTotals');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
@@ -352,6 +379,7 @@ Route::group([
     Route::resource('timesheet', 'TimesheetController');
 
     Route::resource('timesheet-missing', 'TimesheetMissingController');
+
 
     Route::resource('help', 'HelpController');
 

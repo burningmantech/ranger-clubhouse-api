@@ -32,8 +32,8 @@ class Clubhouse1Log extends Model
     public static function findForQuery($query)
     {
         $personId = $query['person_id'] ?? null;
-        $page = $query['page'] ?? 1;
-        $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
+        $page = (int) ($query['page'] ?? 1);
+        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
         $events = $query['events'] ?? [ ];
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
@@ -90,6 +90,9 @@ class Clubhouse1Log extends Model
         $page = $page - 1;
         if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize <= 0) {
+            $pageSize = self::PAGE_SIZE_DEFAULT;
         }
 
         $sql->offset($page * $pageSize)->limit($pageSize);

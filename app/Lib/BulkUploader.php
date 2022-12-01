@@ -10,6 +10,9 @@ use App\Models\Certification;
 use App\Models\Person;
 use App\Models\PersonCertification;
 use App\Models\PersonEvent;
+use App\Models\PersonTeamLog;
+use App\Models\Provision;
+use App\Models\Team;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Exception;
@@ -35,6 +38,8 @@ class BulkUploader
     const PROCESS_WAP_ACTION = 'processWAPs';
     const CERTIFICATION_ACTION = 'processCertifications';
 
+    const PROCESS_TEAM_MEMBERSHIP = 'processTeamMembership';
+
     const HELP_CALLSIGN = 'callsign';
     const HELP_RADIO = 'callsign,radio count';
     const HELP_CERTIFICATION = "callsign,issued on date,card number,trained on date\ndate format = YYYY-MM-DD\nAll fields, other than the callsign, are optional and may be left blank.
@@ -46,11 +51,11 @@ class BulkUploader
         [
             'label' => 'Earned Provisions Actions',
             'options' => [
-                ['id' => AccessDocument::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => AccessDocument::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => AccessDocument::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
                 [
-                    'id' => AccessDocument::EVENT_RADIO,
+                    'id' => Provision::EVENT_RADIO,
                     'label' => 'Earned Event Radio',
                     'help' => self::HELP_RADIO
                 ]
@@ -59,15 +64,15 @@ class BulkUploader
         [
             'label' => 'Allocated Provisions Actions',
             'options' => [
-                ['id' => 'alloc_' . AccessDocument::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . AccessDocument::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
+                ['id' => 'alloc_' . Provision::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . Provision::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
             ]
         ],
         [
@@ -88,7 +93,7 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,wap date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and rpt",
                 ],
                 [
                     'id' => 'wap',
@@ -122,8 +127,19 @@ class BulkUploader
                 ['id' => 'vintage', 'label' => 'set vintage flag', 'help' => self::HELP_CALLSIGN]
             ]
         ],
+        [
+            'label' => 'Team Membership',
+            'options' => [
+                [
+                    'id' => 'team_membership',
+                    'label' => 'Add Team Membership History',
+                    'help' => "callsign,team name,joined on,left on\njoined on = YYYY-MM-DD date the person joined the team.\nleft on= YYYY-MM-DD optional date the person left the time.\n\nThis action only records team membership history and does not effect current membership as managed thru \"Edit Teams/Positions\""
+                ]
+            ]
+        ],
 
     ];
+
 
     const ACTIONS = [
         'vintage' => self::CHANGE_PERSON_COLUMN_ACTION,
@@ -153,6 +169,8 @@ class BulkUploader
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
         'wap' => self::PROCESS_WAP_ACTION,
+
+        'team_membership' => self::PROCESS_TEAM_MEMBERSHIP,
     ];
 
     const MEALS_SORT = [
@@ -174,6 +192,7 @@ class BulkUploader
     {
         $lines = explode("\n", str_replace("\r", "", $recordsParam));
 
+        $callsigns = [];
         foreach ($lines as $line) {
             if (empty(trim($line))) {
                 continue;
@@ -447,15 +466,16 @@ class BulkUploader
                 continue;
             }
 
+            $nextInd = 0;
             $data = $record->data;
+            $dataCount = count($data);
             if (empty($data)) {
                 $record->status = self::STATUS_FAILED;
                 $record->details = 'missing ticket type';
                 continue;
             }
 
-            $type = trim($data[0]);
-
+            $type = trim($data[$nextInd++]);
 
             /* This assumes we're being run in January or later! */
             $sourceYear = $year - 1;
@@ -478,9 +498,6 @@ class BulkUploader
             switch (strtoupper($type)) {
                 case 'CRED':
                     $type = AccessDocument::STAFF_CREDENTIAL;
-                    if (count($data) >= 2) {
-                        $accessDate = trim($data[1]);
-                    }
                     break;
 
                 case 'RPT':
@@ -497,9 +514,6 @@ class BulkUploader
 
                 case 'WAP':
                     $type = AccessDocument::WAP;
-                    if (count($data) >= 2) {
-                        $accessDate = trim($data[1]);
-                    }
                     break;
 
                 default:
@@ -508,12 +522,61 @@ class BulkUploader
                     continue 2;
             }
 
+            // Optionally pop an access date if this type supports them
+            if ($type == AccessDocument::STAFF_CREDENTIAL || $type == AccessDocument::WAP) {
+                if ($dataCount >= $nextInd + 1) {
+                    $accessDate = trim($data[$nextInd++]);
+                }
+            }
+            // Optionally pop a source year if this type supports them
+            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+                if ($dataCount >= $nextInd + 1) {
+                    $sourceYear = trim($data[$nextInd++]);
+                }
+            }
+            // Optionally pop an expiry year if this type supports them
+            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+                if ($dataCount >= $nextInd + 1) {
+                    $expiryYear = trim($data[$nextInd++]);
+                }
+            }
+            // Fail if there are additional unconsumed data columns
+            if ($dataCount != $nextInd) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Unexpected additional data for $type. See the required line format";
+                continue;
+            }
+
+            if (!is_numeric($sourceYear) || $sourceYear > 9999) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Expected a year for sourceYear, got $sourceYear";
+                continue;
+            }
+            if (!is_numeric($expiryYear) || $expiryYear > 9999) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Expected a year for expiryYear, got $expiryYear";
+                continue;
+            }
+            if ($expiryYear < $sourceYear) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Source year [$sourceYear] must not be after expiry year [$expiryYear]";
+                continue;
+            }
+
             if ($accessDate != null) {
+                // A date can't reasonably be specified in four or fewer characters.
+                // This is basically a protection against someone putting in a year rather than a date,
+                // since Carbon happily misinterprets YYYY as today at time YY:YY:00.
+                if (strlen($accessDate) <= 4) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = "Access date is invalid. Try YYYY-MM-DD format. [$accessDate]";
+                    continue;
+                }
                 try {
                     $accessDateCleaned = Carbon::parse($accessDate);
-                } catch (Exception $e) {
+                } catch (Exception) {
                     $record->status = self::STATUS_FAILED;
-                    $record->details = "Access date is invalid [$accessDate]";
+                    $record->details = "Access date is invalid. Try YYYY-MM-DD format. [$accessDate]";
                     continue;
                 }
 
@@ -640,13 +703,14 @@ class BulkUploader
             $type = str_replace('alloc_', '', $type);
 
         }
-        if (!in_array($type, AccessDocument::PROVISION_TYPES)) {
+
+        if (!in_array($type, Provision::ALL_TYPES)) {
             throw new InvalidArgumentException('Unknown provision type');
         }
 
-        $isEventRadio = ($type == AccessDocument::EVENT_RADIO);
-        if (in_array($type, AccessDocument::EAT_PASSES)) {
-            $existingTypes = AccessDocument::EAT_PASSES;
+        $isEventRadio = ($type == Provision::EVENT_RADIO);
+        if (in_array($type, Provision::MEAL_TYPES)) {
+            $existingTypes = Provision::MEAL_TYPES;
         } else {
             $existingTypes = [$type];
         }
@@ -659,7 +723,7 @@ class BulkUploader
             $personId = $record->person->id;
             $existing = null;
 
-            $existing = AccessDocument::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
+            $existing = Provision::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
             if ($existing && !$commit) {
                 $record->status = self::STATUS_WARNING;
                 if ($isAllocated) {
@@ -675,11 +739,11 @@ class BulkUploader
                 continue;
             }
 
-            $ad = new AccessDocument([
+            $ad = new Provision([
                 'person_id' => $person->id,
                 'type' => $type,
-                'status' => AccessDocument::QUALIFIED,
-                'expiry_date' => $expiryYear,
+                'status' => Provision::AVAILABLE,
+                'expires_on' => $expiryYear,
                 'source_year' => $sourceYear,
                 'is_allocated' => $isAllocated,
                 'additional_comments' => 'created via bulk uploader'
@@ -696,11 +760,11 @@ class BulkUploader
                 continue;
             }
 
-            $existing->status = AccessDocument::CANCELLED;
+            $existing->status = Provision::CANCELLED;
             $existing->additional_comments = $existing->auditReason = 'Replaced by item #' . $ad->id . ' via bulk uploader';
             $record->status = self::STATUS_WARNING;
-            $record->details = "Existing item #" . $existing->id . " " . $existing->getTypeLabel()
-                . " cancelled and replaced with #" . $ad->id . " " . $ad->getTypeLabel();
+            $record->details = "Existing provision RP-" . $existing->id . " " . $existing->getTypeLabel()
+                . " cancelled and replaced with RP-" . $ad->id . " " . $ad->getTypeLabel();
             $existing->saveWithoutValidation();
         }
     }
@@ -831,6 +895,94 @@ class BulkUploader
             return true; // looks good
         } catch (InvalidFormatException) {
             return false; // wah, wah.
+        }
+    }
+
+    /**
+     * Process team membership. Format is:
+     *
+     * callsign,team name,joined date[,left date]
+     *
+     * date format is YYYY-MM-DD (no time of day)
+     *
+     * @param $records
+     * @param $type
+     * @param $commit
+     * @param $reason
+     */
+
+    public static function processTeamMembership($records, $type, $commit, $reason): void
+    {
+        foreach ($records as $record) {
+            $person = $record->person;
+            if (!$person) {
+                // person not found -- skip it.
+                continue;
+            }
+
+            $data = $record->data;
+            if (empty($data)) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing team membership info';
+                continue;
+            }
+
+            $teamName = trim($data[0]);
+            if (empty($teamName)) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing team name';
+                continue;
+            }
+
+            $team = Team::findByTitle($teamName);
+            if (!$team) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Team '$teamName' not found";
+                continue;
+            }
+
+            if (empty($data[1])) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = 'missing joined on date';
+                continue;
+            } else {
+                try {
+                    $joinedOn = Carbon::parse($data[1]);
+                } catch (InvalidFormatException $exception) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = 'Invalid joined on date';
+                    continue;
+                }
+            }
+
+            if (!empty($data[2])) {
+                try {
+                    $leftOn = Carbon::parse($data[2]);
+                } catch (InvalidFormatException $exception) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = 'Invalid left on date';
+                    continue;
+                }
+            } else {
+                $leftOn = null;
+            }
+
+            if ($record->status == self::STATUS_FAILED) {
+                continue;
+            }
+
+            if ($commit) {
+                $history = new PersonTeamLog([
+                    'person_id' => $person->id,
+                    'team_id' => $team->id,
+                    'joined_on' => $joinedOn,
+                    'left_on' => $leftOn
+                ]);
+
+                $history->save();
+            }
+
+            $record->status = self::STATUS_SUCCESS;
         }
     }
 }

@@ -31,7 +31,6 @@ class TicketingManagement
             $sql = AccessDocument::whereIn('status', AccessDocument::ACTIVE_STATUSES);
         }
 
-        $sql->whereNotIn('type', AccessDocument::PROVISION_TYPES);
 
         $rows = $sql->select(
             '*',

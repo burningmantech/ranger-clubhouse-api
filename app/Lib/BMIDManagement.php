@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
+use App\Models\Provision;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Illuminate\Database\Eloquent\Collection;
@@ -368,10 +369,10 @@ class BMIDManagement
                         $q->orWhere('showers', true);
                         $q->orWhereExists(function ($provision) {
                             $provision->selectRaw(1)
-                                ->from('access_document')
-                                ->where('access_document.person_id', 'bmid.person_id')
-                                ->whereIn('access_document.status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
-                                ->whereIn('access_document.type', [AccessDocument::WET_SPOT, ...AccessDocument::MEAL_TYPES])
+                                ->from('provision')
+                                ->where('provision.person_id', 'bmid.person_id')
+                                ->whereIn('provision.status', [Provision::SUBMITTED, Provision::AVAILABLE])
+                                ->whereIn('provision.type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
                                 ->limit(1)
                                 ->get();
                         });
@@ -401,17 +402,15 @@ class BMIDManagement
                     ->pluck('person_id')
                     ->toArray();
 
-                $provisionIds = AccessDocument::whereIn('access_document.type', [AccessDocument::WET_SPOT, ...AccessDocument::EAT_PASSES])
-                    ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
+                    ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
                     ->distinct('person_id')
                     ->get(['person_id'])
                     ->pluck('person_id')
                     ->toArray();
 
 
-                $ids = array_merge($specialIds, $adIds);
-                $ids = array_merge($provisionIds, $ids);
-                $ids = array_unique($ids);
+                $ids = array_unique([...$specialIds, ...$adIds, ...$provisionIds]);
                 break;
         }
 

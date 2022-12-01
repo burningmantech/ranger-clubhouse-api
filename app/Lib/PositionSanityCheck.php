@@ -9,16 +9,15 @@ class PositionSanityCheck
     /*
      * Report on problematic position assignments and roles
      *
-     * "STOP THE INSANITY" -- Susan Powders, 1990s self proclaimed exercise "guru"
-     *  & peroxide enthusiast.
+     * "STOP THE INSANITY" -- Susan Powders, 1990s self-proclaimed exercise "guru" & peroxide enthusiast.
      */
 
     const CHECKERS = [
-        'green_dot' => 'App\Lib\PositionSanityCheck\GreenDotCheck',
-        'management_role' => 'App\Lib\PositionSanityCheck\ManagementYearRoundCheck',
-        'management_onplaya_role' => 'App\Lib\PositionSanityCheck\ManagementOnPlayaCheck',
         'shiny_pennies' => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
         'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
+        'team_positions' => 'App\Lib\PositionSanityCheck\TeamPositionsCheck',
+        'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
+        'lmyr' => 'App\Lib\PositionSanityCheck\LoginManagementYearRoundCheck',
     ];
 
     public static function issues(): array
@@ -37,6 +36,7 @@ class PositionSanityCheck
      *
      * @param string $repair - the name of the thing to repair 'green_dot', 'management_role', 'shiny_penny'
      * @param array $peopleIds - list of person ids to repair. Ids are assumed to exist.
+     * @param array $options
      * @return array
      */
 

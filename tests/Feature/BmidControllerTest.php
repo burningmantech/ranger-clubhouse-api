@@ -2,22 +2,21 @@
 
 namespace Tests\Feature;
 
-use App\Models\BmidExport;
-use App\Models\PersonPhoto;
-use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use App\Models\AccessDocument;
 use App\Models\Bmid;
+use App\Models\BmidExport;
 use App\Models\Person;
+use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
+use App\Models\Provision;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 
 class BmidControllerTest extends TestCase
 {
@@ -33,6 +32,7 @@ class BmidControllerTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
+
         $this->signInUser();
         $this->addRole(Role::EDIT_BMIDS);
 
@@ -67,7 +67,7 @@ class BmidControllerTest extends TestCase
         $wap = AccessDocument::factory()->create([
             'person_id' => $personWithWap->id,
             'access_date' => "$year-08-20 00:00:00",
-            'type' => 'work_access_pass',
+            'type' => AccessDocument::WAP,
             'status' => 'claimed',
         ]);
 
@@ -97,7 +97,7 @@ class BmidControllerTest extends TestCase
 
         $personTrained = Person::factory()->create(['callsign' => 'Trenton Trained']);
 
-        $traineeStatus = TraineeStatus::factory()->create([
+        TraineeStatus::factory()->create([
             'slot_id' => $trainingSlot->id,
             'person_id' => $personTrained->id,
             'passed' => true,
@@ -116,7 +116,7 @@ class BmidControllerTest extends TestCase
         // Processed BMIDs
         foreach (['submitted', 'issues'] as $status) {
             $person = Person::factory()->create(['callsign' => "BMID $status"]);
-            $bmid = Bmid::factory()->create([
+            Bmid::factory()->create([
                 'person_id' => $person->id,
                 'year' => $year,
                 'status' => $status,
@@ -310,20 +310,20 @@ class BmidControllerTest extends TestCase
     {
         $person = Person::factory()->create();
 
-        AccessDocument::factory()->create([
+        Provision::factory()->create([
             'person_id' => $person->id,
-            'type' => AccessDocument::EVENT_EAT_PASS,
-            'status' => AccessDocument::CLAIMED,
+            'type' => Provision::EVENT_EAT_PASS,
+            'status' => Provision::CLAIMED,
             'source_year' => $this->year,
-            'expiry_date' => $this->year
+            'expires_on' => $this->year
         ]);
 
-        AccessDocument::factory()->create([
+        Provision::factory()->create([
             'person_id' => $person->id,
-            'type' => AccessDocument::WET_SPOT,
-            'status' => AccessDocument::CLAIMED,
+            'type' => Provision::WET_SPOT,
+            'status' => Provision::CLAIMED,
             'source_year' => $this->year,
-            'expiry_date' => $this->year
+            'expires_on' => $this->year
         ]);
 
         $response = $this->json(
@@ -456,12 +456,12 @@ class BmidControllerTest extends TestCase
             'status' => Bmid::READY_TO_PRINT,
         ]);
 
-        $meals = AccessDocument::factory()->create([
+        $meals = Provision::factory()->create([
             'person_id' => $person->id,
-            'type' => AccessDocument::ALL_EAT_PASS,
-            'status' => AccessDocument::CLAIMED,
+            'type' => Provision::ALL_EAT_PASS,
+            'status' => Provision::CLAIMED,
             'source_year' => $this->year,
-            'expiry_date' => $this->year
+            'expires_on' => $this->year
         ]);
 
         $response = $this->json('POST', 'bmid/export', [
@@ -479,12 +479,12 @@ class BmidControllerTest extends TestCase
             ]]
         ]);
 
-        $this->assertDatabaseHas('access_document', [
+        $this->assertDatabaseHas('provision', [
             'id' => $meals->id,
-            'status' => AccessDocument::SUBMITTED
+            'status' => Provision::SUBMITTED
         ]);
 
-        $this->assertDatabaseHas('bmid_export', [ 'batch_info' => 'Big Batch']);
+        $this->assertDatabaseHas('bmid_export', ['batch_info' => 'Big Batch']);
         $export = BmidExport::firstOrFail();
 
         Storage::disk($exportStorage)->assertExists(BmidExport::storagePath($export->filename));

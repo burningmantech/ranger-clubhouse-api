@@ -11,10 +11,10 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('person', function (Blueprint $table) {
-            $table->datetime('pi_reviewed_for_dashboard_at')->nullable(true);
+        Schema::table('position', function (Blueprint $table) {
+            $table->boolean('on_trainer_report')->default(false)->nullable(false)->after('on_sl_report');
         });
     }
 
@@ -23,10 +23,10 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::table('person', function (Blueprint $table) {
-            $table->dropColumn('pi_reviewed_for_dashboard_at');
+        Schema::table('position', function (Blueprint $table) {
+            $table->dropColumn('on_trainer_report');
         });
     }
 };

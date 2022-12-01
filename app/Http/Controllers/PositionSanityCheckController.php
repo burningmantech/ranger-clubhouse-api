@@ -2,38 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Position;
-
 use App\Lib\PositionSanityCheck;
+use App\Models\Position;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
-use Illuminate\Http\Request;
-
-class PositionSanityCheckController extends Controller
+class PositionSanityCheckController extends ApiController
 {
     /**
      * Return a Rangers with position issues
      *
-     * @return  \Illuminate\Http\JsonResponse
+     * @return  JsonResponse
+     * @throws AuthorizationException
      */
-    public function sanityChecker()
+
+    public function sanityChecker(): JsonResponse
     {
-        $this->authorize('sanityChecker', [ Position::class ]);
+        $this->authorize('sanityChecker', Position::class);
         return response()->json(PositionSanityCheck::issues());
     }
 
     /**
      * Repair position issues
      *
-     * @return  \Illuminate\Http\JsonResponse
+     * @return  JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function repair()
+    public function repair(): JsonResponse
     {
-        $this->authorize('repair', [ Position::class ]);
+        $this->authorize('repair', Position::class);
 
         $params = request()->validate([
-            'repair'       => 'required|string',
-            'people_ids'   => 'required|array',
+            'repair' => 'required|string',
+            'people_ids' => 'required|array',
             'people_ids.*' => 'required|integer|exists:person,id',
             'repair_params' => 'nullable'
         ]);

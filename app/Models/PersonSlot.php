@@ -2,13 +2,7 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-
-use App\Models\ApiModel;
-use App\Models\ActionLog;
-use App\Models\Person;
-use App\Models\Slot;
-
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 class PersonSlot extends ApiModel
@@ -24,27 +18,37 @@ class PersonSlot extends ApiModel
         'timestamp' => 'datetime'
     ];
 
-    public function person() {
+    public function person(): BelongsTo
+    {
         return $this->belongsTo(Person::class);
     }
 
-    public function slot() {
+    public function slot(): BelongsTo
+    {
         return $this->belongsTo(Slot::class);
     }
 
-    /*
+    /**
      * Is a person signed up for a given slot?
+     *
+     * @param int $personId
+     * @param int $slotId
+     * @return bool
      */
 
-    public static function haveSlot($personId, $slotId) {
+    public static function haveSlot(int $personId, int $slotId): bool
+    {
         return self::where('person_id', $personId)->where('slot_id', $slotId)->exists();
     }
 
-    /*
-     * Delete all records referring to a slot. Used by slot deletion.
+    /**
+     * Delete all slot sign-ups. Used by slot deletion.
+     *
+     * @param int $slotId
      */
 
-    public static function deleteForSlot($slotId) {
+    public static function deleteForSlot(int $slotId)
+    {
         $rows = self::where('slot_id', $slotId)->get();
         $user = Auth::user();
 

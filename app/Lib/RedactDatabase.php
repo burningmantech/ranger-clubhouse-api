@@ -4,6 +4,7 @@ namespace App\Lib;
 
 use App\Models\AccessDocument;
 use App\Models\Person;
+use App\Models\Provision;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
@@ -53,9 +54,9 @@ class RedactDatabase
 
         // And nuke a bunch of tables
         $tables = [
+//            'access_document',
             'access_document_changes',
             'access_document_delivery',
-//            'access_document',
             'broadcast_message',
             'broadcast',
             'contact_log',
@@ -66,6 +67,7 @@ class RedactDatabase
             'person_intake',
             'person_intake_note',
             'person_event',
+            'trainee_note',
             'vehicle',
             'survey_answer',
         ];
@@ -74,13 +76,34 @@ class RedactDatabase
             DB::statement("TRUNCATE $table");
         }
 
-        DB::table('access_document')
-            ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
-            ->delete();
-
-        DB::table('access_document')->update([ 'status' => AccessDocument::QUALIFIED]);
+        DB::table('provision')->update(['status' => Provision::AVAILABLE]);
 
         DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
+
+        DB::table('access_document')->update(['comments' => '']);
+        DB::table('access_document')->whereYear('expiry_date', '>', current_year()+3);
+
+        $address = [
+            'street1' => '1 Main St',
+            'street2' => '',
+            'city' => 'Springfield',
+            'state' => 'NT',
+            'postal_code' => '99999',
+        ];
+
+        foreach ($address as $key => $value) {
+            DB::table('access_document')
+                ->where($key, '!=', '')
+                ->update([$key => $value]);
+        }
+
+        DB::table('access_document')
+            ->where('type', AccessDocument::WAPSO)
+            ->update(['name' => DB::raw('CONCAT("WAP Name #", id)')]);
+
+        DB::table('access_document')
+            ->where('type', '!=', AccessDocument::WAPSO)
+            ->update(['name' => '']);
 
         // Zap all the Clubhouse message archives including the current table
         $rows = DB::select('SHOW TABLES LIKE "person_message%"');
