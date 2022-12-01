@@ -6,7 +6,6 @@ use App\Mail\ResetPassword;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
-use App\Models\Role;
 use Carbon\Carbon;
 use Exception;
 use GuzzleHttp;
@@ -109,11 +108,6 @@ class AuthController extends Controller
             return response()->json(['status' => 'account-disabled'], 401);
         }
 
-        if (!$person->hasRole(Role::LOGIN)) {
-            ActionLog::record($person, 'auth-failed', 'Login disabled', $actionData);
-            return response()->json(['status' => 'login-disabled'], 401);
-        }
-
         $person->logged_in_at = now();
         $person->saveWithoutValidation();
 
@@ -143,7 +137,8 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function refresh()
+
+    public function refresh(): JsonResponse
     {
         // TODO - test this
         return $this->respondWithToken(Auth::guard()->refresh());

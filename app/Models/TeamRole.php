@@ -59,8 +59,9 @@ class TeamRole extends ApiModel
         }
 
         $data = ['team_id' => $teamId, 'role_id' => $roleId];
-        self::insertOrIgnore($data);
-        ActionLog::record(Auth::user(), 'team-role-add', $reason, $data);
+        if (self::insertOrIgnore($data) == 1) {
+            ActionLog::record(Auth::user(), 'team-role-add', $reason, $data);
+        }
     }
 
     /**
