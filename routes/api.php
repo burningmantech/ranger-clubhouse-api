@@ -80,8 +80,6 @@ Route::group([
     Route::get('access-document/claimed-tickets-with-no-signups', 'AccessDocumentController@claimedTicketsWithNoSignups');
     Route::resource('access-document', 'AccessDocumentController');
 
-    Route::resource('access-document-delivery', 'AccessDocumentDeliveryController');
-
     Route::resource('action-log', 'ActionLogController', ['only' => 'index']);
 
     Route::resource('alert', 'AlertController');
