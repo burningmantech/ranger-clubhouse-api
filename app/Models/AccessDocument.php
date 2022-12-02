@@ -44,20 +44,23 @@ class AccessDocument extends ApiModel
     const STAFF_CREDENTIAL = 'staff_credential';
     const RPT = 'reduced_price_ticket';
     const GIFT = 'gift_ticket';
+    const LSD = 'lsd_ticket';
     const VEHICLE_PASS = 'vehicle_pass';
     const WAP = 'work_access_pass';
     const WAPSO = 'work_access_pass_so';
 
     const TICKET_TYPES = [
-        self::STAFF_CREDENTIAL,
+        self::GIFT,
+        self::LSD,
         self::RPT,
-        self::GIFT
+        self::STAFF_CREDENTIAL,
     ];
 
     const DELIVERABLE_TYPES = [
-        self::STAFF_CREDENTIAL,
-        self::RPT,
         self::GIFT,
+        self::LSD,
+        self::RPT,
+        self::STAFF_CREDENTIAL,
         self::VEHICLE_PASS
     ];
 
@@ -74,21 +77,23 @@ class AccessDocument extends ApiModel
     ];
 
     const TYPE_LABELS = [
-        self::STAFF_CREDENTIAL => 'Staff Credential',
-        self::RPT => 'Reduced-Price Ticket',
         self::GIFT => 'Gift Ticket',
+        self::LSD => 'LSD Ticket',
+        self::RPT => 'Reduced-Price Ticket',
+        self::STAFF_CREDENTIAL => 'Staff Credential',
         self::VEHICLE_PASS => 'Vehicle Pass',
         self::WAP => 'WAP',
-        self::WAPSO => 'WAPSO',
+        self::WAPSO => 'SO WAP',
     ];
 
     const SHORT_TICKET_LABELS = [
-        self::STAFF_CREDENTIAL => 'SC',
-        self::RPT => 'RPT',
         self::GIFT => 'GIFT',
+        self::LSD => 'LSD',
+        self::RPT => 'RPT',
+        self::STAFF_CREDENTIAL => 'SC',
         self::VEHICLE_PASS => 'VP',
         self::WAP => 'WAP',
-        self::WAPSO => 'WAPSO',
+        self::WAPSO => 'SO WAP',
     ];
 
     const DELIVERY_NONE = 'none';
@@ -149,7 +154,7 @@ class AccessDocument extends ApiModel
                 $model->create_date = now();
             }
 
-            if (in_array($model->type, self::EXPIRE_THIS_YEAR_TYPES)) {
+            if ($model->doesExpireThisYear()) {
                 $year = current_year();
                 // Certain things always expire this year
                 if (!$model->expiry_date || Carbon::parse($model->expiry_date)->year > $year) {
@@ -167,8 +172,8 @@ class AccessDocument extends ApiModel
                     break;
             }
 
-            // Only WAP SOs can have names
-            if ($model->type != self::WAPSO) {
+            // Only Gift, LSD, and WAP SOs can have names
+            if ($model->type != self::WAPSO && $model->type != self::LSD && $model->type != self::GIFT) {
                 $model->name = null;
             }
 
@@ -624,5 +629,16 @@ class AccessDocument extends ApiModel
         }
 
         return true;
+    }
+
+    /**
+     * Does this access document type expire after the event?
+     *
+     * @return bool
+     */
+
+    public function doesExpireThisYear() : bool
+    {
+        return in_array($this->type, self::EXPIRE_THIS_YEAR_TYPES);
     }
 }

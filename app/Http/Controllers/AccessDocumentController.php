@@ -446,21 +446,16 @@ class AccessDocumentController extends ApiController
 
         $user = $this->user->callsign;
         $rows = AccessDocument::whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
-            ->where('is_allocated', false)
             ->with('person:id,callsign,status')
             ->get();
-        $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
 
         $documents = [];
-
         $reasonExpired = 'marked as expired via maintenance function';
         $reasonUsed = 'marked as used via maintenance function';
         foreach ($rows as $ad) {
             switch ($ad->status) {
                 case AccessDocument::QUALIFIED:
-                    if ($ad->type == AccessDocument::VEHICLE_PASS
-                        || $ad->type == AccessDocument::WAP
-                        || $ad->type == AccessDocument::WAPSO) {
+                    if ($ad->doesExpireThisYear()) {
                         $ad->status = AccessDocument::EXPIRED;
                         $ad->addComment($reasonExpired, $user);
                         $ad->auditReason = $reasonExpired;
@@ -477,24 +472,7 @@ class AccessDocumentController extends ApiController
             }
         }
 
-        // Expire or use all allocated items.
-        $rows = AccessDocument::where('is_allocated', true)
-            ->whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED, AccessDocument::BANKED])
-            ->with('person:id,callsign,status')
-            ->get();
-
-        foreach ($rows as $row) {
-            if ($row->type == AccessDocument::SUBMITTED) {
-                $row->status = AccessDocument::USED;
-                $ad->addComment($reasonUsed, $user);
-                $ad->auditReason = $reasonUsed;
-            } else {
-                $row->status = AccessDocument::EXPIRED;
-                $row->addComment($reasonExpired, $user);
-                $ad->auditReason = $reasonExpired;
-            }
-            $this->saveAccessDocument($ad, $documents);
-        }
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
 
         return response()->json(['access_documents' => $documents]);
     }

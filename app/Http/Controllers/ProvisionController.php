@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessDocument;
 use App\Models\Provision;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -305,6 +306,44 @@ class ProvisionController extends ApiController
     }
 
     /**
+     * Expire job provisions.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function expireJobProvisions(): JsonResponse
+    {
+        $this->authorize('expireJobProvisions', Provision::class);
+
+        // Expire or use all allocated items.
+        $rows = Provision::where('is_allocated', true)
+            ->whereIn('status', [Provision::SUBMITTED, Provision::AVAILABLE, Provision::BANKED])
+            ->with('person:id,callsign,status')
+            ->get();
+
+        $user = $this->user;
+        $reasonUsed = 'maintenance function - marked submitted job provision used';
+        $reasonExpired = 'maintenance function - marked available job provision expired';
+        $provisions = [];
+
+        foreach ($rows as $row) {
+            if ($row->type == Provision::SUBMITTED) {
+                $row->status = Provision::USED;
+                $row->addComment($reasonUsed, $user);
+                $row->auditReason = $reasonUsed;
+            } else {
+                $row->status = AccessDocument::EXPIRED;
+                $row->addComment($reasonExpired, $user);
+                $row->auditReason = $reasonExpired;
+            }
+            $this->saveProvision($row, $documents);
+        }
+
+        return response()->json(['provisions' => $provisions]);
+    }
+
+    /**
      * Set the status for several provisions owned by the same person at once.
      *
      * @return JsonResponse
@@ -356,7 +395,7 @@ class ProvisionController extends ApiController
                     break;
 
                 default:
-                    throw new InvalidArgumentException('Unknown status action');
+                    throw new InvalidArgumentException("Unknown status action [$status]");
             }
 
             $prov->status = $status;
