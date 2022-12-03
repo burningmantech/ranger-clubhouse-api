@@ -56,7 +56,6 @@ class RedactDatabase
         $tables = [
 //            'access_document',
             'access_document_changes',
-            'access_document_delivery',
             'broadcast_message',
             'broadcast',
             'contact_log',

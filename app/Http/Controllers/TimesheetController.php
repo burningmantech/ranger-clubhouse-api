@@ -695,7 +695,7 @@ class TimesheetController extends ApiController
         $this->authorize('radioEligibilityReport', [Timesheet::class]);
         $year = $this->getYear();
 
-        return response()->json(['people' => RadioEligibilityReport::execute($year)]);
+        return response()->json(RadioEligibilityReport::execute($year));
     }
 
     /**
