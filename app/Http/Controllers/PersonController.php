@@ -400,7 +400,7 @@ class PersonController extends ApiController
     }
 
     /**
-     * Update the roles held
+     * Update the roles held. The Tech Ninja and Admin roles may only be alerted by Tech Ninja role holders.
      *
      * @param Person $person
      * @return JsonResponse
@@ -424,20 +424,20 @@ class PersonController extends ApiController
         $newIds = [];
         $deleteIds = [];
 
-        // Only tech ninjas may grant/revoke the tech ninja role. Ignore attempts to alter the role by
+        // Only tech ninjas may grant/revoke the tech ninja and admin roles. Ignore attempts to alter the roles by
         // mere mortals.
         $isTechNinja = $this->userHasRole(Role::TECH_NINJA);
 
-        // Find the new ids
+        // Find the new ids to be added
         foreach ($roleIds as $id) {
-            if (!in_array($id, $existingRoles) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $existingRoles) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
                 $newIds[] = $id;
             }
         }
 
         // Find the ids to be deleted
         foreach ($existingRoles as $id) {
-            if (!in_array($id, $roleIds) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $roleIds) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
                 $deleteIds[] = $id;
             }
         }
