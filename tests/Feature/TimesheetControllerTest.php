@@ -794,40 +794,87 @@ class TimesheetControllerTest extends TestCase
 
     public function testradioEligibilityReport()
     {
-        // 2020 is funky
         Carbon::setTestNow('2019-01-01 12:34:56');
         $this->year = 2019;
-        $lastYear = $this->year - 1;
-        $prevYear = $this->year - 2;
-        $person = $this->targetPerson;
+        $year1 = $this->year - 1;
+        $year2 = $this->year - 2;
+        $year3 = $this->year - 3;
+        $person = Person::factory()->create(['callsign' => 'person a']);
 
         Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
-            'on_duty' => "$lastYear-08-25 00:00:00",
-            'off_duty' => "$lastYear-08-25 08:00:00",
+            'on_duty' => "$year1-08-25 00:00:00",
+            'off_duty' => "$year1-08-25 08:00:00",
         ]);
 
 
         Timesheet::factory()->create([
             'person_id' => $person->id,
             'position_id' => Position::DIRT,
-            'on_duty' => "$prevYear-08-25 00:00:00",
-            'off_duty' => "$prevYear-08-25 02:00:00",
+            'on_duty' => "$year2-08-25 00:00:00",
+            'off_duty' => "$year2-08-25 02:00:00",
         ]);
+
+        $personB = Person::factory()->create(['callsign' => 'person b']);
+        PersonPosition::factory()->create(['person_id' => $personB->id, 'position_id' => Position::RSC_SHIFT_LEAD]);
+
+        Timesheet::factory()->create([
+            'person_id' => $personB->id,
+            'position_id' => Position::DIRT,
+            'on_duty' => "$year1-08-25 00:00:00",
+            'off_duty' => "$year1-08-25 08:00:00",
+        ]);
+
+        Timesheet::factory()->create([
+            'person_id' => $personB->id,
+            'position_id' => Position::DIRT,
+            'on_duty' => "$year2-08-25 00:00:00",
+            'off_duty' => "$year2-08-25 02:00:00",
+        ]);
+
+        Timesheet::factory()->create([
+            'person_id' => $personB->id,
+            'position_id' => Position::DIRT,
+            'on_duty' => "$year3-08-25 00:00:00",
+            'off_duty' => "$year3-08-25 02:30:00",
+        ]);
+
+        $slot = Slot::factory()->create([
+            'begins' => date("{$this->year}-08-30 00:00:00"),
+            'ends' => date("{$this->year}-08-30 01:00:00"),
+            'position_id' => Position::DIRT,
+        ]);
+
+        PersonSlot::factory()->create(['person_id' => $personB->id, 'slot_id' => $slot->id]);
 
         $response = $this->json('GET', 'timesheet/radio-eligibility', ['year' => $this->year]);
         $response->assertStatus(200);
 
         $response->assertJson([
-            'people' => [[
-                'id' => $person->id,
-                'callsign' => $person->callsign,
-                'hours_last_year' => 8,
-                'hours_prev_year' => 2,
-                'signed_up' => false,
-                'shift_lead' => false
-            ]]
+            'people' => [
+                [
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'year_1' => 8,
+                    'year_2' => 2,
+                    'year_3' => 0,
+                    'signed_up' => false,
+                    'shift_lead' => false,
+                ],
+                [
+                    'id' => $personB->id,
+                    'callsign' => $personB->callsign,
+                    'year_1' => 8,
+                    'year_2' => 2,
+                    'year_3' => 2.5,
+                    'signed_up' => true,
+                    'shift_lead' => true,
+                ],
+            ],
+            'year_1' => $year1,
+            'year_2' => $year2,
+            'year_3' => $year3,
         ]);
     }
 
@@ -1341,7 +1388,8 @@ class TimesheetControllerTest extends TestCase
      * Test the Ranger Retention report
      */
 
-    public function testRangerRetentionReport() {
+    public function testRangerRetentionReport()
+    {
         $this->addAdminRole();
         $year = date('Y');
         $excludeYear = $year - 5;   // Report shouldn't pick up this year.
@@ -1370,10 +1418,10 @@ class TimesheetControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'start_year' => $year - 4,
-            'end_year'=> $year,
-            'people'=> [[
+            'end_year' => $year,
+            'people' => [[
                 'id' => $personA->id,
-                'callsign'=> $personA->callsign,
+                'callsign' => $personA->callsign,
             ]]
         ]);
     }

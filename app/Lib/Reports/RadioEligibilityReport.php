@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\DB;
 
 class RadioEligibilityReport
 {
+    const SHIFT_LEAD_POSITIONS = [
+        Position::OOD,
+        Position::DEPUTY_OOD,
+        Position::RSC_SHIFT_LEAD,
+        Position::RSC_SHIFT_LEAD_PRE_EVENT
+    ];
+
     /**
      * Radio Eligibility
      *
@@ -22,32 +29,43 @@ class RadioEligibilityReport
     public static function execute(int $currentYear): array
     {
         // 2020 & 2021 didn't happen, so adjust for that.
-        if ($currentYear == 2021 || $currentYear == 2022) {
-            $lastYear = 2019;
-            $prevYear = 2018;
-        } else if ($currentYear == 2023) {
-            $lastYear = 2022;
-            $prevYear = 2019;
-        } else {
-            $lastYear = $currentYear - 1;
-            $prevYear = $currentYear - 2;
+        switch ($currentYear) {
+            case 2022:
+                $year1 = 2019;
+                $year2 = 2018;
+                $year3 = 2017;
+                break;
+            case 2023:
+                $year1 = 2022;
+                $year2 = 2019;
+                $year3 = 2018;
+                break;
+            case 2024:
+                $year1 = 2023;
+                $year2 = 2022;
+                $year3 = 2019;
+                break;
+            default:
+                $year1 = $currentYear - 1;
+                $year2 = $currentYear - 2;
+                $year3 = $currentYear - 3;
+                break;
         }
 
-        $shiftLeadPosititons = implode(',', [Position::OOD, Position::DEPUTY_OOD, Position::RSC_SHIFT_LEAD, Position::RSC_SHIFT_LEAD_PRE_EVENT]);
+        $shiftLeadPosititons = implode(',', self::SHIFT_LEAD_POSITIONS);
 
         $people = DB::table('person')
-            ->select('person.id',
-                'person.callsign',
-                DB::raw("EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id IN ($shiftLeadPosititons) LIMIT 1) AS shift_lead"),
-            )
-            ->whereIn('person.status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
+            ->select('.id', '.callsign')
+            ->whereIn('status', Person::ACTIVE_STATUSES)
             ->orderBy('callsign')
             ->get();
 
         foreach ($people as $person) {
             $person->signed_up = false;
-            $person->hours_last_year = 0;
-            $person->hours_prev_year = 0;
+            $person->shift_lead = false;
+            $person->year_1 = 0;
+            $person->year_2 = 0;
+            $person->year_3 = 0;
         }
 
         $ids = $people->pluck('id');
@@ -68,22 +86,48 @@ class RadioEligibilityReport
             }
         }
 
-        self::computeHours($peopleById, $ids, $lastYear, 'hours_last_year');
-        self::computeHours($peopleById, $ids, $prevYear, 'hours_prev_year');
+        $rows = DB::table('person_position')
+            ->select('person_id')
+            ->whereIn('person_id', $ids)
+            ->whereIn('position_id', self::SHIFT_LEAD_POSITIONS)
+            ->distinct()
+            ->get();
 
-        // Person must have worked in one of the previous two years, or is a shift lead
-        $people = $people->filter(fn($p) => ($p->hours_prev_year || $p->hours_last_year || $p->shift_lead))->values();
+        foreach ($rows as $row) {
+            $peopleById[$row->person_id]->shift_lead = true;
+        }
+
+        self::computeHours($peopleById, $ids, $year1, 'year_1');
+        self::computeHours($peopleById, $ids, $year2, 'year_2');
+        self::computeHours($peopleById, $ids, $year3, 'year_3');
+
+        // Person must have worked in one of the previous three years, or is a shift lead
+        $people = $people->filter(fn($p) => ($p->year_1 || $p->year_2 || $p->year_3 || $p->shift_lead))->values();
 
         foreach ($people as $person) {
             // Qualified radio hours is last year, OR the previous year if last year
             // was less than 10 hours and the previous year was greater than last year.
-            $person->radio_hours = $person->hours_last_year;
-            if ($person->hours_last_year < 10.0 && ($person->hours_prev_year > $person->hours_last_year)) {
-                $person->radio_hours = $person->hours_prev_year;
+            $person->radio_hours = $person->year_1;
+            if ($person->year_1 < 10.0 && ($person->year_2 > $person->year_1)) {
+                $person->radio_hours = $person->year_2;
+            }
+            if ($person->year_3 > $person->radio_hours) {
+                $person->radio_hours = $person->year_3;
             }
         }
 
-        return $people->toArray();
+        return [
+            'people' => $people->toArray(),
+            'year_1' => $year1,
+            'year_2' => $year2,
+            'year_3' => $year3,
+            'current_year' => $currentYear,
+            'shift_lead_positions' => DB::table('position')
+                ->select('id', 'title')
+                ->whereIn('id', self::SHIFT_LEAD_POSITIONS)
+                ->orderBy('title')
+                ->get(),
+        ];
     }
 
     public static function computeHours($peopleById, $ids, $year, $column): void
