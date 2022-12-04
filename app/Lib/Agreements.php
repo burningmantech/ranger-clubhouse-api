@@ -6,14 +6,16 @@ use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonRole;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use InvalidArgumentException;
 
 /*
  * TODO: Move to a flag/certificate/agreement tracking system to layer on top of. This is intended to be a
- * temporary abstraction.
+ *       temporary abstraction.
  */
 
 class Agreements
@@ -23,8 +25,10 @@ class Agreements
 
     const SANDMAN_AFFIDAVIT = 'sandman-affidavit';
 
+    const DEPT_NDA = 'dept-nda';
+
     /**
-     * A document list available to most Rangers and PNVs.
+     * A document list available to most Rangers and Applicants.
      *
      * key: the document tag identifier (see App/Models/Document)
      * term: indicates the agreement is lifetime (person table col.) or annual (person_event table col.)
@@ -62,6 +66,12 @@ class Agreements
         self::SANDMAN_AFFIDAVIT => [
             'term' => self::TERM_ANNUAL,
             'column' => 'sandman_affidavit',
+        ],
+
+        self::DEPT_NDA => [
+            'term' => self::TERM_ANNUAL,
+            'column' => 'signed_nda',
+            'role' => Role::MANAGE,     // Only show if the effective role has been granted
         ]
     ];
 
@@ -80,7 +90,7 @@ class Agreements
         foreach (self::DOCUMENTS as $tag => $paper) {
             $term = $paper['term'];
 
-            if (!self::isDocumentVisible($tag, $paper, $personEvent)) {
+            if (!self::isDocumentVisible($tag, $paper, $personEvent, $person)) {
                 continue;
             }
 
@@ -95,7 +105,7 @@ class Agreements
                 'tag' => $tag,
                 'title' => $document->description,
                 'signed' => (bool)($term == self::TERM_LIFETIME ? $person->{$col} : $personEvent->{$col}),
-                'available' => self::canSignDocument($person->id, $tag, $personEvent)
+                'available' => self::canSignDocument($person, $tag, $personEvent)
             ];
         }
 
@@ -112,7 +122,7 @@ class Agreements
      * @param bool $signature
      */
 
-    public static function signAgreement(Person $person, string $tag, bool $signature)
+    public static function signAgreement(Person $person, string $tag, bool $signature): void
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
@@ -121,7 +131,7 @@ class Agreements
 
         $personEvent = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
 
-        if (!self::canSignDocument($person->id, $tag, $personEvent)) {
+        if (!self::canSignDocument($person, $tag, $personEvent)) {
             throw new InvalidArgumentException('Document not available to sign');
         }
 
@@ -170,12 +180,12 @@ class Agreements
     /**
      * Check to see if the agreement can be signed.
      *
-     * @param int $personId
+     * @param Person $person
      * @param string $tag
-     * @param null $personEvent
+     * @param PersonEvent $personEvent
      * @return bool
      */
-    public static function canSignDocument(int $personId, string $tag, $personEvent = null): bool
+    public static function canSignDocument(Person $person, string $tag, PersonEvent $personEvent): bool
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
@@ -184,13 +194,15 @@ class Agreements
 
         $setting = $paper['setting'] ?? null;
         $peColumn = $paper['person_event'] ?? null;
+        $role = $paper['role'] ?? null;
+
+        if ($role && !PersonRole::haveRole($person->id, $role)) {
+            return false;
+        }
 
         if ($setting) {
             return setting($setting);
         } else if ($peColumn) {
-            if (!$personEvent) {
-                $personEvent = PersonEvent::firstOrNewForPersonYear($personId, current_year());
-            }
             return $personEvent->{$peColumn};
         } else {
             return true;
