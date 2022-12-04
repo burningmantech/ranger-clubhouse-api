@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PositionCredit extends ApiModel
 {
@@ -41,9 +42,14 @@ class PositionCredit extends ApiModel
     public int $start_timestamp;
     public int $end_timestamp;
 
-    public function position(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
+    }
+
+    public static function clearCache()
+    {
+        self::$yearCache = [];
     }
 
     /**
@@ -53,7 +59,7 @@ class PositionCredit extends ApiModel
      * @return Collection
      */
 
-    public static function findForYear(int $year): \Illuminate\Database\Eloquent\Collection
+    public static function findForYear(int $year): Collection
     {
         return self::with(self::RELATIONS)
             ->whereYear('start_time', $year)
