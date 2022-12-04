@@ -104,6 +104,14 @@ class PositionCredit extends ApiModel
      * @param $positionIds
      */
 
+    /**
+     * Warm the position credit cache with credits based on the given year and position ids.
+     * A performance optimization to help computeCredits() avoid extra lookups.
+     *
+     * @param int $year
+     * @param $positionIds
+     */
+
     public static function warmYearCache(int $year, $positionIds)
     {
         self::warmBulkYearCache([$year => $positionIds]);
@@ -111,7 +119,6 @@ class PositionCredit extends ApiModel
 
     /**
      * Warm the position credit cache with credits based on the given year and position ids.
-     * A performance optimization to help computeCredits() avoid extra lookups.
      *
      * @param $bulkYears
      */
@@ -120,17 +127,38 @@ class PositionCredit extends ApiModel
     {
         $sql = self::query();
 
+        $didCache = true;
         foreach ($bulkYears as $year => $positionIds) {
-            $sql->orWhere(function ($q) use ($year, $positionIds) {
-                $q->whereYear('start_time', $year);
-                if (!empty($positionIds)) {
-                    $q->whereIn('position_id', $positionIds);
-                }
-            });
-
-            foreach ($positionIds as $id) {
-                self::$yearCache[$year][$id] ??= [];
+            if (empty($positionIds)) {
+                $sql->orWhereYear('start_time', $year);
+                $didCache = false;
+                self::$yearCache[$year] = []; // Pulling in all positional credits for the year.
+                continue;
             }
+
+            $findIds = [];
+            foreach ($positionIds as $id) {
+                if (!isset(self::$yearCache[$year][$id])) {
+                    $findIds[] = $id;
+                    self::$yearCache[$year][$id] = [];
+                }
+            }
+
+            if (empty($findIds)) {
+                // Cache already warmed for this year & positions.
+                continue;
+            }
+
+            $didCache = false;
+            $sql->orWhere(function ($q) use ($year, $findIds) {
+                $q->whereYear('start_time', $year);
+                $q->whereIn('position_id', $findIds);
+            });
+        }
+
+        if ($didCache) {
+            // Cache was already warmed.
+            return;
         }
 
         $rows = $sql->orderBy('start_time')->get();
@@ -141,7 +169,6 @@ class PositionCredit extends ApiModel
             $row->end_timestamp = $row->end_time->timestamp;
             self::$yearCache[$row->start_time->year][$row->position_id][] = $row;
         }
-
     }
 
     /**
