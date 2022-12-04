@@ -2,12 +2,15 @@
 
 namespace App\Lib;
 
+use App\Models\Document;
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
 use App\Models\Survey;
@@ -151,6 +154,16 @@ class Milestones
 
 
         if (in_array($status, Person::ACTIVE_STATUSES) || $isNonRanger) {
+            // Starting late 2022 - All (effective) login management roles require annual NDA signature.
+            // MOAR PAPERWERKS! MOAR WINZ!
+            // Don't require the NDA if the agreement does not exist.
+            if (PersonRole::haveRole($person->id, Role::MANAGE)
+                && !$event->signed_nda
+                && Document::haveTag(Agreements::DEPT_NDA)
+            ) {
+                $milestones['nda_required'] = true;
+            }
+
             if (!$isNonRanger) {
                 // note, some inactives are active trainers yet do not work on playa.
                 $milestones['is_trainer'] = PersonPosition::havePosition($person->id, Position::TRAINERS[Position::TRAINING]);

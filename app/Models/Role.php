@@ -10,11 +10,11 @@ class Role extends ApiModel
     const ADMIN            = 1;   // Super user! Change anything
     const VIEW_PII         = 2;   // See email, address, phone
     const VIEW_EMAIL       = 3;   // See email
-    const GRANT_POSITION   = 4;   // Grand/Revoke Positions
+    const GRANT_POSITION   = 4;   // Grand/Revoke Positions (superseded by Clubhouse Teams)
     const EDIT_ACCESS_DOCS = 5;   // Edit Access Documents
     const EDIT_BMIDS       = 6;   // Edit BMIDs
     const EDIT_SLOTS       = 7;   // Edit Slots
-    const LOGIN            = 11;  // Person allowed to login
+    const LOGIN            = 11;  // Person allowed to login (superseded by the suspend status)
     const MANAGE           = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
     const INTAKE           = 13;  // Intake Management
     const MENTOR           = 101; // Mentor - access mentor section

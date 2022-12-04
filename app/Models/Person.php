@@ -12,6 +12,7 @@
 namespace App\Models;
 
 use App\Helpers\SqlHelper;
+use App\Lib\Agreements;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
@@ -347,6 +348,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public $roles;
+
+    public $rolesById;
 
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
@@ -898,10 +901,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Retrieve the person's assigned roles.
+     * Retrieve the person's effective roles.
      *
      * Add MANAGE if person has MANAGE_ON_PLAYA and if LoginManageOnPlayaEnabled is true
      * Add TRAINER if person has TRAINER_SEASONAL and if TrainingSeasonalRoleEnabled is true
+     *
+     * User has to have the Ranger NDA signed if an effective LM role is in effect, otherwise kill
+     * all the roles (unless the user is a Tech Ninja) until the NDA has been agreed to.
      */
 
     public function retrieveRoles(): void
@@ -927,21 +933,34 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             ->where('person_team.person_id', $this->id);
 
         $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
-        $roleIds = array_unique(array_map(fn($r) => (int)$r, $roleIds));
+        $this->rolesById = [];
+        foreach ($roleIds as $id){
+            $this->rolesById[$id] = true;
+        }
 
-        if (!in_array(Role::MANAGE, $roleIds)
-            && in_array(Role::MANAGE_ON_PLAYA, $roleIds)
+        $haveManage = $this->rolesById[Role::MANAGE] ?? false;
+        if (!$haveManage
+            && isset($this->rolesById[Role::MANAGE_ON_PLAYA])
             && setting('LoginManageOnPlayaEnabled')) {
-            $roleIds[] = Role::MANAGE;
+            $this->rolesById[Role::MANAGE] = true;
+            $haveManage = true;
         }
 
-        if (!in_array(Role::TRAINER, $roleIds)
-            && in_array(Role::TRAINER_SEASONAL, $roleIds)
+        if (!isset($this->rolesById[Role::TRAINER])
+            && isset($this->rolesById[Role::TRAINER_SEASONAL])
             && setting('TrainingSeasonalRoleEnabled')) {
-            $roleIds[] = Role::TRAINER;
+            $this->rolesById[Role::TRAINER] = true;
         }
 
-        $this->roles = $roleIds;
+        if ($haveManage && !isset($this->rolesById[Role::TECH_NINJA])) {
+            // Kill the roles if the NDA is not signed and the NDA document exists.
+            if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
+                // Don't allow the person to do anything until the NDA is signed.
+                $this->rolesById = [];
+            }
+        }
+
+        $this->roles = array_keys($this->rolesById);
     }
 
     /**
@@ -957,16 +976,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $this->retrieveRoles();
         }
 
-        if (is_array($role)) {
-            foreach ($role as $r) {
-                if (in_array($r, $this->roles)) {
-                    return true;
-                }
-            }
-            return false;
+        if (!is_array($role)) {
+            return isset($this->rolesById[$role]);
         }
 
-        return in_array($role, $this->roles);
+        foreach ($role as $r) {
+            if (isset($this->rolesById[$r])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1030,7 +1049,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return mixed
      */
 
-    public function getLanguagesAttribute()
+    public function getLanguagesAttribute(): mixed
     {
         return $this->languages;
     }
@@ -1042,7 +1061,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setLanguagesAttribute($value)
+    public function setLanguagesAttribute($value): void
     {
         $this->languages = $value;
     }
@@ -1054,7 +1073,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setHasReviewedPiAttribute($value)
+    public function setHasReviewedPiAttribute($value): void
     {
         $this->has_reviewed_pi = $value;
     }
@@ -1342,7 +1361,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return array
      */
 
-    public function formerlyKnownAsArray(bool $filter = false): array
+    public
+    function formerlyKnownAsArray(bool $filter = false): array
     {
         return self::splitCommas($this->formerly_known_as, $filter);
     }
