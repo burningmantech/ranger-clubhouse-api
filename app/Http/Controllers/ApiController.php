@@ -6,7 +6,6 @@ use App\Http\RestApi\DeserializeRecord;
 use App\Http\RestApi\SerializeRecord;
 use App\Models\ActionLog;
 use App\Models\Person;
-use App\Models\PositionCredit;
 use App\Models\Role;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -53,8 +52,6 @@ class ApiController extends Controller
             // then doing $user->last_seen_at = now(); $user->save();
             DB::table('person')->where('id', $this->user->id)->update(['last_seen_at' => now()]);
         }
-
-        PositionCredit::clearCache();
     }
 
     /**
@@ -79,7 +76,7 @@ class ApiController extends Controller
      * @return ?Person
      */
 
-    public function findPerson($id) : ?Person
+    public function findPerson($id): ?Person
     {
         if ($this->isUser($id)) {
             return $this->user;

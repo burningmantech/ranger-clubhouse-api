@@ -47,7 +47,13 @@ class PositionCredit extends ApiModel
         return $this->belongsTo(Position::class);
     }
 
-    public static function clearCache()
+    /**
+     * Clear the cache, currently only used for testing.
+     *
+     * @return void
+     */
+
+    public static function clearCache(): void
     {
         self::$yearCache = [];
     }
