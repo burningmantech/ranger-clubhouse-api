@@ -76,7 +76,7 @@ class ApiController extends Controller
      * @return ?Person
      */
 
-    public function findPerson($id) : ?Person
+    public function findPerson($id): ?Person
     {
         if ($this->isUser($id)) {
             return $this->user;
