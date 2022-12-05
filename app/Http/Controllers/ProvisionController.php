@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\ProvisionUnsubmitRecommendationReport;
 use App\Models\AccessDocument;
 use App\Models\Provision;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -403,5 +404,51 @@ class ProvisionController extends ApiController
         }
 
         return $this->success($rows, null, 'provision');
+    }
+
+    /**
+     * Recommendation report for non-allocated provisions to be un-submitted.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function unsubmitRecommendations(): JsonResponse
+    {
+        $this->authorize('unsubmitRecommendations', Provision::class);
+
+        return response()->json(['people' => ProvisionUnsubmitRecommendationReport::execute()]);
+    }
+
+    /**
+     * Un-submit all submitted non-allocated provisions
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function unsubmitProvisions(): JsonResponse
+    {
+        $this->authorize('unsubmitProvisions', Provision::class);
+
+        $params = request()->validate([
+            'people_ids' => 'required|array',
+            'people_ids.*' => 'required|integer|exists:person,id',
+        ]);
+
+        foreach ($params['people_ids'] as $personId) {
+            $provisions = Provision::where('person_id', $personId)
+                ->whereIn('status', [Provision::CLAIMED, Provision::SUBMITTED])
+                ->where('is_allocated', false)
+                ->get();
+
+            foreach ($provisions as $provision) {
+                $provision->status = Provision::AVAILABLE;
+                $provision->auditReason = 'un-submit maintenance function';
+                $provision->additional_comments = 'un-submit maintenance function';
+                $provision->save();
+            }
+        }
+
+        return $this->success();
     }
 }
