@@ -138,4 +138,28 @@ class ProvisionPolicy
     {
         return false;
     }
+
+    /**
+     * Can the user run the unsubmit provisions recommendation report?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function unsubmitRecommendations(Person $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Can the user bulk un-submit provisions?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function unsubmitProvisions(Person $user): bool
+    {
+        return false;
+    }
 }

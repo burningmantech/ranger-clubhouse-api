@@ -268,6 +268,8 @@ Route::group([
     Route::post('provision/expire-provisions', 'ProvisionController@expireProvisions');
     Route::patch('provision/statuses', 'ProvisionController@statuses');
     Route::post('provision/unbank-provisions', 'ProvisionController@unbankProvisions');
+    Route::get('provision/unsubmit-recommendations', 'ProvisionController@unsubmitRecommendations');
+    Route::post('provision/unsubmit-provisions', 'ProvisionController@unsubmitProvisions');
     Route::resource('provision', 'ProvisionController');
 
     Route::get('rbs/config', 'RbsController@config');
