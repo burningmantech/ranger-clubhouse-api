@@ -128,17 +128,30 @@ class ProvisionControllerTest extends TestCase
     {
         $provision = $this->createProvision();
 
-        $response = $this->json('PATCH', "provision/statuses",
-            [
-                'statuses' => [
-                    [
-                        'id' => $provision->id,
-                        'status' => Provision::BANKED
-                    ]]
-
-            ]);
+        $response = $this->json('PATCH', "provision/{$this->user->id}/statuses", ['status' => Provision::BANKED]);
         $response->assertStatus(200);
         $this->assertDatabaseHas('provision', ['id' => $provision->id, 'status' => Provision::BANKED]);
+    }
+
+    /*
+    * Test changing the status on an provision
+    */
+
+    public function testStatusChangeNoAllocations()
+    {
+        $provision = $this->createProvision();
+        Provision::factory()->create([
+            'type' => Provision::ALL_EAT_PASS,
+            'status' => Provision::AVAILABLE,
+            'person_id' => $this->user->id,
+            'source_year' => (int)date('Y'),
+            'expires_on' => date('Y-12-31'),
+            'is_allocated' => true,
+        ]);
+
+        $response = $this->json('PATCH', "provision/{$this->user->id}/statuses", ['status' => Provision::BANKED]);
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('provision', ['id' => $provision->id, 'status' => Provision::AVAILABLE]);
     }
 
     /*

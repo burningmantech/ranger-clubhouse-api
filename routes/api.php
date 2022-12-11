@@ -266,7 +266,7 @@ Route::group([
     Route::post('provision/bulk-comment', 'ProvisionController@bulkComment');
     Route::post('provision/clean-provisions', 'ProvisionController@cleanProvisionsFromPriorEvent');
     Route::post('provision/expire-provisions', 'ProvisionController@expireProvisions');
-    Route::patch('provision/statuses', 'ProvisionController@statuses');
+    Route::patch('provision/{person}/statuses', 'ProvisionController@statuses');
     Route::post('provision/unbank-provisions', 'ProvisionController@unbankProvisions');
     Route::get('provision/unsubmit-recommendations', 'ProvisionController@unsubmitRecommendations');
     Route::post('provision/unsubmit-provisions', 'ProvisionController@unsubmitProvisions');
@@ -347,8 +347,9 @@ Route::group([
     Route::get('ticketing/info', 'TicketingController@ticketingInfo');
     Route::get('ticketing/thresholds', 'TicketingController@thresholds');
     Route::get('ticketing/statistics', 'TicketingController@statistics');
-    Route::get('ticketing/{person}/package', 'TicketingController@package');
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
+    Route::get('ticketing/{person}/package', 'TicketingController@package');
+    Route::post('ticketing/{person}/progress', 'TicketingController@updateProgress');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
     Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');

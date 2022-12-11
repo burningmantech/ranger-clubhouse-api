@@ -167,4 +167,28 @@ class AccessDocumentPolicy
     {
         return false;
     }
+
+    /**
+     * Can the user see a person's ticketing progress?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function progress(Person $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Can the user update a person's ticketing progress?
+     *
+     * @param Person $user
+     * @return false
+     */
+
+    public function updateProgress(Person $user): bool
+    {
+        return false;
+    }
 }
