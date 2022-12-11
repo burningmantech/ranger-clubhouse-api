@@ -187,8 +187,8 @@ class AccessDocumentPolicy
      * @return false
      */
 
-    public function updateProgress(Person $user): bool
+    public function updateProgress(Person $user, Person $person): bool
     {
-        return false;
+        return $user->id == $person->id;
     }
 }
