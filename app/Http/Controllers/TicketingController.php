@@ -227,7 +227,7 @@ class TicketingController extends ApiController
         $pe = PersonEvent::findForPersonYear($person->id, current_year());
         switch ($params['milestone']) {
             case 'visited':
-                $pe->ticketing_visited_at = now();
+                $pe->ticketing_last_visited_at = now();
                 break;
             case 'started':
                 $pe->ticketing_started_at = now();
