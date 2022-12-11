@@ -92,21 +92,24 @@ class Schedule extends ApiModel
         // Find all slots the person is eligible for AND all slots the person is already signed up for
         // Note: a person may be signed up for a position they no longer hold. e.g., Alpha, Green Dot Mentee, etc.
 
-        $sql = Slot::distinct('slot.id')
-            ->select('slot.*',
-                'trainer_slot.signed_up as trainer_count',
-                DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned")
-            )
-            ->leftJoin('person_slot', function ($join) use ($personId) {
-                $join->where('person_slot.person_id', $personId)
-                    ->on('slot.id', 'person_slot.slot_id');
-            })->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
+        $sql = Slot::select('slot.*', 'trainer_slot.signed_up as trainer_count')
+            ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->whereYear('slot.begins', $year)
             ->orderBy('slot.begins');
 
         if ($onlySignups) {
             $sql->whereNotNull('person_slot.person_id');
+            $sql->join('person_slot', function ($join) use ($personId) {
+                $join->where('person_slot.person_id', $personId)
+                    ->on('slot.id', 'person_slot.slot_id');
+            });
         } else {
+            $sql->leftJoin('person_slot', function ($join) use ($personId) {
+                $join->where('person_slot.person_id', $personId)
+                    ->on('slot.id', 'person_slot.slot_id');
+            });
+            $sql->distinct('slot.id');
+            $sql->addSelect(DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned"));
             $sql->leftJoin('person_position', function ($join) use ($personId) {
                 $join->where('person_position.person_id', $personId)
                     ->on('person_position.position_id', 'slot.position_id');
@@ -128,7 +131,7 @@ class Schedule extends ApiModel
                 'id' => $row->id,
                 'has_ended' => $row->has_ended,
                 'has_started' => $row->has_started,
-                'person_assigned' => $row->person_assigned,
+                'person_assigned' => $onlySignups ? true : $row->person_assigned,
                 'position_id' => $row->position_id,
                 'slot_active' => $row->active,
                 'slot_begins' => (string)$row->begins,

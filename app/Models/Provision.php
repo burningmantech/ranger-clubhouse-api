@@ -189,7 +189,7 @@ class Provision extends ApiModel
     }
 
     /**
-     * Find a document that is available (qualified, claimed, banked, submitted) for the given person & type(s)
+     * Find provisions (available, claimed, banked, submitted) for the given person & type(s)
      *
      * @param int $personId
      * @param array|string $type
@@ -217,6 +217,35 @@ class Provision extends ApiModel
         }
 
         return $sql->first();
+    }
+
+    /**
+     * Does the person have allocated provisions?
+     *
+     * @param int $personId
+     * @return bool
+     */
+    public static function haveAllocated(int $personId): bool
+    {
+        return self::where('person_id', $personId)
+            ->whereIn('status', [self::AVAILABLE, self::CLAIMED, self::SUBMITTED])
+            ->where('is_allocated', true)
+            ->exists();
+    }
+
+    /**
+     * Retrieve all un-submitted earned provisions
+     *
+     * @param int $personId
+     * @return Collection
+     */
+
+    public static function retrieveEarned(int $personId): Collection
+    {
+        return self::where('person_id', $personId)
+            ->whereIn('status', [self::AVAILABLE, self::CLAIMED, self::BANKED])
+            ->where('is_allocated', false)
+            ->get();
     }
 
     /**

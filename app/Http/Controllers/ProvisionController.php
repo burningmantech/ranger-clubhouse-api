@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Lib\Reports\ProvisionUnsubmitRecommendationReport;
 use App\Models\AccessDocument;
+use App\Models\Person;
 use App\Models\Provision;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class ProvisionController extends ApiController
@@ -347,63 +349,37 @@ class ProvisionController extends ApiController
     /**
      * Set the status for several provisions owned by the same person at once.
      *
+     * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function statuses(): JsonResponse
+    public function statuses(Person $person): JsonResponse
     {
+        $this->authorize('statuses', [Provision::class, $person]);
+
         $params = request()->validate([
-            'statuses' => 'required|array',
-            'statuses.*.id' => 'required|integer|exists:provision,id',
-            'statuses.*.status' => 'required|string'
+            'status' => ['required', 'string', Rule::in(Provision::BANKED, Provision::CLAIMED)],
         ]);
 
-        $rows = Provision::whereIntegerInRaw('id', array_column($params['statuses'], 'id'))->get();
+        $personId = $person->id;
+        if (Provision::haveAllocated($personId)) {
+            throw new InvalidArgumentException("Person has allocated provisions. Earn provisions cannot be adjusted.");
+        }
 
-        $personId = $rows[0]->person_id;
+        $status = $params['status'];
+        $rows = Provision::retrieveEarned($personId);
+
+        if ($rows->isEmpty()) {
+            throw new InvalidArgumentException("Person has no earned provisions.");
+        }
+
         foreach ($rows as $row) {
-            // Verify person can update all the documents.
-            $this->authorize('update', $row);
-            if ($personId != $row->person_id) {
-                throw new InvalidArgumentException("All records must be for the same person");
-            }
+            $row->status = $status;
+            $row->saveWithoutValidation();
         }
 
-        $provisionsById = $rows->keyBy('id');
-
-        foreach ($params['statuses'] as $statusUpdate) {
-            $status = $statusUpdate['status'];
-            $prov = $provisionsById->get($statusUpdate['id']);
-            $provStatus = $prov->status;
-            switch ($status) {
-                case Provision::BANKED:
-                    if ($prov->is_allocated) {
-                        throw new InvalidArgumentException('Provision is allocated and cannot be banked.');
-                    }
-                    break;
-
-                case Provision::CLAIMED:
-                    if ($provStatus != Provision::AVAILABLE && $provStatus != Provision::BANKED) {
-                        throw new InvalidArgumentException('Provision is not banked or qualified');
-                    }
-                    break;
-
-                case Provision::AVAILABLE:
-                    if ($provStatus != Provision::CLAIMED) {
-                        throw new InvalidArgumentException('Provision is not claimed.');
-                    }
-                    break;
-
-                default:
-                    throw new InvalidArgumentException("Unknown status action [$status]");
-            }
-
-            $prov->status = $status;
-            $prov->saveWithoutValidation();
-        }
-
-        return $this->success($rows, null, 'provision');
+        return $this->success();
     }
 
     /**

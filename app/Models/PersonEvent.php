@@ -40,6 +40,9 @@ class PersonEvent extends ApiModel
         'signed_personal_vehicle_agreement',
         'timesheet_confirmed',
         'timesheet_confirmed_at',
+        'ticketing_started_at',
+        'ticketing_last_visited_at',
+        'ticketing_finished_at'
     ];
 
     protected $attributes = [
@@ -55,6 +58,12 @@ class PersonEvent extends ApiModel
 
     protected $appends = [
         'id'        // Not real.
+    ];
+
+    protected $dates = [
+        'ticketing_started_at',
+        'ticketing_last_visited_at',
+        'ticketing_finished_at'
     ];
 
     protected $createRules = [

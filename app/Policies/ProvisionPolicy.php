@@ -162,4 +162,16 @@ class ProvisionPolicy
     {
         return false;
     }
+
+    /**
+     * Can the user update the statuses for earned provisions?
+     *
+     * @param Person $user
+     * @param Person $person
+     * @return bool
+     */
+
+    public function statuses(Person $user, Person $person) : bool {
+        return $user->id == $person->id;
+    }
 }
