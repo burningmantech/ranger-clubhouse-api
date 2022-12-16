@@ -164,7 +164,7 @@ class Swag extends ApiModel
 
     public static function shirtSortWeight($title): array
     {
-        if (preg_match("/^(.+)\s+(\d?-?[lmsx]+)(\s+\d+\")?$/i", $title, $matches) === false) {
+        if (preg_match("/^(.+)\s+(\d?-?[lmsx]+)(\s+\d+(\s*-\d+\s*)?\")?$/i", $title, $matches) === false) {
             return [$title, 99];
         }
 
