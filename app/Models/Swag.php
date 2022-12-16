@@ -40,10 +40,10 @@ class Swag extends ApiModel
 
     protected $rules = [
         'active' => 'required|boolean',
-        'description' => 'sometimes|string',
+        'description' => 'sometimes|string|nullable',
         'title' => 'required|string',
         'type' => 'required|string',
-        'shirt_type' => 'sometimes|string',
+        'shirt_type' => 'sometimes|string|nullable',
     ];
 
     protected $fillable = [
@@ -52,6 +52,11 @@ class Swag extends ApiModel
         'shirt_type',
         'title',
         'type',
+    ];
+
+    protected $attributes = [
+        'shirt_type' => '',
+        'description' => ''
     ];
 
     public function person_swag(): HasMany
@@ -115,7 +120,14 @@ class Swag extends ApiModel
         $this->attributes['shirt_type'] = empty($value) ? '' : $value;
     }
 
-    public static function sortShirtSizes($rows)
+    /**
+     * Sort the rows by title and using shirt sizes if possible.
+     *
+     * @param $rows
+     * @return mixed
+     */
+
+    public static function sortShirtSizes($rows): mixed
     {
         return $rows->sort(function ($a, $b) {
             $aTitle = $a->title;
@@ -123,8 +135,8 @@ class Swag extends ApiModel
             if ($a->type != self::TYPE_DEPT_SHIRT || $b->type != self::TYPE_DEPT_SHIRT) {
                 return strnatcmp($aTitle, $bTitle);
             }
-            $aType = self::SHIRT_TYPE_SORT_WEIGHT[$a->shirt_type] ?? 3;
-            $bType = self::SHIRT_TYPE_SORT_WEIGHT[$b->shirt_type] ?? 3;
+            $aType = empty($a->shirt_type) ? 3 : self::SHIRT_TYPE_SORT_WEIGHT[$a->shirt_type];
+            $bType = empty($b->shirt_type) ? 3 : self::SHIRT_TYPE_SORT_WEIGHT[$b->shirt_type];
             if ($aType != $bType) {
                 return $aType > $bType ? 1 : -1;
             }
@@ -141,9 +153,18 @@ class Swag extends ApiModel
         })->values();
     }
 
+    /**
+     * Obtain the sort weight for a shirt title.
+     * - Look for size (e.g., 2xl, 2-xl, xl, etc)
+     * - Ignore chest size at the end if present (e.g., t-shirt xl 37")
+     *
+     * @param $title
+     * @return array
+     */
+
     public static function shirtSortWeight($title): array
     {
-        if (preg_match("/^(.+)\s+([\dlmsx\- ]+)$/i", $title, $matches) === false) {
+        if (preg_match("/^(.+)\s+(\d?-?[lmsx]+)(\s+\d+\")?$/i", $title, $matches) === false) {
             return [$title, 99];
         }
 
