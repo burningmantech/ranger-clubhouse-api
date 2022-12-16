@@ -8,11 +8,16 @@ use Illuminate\Support\Facades\DB;
 
 class PotentialEarnedShirtsReport
 {
-    /*
-      * Retrieve folks who potentially earned a t-shirt
-      */
+    /**
+     * Retrieve folks who potentially earned a t-shirt
+     *
+     * @param int $year
+     * @param int $thresholdSS
+     * @param int $thresholdLS
+     * @return array
+     */
 
-    public static function execute($year, $thresholdSS, $thresholdLS)
+    public static function execute(int $year, int $thresholdSS, int $thresholdLS): array
     {
         $active_statuses = implode("','", Person::ACTIVE_STATUSES);
         $report = DB::select(
@@ -20,9 +25,14 @@ class PotentialEarnedShirtsReport
           person.id, person.callsign, person.status, person.first_name, person.mi, person.last_name,
           eh.estimated_hours,
           ah.actual_hours,
-          person.teeshirt_size_style, person.longsleeveshirt_size_style
+          tshirt_swag.title AS t_shirt_size, 
+          tshirt_secondary_swag.title as t_shirt_secondary_size,
+          longsleeve_swag.title AS longsleeve_size
         FROM
           person
+        LEFT JOIN swag tshirt_swag ON person.tshirt_swag_id = tshirt_swag.id
+        LEFT JOIN swag tshirt_secondary_swag ON person.tshirt_secondary_swag_id = tshirt_secondary_swag.id
+        LEFT JOIN swag longsleeve_swag ON person.long_sleeve_swag_ig=longsleeve_swag.id
         LEFT JOIN (
           SELECT
             person_slot.person_id,
@@ -77,9 +87,9 @@ class PotentialEarnedShirtsReport
             return [];
         }
 
-        $report = collect($report);
-        return $report->map(function ($row) use ($thresholdSS, $thresholdLS) {
-            return [
+
+        return array_map(
+            fn($row) => [
                 'id' => $row->id,
                 'callsign' => $row->callsign,
                 'first_name' => $row->first_name,
@@ -87,11 +97,12 @@ class PotentialEarnedShirtsReport
                 'last_name' => $row->last_name,
                 'estimated_hours' => $row->estimated_hours,
                 'actual_hours' => $row->actual_hours,
-                'longsleeveshirt_size_style' => $row->longsleeveshirt_size_style,
+                'teeshirt_size_style' => $row->t_shirt_size ?? 'Unknown',
+                'tshirt_secondary_size' => $row->t_shirt_secondary_size ?? 'Unknown',
+                'longsleeveshirt_size_style' => $row->longsleeve_size ?? 'Unknown',
+
                 'earned_ls' => ($row->actual_hours >= $thresholdLS),
-                'teeshirt_size_style' => $row->teeshirt_size_style,
                 'earned_ss' => ($row->actual_hours >= $thresholdSS), // gonna be true always, but just in case the selection above changes.
-            ];
-        });
+            ], $report);
     }
 }

@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Lib\Agreements;
 use App\Models\AccessDocument;
-use App\Models\AccessDocumentDelivery;
 use App\Models\ActionLog;
 use App\Models\Alert;
 use App\Models\AlertPerson;
@@ -27,6 +26,7 @@ use App\Models\PersonMessage;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\PersonPositionLog;
+use App\Models\PersonSwag;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Provision;
@@ -37,12 +37,12 @@ use App\Models\Slot;
 use App\Models\Survey;
 use App\Models\SurveyGroup;
 use App\Models\SurveyQuestion;
+use App\Models\Swag;
 use App\Models\Timesheet;
 use App\Models\TimesheetMissing;
 use App\Models\Training;
 use App\Models\TrainingSession;
 use App\Models\Vehicle;
-use App\Policies\AccessDocumentDeliveryPolicy;
 use App\Policies\AccessDocumentPolicy;
 use App\Policies\ActionLogPolicy;
 use App\Policies\AgreementsPolicy;
@@ -67,6 +67,7 @@ use App\Policies\PersonOnlineTrainingPolicy;
 use App\Policies\PersonPhotoPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PersonPositionLogPolicy;
+use App\Policies\PersonSwagPolicy;
 use App\Policies\PositionCreditPolicy;
 use App\Policies\PositionPolicy;
 use App\Policies\ProvisionPolicy;
@@ -77,6 +78,7 @@ use App\Policies\SlotPolicy;
 use App\Policies\SurveyGroupPolicy;
 use App\Policies\SurveyPolicy;
 use App\Policies\SurveyQuestionPolicy;
+use App\Policies\SwagPolicy;
 use App\Policies\TimesheetMissingPolicy;
 use App\Policies\TimesheetPolicy;
 use App\Policies\TrainingPolicy;
@@ -94,7 +96,6 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         AccessDocument::class => AccessDocumentPolicy::class,
-        AccessDocumentDelivery::class => AccessDocumentDeliveryPolicy::class,
         ActionLog::class => ActionLogPolicy::class,
         Agreements::class => AgreementsPolicy::class,
         Award::class => AwardPolicy::class,
@@ -118,6 +119,7 @@ class AuthServiceProvider extends ServiceProvider
         PersonOnlineTraining::class => PersonOnlineTrainingPolicy::class,
         PersonPhoto::class => PersonPhotoPolicy::class,
         PersonPositionLog::class => PersonPositionLogPolicy::class,
+        PersonSwag::class => PersonSwagPolicy::class,
         Position::class => PositionPolicy::class,
         PositionCredit::class => PositionCreditPolicy::class,
         Provision::class => ProvisionPolicy::class,
@@ -128,6 +130,7 @@ class AuthServiceProvider extends ServiceProvider
         Survey::class => SurveyPolicy::class,
         SurveyGroup::class => SurveyGroupPolicy::class,
         SurveyQuestion::class => SurveyQuestionPolicy::class,
+        Swag::class => SwagPolicy::class,
         Timesheet::class => TimesheetPolicy::class,
         TimesheetMissing::class => TimesheetMissingPolicy::class,
         Training::class => TrainingPolicy::class,

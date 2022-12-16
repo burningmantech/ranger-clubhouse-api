@@ -62,8 +62,8 @@ class PotentialClubhouseAccountFromSalesforce
     public $bpguid;
     public $sfuid;
     public $chuid;
-    public $longsleeveshirt_size_style;     /* Fixed to remove multibyte crap */
-    public $teeshirt_size_style;            /* Fixed to remove multibyte crap */
+    //public $longsleeveshirt_size_style;     /* Fixed to remove multibyte crap */
+    //public $teeshirt_size_style;            /* Fixed to remove multibyte crap */
     public $known_pnv_names;        /* PNV = prospective new volunteers */
     public $known_ranger_names;
     public $callsign;
@@ -135,13 +135,15 @@ class PotentialClubhouseAccountFromSalesforce
         $this->bpguid = trim(@$sobj->Ranger_Info__r->BPGUID__c);
         $this->sfuid = trim(@$sobj->Ranger_Info__r->SFUID__c);
         $this->chuid = trim(@$sobj->CH_UID__c);
-        $this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(trim(@$sobj->Long_Sleeve_Shirt_Size__c));
-        $this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(trim(@$sobj->Tee_Shirt_Size__c));
         $this->known_pnv_names = trim(@$sobj->Known_Prospective_Volunteer_Names__c);
         $this->known_ranger_names = trim(@$sobj->Known_Rangers_Names__c);
         $this->callsign = trim(@$sobj->VC_Approved_Radio_Call_Sign__c);
         $this->vc_status = trim(@$sobj->VC_Status__c);
         $this->vc_comments = trim(@$sobj->VC_Comments__c);
+
+        // Shirts no longer part of the VolQ.
+        //$this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(trim(@$sobj->Long_Sleeve_Shirt_Size__c));
+        //$this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(trim(@$sobj->Tee_Shirt_Size__c));
 
         if ($this->vc_status == "Released to Upload"
             && ($this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
