@@ -201,8 +201,9 @@ class Alpha
             'city' => $person->city,
             'state' => $person->state,
             'country' => $person->country,
-            'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
-            'teeshirt_size_style' => $person->teeshirt_size_style,
+            'teeshirt_size_style' => $person->tshirt->title ?? 'Unknown',
+            'tshirt_secondary_size' => $person->tshirt_secondary->title ?? 'Unknown',
+            'longsleeveshirt_size_style' => $person->long_sleeve->title ?? 'Unknown',
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
             'on_alpha_shift' => !empty($signedIn[$personId])

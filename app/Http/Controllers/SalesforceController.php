@@ -198,8 +198,10 @@ class SalesforceController extends ApiController
         $person->known_rangers = $pca->known_ranger_names;
         $person->known_pnvs = $pca->known_pnv_names;
 
-        $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
-        $person->teeshirt_size_style = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
+        /*
+         $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
+         $person->teeshirt_size_style = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
+        */
 
         if ($isNew) {
             $person->password = 'abcdef';

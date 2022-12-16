@@ -248,6 +248,9 @@ Route::group([
     Route::resource('person-photo', 'PersonPhotoController');
 
     Route::resource('person-position-log', 'PersonPositionLogController');
+
+    Route::resource('person-swag', 'PersonSwagController');
+
     Route::resource('person-team-log', 'PersonTeamLogController');
 
     Route::post('position-credit/copy', 'PositionCreditController@copy');
@@ -321,6 +324,11 @@ Route::group([
     Route::resource('survey-group', 'SurveyGroupController');
 
     Route::resource('survey-question', 'SurveyQuestionController');
+
+    Route::post('swag/bulk-grant-swag', 'SwagController@bulkGrantSwag');
+    Route::get('swag/potential-swag', 'SwagController@potentialSwagReport');
+    Route::get('swag/shirts', 'SwagController@shirts');
+    Route::resource('swag', 'SwagController');
 
     Route::get('team/people-by-teams', 'TeamController@peopleByTeamsReport');
     Route::resource('team', 'TeamController');

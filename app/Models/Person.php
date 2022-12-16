@@ -225,8 +225,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'alt_phone',
 
         'on_site',
-        'longsleeveshirt_size_style',
-        'teeshirt_size_style',
+        'longsleeveshirt_size_style',   // deprecated
+        'teeshirt_size_style',          // deprecated
+        'tshirt_swag_id',
+        'tshirt_secondary_swag_id',
+        'long_sleeve_swag_ig',
+
         'emergency_contact',
         'camp_location',
 
@@ -290,6 +294,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'person_position_log',
         'person_role',
         'person_slot',
+        'person_swag',
         'person_team',
         'person_team_log',
         'radio_eligible',
@@ -358,6 +363,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $languages;
 
+    public function tshirt(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'tshirt_swag_id');
+    }
+
+    public function tshirt_secondary(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'tshirt_secondary_swag_id');
+    }
+
+    public function long_sleeve(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'long_sleeve_swag_ig');
+    }
+
     /**
      * Setup various before save or create callback methods
      */
@@ -374,15 +394,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         self::saving(function ($model) {
             if ($model->isDirty('message')) {
                 $model->message_updated_at = now();
-            }
-
-            // Ensure shirts are always set correctly
-            if (empty($model->longsleeveshirt_size_style)) {
-                $model->longsleeveshirt_size_style = 'Unknown';
-            }
-
-            if (empty($model->teeshirt_size_style)) {
-                $model->teeshirt_size_style = 'Unknown';
             }
 
             if ($model->pronouns != 'custom') {
@@ -934,7 +945,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
         $this->rolesById = [];
-        foreach ($roleIds as $id){
+        foreach ($roleIds as $id) {
             $this->rolesById[$id] = true;
         }
 

@@ -150,9 +150,6 @@ class Slot extends ApiModel
     }
 
     /**
-     *
-     */
-    /**
      * Find all the slots with sign-ups for a given year.
      *
      * @param int $year
