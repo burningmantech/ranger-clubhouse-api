@@ -247,6 +247,8 @@ Route::group([
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
 
+    Route::resource('person-pog', 'PersonPogController');
+
     Route::resource('person-position-log', 'PersonPositionLogController');
 
     Route::resource('person-swag', 'PersonSwagController');
