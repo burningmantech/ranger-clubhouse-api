@@ -25,6 +25,7 @@ use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
+use App\Models\PersonPog;
 use App\Models\PersonPositionLog;
 use App\Models\PersonSwag;
 use App\Models\Position;
@@ -65,6 +66,7 @@ use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
 use App\Policies\PersonOnlineTrainingPolicy;
 use App\Policies\PersonPhotoPolicy;
+use App\Policies\PersonPogPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PersonPositionLogPolicy;
 use App\Policies\PersonSwagPolicy;
@@ -118,6 +120,7 @@ class AuthServiceProvider extends ServiceProvider
         PersonMessage::class => PersonMessagePolicy::class,
         PersonOnlineTraining::class => PersonOnlineTrainingPolicy::class,
         PersonPhoto::class => PersonPhotoPolicy::class,
+        PersonPog::class => PersonPogPolicy::class,
         PersonPositionLog::class => PersonPositionLogPolicy::class,
         PersonSwag::class => PersonSwagPolicy::class,
         Position::class => PositionPolicy::class,
