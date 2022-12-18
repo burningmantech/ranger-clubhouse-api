@@ -20,7 +20,6 @@ use Illuminate\Support\Carbon;
  * @property bool timesheet_confirmed
  * @property Carbon timesheet_confirmed_at
  */
-
 class PersonEvent extends ApiModel
 {
     protected $table = 'person_event';
@@ -34,15 +33,17 @@ class PersonEvent extends ApiModel
         'asset_authorized',
         'may_request_stickers',
         'org_vehicle_insurance',
+        'pii_finished_at',
+        'pii_started_at',
         'sandman_affidavit',
         'signed_motorpool_agreement',
         'signed_nda',
         'signed_personal_vehicle_agreement',
+        'ticketing_finished_at',
+        'ticketing_last_visited_at',
+        'ticketing_started_at',
         'timesheet_confirmed',
         'timesheet_confirmed_at',
-        'ticketing_started_at',
-        'ticketing_last_visited_at',
-        'ticketing_finished_at'
     ];
 
     protected $attributes = [
@@ -61,9 +62,11 @@ class PersonEvent extends ApiModel
     ];
 
     protected $dates = [
-        'ticketing_started_at',
+        'pii_finished_at',
+        'pii_started_at',
+        'ticketing_finished_at',
         'ticketing_last_visited_at',
-        'ticketing_finished_at'
+        'ticketing_started_at',
     ];
 
     protected $createRules = [
@@ -155,9 +158,9 @@ class PersonEvent extends ApiModel
      * @return bool
      */
 
-    public static function isSet(int $personId, string $column) : bool
+    public static function isSet(int $personId, string $column): bool
     {
-        return (bool) self::where('person_id', $personId)->where('year', current_year())->value($column);
+        return (bool)self::where('person_id', $personId)->where('year', current_year())->value($column);
     }
 
     /**

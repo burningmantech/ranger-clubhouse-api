@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessDocument;
+use App\Models\Person;
 use App\Models\PersonEvent;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 /*
  * Person Event records are special -- a record will always be returned even if the record does not
@@ -83,4 +86,51 @@ class PersonEventController extends ApiController
         }
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Update milestone progress
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function updateProgress(Person $person): JsonResponse
+    {
+        $this->authorize('updateProgress', [AccessDocument::class, $person]);
+
+        $params = request()->validate([
+            'milestone' => ['required', 'string',
+                Rule::in(
+                    'ticket-visited', 'ticket-started', 'ticket-finished',
+                    'pii-started', 'pii-finished',
+                )
+            ],
+        ]);
+
+        $pe = PersonEvent::findForPersonYear($person->id, current_year());
+        switch ($params['milestone']) {
+            case 'ticket-visited':
+                $pe->ticketing_last_visited_at = now();
+                break;
+            case 'ticket-started':
+                $pe->ticketing_started_at = now();
+                break;
+            case 'ticket-finished':
+                $pe->ticketing_finished_at = now();
+                break;
+            case 'pii-started':
+                $pe->pii_started_at = now();
+                break;
+            case 'pii-finished':
+                $pe->pii_finished_at = now();
+                break;
+        }
+
+        $pe->saveWithoutValidation();
+
+        return $this->success();
+    }
+
+
 }

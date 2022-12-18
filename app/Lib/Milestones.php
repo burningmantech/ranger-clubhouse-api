@@ -56,7 +56,7 @@ class Milestones
             'online_training_enabled' => $settings['OnlineTrainingEnabled'],
             'online_training_url' => $settings['OnlineTrainingUrl'],
             'behavioral_agreement' => $person->behavioral_agreement,
-            'has_reviewed_pi' => $person->hasReviewedPi(),
+            'has_reviewed_pi' => !empty($event->pii_finished_at) && $event->pii_finished_at->year == $year,
             'asset_authorized' => $event->asset_authorized,
             'radio_checkout_agreement_enabled' => $settings['RadioCheckoutAgreementEnabled'],
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),

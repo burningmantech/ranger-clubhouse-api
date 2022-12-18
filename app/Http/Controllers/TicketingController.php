@@ -208,41 +208,7 @@ class TicketingController extends ApiController
         return $this->success($tickets, null, 'access_document');
     }
 
-    /**
-     * Update ticketing progress
-     *
-     * @param Person $person
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function updateProgress(Person $person): JsonResponse
-    {
-        $this->authorize('updateProgress', [AccessDocument::class, $person]);
-
-        $params = request()->validate([
-            'milestone' => ['required', 'string', Rule::in('visited', 'started', 'finished')],
-        ]);
-
-        $pe = PersonEvent::findForPersonYear($person->id, current_year());
-        switch ($params['milestone']) {
-            case 'visited':
-                $pe->ticketing_last_visited_at = now();
-                break;
-            case 'started':
-                $pe->ticketing_started_at = now();
-                break;
-            case 'finished':
-                $pe->ticketing_finished_at = now();
-                break;
-        }
-
-        $pe->saveWithoutValidation();
-
-        return $this->success();
-    }
-
-    /**
+     /**
      * Return the appreciation credit/hour thresholds for tickets, All-You-Can-Eat pass, shirts, and showers.
      *
      * @return JsonResponse

@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 Route::group([
     'middleware' => 'api',
 ], function ($router) {
+    Route::get('config/dashboard-period', 'ConfigController@dashboardPeriod');
     Route::get('config', 'ConfigController@show');
 
     Route::post('auth/login', 'AuthController@login');
@@ -239,6 +240,7 @@ Route::group([
 
     Route::resource('person-certification', 'PersonCertificationController');
 
+    Route::post('person-event/{person}/progress', 'PersonEventController@updateProgress');
     Route::resource('person-event', 'PersonEventController');
 
     Route::get('person-photo/review-config', 'PersonPhotoController@reviewConfig');
@@ -359,7 +361,6 @@ Route::group([
     Route::get('ticketing/statistics', 'TicketingController@statistics');
     Route::post('ticketing/{person}/delivery', 'TicketingController@delivery');
     Route::get('ticketing/{person}/package', 'TicketingController@package');
-    Route::post('ticketing/{person}/progress', 'TicketingController@updateProgress');
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
     Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
