@@ -100,7 +100,8 @@ class Timesheet extends ApiModel
     const RELATIONSHIPS = [
         'reviewer_person:id,callsign',
         'verified_person:id,callsign',
-        'position:id,title,count_hours'
+        'position:id,title,count_hours',
+        'slot'
     ];
 
     public $_additional_notes;
