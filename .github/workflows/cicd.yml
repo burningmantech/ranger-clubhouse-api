@@ -98,7 +98,7 @@ jobs:
           docker image save ranger-clubhouse-api:dev | gzip -6 > images/api.tgz;
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: images
           path: images
