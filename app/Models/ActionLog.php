@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use DateTime;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActionLog extends Model
 {
@@ -24,26 +24,34 @@ class ActionLog extends Model
 
     const PAGE_SIZE_DEFAULT = 50;
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function target_person()
+    public function target_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query, $redactData)
+    /**
+     * Retrieve action log records based on the given query criteria.
+     *
+     * @param array $query
+     * @param bool $redactData - true if the data column is to be redacted.
+     * @return array
+     */
+    public static function findForQuery(array $query, bool $redactData): array
     {
         $personId = $query['person_id'] ?? null;
-        $page = $query['page'] ?? 1;
-        $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
+        $page = (int)($query['page'] ?? 1);
+        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
         $events = $query['events'] ?? [];
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
         $endTime = $query['end_time'] ?? null;
         $lastDay = $query['lastday'] ?? false;
+        $message = $query['message'] ?? null;
 
         $sql = self::query();
 
@@ -59,10 +67,10 @@ class ActionLog extends Model
             $likeEvents = [];
 
             foreach ($events as $event) {
-                if (strpos($event, '%') === false) {
-                    $exactEvents[] = $event;
-                } else {
+                if (str_contains($event, '%')) {
                     $likeEvents[] = $event;
+                } else {
+                    $exactEvents[] = $event;
                 }
             }
 
@@ -88,7 +96,15 @@ class ActionLog extends Model
         }
 
         if ($lastDay) {
-            $sql->whereRaw('created_at >= ?', [ now()->subHours(24) ]);
+            $sql->whereRaw('created_at >= ?', [now()->subHours(24)]);
+        }
+
+        if ($message) {
+            if (str_contains($message, '%')) {
+                $sql->where('message', 'like', $message);
+            } else {
+                $sql->where('message', $message);
+            }
         }
 
         // How many total for the query
@@ -108,6 +124,10 @@ class ActionLog extends Model
         $page = $page - 1;
         if ($page < 0) {
             $page = 0;
+        }
+
+        if ($pageSize <= 0) {
+            $pageSize = self::PAGE_SIZE_DEFAULT;
         }
 
         $sql->offset($page * $pageSize)->limit($pageSize);
@@ -158,11 +178,22 @@ class ActionLog extends Model
         ];
     }
 
-    public static function record($person, $event, $message, $data = null, $targetPersonId = null)
+    /**
+     * Record a Clubhouse event
+     *
+     * @param $user - user performing the action
+     * @param $event - event that happened.
+     * @param $message - optional message/reason
+     * @param $data - relevant data to log
+     * @param $targetPersonId - the target id who the action was taken against
+     * @return void
+     */
+
+    public static function record($user, $event, $message, $data = null, $targetPersonId = null): void
     {
         $log = new ActionLog;
         $log->event = $event;
-        $log->person_id = $person ? $person->id : null;
+        $log->person_id = $user?->id;
         $log->message = $message ?? '';
         $log->target_person_id = $targetPersonId;
 
@@ -170,17 +201,19 @@ class ActionLog extends Model
             $log->data = $data;
         }
 
-        $log->created_at = now();
+        // We want the real time, not the simulated GHD time returned by now().
+        $log->created_at = new Carbon(new DateTime);
         $log->save();
     }
 
     /**
      * Prepare a date for array / JSON serialization.
      *
-     * @param  \DateTimeInterface  $date
+     * @param DateTimeInterface $date
      * @return string
      */
-    protected function serializeDate(DateTimeInterface $date)
+
+    protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
     }

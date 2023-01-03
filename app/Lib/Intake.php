@@ -3,23 +3,27 @@
 namespace App\Lib;
 
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
-use App\Models\PersonStatus;
-use App\Models\PersonMentor;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
+use App\Models\PersonMentor;
+use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
-use App\Models\Position;
-use App\Models\Training;
-use App\Models\Timesheet;
-use App\Models\Slot;
 use App\Models\PersonSlot;
+use App\Models\PersonStatus;
+use App\Models\Position;
+use App\Models\Slot;
+use App\Models\Timesheet;
 use App\Models\TraineeStatus;
-
+use App\Models\Training;
 use Carbon\Carbon;
 
 class Intake
 {
+    const ABOVE_AVERAGE = 1;
+    const AVERAGE = 2;
+    const BELOW_AVERAGE = 3;
+    const FLAG = 4;
+
     /**
      * Retrieve all PNVs in a given year.
      *
@@ -27,13 +31,8 @@ class Intake
      * @return array
      */
 
-    const ABOVE_AVERAGE = 1;
-    const AVERAGE = 2;
-    const BELOW_AVERAGE = 3;
-    const FLAG = 4;
-
-    public static function retrieveAllForYear(int $year)
-    {
+     public static function retrieveAllForYear(int $year): array
+     {
         // Find any PNVs in a given year
         $pnvIds = PersonStatus::select('person_id')
             ->whereYear('created_at', $year)
@@ -79,7 +78,7 @@ class Intake
             ->whereYear('created_at', $year)
             ->where('created_at', '>=', "$year-02-01")
             ->where('new_status', Person::PAST_PROSPECTIVE)
-            ->whereIn('person_id', $pnvIds)
+            ->whereIntegerInRaw('person_id', $pnvIds)
             ->orderBy('created_at')
             ->with('person:id,callsign')
             ->get()
@@ -95,7 +94,7 @@ class Intake
             ->where('person_photo.status', PersonPhoto::APPROVED)
             ->join('person', 'person.person_photo_id', 'person_photo.id')
             ->whereYear('person_photo.uploaded_at', $year)
-            ->whereIn('person_photo.person_id', $pnvIds)
+            ->whereIntegerInRaw('person_photo.person_id', $pnvIds)
             ->with('person:id,callsign')
             ->get();
 
@@ -105,7 +104,7 @@ class Intake
             self::setSpigotDate($dates, 'photo_approved', $photo->reviewed_at ?? $photo->uploaded_at, $photo->person);
         }
 
-        $onlineTraining = PersonOnlineTraining::whereIn('person_id', $pnvIds)
+        $onlineTraining = PersonOnlineTraining::whereIntegerInRaw('person_id', $pnvIds)
             ->whereYear('completed_at', $year)
             ->with('person:id,callsign')
             ->get();
@@ -123,8 +122,8 @@ class Intake
             ->toArray();
 
         if (!empty($trainingSlotIds)) {
-            $trainingSignups = PersonSlot::whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $trainingSlotIds)
+            $trainingSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
                 ->with('person:id,callsign')
                 ->get()
                 ->groupBy('person_id');
@@ -136,8 +135,8 @@ class Intake
             // Grab the passing PNVs
             $trainingPass = TraineeStatus::select('trainee_status.*', 'slot.begins')
                 ->join('slot', 'slot.id', 'trainee_status.slot_id')
-                ->whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $trainingSlotIds)
+                ->whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
                 ->where('passed', true)
                 ->with('person:id,callsign')
                 ->get()
@@ -157,8 +156,8 @@ class Intake
             ->toArray();
 
         if (!empty($alphaSlotIds)) {
-            $alphaSignups = PersonSlot::whereIn('person_id', $pnvIds)
-                ->whereIn('slot_id', $alphaSlotIds)
+            $alphaSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
+                ->whereIntegerInRaw('slot_id', $alphaSlotIds)
                 ->with('person:id,callsign')
                 ->get()
                 ->groupBy('person_id');
@@ -216,20 +215,21 @@ class Intake
      *
      * @param array $pnvIds PNV ids to find
      * @param int $year
+     * @param bool $onlyFlagged
      * @return array
      */
 
-    public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true)
+    public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true): array
     {
         // Find the ALL intake records for the folks in question.
-        $peopleIntake = PersonIntake::whereIn('person_id', $pnvIds)
+        $peopleIntake = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)
             ->where('year', '<=', $year)
             ->orderBy('person_id')
             ->orderBy('year')
             ->get()
             ->groupBy('person_id');
 
-        $personStatuses = PersonStatus::whereIn('person_id', $pnvIds)
+        $personStatuses = PersonStatus::whereIntegerInRaw('person_id', $pnvIds)
             ->whereIn('new_status', [Person::AUDITOR, Person::PROSPECTIVE, Person::ALPHA])
             ->whereYear('created_at', '<=', $year)
             ->orderBy('person_id')
@@ -244,7 +244,7 @@ class Intake
         $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA);
 
         // Find the people
-        $people = Person::whereIn('id', $pnvIds)->orderBy('callsign')->get();
+        $people = Person::whereIntegerInRaw('id', $pnvIds)->orderBy('callsign')->get();
 
         $pnvs = [];
         foreach ($people as $person) {
@@ -401,7 +401,15 @@ class Intake
         return $pnvs;
     }
 
-    public static function wasAuditorInYear($statuses, $year)
+    /**
+     * Figure out if a person was an auditor in a given year.
+     *
+     * @param $statuses
+     * @param $year
+     * @return bool
+     */
+
+    public static function wasAuditorInYear($statuses, $year): bool
     {
         $possible = null;
         foreach ($statuses as $row) {
@@ -443,7 +451,6 @@ class Intake
         }
 
         if (!empty($notes)) {
-            $haveNote = false;
             foreach ($notes as $note) {
                 if ($note->type != $type) {
                     continue;
@@ -462,9 +469,7 @@ class Intake
             $result[] = $info;
         }
 
-        usort($result, function ($a, $b) {
-            return $a['year'] <=> $b['year'];
-        });
+        usort($result, fn($a, $b) => $a['year'] <=> $b['year']);
         return $result;
     }
 }

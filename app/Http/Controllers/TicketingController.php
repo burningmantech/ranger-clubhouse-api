@@ -9,23 +9,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
+use App\Lib\TicketAndProvisionsPackage;
+use App\Lib\TicketingStatistics;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
-
+use App\Models\PersonEvent;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class TicketingController extends ApiController
 {
-    /*
+    /**
      * Retrieve the ticketing information
+     *
+     * @return JsonResponse
      */
 
-    public function ticketingInfo()
+    public function ticketingInfo(): JsonResponse
     {
         $settings = setting([
             'TicketingPeriod', 'TicketsAndStuffEnablePNV',
@@ -35,7 +38,8 @@ class TicketingController extends ApiController
             'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
             'RpTicketThreshold', 'ScTicketThreshold',
             'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
-            'TAS_Pickup_Locations'
+            'TAS_Pickup_Locations',
+            'TAS_PayByDateTime'
         ]);
 
         return response()->json([
@@ -66,6 +70,8 @@ class TicketingController extends ApiController
 
                 'pickup_locations' => $settings['TAS_Pickup_Locations'],
 
+                'paid_by' => $settings['TAS_PayByDateTime'],
+
                 'faqs' => [
                     'ticketing' => $settings['TAS_Ticket_FAQ'],
                     'wap' => $settings['TAS_WAP_FAQ'],
@@ -76,23 +82,28 @@ class TicketingController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Retrieve the ticketing package
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function package(Person $person)
+    public function package(Person $person): JsonResponse
     {
-
         $this->authorize('index', [AccessDocument::class, $person->id]);
-
-        return response()->json(['package' => AccessDocument::buildPackageForPerson($person->id)]);
+        return response()->json(['package' => TicketAndProvisionsPackage::buildPackageForPerson($person->id)]);
     }
 
-    /*
+    /**
      * Update the SO WAP list
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function storeWAPSO(Person $person)
+    public function storeWAPSO(Person $person): JsonResponse
     {
         $personId = $person->id;
         $this->authorize('storeSOSWAP', [AccessDocument::class, $personId]);
@@ -167,7 +178,7 @@ class TicketingController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
 
     public function delivery(Person $person): JsonResponse
@@ -197,7 +208,7 @@ class TicketingController extends ApiController
         return $this->success($tickets, null, 'access_document');
     }
 
-    /**
+     /**
      * Return the appreciation credit/hour thresholds for tickets, All-You-Can-Eat pass, shirts, and showers.
      *
      * @return JsonResponse
@@ -219,5 +230,19 @@ class TicketingController extends ApiController
         ]);
 
         return response()->json(['thresholds' => $thresholds]);
+    }
+
+    /**
+     * Retrieve ticketing statistics
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function statistics(): JsonResponse
+    {
+        $this->authorize('statistics', AccessDocument::class);
+
+        return response()->json(['statistics' => TicketingStatistics::execute()]);
     }
 }

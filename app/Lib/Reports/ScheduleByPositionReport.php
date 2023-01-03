@@ -1,8 +1,6 @@
 <?php
 
-
 namespace App\Lib\Reports;
-
 
 use App\Models\Slot;
 
@@ -15,12 +13,12 @@ class ScheduleByPositionReport
      * @return array
      */
 
-    public static function execute(int $year, $canViewEmail): array
+    public static function execute(int $year): array
     {
         $rows = Slot::select('slot.*')
             ->join('position', 'position.id', 'slot.position_id')
             ->whereYear('begins', $year)
-            ->with(['position:id,title,active', 'person_slot.person:id,callsign,first_name,last_name,status,email'])
+            ->with(['position:id,title,active', 'person_slot.person:id,callsign,first_name,last_name,status'])
             ->orderBy('position.title')
             ->orderBy('slot.begins')
             ->get()
@@ -28,7 +26,7 @@ class ScheduleByPositionReport
 
         $people = [];
 
-        $positions = $rows->map(function ($p) use ($canViewEmail, &$people) {
+        $positions = $rows->map(function ($p) use (&$people) {
             $slot = $p[0];
             $position = $slot->position;
 
@@ -36,7 +34,7 @@ class ScheduleByPositionReport
                 'id' => $position->id,
                 'title' => $position->title,
                 'active' => $position->active,
-                'slots' => $p->map(function ($slot) use ($canViewEmail, &$people) {
+                'slots' => $p->map(function ($slot) use (&$people) {
                     return [
                         'id' => $slot->id,
                         'begins' => (string)$slot->begins,
@@ -44,7 +42,7 @@ class ScheduleByPositionReport
                         'active' => $slot->active,
                         'description' => (string)$slot->description,
                         'max' => $slot->max,
-                        'sign_ups' =>  $slot->person_slot->map(function ($row) use ($canViewEmail, &$people) {
+                        'sign_ups' => $slot->person_slot->map(function ($row) use (&$people) {
                             $person = $row->person;
                             $personId = $person->id;
                             $people[$personId] ??= [
@@ -54,9 +52,6 @@ class ScheduleByPositionReport
                                 'last_name' => $person->last_name,
                                 'status' => $person->status,
                             ];
-                            if ($canViewEmail) {
-                                $people[$personId]['email'] ??= $person->email;
-                            }
                             return $personId;
                         })->toArray()
                     ];
@@ -66,7 +61,7 @@ class ScheduleByPositionReport
 
         return [
             'positions' => $positions,
-            'people'=> $people
+            'people' => $people
         ];
     }
 }

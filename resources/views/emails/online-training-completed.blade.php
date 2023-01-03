@@ -9,8 +9,11 @@
         @endif
     </p>
     <p>
-        Congratulations! You have successfully completed the Ranger Online Training Course.
+        Congratulations! You have successfully completed the Ranger Online Course.
         You are cleared to sign up for the In-Person Training.
+    </p>
+    <p>
+        Note, not all trainings may yet be announced.
     </p>
     @if ($person->isPNV())
         <p>
@@ -20,14 +23,18 @@
     @elseif ($person->isAuditor())
         <p>
             Visit the <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>
-            to audit the Ranger In-Person Training.
+            to audit the In-Person Training.
         </p>
         <p>
-            <b>NOTE: You are an auditor, you are NOT on the path to becoming a Black Rock Ranger this year.</b>
+            <b>WARNING: You are an auditor, you are NOT on the path to becoming a Black Rock Ranger this year.</b>
         </p>
     @else
         <p>
-            <b>All Rangers MUST complete an In-Person Training before being allowed to work a shift on playa.</b>
+            <b>All Rangers MUST complete the In-Person Training before being allowed to work a shift on playa.</b>
+        </p>
+        <p>
+            In order to work certain Ranger special team shifts, you have to sign up for and attend the corresponding
+            Advance Ranger Training(s).
         </p>
         <p>
             Visit the <a href="https://ranger-clubhouse.burningman.org">Ranger Secret Clubhouse</a>

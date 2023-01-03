@@ -101,6 +101,10 @@ class BmidController extends ApiController
         // Filter out the IDS.
         $filterBmids = $bmids->filter(fn($bmid) => $bmid->isPrintable());
 
+        if ($filterBmids->isEmpty()) {
+            throw new InvalidArgumentException("No prep or ready-to-print status BMIDs found. Previously submitted BMIDs are ignored.");
+        }
+
         $batchInfo = $params['batch_info'] ?? '';
         $exportUrl = MarcatoExport::export($filterBmids, $batchInfo);
 

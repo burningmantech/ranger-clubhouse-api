@@ -3,11 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class PhotoRejectedMail extends Mailable
+class PhotoRejectedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -20,12 +18,13 @@ class PhotoRejectedMail extends Mailable
      *
      * @return void
      */
-     public function __construct($person, $rejectReasons, $rejectMessage)
-     {
-         $this->person = $person;
-         $this->rejectMessage = $rejectMessage;
-         $this->rejectReasons = $rejectReasons;
-     }
+    public function __construct($person, $rejectReasons, $rejectMessage)
+    {
+        $this->person = $person;
+        $this->rejectMessage = $rejectMessage;
+        $this->rejectReasons = $rejectReasons;
+        parent::__construct();
+    }
 
     /**
      * Build the message.
@@ -34,8 +33,8 @@ class PhotoRejectedMail extends Mailable
      */
     public function build()
     {
-        return $this->from([ 'address' => setting('VCEmail'), 'name' => 'The Volunteer Coordinators'] )
-                ->subject('Ranger Clubhouse photo submission REJECTED.')
-                ->view('emails.photo-rejected');
+        return $this->from(setting('VCEmail'), 'The Volunteer Coordinators')
+            ->subject('Ranger Clubhouse photo submission REJECTED.')
+            ->view('emails.photo-rejected');
     }
 }

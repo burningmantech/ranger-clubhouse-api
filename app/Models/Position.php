@@ -2,7 +2,13 @@
 
 namespace App\Models;
 
+use App\Lib\Membership;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\DB;
 
 class Position extends ApiModel
 {
@@ -30,6 +36,7 @@ class Position extends ApiModel
     const DIRT_GREEN_DOT = 4;
     const GREEN_DOT_LEAD = 14;
     const GREEN_DOT_LEAD_INTERN = 126;
+    const GREEN_DOT_LONG = 28;
     const GREEN_DOT_MENTOR = 40;
     const GREEN_DOT_MENTEE = 50;
     const GREEN_DOT_TRAINING = 101;
@@ -48,18 +55,28 @@ class Position extends ApiModel
     const HQ_TRAINER = 34;
     const HQ_WINDOW = 3;
     const HQ_WINDOW_PRE_EVENT = 117;
-
+    const HQ_WINDOW_SANDMAN = 104;
+    const HQ_TOD = 103;
     const DOUBLE_OH_7 = 21;
+    const DOUBLE_OH_7_STANDBY = 110;
 
     const DPW_RANGER = 105;
+
+    const DEEP_FREEZE = 38;
 
     const OOD = 10;
     const DEPUTY_OOD = 87;
 
+    const ART_SAFETY = 16;
     const ART_CAR_WRANGLER = 125;
+
+
     const BURN_COMMAND_TEAM = 99;
     const BURN_PERIMETER = 19;
     const BURN_QUAD_LEAD = 114;
+    const BURN_JUMP_TEAM = 144;
+    const FIRE_LANE = 143;
+
     const SANDMAN = 61;
     const SANDMAN_TRAINER = 108;
     const SANDMAN_TRAINING = 80;
@@ -67,15 +84,24 @@ class Position extends ApiModel
 
     const SITE_SETUP = 59;
     const SITE_SETUP_LEAD = 96;
+    const SITE_TEARDOWN = 60;
+    const SITE_TEARDOWN_LEAD = 97;
 
     const RSC_SHIFT_LEAD = 12;
     const RSC_SHIFT_LEAD_PRE_EVENT = 83;
 
     const OPERATIONS_MANAGER = 37;
+
     const DEPARTMENT_MANAGER = 106;
 
     const TROUBLESHOOTER = 91;
     const TROUBLESHOOTER_MENTEE = 127;
+    const TROUBLESHOOTER_MENTOR = 128;
+    const TROUBLESHOOTER_TRAINER = 129;
+    const TROUBLESHOOTER_TRAINING = 94;
+    const TROUBLESHOOTER_LEAL = 147;
+    const TROUBLESHOOTER_LEAL_PRE_EVENT = 148;
+    const TROUBLESHOOTER_PRE_EVENT = 149;
 
     // Trainer positions for Dirt
     const TRAINING = 13;
@@ -89,11 +115,12 @@ class Position extends ApiModel
     const TOW_TRUCK_TRAINER = 121;
 
     const TECH_ON_CALL = 113;
-    const TECH_TEAM = 24;
+    const TECH_OPS = 24;
 
     const GERLACH_PATROL = 75;
     const GERLACH_PATROL_LEAD = 76;
     const GERLACH_PATROL_GREEN_DOT = 122;
+    const GERLACH_PATROL_LONG = 145;
 
     const HOT_SPRINGS_PATROL_DRIVER = 39;
 
@@ -101,9 +128,17 @@ class Position extends ApiModel
     const ECHELON_FIELD_LEAD = 81;
     const ECHELON_FIELD_LEAD_TRAINING = 111;
 
+    const LNT_OUTREACH = 73;
+
     const RSCI = 25;
     const RSCI_MENTOR = 92;
     const RSCI_MENTEE = 93;
+    const RSC_DISPATCH = 71;
+    const RSC_RESIDENT = 77;
+    const RSC_SHIFT_COORD = 78;
+    const RSC_WESL = 109;
+    const RSCI_FB_CONSELOR = 64;
+
 
     const RNR = 11;
     const RNR_RIDE_ALONG = 115;
@@ -116,7 +151,7 @@ class Position extends ApiModel
     const INTERCEPT_OPERATOR = 66;
 
     const OPERATOR = 56;
-    const RSC_WESL = 109;
+    const OPERATOR_SMOOTH = 142;
 
     const LEAL = 7;
     const LEAL_MENTEE = 8;
@@ -125,26 +160,27 @@ class Position extends ApiModel
     const LEAL_PRE_EVENT = 119;
 
     const QUARTERMASTER = 84;
+    const QUARTERMASTER_LEAD = 146;
 
-    const DEEP_FREEZE = 38;
+    const VEHICLE_MAINTENANCE_LEAD = 124;
+    const VEHICLE_MAINTENANCE = 74;
 
-    /*
-     * 2021 Operation Non-Event (O.N.E.) positions
-     */
+    const VOLUNTEER_COORDINATOR = 112;
 
-    const ONE_SHIFT_LEAD = 132;
-    const ONE_TROUBLESHOOTER = 133;
-    const ONE_GREEN_DOT = 134;
-    const ONE_GERLACH_PATROL_DIRT = 135;
-    const ONE_RSCI = 136;
-    const ONE_HQ_WINDOW = 137;
-    const ONE_OPS_MANAGER = 140;
-    const ONE_OPS_DEPUTY = 141;
+    const IMS_ADMIN = 89;
+    const IMS_AUDIT = 90;
+    const IMS_TRAINING = 62;
 
+    const LOGISTICS_LEAD = 98;
+    const LOGISTICS = 42;
+    const LOGISTICS_MANAGER = 151;
+
+    const REGIONAL_RANGER_NETWORK = 154;
 
     /*
      * Position types
      */
+
     const TYPE_COMMAND = 'Command';
     const TYPE_FRONTLINE = 'Frontline';
     const TYPE_HQ = 'HQ';
@@ -230,28 +266,55 @@ class Position extends ApiModel
 
     const SANDMAN_YEAR_CUTOFF = 5;
 
+    const ART_GRADUATE_TO_POSITIONS = [
+        self::TOW_TRUCK_TRAINING => [
+            'veteran' => self::TOW_TRUCK_DRIVER,
+            'positions' => [self::TOW_TRUCK_MENTEE],
+        ],
+
+        self::SANDMAN_TRAINING => [
+            'positions' => [self::SANDMAN],
+        ],
+
+        self::GREEN_DOT_TRAINING => [
+            'veteran' => self::DIRT_GREEN_DOT,
+            'positions' => [self::GREEN_DOT_MENTEE, self::SANCTUARY_MENTEE]
+        ],
+    ];
+
     protected $fillable = [
+        'active',
+        'alert_when_empty',
         'all_rangers',
+        'all_team_members',
+        'contact_email',
+        'contact_email',
         'count_hours',
         'max',
         'min',
         'new_user_eligible',
         'on_sl_report',
+        'on_trainer_report',
         'prevent_multiple_enrollments',
+        'public_team_position',
+        'role_ids',
         'short_title',
-        'contact_email',
+        'team_id',
         'title',
         'training_position_id',
         'type',
-        'active',
     ];
 
     protected $casts = [
+        'active' => 'bool',
+        'alert_when_empty' => 'bool',
         'all_rangers' => 'bool',
+        'all_team_members' => 'bool',
         'new_user_eligible' => 'bool',
         'on_sl_report' => 'bool',
+        'on_trainer_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
-        'active' => 'bool'
+        'public_team_position' => 'bool',
     ];
 
     protected $rules = [
@@ -259,22 +322,73 @@ class Position extends ApiModel
         'short_title' => 'sometimes|string|max:6|nullable',
         'min' => 'integer',
         'max' => 'integer',
-        'training_position_id' => 'nullable|exists:position,id'
+        'training_position_id' => 'nullable|exists:position,id',
+        'team_id' => 'nullable|exists:team,id',
+        'role_ids' => 'sometimes|array',
+        'role_ids.*' => 'sometimes|integer|exists:role,id'
     ];
 
-    public function training_positions()
+    protected $hidden = [
+        'position_roles',
+        'roles',
+    ];
+
+    // Pseudo column - for the position role grants
+    public array|null $role_ids = null;
+
+    public static function boot()
+    {
+        parent::boot();
+
+        self::saved(function ($model) {
+            if (is_array($model->role_ids)) {
+                // Update Position Roles
+                Membership::updatePositionRoles($model->id, $model->role_ids, '');
+            }
+        });
+    }
+
+    public function training_positions(): HasMany
     {
         return $this->hasMany(Position::class, 'training_position_id');
     }
 
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class, 'team_id');
+    }
+
+    public function position_roles(): HasMany
+    {
+        return $this->hasMany(PositionRole::class, 'position_id');
+    }
+
+    public function team_positions(): HasMany
+    {
+        return $this->hasMany(Position::class, 'team_id');
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'position_role');
+    }
+
+    public function members(): HasManyThrough
+    {
+        return $this->hasManyThrough(Person::class, PersonPosition::class, 'position_id', 'id', 'id', 'person_id')->orderBy('person.callsign');
+    }
+
     /**
      * Find  positions based on criteria
-     * @param $query
-     * @return Position[]|Collection
+     *
+     * @param array $query
+     * @return Collection
      */
-    public static function findForQuery($query)
+
+    public static function findForQuery(array $query): Collection
     {
         $type = $query['type'] ?? null;
+        $includeRoles = $query['include_roles'] ?? false;
 
         $sql = self::orderBy('title');
 
@@ -282,7 +396,34 @@ class Position extends ApiModel
             $sql->where('type', $type);
         }
 
-        return $sql->get();
+        $rows = $sql->get();
+
+        if ($includeRoles) {
+            $rows->load('position_roles');
+            foreach ($rows as $row) {
+                $row->loadRoles();
+            }
+        }
+
+        return $rows;
+    }
+
+    public function loadRoles()
+    {
+        $this->role_ids = $this->position_roles->pluck('role_id')->toArray();
+        $this->append('role_ids');
+    }
+
+    /**
+     * Find by title
+     *
+     * @param string $title
+     * @return Position|null
+     */
+
+    public static function findByTitle(string $title): ?Position
+    {
+        return self::where('title', $title)->first();
     }
 
     /**
@@ -290,14 +431,16 @@ class Position extends ApiModel
      * Optionally exclude Dirt Training (for ART module support)
      * Return only the id & title.
      *
-     * @param false $excludeDirt
+     * @param bool $excludeDirt
      * @return array
      */
-    public static function findAllTrainings($excludeDirt = false): array
+
+    public static function findAllTrainings(bool $excludeDirt = false): array
     {
         $sql = self::select('id', 'title')
             ->where('type', Position::TYPE_TRAINING)
             ->where('title', 'not like', '%trainer%')
+            ->where('active', true)
             ->orderBy('title');
 
         if ($excludeDirt) {
@@ -310,31 +453,34 @@ class Position extends ApiModel
     /**
      * Retrieve the title for a position. Return a position id if the
      * position was not found.
+     * @param int $id
+     * @return string
      */
 
-    public static function retrieveTitle($id): string
+    public static function retrieveTitle(int $id): string
     {
-        $row = self::find($id);
+        $row = DB::table('position')->select('title')->where('id', $id)->first();
 
         return $row ? $row->title : "Position #{$id}";
     }
 
     /**
      * Find all positions which reference the given training position
-     * @param $positionId position
-     * @return Position[]|Collection
+     * @param int $positionId
+     * @return Collection
      */
 
-    public static function findTrainedPositions(int $positionId)
+    public static function findTrainedPositions(int $positionId): Collection
     {
         return self::select('id', 'title')->where('training_position_id', $positionId)->get();
     }
 
-    /*
+    /**
      * Find all positions with working (started) slots
+     * @return Collection
      */
 
-    public static function findAllWithInProgressSlots()
+    public static function findAllWithInProgressSlots(): Collection
     {
         $now = (string)now();
         return self::where('type', '!=', self::TYPE_TRAINING)
@@ -354,17 +500,21 @@ class Position extends ApiModel
      * @return bool true if the person is qualified
      */
 
-    public static function isSandmanQualified(Person $person, &$reason)
+    public static function isSandmanQualified(Person $person, &$reason): bool
     {
-        $event = PersonEvent::findForPersonYear($person->id, current_year());
-        if (!$event || !$event->sandman_affidavit) {
-            $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
-            return false;
+        if (setting('SandmanRequireAffidavit')) {
+            $event = PersonEvent::findForPersonYear($person->id, current_year());
+            if (!$event || !$event->sandman_affidavit) {
+                $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
+                return false;
+            }
         }
 
-        if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
-            $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
-            return false;
+        if (setting('SandmanRequirePerimeterExperience')) {
+            if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
+                $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
+                return false;
+            }
         }
 
         return true;
@@ -374,9 +524,10 @@ class Position extends ApiModel
      * Return the "sub type" of the position - i.e. return an additional types
      * For mentoring positions, figure out if it's a mentor or mentee position (Alpha & Cheetah Cub)
      *
-     * @return string
+     * @return string|null
      */
-    public function getSubtypeAttribute()
+
+    public function getSubtypeAttribute(): ?string
     {
         $id = $this->id;
 
@@ -388,5 +539,27 @@ class Position extends ApiModel
         } else {
             return $this->type;
         }
+    }
+
+    /**
+     * Get the pseudo role_ids field
+     *
+     * @return array|null
+     */
+    public function getRoleIdsAttribute(): ?array
+    {
+        return $this->role_ids;
+    }
+
+    /**
+     * Set the pseudo role_ids field
+     *
+     * @param $value
+     * @return void
+     */
+
+    public function setRoleIdsAttribute($value): void
+    {
+        $this->role_ids = $value;
     }
 }

@@ -44,8 +44,7 @@ namespace App\Lib;
  * so we can make sure we're not dealing with a duplicate record.
  */
 
-use App\Lib\SalesforceConnector;
-use App\Lib\PotentialClubhouseAccountFromSalesforce;
+use Illuminate\Support\Facades\Log;
 
 // ------------- SalesForceClubhouseInterface class -------------------
 
@@ -59,11 +58,11 @@ class SalesforceClubhouseInterface
         'Name',
         'CH_UID__c',
         'Ranger_Applicant_Type__c',
-        'Long_Sleeve_Shirt_Size__c',
-        'Tee_Shirt_Size__c',
+        //   'Long_Sleeve_Shirt_Size__c',
+        //   'Tee_Shirt_Size__c',
         'VC_Approved_Radio_Call_Sign__c',
-        'Why_Ranger_Comments__c',
-//        'VC_Comments__c',
+//        'Why_Ranger_Comments__c',
+        'VC_Comments__c',
         'VC_Status__c',
         'Known_Rangers__c',
         'Known_Rangers_Names__c',
@@ -104,42 +103,37 @@ class SalesforceClubhouseInterface
     ];
 
 
-    /*
-	 * If we're provided an SFConnector we'll use it, otherwise
-	 * we'll create one of our own.
-	 */
+    /**
+     * If we're provided an SFConnector we'll use it, otherwise
+     * we'll create one of our own.
+     * @param null $sf
+     */
+
     public function __construct($sf = null)
     {
-        if ($sf) {
-            $this->sf = $sf;
-        } else {
-            $this->sf = new SalesforceConnector();
-        }
+        $this->sf = $sf ?? new SalesforceConnector();
     }
 
-    /*
-	 * Enable or disable debugging; this is just some echos
-	 * around Saleforce writebacks.
-	 */
-    public function setDebug($d = true)
+    /**
+     * Enable or disable debugging; this is just some echos
+     * around Saleforce writebacks.
+     * @param bool $d
+     */
+
+    public function setDebug(bool $d = true)
     {
         $this->debug = $d;
     }
 
-    /*
-	 * Authenticate with salesforce.  "Where" can be one of
-	 * "sandbox" or "production". Defaults to sandbox.
-	 * Grabs credtials out of config.php, with either "sbx" or "prd"
-	 * in the config variable names.
-	 * Return true on success, false on error.
-	 */
+    /**
+     * Authenticate with salesforce
+     *
+     * @return bool
+     */
 
-    public function auth($where = "sandbox")
+    public function auth(): bool
     {
-        $d = "sbx";
-        if ($where == "production") {
-            $d = "prd";
-        }
+        $d = "prd";
         if (setting("SF" . $d . "Password") == "") {
             $this->sf->errorMessage = "sfch->auth: no password for $d";
             return false;
@@ -154,21 +148,25 @@ class SalesforceClubhouseInterface
     }
 
 
-    /*
-	 * Return an array of (Salesforce) objects of accounts ready to import
-	 * or FALSE on error.
-	 *
-	 * By default, only grabs Rangers from Salesforce who are of VC_Status
-	 * of "Released to Upload" and who are prospective new volunteers.
-	 * I.e., doesn't deal with updates to existing Rangers, just n00bs.
-	 * If options is "showall", returns a list of all objects in Salesforce,
-	 * whether or not they're ready to be imported.  If options is "testing",
-	 * returns only Salesforce objects with callsigns like "Testing*".
-	 *
-	 * The array returned will need to be cleaned up and converted into
-	 * a PotentialClubhouseAccountFromSalesforce object (see above).
-	 */
-    function queryAccountsReadyForImport($options = "")
+    /**
+     * Return an array of (Salesforce) objects of accounts ready to import
+     * or FALSE on error.
+     *
+     * By default, only grabs Rangers from Salesforce who are of VC_Status
+     * of "Released to Upload" and who are prospective new volunteers.
+     * I.e., doesn't deal with updates to existing Rangers, just n00bs.
+     * If options is "showall", returns a list of all objects in Salesforce,
+     * whether or not they're ready to be imported.  If options is "testing",
+     * returns only Salesforce objects with callsigns like "Testing*".
+     *
+     * The array returned will need to be cleaned up and converted into
+     * a PotentialClubhouseAccountFromSalesforce object (see above).
+     *
+     * @param string $options
+     * @return false|mixed
+     */
+
+    public function queryAccountsReadyForImport(string $options = ""): mixed
     {
         $q = 'SELECT ' . implode(', ', self::SF_FIELDS) . ' FROM Ranger__c';
 
@@ -178,6 +176,7 @@ class SalesforceClubhouseInterface
         } elseif ($options != "showall") {
             $q .= " WHERE VC_Status__c = 'Released to Upload' AND ";
             $q .= "(Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger' OR Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger Redux')";
+            $q .= " AND (NOT VC_Approved_Radio_Call_Sign__c LIKE 'Testing%')";
         }
 
         $r = $this->sf->soqlQuery($q);
@@ -187,23 +186,23 @@ class SalesforceClubhouseInterface
             return false;
         }
 
-        /*        if ($r->done != 1) {
-                    $this->sf->errorMessage =
-                                "Salesforce API query returned unfinished";
-                    return false;
-                }*/
         return $r;
     }
 
-    /*
-	 * Set the Clubbouse import status message in Salesforce for this account.
-	 */
-    function updateSalesforceClubhouseImportStatusMessage($pca)
+    /**
+     * Set the Clubbouse import status message in Salesforce for this account.
+     * @param $pca
+     */
+
+    public function updateSalesforceClubhouseImportStatusMessage($pca, $isNew)
     {
         $status = $pca->status;
         $message = $pca->message;
         $d = date("Y-m-d G:i:s");
         $m = "$d: Clubhouse import status: $status";
+        if (!$isNew) {
+            $m .= " existing account updated\n";
+        }
         if ($message != "") {
             $m .= ": $message";
         }
@@ -214,19 +213,26 @@ class SalesforceClubhouseInterface
         );
     }
 
-    /*
-	 * Set the Salesforce VCStatus field in Salesforce to
-	 * either  "Clubhouse Record Created" or "Released to Upload"
-	 * depending on state of PCA status.
-	 */
-    function updateSalesforceVCStatus($pca)
+    /**
+     * Set the Salesforce VCStatus field in Salesforce to
+     * either  "Clubhouse Record Created" or "Released to Upload"
+     * depending on state of PCA status.
+     *
+     * @param $pca
+     * @param $isNew
+     */
+
+    public function updateSalesforceVCStatus($pca, $isNew)
     {
-        if ($pca->status == "succeeded") {
-            $vcStatus = "Clubhouse Record Created";
-        } elseif ($pca->status == "reset") {
-            $vcStatus = "Released to Upload";
-        } else {
-            return;     // Do nothing
+        switch ($pca->status) {
+            case "succeeded":
+                $vcStatus = $isNew ? "Clubhouse Record Created" : "Clubhouse Record Updated";
+                break;
+            case "reset":
+                $vcStatus = "Released to Upload";
+                break;
+            default:
+                return;
         }
 
         $pca->vc_status = $vcStatus;
@@ -238,11 +244,13 @@ class SalesforceClubhouseInterface
         );
     }
 
-    /*
-	 * Set the Salesforce Clubhouse UID field.
- 	 * (if the creation succweeded, that is).
-	 */
-    function updateSalesforceClubhouseUserID($pca)
+    /**
+     * Set the Salesforce Clubhouse UID field.
+     * (if the creation succeeded, that is).
+     * @param $pca
+     */
+
+    public function updateSalesforceClubhouseUserID($pca)
     {
         if ($pca->status != "succeeded") {
             return;
@@ -254,14 +262,17 @@ class SalesforceClubhouseInterface
         );
     }
 
-    /*
-	 * Update a given Salesforce field ("forcefield"?!) to a given value.
-	 */
-    private function updateSalesforceField($id, $field, $value)
+    /**
+     * Update a given Salesforce field ("forcefield"?!) to a given value.
+     * @param $id
+     * @param $field
+     * @param $value
+     */
+
+    public function updateSalesforceField($id, $field, $value)
     {
         if (setting('SFEnableWritebacks')) {
-            $js = json_encode([$field => $value]);
-            $this->sf->objUpdate("Ranger__c", $id, $js);
+            $this->sf->objUpdate("Ranger__c", $id, [$field => $value]);
             if ($this->debug) {
                 Log::debug("updateSalesforceField: updated $field for $id to $value");
             }

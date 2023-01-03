@@ -2,15 +2,15 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\Person;
-use App\Models\Position;
-use App\Models\PersonPosition;
 use App\Models\PersonEvent;
+use App\Models\PersonPosition;
+use App\Models\Position;
+use App\Models\Provision;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class BulkUploadControllerTest extends TestCase
 {
@@ -683,10 +683,10 @@ class BulkUploadControllerTest extends TestCase
             ]
         ]]);
 
-        $this->assertDatabaseHas('access_document', [
+        $this->assertDatabaseHas('provision', [
             'person_id' => $personId,
             'source_year' => $year,
-            'type' => AccessDocument::EVENT_RADIO,
+            'type' => Provision::EVENT_RADIO,
             'item_count' => 1,
         ]);
 
@@ -701,14 +701,14 @@ class BulkUploadControllerTest extends TestCase
         $response->assertJson(['results' => [
             [
                 'callsign' => $callsign,
-                'status' => 'success',
+                'status' => 'warning',
             ]
         ]]);
 
-        $this->assertDatabaseHas('access_document', [
+        $this->assertDatabaseHas('provision', [
             'person_id' => $personId,
             'source_year' => $year,
-            'type' => AccessDocument::EVENT_RADIO,
+            'type' => Provision::EVENT_RADIO,
             'item_count' => 2,
         ]);
     }

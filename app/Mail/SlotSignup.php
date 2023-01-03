@@ -8,28 +8,22 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class SlotSignup extends Mailable
+class SlotSignup extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $slot;
-    public $fromEmail;
-
-     /**
-      * Create a new message instance.
-      *
-      * @param
-      * @return void
-      */
-     public function __construct($slot, $fromEmail)
-     {
-         $this->slot = $slot;
-         $this->fromEmail = $fromEmail;
-     }
+    /**
+     * Create a new message instance.
+     *
+     * @param
+     * @return void
+     */
+    public function __construct(public $slot)
+    {
+        parent::__construct();
+    }
 
     /**
      * Build the message.
@@ -39,8 +33,8 @@ class SlotSignup extends Mailable
     public function build()
     {
         return $this
-                ->from($this->fromEmail)
-                ->subject('Shift Signup')
-                ->view('emails.slot-signup');
+            ->from(setting('DoNotReplyEmail'))
+            ->subject('Shift Signup')
+            ->view('emails.slot-signup');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
+use App\Lib\Reports\EventStats;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
@@ -17,13 +18,14 @@ use App\Lib\Reports\TimesheetByCallsignReport;
 use App\Lib\Reports\TimesheetByPositionReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
+use App\Lib\Reports\TopHourEarnersReport;
+use App\Lib\TimesheetSlotAssocRepair;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
-use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
@@ -31,7 +33,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
-use Psy\Util\Json;
 
 class TimesheetController extends ApiController
 {
@@ -72,9 +73,7 @@ class TimesheetController extends ApiController
             }
         }
 
-        foreach ($years as $year => $positions) {
-            PositionCredit::warmYearCache($year, $positions);
-        }
+        PositionCredit::warmBulkYearCache($years);
 
         return $this->success($rows, null, 'timesheet');
     }
@@ -182,7 +181,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
         $timesheet = new Timesheet;
 
@@ -216,11 +216,10 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function update(Timesheet $timesheet)
+
+    public function update(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('update', $timesheet);
-
-        $person = $this->findPerson($timesheet->person_id);
 
         $this->fromRestFiltered($timesheet);
 
@@ -238,7 +237,7 @@ class TimesheetController extends ApiController
             $timesheet->reviewer_person_id = $userId;
         }
 
-        if ($timesheet->isDirty('notes')) {
+        if ($timesheet->isDirty('notes') && !$timesheet->isDirty('review_status')) {
             $timesheet->review_status = Timesheet::STATUS_PENDING;
         }
 
@@ -249,11 +248,6 @@ class TimesheetController extends ApiController
             } else if ($event->timesheet_confirmed) {
                 $markedUnconfirmed = true;
             }
-        }
-
-        if ($timesheet->isDirty('position_id')) {
-            // Find new sign up to associate with
-            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
         }
 
         $auditColumns = [];
@@ -329,6 +323,7 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function updatePosition(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('updatePosition', $timesheet);
@@ -340,7 +335,6 @@ class TimesheetController extends ApiController
 
         $positionId = $params['position_id'];
         $person = $timesheet->person;
-        $personId = $timesheet->person_id;
 
         $requiredPositionId = 0;
         $unqualifiedReason = null;
@@ -354,8 +348,6 @@ class TimesheetController extends ApiController
 
         $oldPositionId = $timesheet->position_id;
         $timesheet->position_id = $positionId;
-        // Find new sign up to associate with
-        $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($personId, $positionId, $timesheet->on_duty);
         $timesheet->auditReason = 'position update while on duty';
         $timesheet->saveOrThrow();
 
@@ -374,7 +366,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function destroy(Timesheet $timesheet)
+    public function destroy(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('destroy', $timesheet);
         $timesheet->delete();
@@ -396,7 +388,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function signin()
+    public function signin(): JsonResponse
     {
         $this->authorize('signin', [Timesheet::class]);
         $canForceSignon = $this->userHasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
@@ -430,12 +422,6 @@ class TimesheetController extends ApiController
 
         $timesheet = new Timesheet($params);
         $timesheet->setOnDutyToNow();
-
-        if (!$timesheet->slot_id) {
-            // Try to associate a slot with the sign on
-            $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
-        }
-
         $timesheet->auditReason = 'sign in';
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
@@ -457,7 +443,7 @@ class TimesheetController extends ApiController
         $response = [
             'status' => 'success',
             'timesheet_id' => $timesheet->id,
-            'on_duty' => (string) $timesheet->on_duty,
+            'on_duty' => (string)$timesheet->on_duty,
         ];
 
         if ($signonForced) {
@@ -487,7 +473,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function signoff(Timesheet $timesheet)
+    public function signoff(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('signoff', $timesheet);
 
@@ -516,7 +502,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function resignin(Timesheet $timesheet)
+    public function resignin(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('resignin', $timesheet);
 
@@ -544,7 +530,7 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      */
 
-    public function info()
+    public function info(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'required|integer'
@@ -571,7 +557,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function confirm()
+    public function confirm(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'required|integer',
@@ -612,7 +598,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function correctionRequests()
+
+    public function correctionRequests(): JsonResponse
     {
         $this->authorize('correctionRequests', [Timesheet::class]);
         $year = $this->getYear();
@@ -628,7 +615,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function unconfirmedPeople()
+
+    public function unconfirmedPeople(): JsonResponse
     {
         $this->authorize('unconfirmedPeople', [Timesheet::class]);
         $year = $this->getYear();
@@ -644,7 +632,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function sanityChecker()
+    public function sanityChecker(): JsonResponse
     {
         $this->authorize('sanityChecker', [Timesheet::class]);
         $year = $this->getYear();
@@ -658,7 +646,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function potentialShirtsEarnedReport()
+    public function potentialShirtsEarnedReport(): JsonResponse
     {
         $this->authorize('potentialShirtsEarnedReport', [Timesheet::class]);
 
@@ -673,11 +661,14 @@ class TimesheetController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Freaking years report!
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function freakingYearsReport()
+    public function freakingYearsReport(): JsonResponse
     {
         $this->authorize('freakingYearsReport', [Timesheet::class]);
 
@@ -692,16 +683,19 @@ class TimesheetController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Radio eligibility report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function radioEligibilityReport()
+    public function radioEligibilityReport(): JsonResponse
     {
         $this->authorize('radioEligibilityReport', [Timesheet::class]);
         $year = $this->getYear();
 
-        return response()->json(['people' => RadioEligibilityReport::execute($year)]);
+        return response()->json(RadioEligibilityReport::execute($year));
     }
 
     /**
@@ -710,7 +704,8 @@ class TimesheetController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function bulkSignInOut()
+
+    public function bulkSignInOut(): JsonResponse
     {
         $this->authorize('bulkSignInOut', [Timesheet::class]);
 
@@ -853,7 +848,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function onDutyShiftLeadReport()
+    public function onDutyShiftLeadReport(): JsonResponse
     {
         $this->authorize('onDutyShiftLeadReport', [Timesheet::class]);
 
@@ -870,7 +865,7 @@ class TimesheetController extends ApiController
     {
         $personId = $person->id;
 
-        // Confirm the person is allowed to sign into the position
+        // Confirm the person is allowed to sign in to the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
             $response = ['status' => 'position-not-held'];
             return false;
@@ -916,9 +911,57 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function retentionReport() : JsonResponse {
+    public function retentionReport(): JsonResponse
+    {
         $this->authorize('retentionReport', Timesheet::class);
 
         return response()->json(RangerRetentionReport::execute());
+    }
+
+    /**
+     * The Top Hour Earners report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function topHourEarnersReport(): JsonResponse
+    {
+        $this->authorize('topHourEarnersReport', Timesheet::class);
+        $params = request()->validate([
+            'start_year' => 'integer|gte:2010',
+            'end_year' => 'integer|gte:2010',
+            'limit' => 'integer|gt:0|lt:300'
+        ]);
+
+        return response()->json(['top_earners' => TopHourEarnersReport::execute($params['start_year'], $params['end_year'], $params['limit'])]);
+    }
+
+    /**
+     * Scan the timesheet entries for a given year and repair any broken the slot (sign-up) associations.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function repairSlotAssociations(): JsonResponse
+    {
+        $this->authorize('repairSlotAssociations', Timesheet::class);
+        $year = $this->getYear();
+
+        return response()->json(['entries' => TimesheetSlotAssocRepair::execute($year)]);
+    }
+
+    /**
+     * Event Statistics
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function eventStatsReport() : JsonResponse
+    {
+        $this->authorize('eventStatsReport', Timesheet::class);
+        return response()->json(['stats' => EventStats::execute($this->getYear())]);
     }
 }

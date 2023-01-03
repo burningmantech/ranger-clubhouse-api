@@ -12,6 +12,5 @@ php /var/www/application/artisan db:wait;
 while [ true ]
 do
     php /var/www/application/artisan schedule:run -vvv --no-interaction;
-    sleep 60;
+    sleep 15;
 done
-

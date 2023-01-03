@@ -1,20 +1,23 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Lib\ReservedCallsigns;
-use Illuminate\Support\Facades\DB;
 use App\Models\Person;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 /** HTTP controller for handles (person callsigns and reserved words), used by the handle checker. */
 class HandleController extends ApiController
 {
-    const EXCLUDE_STATUSES = [ Person::PAST_PROSPECTIVE, Person::AUDITOR ];
+    const EXCLUDE_STATUSES = [Person::PAST_PROSPECTIVE, Person::AUDITOR];
 
     /**
      * List all handles.
-     * @return \Illuminate\Http\Response
+     * @return JsonResponse
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $result = array();
         $rangerHandles = DB::table('person')

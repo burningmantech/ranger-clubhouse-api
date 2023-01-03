@@ -30,7 +30,7 @@ class TestMail extends Mailable
 
     public function build()
     {
-        return $this->from('do-not-reply@burningman.org')
+        return $this->from(setting('DoNotReplyEmail'))
                 ->subject('Test Email')
                 ->view('emails.test-mail');
     }

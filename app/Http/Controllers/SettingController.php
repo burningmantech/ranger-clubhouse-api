@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ErrorLog;
 use App\Models\Role;
 use App\Models\Setting;
-use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
 
 class SettingController extends ApiController
 {
-    public function index()
+    /**
+     * Retrieve all settings. Redact credentials if user is not a tech ninja.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function index(): JsonResponse
     {
         $this->authorize('index', Setting::class);
 
@@ -39,7 +42,7 @@ class SettingController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function show(Setting $setting)
+    public function show(Setting $setting): JsonResponse
     {
         $this->authorize('show', Setting::class);
         if ($setting->is_credential && !$this->userHasRole(Role::TECH_NINJA)) {
@@ -64,9 +67,11 @@ class SettingController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function update(Setting $setting)
+    public function update(Setting $setting): JsonResponse
     {
         $this->authorize('update', $setting);
+        prevent_if_ghd_server('Settings update');
+
         $this->fromRest($setting);
 
         $setting->auditReason = "setting update $setting->name";

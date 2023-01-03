@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Mail\OnlineTrainingCompletedMail;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
@@ -209,6 +210,7 @@ class Moodle
     public function processCourseCompletion(int $courseId): void
     {
         $enrolled = $this->retrieveCourseEnrollment($courseId);
+
         $students = $this->findClubhouseUsers($enrolled);
 
         $peopleIds = [];
@@ -217,7 +219,7 @@ class Moodle
         }
 
         if (!empty($peopleIds)) {
-            $peopleCompleted = PersonOnlineTraining::whereIn('person_id', $peopleIds)
+            $peopleCompleted = PersonOnlineTraining::whereIntegerInRaw('person_id', $peopleIds)
                 ->whereYear('completed_at', current_year())
                 ->get();
             foreach ($peopleCompleted as $person) {
@@ -266,7 +268,7 @@ class Moodle
             $ot->save();
 
             if (!in_array($person->status, Person::LOCKED_STATUSES)) {
-                mail_to($person->email, new OnlineTrainingCompletedMail($person));
+                mail_to_person($person, new OnlineTrainingCompletedMail($person));
             }
         }
     }
@@ -292,7 +294,7 @@ class Moodle
         }
 
         $people = Person::select('id', 'callsign', 'status', 'email', 'lms_id')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
             ->get();
 
         $found = [];
@@ -357,12 +359,21 @@ class Moodle
 
     public static function generatePassword(Person $person): string
     {
-        $password = ucfirst(preg_replace('/[^\w]/', '', $person->last_name) . ucfirst(substr($person->first_name, 0, 1))) . '!';
+        $letters = 'abcdefghijk';
+        $lastName = ucfirst(strtolower(Person::convertDiacritics($person->last_name)));
+        $firstName = Person::convertDiacritics($person->first_name);
+        $password = ucfirst(preg_replace('/[^\w]/', '', $lastName) . ucfirst(substr($firstName, 0, 1))) . '!';
         $password .= ((string)rand(0, 9) . (string)rand(0, 9) . (string)rand(0, 9));
 
-        while (strlen($password) < 8) {
-            $password .= substr(str_shuffle("abcdef"), 0, 1);
+        while (strlen($password) < 10) {
+            $password .= substr(str_shuffle($letters), 0, 1);
         }
+
+        // Ensure at least one lower case letter appears.
+        if (!preg_match("/[a-z]/", $password)) {
+            $password .= substr(str_shuffle($letters), 0, 1);
+        }
+
         return $password;
     }
 
@@ -380,7 +391,8 @@ class Moodle
 
         $username = str_ireplace('(NR)', '', $person->callsign);
         $username = strtolower(trim($username));
-        $username = preg_replace('/[^\w]/', '', $username);
+        $username = preg_replace('/[^\w]/', '', Person::convertDiacritics($username));
+
         $result = $this->requestWebService(
             'POST', self::WS_CREATE_USERS,
             [
@@ -517,15 +529,22 @@ class Moodle
      * @param $response
      * @param $url
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public static function decodeResponse($response, $url): mixed
     {
         if ($response->failed()) {
+            $body = $response->body();
+            if (str_contains(strtolower($body), 'undergoing maintenance')) {
+                ErrorLog::record('lms-down-for-maintenance');
+                throw new MoodleDownForMaintenanceException();
+            }
+
             $status = $response->status();
             ErrorLog::record('lms-request-failure', [
                 'status' => $status,
-                'body' => $response->body(),
+                'body' => $body,
                 'url' => $url,
             ]);
             throw new RuntimeException('HTTP LMS request status error status=' . $status);

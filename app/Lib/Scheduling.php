@@ -14,7 +14,7 @@ class Scheduling
     const PI_UNREVIEWED = 'pi-unreviewed';
     // BPGUID has not been linked.
     const BPGUID_MISSING = 'bpguid-missing';
-    // Online Training has not been completed
+    // Online Course has not been completed
     const OT_MISSING = 'ot-missing';
     // Online Training is not available at the moment
     const OT_DISABLED = 'ot-disabled';
@@ -76,7 +76,7 @@ class Scheduling
             $otCompleted = PersonOnlineTraining::didCompleteForYear($personId, current_year());
         }
 
-        $canSignUpForTraining = $otCompleted;
+        $canSignUpForTraining = $isNonRanger || $otCompleted;
         $canSignUpForAllShifts = true;
 
         $requirements = [];
@@ -94,7 +94,8 @@ class Scheduling
             }
         } else if (!$isNonRanger && !$otCompleted) {
             // Online training not completed. Bad Ranger, no biscuit.
-            $requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+            //$requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+            $canSignUpForTraining = false;
         }
 
         if (!$isAuditor) {

@@ -7,45 +7,49 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
 use App\Models\Clubhouse1Log;
 use App\Models\Person;
-use App\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class Clubhouse1LogController extends ApiController
 {
     /**
      * Retrieve the action log
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-     public function index()
-     {
-         $this->authorize('isAdmin');
+    public function index(): JsonResponse
+    {
+        $this->authorize('isAdmin');
 
-         $params = request()->validate([
-             'sort'       => 'sometimes|string',
-             'events'     => 'sometimes|string',
-             'event_text' => 'sometimes|string',
+        prevent_if_ghd_server('Clubhouse 1 Log viewing');
 
-             'start_time'  => 'sometimes|date',
-             'end_time'    => 'sometimes|date',
+        $params = request()->validate([
+            'sort' => 'sometimes|string',
+            'events' => 'sometimes|string',
+            'event_text' => 'sometimes|string',
 
-             'page'       => 'sometimes|integer',
-             'page_size'  => 'sometimes|integer',
+            'start_time' => 'sometimes|date',
+            'end_time' => 'sometimes|date',
 
-             'person'     => 'sometimes|string',
+            'page' => 'sometimes|integer',
+            'page_size' => 'sometimes|integer',
+
+            'person' => 'sometimes|string',
         ]);
 
-        if (isset($params['person'])) {
-            $callsign = $params['person'];
+        $callsign = $params['person'] ?? null;
+        if ($callsign) {
             if (is_numeric($callsign)) {
-                $params['person_id'] = (int) $callsign;
+                $params['person_id'] = (int)$callsign;
             } else {
                 $person = Person::findByCallsign($callsign);
                 if (!$person) {
-                    return response()->json([ 'error' => "Person $callsign was not found."]);
+                    return response()->json(['error' => "Person $callsign was not found."]);
                 }
 
                 $params['person_id'] = $person->id;

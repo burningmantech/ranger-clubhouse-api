@@ -2,30 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
-
-use App\Http\Controllers\ApiController;
-
-use App\Lib\RBS;
-
-use App\Jobs\RBSTransmitEmailJob;
 use App\Jobs\RBSTransmitClubhouseMessageJob;
-
+use App\Jobs\RBSTransmitEmailJob;
+use App\Lib\RBS;
 use App\Models\Alert;
 use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Slot;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class RbsController extends ApiController
 {
-    /*
+    /**
      * Broadcast configuration
+     *
+     * @return JsonResponse
      */
 
-    public function config()
+    public function config(): JsonResponse
     {
         return response()->json([
             'config' => [
@@ -51,9 +50,12 @@ class RbsController extends ApiController
 
     /**
      * Show unverified & stopped phone numbers
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function unverifiedStopped()
+    public function unverifiedStopped(): JsonResponse
     {
         $this->authorize('unverifiedStopped', Broadcast::class);
 
@@ -95,13 +97,15 @@ class RbsController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Count how many people a broadcast may reach
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function recipients()
+    public function recipients(): JsonResponse
     {
-
         $params = request()->validate([
             'type' => 'required|string',
             'count_only' => 'sometimes|boolean'
@@ -116,12 +120,14 @@ class RbsController extends ApiController
         return response()->json(['people' => RBS::retrieveRecipients($type, $criteria, $countOnly)]);
     }
 
-    /*
+    /**
      * Return the items needed (slots, positions, alerts) needed to setup a broadcast form.
+     * @param $type
+     * @return mixed
+     * @throws AuthorizationException
      */
 
-    private
-    function verifyType($type)
+    private function verifyType($type): mixed
     {
 
         $attrs = RBS::ATTRIBUTES[$type] ?? null;
@@ -134,11 +140,14 @@ class RbsController extends ApiController
         return $attrs;
     }
 
-    /*
+    /**
      * Retrieve unknown phone numbers for a year
+     *
+     * @param $type
+     * @return array
      */
 
-    private static function grabCriteria($type)
+    private static function grabCriteria($type): array
     {
         $attrs = RBS::ATTRIBUTES[$type];
 
@@ -179,12 +188,16 @@ class RbsController extends ApiController
         return request()->validate($validations);
     }
 
-    /*
+    /**
      * Retrieve basic statistics  (verified, unverified, stopped, etc.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function details()
+    public function details(): JsonResponse
     {
+        prevent_if_ghd_server('RBS stats');
         $params = request()->validate([
             'type' => 'required|string'
         ]);
@@ -282,13 +295,17 @@ class RbsController extends ApiController
         return response()->json(['details' => $info]);
     }
 
-    /*
+    /**
      * Transmit a message to the world
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function unknownPhones()
+    public function unknownPhones(): JsonResponse
     {
         $this->authorize('unknownPhones', Broadcast::class);
+        prevent_if_ghd_server('Unknown phones listing');
 
         $params = request()->validate([
             'year' => 'required|integer'
@@ -297,12 +314,15 @@ class RbsController extends ApiController
         return response()->json(['phones' => BroadcastMessage::findUnknownPhonesForYear($params['year'])]);
     }
 
-    /*
-     * Setup a validation array to grab and verify the query parameters needed
+    /**
+     * Set up a validation array to grab and verify the query parameters needed
      * for the given broadcast type.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function stats()
+    public function stats(): JsonResponse
     {
         $this->authorize('stats', Broadcast::class);
 
@@ -366,12 +386,17 @@ class RbsController extends ApiController
         return response()->json(['stats' => $stats]);
     }
 
-    /*
+    /**
      * Attempt to resend a failed broadcast
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function transmit()
+    public function transmit(): JsonResponse
     {
+        prevent_if_ghd_server('RBS transmission');
+
         $params = request()->validate([
             'type' => 'required|string',
             'send_sms' => 'sometimes|boolean',
@@ -414,7 +439,7 @@ class RbsController extends ApiController
             $sendClubhouse = false;
             $sendEmail = !isset($attrs['sms_only']);
             $sendSMS = true;
-            $from = 'do-not-reply@burningman.org';
+            $from = setting('DoNotReplyEmail');
         }
 
         $userId = $this->user->id;
@@ -451,7 +476,7 @@ class RbsController extends ApiController
         // Send out the emails
         $emailsQueued = 0;
         if ($sendEmail) {
-            RBSTransmitEmailJob::dispatch($alert, $broadcastId, $userId, $people, $from, $subject, $message);
+            RBSTransmitEmailJob::dispatch($alert, $broadcastId, $userId, $people, $subject, $message);
             foreach ($people as $person) {
                 if ($person->use_email) {
                     $emailsQueued++;
@@ -483,17 +508,20 @@ class RbsController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Find a person transmit record already built up or built a new one
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function retry()
+    public function retry(): JsonResponse
     {
+        $this->authorize('retry', Broadcast::class);
+
         $params = request()->validate([
             'broadcast_id' => 'required|integer',
         ]);
-
-        $this->authorize('retry', Broadcast::class);
 
         $broadcast = Broadcast::findWithFailedMessages($params['broadcast_id']);
 

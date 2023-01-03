@@ -2,19 +2,18 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-
 use App\Models\PersonPosition;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 
 class PersonPositionFactory extends Factory
 {
     protected $model = PersonPosition::class;
 
-    public function definition()
+    public function definition(): array
     {
-return [
-        //
-    ];
-}
+        return [
+            //
+        ];
+    }
 }

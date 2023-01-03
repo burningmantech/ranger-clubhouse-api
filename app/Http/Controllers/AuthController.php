@@ -2,23 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-
-use App\Http\Controllers\Controller;
-
+use App\Mail\ResetPassword;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
-use App\Models\Role;
-
-use App\Mail\ResetPassword;
-
 use Carbon\Carbon;
-
+use Exception;
 use GuzzleHttp;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Okta\JwtVerifier\JwtVerifierBuilder;
 
 class AuthController extends Controller
@@ -29,7 +23,7 @@ class AuthController extends Controller
      * @return JsonResponse
      */
 
-    public function login()
+    public function login(): JsonResponse
     {
         $code = request()->input('sso_code');
 
@@ -72,7 +66,7 @@ class AuthController extends Controller
         return $this->attemptLogin($person, $actionData);
     }
 
-    private function buildLogInfo()
+    private function buildLogInfo(): array
     {
         $actionData = [
             'ip' => request_ip(),
@@ -100,7 +94,7 @@ class AuthController extends Controller
      * Handles the common checks for both username/password and SSO logins.
      */
 
-    private function attemptLogin(Person $person, $actionData)
+    private function attemptLogin(Person $person, $actionData): JsonResponse
     {
         $status = $person->status;
 
@@ -114,20 +108,14 @@ class AuthController extends Controller
             return response()->json(['status' => 'account-disabled'], 401);
         }
 
-        if (!$person->hasRole(Role::LOGIN)) {
-            ActionLog::record($person, 'auth-failed', 'Login disabled', $actionData);
-            return response()->json(['status' => 'login-disabled'], 401);
-        }
-
         $person->logged_in_at = now();
         $person->saveWithoutValidation();
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
 
-        $token = $this->groundHogDayWrap(function () use ($person) {
-            return auth()->login($person);
-        });
-        return $this->respondWithToken($token, $person);
+        $token = $this->groundHogDayWrap(fn() => auth()->login($person));
+
+        return $this->respondWithToken($token);
     }
 
     /**
@@ -135,7 +123,8 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function logout()
+
+    public function logout(): JsonResponse
     {
         ActionLog::record($this->user, 'auth-logout', 'User logout');
         auth()->logout();
@@ -148,7 +137,8 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function refresh()
+
+    public function refresh(): JsonResponse
     {
         // TODO - test this
         return $this->respondWithToken(Auth::guard()->refresh());
@@ -156,10 +146,15 @@ class AuthController extends Controller
 
     /**
      * Reset an account password by emailing a new temporary password.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function resetPassword()
+    public function resetPassword(): JsonResponse
     {
+        prevent_if_ghd_server('Reset password is not available on the training server.');
+
         $data = request()->validate([
             'identification' => 'required|email',
         ]);
@@ -186,7 +181,7 @@ class AuthController extends Controller
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
-        if (!mail_to($person->email, new ResetPassword($person, $token))) {
+        if (!mail_to_person($person, new ResetPassword($person, $token), false)) {
             return response()->json(['status' => 'mail-fail']);
         }
 
@@ -201,7 +196,7 @@ class AuthController extends Controller
      * the person is trying to login.
      */
 
-    private function handleSSOLogin($code)
+    private function handleSSOLogin($code): JsonResponse
     {
         $clientId = config('okta.client_id');
         $issuer = config('okta.issuer');
@@ -285,11 +280,11 @@ class AuthController extends Controller
      * Get the JWT token array structure.
      *
      * @param string $token
-     *
+     * @param $person
      * @return JsonResponse
      */
 
-    protected function respondWithToken($token, $person)
+    protected function respondWithToken($token): JsonResponse
     {
         return response()->json([
             'token' => $token,
@@ -299,9 +294,12 @@ class AuthController extends Controller
 
     /**
      * Deal with Ground Hog Day server timing
+     *
+     * @param $closure
+     * @return mixed
      */
 
-    private function groundHogDayWrap($closure)
+    private function groundHogDayWrap($closure): mixed
     {
         $ghd = config('clubhouse.GroundhogDayTime');
         if (!empty($ghd)) {

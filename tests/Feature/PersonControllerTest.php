@@ -705,6 +705,7 @@ class PersonControllerTest extends TestCase
                     $keepPosition->id,
                     $newPosition->id,
                 ],
+                'team_manager_ids' => [],
             ]
         );
 
@@ -1489,23 +1490,20 @@ class PersonControllerTest extends TestCase
     public function testPeopleByStatusChangeReport()
     {
         $this->addRole(Role::ADMIN);
+        $year = 2016;
 
         // Create a current timesheet so test account does not appear in any list.
         Timesheet::factory()->create([
             'person_id' => $this->user->id,
             'position_id' => Position::DIRT,
-            'on_duty' => date('Y-01-01 10:00:00'),
-            'off_duty' => date('Y-01-01 11:00:00')
+            'on_duty' => date("$year-01-01 10:00:00"),
+            'off_duty' => date("$year-01-01 11:00:00")
         ]);
-
-        $year = date('Y');
 
         // Inactive recommendation - an active account who has not worked in the last 3 years but may have worked in the last 5.
-        $inactive = Person::factory()->create([
-            'status' => Person::ACTIVE
-        ]);
+        $inactive = Person::factory()->create(['status' => Person::ACTIVE]);
 
-        $inactiveYear = $year - 5;
+        $inactiveYear = $year - 3;
         Timesheet::factory()->create([
             'person_id' => $inactive->id,
             'position_id' => Position::DIRT,
@@ -1514,9 +1512,7 @@ class PersonControllerTest extends TestCase
         ]);
 
         // Retirement recommendation - an inactive account who has not worked in the last 5 years.
-        $retired = Person::factory()->create([
-            'status' => Person::INACTIVE
-        ]);
+        $retired = Person::factory()->create(['status' => Person::INACTIVE]);
 
         $retiredYear = $year - 6;
         Timesheet::factory()->create([
@@ -1527,21 +1523,17 @@ class PersonControllerTest extends TestCase
         ]);
 
         // Active recommendation - an inactive account that worked this last year.
-        $active = Person::factory()->create([
-            'status' => Person::INACTIVE
-        ]);
+        $active = Person::factory()->create(['status' => Person::INACTIVE]);
 
         Timesheet::factory()->create([
             'person_id' => $active->id,
             'position_id' => Position::DIRT,
-            'on_duty' => date('Y-09-01 10:00:00'),
-            'off_duty' => date('Y-09-01 11:00:00'),
+            'on_duty' => date('2016-09-01 10:00:00'),
+            'off_duty' => date('2016-09-01 11:00:00'),
         ]);
 
         // Past Prospective recommendation - any bonked, alpha, prospective account
-        $pastProspective = Person::factory()->create([
-            'status' => 'prospective'
-        ]);
+        $pastProspective = Person::factory()->create(['status' => 'prospective']);
 
         $vintage = Person::factory()->create();
         for ($workYear = $year - 10; $workYear <= $year; $workYear++) {

@@ -17,7 +17,8 @@ class Training extends Position
 {
     protected $appends = [
         'is_art',
-        'slug'
+        'slug',
+        'graduation_info'
     ];
 
     const FAIL = 'fail';        // Person was not marked as pass
@@ -26,7 +27,7 @@ class Training extends Position
     const PENDING = 'pending'; // Training hasn't happened yet, or still within the grace period.
     const NO_SHIFT = 'no-shift'; // No training sign up was found
 
-    const GRACE_PERIOD_HOURS = 12;
+    const GRACE_PERIOD_HOURS = 72;
 
     /**
      * Is the person trained for a position in a given year?
@@ -105,6 +106,7 @@ class Training extends Position
                 'id' => $position->id,
                 'title' => $position->title,
                 'active' => $position->active,
+                'type' => $position->type,
             ];
 
             $personPositions[] = $info;
@@ -159,7 +161,7 @@ class Training extends Position
             if (!$trainer && $trainingId && !self::didPersonPassForYear($person, $trainingId, $year)) {
                 $info->is_untrained = true;
                 $info->training_position_id = $trainingId;
-                $info->training_title = Position::retrieveTitle($trainingId);
+                $info->training_title = ($trainingId == Position::TRAINING) ? "In-Person Training" : Position::retrieveTitle($trainingId);
             }
         }
 
@@ -169,7 +171,7 @@ class Training extends Position
     /**
      * Did the person pass training in a given year? check to see if they were a teacher or student.
      *
-     * @param Person $person person to check
+     * @param Person|int $person person to check
      * @param int $positionId position in question
      * @param int $year the year to check in
      * @return bool true if the person passed in the given year
@@ -330,6 +332,7 @@ class Training extends Position
             $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
                 ->whereIn('position_id', $ids)
                 ->whereYear('begins', $year)
+                ->where('slot.active', true)
                 ->where('person_slot.person_id', $personId)
                 ->orderBy('begins', 'desc')
                 ->first();
@@ -355,17 +358,17 @@ class Training extends Position
             $ed->is_trainer = true;
             $ed->status = self::PASS;
         } elseif ($training) {
-            // If the person did not pass, BUT there is a later sign up use the later sign up.
+            // If the person did not pass, BUT there is a later sign-up use the later sign-up.
             if (!$training->passed && $slot && $slot->id != $training->id && $slot->ends->gt($training->ends)) {
                 $ed->location = $slot->description;
                 $ed->date = $slot->begins;
                 $ed->slot_id = $slot->id;
-                $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? self::PENDING : self::FAIL;
+                $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now, $slot->timezone) ? self::PENDING : self::FAIL;
             } else {
                 $ed->slot_id = $training->id;
                 $ed->location = $training->description;
                 $ed->date = $training->begins;
-                if (!$training->passed && self::isTimeWithinGracePeriod($training->ends, $now)) {
+                if (!$training->passed && self::isTimeWithinGracePeriod($training->ends, $now, $training->timezone)) {
                     $ed->status = self::PENDING;
                 } else {
                     $ed->status = ($training->passed ? self::PASS : self::FAIL);
@@ -376,7 +379,7 @@ class Training extends Position
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
             // Training signed up and no trainee status
-            $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now) ? self::PENDING : self::FAIL;
+            $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now, $slot->timezone) ? self::PENDING : self::FAIL;
         } elseif ($teachingPositions && !$taught->isEmpty()) {
             // find the first pending session
             $slot = $taught->firstWhere('status', TrainerStatus::PENDING);
@@ -459,9 +462,10 @@ class Training extends Position
      * @param $now
      * @return bool
      */
-    private static function isTimeWithinGracePeriod($time, $now): bool
+    private static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
+        $time->shiftTimezone($timezone);
 
         return $time->addHours(self::GRACE_PERIOD_HOURS)->gt($now);
     }
@@ -487,8 +491,8 @@ class Training extends Position
         }
 
         $people = DB::table('person_position')
-            ->whereIn('position_id', $trained->pluck('id')->toArray())
-            ->whereIn('person_id', $personIds)
+            ->whereIntegerInRaw('position_id', $trained->pluck('id')->toArray())
+            ->whereIntegerInRaw('person_id', $personIds)
             ->get()
             ->keyBy('person_id');
 
@@ -504,39 +508,6 @@ class Training extends Position
     }
 
     /**
-     * Find all the dirt trainings for a person in a given year
-     *
-     * @param int $personId person to find
-     * @param int $year year to look
-     * @return Collection the slots & training status found
-     */
-    public static function retrieveDirtTrainingsForPersonYear(int $personId, int $year): Collection
-    {
-        $now = (string)now();
-        return DB::table('person_slot')
-            ->select(
-                'slot.id as slot_id',
-                'slot.description',
-                'slot.begins',
-                DB::raw('IFNULL(trainee_status.passed, FALSE) as passed'),
-                'trainee_status.notes',
-                'trainee_status.rank',
-                DB::raw("('$now' >= slot.begins) as has_started")
-            )->join('slot', function ($j) use ($year) {
-                $j->on('slot.id', 'person_slot.slot_id');
-                $j->whereYear('slot.begins', $year);
-                $j->where('slot.position_id', Position::TRAINING);
-            })
-            ->leftJoin('trainee_status', function ($j) use ($personId) {
-                $j->on('slot.id', 'trainee_status.slot_id');
-                $j->where('trainee_status.person_id', $personId);
-            })
-            ->where('person_slot.person_id', $personId)
-            ->orderBy('slot.begins')
-            ->get();
-    }
-
-    /**
      * Retrieve all trainings up to the given year and position for ids
      *
      * @param array|mixed $peopleIds people to look up
@@ -547,43 +518,55 @@ class Training extends Position
 
     public static function retrieveTrainingHistoryForIds($peopleIds, int $positionId, int $year): Collection
     {
-        $now = (string)now();
-        // Find the sign ups
-        $rows = DB::table('slot')
-            ->select(
-                'person_slot.person_id as person_id',
-                'slot.id as slot_id',
-                'slot.description as slot_description',
-                'slot.begins as slot_begins',
-                DB::raw('YEAR(slot.begins) as slot_year'),
-                DB::raw("IF(slot.ends < '$now', true, false) as slot_has_ended"),
-                DB::raw('IFNULL(trainee_status.passed, FALSE) as training_passed'),
-                'trainee_status.rank as training_rank',
-                'trainee_status.feedback_delivered as feedback_delivered'
-            )->join('person_slot', 'person_slot.slot_id', 'slot.id')
+        // Find the sign-ups
+        $rows = Slot::select(
+            'slot.*',
+            'person_slot.person_id as person_id',
+            DB::raw('IFNULL(trainee_status.passed, FALSE) as training_passed'),
+            'trainee_status.rank as training_rank',
+            'trainee_status.feedback_delivered as feedback_delivered'
+        )
+            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
             ->leftJoin('trainee_status', function ($j) {
-                $j->on('trainee_status.person_id', '=', 'person_slot.person_id');
-                $j->on('trainee_status.slot_id', '=', 'person_slot.slot_id');
+                $j->on('trainee_status.person_id', 'person_slot.person_id');
+                $j->on('trainee_status.slot_id', 'person_slot.slot_id');
             })
             ->whereYear('slot.begins', '<=', $year)
             ->where('slot.position_id', $positionId)
-            ->whereIn('person_slot.person_id', $peopleIds)
+            ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->orderBy('person_slot.person_id')
             ->orderBy('slot.begins')
             ->get();
 
 
+        $trainings = [];
         foreach ($rows as $row) {
-            $row->training_notes = TraineeNote::findAllForPersonSlot($row->person_id, $row->slot_id);
-            $ps = PersonStatus::findForTime($row->person_id, $row->slot_begins);
+            $ps = PersonStatus::findForTime($row->person_id, $row->begins);
             if ($ps) {
-                $row->person_status = ($ps->new_status == Person::VINTAGE) ? Person::ACTIVE : $ps->new_status;
+                $status = ($ps->new_status == Person::VINTAGE) ? Person::ACTIVE : $ps->new_status;
             } else {
-                $row->person_status = 'unknown';
+                $status = 'unknown';
             }
+
+            $trainings[] = (object)[
+                'person_id' => $row->person_id,
+                'training_notes' => TraineeNote::findAllForPersonSlot($row->person_id, $row->id),
+                'person_status' => $status,
+                'slot_id' => $row->id,
+                'slot_description' => $row->description,
+                'slot_begins' => (string)$row->begins,
+                'slot_year' => $row->begins->year,
+                'slot_tz' => $row->timezone,
+                'slot_tz_abbr' => $row->timezone_abbr,
+                'slot_has_ended' => $row->has_ended,
+                'training_passed' => $row->training_passed,
+                'training_rank' => $row->training_rank,
+                'feedback_delivered' => $row->feedback_delivered,
+            ];
         }
-        return $rows->groupBy('person_id');
+
+        return collect($trainings)->groupBy('person_id');
     }
 
     /**
@@ -605,5 +588,33 @@ class Training extends Position
     public function getSlugAttribute(): string
     {
         return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
+    }
+
+    /**
+     * Obtain graduation information if any
+     *
+     * @return array|null
+     */
+
+    public function getGraduationInfoAttribute(): ?array
+    {
+        $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->id] ?? null;
+        if (!$graduate) {
+            return null;
+        }
+
+        $result = [
+            'positions' => array_map(fn($p) => ['id' => $p, 'title' => Position::retrieveTitle($p)], $graduate['positions'])
+        ];
+
+        $fullyGraduatedPosition = $graduate['veteran'] ?? null;
+        if ($fullyGraduatedPosition) {
+            $result['fully_graduated_position'] = [
+                'id' => $fullyGraduatedPosition,
+                'title' => Position::retrieveTitle($fullyGraduatedPosition)
+            ];
+        }
+
+        return $result;
     }
 }

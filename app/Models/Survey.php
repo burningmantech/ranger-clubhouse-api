@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -37,7 +39,7 @@ class Survey extends ApiModel
         'position_id' => 'sometimes|integer|nullable',
     ];
 
-    public function survey_group()
+    public function survey_group(): HasMany
     {
         return $this->hasMany(SurveyGroup::class);
     }
@@ -45,10 +47,10 @@ class Survey extends ApiModel
     /**
      * Find all the surveys
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public static function findAll(): \Illuminate\Database\Eloquent\Collection
+    public static function findAll(): Collection
     {
         return self::orderBy('year')->get();
     }
@@ -57,10 +59,10 @@ class Survey extends ApiModel
      * Find all the surveys for a given year
      *
      * @param int $year
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public static function findAllForYear(int $year): \Illuminate\Database\Eloquent\Collection
+    public static function findAllForYear(int $year): Collection
     {
         return self::where('year', $year)->orderBy('type')->get();
     }
@@ -71,11 +73,11 @@ class Survey extends ApiModel
      * @param string $type
      * @param int $positionId
      * @param int $year
-     * @return Survey|null
+     * @return Model
      * @throws ModelNotFoundException
      */
 
-    public static function findForTypePositionYear(string $type, int $positionId, int $year): ?Survey
+    public static function findForTypePositionYear(string $type, int $positionId, int $year): Model
     {
         return self::where('type', $type)
             ->where('position_id', $positionId)
@@ -153,21 +155,20 @@ class Survey extends ApiModel
     /**
      * Retrieve all the slots for the survey
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public function retrieveSlots(): \Illuminate\Database\Eloquent\Collection
+    public function retrieveSlots(): Collection
     {
         return Slot::select(
             'id',
             'begins',
             'ends',
+            'timezone',
             'description',
             'signed_up',
             DB::raw('EXISTS (SELECT 1 FROM survey_answer WHERE slot_id=slot.id LIMIT 1) AS has_responses'),
-            DB::raw('IF(slot.ends < ? , TRUE, FALSE) as has_ended'),
-        )->setBindings([now()])
-            ->whereYear('begins', $this->year)
+        )->whereYear('begins', $this->year)
             ->where('position_id', $this->position_id)
             ->orderBy('begins')
             ->get();
@@ -177,7 +178,6 @@ class Survey extends ApiModel
      * Retrieve all the surveys with feedback for the given person and optional year
      *
      * @param int $personId
-     * @param $year
      * @return Collection
      */
 
@@ -276,7 +276,7 @@ class Survey extends ApiModel
 
             // Find all the sessions the person taught (aka marked as attended)
             $taught = TrainerStatus::join('slot', 'slot.id', 'trainer_status.trainer_slot_id')
-                ->whereIn('slot.position_id', $positionIds)
+                ->whereIntegerInRaw('slot.position_id', $positionIds)
                 ->whereYear('slot.begins', $year)
                 ->where('trainer_status.person_id', $personId)
                 ->where('trainer_status.status', TrainerStatus::ATTENDED)
@@ -287,7 +287,7 @@ class Survey extends ApiModel
                 $slotIds = $taught->pluck('slot_id')->unique()->toArray();
                 $trainerSlots = TrainerStatus::select('trainer_status.*')
                     ->join('slot', 'slot.id', 'trainer_status.slot_id')
-                    ->whereIn('slot_id', $slotIds)
+                    ->whereIntegerInRaw('slot_id', $slotIds)
                     ->where('trainer_status.person_id', '!=', $personId)
                     ->where('trainer_status.status', TrainerStatus::ATTENDED)
                     // is there a survey available?

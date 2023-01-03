@@ -128,12 +128,13 @@ class PersonScheduleController extends ApiController
              * Person must meet various requirements before being allowed to sign up
              */
             $isTraining = ($slot->position_id == Position::TRAINING);
-            if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed']) {
+            if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed'] ?? false) {
                 return response()->json([
                     'status' => Schedule::MISSING_REQUIREMENTS,
                     'signed_up' => $slot->signed_up,
                     'may_force' => $canForce,
-                    'requirements' => $permission['requirements']
+                    'requirements' => $permission['requirements'],
+                    'training_signups_allowed' => $permission['training_signups_allowed'] ?? false,
                 ]);
             }
         }
@@ -288,7 +289,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        $result = Schedule::deleteFromSchedule($person->id, $slotId);
+        $result = Schedule::deleteFromSchedule($person->id, $slot);
         if ($result['status'] == 'success') {
             $data = ['slot_id' => $slotId];
             if ($forced) {

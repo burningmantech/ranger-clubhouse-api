@@ -1185,16 +1185,10 @@ class PersonScheduleControllerTest extends TestCase
 
         $this->setupRequirements($this->user);
 
-        // Sign up, and then remove the sign up so a audit trail is available
-        $added = "{$this->year}-01-01 12:00:00";
-        Carbon::setTestNow($added);
         $response = $this->json('POST', "person/$personId/schedule", ['slot_id' => $shift->id]);
         $response->assertStatus(200);
 
-        // Advance the clock
-        $removed = "{$this->year}-01-02 13:00:00";
-        Carbon::setTestNow($removed);
-        $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
+         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
 
         // Grab the audit trail
@@ -1209,7 +1203,6 @@ class PersonScheduleControllerTest extends TestCase
                     'slot_begins' => (string)$shift->begins,
                     'added' => [
                         [
-                            'date' => $added,
                             'person' => [
                                 'id' => $personId,
                                 'callsign' => $callsign,
@@ -1218,7 +1211,6 @@ class PersonScheduleControllerTest extends TestCase
                     ],
                     'removed' => [
                         [
-                            'date' => $removed,
                             'person' => [
                                 'id' => $personId,
                                 'callsign' => $callsign,

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Person;
 use App\Models\AccessDocument;
+use App\Models\Person;
 use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -93,6 +93,11 @@ class AccessDocumentPolicy
         return ($user->id == $personId);
     }
 
+    public function bulkComment(Person $user)
+    {
+        return false;
+    }
+
     public function markSubmitted(Person $user)
     {
         return false;
@@ -136,5 +141,54 @@ class AccessDocumentPolicy
     public function delivery(Person $user, $personId)
     {
         return ($user->id == $personId);
+    }
+
+    public function unbankAccessDocuments(Person $user)
+    {
+        return false;
+    }
+
+    public function statistics(Person $user)
+    {
+        return false;
+    }
+
+    public function wapCandidates(Person $user)
+    {
+        return false;
+    }
+
+    public function unclaimedTicketsWithSignups(Person $user)
+    {
+        return false;
+    }
+
+    public function claimedTicketsWithNoSignups(Person $user)
+    {
+        return false;
+    }
+
+    /**
+     * Can the user see a person's ticketing progress?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function progress(Person $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Can the user update a person's ticketing progress?
+     *
+     * @param Person $user
+     * @return false
+     */
+
+    public function updateProgress(Person $user, Person $person): bool
+    {
+        return $user->id == $person->id;
     }
 }

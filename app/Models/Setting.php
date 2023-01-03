@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
@@ -102,15 +103,6 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
-        'BroadcastSMSService' => [
-            'description' => 'Ranger Broadcast SMS Service',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['twilio', 'deliver SMS messages via Twilio'],
-                ['sandbox', 'No SMS sent - developer mode'],
-            ]
-        ],
-
         'BroadcastSMSSandbox' => [
             'description' => 'Sandbox SMS messages',
             'type' => self::TYPE_BOOL,
@@ -131,6 +123,12 @@ class Setting extends ApiModel
                 ['before-event', 'Before Event (March thru mid-to-late August)'],
                 ['event', 'Event Period (mid Aug til 1st Sat after Labor Day)'],
             ]
+        ],
+
+        'DoNotReplyEmail' => [
+            'description' => 'Most generated Clubhouse emails have a reply to of do-not-reply@XXX.org',
+            'type' => self::TYPE_EMAIL,
+            'default' => 'do-not-reply@burningmail.burningman.org'
         ],
 
         'EditorUrl' => [
@@ -185,41 +183,41 @@ class Setting extends ApiModel
         ],
 
         'OnlineTrainingEnabled' => [
-            'description' => 'Enable online training link',
+            'description' => 'Enable online course link',
             'type' => self::TYPE_BOOL
         ],
 
         'OnlineTrainingUrl' => [
-            'description' => 'Online Training Url',
+            'description' => 'Online course Url',
             'type' => self::TYPE_STRING
         ],
 
         'OnlineTrainingDisabledAllowSignups' => [
-            'description' => 'Enable shift signups even if Online Training is disabled (VERY DANGEROUS)',
+            'description' => 'Enable shift signups even if the Online Course is disabled (VERY DANGEROUS)',
             'type' => self::TYPE_BOOL,
             'default' => false,
         ],
 
         'OnlineTrainingOnlyForAuditors' => [
-            'description' => 'Auditor are only allowed to take Online Training',
+            'description' => 'Auditor are only allowed to take the Online Course',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingOnlyForBinaries' => [
-            'description' => 'Only require Online Training and not Face-to-Face training for vets (2+ years)',
+            'description' => 'Only require Online Course and not In-Person training for vets (2+ years)',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingOnlyForVets' => [
-            'description' => 'Only require Online Training and not Face-to-Face training for binaries (0-1 years)',
+            'description' => 'Only require the Online Course and not In-Person training for binaries (0-1 years)',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
         'OnlineTrainingFullCourseForVets' => [
-            'description' => 'Require the full course for vets',
+            'description' => 'Require the full online course for vets',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
@@ -236,12 +234,12 @@ class Setting extends ApiModel
         ],
 
         'MoodleHalfCourseId' => [
-            'description' => 'Moodle training course ID for active Rangers (2+ years)',
+            'description' => 'Moodle online course ID for active Rangers (2+ years)',
             'type' => self::TYPE_STRING,
         ],
 
         'MoodleFullCourseId' => [
-            'description' => 'Moodle full training course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
+            'description' => 'Moodle full online course ID for PNVs, Auditors, Binaries, and Inactive Rangers',
             'type' => self::TYPE_STRING,
         ],
 
@@ -283,12 +281,12 @@ class Setting extends ApiModel
         ],
 
         'PhotoUploadEnable' => [
-            'description' => 'Enable Photo Uploading',
+            'description' => 'Enable Photo Uploading. If disabled, Admins and VCs will still be able to upload photos on another person\'s behalf.',
             'type' => self::TYPE_BOOL,
         ],
 
         'RadioCheckoutAgreementEnabled' => [
-            'description' => 'Allows the Radio Checkout Agreement to be signed',
+            'description' => 'Allows the Radio Checkout Agreement to be signed.',
             'type' => self::TYPE_BOOL,
         ],
 
@@ -312,9 +310,26 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'RangerPersonalVehiclePolicyUrl' => [
+            'description' => 'Ranger Personal Vehicle Document URL (used by Me > Vehicles)',
+            'type' => self::TYPE_STRING,
+        ],
+
         'RpTicketThreshold' => [
             'description' => 'Credit threshold for a reduced price ticket. Shown on the Schedule and Ticket announce pages',
             'type' => self::TYPE_FLOAT,
+        ],
+
+        'SandmanRequireAffidavit' => [
+            'description' => 'Require the Sandman Affidavit be signed in order to work a Sandman shift',
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
+        ],
+
+        'SandmanRequirePerimeterExperience' => [
+            'description' => 'Require a Sandman to have worked a Burn Perimeter or Sandman positions within the last few years',
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
         ],
 
         'SFEnableWritebacks' => [
@@ -426,6 +441,11 @@ class Setting extends ApiModel
         'TAS_Email' => [
             'description' => 'Ranger Ticketing Support Email',
             'type' => self::TYPE_EMAIL,
+        ],
+
+        'TAS_PayByDateTime' => [
+            'description' => 'The date and time items have to be paid for. Shown on the Ticketing is closed page',
+            'type' => self::TYPE_DATETIME,
         ],
 
         'TAS_Pickup_Locations' => [
@@ -583,11 +603,6 @@ class Setting extends ApiModel
             'is_credential' => true,
         ],
 
-        'TwilioStatusCallbackUrl' => [
-            'description' => 'Twilio Status Callback URL (not implemented currently)',
-            'type' => self::TYPE_STRING,
-        ],
-
         'VCEmail' => [
             'description' => 'Ranger Volunteer Coordinator Address',
             'type' => self::TYPE_EMAIL,
@@ -661,7 +676,7 @@ class Setting extends ApiModel
             try {
                 // Kick the queue workers to pick up the new settings
                 Artisan::call('queue:restart');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 ErrorLog::recordException($e, 'setting-queue-restart-exception');
             }
         }

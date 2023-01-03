@@ -31,7 +31,6 @@ class TicketingManagement
             $sql = AccessDocument::whereIn('status', AccessDocument::ACTIVE_STATUSES);
         }
 
-        $sql->whereNotIn('type', AccessDocument::PROVISION_TYPES);
 
         $rows = $sql->select(
             '*',
@@ -91,9 +90,9 @@ class TicketingManagement
                     break;
             }
 
+            $deliveryType = $row->delivery_method;
             if ($forDelivery) {
-                $deliveryMethod = $row->delivery_method;
-
+                // Override delivery methods if need be.
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                         $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
@@ -105,9 +104,8 @@ class TicketingManagement
                         break;
 
                     case AccessDocument::RPT:
-                        $deliveryType = $deliveryMethod;
-                        if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
-                            $errors[] = 'delivery method missing';
+                        if ($deliveryType == AccessDocument::DELIVERY_NONE) {
+                            $errors[] = 'missing delivery method';
                         }
                         break;
 
@@ -115,10 +113,10 @@ class TicketingManagement
                     case AccessDocument::GIFT:
                         if ($row->type == AccessDocument::VEHICLE_PASS && $row->has_staff_credential) {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
+                        } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_POSTAL) {
-                            if ($row->hasAddress()) {
+                        } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
+                            /*if ($row->hasAddress()) {
                                 $row->delivery_address = [
                                     'street' => $row->street,
                                     'city' => $row->city,
@@ -129,7 +127,7 @@ class TicketingManagement
                                 ];
                             } else {
                                 $errors[] = 'missing mailing address';
-                            }
+                            }*/
                             $deliveryType = AccessDocument::DELIVERY_POSTAL;
                         } else {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;

@@ -8,8 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 class RadioEligibilityReport
 {
-    /*
-     */
+    const SHIFT_LEAD_POSITIONS = [
+        Position::OOD,
+        Position::DEPUTY_OOD,
+        Position::RSC_SHIFT_LEAD,
+        Position::RSC_SHIFT_LEAD_PRE_EVENT
+    ];
 
     /**
      * Radio Eligibility
@@ -22,55 +26,124 @@ class RadioEligibilityReport
      * @return array
      */
 
-    public static function execute(int $currentYear)
+    public static function execute(int $currentYear): array
     {
         // 2020 & 2021 didn't happen, so adjust for that.
-        if ($currentYear == 2021 || $currentYear == 2022) {
-            $lastYear = 2019;
-            $prevYear = 2018;
-        } else {
-            $lastYear = $currentYear - 1;
-            $prevYear = $currentYear - 2;
+        switch ($currentYear) {
+            case 2022:
+                $year1 = 2019;
+                $year2 = 2018;
+                $year3 = 2017;
+                break;
+            case 2023:
+                $year1 = 2022;
+                $year2 = 2019;
+                $year3 = 2018;
+                break;
+            case 2024:
+                $year1 = 2023;
+                $year2 = 2022;
+                $year3 = 2019;
+                break;
+            default:
+                $year1 = $currentYear - 1;
+                $year2 = $currentYear - 2;
+                $year3 = $currentYear - 3;
+                break;
         }
 
-        $statuses = implode("','", [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED]);
-        $shiftLeadPosititons = implode(',', [Position::OOD, Position::DEPUTY_OOD, Position::RSC_SHIFT_LEAD, Position::RSC_SHIFT_LEAD_PRE_EVENT]);
-        $excludePositions = implode(',', [Position::ALPHA, Position::TRAINING]);
+        $shiftLeadPosititons = implode(',', self::SHIFT_LEAD_POSITIONS);
 
-        $people = DB::select("SELECT person.id, person.callsign,
-                (SELECT SUM(TIMESTAMPDIFF(second, on_duty, off_duty))/3600.0 FROM timesheet WHERE person.id=timesheet.person_id AND year(on_duty)=$lastYear AND position_id NOT IN (1,13)) as hours_last_year,
-                (SELECT SUM(TIMESTAMPDIFF(second, on_duty, off_duty))/3600.0 FROM timesheet WHERE person.id=timesheet.person_id AND year(on_duty)=$prevYear AND position_id NOT IN (1,13)) as hours_prev_year,
-                EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id IN ($shiftLeadPosititons) LIMIT 1) AS shift_lead,
-                EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id AND YEAR(slot.begins)=$currentYear AND slot.begins >= '$currentYear-08-15 00:00:00' AND position_id NOT IN ($excludePositions) WHERE person_slot.person_id=person.id LIMIT 1) as signed_up
-                FROM person WHERE person.status IN ('$statuses')
-                ORDER by callsign");
-
-        // Person must have worked in one of the previous two years, or is a shift lead
-        $people = array_values(array_filter($people, function ($p) {
-            return $p->hours_prev_year || $p->hours_last_year || $p->shift_lead;
-        }));
+        $people = DB::table('person')
+            ->select('.id', '.callsign')
+            ->whereIn('status', Person::ACTIVE_STATUSES)
+            ->orderBy('callsign')
+            ->get();
 
         foreach ($people as $person) {
-            // Normalized the hours - no timesheets found in a given years will result in null
-            if (!$person->hours_last_year) {
-                $person->hours_last_year = 0.0;
-            }
+            $person->signed_up = false;
+            $person->shift_lead = false;
+            $person->year_1 = 0;
+            $person->year_2 = 0;
+            $person->year_3 = 0;
+        }
 
-            $person->hours_last_year = round($person->hours_last_year, 2);
+        $ids = $people->pluck('id');
+        $peopleById = $people->keyBy('id');
 
-            if (!$person->hours_prev_year) {
-                $person->hours_prev_year = 0.0;
-            }
-            $person->hours_prev_year = round($person->hours_prev_year, 2);
+        $rows = DB::table('slot')
+            ->select('person_id')
+            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+            ->whereYear('slot.begins', $currentYear)
+            ->where('slot.begins', '>=', "$currentYear-08-15 00:00:00")
+            ->whereNotIn('slot.position_id', [Position::ALPHA, Position::TRAINING])
+            ->groupBy('person_id')
+            ->get();
 
-            // Qualified radio hours is last year, OR the previous year if last year
-            // was less than 10 hours and the previous year was greater than last year.
-            $person->radio_hours = $person->hours_last_year;
-            if ($person->hours_last_year < 10.0 && ($person->hours_prev_year > $person->hours_last_year)) {
-                $person->radio_hours = $person->hours_prev_year;
+        foreach ($rows as $row) {
+            if ($peopleById->has($row->person_id)) {
+                $peopleById[$row->person_id]->signed_up = true;
             }
         }
 
-        return $people;
+        $rows = DB::table('person_position')
+            ->select('person_id')
+            ->whereIn('person_id', $ids)
+            ->whereIn('position_id', self::SHIFT_LEAD_POSITIONS)
+            ->distinct()
+            ->get();
+
+        foreach ($rows as $row) {
+            $peopleById[$row->person_id]->shift_lead = true;
+        }
+
+        self::computeHours($peopleById, $ids, $year1, 'year_1');
+        self::computeHours($peopleById, $ids, $year2, 'year_2');
+        self::computeHours($peopleById, $ids, $year3, 'year_3');
+
+        // Person must have worked in one of the previous three years, or is a shift lead
+        $people = $people->filter(fn($p) => ($p->year_1 || $p->year_2 || $p->year_3 || $p->shift_lead))->values();
+
+        foreach ($people as $person) {
+            // Qualified radio hours is last year, OR the previous year if last year
+            // was less than 10 hours and the previous year was greater than last year.
+            $person->radio_hours = $person->year_1;
+            if ($person->year_1 < 10.0 && ($person->year_2 > $person->year_1)) {
+                $person->radio_hours = $person->year_2;
+            }
+            if ($person->year_3 > $person->radio_hours) {
+                $person->radio_hours = $person->year_3;
+            }
+        }
+
+        return [
+            'people' => $people->toArray(),
+            'year_1' => $year1,
+            'year_2' => $year2,
+            'year_3' => $year3,
+            'current_year' => $currentYear,
+            'shift_lead_positions' => DB::table('position')
+                ->select('id', 'title')
+                ->whereIn('id', self::SHIFT_LEAD_POSITIONS)
+                ->orderBy('title')
+                ->get(),
+        ];
+    }
+
+    public static function computeHours($peopleById, $ids, $year, $column): void
+    {
+        $rows = DB::table('timesheet')
+            ->select(
+                'person_id',
+                DB::raw("SUM(timestampdiff(SECOND, on_duty, off_duty)) as total")
+            )->whereIntegerInRaw('person_id', $ids)
+            ->whereYear('on_duty', $year)
+            ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
+            ->groupBy('person_id')
+            ->get();
+
+        foreach ($rows as $row) {
+            $peopleById[$row->person_id]->{$column} = round($row->total / 3600.0, 2);
+        }
     }
 }

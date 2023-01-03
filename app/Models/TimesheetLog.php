@@ -2,13 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-use App\Models\ApiModel;
-
-use App\Models\Person;
-use App\Models\Timesheet;
-
 use Illuminate\Support\Facades\DB;
 
 class TimesheetLog extends ApiModel
@@ -76,7 +69,7 @@ class TimesheetLog extends ApiModel
             ->where('timesheet_log.person_id', $personId)
             ->where('timesheet_log.year', $year)
             ->orderBy('timesheet_log.created_at')
-             ->get();
+            ->get();
 
         // Possible issue: if the person confirms their timesheet in the year following
         // it may not be seen in the year being view. (.e.g, hubcap worked in 2018, yet
@@ -93,7 +86,7 @@ class TimesheetLog extends ApiModel
 
     public static function updateYear($timesheetId, $year)
     {
-        DB::update("UPDATE timesheet_log SET year=? WHERE timesheet_id=? ", [ $timesheetId, $year]);
+        DB::update("UPDATE timesheet_log SET year=? WHERE timesheet_id=? ", [$timesheetId, $year]);
     }
 
     /**
@@ -102,11 +95,12 @@ class TimesheetLog extends ApiModel
      * @param string $action timesheet action
      * @param int $personId the timesheet owner
      * @param int $userId user performing the action
-     * @param  $timesheetId timesheet id (maybe null for 'confirmed')
+     * @param int|null $timesheetId timesheet id (maybe null for 'confirmed')
      * @param mixed $data required data usually includes modified columns.
+     * @param int $year
      */
 
-    public static function record(string $action, int $personId, int $userId,  $timesheetId, $data, int $year=0)
+    public static function record(string $action, int $personId, int $userId, int|null $timesheetId, $data, int $year = 0)
     {
         $columns = [
             'action' => $action,

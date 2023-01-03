@@ -17,7 +17,7 @@ class  LanguagesSpokenOnSiteReport
             ->whereIn('status', Person::ACTIVE_STATUSES)
             ->pluck('id');
 
-        $languages = PersonLanguage::whereIn('person_id', $personId)
+        $languages = PersonLanguage::whereIntegerInRaw('person_id', $personId)
             ->with(['person:id,callsign'])
             ->orderBy('language_name')
             ->get()

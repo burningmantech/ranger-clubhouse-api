@@ -5,6 +5,7 @@ namespace App\Lib;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
+use App\Models\PersonSlot;
 use App\Models\Position;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,11 +39,11 @@ class GrantPasses
             ->get()
             ->pluck('id');
 
-        if (!empty($slotIds)) {
+        if ($slotIds->isNotEmpty()) {
             $prospectiveIds = DB::table('person_slot')
                 ->select('person_id')
                 ->join('person', 'person.id', 'person_slot.person_id')
-                ->whereIn('slot_id', $slotIds)
+                ->whereIntegerInRaw('slot_id', $slotIds)
                 ->whereIn('status', [Person::PROSPECTIVE, Person::ALPHA])
                 ->groupBy('person_id')
                 ->get()
@@ -53,12 +54,12 @@ class GrantPasses
 
         $ids = $alphaIds->merge($prospectiveIds)->unique();
 
-        if (empty($ids)) {
+        if ($ids->isEmpty()) {
             return [];
         }
 
         $people = Person::select('id', 'callsign', 'status')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
             ->whereNotExists(function ($q) {
                 $q->selectRaw(1)
                     ->from('access_document')
@@ -83,14 +84,22 @@ class GrantPasses
 
     public static function grantWAPsToRangers(): mixed
     {
-        $people = self::findRangersWhoNeedWAPs();
-        self::grantAccessDocumentToPeople($people, AccessDocument::WAP, null, current_year());
+        list ($people, $startYear) = self::findRangersWhoNeedWAPs();
+        self::grantAccessDocumentToPeople($people, AccessDocument::WAP, setting('TAS_DefaultWAPDate'), current_year());
 
-        return $people;
+        return [ $people, $startYear];
     }
 
     /**
      * Find Rangers who should get WAPs
+     *
+     * 1. Find active & inactives who worked in the last 3 events. (pandemic years adjusted for.)
+     * 2. Find active, inactives, inactive extends, and retirees who are signed up this year.
+     * 3. Merge #1 & #2, and pull their WAP, RPT, and Staff Credential if present.
+     * 4. Run through the combined #1 & #2 lists and report on potential people to give WAPs to whom:
+     *      - Do not already have a WAP or SC
+     *              AND
+     *      - Have a reduced-price ticket OR signed up this year.
      *
      * @return mixed
      */
@@ -98,60 +107,162 @@ class GrantPasses
     public static function findRangersWhoNeedWAPs(): mixed
     {
         $year = current_year();
-        $startYear = $year - 3;
+        if ($year == 2022) {
+            $startYear = 2017;
+        } else if ($year == 2023) {
+            $startYear = 2018;
+        } else if ($year == 2024) {
+            $startYear = 2019;
+        } else {
+            $startYear = $year - 3;
+        }
 
         // Find everyone who worked in the last three years
-        $workedIds = DB::table('timesheet')
-            ->join('person', 'person.id', 'timesheet.person_id')
-            ->whereYear('timesheet.on_duty', '>=', $startYear)
-            ->whereIn('person.status', [Person::ACTIVE, Person::INACTIVE])
-            ->groupBy('timesheet.person_id')
-            ->pluck('timesheet.person_id');
+        $timesheetIds = DB::table('timesheet')
+            ->whereYear('on_duty', '>=', $startYear)
+            ->groupBy('person_id')
+            ->pluck('person_id');
+
+        $workedIds = DB::table('person')
+            ->whereIntegerInRaw('id', $timesheetIds)
+            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
+            ->pluck('id');
 
         // .. and find everyone signed up this year.
         $slotIds = DB::table('slot')->whereYear('begins', $year)->pluck('id');
         $signUpIds = DB::table('person_slot')
-            ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot_id', $slotIds)
-            ->whereIn('person.status', Person::ACTIVE_STATUSES)
-            ->groupBy('person_slot.person_id')
+            ->whereIntegerInRaw('slot_id', $slotIds)
+            ->groupBy('person_id')
             ->pluck('person_id');
+
+        $signUpIds = DB::table('person')
+            ->whereIntegerInRaw('id', $signUpIds)
+            ->whereIn('status', Person::ACTIVE_STATUSES)
+            ->pluck('id');
 
         $personIds = $signUpIds->merge($workedIds)->unique()->toArray();
 
-        $people = Person::select('person.id', 'person.callsign', 'person.status')
-            ->whereIn('person.id', $personIds)
+        // Pull any WAPs (qualified, claimed, submitted) or RPT & SCs (qualified, claimed, submitted, banked)
+        $accessDocuments = AccessDocument::whereIntegerInRaw('person_id', $personIds)
             ->where(function ($check) {
-                $check->whereNotExists(function ($wap) {
-                    $wap->selectRaw(1)
-                        ->from('access_document')
-                        ->whereColumn('access_document.person_id', 'person.id')
-                        ->where('type', AccessDocument::WAP)
-                        ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-                        ->limit(1);
+                $check->where(function ($wap) {
+                    $wap->where('type', AccessDocument::WAP)
+                        ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
                 });
-                $check->where(function ($tickets) {
-                    $tickets->orWhereExists(function ($rpt) {
-                        $rpt->selectRaw(1)
-                            ->from('access_document')
-                            ->whereColumn('access_document.person_id', 'person.id')
-                            ->where('access_document.type', AccessDocument::RPT)
-                            ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
-                            ->limit(1);
-                    });
-                    $tickets->orWhereNotExists(function ($sc) {
-                        $sc->selectRaw(1)
-                            ->from('access_document')
-                            ->whereColumn('access_document.person_id', 'person.id')
-                            ->where('access_document.type', AccessDocument::STAFF_CREDENTIAL)
-                            ->whereIn('access_document.status', AccessDocument::CHECK_STATUSES)
-                            ->limit(1);
-                    });
+                $check->orWhere(function ($ticket) {
+                    $ticket->whereIn('type', [AccessDocument::RPT, AccessDocument::STAFF_CREDENTIAL])
+                        ->whereIn('status', AccessDocument::CURRENT_STATUSES);
                 });
-            })->orderBy('callsign')
+            })->get()
+            ->groupBy('person_id');
+
+        $potentials = DB::table('person')
+            ->select('id', 'callsign', 'status')
+            ->whereIntegerInRaw('id', $personIds)
+            ->orderBy('callsign')
             ->get();
 
-        return $people;
+        $people = [];
+        foreach ($potentials as $person) {
+            $id = $person->id;
+            $person->has_rpt = false;
+            $person->tickets = [];
+            $person->years = [];
+
+            $docs = $accessDocuments->get($id);
+            if (!$docs) {
+                if ($signUpIds->contains($id)) {
+                    // No tickets or WAPs, yet they are signed up to work. WAP 'em.
+                    $people[] = $person;
+                    $person->schedule = self::retrieveScheduleForPerson($id);
+                    $person->years = self::retrieveYearsWorkedSince($id, $startYear);
+                }
+                continue;
+            }
+
+            $wap = $docs->firstWhere('type', AccessDocument::WAP);
+            if ($wap) {
+                // Has a WAP already, nothing to see here.
+                continue;
+            }
+
+            $sc = $docs->firstWhere('type', AccessDocument::STAFF_CREDENTIAL);
+            if ($sc) {
+                // Has SC which is a WAP as well, nothing to see here too.
+                continue;
+            }
+
+            $rpt = $docs->firstWhere('type', AccessDocument::RPT);
+            if ($rpt) {
+                // have an existing RPT, WAP 'em.
+                $people[] = $person;
+                $person->schedule = self::retrieveScheduleForPerson($id);
+                $person->has_rpt = true;
+                $person->tickets = $docs;
+                $person->years = self::retrieveYearsWorkedSince($id, $startYear);
+                continue;
+            }
+
+            if ($signUpIds->contains($id)) {
+                // No ticket, yet they are signed up to work. WAP 'em.
+                $people[] = $person;
+                $person->schedule = self::retrieveScheduleForPerson($id);
+                $person->tickets = $docs;
+                $person->years = self::retrieveYearsWorkedSince($id, $startYear);
+            }
+        }
+
+        return [ $people, $startYear];
+    }
+
+    /**
+     * Find the years worked since a given year.
+     *
+     * @param int $personId
+     * @param int $startYear
+     * @return array
+     */
+
+    public static function retrieveYearsWorkedSince(int $personId, int $startYear): array
+    {
+        $sql = DB::table('timesheet')
+            ->selectRaw("YEAR(on_duty) as year")
+            ->whereYear('on_duty', '>=', $startYear)
+            ->where('person_id', $personId)
+            ->groupBy("year")
+            ->orderBy("year", "asc");
+
+        return $sql->pluck('year')->toArray();
+    }
+
+    /**
+     * Retrieve the schedule for a person
+     *
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrieveScheduleForPerson(int $personId): array
+    {
+        $signUps = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
+            ->where('person_id', $personId)
+            ->whereYear('slot.begins', current_year())
+            ->with(['slot:id,description,begins,position_id', 'slot.position:id,title'])
+            ->get();
+
+        $signUps = $signUps->sortBy('slot.begins')->values();
+
+        $schedule = [];
+        foreach ($signUps as $signUp) {
+            $schedule[] = (object)[
+                'id' => $signUp->slot_id,
+                'position_title' => $signUp->slot->position->title ?? "position #{$signUp->slot->position_id}",
+                'description' => $signUp->slot->description,
+                'begins' => $signUp->slot->begins->format('Y-m-d H:i'),
+            ];
+        }
+
+        return $schedule;
     }
 
     /**
@@ -177,7 +288,8 @@ class GrantPasses
         }
 
         $people = Person::select('id', 'callsign', 'status')
-            ->whereIn('id', $ids)
+            ->whereIntegerInRaw('id', $ids)
+            ->whereNotIn('status', [Person::DISMISSED, Person::DECEASED])
             ->orderBy('callsign')
             ->get();
 
@@ -196,10 +308,10 @@ class GrantPasses
      * @return void
      */
 
-    public static function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status = AccessDocument::QUALIFIED)
+    public static function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status = AccessDocument::QUALIFIED): void
     {
         $user = Auth::user();
-        $userId = $user?->id;
+        $userId = Auth::id();
 
         foreach ($people as $person) {
             $ad = new AccessDocument([

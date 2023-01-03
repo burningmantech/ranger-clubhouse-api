@@ -4,6 +4,7 @@ namespace App\Lib\Reports;
 
 use App\Models\Person;
 use App\Models\Position;
+use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\DB;
 
 class SandmanQualificationReport {
@@ -25,25 +26,78 @@ class SandmanQualificationReport {
         $year = current_year();
         $cutoff = $year - Position::SANDMAN_YEAR_CUTOFF;
 
-        $positionIds = implode(',', Position::SANDMAN_QUALIFIED_POSITIONS);
+        $personIds = DB::table('person_position')
+            ->join('person', 'person.id', 'person_position.person_id')
+            ->where('position_id', Position::SANDMAN)
+            ->where('person.status', Person::ACTIVE)
+            ->get()
+            ->pluck('person_id');
+
+        $trainingIds = DB::table('slot')->whereYear('begins', $year)
+                    ->where('position_id', Position::SANDMAN_TRAINING)
+                    ->where('active', true)
+                    ->get()
+                    ->pluck('id');
+
+        $trainerSlotIds = DB::table('slot')->whereYear('begins', $year)
+            ->where('position_id', Position::SANDMAN_TRAINER)
+            ->where('active', true)
+            ->get()
+            ->pluck('id');
+
+        $trainedByPersonId = DB::table('trainee_status')
+                ->whereIn('slot_id', $trainingIds)
+                ->whereIntegerInRaw('person_id', $personIds)
+                ->where('passed', true)
+                ->get()
+                ->keyBy('person_id');
+
+        $trainerByPersonIds = DB::table('trainer_status')
+            ->whereIn('slot_id', $trainingIds)
+            ->whereIntegerInRaw('person_id', $trainerSlotIds)
+            ->where('status', TrainerStatus::ATTENDED)
+            ->get()
+            ->keyBy('person_id');
+
+        $sandmanSlotIds = DB::table('slot')
+                ->whereYear('begins', $year)
+                ->where('position_id', Position::SANDMAN)
+                ->get()
+                ->pluck('id');
+
+        $sandmanShiftByPersonId = DB::table('person_slot')
+                ->whereIn('slot_id', $sandmanSlotIds)
+                ->get()
+                ->keyBy('person_id');
+
+        $pastWork = DB::table('timesheet')
+                ->select('person_id')
+                ->whereYear('on_duty', '>=', $cutoff)
+                ->whereIn('position_id', Position::SANDMAN_QUALIFIED_POSITIONS)
+                ->whereIntegerInRaw('person_id', $personIds)
+                ->groupBy('person_id')
+                ->get()
+                ->keyBy('person_id');
 
         $sandPeople = DB::table('person')
             ->select(
                 'id',
                 'callsign',
                 DB::raw('IFNULL(person_event.sandman_affidavit, FALSE) as sandman_affidavit'),
-                DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty) >= $cutoff AND position_id IN ($positionIds) LIMIT 1) AS has_experience"),
-                DB::raw("EXISTS (SELECT 1 FROM trainee_status JOIN slot ON slot.id=trainee_status.slot_id WHERE trainee_status.person_id=person.id AND slot.position_id=" . Position::SANDMAN_TRAINING . " AND YEAR(slot.begins)=$year AND passed=1 LIMIT 1) as is_trained"),
-                DB::raw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON slot.id=person_slot.slot_id WHERE person_slot.person_id=person.id AND slot.position_id=" . Position::SANDMAN . " AND YEAR(slot.begins)=$year LIMIT 1) as is_signed_up")
-            )
-            ->leftJoin('person_event', function ($j) use ($year) {
+            )->leftJoin('person_event', function ($j) use ($year) {
                 $j->on('person_event.person_id', 'person.id');
                 $j->where('year', $year);
             })
-            ->where('status', Person::ACTIVE)
-            ->whereRaw('EXISTS (SELECT 1 FROM person_position WHERE person_position.person_id=person.id AND person_position.position_id=?)', [Position::SANDMAN])
+            ->whereIntegerInRaw('person.id', $personIds)
             ->orderBy('callsign')
             ->get();
+
+        foreach ($sandPeople as $person) {
+            $id = $person->id;
+            $person->is_trained = $trainedByPersonId->has($id) || $trainerByPersonIds->has($id);
+            $person->is_signed_up = $sandmanShiftByPersonId->has($id);
+            $person->has_experience = $pastWork->has($id);
+        }
 
         return [
             'sandpeople' => $sandPeople,

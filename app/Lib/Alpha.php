@@ -14,8 +14,6 @@ use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\Training;
-
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -53,7 +51,7 @@ class Alpha
      * @return array
      */
 
-    public static function retrieveMentees($noBonks, $year, $haveTraining)
+    public static function retrieveMentees($noBonks, $year, $haveTraining): array
     {
         $sql = PersonStatus::whereIn('new_status', [Person::ALPHA, Person::PROSPECTIVE])
             ->whereYear('created_at', $year)
@@ -68,7 +66,7 @@ class Alpha
 
         $potentialIds = $sql->get()->groupBy('person_id')->keys();
 
-        $sql = Person::whereIn('id', $potentialIds)->with('person_photo')->orderBy('callsign');
+        $sql = Person::whereIntegerInRaw('id', $potentialIds)->with('person_photo')->orderBy('callsign');
         if ($haveTraining) {
             $sql->whereRaw("EXISTS
                 (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id
@@ -91,7 +89,7 @@ class Alpha
      * @return array
      */
 
-    public static function buildAlphaInformation($people, int $year)
+    public static function buildAlphaInformation($people, int $year): array
     {
         if ($people->isEmpty()) {
             return [];
@@ -99,6 +97,7 @@ class Alpha
 
         list ($intakeHistory, $intakeNotes, $trainings) = self::retrieveIntakeHistory($people->pluck('id')->toArray());
 
+        $peopleIds = $people->pluck('id')->toArray();
         // Find out the signed up shifts
         $alphaSlots = DB::table('person_slot')
             ->select(
@@ -111,14 +110,16 @@ class Alpha
                 $j->whereYear('slot.begins', $year);
                 $j->where('slot.position_id', Position::ALPHA);
             })
-            ->whereIn('person_slot.person_id', $people->pluck('id')->toArray())
+            ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->orderBy('slot.begins')
             ->get()
             ->groupBy('person_id');
 
+        $signedIn = Timesheet::retrieveSignedInPeople(Position::ALPHA);
+
         $potentials = [];
         foreach ($people as $row) {
-            $person = self::buildPerson($row, $year, $intakeHistory, $intakeNotes, $trainings);
+            $person = self::buildPerson($row, $year, $intakeHistory, $intakeNotes, $trainings, $signedIn);
             $slot = $alphaSlots[$row->id] ?? null;
             if ($slot) {
                 // Only grab the first slot
@@ -141,11 +142,12 @@ class Alpha
      * @param mixed $pnvIds ids to retrieve the intake history for
      * @return array
      */
-    public static function retrieveIntakeHistory($pnvIds)
+
+    public static function retrieveIntakeHistory($pnvIds): array
     {
         $year = current_year();
 
-        $intakeHistory = PersonIntake::whereIn('person_id', $pnvIds)
+        $intakeHistory = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)
             ->orderBy('person_id')
             ->orderBy('year')
             ->get()
@@ -174,7 +176,7 @@ class Alpha
      * @return object
      */
 
-    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings)
+    public static function buildPerson(Person $person, int $year, $intakeHistory, $intakeNotes, $trainings, $signedIn): object
     {
         $personId = $person->id;
         $photoApproved = $person->person_photo && $person->person_photo->status == PersonPhoto::APPROVED;
@@ -199,11 +201,12 @@ class Alpha
             'city' => $person->city,
             'state' => $person->state,
             'country' => $person->country,
-            'longsleeveshirt_size_style' => $person->longsleeveshirt_size_style,
-            'teeshirt_size_style' => $person->teeshirt_size_style,
+            'teeshirt_size_style' => $person->tshirt->title ?? 'Unknown',
+            'tshirt_secondary_size' => $person->tshirt_secondary->title ?? 'Unknown',
+            'longsleeveshirt_size_style' => $person->long_sleeve->title ?? 'Unknown',
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
-            'on_alpha_shift' => Timesheet::isPersonSignIn($personId, Position::ALPHA)
+            'on_alpha_shift' => !empty($signedIn[$personId])
         ];
 
         if ($photoApproved) {
@@ -237,6 +240,7 @@ class Alpha
         $ignoreFlag = false;
         $potential->rrn_team = Intake::buildIntakeTeam('rrn', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
         $potential->vc_team = Intake::buildIntakeTeam('vc', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
+        $potential->personnel_team = Intake::buildIntakeTeam('personnel', $teamHistory, $intakeNotes[$personId] ?? null, $ignoreFlag);
 
         if (!empty($teamHistory)) {
             foreach ($teamHistory as $history) {
@@ -275,14 +279,12 @@ class Alpha
      * @return array
      */
 
-    public static function retrieveAllAlphas()
+    public static function retrieveAllAlphas(): array
     {
         $rows = PersonPosition::where('position_id', Position::ALPHA)
             ->with(['person', 'person.person_photo'])
             ->get()
-            ->filter(function ($r) {
-                return $r->person != null;
-            })
+            ->filter(fn($r) => $r->person != null)
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
             ->pluck('person')
             ->values();
@@ -291,13 +293,13 @@ class Alpha
     }
 
     /**
-     * Retrieve all the Alpha slots in a given year with sign ups and their intake data.
+     * Retrieve all the Alpha slots in a given year with sign-ups and their intake data.
      *
      * @param int $year
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public static function retrieveAlphaScheduleForYear(int $year)
+    public static function retrieveAlphaScheduleForYear(int $year): Collection
     {
         // Find the Alpha slots
         $slots = Slot::whereYear('begins', $year)
@@ -306,7 +308,7 @@ class Alpha
             ->get();
 
         // Next, find the Alpha sign ups
-        $rows = PersonSlot::whereIn('slot_id', $slots->pluck('id')->toArray())
+        $rows = PersonSlot::whereIntegerInRaw('slot_id', $slots->pluck('id')->toArray())
             ->with(['person', 'person.person_photo'])
             ->get()
             ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
@@ -326,8 +328,9 @@ class Alpha
 
         list ($intakeHistory, $intakeNotes, $trainings) = self::retrieveIntakeHistory($rows->pluck('person_id'));
 
+        $signedIn = Timesheet::retrieveSignedInPeople(Position::ALPHA);
         foreach ($rows as $row) {
-            $slotsById[$row->slot_id]->people[] = self::buildPerson($row->person, $year, $intakeHistory, $intakeNotes, $trainings);
+            $slotsById[$row->slot_id]->people[] = self::buildPerson($row->person, $year, $intakeHistory, $intakeNotes, $trainings, $signedIn);
         }
 
         return $slotInfo;
@@ -340,7 +343,7 @@ class Alpha
      * @return Collection
      */
 
-    public static function retrieveVerdicts()
+    public static function retrieveVerdicts(): Collection
     {
         $year = current_year();
 
@@ -352,8 +355,6 @@ class Alpha
             ->orderBy('person.callsign')
             ->get();
 
-        return $people->filter(function ($p) {
-            return $p->mentor_status != PersonMentor::PENDING;
-        })->values();
+        return $people->filter(fn($p) => $p->mentor_status != PersonMentor::PENDING)->values();
     }
 }

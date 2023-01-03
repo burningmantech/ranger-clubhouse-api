@@ -18,7 +18,7 @@ class PersonFactory extends Factory
             'status' => 'active',
             'callsign' => $this->faker->unique()->word(),
             'callsign_approved' => true,
-            'email' => $uuid . '@e.co',
+            'email' => $uuid . '@example.com',
             'first_name' => 'Bravo',
             'last_name' => 'Delta',
             'street1' => '1 Main Street',

@@ -16,7 +16,7 @@ class Kernel extends ConsoleKernel
         'App\Console\Commands\ClubhouseDailyReportCommand',
         'App\Console\Commands\ClubhousePhotoPendingCommand',
         'App\Console\Commands\ClubhouseVehiclePendingCommand',
-        'App\Console\Commands\ClubhouseDoceboCompletion',
+        'App\Console\Commands\ClubhouseMoodleCompletion',
     ];
 
     /**
@@ -27,7 +27,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        if (config('clubhouse.DeploymentEnvironment') == 'Production') {
+        if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server()) {
             // Let someone know what's been happening in the Clubhouse
             $schedule->command('clubhouse:daily-report')->dailyAt('03:00')->onOneServer();
 
@@ -46,6 +46,11 @@ class Kernel extends ConsoleKernel
             $schedule->command('clubhouse:ranger-waps-report')
                 ->cron('30 2 * 7-8 1')
                 ->onOneServer();
+        }
+
+        if (is_ghd_server()) {
+            // Reset the GHD Server
+            $schedule->command('clubhouse:reload-training-db')->dailyAt('04:00')->onOneServer();
         }
     }
 

@@ -2,25 +2,36 @@
 
 namespace App\Lib;
 
-use App\Models\AccessDocument;
+use App\Models\Document;
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Slot;
 use App\Models\Survey;
 use App\Models\Timesheet;
+use App\Models\TraineeStatus;
+use App\Models\TrainerStatus;
 use App\Models\Training;
 use App\Models\Vehicle;
-
 use Carbon\Carbon;
 
 class Milestones
 {
-    public static function buildForPerson(Person $person)
+    /**
+     * Build up the various milestones completed or pending for a given person.
+     * Use heavily by the dashboards.
+     *
+     * @param Person $person
+     * @return array
+     */
+
+    public static function buildForPerson(Person $person): array
     {
         $status = $person->status;
 
@@ -29,6 +40,8 @@ class Milestones
 
         $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
         $period = EventDate::calculatePeriod();
+        $isBinary = Timesheet::isPersonBinary($person);
+        $isNonRanger = ($status == Person::NON_RANGER);
 
         $settings = setting([
             'MotorpoolPolicyEnable',
@@ -39,11 +52,11 @@ class Milestones
         ]);
 
         $milestones = [
-            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
+            'online_training_passed' => $isNonRanger || PersonOnlineTraining::didCompleteForYear($person->id, $year),
             'online_training_enabled' => $settings['OnlineTrainingEnabled'],
             'online_training_url' => $settings['OnlineTrainingUrl'],
             'behavioral_agreement' => $person->behavioral_agreement,
-            'has_reviewed_pi' => $person->hasReviewedPi(),
+            'has_reviewed_pi' => !empty($event->pii_finished_at) && $event->pii_finished_at->year == $year,
             'asset_authorized' => $event->asset_authorized,
             'radio_checkout_agreement_enabled' => $settings['RadioCheckoutAgreementEnabled'],
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
@@ -70,11 +83,10 @@ class Milestones
             $milestones['training'] = ['status' => 'no-shift'];
         }
 
-        usort($artTrainings, fn ($a, $b) => strcasecmp($a->position_title, $b->position_title));
+        usort($artTrainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $milestones['art_trainings'] = $artTrainings;
 
-        $isBinary = Timesheet::isPersonBinary($person);
 
         if (in_array($status, Person::ACTIVE_STATUSES)) {
             // Only require Online Training to be passed in order to work? (2021 social distancing training)
@@ -87,6 +99,7 @@ class Milestones
                     $milestones['online_training_only'] = true;
                 }
                 break;
+
             case Person::ALPHA:
             case Person::PROSPECTIVE:
             case Person::BONKED:
@@ -104,18 +117,25 @@ class Milestones
                 }
                 $milestones['needs_full_training'] = true;
                 break;
+
             case Person::ACTIVE:
-                if ($isBinary || setting('OnlineTrainingFullCourseForVets')) {
+                if ($isBinary) {
                     // Binaries have to take a full day's training, or
                     // everyone is being forced to take the full version.
                     $milestones['needs_full_training'] = true;
                     $milestones['is_binary'] = $isBinary;
                 }
+
+                if (setting('OnlineTrainingFullCourseForVets')) {
+                    $milestones['needs_full_online_course'] = true;
+                }
                 break;
+
             case Person::INACTIVE:
                 // Inactives need a full day's training
                 $milestones['needs_full_training'] = true;
                 break;
+
             case Person::INACTIVE_EXTENSION:
             case Person::RETIRED:
             case Person::RESIGNED:
@@ -132,14 +152,26 @@ class Milestones
                 break;
         }
 
-        if (in_array($status, Person::ACTIVE_STATUSES)) {
-            // note, some inactives are active trainers yet do not work on playa.
-            $milestones['is_trainer'] = PersonPosition::havePosition($person->id, Position::TRAINERS[Position::TRAINING]);
 
+        if (in_array($status, Person::ACTIVE_STATUSES) || $isNonRanger) {
+            // Starting late 2022 - All (effective) login management roles require annual NDA signature.
+            // MOAR PAPERWERKS! MOAR WINZ!
+            // Don't require the NDA if the agreement does not exist.
+            if (PersonRole::haveRole($person->id, Role::MANAGE)
+                && !$event->signed_nda
+                && Document::haveTag(Agreements::DEPT_NDA)
+            ) {
+                $milestones['nda_required'] = true;
+            }
+
+            if (!$isNonRanger) {
+                // note, some inactives are active trainers yet do not work on playa.
+                $milestones['is_trainer'] = PersonPosition::havePosition($person->id, Position::TRAINERS[Position::TRAINING]);
+            }
             $ticketingPeriod = setting('TicketingPeriod');
             $milestones['ticketing_period'] = $ticketingPeriod;
             if ($ticketingPeriod == 'open' || $ticketingPeriod == 'closed') {
-                $milestones['ticketing_package'] = AccessDocument::buildPackageForPerson($person->id);
+                $milestones['ticketing_package'] = TicketAndProvisionsPackage::buildPackageForPerson($person->id);
             }
 
             // Timesheets!
@@ -152,7 +184,9 @@ class Milestones
             }
 
             if ($period != EventDate::AFTER_EVENT) {
-                $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
+                if (!$isNonRanger) {
+                    $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
+                }
                 $milestones['shift_signups'] = Schedule::summarizeShiftSignups($person);
                 // Person is *not* signed up - figure out if weekend shirts are available
                 $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
@@ -166,22 +200,19 @@ class Milestones
                     $milestones['vehicle_requests_allowed'] = true;
                     $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
                 }
+
+                if (!$isNonRanger && PersonPosition::havePosition($person->id, Position::SANDMAN)) {
+                    if ($event->sandman_affidavit) {
+                        $milestones['sandman_affidavit_signed'] = true;
+                    } else if (TraineeStatus::didPersonPassForYear($person->id, Position::SANDMAN_TRAINING, $year)
+                        || TrainerStatus::didPersonTeachForYear($person->id, Position::SANDMAN_TRAINING, $year)) {
+                        // Sandpeople! Put the affidavit in your walk, head-to-toe let your whole body talk.
+                        $milestones['sandman_affidavit_unsigned'] = true;
+                    }
+                }
             }
         }
 
         return $milestones;
-    }
-
-    /**
-     * Is the given time within a 12 hour grace period?
-     * @param Carbon|string $time
-     * @param $now
-     * @return bool
-     */
-    private static function isTimeWithinGracePeriod($time, $now): bool
-    {
-        $time = is_string($time) ? Carbon::parse($time) : $time->clone();
-
-        return $time->addHours(12)->gt($now);
     }
 }

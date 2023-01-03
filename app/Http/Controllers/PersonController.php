@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Lib\AppreciationProgress;
 use App\Lib\BulkLookup;
+use App\Lib\Membership;
 use App\Lib\Milestones;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
@@ -26,16 +26,16 @@ use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
 use App\Models\Position;
+use App\Models\PositionRole;
 use App\Models\Role;
 use App\Models\SurveyAnswer;
+use App\Models\TeamRole;
 use App\Models\Timesheet;
 use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use RuntimeException;
 
 class PersonController extends ApiController
 {
@@ -45,7 +45,8 @@ class PersonController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', Person::class);
 
@@ -59,21 +60,21 @@ class PersonController extends ApiController
             'basic' => 'sometimes|boolean',
         ]);
 
-        $results = Person::findForQuery($params);
+        $canViewEmail = $this->userCanViewEmail();
+        $results = Person::findForQuery($params, $canViewEmail);
         $people = $results['people'];
         $meta = ['limit' => $results['limit'], 'total' => $results['total']];
 
         if ($params['basic'] ?? false) {
-            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER])) {
+            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER])) {
                 $this->notPermitted("Not authorized for basic search.");
             }
 
             $rows = [];
-            $canViewEmail = $this->userCanViewEmail();
             $searchFields = $params['search_fields'] ?? '';
             $query = trim($params['query'] ?? '');
 
-            if (stripos($searchFields, 'email') !== false) {
+            if ($canViewEmail && stripos($searchFields, 'email') !== false) {
                 $searchingForEmail = stripos($query, '@') !== false;
             } else {
                 $searchingForEmail = false;
@@ -91,13 +92,12 @@ class PersonController extends ApiController
 
                 if ($canViewEmail) {
                     $row['email'] = $person->email;
-                }
-
-                if ($searchingForEmail) {
-                    if (strcasecmp($person->email, $query) == 0) {
-                        $row['email_match'] = 'full';
-                    } elseif (stripos($person->email, $query) !== false) {
-                        $row['email_match'] = 'partial';
+                    if ($searchingForEmail) {
+                        if (strcasecmp($person->email, $query) == 0) {
+                            $row['email_match'] = 'full';
+                        } elseif (stripos($person->email, $query) !== false) {
+                            $row['email_match'] = 'partial';
+                        }
                     }
                 }
 
@@ -121,35 +121,47 @@ class PersonController extends ApiController
         }
     }
 
-    /*
+    /**
      * Create a person
-     * TODO
+     *  TODO
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function store(Request $request)
+    public function store(): JsonResponse
     {
         $this->authorize('store');
-        throw new RuntimeException('unimplemented');
+        return response()->json(['message' => 'not implemented'], 501);
     }
 
-    /*
+    /**
      * Show a specific person - include roles, and languages.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(Person $person)
+    public function show(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $personId = $person->id;
         $person->languages = PersonLanguage::retrieveForPerson($personId);
+        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
 
-    /*
+    /**
      * Update a person record. Also update the person_language table at the same time.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(Person $person)
+    public function update(Person $person): JsonResponse
     {
         $this->authorize('update', $person);
 
@@ -188,7 +200,7 @@ class PersonController extends ApiController
 
         // Alert VCs when the email address changes for a prospective.
         if ($emailChanged
-            && $person->status == Person::PROSPECTIVE
+            && ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA)
             && $person->id == $this->user->id) {
             mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
         }
@@ -199,14 +211,20 @@ class PersonController extends ApiController
         }
 
         $person->languages = PersonLanguage::retrieveForPerson($person->id);
+        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
 
-    /*
+    /**
      * Remove the person from the clubhouse
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Person $person)
+
+    public function destroy(Person $person): JsonResponse
     {
         $this->authorize('delete', $person);
 
@@ -214,11 +232,14 @@ class PersonController extends ApiController
             function () use ($person) {
                 $personId = $person->id;
 
-                DB::update('UPDATE slot SET signed_up = signed_up - 1 WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
 
                 foreach (Person::ASSOC_TABLES as $table) {
                     DB::table($table)->where('person_id', $personId)->delete();
                 }
+
+                // Ensure slot signed up counts are adjusted.
+
+                DB::update('UPDATE slot SET signed_up = (SELECT COUNT(*) FROM person_slot WHERE slot_id=slot.id) WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
 
                 // Photos require a bit of extra work.
                 PersonPhoto::deleteAllForPerson($personId);
@@ -231,12 +252,14 @@ class PersonController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /*
-     * Return the person's training status, BMID & radio privs
-     * for a given year.
+    /**
+     * Return the person's training status, provisions, signatures for a given year.
+     *
+     * @param Person $person
+     * @return JsonResponse
      */
 
-    public function eventInfo(Person $person)
+    public function eventInfo(Person $person): JsonResponse
     {
         $year = $this->getYear();
         $eventInfo = PersonEventInfo::findForPersonYear($person, $year);
@@ -247,11 +270,15 @@ class PersonController extends ApiController
         return $this->restError('The year could not be found.', 404);
     }
 
-    /*
+    /**
      * Change password
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function password(Request $request, Person $person)
+    public function password(Person $person): JsonResponse
     {
         $this->authorize('password', $person);
 
@@ -264,8 +291,8 @@ class PersonController extends ApiController
         $requireOld = $this->isUser($person) && !$this->userHasRole(Role::ADMIN);
 
         $rules = [
-            'password' => 'required|string|confirmed',
-            'password_confirmation' => 'required|string',
+            'password' => 'required|string|confirmed|max:30',
+            'password_confirmation' => 'required|string|max:30',
         ];
 
         $token = request()->input('temp_token');
@@ -273,7 +300,7 @@ class PersonController extends ApiController
             $rules['password_old'] = 'required|string';
         }
 
-        $passwords = $request->validate($rules);
+        $passwords = request()->validate($rules);
 
         if (!empty($token)) {
             if ($person->tpassword != $token || $person->tpassword_expire <= now()->timestamp) {
@@ -289,15 +316,20 @@ class PersonController extends ApiController
         return $this->success();
     }
 
-    /*
+    /**
      * Retrieve the positions held
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function positions(Person $person)
+    public function positions(Person $person): JsonResponse
     {
         $params = request()->validate([
             'include_training' => 'sometimes|boolean',
             'include_mentee' => 'sometimes|boolean',
+            'explicit' => 'sometimes|boolean',
             'year' => 'required_if:include_training,true|integer'
         ]);
 
@@ -305,87 +337,77 @@ class PersonController extends ApiController
 
         $includeTraining = $params['include_training'] ?? false;
         $includeMentee = $params['include_mentee'] ?? false;
+        $explicit = $params['explicit'] ?? false;
 
         if ($includeTraining) {
             $positions = Training::findPositionsWithTraining($person, $params['year']);
         } else {
-            $positions = PersonPosition::findForPerson($person->id, $includeMentee);
+            $positions = PersonPosition::findForPerson($person->id, $includeMentee, $explicit);
         }
 
         return response()->json(['positions' => $positions]);
     }
 
-    /*
-     * Update the positions held
+    /**
+     * Update the positions to be  explicitly held or revoked.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function updatePositions(Person $person)
+    public function updatePositions(Person $person): JsonResponse
     {
         $this->authorize('updatePositions', $person);
-        $params = request()->validate(
-            [
-                'position_ids' => 'present|array',
-                'position_ids.*' => 'sometimes|integer'
-            ]
-        );
+        $params = request()->validate([
+            'position_ids' => 'present|array',
+            'position_ids.*' => 'sometimes|integer'
+        ]);
 
         $personId = $person->id;
-
-        $positionIds = $params['position_ids'];
-        $positions = PersonPosition::findForPerson($personId);
-        $newIds = [];
-        $deleteIds = [];
-
-        // Find the new ids
-        foreach ($positionIds as $id) {
-            $found = false;
-            foreach ($positions as $position) {
-                if ($position->id == $id) {
-                    $found = true;
-                    break;
-                }
-            }
-
-            if (!$found) {
-                $newIds[] = $id;
-            }
-        }
-
-        // Find the ids to be deleted
-        foreach ($positions as $position) {
-            if (!in_array($position->id, $positionIds)) {
-                $deleteIds[] = $position->id;
-            }
-        }
-
-        // Mass delete the old ids
-        if (!empty($deleteIds)) {
-            PersonPosition::removeIdsFromPerson($personId, $deleteIds, 'person update');
-        }
-
-        if (!empty($newIds)) {
-            PersonPosition::addIdsToPerson($personId, $newIds, 'person update');
-        }
-
+        Membership::updatePositionsForPerson(
+            $this->user->id,
+            $person->id,
+            $params['position_ids'],
+            'person update',
+            $this->userHasRole(Role::ADMIN)
+        );
         return response()->json(['positions' => PersonPosition::findForPerson($personId)]);
     }
 
-    /*
-    * Retrieve the roles held, and return a list of role ids
-    */
+    /**
+     * Retrieve the roles held, and return a list of role ids
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
 
-    public function roles(Person $person)
+    public function roles(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
-        return response()->json(['roles' => PersonRole::findRolesForPerson($person->id)]);
+        $results = [
+            'roles' => PersonRole::findRolesForPerson($person->id)
+        ];
+
+        if (request()->input('include_memberships')) {
+            $results['team_roles'] = TeamRole::findRolesForPerson($person->id);
+            $results['position_roles'] = PositionRole::findRolesForPerson($person->id);
+        }
+
+        return response()->json($results);
     }
 
-    /*
-     * Update the roles held
+    /**
+     * Update the roles held. The Tech Ninja and Admin roles may only be alerted by Tech Ninja role holders.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function updateRoles(Person $person)
+    public function updateRoles(Person $person): JsonResponse
     {
         $this->authorize('updateRoles', $person);
         $params = request()->validate(
@@ -402,20 +424,20 @@ class PersonController extends ApiController
         $newIds = [];
         $deleteIds = [];
 
-        // Only tech ninjas may grant/revoke the tech ninja role. Ignore attempts to alter the role by
+        // Only tech ninjas may grant/revoke the tech ninja and admin roles. Ignore attempts to alter the roles by
         // mere mortals.
         $isTechNinja = $this->userHasRole(Role::TECH_NINJA);
 
-        // Find the new ids
+        // Find the new ids to be added
         foreach ($roleIds as $id) {
-            if (!in_array($id, $existingRoles) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $existingRoles) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
                 $newIds[] = $id;
             }
         }
 
         // Find the ids to be deleted
         foreach ($existingRoles as $id) {
-            if (!in_array($id, $roleIds) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $roleIds) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
                 $deleteIds[] = $id;
             }
         }
@@ -432,22 +454,69 @@ class PersonController extends ApiController
         return response()->json(['roles' => PersonRole::findRolesForPerson($personId)]);
     }
 
-    /*
-     * Return the count of  unread messages
+    /**
+     * Retrieve the team & position membership
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function unreadMessageCount(Person $person)
+    public function membership(Person $person): JsonResponse
+    {
+        $this->authorize('view', $person);
+        return response()->json(['membership' => Membership::retrieveForPerson($person->id)]);
+    }
+
+    /**
+     * Update team memberships
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function updateTeams(Person $person): JsonResponse
+    {
+        $this->authorize('updateTeams', $person);
+
+        $params = request()->validate([
+            'team_ids' => 'present|array',
+            'team_ids.*' => 'sometimes|integer',
+            'manager_ids' => 'present|array',
+            'manager_ids.*' => 'sometimes|integer',
+        ]);
+
+        Membership::updateTeamsForPerson($this->user->id, $person->id, $params['team_ids'], $params['manager_ids'], 'person update', $this->user->isAdmin());
+
+        return $this->success();
+    }
+
+    /**
+     * /**
+     * Return the count of  unread messages
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function unreadMessageCount(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
         return response()->json(['unread_message_count' => PersonMessage::countUnread($person->id)]);
     }
 
-    /*
+    /**
      * Retrieve user information needed for user login, or to show/edit a person.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function userInfo(Person $person)
+    public function userInfo(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
 
@@ -458,12 +527,7 @@ class PersonController extends ApiController
 
         $timesheet = Timesheet::findPersonOnDuty($personId);
         if ($timesheet) {
-            $onduty = [
-                'id' => $timesheet->position_id,
-                'title' => $timesheet->position->title,
-                'type' => $timesheet->position->type,
-                'subtype' => $timesheet->position->subtype,
-            ];
+            $onduty = $timesheet->buildOnDutyInfo();
         } else {
             $onduty = null;
         }
@@ -507,13 +571,30 @@ class PersonController extends ApiController
     }
 
     /**
-     * Return the years person has worked and has sign ups
+     * Check see if the person is on duty.
+     *
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function years(Person $person)
+    public function onDuty(Person $person): JsonResponse
+    {
+        $this->authorize('view', $person);
+
+        $timesheet = Timesheet::findPersonOnDuty($person->id);
+        return response()->json(['onduty' => $timesheet?->buildOnDutyInfo()]);
+    }
+
+    /**
+     * Return the years person has worked and has sign ups
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function years(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $personId = $person->id;
@@ -525,11 +606,15 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Calculate how many earned credits for a given year
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function credits(Person $person)
+    public function credits(Person $person): JsonResponse
     {
         $params = request()->validate([
             'year' => 'integer|required'
@@ -542,11 +627,11 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Provide summary for a person
      */
 
-    public function timesheetSummary(Person $person)
+    public function timesheetSummary(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         $year = $this->getYear();
@@ -555,21 +640,29 @@ class PersonController extends ApiController
         ]);
     }
 
-    /*
+    /**
      * Find the person's mentees
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function mentees(Person $person)
+    public function mentees(Person $person): JsonResponse
     {
         $this->authorize('mentees', $person);
         return response()->json(['mentees' => PersonMentor::retrieveAllForPerson($person->id)]);
     }
 
-    /*
+    /**
      * Retrieve a person's mentors
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function mentors(Person $person)
+    public function mentors(Person $person): JsonResponse
     {
         $this->authorize('mentors', $person);
 
@@ -582,8 +675,10 @@ class PersonController extends ApiController
      * Note: method does not require authorization/login. see routes/api.php
      */
 
-    public function register()
+    public function register(): JsonResponse
     {
+        prevent_if_ghd_server('Account registration');
+
         if (setting('AuditorRegistrationDisabled')) {
             throw new InvalidArgumentException("Auditor registration is disabled at this time.");
         }
@@ -669,7 +764,7 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function peopleByLocation()
+    public function peopleByLocation(): JsonResponse
     {
         $this->authorize('peopleByLocation', [Person::class]);
 
@@ -682,11 +777,14 @@ class PersonController extends ApiController
         return response()->json(['people' => PeopleByLocationReport::execute($year, $this->userCanViewEmail())]);
     }
 
-    /*
+    /**
      * People By Role report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function peopleByRole()
+    public function peopleByRole(): JsonResponse
     {
         $this->authorize('peopleByRole', [Person::class]);
 
@@ -708,8 +806,8 @@ class PersonController extends ApiController
     }
 
     /**
-     *
      * Languages Spoken On Site Report
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
@@ -730,7 +828,7 @@ class PersonController extends ApiController
 
     public function peopleByStatusChange(): JsonResponse
     {
-        $this->authorize('peopleByStatusChange', [Person::class]);
+        $this->authorize('peopleByStatusChange', Person::class);
         return response()->json(RecommendStatusChangeReport::execute($this->getYear()));
     }
 
@@ -743,7 +841,7 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function milestones(Person $person)
+    public function milestones(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
         return response()->json(['milestones' => Milestones::buildForPerson($person)]);

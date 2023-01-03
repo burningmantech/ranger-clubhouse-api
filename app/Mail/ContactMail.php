@@ -9,12 +9,12 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 
 use App\Models\Person;
 
-class ContactMail extends Mailable
+class ContactMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
     public $senderPerson;
-    public $recipientPerson;
+    public $person;
     public $messageSubject;
     public $contactMessage;
 
@@ -26,9 +26,11 @@ class ContactMail extends Mailable
     public function __construct(Person $sender, Person $recipient, $subject, $message)
     {
         $this->senderPerson = $sender;
-        $this->recipientPerson = $recipient;
+        $this->person = $recipient;
         $this->messageSubject = $subject;
         $this->contactMessage = $message;
+
+        parent::__construct();
     }
 
     /**
@@ -39,7 +41,7 @@ class ContactMail extends Mailable
 
     public function build()
     {
-        return $this->from('do-not-reply@burningman.org')
+        return $this->from(setting('DoNotReplyEmail'))
                 ->subject($this->messageSubject)
                 ->view('emails.contact');
     }

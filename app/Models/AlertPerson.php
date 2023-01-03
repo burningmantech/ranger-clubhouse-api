@@ -2,10 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-
-use App\Models\Alert;
 
 class AlertPerson extends ApiModel
 {
@@ -18,13 +16,14 @@ class AlertPerson extends ApiModel
         'use_sms',
     ];
 
-    /*
+    /**
      * Find all alerts with opt defaults for person
      *
      * @param integer $personId user to look up
+     * @return Collection
      */
 
-    public static function findAllForPerson($personId)
+    public static function findAllForPerson(int $personId): Collection
     {
         return Alert::select(
             'alert.id',
@@ -34,23 +33,23 @@ class AlertPerson extends ApiModel
             DB::raw('IFNULL(use_sms, 1) as use_sms'),
             DB::raw('IFNULL(use_email, 1) as use_email')
         )->leftJoin('alert_person', function ($join) use ($personId) {
-            $join->where('alert_person.person_id','=',$personId);
+            $join->where('alert_person.person_id', '=', $personId);
             $join->whereRaw('alert_person.alert_id=alert.id');
         })->orderBy('alert.on_playa', 'desc')->orderBy('alert.title')->get();
     }
 
-    /*
+    /**
      * Find or create an alert for a person
      *
-     * @param integer $personId user to find alert for
-     * @param integer $alertId id to lookup
+     * @param int $personId user to find alert for
+     * @param int $alertId id to lookup
      */
 
-    public static function findOrCreateForPerson($personId, $alertId)
+    public static function findOrCreateForPerson(int $personId, int $alertId): AlertPerson
     {
         $query = [
             'person_id' => $personId,
-            'alert_id'  => $alertId,
+            'alert_id' => $alertId,
         ];
         $alert = self::where($query)->first();
 
@@ -61,26 +60,28 @@ class AlertPerson extends ApiModel
         return new AlertPerson($query);
     }
 
-    /*
+    /**
      * Find an alert for a person
      *
-     * @param integer $alertId alert to find
-     * @param interger $personId user to find
+     * @param int $alertId alert to find
+     * @param int $personId user to find
+     * @return AlertPerson|null
      */
 
-    public static function findAlertForPerson($alertId, $personId) {
+    public static function findAlertForPerson(int $alertId, int $personId): ?AlertPerson
+    {
         return self::where('alert_id', $alertId)->where('person_id', $personId)->first();
     }
 
-    /*
+    /**
      * Figure out if the person is okay with sending email for a given alert.
      *
-     * @param integer $personId person to check
-     * @param integer $alertId alert to verify
-     * @param boolean true if person allows emails
+     * @param int $personId person to check
+     * @param int $alertId alert to verify
+     * @return bool true if person allows emails
      */
 
-    public static function allowEmailForAlert($personId, $alertId)
+    public static function allowEmailForAlert(int $personId, int $alertId): bool
     {
         $pref = self::where('person_id', $personId)->where('alert_id', $alertId)->first();
 

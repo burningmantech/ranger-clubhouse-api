@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessDocument;
+use App\Models\Person;
 use App\Models\PersonEvent;
-use App\Models\Role;
-
-use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 /*
  * Person Event records are special -- a record will always be returned even if the record does not
@@ -17,10 +19,11 @@ class PersonEventController extends ApiController
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         $this->authorize('index', PersonEvent::class);
 
@@ -35,11 +38,12 @@ class PersonEventController extends ApiController
     /**
      * Display the person event
      *
-     * @param  \App\Models\PersonEvent  $personEvent
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @param PersonEvent $personEvent
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function show(PersonEvent $personEvent)
+
+    public function show(PersonEvent $personEvent): JsonResponse
     {
         $this->authorize('show', $personEvent);
 
@@ -50,16 +54,16 @@ class PersonEventController extends ApiController
      * Update (or create) a person event record
      *
      * @param PersonEvent $personEvent
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(PersonEvent $personEvent)
+    public function update(PersonEvent $personEvent): JsonResponse
     {
         $this->authorize('update', $personEvent);
         $this->fromRest($personEvent);
 
-         if (!$personEvent->save()) {
+        if (!$personEvent->save()) {
             return $this->restError($personEvent);
         }
 
@@ -69,10 +73,12 @@ class PersonEventController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\PersonEvent  $personEvent
-     * @return \Illuminate\Http\JsonResponse
+     * @param PersonEvent $personEvent
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(PersonEvent $personEvent)
+
+    public function destroy(PersonEvent $personEvent): JsonResponse
     {
         if ($personEvent->exists()) {
             $this->authorize('destroy', $personEvent);
@@ -80,4 +86,51 @@ class PersonEventController extends ApiController
         }
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Update milestone progress
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function updateProgress(Person $person): JsonResponse
+    {
+        $this->authorize('updateProgress', [AccessDocument::class, $person]);
+
+        $params = request()->validate([
+            'milestone' => ['required', 'string',
+                Rule::in(
+                    'ticket-visited', 'ticket-started', 'ticket-finished',
+                    'pii-started', 'pii-finished',
+                )
+            ],
+        ]);
+
+        $pe = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
+        switch ($params['milestone']) {
+            case 'ticket-visited':
+                $pe->ticketing_last_visited_at = now();
+                break;
+            case 'ticket-started':
+                $pe->ticketing_started_at = now();
+                break;
+            case 'ticket-finished':
+                $pe->ticketing_finished_at = now();
+                break;
+            case 'pii-started':
+                $pe->pii_started_at = now();
+                break;
+            case 'pii-finished':
+                $pe->pii_finished_at = now();
+                break;
+        }
+
+        $pe->saveWithoutValidation();
+
+        return $this->success();
+    }
+
+
 }

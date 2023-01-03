@@ -14,29 +14,13 @@ class RBSTransmitEmailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $alert;
-    public $broadcastId;
-    public $userId;
-    public $people;
-    public $from;
-    public $subject;
-    public $message;
-
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($alert, $broadcastId, $userId, $people, $from, $subject, $message)
+    public function __construct(public $alert, public $broadcastId, public $userId, public $people, public $subject, public $message)
     {
-        $this->alert = $alert;
-        $this->broadcastId = $broadcastId;
-        $this->userId = $userId;
-        $this->people = $people;
-        $this->from = $from;
-        $this->subject = $subject;
-        $this->message = $message;
-
     }
 
     /**
@@ -46,7 +30,6 @@ class RBSTransmitEmailJob implements ShouldQueue
      */
     public function handle()
     {
-        RBS::broadcastEmail($this->alert, $this->broadcastId,
-            $this->userId, $this->people, $this->from, $this->subject, $this->message);
+        RBS::broadcastEmail($this->alert, $this->broadcastId, $this->userId, $this->people, $this->subject, $this->message);
     }
 }

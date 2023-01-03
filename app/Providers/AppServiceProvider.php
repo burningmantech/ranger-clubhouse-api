@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
                 // replace all newlines with spaces except those in quotes
                 $sql = preg_replace('/\n(?![^"]*"(?:(?:[^"]*"){2})*[^"]*$)/i', ' ', $sql);
                 $sql = preg_replace('/\s{2,}/i', ' ', $sql);
-                error_log("[$query->time ms] SQL $sql");
+                Log::debug("$query->time ms: SQL $sql");
             });
         }
 

@@ -2,17 +2,15 @@
 
 namespace Tests;
 
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-
-use Mockery;
 use App\Models\Person;
-use App\Models\Role;
-use App\Models\PersonRole;
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
+use App\Models\PositionCredit;
+use App\Models\Role;
 use App\Models\Setting;
-
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -20,7 +18,7 @@ abstract class TestCase extends BaseTestCase
 
     public $user;
 
-    public function setUp() : void
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -29,6 +27,7 @@ abstract class TestCase extends BaseTestCase
         gc_collect_cycles();
 
         Setting::$cache = [];
+        PositionCredit::clearCache();
 
         // Set the time to the beginning of the year
         Carbon::setTestNow(date('Y-01-01 12:34:56'));
@@ -38,9 +37,8 @@ abstract class TestCase extends BaseTestCase
     {
         $this->user = Person::factory()->create();
         if (!$this->user->id) {
-            throw new \RuntimeException("Failed to create signed in user.".json_encode($this->user->getErrors()));
+            throw new RuntimeException("Failed to create signed in user." . json_encode($this->user->getErrors()));
         }
-        $this->addRole(Role::LOGIN);
     }
 
 
@@ -58,14 +56,14 @@ abstract class TestCase extends BaseTestCase
         }
 
         if (!is_array($roles)) {
-            $roles = [ $roles ];
+            $roles = [$roles];
         }
 
         $rows = [];
         foreach ($roles as $role) {
             $rows[] = [
                 'person_id' => $user->id,
-                'role_id'   => $role,
+                'role_id' => $role,
             ];
         }
 
@@ -80,13 +78,13 @@ abstract class TestCase extends BaseTestCase
         }
 
         if (!is_array($positions)) {
-            $positions = [ $positions ];
+            $positions = [$positions];
         }
 
         foreach ($positions as $p) {
             PersonPosition::factory()->create(
                 [
-                    'person_id'   => $user->id,
+                    'person_id' => $user->id,
                     'position_id' => $p,
                 ]
             );
@@ -101,6 +99,6 @@ abstract class TestCase extends BaseTestCase
     public function setting($name, $value)
     {
         Setting::where('name', $name)->delete();
-        Setting::insert([ 'name'  => $name, 'value' => $value ]);
+        Setting::insert(['name' => $name, 'value' => $value]);
     }
 }

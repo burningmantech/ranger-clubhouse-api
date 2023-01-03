@@ -2,9 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\ErrorLog;
+use App\Models\Person;
 use App\Models\Role;
-use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ErrorLogPolicy
@@ -13,7 +12,7 @@ class ErrorLogPolicy
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
     }
@@ -21,7 +20,7 @@ class ErrorLogPolicy
     /**
      * Determine whether the user can see error Log
      */
-    public function index(Person $user)
+    public function index(Person $user): bool
     {
         return false;
     }
@@ -29,9 +28,8 @@ class ErrorLogPolicy
     /**
      * Determine whether the user can purge the log
      */
-    public function purge(Person $user)
+    public function purge(Person $user): bool
     {
         return false;
     }
-
 }
