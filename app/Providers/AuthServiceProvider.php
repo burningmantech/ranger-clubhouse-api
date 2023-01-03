@@ -16,6 +16,7 @@ use App\Models\Broadcast;
 use App\Models\Document;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
+use App\Models\HandleReservation;
 use App\Models\Help;
 use App\Models\Motd;
 use App\Models\Person;
@@ -58,6 +59,7 @@ use App\Policies\BroadcastPolicy;
 use App\Policies\DocumentPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
+use App\Policies\HandleReservationPolicy;
 use App\Policies\HelpPolicy;
 use App\Policies\MotdPolicy;
 use App\Policies\PersonAwardPolicy;
@@ -111,6 +113,7 @@ class AuthServiceProvider extends ServiceProvider
         Document::class => DocumentPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,
+        HandleReservation::class => HandleReservationPolicy::class,
         Help::class => HelpPolicy::class,
         Motd::class => MotdPolicy::class,
         Person::class => PersonPolicy::class,
