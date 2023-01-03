@@ -388,11 +388,12 @@ class ProvisionController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function unsubmitRecommendations(): JsonResponse
     {
         $this->authorize('unsubmitRecommendations', Provision::class);
 
-        return response()->json(['people' => ProvisionUnsubmitRecommendationReport::execute()]);
+        return response()->json(ProvisionUnsubmitRecommendationReport::execute());
     }
 
     /**

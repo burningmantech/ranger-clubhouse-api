@@ -118,6 +118,19 @@ if (!function_exists('event_year')) {
     }
 }
 
+if (!function_exists('maintenance_year')) {
+    /**
+     * The maintenance year is from the end of the event til end of July of the following year.
+     *
+     * @return int
+     */
+    function maintenance_year(): int
+    {
+        $now = now();
+        return $now->month < 8 ? $now->year - 1 : $now->year;
+    }
+}
+
 if (!function_exists('request_ip')) {
     function request_ip(): string
     {

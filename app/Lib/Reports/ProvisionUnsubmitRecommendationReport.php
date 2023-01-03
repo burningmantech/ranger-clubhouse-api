@@ -12,6 +12,8 @@ class ProvisionUnsubmitRecommendationReport
 {
     public static function execute(): array
     {
+        $year = maintenance_year();
+
         $rows = Provision::whereIn('provision.status', [Provision::CLAIMED, Provision::SUBMITTED])
             ->where('is_allocated', false)
             ->with('person:id,callsign,status')
@@ -33,6 +35,7 @@ class ProvisionUnsubmitRecommendationReport
 
         $bmids = DB::table('bmid')
             ->whereIntegerInRaw('person_id', $ids)
+            ->where('year', $year)
             ->where('status', Bmid::SUBMITTED)
             ->get()
             ->keyBy('person_id');
@@ -40,7 +43,7 @@ class ProvisionUnsubmitRecommendationReport
         $timesheets = DB::table('timesheet')
             ->select('person_id')
             ->whereIntegerInRaw('person_id', $ids)
-            ->whereYear('on_duty', current_year())
+            ->whereYear('on_duty', $year)
             ->groupBy('person_id')
             ->get()
             ->keyBy('person_id');
@@ -49,7 +52,7 @@ class ProvisionUnsubmitRecommendationReport
             ->select('person_slot.person_id')
             ->join('slot', 'person_slot.person_id', 'slot.id')
             ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('slot.begins', current_year())
+            ->whereYear('slot.begins', $year)
             ->whereIntegerInRaw('person_slot.person_id', $ids)
             ->where('position.type', '!=', Position::TYPE_TRAINING)
             ->groupBy('person_slot.person_id')
@@ -91,6 +94,9 @@ class ProvisionUnsubmitRecommendationReport
         }
 
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-        return $people;
+        return [
+            'people' => $people,
+            'year' => $year
+        ];
     }
 }
