@@ -12,6 +12,8 @@ class ProvisionUnsubmitRecommendationReport
 {
     public static function execute(): array
     {
+        $year = maintenance_year();
+
         $rows = Provision::whereIn('provision.status', [Provision::CLAIMED, Provision::SUBMITTED])
             ->where('is_allocated', false)
             ->with('person:id,callsign,status')
@@ -31,8 +33,15 @@ class ProvisionUnsubmitRecommendationReport
             ->get()
             ->keyBy('person_id');
 
+        $waps = AccessDocument::whereIntegerInRaw('person_id', $ids)
+            ->where('type', AccessDocument::WAP)
+            ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->get()
+            ->keyBy('person_id');
+
         $bmids = DB::table('bmid')
             ->whereIntegerInRaw('person_id', $ids)
+            ->where('year', $year)
             ->where('status', Bmid::SUBMITTED)
             ->get()
             ->keyBy('person_id');
@@ -40,7 +49,7 @@ class ProvisionUnsubmitRecommendationReport
         $timesheets = DB::table('timesheet')
             ->select('person_id')
             ->whereIntegerInRaw('person_id', $ids)
-            ->whereYear('on_duty', current_year())
+            ->whereYear('on_duty', $year)
             ->groupBy('person_id')
             ->get()
             ->keyBy('person_id');
@@ -49,12 +58,13 @@ class ProvisionUnsubmitRecommendationReport
             ->select('person_slot.person_id')
             ->join('slot', 'person_slot.person_id', 'slot.id')
             ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('slot.begins', current_year())
+            ->whereYear('slot.begins', $year)
             ->whereIntegerInRaw('person_slot.person_id', $ids)
             ->where('position.type', '!=', Position::TYPE_TRAINING)
             ->groupBy('person_slot.person_id')
             ->get()
             ->keyBy('person_id');
+
 
         $people = [];
         foreach ($rows as $personId => $provisions) {
@@ -75,7 +85,8 @@ class ProvisionUnsubmitRecommendationReport
                     'status' => $p->status,
                 ])->values()->toArray(),
                 'bmid' => $bmids->has($person->id),
-                'signed_up' => $signUps->has($person->id)
+                'signed_up' => $signUps->has($person->id),
+                'has_wap' => $waps->has($person->id)
             ];
 
             $ticket = $tickets->get($person->id);
@@ -85,12 +96,18 @@ class ProvisionUnsubmitRecommendationReport
                     'status' => $ticket->status,
                     'type' => $ticket->type
                 ];
+                if ($ticket->type == AccessDocument::STAFF_CREDENTIAL) {
+                    $result['has_wap'] = true;
+                }
             }
 
             $people[] = $result;
         }
 
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-        return $people;
+        return [
+            'people' => $people,
+            'year' => $year
+        ];
     }
 }
