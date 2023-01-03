@@ -33,6 +33,12 @@ class ProvisionUnsubmitRecommendationReport
             ->get()
             ->keyBy('person_id');
 
+        $waps = AccessDocument::whereIntegerInRaw('person_id', $ids)
+            ->where('type', AccessDocument::WAP)
+            ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->get()
+            ->keyBy('person_id');
+
         $bmids = DB::table('bmid')
             ->whereIntegerInRaw('person_id', $ids)
             ->where('year', $year)
@@ -59,6 +65,7 @@ class ProvisionUnsubmitRecommendationReport
             ->get()
             ->keyBy('person_id');
 
+
         $people = [];
         foreach ($rows as $personId => $provisions) {
             $person = $provisions[0]->person;
@@ -78,7 +85,8 @@ class ProvisionUnsubmitRecommendationReport
                     'status' => $p->status,
                 ])->values()->toArray(),
                 'bmid' => $bmids->has($person->id),
-                'signed_up' => $signUps->has($person->id)
+                'signed_up' => $signUps->has($person->id),
+                'has_wap' => $waps->has($person->id)
             ];
 
             $ticket = $tickets->get($person->id);
@@ -88,6 +96,9 @@ class ProvisionUnsubmitRecommendationReport
                     'status' => $ticket->status,
                     'type' => $ticket->type
                 ];
+                if ($ticket->type == AccessDocument::STAFF_CREDENTIAL) {
+                    $result['has_wap'] = true;
+                }
             }
 
             $people[] = $result;
