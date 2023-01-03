@@ -145,6 +145,8 @@ Route::group([
     Route::get('event-dates/year', 'EventDatesController@showYear');
     Route::resource('event-dates', 'EventDatesController');
 
+    Route::resource('handle-reservation', 'HandleReservationController');
+
     Route::get('intake', 'IntakeController@index');
     Route::get('intake/spigot', 'IntakeController@spigot');
     Route::get('intake/shiny-penny-report', 'IntakeController@shinyPennyReport');
