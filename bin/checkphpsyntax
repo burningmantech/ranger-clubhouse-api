@@ -11,7 +11,7 @@
 set -e
 set -u
 
-php_cmd="${PHP:-php}";
+php_cmd="$(type -p "${PHP:-php}")";
 
 php_major="$("${php_cmd}" -v | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
 
