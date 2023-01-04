@@ -113,7 +113,7 @@ COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 COPY ./docker/supervisord-php-fpm.ini /etc/supervisor.d/php-fpm.ini
 
 # Replace Nginx default site config
-COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY ./docker/nginx-default.conf /etc/nginx/http.d/default.conf
 
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
