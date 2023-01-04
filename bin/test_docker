@@ -123,9 +123,9 @@ db_sql() {
 
 
 db_init() {
-    if [ -n "${RANGER_TEST_DB_DUMP:-}" ]; then
+    if [ -n "${RANGER_API_TEST_DB_DUMP:-}" ]; then
         echo "Importing test database dump...";
-        gunzip < "${RANGER_TEST_DB_DUMP}" | db_sql;
+        gunzip < "${RANGER_API_TEST_DB_DUMP}" | db_sql;
     fi;
 
     echo "Applying database schema...";
@@ -347,7 +347,6 @@ test_config() {
     # Received JSON payload should have a "AdminEmail" key.
     if ! grep '"AdminEmail":' "${body}" > /dev/null; then
         fail "Configuration payload lacks AdminEmail.";
-        echo "Content-Type: ${content_type}";
         echo "Response:"; cat "${response}";
         return 1;
     fi;
