@@ -2,11 +2,11 @@
 #
 # Checks PHP syntax in specific files or recursively in a directory.
 # If the $PHP environment variable is set, that will be used as the
-# path to the PHP version to check.
+# path to the PHP executable.
 #
 # Usage:
-#   checkphpsyntax src/Foo/ src/Bar
-#   PHP=/path/to/php7 checkphpsyntax  # check ./api ./src ./standard by default
+#   checkphpsyntax  # check ./app ./tests ./database by default
+#   checkphpsyntax app/Console/ src/Bar
 
 set -e
 set -u
@@ -15,8 +15,8 @@ php_cmd="${PHP:-php}";
 
 php_major="$("${php_cmd}" -v | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
 
-if [ ! ${php_major} -eq 7 ]; then
-    echo "PHP major version 7 is required";
+if [ ! ${php_major} -eq 8 ]; then
+    echo "PHP major version 8 is required";
     exit 78;  # EX_CONFIG
 fi;
 
