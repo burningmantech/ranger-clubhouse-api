@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM burningman/php-nginx:8.2.0-alpine3.16 as php
+FROM burningman/php-nginx:8.2.0-alpine3.17 as php
 
 RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     libxml2 libpng libjpeg-turbo libwebp mysql-client icu-dev libzip-dev zip \
@@ -113,7 +113,7 @@ COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
 COPY ./docker/supervisord-php-fpm.ini /etc/supervisor.d/php-fpm.ini
 
 # Replace Nginx default site config
-COPY ./docker/nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY ./docker/nginx-default.conf /etc/nginx/http.d/default.conf
 
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/

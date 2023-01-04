@@ -8,7 +8,7 @@ set -eu
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
        app="/var/www/application";
-image_name="burningman/php-nginx:8.1.13-alpine3.16";
+image_name="burningman/php-nginx:8.1.13-alpine3.17";
 
 docker run                    \
     --rm                      \
