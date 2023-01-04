@@ -26,8 +26,6 @@ jobs:
 
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax
-        env:
-          PHP: php8.0.6
 
 
   docker-build:
