@@ -2,24 +2,26 @@
 
 namespace App\Lib;
 
-use Illuminate\Support\Facades\DB;
-
 use App\Models\AccessDocument;
+use Illuminate\Support\Facades\DB;
 
 
 class TicketingManagement
 {
-    /*
- * Retrieve all access documents, group by people, that are claimed, qualified, or banked
- *
- * Return an array. Each element is an associative array:
- *
- * person info: id,callsign,status,first_name,last_name,email
- *     if $includeDelivery is true include - street1,city,state,zip,country
- * documents: array of access documents
- */
+    /**
+     * Retrieve all access documents, group by people, that are claimed, qualified, or banked
+     *
+     * Return an array. Each element is an associative array:
+     *
+     * person info: id,callsign,status,first_name,last_name,email
+     *     if $includeDelivery is true include - street1,city,state,zip,country
+     * documents: array of access documents
+     *
+     * @param $forDelivery
+     * @return array
+     */
 
-    public static function retrieveCurrentByPerson($forDelivery)
+    public static function retrieveCurrentByPerson($forDelivery): array
     {
         $currentYear = current_year();
 
@@ -29,7 +31,6 @@ class TicketingManagement
             $sql = AccessDocument::whereIn('status', AccessDocument::ACTIVE_STATUSES);
         }
 
-        $sql->whereNotIn('type', AccessDocument::PROVISION_TYPES);
 
         $rows = $sql->select(
             '*',
@@ -89,9 +90,9 @@ class TicketingManagement
                     break;
             }
 
+            $deliveryType = $row->delivery_method;
             if ($forDelivery) {
-                $deliveryMethod = $row->delivery_method;
-
+                // Override delivery methods if need be.
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                         $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
@@ -103,9 +104,8 @@ class TicketingManagement
                         break;
 
                     case AccessDocument::RPT:
-                        $deliveryType = $deliveryMethod;
-                        if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
-                            $errors[] = 'delivery method missing';
+                        if ($deliveryType == AccessDocument::DELIVERY_NONE) {
+                            $errors[] = 'missing delivery method';
                         }
                         break;
 
@@ -113,10 +113,10 @@ class TicketingManagement
                     case AccessDocument::GIFT:
                         if ($row->type == AccessDocument::VEHICLE_PASS && $row->has_staff_credential) {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_NONE) {
+                        } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';
-                        } else if ($deliveryMethod == AccessDocument::DELIVERY_POSTAL) {
-                            if ($row->hasAddress()) {
+                        } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
+                            /*if ($row->hasAddress()) {
                                 $row->delivery_address = [
                                     'street' => $row->street,
                                     'city' => $row->city,
@@ -127,7 +127,7 @@ class TicketingManagement
                                 ];
                             } else {
                                 $errors[] = 'missing mailing address';
-                            }
+                            }*/
                             $deliveryType = AccessDocument::DELIVERY_POSTAL;
                         } else {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;

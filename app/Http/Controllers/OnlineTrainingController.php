@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Mail\OnlineTrainingEnrollmentMail;
 use App\Models\Person;
@@ -10,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class OnlineTrainingController extends ApiController
 {
@@ -43,6 +45,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('setupPerson', [PersonOnlineTraining::class, $person]);
 
+        prevent_if_ghd_server('Online Course setup');
+
         /*
          * Any active Ranger with 2 or more years experience gets to take the half course.
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
@@ -62,30 +66,36 @@ class OnlineTrainingController extends ApiController
         $exists = true;
         $lms = null;
 
-        if (empty($person->lms_id)) {
-            // See if the person already has an online account setup
-            $lms = new Moodle();
-            if ($lms->findPerson($person) == false) {
-                // Nope, create the user
-                if ($lms->createUser($person, $password) == false) {
-                    // Crap, failed.
-                    return response()->json(['status' => 'fail']);
+        try {
+            if (empty($person->lms_id)) {
+                // See if the person already has an online account setup
+                $lms = new Moodle();
+                if (!$lms->findPerson($person)) {
+                    // Nope, create the user
+                    if (!$lms->createUser($person, $password)) {
+                        // Crap, failed.
+                        return response()->json(['status' => 'fail']);
+                    }
+                    $exists = false;
                 }
-                $exists = false;
-            }
-        }
-
-        if ($person->lms_course != $courseId) {
-            if (!$lms) {
-                $lms = new Moodle;
             }
 
-            // Enroll the person in the course
-            $lms->enrollPerson($person, $courseId);
+            // TODO before 2023: put back $person->lms_course != $courseId
+            // 2022 - half course implemented 1/2 way thru the training season and messed things up.
+            if (empty($person->lms_course)) {
+                if (!$lms) {
+                    $lms = new Moodle;
+                }
+
+                // Enroll the person in the course
+                $lms->enrollPerson($person, $courseId);
+            }
+        } catch (MoodleDownForMaintenanceException $e) {
+            return response()->json([ 'status' => 'down-for-maintenance' ]);
         }
 
         if (!$exists) {
-            mail_to($person->email, new OnlineTrainingEnrollmentMail($person, $type, $password), true);
+            mail_to_person($person, new OnlineTrainingEnrollmentMail($person, $type, $password), true);
         }
 
         return response()->json([
@@ -107,6 +117,7 @@ class OnlineTrainingController extends ApiController
     public function linkUsers(): JsonResponse
     {
         $this->authorize('linkUsers', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Online Course admin');
 
         $fullId = setting('MoodleFullCourseId');
         $halfId = setting('MoodleHalfCourseId');
@@ -152,6 +163,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('courses', PersonOnlineTraining::class);
 
+        prevent_if_ghd_server('Online Course admin');
+
         $lms = new Moodle();
         $fullCourse = setting('MoodleFullCourseId');
         $halfCourse = setting('MoodleHalfCourseId');
@@ -178,6 +191,8 @@ class OnlineTrainingController extends ApiController
     {
         $this->authorize('setCourseType', PersonOnlineTraining::class);
 
+        prevent_if_ghd_server('Online Course admin');
+
         $params = request()->validate([
             'course_id' => 'integer|required',
             'type' => 'string|required'
@@ -203,6 +218,8 @@ class OnlineTrainingController extends ApiController
     public function enrollment(): JsonResponse
     {
         $this->authorize('enrollment', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Online Course admin');
+
         $lms = new Moodle();
 
         $fullId = setting('MoodleFullCourseId');
@@ -212,5 +229,38 @@ class OnlineTrainingController extends ApiController
             'full_course' => !empty($fullId) ? $lms->retrieveCourseEnrollmentWithCompletion($fullId) : [],
             'half_course' => !empty($halfId) ? $lms->retrieveCourseEnrollmentWithCompletion($halfId) : [],
         ]);
+    }
+
+    /**
+     * Mark a person as having completed the online course.
+     * (Very dangerous, only use this superpower for good.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function markCompleted(Person $person): JsonResponse
+    {
+        $this->authorize('markCompleted', PersonOnlineTraining::class);
+        prevent_if_ghd_server('Mark online course as completed');
+
+        $personId = $person->id;
+        $year = current_year();
+
+        if (PersonOnlineTraining::didCompleteForYear($personId, $year)) {
+            return throw new InvalidArgumentException("Person has already completed online training for $year");
+        }
+
+        $ot = new PersonOnlineTraining([
+            'person_id' => $personId,
+            'completed_at' => now(),
+            'type' => PersonOnlineTraining::MOODLE
+        ]);
+
+        $ot->auditReason = 'force marked completed';
+        if (!$ot->save()) {
+            return $this->restError($ot);
+        }
+
+        return response()->json(['status' => 'success']);
     }
 }

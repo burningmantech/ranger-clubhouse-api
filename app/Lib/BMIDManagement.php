@@ -8,9 +8,9 @@ use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
+use App\Models\Provision;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -27,9 +27,9 @@ class BMIDManagement
     ];
 
     /**
-     * Sanity check the BMIDs.
+     * Sanity check the BMIDs.. really sanity check the WAPs.
      *
-     * - Find any BMID for a person who has non-Training shifts starting before the access date
+     * - Find any a person who has non-Training shifts starting before the access date
      * - Find any BMID for a person who does not have a WAP or a Staff Credential
      * - Find any BMID for a person who has reduced-price-ticket and a WAP with an access date before the box office opens.
      *
@@ -43,75 +43,221 @@ class BMIDManagement
          * Find people who have signed up shifts starting before their WAP access date
          */
 
-        $ids = DB::table('person_slot')
-            ->select('person_slot.person_id')
-            ->join('slot', 'slot.id', 'person_slot.slot_id')
-            ->join('position', 'position.id', 'slot.position_id')
-            ->join('access_document', 'access_document.person_id', 'person_slot.person_id')
-            ->whereYear('slot.begins', $year)
-            ->whereNotIn('slot.position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
-            ->whereIn('access_document.type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
-            ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
-            ->where('slot.begins', '>', "$year-08-15")
-            ->where('access_document.access_any_time', false)
-            ->groupBy('person_slot.person_id')
-            ->pluck('person_slot.person_id');
+        $shiftsBeforeWap = [];
+        $shiftsBeforeSubmittedWaps = [];
 
-        $shiftsBeforeWap = Person::whereIn('id', $ids)
-            ->where('status', '!=', Person::ALPHA)
-            ->orderBy('callsign')
-            ->get(self::INSANE_PERSON_COLUMNS);
+        $slotIds = DB::table('slot')
+            ->whereYear('begins', $year)
+            ->where('active', true)
+            ->where('begins', '>', "$year-08-15")
+            ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($slotIds)) {
+            $personIds = DB::table('person_slot')
+                ->whereIntegerInRaw('slot_id', $slotIds)
+                ->groupBy('person_slot.person_id')
+                ->pluck('person_slot.person_id')
+                ->toArray();
+        } else {
+            $personIds = null;
+        }
+
+        if (!empty($personIds)) {
+            $people = Person::whereIntegerInRaw('id', $personIds)
+                ->whereNotIn('status', [Person::AUDITOR, Person::PROSPECTIVE, Person::PAST_PROSPECTIVE, Person::ALPHA])
+                ->orderBy('callsign')
+                ->get(self::INSANE_PERSON_COLUMNS);
+        } else {
+            $people = null;
+        }
+
+        if ($people && $people->isNotEmpty()) {
+            $accessDocs = AccessDocument::whereIn('type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
+                ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
+                ->whereIntegerInRaw('person_id', $people->pluck('id'))
+                ->get()
+                ->groupBy('person_id');
+
+            foreach ($people as $person) {
+                $hasBadACs = [];
+                $qualified = null;
+
+                $docs = $accessDocs->get($person->id);
+
+                if ($docs) {
+                    foreach ($docs as $candidate) {
+                        if (!$candidate->access_date && !$candidate->access_any_time) {
+                            // D'oh. No access date set.
+                            $hasBadACs[] = $candidate;
+                            continue;
+                        }
+                        if (!$qualified) {
+                            $qualified = $candidate;
+                        } elseif ($candidate->access_any_time) {
+                            $qualified = $candidate;
+                        } elseif ($candidate->access_date->lt($qualified->access_date)) {
+                            $qualified = $candidate;
+                        }
+                    }
+                }
+
+                if ($qualified && $qualified->access_any_time) {
+                    continue;
+                }
+
+                if ($qualified) {
+                    // Check to see if a person has a sign-up before access date.
+                    $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                        ->where('begins', '>=', "$year-08-15 00:00:00")
+                        ->where('begins', '<', (string)$qualified->access_date)
+                        ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+                        ->where('person_slot.person_id', $person->id)
+                        ->with('position:id,title')
+                        ->orderBy('begins')
+                        ->first();
+
+                    if ($slot) {
+                        // Wrut-wroh! Shift sign up before access date
+                        $label = $qualified->getTypeLabel();
+                        $date = $qualified->access_date->toDateString();
+                        $person->reason = "Shift {$slot->position->title} {$slot->begins} is before RAD-{$qualified->id} {$label} access date {$date} status {$qualified->status}";
+                        if ($qualified->status == AccessDocument::SUBMITTED) {
+                            $shiftsBeforeSubmittedWaps[] = $person;
+                        } else {
+                            $shiftsBeforeWap[] = $person;
+                        }
+                    }
+                } else {
+                    // No access document, feh.
+                    $person->reason = "No qualified, claimed, submitted WAP or Staff Credential.";
+
+                    $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                        ->where('begins', '>=', "$year-08-15 00:00:00")
+                        ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+                        ->where('person_slot.person_id', $person->id)
+                        ->with('position:id,title')
+                        ->orderBy('begins')
+                        ->first();
+
+                    if ($slot) {
+                        $person->reason .= " First shift {$slot->position->title} {$slot->begins}";
+                    }
+
+                    $banked = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
+                        ->where('status', AccessDocument::BANKED)
+                        ->where('person_id', $person->id)
+                        ->get();
+
+                    foreach ($banked as $ac) {
+                        $person->reason .= " RAD-{$ac->id} Staff Credential banked.";
+                    }
+
+                    if (!empty($hasBadACs)) {
+                        foreach ($hasBadACs as $ac) {
+                            $label = $ac->getTypeLabel();
+                            $person->reason .= " RAD-{$ac->id} {$label} status {$ac->status} has no access date.";
+                        }
+                    }
+                    $shiftsBeforeWap[] = $person;
+                }
+            }
+        }
 
         /*
          * Find people who signed up early shifts yet do not have a WAP
          */
 
+        $checkDate = "$year-08-10";
+
+        $slotIds = DB::table('slot')
+            ->whereYear('begins', $year)
+            ->where('begins', '>', $checkDate)
+            ->pluck('id');
+
         $ids = DB::table('person_slot')
             ->select('person_slot.person_id')
-            ->join('slot', 'slot.id', 'person_slot.slot_id')
-            ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('slot.begins', $year)
-            ->where('slot.begins', '>', "$year-08-10")
+            ->whereIntegerInRaw('person_slot.slot_id', $slotIds)
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('access_document')
                     ->whereColumn('access_document.person_id', 'person_slot.person_id')
                     ->whereIn('type', [AccessDocument::WAP, AccessDocument::STAFF_CREDENTIAL])
-                    ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED]);
+                    ->whereIn('status', AccessDocument::CURRENT_STATUSES);
             })->groupBy('person_slot.person_id')
             ->pluck('person_slot.person_id');
 
-        $shiftsNoWap = Person::whereIn('id', $ids)
-            ->where('status', '!=', Person::ALPHA)
+        $shiftsNoWap = Person::whereIntegerInRaw('id', $ids)
+            ->whereNotIn('status', [Person::ALPHA, Person::PROSPECTIVE, Person::AUDITOR, Person::PAST_PROSPECTIVE])
             ->orderBy('callsign')
             ->get(self::INSANE_PERSON_COLUMNS);
+
+        foreach ($shiftsNoWap as $person) {
+            // Check to see if a person has a sign up before access date.
+            $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
+                ->whereIntegerInRaw('slot.id', $slotIds)
+                ->where('person_slot.person_id', $person->id)
+                ->with('position:id,title')
+                ->orderBy('begins')
+                ->first();
+            $person->reason = "Shift {$slot->position->title} {$slot->begins}";
+        }
 
         $boxOfficeOpenDate = setting('TAS_BoxOfficeOpenDate', true);
 
-        $ids = DB::table('access_document as wap')
+        $waps = AccessDocument::select('access_document.*')
             ->join('access_document as rpt', function ($j) {
-                $j->on('wap.person_id', 'rpt.person_id')
+                $j->on('access_document.person_id', 'rpt.person_id')
                     ->where('rpt.type', AccessDocument::RPT)
-                    ->whereIn('rpt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED]);
+                    ->whereIn('rpt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
             })->join('person', function ($j) {
-                $j->on('person.id', 'wap.person_id')
-                    ->where('person.status', '!=', Person::ALPHA);
-            })->where('wap.type', AccessDocument::WAP)
-            ->whereIn('wap.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED])
-            ->where('wap.access_date', '<', $boxOfficeOpenDate)
-            ->groupBy('wap.person_id')
-            ->pluck('wap.person_id');
+                $j->on('person.id', 'access_document.person_id')
+                    ->whereNotIn('person.status', [Person::ALPHA, Person::PROSPECTIVE, Person::AUDITOR]);
+            })->where('access_document.type', AccessDocument::WAP)
+            ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->where('access_document.access_date', '<', $boxOfficeOpenDate)
+            ->orderBy('access_document.person_id')
+            ->get();
 
-        $rptBeforeBoxOfficeOpens = Person::whereIn('id', $ids)
-            ->orderBy('callsign')
-            ->get(self::INSANE_PERSON_COLUMNS);
+        $ids = $waps->pluck('person_id')->unique()->toArray();
+
+        if (!empty($ids)) {
+            $rptBeforeBoxOfficeOpens = Person::whereIntegerInRaw('id', $ids)
+                ->orderBy('callsign')
+                ->get(self::INSANE_PERSON_COLUMNS);
+
+            $waps = $waps->groupBy('person_id');
+
+            foreach ($rptBeforeBoxOfficeOpens as $person) {
+                $personWaps = $waps->get($person->id);
+                if ($personWaps) {
+                    $wap = $personWaps[0];
+                    if ($wap->access_any_time) {
+                        $person->reason = "RAD-{$wap->id} {$wap->getTypeLabel()} status {$wap->status} access any time";
+                    } else if ($wap->access_date) {
+                        $date = $wap->access_date->toDateString();
+                        $person->reason = "RAD-{$wap->id} {$wap->getTypeLabel()}  status {$wap->status} access date {$date}";
+                    } else {
+                        $person->reason = "RAD-{$wap->id} {$wap->getTypeLabel()}  status {$wap->status} NO ACCESS DATE";
+                    }
+                } else {
+                    $person->reason = "NO WAP FOUND?!?";
+                }
+            }
+        } else {
+            $rptBeforeBoxOfficeOpens = [];
+        }
 
         return [
             [
                 'type' => 'shifts-before-access-date',
                 'people' => $shiftsBeforeWap,
             ],
-
+            [
+                'type' => 'shifts-before-submitted-wap',
+                'people' => $shiftsBeforeSubmittedWaps,
+            ],
             [
                 'type' => 'shifts-no-wap',
                 'people' => $shiftsNoWap,
@@ -121,7 +267,7 @@ class BMIDManagement
                 'type' => 'rpt-before-box-office',
                 'box_office' => $boxOfficeOpenDate,
                 'people' => $rptBeforeBoxOfficeOpens
-            ]
+            ],
         ];
     }
 
@@ -140,7 +286,7 @@ class BMIDManagement
      * @return Bmid[]|array|Collection
      */
 
-    public static function retrieveCategoryToManage(int $year, string $filter)
+    public static function retrieveCategoryToManage(int $year, string $filter): Collection|array
     {
         switch ($filter) {
             case 'alpha':
@@ -156,7 +302,7 @@ class BMIDManagement
                     ->where('begins', '>=', "$year-08-10")
                     ->pluck('id');
 
-                $signedUpIds = PersonSlot::whereIn('slot_id', $slotIds)
+                $signedUpIds = PersonSlot::whereIntegerInRaw('slot_id', $slotIds)
                     ->join('person', function ($j) {
                         $j->whereRaw('person.id=person_slot.person_id');
                         $j->whereIn('person.status', Person::ACTIVE_STATUSES);
@@ -176,7 +322,7 @@ class BMIDManagement
                     $j->whereRaw('person.id=trainee_status.person_id');
                     $j->whereIn('person.status', Person::ACTIVE_STATUSES);
                 })
-                    ->whereIn('slot_id', $slotIds)
+                    ->whereIntegerInRaw('slot_id', $slotIds)
                     ->where('passed', 1)
                     ->distinct('trainee_status.person_id')
                     ->pluck('trainee_status.person_id')
@@ -221,6 +367,15 @@ class BMIDManagement
                         $q->orWhereNotNull('title3');
                         $q->orWhereNotNull('meals');
                         $q->orWhere('showers', true);
+                        $q->orWhereExists(function ($provision) {
+                            $provision->selectRaw(1)
+                                ->from('provision')
+                                ->where('provision.person_id', 'bmid.person_id')
+                                ->whereIn('provision.status', [Provision::SUBMITTED, Provision::AVAILABLE])
+                                ->whereIn('provision.type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
+                                ->limit(1)
+                                ->get();
+                        });
                     })
                     ->get(['person_id'])
                     ->pluck('person_id')
@@ -247,24 +402,29 @@ class BMIDManagement
                     ->pluck('person_id')
                     ->toArray();
 
-                $provisionIds = AccessDocument::whereIn('access_document.type', [AccessDocument::WET_SPOT, ...AccessDocument::EAT_PASSES])
-                    ->whereIn('access_document.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
+                    ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
                     ->distinct('person_id')
                     ->get(['person_id'])
                     ->pluck('person_id')
                     ->toArray();
 
 
-                $ids = array_merge($specialIds, $adIds);
-                $ids = array_merge($provisionIds, $ids);
-                $ids = array_unique($ids);
+                $ids = array_unique([...$specialIds, ...$adIds, ...$provisionIds]);
                 break;
         }
 
         return BMID::findForPersonIds($year, $ids);
     }
 
-    public static function setBMIDTitles()
+    /**
+     * Set the BMID titles on BMID records based on what position a person holds.
+     *
+     * @return array
+     */
+
+
+    public static function setBMIDTitles(): array
     {
         $year = current_year();
 

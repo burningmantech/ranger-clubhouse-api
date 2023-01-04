@@ -264,7 +264,7 @@ class MentorControllerTest extends TestCase
         $toActive = Person::factory()->create([ 'status' => Person::ALPHA ]);
         $toBonked = Person::factory()->create([ 'status' => Person::ALPHA ]);
 
-        $response = $this->json('POST', 'mentor/convert', [
+        $response = $this->json('POST', 'mentor/convert-alphas', [
             'alphas' => [
                 [
                     'id' => $toActive->id,

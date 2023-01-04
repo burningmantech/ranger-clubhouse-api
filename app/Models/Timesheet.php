@@ -4,10 +4,35 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-
+/**
+ * @property ?Carbon $off_duty
+ * @property ?Carbon $timesheet_confirmed_at
+ * @property ?Carbon $verified_at
+ * @property ?int $reviewer_person_id
+ * @property ?int $slot_id
+ * @property ?int $verified_person_id
+ * @property ?string $notes
+ * @property Carbon $on_duty
+ * @property Carbon $reviewed_at
+ * @property bool $is_non_ranger
+ * @property bool $timesheet_confirmed
+ * @property int $person_id
+ * @property int $position_id
+ * @property string $review_status
+ * @property-read int $duration
+ * @property-read float $credits
+ * @property-read ?Position $position
+ * @property-read ?Slot $slot
+ * @property-read ?Person $reviewer_person
+ * @property-read ?Person $verified_person
+ * @property  ?string $additional_notes
+ * @property ?string $additional_reviewer_notes
+ */
 class Timesheet extends ApiModel
 {
     protected $table = 'timesheet';
@@ -75,7 +100,8 @@ class Timesheet extends ApiModel
     const RELATIONSHIPS = [
         'reviewer_person:id,callsign',
         'verified_person:id,callsign',
-        'position:id,title,count_hours'
+        'position:id,title,count_hours',
+        'slot'
     ];
 
     public $_additional_notes;
@@ -99,39 +125,71 @@ class Timesheet extends ApiModel
             }
         });
 
+        /*
+         * Associate the timesheet entry with a slot. Preference is given to a shift sign up, followed by
+         * a matching shift in the full schedule.
+         */
+
+        self::saving(function ($model) {
+            if (!$model->isDirty('slot_id')
+                && (
+                    ($model->isDirty('position_id') && $model->position_id)
+                    || ($model->isDirty('on_duty') && $model->on_duty))
+            ) {
+                // Find new sign up to associate with
+                $model->slot_id = Schedule::findSlotIdSignUpByPositionTime($model->person_id, $model->position_id, $model->on_duty);
+                if (!$model->slot_id) {
+                    $start = $model->on_duty->clone()->subMinutes(45);
+                    $end = $model->on_duty->clone()->addMinutes(45);
+                    $slot = DB::table('slot')
+                        ->select('id')
+                        ->whereBetween('begins', [$start, $end])
+                        ->where('position_id', $model->position_id)
+                        ->first();
+                    $model->slot_id = $slot?->id;
+                }
+            }
+        });
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function reviewer_person()
+    public function reviewer_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function verified_person()
+    public function verified_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function position()
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
 
-    public function slot()
+    public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): Timesheet
     {
         return $this->load(self::RELATIONSHIPS);
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find timesheet entries based on the given criteria
+     *
+     * @param array $query
+     * @return Collection
+     */
+
+    public static function findForQuery(array $query): Collection
     {
         $sql = self::query();
 
@@ -185,7 +243,7 @@ class Timesheet extends ApiModel
 
         if ($includePhoto) {
             foreach ($rows as $row) {
-                $row->photo_url = PersonPhoto::retrieveImageUrlForPerson($row->person_id);
+                $row->photo_url = PersonPhoto::retrieveProfileUrlForPerson($row->person_id);
                 $row->appends[] = 'photo_url';
             }
         }
@@ -200,11 +258,11 @@ class Timesheet extends ApiModel
     /**
      * Find the (still) on duty timesheet for a person
      *
-     * @param $personId
-     * @return Timesheet|null
+     * @param int $personId
+     * @return Model|null
      */
 
-    public static function findPersonOnDuty(int $personId): Timesheet|null
+    public static function findPersonOnDuty(int $personId): ?Model
     {
         return self::where('person_id', $personId)
             ->whereYear('on_duty', current_year())
@@ -214,14 +272,14 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Check to see if a person is signed into a position(s)
+     * Check to see if a person is signed in to a position(s)
      *
      * @param int $personId
      * @param $positionIds
      * @return bool
      */
 
-    public static function isPersonSignIn(int $personId, $positionIds): bool
+    public static function isPersonSignedIn(int $personId, $positionIds): bool
     {
         $sql = self::where('person_id', $personId)->whereNull('off_duty');
         if (is_array($positionIds)) {
@@ -231,6 +289,29 @@ class Timesheet extends ApiModel
         }
 
         return $sql->exists();
+    }
+
+    /**
+     * Find everyone who is signed in to a given position
+     *
+     * @param int $positionId
+     * @return array
+     */
+
+    public static function retrieveSignedInPeople(int $positionId): array
+    {
+        $rows = DB::table('timesheet')
+            ->select('person_id')
+            ->where('position_id', $positionId)
+            ->whereNull('off_duty')
+            ->get();
+
+        $people = [];
+        foreach ($rows as $row) {
+            $people[$row->person_id] = true;
+        }
+
+        return $people;
     }
 
     /**
@@ -258,7 +339,7 @@ class Timesheet extends ApiModel
      * (used to help find a shift partner for missing timesheet entry requests)
      *
      * @param int $personId
-     * @param int $startTime
+     * @param Carbon|int $startTime
      * @param int $withinMinutes
      * @return Timesheet|null
      */
@@ -290,7 +371,8 @@ class Timesheet extends ApiModel
     {
         $everything = ($type == self::YEARS_ALL);
 
-        $sql = self::selectRaw("YEAR(on_duty) as year")
+        $sql = DB::table('timesheet')
+            ->selectRaw("YEAR(on_duty) as year")
             ->where('person_id', $personId)
             ->groupBy("year")
             ->orderBy("year", "asc");
@@ -428,20 +510,18 @@ class Timesheet extends ApiModel
      *
      * @param array $personIds
      * @param int $positionId
-     * @return Collection group by person_id and sub-grouped by year
+     * @return \Illuminate\Support\Collection group by person_id and sub-grouped by year
      */
 
-    public static function retrieveAllForPositionIds(array $personIds, int $positionId)
+    public static function retrieveAllForPositionIds(array $personIds, int $positionId): \Illuminate\Support\Collection
     {
-        return self::whereIn('person_id', $personIds)
+        return self::whereIntegerInRaw('person_id', $personIds)
             ->where('position_id', $positionId)
             ->orderBy('on_duty')
             ->get()
             ->groupBy([
                 'person_id',
-                function ($row) {
-                    return $row->on_duty->year;
-                }
+                fn($row) => $row->on_duty->year
             ]);
     }
 
@@ -611,13 +691,13 @@ class Timesheet extends ApiModel
      * Eloquent will insist on using Carbon::parse(null) which yields the current time. Sigh.
      */
 
-    public function setOffDutyToNullAndSave(string $reason) : void
+    public function setOffDutyToNullAndSave(string $reason): void
     {
-        $oldValue = (string) $this->off_duty;
-        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [ $this->id ]);
-        ActionLog::record(Auth::user(),  'timesheet-update', $reason, [
+        $oldValue = (string)$this->off_duty;
+        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [$this->id]);
+        ActionLog::record(Auth::user(), 'timesheet-update', $reason, [
             'id' => $this->id,
-            'off_duty' => [ $oldValue, null ]
+            'off_duty' => [$oldValue, null]
         ], $this->person_id);
 
         $this->refresh();
@@ -705,7 +785,24 @@ class Timesheet extends ApiModel
         return $this->_additional_notes;
     }
 
-    public function getPhotoUrlAttribute() {
+    public function getPhotoUrlAttribute()
+    {
         return $this->photo_url;
+    }
+
+    /**
+     * Build on duty information
+     *
+     * @return array
+     */
+
+    public function buildOnDutyInfo(): array
+    {
+        return [
+            'id' => $this->position_id,
+            'title' => $this->position->title,
+            'type' => $this->position->type,
+            'subtype' => $this->position->subtype,
+        ];
     }
 }

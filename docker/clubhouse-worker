@@ -4,7 +4,6 @@
 # Start Clubhouse queue worker -- handles all Laravel queue jobs
 #
 
-
 echo "Starting Clubhouse queue worker...";
 
 php /var/www/application/artisan db:wait;
@@ -12,5 +11,5 @@ php /var/www/application/artisan db:wait;
 while [ true ]
 do
     php /var/www/application/artisan queue:work --stop-when-empty;
-    sleep 60;
+    sleep 15;
 done

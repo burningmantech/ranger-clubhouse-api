@@ -3,10 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class OnlineTrainingEnrollmentMail extends Mailable
+class OnlineTrainingEnrollmentMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -20,6 +19,7 @@ class OnlineTrainingEnrollmentMail extends Mailable
     public function __construct(public $person, public $courseType, public $password)
     {
         $this->otUrl = setting('OnlineTrainingUrl');
+        parent::__construct();
     }
 
     /**
@@ -29,10 +29,8 @@ class OnlineTrainingEnrollmentMail extends Mailable
      */
     public function build()
     {
-        return $this->from([
-            'address' => setting('TrainingAcademyEmail'),
-            'name' => 'The Ranger Training Academy'
-        ])->subject('Enrolled In The Ranger Online Course')
+        return $this->from(setting('DoNotReplyEmail'), 'The Ranger Training Academy')
+        ->subject('Enrolled In The Ranger Online Course')
             ->view('emails.online-training-enrollment');
     }
 }

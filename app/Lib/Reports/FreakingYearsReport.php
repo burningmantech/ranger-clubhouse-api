@@ -44,7 +44,7 @@ class FreakingYearsReport
 
         $personIds = array_column($rows, 'person_id');
         $people = Person::select('id', 'callsign', 'first_name', 'last_name', 'status')
-            ->whereIn('id', $personIds)
+            ->whereIntegerInRaw('id', $personIds)
             ->get()
             ->keyBy('id');
 

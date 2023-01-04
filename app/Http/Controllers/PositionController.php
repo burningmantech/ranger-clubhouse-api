@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Lib\BulkPositionGrantRevoke;
 use App\Lib\Reports\PeopleByPositionReport;
+use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\SandmanQualificationReport;
 use App\Models\Person;
-use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PositionController extends ApiController
 {
@@ -19,33 +19,37 @@ class PositionController extends ApiController
      *
      * @return JsonResponse
      */
+
     public function index()
     {
         $params = request()->validate([
-            'type' => 'sometimes|string'
+            'type' => 'sometimes|string',
+            'can_manage' => 'sometimes|boolean',
+            'include_roles' => 'sometimes|boolean',
         ]);
 
-        return $this->success(Position::findForQuery($params), null);
+        return $this->success(Position::findForQuery($params), null, 'position');
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a position
      *
-     * @param Request $request
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store(Request $request)
+
+    public function store(): JsonResponse
     {
         $this->authorize('store', Position::class);
 
         $position = new Position;
         $this->fromRest($position);
 
-        if ($position->save()) {
-            return $this->success($position);
+        if (!$position->save()) {
+            return $this->restError($position);
         }
 
-        return $this->restError($position);
+        return $this->success($position);
     }
 
     /**
@@ -54,8 +58,10 @@ class PositionController extends ApiController
      * @param Position $position
      * @return JsonResponse
      */
-    public function show(Position $position)
+
+    public function show(Position $position): JsonResponse
     {
+        $position->loadRoles();
         return $this->success($position);
     }
 
@@ -73,6 +79,7 @@ class PositionController extends ApiController
         $this->fromRest($position);
 
         if ($position->save()) {
+            $position->loadRoles();
             return $this->success($position);
         }
 
@@ -84,12 +91,14 @@ class PositionController extends ApiController
      *
      * @param Position $position
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Position $position)
+
+    public function destroy(Position $position): JsonResponse
     {
         $this->authorize('delete', $position);
         $position->delete();
-        PersonPosition::where('position_id', $position->id)->delete();
+        DB::table('position_role')->where('position_id', $position->id)->delete();
         return $this->restDeleteSuccess();
     }
 
@@ -114,11 +123,27 @@ class PositionController extends ApiController
 
     /**
      * Sandman Qualification Report
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function sandmanQualifiedReport()
+
+    public function sandmanQualifiedReport(): JsonResponse
     {
         $this->authorize('sandmanQualified', Position::class);
         return response()->json(SandmanQualificationReport::execute());
+    }
+
+    /**
+     * People By Teams Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function peopleByTeamsReport(): JsonResponse
+    {
+        $this->authorize('peopleByTeamsReport', Position::class);
+        return response()->json(PeopleByTeamsReport::execute());
     }
 
     /**

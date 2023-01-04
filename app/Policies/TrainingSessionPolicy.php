@@ -2,9 +2,9 @@
 
 namespace App\Policies;
 
-use App\Models\TrainingSession;
-use App\Models\Role;
 use App\Models\Person;
+use App\Models\Role;
+use App\Models\TrainingSession;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TrainingSessionPolicy
@@ -22,7 +22,7 @@ class TrainingSessionPolicy
      * Can a user see the training session(s)?
      */
 
-    public function show(Person $user, TrainingSession $training_session)
+    public function show(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
     }
@@ -31,7 +31,7 @@ class TrainingSessionPolicy
      *  Can the user score (mark passed, add notes, etc.) to a session?
      */
 
-    public function score(Person $user, TrainingSession $training_session)
+    public function score(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
     }
@@ -41,7 +41,7 @@ class TrainingSessionPolicy
      *
      */
 
-    public function admissions(Person $user, TrainingSession $training_session)
+    public function admissions(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
     }
@@ -51,7 +51,17 @@ class TrainingSessionPolicy
      *
      */
 
-    public function trainerStatus(Person $user, TrainingSession $training_session)
+    public function trainerStatus(Person $user, TrainingSession $training_session): bool
+    {
+        return $this->checkForArt($user, $training_session);
+    }
+
+    public function graduationCandidates(Person $user, TrainingSession $training_session): bool
+    {
+        return $this->checkForArt($user, $training_session);
+    }
+
+    public function graduateCandidates(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
     }

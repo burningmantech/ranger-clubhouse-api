@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\Agreements;
 use App\Models\Document;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -29,15 +30,16 @@ class AgreementsController extends ApiController
      *
      * @param Person $person
      * @param Document $document
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function show(Person $person, Document $document)
+    public function show(Person $person, Document $document): JsonResponse
     {
         $this->authorize('show', [Agreements::class, $person]);
 
         $tag = $document->tag;
-        if (!Agreements::canSignDocument($person->id, $tag)) {
+        if (!Agreements::canSignDocument($person, $tag, PersonEvent::firstOrNewForPersonYear($person->id, current_year()))) {
             return response()->json(['status' => 'not-available']);
         }
 

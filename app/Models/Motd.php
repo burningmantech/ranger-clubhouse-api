@@ -102,8 +102,8 @@ class Motd extends ApiModel
     public static function findForBulletin(int $personId, string $status, array $params): array
     {
         $type = $params['type'] ?? 'all';
-        $page = $params['page'] ?? 1;
-        $pageSize = $params['page_size'] ?? 20;
+        $page = (int) ($params['page'] ?? 1);
+        $pageSize = (int) ($params['page_size'] ?? 20);
 
         switch ($status) {
             case Person::AUDITOR:
@@ -157,6 +157,9 @@ class Motd extends ApiModel
         $page = $page - 1;
         if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize <= 0) {
+            $pageSize = 20;
         }
 
         $sql->offset($page * $pageSize)->limit($pageSize);

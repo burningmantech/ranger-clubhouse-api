@@ -2,23 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
+use App\Mail\PhotoApprovedMail;
+use App\Mail\PhotoRejectedMail;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonPhoto;
 use App\Models\Role;
-
-use App\Mail\PhotoApprovedMail;
-use App\Mail\PhotoRejectedMail;
-
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
 use Illuminate\Validation\Rule;
-use Intervention\Image\ImageManagerStatic as Image;
 use InvalidArgumentException;
 use ReflectionException;
 use RuntimeException;
@@ -30,10 +24,13 @@ use RuntimeException;
 class PersonPhotoController extends ApiController
 {
     /**
-     * Display a listing of photos based on search criteria
+     * Return a list of photos based on the given criteria
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $this->authorize('index', PersonPhoto::class);
 
@@ -56,9 +53,12 @@ class PersonPhotoController extends ApiController
 
     /**
      * Retrieve the review configuration.
+     * @return JsonResponse
+     *
+     * @throws AuthorizationException
      */
 
-    public function reviewConfig()
+    public function reviewConfig(): JsonResponse
     {
         $this->authorize('reviewConfig', PersonPhoto::class);
 
@@ -91,10 +91,14 @@ class PersonPhotoController extends ApiController
     }
 
     /**
-     * Display the record.
+     * Return a photo record
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(PersonPhoto $personPhoto)
+    public function show(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('show', $personPhoto);
         $personPhoto->load(PersonPhoto::PERSON_TABLES);
@@ -103,11 +107,17 @@ class PersonPhotoController extends ApiController
 
     /**
      * Update a record
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function update(PersonPhoto $personPhoto)
+    public function update(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+        prevent_if_ghd_server('Photo updating');
+
         $person = $personPhoto->person;
         if (!$personPhoto->person) {
             throw new InvalidArgumentException('Record is not linked to a person.');
@@ -134,9 +144,9 @@ class PersonPhotoController extends ApiController
         if ($reviewed && !in_array($person->status, Person::LOCKED_STATUSES)) {
             $status = $personPhoto->status;
             if ($status == PersonPhoto::APPROVED) {
-                mail_to($person->email, new PhotoApprovedMail($person), true);
+                mail_to_person($person, new PhotoApprovedMail($person), true);
             } elseif ($status == PersonPhoto::REJECTED) {
-                mail_to($person->email, new PhotoRejectedMail($person, $personPhoto->reject_reasons, $personPhoto->reject_message), true);
+                mail_to_person($person, new PhotoRejectedMail($person, $personPhoto->reject_reasons, $personPhoto->reject_message), true);
             }
         }
 
@@ -148,18 +158,23 @@ class PersonPhotoController extends ApiController
     /**
      * Replace a photo (aka edit)
      *
-     * Ideally the client will take the original photo, edit it, and then send
-     * it back to the server.
+     * Ideally the client will take the original photo, edit it, and then send it back to the server.
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function replace(PersonPhoto $personPhoto)
+    public function replace(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+
+        prevent_if_ghd_server('Photo replacement');
 
         $params = request()->validate(['image' => 'required']);
 
         $oldFilename = $personPhoto->image_filename;
-        list ($image, $width, $height) = $this->processImage($params['image'], $personPhoto->person_id);
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_ORIGINAL);
 
         $personPhoto->edit_person_id = $this->user->id;
         $personPhoto->edited_at = now();
@@ -167,12 +182,25 @@ class PersonPhotoController extends ApiController
         $personPhoto->height = $height;
 
         try {
-            $personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, false);
+            $personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, PersonPhoto::SIZE_BMID);
         } catch (Exception $e) {
             ErrorLog::recordException($e, 'person-photo-storage-exception', [
                 'target_person_id' => $personPhoto->person_id,
                 'filename' => $personPhoto->image_filename,
                 'action' => 'replace'
+            ]);
+
+            return response()->json(['status' => 'storage-fail'], 500);
+        }
+
+        $oldProfileFilename = $personPhoto->profile_filename;
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_PROFILE);
+        $personPhoto->profile_width = $width;
+        $personPhoto->profile_height = $height;
+        if ($personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, PersonPhoto::SIZE_PROFILE) === false) {
+            ErrorLog::record('person-photo-store-error', [
+                'person_id' => $this->user->id,
+                'target_person_id' => $personPhoto->person_id,
             ]);
 
             return response()->json(['status' => 'storage-fail'], 500);
@@ -184,6 +212,9 @@ class PersonPhotoController extends ApiController
         // Delete the old (cropped) photo
         try {
             PersonPhoto::storage()->delete(PersonPhoto::storagePath($oldFilename));
+            if (!empty($oldProfileFilename)) {
+                PersonPhoto::storage()->delete(PersonPhoto::storagePath($oldProfileFilename));
+            }
         } catch (Exception $e) {
             ErrorLog::recordException($e, 'person-photo-delete-exception', [
                 'target_person_id' => $personPhoto->person_id,
@@ -198,11 +229,17 @@ class PersonPhotoController extends ApiController
 
     /**
      * Activate a record - i.e. set the photo as the current photo for a person
+     *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function activate(PersonPhoto $personPhoto)
+    public function activate(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
+
+        prevent_if_ghd_server('Photo activation');
 
         $person = $personPhoto->person;
 
@@ -210,7 +247,6 @@ class PersonPhotoController extends ApiController
             throw new RuntimeException("Photo has no person associated with it");
         }
 
-        $oldPhotoId = $person->person_photo_id;
         $person->person_photo_id = $personPhoto->id;
         $person->auditReason = 'photo activate';
         $person->saveWithoutValidation();
@@ -219,18 +255,24 @@ class PersonPhotoController extends ApiController
     }
 
     /**
-     * Remove a record.
+     * Remove a photo.
      *
+     * @param PersonPhoto $personPhoto
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function destroy(PersonPhoto $personPhoto)
+    public function destroy(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('destroy', $personPhoto);
+
+        prevent_if_ghd_server('Photo deletion');
 
         try {
             // Remove the files.
             $personPhoto->deleteImage();
             $personPhoto->deleteOrigImage();
+            $personPhoto->deleteProfileImage();
         } catch (Exception $e) {
             ErrorLog::record('person-photo-delete-exception', [
                 'person_id' => $this->user->id,
@@ -253,11 +295,15 @@ class PersonPhotoController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /*
+    /**
      * Obtain the photo url and status
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function photo(Person $person)
+    public function photo(Person $person): JsonResponse
     {
         $this->authorize('photo', [PersonPhoto::class, $person]);
         return response()->json(['photo' => PersonPhoto::retrieveInfo($person)]);
@@ -265,11 +311,17 @@ class PersonPhotoController extends ApiController
 
     /**
      * Upload photo
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function upload(Person $person)
+    public function upload(Person $person): JsonResponse
     {
         $this->authorize('upload', [PersonPhoto::class, $person]);
+
+        prevent_if_ghd_server('Photo Uploading');
 
         if (!setting('PhotoUploadEnable')
             && !$this->userHasRole([Role::ADMIN, Role:: VC])) {
@@ -283,8 +335,9 @@ class PersonPhotoController extends ApiController
 
         $personId = $person->id;
 
-        list ($origContents, $origWidth, $origHeight) = $this->processImage($params['orig_image'], $personId);
-        list ($imageContents, $imageWidth, $imageHeight) = $this->processImage($params['image'] ?? $params['orig_image'], $personId, true);
+        list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image'], $personId, PersonPhoto::SIZE_ORIGINAL);
+        list ($imageContents, $imageWidth, $imageHeight) =  PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_BMID);
+        list ($profileContents, $profileWidth, $profileHeight) =  PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_PROFILE);
 
         if (!$imageContents || !$origContents) {
             return response()->json(['status' => 'conversion-fail'], 500);
@@ -300,10 +353,12 @@ class PersonPhotoController extends ApiController
         $photo->height = $imageHeight;
         $photo->orig_width = $origWidth;
         $photo->orig_height = $origHeight;
+        $photo->profile_height = $profileHeight;
+        $photo->profile_width = $profileWidth;
 
         $timestamp = $photo->uploaded_at->timestamp;
 
-        if ($photo->storeImage($imageContents, $timestamp, false) === false) {
+        if ($photo->storeImage($imageContents, $timestamp, PersonPhoto::SIZE_BMID) === false) {
             ErrorLog::record('person-photo-store-error', [
                 'person_id' => $this->user->id,
                 'target_person_id' => $personId,
@@ -312,7 +367,7 @@ class PersonPhotoController extends ApiController
             return response()->json(['status' => 'storage-fail'], 500);
         }
 
-        if ($photo->storeImage($origContents, $timestamp, true) === false) {
+        if ($photo->storeImage($origContents, $timestamp, PersonPhoto::SIZE_ORIGINAL) === false) {
             ErrorLog::record('person-photo-store-error', [
                 'person_id' => $this->user->id,
                 'target_person_id' => $personId,
@@ -320,7 +375,22 @@ class PersonPhotoController extends ApiController
 
             // Try cleaning up -- ignore any errors
             try {
-                $photo->deleteImage();
+                $photo->deleteAllVersions();
+            } catch (Exception $e) {
+            }
+
+            return response()->json(['status' => 'storage-fail'], 500);
+        }
+
+        if ($photo->storeImage($profileContents, $timestamp, PersonPhoto::SIZE_PROFILE) === false) {
+            ErrorLog::record('person-photo-store-error', [
+                'person_id' => $this->user->id,
+                'target_person_id' => $personId,
+            ]);
+
+            // Try cleaning up -- ignore any errors
+            try {
+                $photo->deleteAllVersions();
             } catch (Exception $e) {
             }
 
@@ -328,7 +398,6 @@ class PersonPhotoController extends ApiController
         }
 
         $photo->analyzeImage($imageContents);
-
         $photo->saveWithoutValidation();
 
         $person->person_photo_id = $photo->id;
@@ -345,14 +414,14 @@ class PersonPhotoController extends ApiController
 
         foreach ($prevSubmitted as $submitted) {
             try {
-                $submitted->deleteImage();
-                $submitted->deleteOrigImage();
+                $submitted->deleteAllVersions();
             } catch (Exception $e) {
                 ErrorLog::recordException($e, 'person-photo-delete-exception', [
                     'target_person_id' => $personId,
                     'person_photo_id' => $submitted->id,
                     'image_filename' => $submitted->image_filename,
-                    'orig_filename' => $submitted->orig_filename
+                    'orig_filename' => $submitted->orig_filename,
+                    'profile_filename' => $submitted->profile_filename,
                 ]);
             }
 
@@ -376,54 +445,15 @@ class PersonPhotoController extends ApiController
     {
         $this->authorize('rejectPreview', $personPhoto);
 
+        prevent_if_ghd_server('Photo rejection');
+
         $params = request()->validate([
             'reject_reasons' => 'sometimes|array',
             'reject_message' => 'sometimes|string'
         ]);
 
-        $mail = new PhotoRejectedMail($personPhoto->person,$params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
+        $mail = new PhotoRejectedMail($personPhoto->person, $params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
         return response()->json(['mail' => $mail->render()]);
     }
 
-    private function processImage($imageParam, $personId, $isBmid = false)
-    {
-        $filename = $imageParam->getClientOriginalName();
-
-        if ($isBmid) {
-            $width = PersonPhoto::BMID_WIDTH;
-            $height = PersonPhoto::BMID_WIDTH;
-        } else {
-            $width = PersonPhoto::ORIG_MAX_WIDTH;
-            $height = PersonPhoto::ORIG_MAX_WIDTH;
-        }
-
-        try {
-            $image = Image::make($imageParam);
-
-            // correct image orientation
-            $image->orientate();
-
-            if ($image->width() > $width) {
-                $image->resize($width, null, function ($constrain) {
-                    $constrain->aspectRatio();
-                });
-            }
-
-            $contents = $image->stream('jpg', 75)->getContents();
-            $width = $image->width();
-            $height = $image->height();
-            $image->destroy();  // free up memory
-            $image = null; // and kill the object
-            gc_collect_cycles();     // Images can be huge, garbage collect.
-
-            return [$contents, $width, $height];
-        } catch (Exception $e) {
-            ErrorLog::recordException($e, 'person-photo-convert-exception', [
-                'target_person_id' => $personId,
-                'filename' => $filename
-            ]);
-
-            return [null, 0, 0];
-        }
-    }
 }

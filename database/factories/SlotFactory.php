@@ -2,23 +2,23 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-
 use App\Models\Slot;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 
 class SlotFactory extends Factory
 {
     protected $model = Slot::class;
 
-    public function definition()
+    public function definition(): array
     {
-return [
-        'active'    => true,
-        'min'       => 1,
-        'max'       => 10,
-        'description'   => 'slot',
-        'signed_up' => 0,
-    ];
-}
+        return [
+            'active' => true,
+            'min' => 1,
+            'max' => 10,
+            'description' => 'slot',
+            'signed_up' => 0,
+            'timezone' => 'America/Los_Angeles',
+        ];
+    }
 }

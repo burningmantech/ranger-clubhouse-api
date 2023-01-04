@@ -3,11 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class RBSMail extends Mailable
+class RBSMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -25,6 +23,7 @@ class RBSMail extends Mailable
         $this->subject = $subject;
         $this->rbsMessage = $rbsMessage;
         $this->alert = $alert;
+        parent::__construct();
     }
 
     /**

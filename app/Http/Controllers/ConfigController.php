@@ -16,8 +16,8 @@ class ConfigController extends Controller
         'AdminEmail',
         'AuditorRegistrationDisabled',
         'EditorUrl',
-        'HQWindowInterfaceEnabled',
         'GeneralSupportEmail',
+        'HQWindowInterfaceEnabled',
         'JoiningRangerSpecialTeamsUrl',
         'LoginManageOnPlayaEnabled',
         'MealDates',
@@ -57,5 +57,16 @@ class ConfigController extends Controller
         $configs['DeploymentEnvironment'] = config('clubhouse.DeploymentEnvironment');
 
         return response()->json($configs);
+    }
+
+    /**
+     * Obtain the current dashboard period
+     *
+     * @return JsonResponse
+     */
+
+    public function dashboardPeriod() : JsonResponse
+    {
+        return response()->json([ 'period' => setting('DashboardPeriod') ]);
     }
 }

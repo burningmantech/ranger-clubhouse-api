@@ -2,11 +2,10 @@
 
 namespace App\Policies;
 
-use Illuminate\Auth\Access\HandlesAuthorization;
-
 use App\Models\Broadcast;
 use App\Models\Person;
 use App\Models\Role;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BroadcastPolicy
 {
@@ -23,7 +22,8 @@ class BroadcastPolicy
      * Can a user view their own messages?
      */
 
-    public function messages(Person $user, $personId) {
+    public function messages(Person $user, $personId)
+    {
         return ($user->id == $personId);
     }
 
@@ -31,7 +31,8 @@ class BroadcastPolicy
      * Can a user see unverified stopped numbers
      */
 
-    public function unverifiedStopped(Person $user) {
+    public function unverifiedStopped(Person $user): bool
+    {
         return false;
     }
 
@@ -39,7 +40,8 @@ class BroadcastPolicy
      * Can a user see the stats
      */
 
-    public function stats(Person $user) {
+    public function stats(Person $user)
+    {
         return false;
     }
 
@@ -47,7 +49,8 @@ class BroadcastPolicy
      * Can a user retry a broadcast
      */
 
-    public function retry(Person $user) {
+    public function retry(Person $user)
+    {
         return false;
     }
 
@@ -55,7 +58,8 @@ class BroadcastPolicy
      * Can a user see the unknown phones
      */
 
-    public function unknownPhones(Person $user) {
+    public function unknownPhones(Person $user): bool
+    {
         return false;
     }
 
@@ -63,13 +67,14 @@ class BroadcastPolicy
      * Is the user allowed to interact with the broadcast type?
      */
 
-    public function typeAllowed(Person $user, $type) {
+    public function typeAllowed(Person $user, $type)
+    {
         if ($user->hasRole(Role::MEGAPHONE)) {
             return true;
         }
 
         if ($user->hasRole(Role::EDIT_SLOTS)
-        && ($type == Broadcast::TYPE_SLOT || $type == Broadcast::TYPE_SLOT_EDIT)) {
+            && ($type == Broadcast::TYPE_SLOT || $type == Broadcast::TYPE_SLOT_EDIT)) {
             return true;
         }
 

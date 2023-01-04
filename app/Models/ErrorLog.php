@@ -2,12 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-use App\Models\ApiModel;
-
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class ErrorLog extends ApiModel
 {
@@ -16,9 +12,9 @@ class ErrorLog extends ApiModel
     // Allow mass assignment.
     protected $guarded = [];
 
-    protected $casts = [
-        'data' => 'array'
-    ];
+    /* protected $casts = [
+         'data' => 'array'
+     ];*/
 
     public function person()
     {
@@ -45,7 +41,7 @@ class ErrorLog extends ApiModel
             $error['url'] = $req->fullUrl();
         }
 
-        $error['data'] = $data;
+        $error['data'] = json_encode($data);
 
         self::create($error);
     }
@@ -68,7 +64,6 @@ class ErrorLog extends ApiModel
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'backtrace' => $e->getTrace(),
             ]
         ];
 
@@ -76,7 +71,6 @@ class ErrorLog extends ApiModel
         $req = request();
         if ($req) {
             $data['method'] = $req->method();
-            $data['parameters'] = $req->all();
             $data['url'] = $req->fullUrl();
         }
 
@@ -84,7 +78,7 @@ class ErrorLog extends ApiModel
 
         $error = [
             'error_type' => $error_type,
-            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE),
+            'data' => json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE),
         ];
 
         // Include the IP, user_agent and URL location
@@ -96,13 +90,14 @@ class ErrorLog extends ApiModel
 
         // Who is the user?
         if (Auth::check()) {
-            $error['person_id'] = Auth::user()->id;
+            $error['person_id'] = Auth::id();
         }
 
         try {
             self::create($error);
         } catch (QueryException $e) {
-            Log::emergency("error log create exception $e");
+            //Log::emergency("error log create exception ".$e->getMessage());
+            //error_log('ERROR LOG '.$e->getTraceAsString());
         }
     }
 
@@ -164,14 +159,14 @@ class ErrorLog extends ApiModel
         }
 
         // Figure out pagination
-        $pageSize = $query['page_size'] ?? self::PAGE_SIZE_DEFAULT;
-        if (isset($query['page'])) {
-            $page = $query['page'] - 1;
-            if ($page < 0) {
-                $page = 0;
-            }
-        } else {
+        $pageSize = (int)($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
+        $page = (int)($query['page'] ?? 1);
+        $page = $page - 1;
+        if ($page < 0) {
             $page = 0;
+        }
+        if ($pageSize <= 0) {
+            $pageSize = self::PAGE_SIZE_DEFAULT;
         }
 
         $sql = $sql->offset($page * $pageSize)->limit($pageSize);

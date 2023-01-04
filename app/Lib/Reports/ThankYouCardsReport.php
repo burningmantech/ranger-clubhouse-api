@@ -12,7 +12,7 @@ class ThankYouCardsReport
      * @param int $year
      * @return array
      */
-    public static function execute(int $year)
+    public static function execute(int $year): array
     {
         $people = Person::whereNotIn('status',
                     [
@@ -35,6 +35,7 @@ class ThankYouCardsReport
                 'bpguid' => $row->bpguid,
                 'street1' => $row->street1,
                 'street2' => $row->street2,
+                'apt' => $row->apt,
                 'city' => $row->city,
                 'state' => $row->state,
                 'zip' => $row->zip,

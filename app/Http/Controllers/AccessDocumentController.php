@@ -2,23 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
-use Exception;
-use InvalidArgumentException;
-
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\JsonResponse;
-
+use App\Lib\GrantPasses;
+use App\Lib\Reports\ClaimedTicketsWithNoSignups;
+use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
-
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
-use App\Models\PersonSlot;
-use App\Models\Position;
-use App\Models\Slot;
-use App\Models\Timesheet;
+use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 class AccessDocumentController extends ApiController
 {
@@ -29,7 +23,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $query = request()->validate([
             'year' => 'sometimes|digits:4',
@@ -50,7 +44,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function current()
+    public function current(): JsonResponse
     {
         $this->authorize('current', AccessDocument::class);
         $params = request()->validate([
@@ -68,10 +62,39 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function expiring()
+    public function expiring(): JsonResponse
     {
         $this->authorize('expiring', AccessDocument::class);
         return response()->json(['expiring' => TicketingManagement::retrieveExpiringTicketsByPerson(current_year())]);
+    }
+
+    /**
+     * Add a comment to a given set of access documents.
+     * (primarily used by the export feature to record who did an export.)
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function bulkComment(): JsonResponse
+    {
+        $this->authorize('bulkComment', AccessDocument::class);
+        $params = request()->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'comment' => 'required|string'
+        ]);
+
+        $comment = $params['comment'];
+        $rows = AccessDocument::whereIntegerInRaw('id', $params['ids'])
+            ->get();
+
+        foreach ($rows as $row) {
+            $row->addComment($comment, $this->user);
+            $row->saveWithoutValidation();
+        }
+
+        return response()->json(['status' => 'success']);
     }
 
     /**
@@ -82,7 +105,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function markSubmitted()
+    public function markSubmitted(): JsonResponse
     {
         $this->authorize('markSubmitted', AccessDocument::class);
         $params = request()->validate([
@@ -90,9 +113,8 @@ class AccessDocumentController extends ApiController
             'ids.*' => 'integer',
         ]);
 
-        $rows = AccessDocument::whereIn('id', $params['ids'])
+        $rows = AccessDocument::whereIntegerInRaw('id', $params['ids'])
             ->where('status', AccessDocument::CLAIMED)
-            ->whereNotIn('type', AccessDocument::PROVISION_TYPES)
             ->get();
 
         $staffCredentials = $rows->where('type', AccessDocument::STAFF_CREDENTIAL)->keyBy('person_id');
@@ -122,7 +144,8 @@ class AccessDocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function show(AccessDocument $accessDocument)
+
+    public function show(AccessDocument $accessDocument): JsonResponse
     {
         $this->authorize('index', [AccessDocument::class, $accessDocument->person_id]);
         return $this->success($accessDocument);
@@ -135,7 +158,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $this->authorize('create', AccessDocument::class);
 
@@ -159,7 +182,8 @@ class AccessDocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function update(AccessDocument $accessDocument)
+
+    public function update(AccessDocument $accessDocument): JsonResponse
     {
         $this->authorize('update', $accessDocument);
         $this->fromRest($accessDocument);
@@ -186,7 +210,7 @@ class AccessDocumentController extends ApiController
      * @throws Exception
      */
 
-    public function destroy(AccessDocument $accessDocument)
+    public function destroy(AccessDocument $accessDocument): JsonResponse
     {
         $this->authorize('destroy', $accessDocument);
 
@@ -207,21 +231,22 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function statuses()
+    public function statuses(): JsonResponse
     {
         $params = request()->validate([
+            'statuses' => 'required|array',
             'statuses.*.id' => 'required|integer|exists:access_document,id',
             'statuses.*.status' => 'required|string'
         ]);
 
-        $rows = AccessDocument::whereIn('id', array_column($params['statuses'], 'id'))->get();
+        $rows = AccessDocument::whereIntegerInRaw('id', array_column($params['statuses'], 'id'))->get();
 
         $personId = $rows[0]->person_id;
         foreach ($rows as $row) {
             // Verify person can update all the documents.
             $this->authorize('update', $row);
             if ($personId != $row->person_id) {
-                throw new \InvalidArgumentException("All records must be for the same person");
+                throw new InvalidArgumentException("All records must be for the same person");
             }
         }
 
@@ -229,15 +254,14 @@ class AccessDocumentController extends ApiController
 
         $haveTicket = false;
 
-        foreach ($params['statuses'] as $statusUpdate){
+        foreach ($params['statuses'] as $statusUpdate) {
             $status = $statusUpdate['status'];
             $ad = $docsById->get($statusUpdate['id']);
             $adType = $ad->type;
             $adStatus = $ad->status;
             switch ($status) {
                 case AccessDocument::BANKED:
-                    if ((!in_array($adType, AccessDocument::TICKET_TYPES)
-                            && !in_array($adType, AccessDocument::PROVISION_TYPES))
+                    if (!in_array($adType, AccessDocument::TICKET_TYPES)
                         || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
                         throw new InvalidArgumentException('Illegal type and status combination');
                     }
@@ -250,10 +274,8 @@ class AccessDocumentController extends ApiController
                     break;
 
                 case AccessDocument::QUALIFIED:
-                    if ($adType != AccessDocument::WAP
-                        && $adType != AccessDocument::VEHICLE_PASS
-                        && !in_array($adType, AccessDocument::PROVISION_TYPES)) {
-                        throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass, or an Appreciation.');
+                    if ($adType != AccessDocument::WAP && $adType != AccessDocument::VEHICLE_PASS) {
+                        throw new InvalidArgumentException('Document is not a WAP or Vehicle Pass.');
                     }
 
                     if ($adStatus != AccessDocument::CLAIMED) {
@@ -283,7 +305,6 @@ class AccessDocumentController extends ApiController
 
         if ($haveTicket) {
             // Prevent people from trying to game the system and grab the VP without claiming any tickets.
-            $personId = $rows[0]->person_id;
             if (AccessDocument::noAvailableTickets($personId)) {
                 $vp = AccessDocument::where([
                     'person_id' => $personId,
@@ -295,7 +316,7 @@ class AccessDocumentController extends ApiController
                     $vp->auditReason = 'All tickets were banked';
                     $vp->saveWithoutValidation();
                     AccessDocumentChanges::log($vp, $this->user->id,
-                        [ 'status' => [AccessDocument::CLAIMED, AccessDocument::QUALIFIED ]]
+                        ['status' => [AccessDocument::CLAIMED, AccessDocument::QUALIFIED]]
                     );
                 }
             }
@@ -306,7 +327,7 @@ class AccessDocumentController extends ApiController
 
     /**
      * Grant Work Access Passes to people who don't already have them.
-     * Criteria are that you have worked in the last three years, are
+     * Criteria are that you have worked in the last three events (not years), are
      * of status active, inactive, or vintage OR... (this is the UNION below)
      * they have signed up for something (training, whatever),
      * AND they don't have a current staff credential or other WAP
@@ -314,56 +335,26 @@ class AccessDocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function grantWAPs()
+
+    public function grantWAPs(): JsonResponse
     {
         $this->authorize('grantWAPs', [AccessDocument::class]);
+        list ($people, $startYear) = GrantPasses::grantWAPsToRangers();
+        return response()->json(['people' => $people, 'start_year' => $startYear]);
+    }
 
-        $year = current_year();
-        $startYear = $year - 3;
+    /**
+     * Find Rangers who might need a WAP.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
 
-        $accessDate = setting('TAS_DefaultWAPDate', true);
-
-        // Find everyone who worked in the last three years
-        $workedIds = Timesheet::select('person_id')
-            ->join('person', 'person.id', 'timesheet.person_id')
-            ->whereYear('on_duty', '>=', $startYear)
-            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
-            ->groupBy('person_id')
-            ->get()
-            ->pluck('person_id');
-
-        // .. and find everyone signed up this year.
-
-        $slotIds = Slot::whereYear('begins', $year)->pluck('id');
-        $signUpIds = PersonSlot::select('person_id')
-            ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot_id', $slotIds)
-            ->whereIn('person.status', Person::ACTIVE_STATUSES)
-            ->groupBy('person_slot.person_id')
-            ->get()
-            ->pluck('person_id');
-
-        $personIds = $signUpIds->merge($workedIds)->unique();
-        $people = Person::select('id', 'callsign', 'status')
-            ->whereIn('id', $personIds)
-            ->whereRaw('
-                (NOT EXISTS
-                    (SELECT 1 FROM access_document WHERE access_document.person_id=person.id AND type="work_access_pass" AND status IN ("qualified", "claimed", "submitted") LIMIT 1)
-                AND
-                   (
-                     EXISTS
-                        (SELECT 1 FROM access_document WHERE access_document.person_id=person.id AND type="reduced_price_ticket" AND status IN ("qualified", "claimed", "banked", "submitted") LIMIT 1)
-                    OR
-                      NOT EXISTS
-                      (SELECT 1 FROM access_document WHERE access_document.person_id=person.id AND type="staff_credential" AND status IN ("qualified", "claimed", "banked", "submitted") LIMIT 1)
-                   )
-                ) ')
-            ->orderBy('callsign')
-            ->get();
-
-        $this->grantAccessDocumentToPeople($people, AccessDocument::WAP, null, $year);
-
-        return response()->json(['people' => $people]);
+    public function wapCandidates(): JsonResponse
+    {
+        $this->authorize('wapCandidates', [AccessDocument::class]);
+        list ($people, $startYear) = GrantPasses::findRangersWhoNeedWAPs();
+        return response()->json(['people' => $people, 'start_year' => $startYear]);
     }
 
     /**
@@ -377,56 +368,11 @@ class AccessDocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function grantAlphaWAPs()
+
+    public function grantAlphaWAPs(): JsonResponse
     {
         $this->authorize('grantAlphaWAPs', [AccessDocument::class]);
-
-        $year = current_year();
-
-        $accessDate = setting('TAS_DefaultAlphaWAPDate', true);
-
-        // Where be my Alphas yo?
-        $alphaIds = Person::select('id')->where('status', Person::ALPHA)->get()->pluck('id');
-
-        // Find all training slots starting on or after today
-        $slotIds = Slot::select('id')
-            ->whereYear('begins', $year)
-            ->where('position_id', Position::TRAINING)
-            ->whereRaw('begins > ?', [now()])
-            ->get()
-            ->pluck('id');
-
-        if (!empty($slotIds)) {
-            $prospectiveIds = PersonSlot::select('person_id')
-                ->join('person', 'person.id', 'person_slot.person_id')
-                ->whereIn('slot_id', $slotIds)
-                ->where('status', Person::PROSPECTIVE)
-                ->groupBy('person_id')
-                ->get()
-                ->pluck('person_id');
-        } else {
-            $prospectiveIds = [];
-        }
-
-        $ids = $alphaIds->merge($prospectiveIds)->unique();
-
-        if (!empty($ids)) {
-            $people = Person::select('id', 'callsign', 'status')
-                ->whereIn('id', $ids)
-                ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document WHERE person_id=person.id
-                        AND
-                           (
-                             (access_document.type="work_access_pass" AND access_document.status IN ("qualified", "claimed", "submitted"))
-                            OR
-                            (access_document.type="staff_credential" AND access_document.status IN ("qualified", "claimed", "banked", "submitted"))
-                        ) LIMIT 1)')
-                ->orderBy('callsign')
-                ->get();
-        } else {
-            $people = [];
-        }
-
-        $this->grantAccessDocumentToPeople($people, AccessDocument::WAP, $accessDate, $year, AccessDocument::CLAIMED);
+        $people = GrantPasses::grantWAPsToAlphas();
         return response()->json(['people' => $people]);
     }
 
@@ -438,30 +384,10 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function grantVehiclePasses()
+    public function grantVehiclePasses(): JsonResponse
     {
         $this->authorize('grantVehiclePasses', [AccessDocument::class]);
-
-        $year = current_year();
-
-        $ids = AccessDocument::select('person_id')
-            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
-            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
-            ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document ad WHERE ad.person_id=access_document.person_id AND ad.type="vehicle_pass" AND ad.status IN ("qualified", "claimed", "submitted") LIMIT 1)')
-            ->groupBy('person_id')
-            ->pluck('person_id');
-
-        if ($ids->count()) {
-            $people = Person::select('id', 'callsign', 'status')
-                ->whereIn('id', $ids)
-                ->orderBy('callsign')
-                ->get();
-
-            $this->grantAccessDocumentToPeople($people, AccessDocument::VEHICLE_PASS, null, $year);
-        } else {
-            $people = [];
-        }
-
+        $people = GrantPasses::grantVehiclePasses();
         return response()->json(['people' => $people]);
     }
 
@@ -473,7 +399,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function setStaffCredentialsAccessDate()
+    public function setStaffCredentialsAccessDate(): JsonResponse
     {
         $this->authorize('setStaffCredentialsAccessDate', [AccessDocument::class]);
 
@@ -491,6 +417,10 @@ class AccessDocumentController extends ApiController
 
         $documents = [];
         foreach ($rows as $row) {
+            if ($row->person->status == Person::DISMISSED
+                || $row->person->status == Person::DECEASED) {
+                continue;
+            }
             $row->access_date = $accessDate;
             $row->addComment("changed access date to $accessDate via maintenance function", $user);
             $this->saveAccessDocument($row, $documents);
@@ -510,7 +440,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function cleanAccessDocsFromPriorEvent()
+    public function cleanAccessDocsFromPriorEvent(): JsonResponse
     {
         $this->authorize('cleanAccessDocsFromPriorEvent', [AccessDocument::class]);
 
@@ -518,18 +448,14 @@ class AccessDocumentController extends ApiController
         $rows = AccessDocument::whereIn('status', [AccessDocument::SUBMITTED, AccessDocument::QUALIFIED])
             ->with('person:id,callsign,status')
             ->get();
-        $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
 
         $documents = [];
-
         $reasonExpired = 'marked as expired via maintenance function';
         $reasonUsed = 'marked as used via maintenance function';
         foreach ($rows as $ad) {
             switch ($ad->status) {
                 case AccessDocument::QUALIFIED:
-                    if ($ad->type == AccessDocument::VEHICLE_PASS
-                        || $ad->type == AccessDocument::WAP
-                        || $ad->type == AccessDocument::WAPSO) {
+                    if ($ad->doesExpireThisYear()) {
                         $ad->status = AccessDocument::EXPIRED;
                         $ad->addComment($reasonExpired, $user);
                         $ad->auditReason = $reasonExpired;
@@ -546,6 +472,8 @@ class AccessDocumentController extends ApiController
             }
         }
 
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+
         return response()->json(['access_documents' => $documents]);
     }
 
@@ -559,14 +487,14 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function bankAccessDocuments()
+    public function bankAccessDocuments(): JsonResponse
     {
         $this->authorize('bankAccessDocuments', [AccessDocument::class]);
 
         $user = $this->user->callsign;
 
         $rows = AccessDocument::where('status', AccessDocument::QUALIFIED)
-            ->whereIn('type', array_merge(AccessDocument::TICKET_TYPES, AccessDocument::PROVISION_TYPES))
+            ->whereIn('type', AccessDocument::TICKET_TYPES)
             ->with('person:id,callsign,status')
             ->get();
 
@@ -602,9 +530,7 @@ class AccessDocumentController extends ApiController
             $this->saveAccessDocument($ad, $documents);
         }
 
-        usort($documents, function ($a, $b) {
-            return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
-        });
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
 
         return response()->json(['access_documents' => $documents]);
     }
@@ -615,7 +541,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function expireAccessDocuments()
+    public function expireAccessDocuments(): JsonResponse
     {
         $this->authorize('expireAccessDocuments', [AccessDocument::class]);
 
@@ -647,7 +573,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function bumpExpiration()
+    public function bumpExpiration(): JsonResponse
     {
         $this->authorize('bumpExpiration', AccessDocument::class);
         $params = request()->validate([
@@ -675,11 +601,15 @@ class AccessDocumentController extends ApiController
         return response()->json(['count' => $rows->count()]);
     }
 
-    /*
+    /**
      * Save the access document, log the changes, and build a response.
+     *
+     * @param AccessDocument $ad
+     * @param $documents
+     * @param bool $includeEmail
      */
 
-    private function saveAccessDocument($ad, &$documents, $includeEmail = false)
+    private function saveAccessDocument(AccessDocument $ad, &$documents, bool $includeEmail = false)
     {
         $changes = $ad->getChangedValues();
         $ad->save();
@@ -705,29 +635,57 @@ class AccessDocumentController extends ApiController
         $documents[] = $result;
     }
 
-    /*
-     * Create a Access Document batch of a particular type & status for folks and log the creation.
+    /**
+     * Find all banked items and set the status to qualified.
      *
-     * The assumption is the type will be non-bankable item (vp, wap, etc) and will expire in the current year.
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    private function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status = AccessDocument::QUALIFIED)
+    public function unbankAccessDocuments(): JsonResponse
     {
-        $user = $this->user->callsign;
-        $userId = $this->user->id;
+        $this->authorize('unbankAccessDocuments', AccessDocument::class);
 
-        foreach ($people as $person) {
-            $ad = new AccessDocument([
-                'person_id' => $person->id,
-                'type' => $type,
-                'status' => $status,
-                'source_year' => $year,
-                'expiry_date' => "$year-09-15",
-                'access_date' => $accessDate,
-            ]);
-            $ad->addComment('created via maintenance function', $user);
-            $ad->saveWithoutValidation();
-            AccessDocumentChanges::log($ad, $userId, $ad, 'create');
+        $rows = AccessDocument::where('status', AccessDocument::BANKED)
+            ->with('person:id,callsign,status')
+            ->get();
+
+        $documents = [];
+        foreach ($rows as $row) {
+            $row->auditReason = 'maintenance - unbank items';
+            $row->status = AccessDocument::QUALIFIED;
+            $row->addComment('marked as qualified via maintenance function', $this->user->callsign);
+            $row->saveWithoutValidation();
+            $this->saveAccessDocument($row, $documents, true);
         }
+
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+
+        return response()->json(['access_documents' => $documents]);
+    }
+
+    /**
+     * Find all unclaimed tickets and people who may or may not be signed up
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function unclaimedTicketsWithSignups(): JsonResponse
+    {
+        $this->authorize('unclaimedTicketsWithSignups', AccessDocument::class);
+
+        return response()->json(['tickets' => UnclaimedTicketsWithSignupsReport::execute()]);
+    }
+
+    /**
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function claimedTicketsWithNoSignups(): JsonResponse
+    {
+        $this->authorize('claimedTicketsWithNoSignups', AccessDocument::class);
+        return response()->json(['people' => ClaimedTicketsWithNoSignups::execute()]);
     }
 }

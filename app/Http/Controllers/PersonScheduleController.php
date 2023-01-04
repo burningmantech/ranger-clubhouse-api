@@ -22,9 +22,13 @@ class PersonScheduleController extends ApiController
 {
     /**
      * Find the possible schedule and signups for a person & year
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index(Person $person)
+    public function index(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
@@ -73,7 +77,7 @@ class PersonScheduleController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function store(Person $person)
+    public function store(Person $person): JsonResponse
     {
         $params = request()->validate([
             'slot_id' => 'required|integer',
@@ -124,12 +128,13 @@ class PersonScheduleController extends ApiController
              * Person must meet various requirements before being allowed to sign up
              */
             $isTraining = ($slot->position_id == Position::TRAINING);
-            if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed']) {
+            if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed'] ?? false) {
                 return response()->json([
                     'status' => Schedule::MISSING_REQUIREMENTS,
                     'signed_up' => $slot->signed_up,
                     'may_force' => $canForce,
-                    'requirements' => $permission['requirements']
+                    'requirements' => $permission['requirements'],
+                    'training_signups_allowed' => $permission['training_signups_allowed'] ?? false,
                 ]);
             }
         }
@@ -256,13 +261,13 @@ class PersonScheduleController extends ApiController
     /**
      * Remove the slot from the person's schedule
      *
-     * @param int $personId slot to delete for person
+     * @param Person $person
      * @param int $slotId to delete
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function destroy(Person $person, $slotId)
+    public function destroy(Person $person, int $slotId): JsonResponse
     {
         $this->authorize('delete', [Schedule::class, $person]);
 
@@ -284,7 +289,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        $result = Schedule::deleteFromSchedule($person->id, $slotId);
+        $result = Schedule::deleteFromSchedule($person->id, $slot);
         if ($result['status'] == 'success') {
             $data = ['slot_id' => $slotId];
             if ($forced) {

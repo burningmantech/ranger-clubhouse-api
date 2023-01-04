@@ -3,11 +3,9 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class PhotoApprovedMail extends Mailable
+class PhotoApprovedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -22,6 +20,7 @@ class PhotoApprovedMail extends Mailable
     public function __construct($person)
     {
         $this->person = $person;
+        parent::__construct();
     }
 
     /**
@@ -31,8 +30,8 @@ class PhotoApprovedMail extends Mailable
      */
     public function build()
     {
-        return $this->from([ 'address' => setting('VCEmail'), 'name' => 'The Volunteer Coordinators'] )
-                ->subject('Ranger Clubhouse photo submission APPROVED.')
-                ->view('emails.photo-approved');
+        return $this->from(setting('DoNotReplyEmail'), 'The Volunteer Coordinators')
+            ->subject('Ranger Clubhouse photo submission APPROVED.')
+            ->view('emails.photo-approved');
     }
 }

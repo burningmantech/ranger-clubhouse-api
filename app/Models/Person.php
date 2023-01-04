@@ -12,18 +12,21 @@
 namespace App\Models;
 
 use App\Helpers\SqlHelper;
+use App\Lib\Agreements;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Normalizer;
 use NumberFormatter;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
-
 
 class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
 {
@@ -99,7 +102,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /*
      * No messages status are those that should not receive any messages
-     * either Clubhouse Messaging or the RBS
+     * either Clubhouse Messages or from the RBS
      */
 
     const NO_MESSAGES_STATUSES = [
@@ -112,6 +115,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         Person::UBERBONKED
     ];
 
+    /*
+     * No street address required statuses. To deal with legacy accounts.
+     */
+
+    const ONLY_BASIC_PII_REQUIRED_STATUSES = [
+        self::DECEASED,
+        self::DISMISSED,
+        self::RESIGNED,
+        self::RETIRED,
+    ];
 
     /**
      * The database table name.
@@ -140,7 +153,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'tpassword',
         'tpassword_expire',
         'callsign_normalized',
-        'callsign_soundex'
+        'callsign_soundex',
+
+        'pivot' // Exclude pivot table references when building JSON response
     ];
 
     protected $casts = [
@@ -194,6 +209,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'message',
 
         'email',
+        'is_bouncing',
         'first_name',
         'mi',
         'last_name',
@@ -209,8 +225,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'alt_phone',
 
         'on_site',
-        'longsleeveshirt_size_style',
-        'teeshirt_size_style',
+        'longsleeveshirt_size_style',   // deprecated
+        'teeshirt_size_style',          // deprecated
+        'tshirt_swag_id',
+        'tshirt_secondary_swag_id',
+        'long_sleeve_swag_ig',
+
         'emergency_contact',
         'camp_location',
 
@@ -253,17 +273,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     // Various associated person tables
     const ASSOC_TABLES = [
-        //'access_document_changes',
-        'access_document_delivery',
         'access_document',
         'action_logs',
         'alert_person',
         'asset_person',
         'bmid',
         'broadcast_message',
-        //'contact_log',
+        'mail_log',
         'manual_review',
         'mentee_status',
+        'person_certification',
         'person_event',
         'person_intake',
         'person_intake_note',
@@ -272,8 +291,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'person_message',
         'person_online_training',
         'person_position',
+        'person_position_log',
         'person_role',
         'person_slot',
+        'person_swag',
+        'person_team',
+        'person_team_log',
         'radio_eligible',
         'timesheet',
         'timesheet_log',
@@ -283,7 +306,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'trainer_status'
     ];
 
-    protected $rules = [
+    const GENERAL_VALIDATIONS = [
         'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',
         'status' => 'required|string',
@@ -295,24 +318,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'email' => 'required|string|max:50',
 
-        'street1' => 'required|string|nullable|max:128',
-        'street2' => 'sometimes|string|nullable|max:128',
-        'apt' => 'sometimes|string|nullable|max:10',
-        'city' => 'required|string|max:50',
-
-        'state' => 'state_for_country:live_only',
-        'country' => 'required|string|max:25',
-
-        'home_phone' => 'sometimes|string|max:25',
-        'alt_phone' => 'sometimes|string|nullable|max:25',
+        'has_reviewed_pi' => 'sometimes|boolean',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
         'gender' => 'sometimes|string|nullable|max:32',
         'pronouns' => 'sometimes|string|nullable',
         'pronouns_custom' => 'sometimes|string|nullable',
 
-        'has_reviewed_pi' => 'sometimes|boolean',
+        'home_phone' => 'sometimes|string|max:25',
+        'alt_phone' => 'sometimes|string|nullable|max:25',
     ];
+
+    const ADDRESS_VALIDATIONS = [
+        'street1' => 'required|string|nullable|max:128',
+        'street2' => 'sometimes|string|nullable|max:128',
+        'apt' => 'sometimes|string|nullable|max:10',
+        'city' => 'required|string|max:50',
+        'state' => 'state_for_country:live_only',
+        'country' => 'required|string|max:25',
+    ];
+
+    const ALL_VALIDATIONS = [
+        ...self::GENERAL_VALIDATIONS,
+        ...self::ADDRESS_VALIDATIONS
+    ];
+
+    protected $rules = self::ALL_VALIDATIONS;
 
     public $has_reviewed_pi;
 
@@ -323,6 +354,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $roles;
 
+    public $rolesById;
 
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
@@ -330,6 +362,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public $languages;
+
+    public function tshirt(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'tshirt_swag_id');
+    }
+
+    public function tshirt_secondary(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'tshirt_secondary_swag_id');
+    }
+
+    public function long_sleeve(): BelongsTo
+    {
+        return $this->belongsTo(Swag::class, 'long_sleeve_swag_ig');
+    }
 
     /**
      * Setup various before save or create callback methods
@@ -349,17 +396,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $model->message_updated_at = now();
             }
 
-            // Ensure shirts are always set correctly
-            if (empty($model->longsleeveshirt_size_style)) {
-                $model->longsleeveshirt_size_style = 'Unknown';
-            }
-
-            if (empty($model->teeshirt_size_style)) {
-                $model->teeshirt_size_style = 'Unknown';
-            }
-
             if ($model->pronouns != 'custom') {
                 $model->pronouns_custom = '';
+            }
+
+            // Clear the bouncing flag when the email changes.
+            if ($model->isDirty('email')) {
+                $model->is_bouncing = false;
             }
 
             /*
@@ -373,6 +416,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $model->resetCallsign();
                 $model->callsign_approved = false;
             }
+
         });
     }
 
@@ -398,17 +442,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return [];
     }
 
-    public function person_position()
+    public function person_position(): HasMany
     {
         return $this->hasMany(PersonPosition::class);
     }
 
-    public function person_photo()
+    public function person_photo(): BelongsTo
     {
         return $this->belongsTo(PersonPhoto::class);
     }
 
-    public function person_role()
+    public function person_role(): HasMany
     {
         return $this->hasMany(PersonRole::class);
     }
@@ -420,7 +464,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return Person|null
      */
 
-    public static function findByEmail(string $email) : ?Person
+    public static function findByEmail(string $email): ?Person
     {
         return self::where('email', $email)->first();
     }
@@ -432,7 +476,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return Person|null
      */
 
-    public static function findByCallsign(string $callsign) : ?Person
+    public static function findByCallsign(string $callsign): ?Person
     {
         return self::where('callsign', $callsign)->first();
     }
@@ -444,7 +488,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return int|null
      */
 
-    public static function findIdByCallsign(string $callsign) : ?int
+    public static function findIdByCallsign(string $callsign): ?int
     {
         $row = self::select('id')->where('callsign', $callsign)->first();
         if ($row) {
@@ -461,24 +505,38 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return ?Person
      */
 
-    public static function findByLmsID(string $lmsId) : ?Person
+    public static function findByLmsID(string $lmsId): ?Person
     {
         return self::where('lms_id', $lmsId)->first();
     }
 
-
-    public function save($options = [])
+    /**
+     * Attempt to save or create a record.
+     *
+     * @param $options
+     * @return bool
+     */
+    public function save($options = []): bool
     {
         $isNew = !$this->exists;
+
         if ($isNew) {
             // Creating record = require callsign & email
             $this->rules['callsign'] = 'required|string|unique:person,callsign';
             $this->rules['email'] = 'required|string|unique:person,email';
         } else {
+            // Allow the Admins and VCs to bypass personal info validations to deal with
+            // moldy defunct accounts with little PII
+            if (in_array($this->status, self::ONLY_BASIC_PII_REQUIRED_STATUSES)
+                && (!Auth::id() || Auth::user()?->hasRole([Role::ADMIN, Role::VC]))) {
+                $this->rules = self::GENERAL_VALIDATIONS;
+            }
+
             if ($this->isDirty('callsign')) {
                 // updating a callsign on an existing record
                 $this->rules['callsign'] = 'required|string|unique:person,callsign,' . $this->id;
             }
+
             if ($this->isDirty('email')) {
                 $this->rules['email'] = 'required|string|unique:person,email,' . $this->id;
             }
@@ -486,22 +544,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $result = parent::save($options);
 
-        if ($isNew) {
-            // Kill the rules in case the newly recreated record is updated further, otherwise
-            // the callsign & email rules will be acted upon and always fail.
-            unset($this->rules['callsign']);
-            unset($this->rules['email']);
-        }
+        // Reset the validations in the case the record is acted upon further this session.
+        $this->rules = self::ALL_VALIDATIONS;
 
         return $result;
     }
 
-    /*
+    /**
      * Bulk lookup by callsigns
      * return an associative array index by callsign
+     *
+     * @param array $callsigns
+     * @return mixed
      */
 
-    public static function findAllByCallsigns(array $callsigns)
+    public static function findAllByCallsigns(array $callsigns): mixed
     {
         $normalizedCallsigns = array_map(fn($name) => Person::normalizeCallsign($name), $callsigns);
         $rows = self::whereIn('callsign_normalized', $normalizedCallsigns)->get();
@@ -512,7 +569,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }, []);
     }
 
-    public static function emailExists($email)
+    /**
+     * Does a record exist with the given email?
+     *
+     * @param string $email
+     * @return bool
+     */
+
+    public static function emailExists(string $email): bool
     {
         return self::where('email', $email)->exists();
     }
@@ -526,10 +590,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * offset: record offset in search
      *
      * @param array $query
+     * @param bool $canViewEmail
      * @return array
      */
 
-    public static function findForQuery(array $query): array
+    public static function findForQuery(array $query, bool $canViewEmail = false): array
     {
         if (isset($query['query'])) {
             $orderCallsigns = true;
@@ -561,12 +626,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $likeQuery = '%' . $q . '%';
 
             $emailOnly = (stripos($q, '@') !== false);
-            if ($emailOnly) {
+            if ($emailOnly && $canViewEmail) {
                 // Force email only search if @ is present
-                $sql = self::where(function ($sql) use ($likeQuery, $q) {
-                    $sql->where('email', $q);
-                    $sql->orWhere('email', 'like', $likeQuery);
-                });
+                $sql = self::where('email', $q);
                 $orderCallsigns = false;
                 $orderFKA = false;
                 $orderRealName = false;
@@ -596,7 +658,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 }
 
 
-                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone) {
+                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone, $canViewEmail) {
                     foreach ($fields as $field) {
                         switch ($field) {
                             case 'callsign':
@@ -612,6 +674,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                                 break;
 
                             case 'email':
+                                if ($canViewEmail) {
+                                    $sql->orWhere($field, 'like', $likeQuery);
+                                }
+                                break;
                             case 'formerly_known_as':
                                 $sql->orWhere($field, 'like', $likeQuery);
                                 break;
@@ -706,7 +772,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign(string $callsign): string
     {
-        return strtolower(preg_replace('/[^\w]/', '', $callsign));
+        return strtolower(preg_replace('/[^\w]/', '', self::convertDiacritics($callsign)));
+    }
+
+    /**
+     * Convert any diacritics into ascii (é -> e, ü -> u)
+     *
+     * @param string $value
+     * @return string
+     */
+
+    public static function convertDiacritics(string $value): string
+    {
+        $value = preg_replace('/©/', '@', $value);
+        return preg_replace('/[\x{0300}-\x{036f}]/u', '', Normalizer::normalize($value, Normalizer::FORM_D));
     }
 
     /**
@@ -769,7 +848,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function isValidPassword(string $password): bool
     {
         $encyptedPw = $this->password;
-        if (strpos($encyptedPw, ':') === false) {
+        if (!str_contains($encyptedPw, ':')) {
             return false;
         }
 
@@ -833,23 +912,66 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Retrieve the person's assigned roles.
+     * Retrieve the person's effective roles.
      *
      * Add MANAGE if person has MANAGE_ON_PLAYA and if LoginManageOnPlayaEnabled is true
      * Add TRAINER if person has TRAINER_SEASONAL and if TrainingSeasonalRoleEnabled is true
+     *
+     * User has to have the Ranger NDA signed if an effective LM role is in effect, otherwise kill
+     * all the roles (unless the user is a Tech Ninja) until the NDA has been agreed to.
      */
 
     public function retrieveRoles(): void
     {
-        $this->roles = PersonRole::findRoleIdsForPerson($this->id);
-
-        if (in_array(Role::MANAGE_ON_PLAYA, $this->roles) && setting('LoginManageOnPlayaEnabled')) {
-            $this->roles[] = Role::MANAGE;
+        if ($this->roles) {
+            return;
         }
 
-        if (in_array(Role::TRAINER_SEASONAL, $this->roles) && setting('TrainingSeasonalRoleEnabled')) {
-            $this->roles[] = Role::TRAINER;
+        $roleSql = DB::table('person_role')
+            ->select('role_id')
+            ->where('person_id', $this->id);
+
+        // Find the granted roles via assigned positions
+        $positionSql = DB::table('person_position')
+            ->select('role_id')
+            ->where('person_id', $this->id)
+            ->join('position_role', 'position_role.position_id', 'person_position.position_id');
+
+        // Find the granted roles via assigned positions
+        $teamSql = DB::table('person_team')
+            ->select('role_id')
+            ->join('team_role', 'team_role.team_id', 'person_team.team_id')
+            ->where('person_team.person_id', $this->id);
+
+        $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
+        $this->rolesById = [];
+        foreach ($roleIds as $id) {
+            $this->rolesById[$id] = true;
         }
+
+        $haveManage = $this->rolesById[Role::MANAGE] ?? false;
+        if (!$haveManage
+            && isset($this->rolesById[Role::MANAGE_ON_PLAYA])
+            && setting('LoginManageOnPlayaEnabled')) {
+            $this->rolesById[Role::MANAGE] = true;
+            $haveManage = true;
+        }
+
+        if (!isset($this->rolesById[Role::TRAINER])
+            && isset($this->rolesById[Role::TRAINER_SEASONAL])
+            && setting('TrainingSeasonalRoleEnabled')) {
+            $this->rolesById[Role::TRAINER] = true;
+        }
+
+        if ($haveManage && !isset($this->rolesById[Role::TECH_NINJA])) {
+            // Kill the roles if the NDA is not signed and the NDA document exists.
+            if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
+                // Don't allow the person to do anything until the NDA is signed.
+                $this->rolesById = [];
+            }
+        }
+
+        $this->roles = array_keys($this->rolesById);
     }
 
     /**
@@ -865,16 +987,16 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $this->retrieveRoles();
         }
 
-        if (is_array($role)) {
-            foreach ($role as $r) {
-                if (in_array($r, $this->roles)) {
-                    return true;
-                }
-            }
-            return false;
+        if (!is_array($role)) {
+            return isset($this->rolesById[$role]);
         }
 
-        return in_array($role, $this->roles);
+        foreach ($role as $r) {
+            if (isset($this->rolesById[$r])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -938,7 +1060,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return mixed
      */
 
-    public function getLanguagesAttribute()
+    public function getLanguagesAttribute(): mixed
     {
         return $this->languages;
     }
@@ -950,7 +1072,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setLanguagesAttribute($value)
+    public function setLanguagesAttribute($value): void
     {
         $this->languages = $value;
     }
@@ -962,7 +1084,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setHasReviewedPiAttribute($value)
+    public function setHasReviewedPiAttribute($value): void
     {
         $this->has_reviewed_pi = $value;
     }
@@ -1109,13 +1231,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function resetCallsign(): bool
     {
+        $lastName = self::convertDiacritics($this->last_name);
+        $firstLetter = substr(self::convertDiacritics($this->first_name), 0, 1);
         $year = current_year() % 100;
         for ($tries = 0; $tries < 10; $tries++) {
-            $newCallsign = $this->last_name;
+            $newCallsign = $lastName;
             if ($tries > 0) {
                 $newCallsign .= $tries + 1;
             }
-            $newCallsign .= substr($this->first_name, 0, 1) . $year;
+            $newCallsign .= $firstLetter . $year;
             if ($this->status == Person::BONKED) {
                 $newCallsign .= 'B';
             } else if ($this->status == Person::AUDITOR) {
@@ -1159,6 +1283,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
+     * Set the callsign pronunciation column. Remove quotes because people are too "literal" sometimes.
+     *
+     * @param string|null $value
+     * @return void
+     */
+
+    public function setCallsignPronounceAttribute(?string $value): void
+    {
+        $this->attributes['callsign_pronounce'] = empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)));
+    }
+
+    /**
      * Normalize long sleeve shirt sizes
      *
      * @return string
@@ -1189,6 +1325,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function summarizeGender(?string $gender): string
     {
+        if (empty($gender)) {
+            return '';
+        }
+
         $check = trim(strtolower($gender));
 
         // Female gender
@@ -1216,7 +1356,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return 'GF';
         }
 
-        // Gender, yes? what does that even mean?
+        // Gender, "yes"? what does that even mean?
         if ($check == 'yes') {
             return '';
         }
@@ -1232,7 +1372,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return array
      */
 
-    public function formerlyKnownAsArray(bool $filter = false): array
+    public
+    function formerlyKnownAsArray(bool $filter = false): array
     {
         return self::splitCommas($this->formerly_known_as, $filter);
     }
@@ -1290,9 +1431,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return $names;
         }
 
-        return array_values(array_filter($names, function ($name) {
-            return !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name);
-        }));
+        return array_values(array_filter($names, fn($name) => !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name)));
     }
 
     /**
@@ -1302,7 +1441,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setPronounsCustomAttribute($value)
+    public function setPronounsCustomAttribute($value): void
     {
         $this->attributes['pronouns_custom'] = $value ?? '';
     }
@@ -1314,7 +1453,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return void
      */
 
-    public function setPronounsAttribute($value)
+    public function setPronounsAttribute($value): void
     {
         $this->attributes['pronouns'] = $value ?? '';
     }

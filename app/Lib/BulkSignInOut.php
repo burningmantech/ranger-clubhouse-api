@@ -2,10 +2,9 @@
 
 namespace App\Lib;
 
-use App\Models\Position;
 use App\Models\Person;
 use App\Models\PersonPosition;
-use App\Models\Schedule;
+use App\Models\Position;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 
@@ -180,6 +179,8 @@ class BulkSignInOut
                     // graveyard or swing shifts e.g., 23:45 -> 06:45
                     $signout = strtotime(date('Y/m/d ', $signin) . ' ' . date('H:i', $signout));
                     $signout = strtotime("+1 day", $signout);
+                } else {
+                    $signout = strtotime(date('Y/m/d ', $signin) . ' ' . date('H:i', $signout));
                 }
                 break;
 
@@ -420,11 +421,6 @@ class BulkSignInOut
                         'off_duty' => (string)$signout
                     ];
                     break;
-            }
-
-            if (!$timesheet->slot_id) {
-                // Try to associate a sign up with the entry
-                $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($timesheet->person_id, $timesheet->position_id, $timesheet->on_duty);
             }
 
             $timesheet->auditReason = 'bulk sign in/out';

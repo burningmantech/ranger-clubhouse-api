@@ -2,12 +2,24 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int person_id
+ * @property int year
+ * @property bool asset_authorized
+ * @property bool may_request_stickers
+ * @property bool org_vehicle_insurance
+ * @property bool sandman_affidavit
+ * @property bool signed_motorpool_agreement
+ * @property bool signed_nda
+ * @property bool signed_personal_vehicle_agreement
+ * @property bool timesheet_confirmed
+ * @property Carbon timesheet_confirmed_at
+ */
 class PersonEvent extends ApiModel
 {
     protected $table = 'person_event';
@@ -18,28 +30,43 @@ class PersonEvent extends ApiModel
     protected $primaryKey = ['person_id', 'year'];
 
     protected $fillable = [
+        'asset_authorized',
         'may_request_stickers',
         'org_vehicle_insurance',
-        'signed_motorpool_agreement',
-        'signed_personal_vehicle_agreement',
-        'asset_authorized',
-        'timesheet_confirmed_at',
-        'timesheet_confirmed',
+        'pii_finished_at',
+        'pii_started_at',
         'sandman_affidavit',
+        'signed_motorpool_agreement',
+        'signed_nda',
+        'signed_personal_vehicle_agreement',
+        'ticketing_finished_at',
+        'ticketing_last_visited_at',
+        'ticketing_started_at',
+        'timesheet_confirmed',
+        'timesheet_confirmed_at',
     ];
 
     protected $attributes = [
+        'asset_authorized' => false,
         'may_request_stickers' => false,
         'org_vehicle_insurance' => false,
-        'signed_motorpool_agreement' => false,
-        'signed_personal_vehicle_agreement' => false,
-        'asset_authorized' => false,
-        'timesheet_confirmed' => false,
         'sandman_affidavit' => false,
+        'signed_motorpool_agreement' => false,
+        'signed_nda' => false,
+        'signed_personal_vehicle_agreement' => false,
+        'timesheet_confirmed' => false,
     ];
 
     protected $appends = [
         'id'        // Not real.
+    ];
+
+    protected $dates = [
+        'pii_finished_at',
+        'pii_started_at',
+        'ticketing_finished_at',
+        'ticketing_last_visited_at',
+        'ticketing_started_at',
     ];
 
     protected $createRules = [
@@ -47,7 +74,19 @@ class PersonEvent extends ApiModel
         'year' => 'required|integer'
     ];
 
-    public static function findForQuery($query)
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    /**
+     * Find records based on given query.
+     *
+     * @param $query
+     * @return mixed
+     */
+
+    public static function findForQuery($query): mixed
     {
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
@@ -56,6 +95,7 @@ class PersonEvent extends ApiModel
         if ($personId) {
             $sql->where('person_id', $personId);
         }
+
         if ($year) {
             $sql->where('year', $year);
         }
@@ -63,13 +103,28 @@ class PersonEvent extends ApiModel
         return $sql->get()->sortBy('person.callsign')->values();
     }
 
-    public static function findForRoute($key)
+    /**
+     * Find record for API route - initialize (but don't create) the record if it doesn't exist.
+     *
+     * @param $key
+     * @return PersonEvent|null
+     */
+
+    public static function findForRoute($key): ?PersonEvent
     {
         list ($personId, $year) = explode('-', $key);
         return self::firstOrNewForPersonYear($personId, $year);
     }
 
-    public static function firstOrNewForPersonYear($personId, $year)
+    /**
+     * Find or initialize a person event record
+     *
+     * @param int $personId
+     * @param int $year
+     * @return PersonEvent
+     */
+
+    public static function firstOrNewForPersonYear(int $personId, int $year): PersonEvent
     {
         $row = self::find(['person_id' => $personId, 'year' => $year]);
         if ($row) {
@@ -82,28 +137,39 @@ class PersonEvent extends ApiModel
         return $row;
     }
 
-    public static function findForPersonYear($personId, $year)
+    /**
+     * Find a record for a given person and year.
+     *
+     * @param $personId
+     * @param $year
+     * @return PersonEvent|null
+     */
+
+    public static function findForPersonYear($personId, $year): ?PersonEvent
     {
         return self::where('person_id', $personId)->where('year', $year)->first();
     }
 
     /**
-     * Can the given person and year be allowed to submit requests for vehicle stickers?
+     * Is the column true or false for the given person in the current year
      *
      * @param int $personId
-     * @param int $year
+     * @param string $column
      * @return bool
      */
-    public static function mayRequestStickersForYear(int $personId, int $year) : bool
+
+    public static function isSet(int $personId, string $column): bool
     {
-        return self::where('person_id', $personId)->where('year', $year)->where('may_request_stickers', true)->exists();
+        return (bool)self::where('person_id', $personId)->where('year', current_year())->value($column);
     }
 
-    public function person() {
-        return $this->belongsTo(Person::class);
-    }
+    /**
+     * Get the pseudo-column id.
+     *
+     * @return string
+     */
 
-    public function getIdAttribute()
+    public function getIdAttribute(): string
     {
         return $this->person_id . '-' . $this->year;
     }
@@ -112,12 +178,12 @@ class PersonEvent extends ApiModel
      * Find all records for a given list of ids and year
      *
      * @param $ids
-     * @param $year
-     * @return PersonEvent[]|Collection
+     * @param int $year
+     * @return Collection
      */
 
-    public static function findAllForIdsYear($ids, $year)
+    public static function findAllForIdsYear($ids, int $year): Collection
     {
-        return self::where('year', $year)->whereIn('person_id', $ids)->get();
+        return self::where('year', $year)->whereIntegerInRaw('person_id', $ids)->get();
     }
 }

@@ -30,7 +30,8 @@ class PersonFilter
         'timestamp',
         'sfuid',
         'logged_in_at',
-        'last_seen_at'
+        'last_seen_at',
+        'is_bouncing'
     ];
 
      const CERTIFICATIONS_FIELDS = [
@@ -72,11 +73,14 @@ class PersonFilter
 
         'longsleeveshirt_size_style',
         'teeshirt_size_style',
+        'tshirt_swag_id',
+        'tshirt_secondary_swag_id',
+        'long_sleeve_swag_ig',
 
         'languages',
         'reviewed_pi_at',
         'pi_reviewed_for_dashboard_at',
-        'has_reviewed_pi', // psuedo field
+        'has_reviewed_pi', // pseudo field
     ];
 
     const HQ_INFO = [

@@ -48,7 +48,7 @@ class HoursCreditsReport
 
         PositionCredit::warmYearCache($year, []);
 
-        $entriesByPerson = Timesheet::whereIn('person_id', $personIds)
+        $entriesByPerson = Timesheet::whereIntegerInRaw('person_id', $personIds)
             ->whereYear('on_duty', $year)
             ->with(['position:id,count_hours'])
             ->get()

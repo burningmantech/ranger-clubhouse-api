@@ -52,7 +52,7 @@ class TrainingMultipleEnrollmentReport
             ->leftJoin('position', 'position.id', '=', 'slot.position_id')
             ->whereYear('slot.begins', $year)
             ->where('position.id', $positionId)
-            ->whereIn('person.id', $multipleIds)
+            ->whereIntegerInRaw('person.id', $multipleIds)
             ->orderBy('person.callsign', 'asc')
             ->orderBy('date', 'ASC')
             ->get()

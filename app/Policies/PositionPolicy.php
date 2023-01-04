@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Policies;
 
 use App\Models\Person;
@@ -78,6 +79,18 @@ class PositionPolicy
     }
 
     /**
+     * Determine if the person can run the people by teams report
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function peopleByTeamsReport(Person $user): bool
+    {
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
+    }
+
+    /**
      * Determine if the person can run the Position Sanity Checker
      *
      * @param Person $user
@@ -86,19 +99,20 @@ class PositionPolicy
 
     public function sanityChecker(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE, Role::GRANT_POSITION]);
+        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
     }
 
     /**
      * Determine if the person can run the Position Sanity Checker
+     *
      * @param Person $user
      * @return bool
      */
 
     public function repair(Person $user): bool
     {
-        // Only admins & Gran Positions are allowed to run it.
-        return $user->hasRole([ Role::ADMIN, Role::GRANT_POSITION]);
+        // Only admins  are allowed to run it.
+        return $user->hasRole(Role::ADMIN);
     }
 
     /**

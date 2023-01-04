@@ -15,21 +15,39 @@ class AlphaShirtsReport
      * @return mixed
      */
 
-    public static function execute()
+    public static function execute(): array
     {
-        return Person::select(
+        $rows = Person::select(
             'id',
             'callsign',
             'status',
             'first_name',
             'last_name',
             'email',
-            'longsleeveshirt_size_style',
-            'teeshirt_size_style'
+            'tshirt_swag_id',
+            'tshirt_secondary_swag_id',
+            'long_sleeve_swag_ig',
         )
             ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
             ->orderBy('callsign')
+            ->with(['tshirt', 'tshirt_secondary', 'long_sleeve'])
             ->get();
 
+        $alphas = [];
+        foreach ($rows as $row) {
+            $alphas[] = [
+                'id' => $row->id,
+                'callsign' => $row->callsign,
+                'status' => $row->status,
+                'first_name' => $row->first_name,
+                'last_name' => $row->last_name,
+                'email' => $row->email,
+                'teeshirt_size_style' => $row->tshirt->title ?? 'Unknown',
+                'tshirt_secondary_size' => $row->tshirt_secondary->title ?? 'Unknown',
+                'longsleeveshirt_size_style' => $row->long_sleeve->title ?? 'Unknown',
+            ];
+        }
+
+        return $alphas;
     }
 }

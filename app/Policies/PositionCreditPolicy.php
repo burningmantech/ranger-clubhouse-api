@@ -21,7 +21,8 @@ class PositionCreditPolicy
     /**
      * Determine whether the user can view the position credit.
      */
-    public function view(Person $user, PositionCredit $position_credit)
+
+    public function view(Person $user): bool
     {
         return false;
     }
@@ -32,7 +33,8 @@ class PositionCreditPolicy
      * @param  \App\Models\Person  $user
      * @return mixed
      */
-    public function store(Person $user)
+
+    public function store(Person $user) : bool
     {
         return false;
     }
@@ -40,8 +42,12 @@ class PositionCreditPolicy
     /**
      * Determine whether the user can update the position.
      *
+     * @param Person $user
+     * @param PositionCredit $position_credit
+     * @return bool
      */
-    public function update(Person $user, PositionCredit $position_credit)
+
+    public function update(Person $user, PositionCredit $position_credit): bool
     {
         return false;
     }
@@ -49,7 +55,8 @@ class PositionCreditPolicy
     /**
      * Determine whether the user can delete the position.
      */
-    public function delete(Person $user, PositionCredit $position_credit)
+
+    public function delete(Person $user, PositionCredit $position_credit): bool
     {
         return false;
     }

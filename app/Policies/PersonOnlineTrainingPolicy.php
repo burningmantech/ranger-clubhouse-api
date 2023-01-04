@@ -79,16 +79,16 @@ class PersonOnlineTrainingPolicy
      * Can the user see the online training configuration?
      */
 
-    public function config(Person $user)
+    public function config(Person $user) : bool
     {
-        return false; // only admins
+        return false; // only tech ninjas
     }
 
     /*
      * Can the user see the courses
      */
 
-    public function courses(Person $user)
+    public function courses(Person $user) : bool
     {
         return false;
     }
@@ -97,7 +97,7 @@ class PersonOnlineTrainingPolicy
      * Can the user see the enrollment list.
      */
 
-    public function enrollment(Person $user)
+    public function enrollment(Person $user) : bool
     {
         return false;
     }
@@ -106,7 +106,7 @@ class PersonOnlineTrainingPolicy
      * Can the user update the course types
      */
 
-    public function setCourseType(Person $user)
+    public function setCourseType(Person $user) : bool
     {
         return false;
     }
@@ -115,8 +115,13 @@ class PersonOnlineTrainingPolicy
      * Can the user setup an online training account
      */
 
-    public function setupPerson(Person $user, Person $person)
+    public function setupPerson(Person $user, Person $person): bool
     {
         return $user->id == $person->id;
+    }
+
+    public function markCompleted(Person $user): bool
+    {
+        return false;
     }
 }

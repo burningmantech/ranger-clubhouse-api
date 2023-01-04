@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ApihouseResult;
-
-use App\Models\Bmid;
-use App\Models\PersonOnlineTraining;
-
 class PersonEventInfo extends ApihouseResult
 {
     public $person_id;
@@ -15,6 +10,7 @@ class PersonEventInfo extends ApihouseResult
     public $trainings;
     public $radio_eligible;
     public $radio_max;
+    public $radio_banked;
     public $meals;
     public $showers;
     public $radio_info_available;
@@ -57,18 +53,26 @@ class PersonEventInfo extends ApihouseResult
             $info->trainings[] = Training::retrieveEducation($personId, $position, $year);
         }
 
-        usort($info->trainings, fn($a, $b) => strcmp($a->position_title, $b->position_title));
+        usort($info->trainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
         $info->radio_info_available = setting('RadioInfoAvailable');
 
         if ($info->radio_info_available) {
-            $radio = AccessDocument::findAvailableTypeForPerson($personId, AccessDocument::EVENT_RADIO);
-            if ($radio) {
+            $radios = Provision::where('type', Provision::EVENT_RADIO)
+                        ->where('person_id', $personId)
+                        ->whereIn('status', [ Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
+                        ->get();
+            if ($radios->isNotEmpty()) {
                 $info->radio_eligible = true;
-                $info->radio_max = $radio->item_count;
-                $info->radio_status = $radio->status;
+                $info->radio_max = $radios->max('item_count');
+                $info->radio_banked = false;
             } else {
                 $info->radio_eligible = false;
+                $info->radio_max = 0;
+                $info->radio_banked = Provision::where('type', Provision::EVENT_RADIO)
+                    ->where('person_id', $personId)
+                    ->where('status', Provision::BANKED)
+                    ->exists();
             }
         }
 
@@ -76,7 +80,7 @@ class PersonEventInfo extends ApihouseResult
 
         if ($bmid) {
             $info->meals = $bmid->effectiveMeals();
-            $info->showers = $bmid->showers || $bmid->want_showers;
+            $info->showers = $bmid->showers || $bmid->earned_showers || $bmid->allocated_showers;
          } else {
             $info->meals = '';
             $info->showers = false;

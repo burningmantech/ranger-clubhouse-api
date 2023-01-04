@@ -57,7 +57,7 @@ class TrainingController extends ApiController
     {
         list($training, $year) = $this->getTrainingAndYear($id);
 
-        return response()->json(['slots' => TrainingSlotCapacityReport::execute($training, $year)]);
+        return response()->json(TrainingSlotCapacityReport::execute($training, $year));
     }
 
     /**

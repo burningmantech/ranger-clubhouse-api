@@ -4,9 +4,12 @@
  */
 
 use App\Models\ErrorLog;
+use App\Models\Person;
 use App\Models\Setting;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -36,8 +39,10 @@ if (!function_exists('setting')) {
  */
 
 if (!function_exists('mail_to')) {
-    function mail_to(string|array $email, Mailable $message, bool $queueMail = false) : bool
+    function mail_to(string|array $email, Mailable $message, bool $queueMail = false, $personId = null): bool
     {
+        prevent_if_ghd_server('Sending email');
+
         if (is_string($email) && str_contains($email, ',')) {
             $email = explode(',', $email);
         }
@@ -59,6 +64,13 @@ if (!function_exists('mail_to')) {
 
             return false;
         }
+    }
+}
+
+if (!function_exists('mail_to_person')) {
+    function mail_to_person(Person $person, Mailable $message, bool $queueMail = false)
+    {
+        return mail_to($person->email, $message, $queueMail, $person->id);
     }
 }
 
@@ -106,9 +118,52 @@ if (!function_exists('event_year')) {
     }
 }
 
+if (!function_exists('maintenance_year')) {
+    /**
+     * The maintenance year is from the end of the event til end of July of the following year.
+     *
+     * @return int
+     */
+    function maintenance_year(): int
+    {
+        $now = now();
+        return $now->month < 8 ? $now->year - 1 : $now->year;
+    }
+}
+
 if (!function_exists('request_ip')) {
     function request_ip(): string
     {
         return implode(',', request()->getClientIps());
     }
 }
+
+if (!function_exists('is_ghd_server')) {
+    /**
+     * Is this a Ground Hog Day server?
+     * @return bool
+     */
+
+    function is_ghd_server(): bool
+    {
+        return !empty(config('clubhouse.GroundhogDayTime'));
+    }
+}
+
+if (!function_exists('prevent_if_ghd_server')) {
+    /**
+     * Thrown an exception if running on the GHD server (training server).
+     * @param $action
+     * @throws AuthorizationException
+     */
+
+    function prevent_if_ghd_server($action)
+    {
+        if (!is_ghd_server()) {
+            return;
+        }
+
+        throw new AuthorizationException("$action is prevented on the training server.");
+    }
+}
+

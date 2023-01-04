@@ -10,11 +10,11 @@ class Role extends ApiModel
     const ADMIN            = 1;   // Super user! Change anything
     const VIEW_PII         = 2;   // See email, address, phone
     const VIEW_EMAIL       = 3;   // See email
-    const GRANT_POSITION   = 4;   // Grand/Revoke Positions
+    const GRANT_POSITION   = 4;   // Grand/Revoke Positions (superseded by Clubhouse Teams)
     const EDIT_ACCESS_DOCS = 5;   // Edit Access Documents
     const EDIT_BMIDS       = 6;   // Edit BMIDs
     const EDIT_SLOTS       = 7;   // Edit Slots
-    const LOGIN            = 11;  // Person allowed to login
+    const LOGIN            = 11;  // Person allowed to login (superseded by the suspend status)
     const MANAGE           = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
     const INTAKE           = 13;  // Intake Management
     const MENTOR           = 101; // Mentor - access mentor section
@@ -26,6 +26,7 @@ class Role extends ApiModel
     const SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
     const MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
     const TRAINER_SEASONAL = 109; // Treated as TRAINER if setting TrainingSeasonalRoleEnabled is true
+    const CERTIFICATION_MGMT = 110; // Person can add certifications on a person's behalf, and view detailed info (card number, notes, etc.)
 
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 

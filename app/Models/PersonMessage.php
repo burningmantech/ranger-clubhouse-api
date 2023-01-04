@@ -2,12 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\PersonPhoto;
-
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PersonMessage extends ApiModel
@@ -156,7 +150,7 @@ class PersonMessage extends ApiModel
             return '';
         }
 
-       return PersonPhoto::retrieveImageUrlForPerson($id);
+       return PersonPhoto::retrieveProfileUrlForPerson($id);
     }
 
     /**

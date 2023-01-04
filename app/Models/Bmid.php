@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -56,11 +58,12 @@ class Bmid extends ApiModel
 
     const ALLOWED_PERSON_STATUSES = [
         Person::ACTIVE,
+        Person::ALPHA,
         Person::INACTIVE,
         Person::INACTIVE_EXTENSION,
+        Person::NON_RANGER,
+        Person::PROSPECTIVE,
         Person::RETIRED,
-        Person::ALPHA,
-        Person::PROSPECTIVE
     ];
 
     const BADGE_TITLES = [
@@ -75,7 +78,6 @@ class Bmid extends ApiModel
         Position::DOUBLE_OH_7 => ['title3', '007']
     ];
 
-    const PERSON_WITH = 'person:id,callsign,status,first_name,last_name,email,bpguid';
 
     protected $wap;
 
@@ -85,8 +87,13 @@ class Bmid extends ApiModel
     protected $has_signups = false;
     protected $org_vehicle_insurance = false;
 
-    protected $want_meals = '';
-    protected $want_showers = false;
+    protected $allocated_meals = '';
+    protected $earned_meals = '';
+
+    protected bool $allocated_showers = false;
+    protected bool $earned_showers = false;
+
+    protected bool $has_approved_photo = false;
 
     protected $fillable = [
         'person_id',
@@ -123,16 +130,20 @@ class Bmid extends ApiModel
         'modified_datetime' => 'datetime',
         'access_date' => 'datetime:Y-m-d',
         'access_any_time' => 'bool',
-        'want_showers' => 'bool',
+        'earned_showers' => 'bool',
+        'allocated_showers' => 'bool',
     ];
 
     protected $appends = [
         'access_any_time',
         'access_date',
+        'allocated_meals',
+        'allocated_showers',
+        'earned_meals',
+        'earned_showers',
+        'has_approved_photo',
         'has_signups',
         'org_vehicle_insurance',
-        'want_meals',
-        'want_showers',
         'wap_id',
         'wap_status',
         'wap_type',
@@ -157,7 +168,7 @@ class Bmid extends ApiModel
         });
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -194,7 +205,7 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public static function findForPersonYear($personId, $year)
+    public static function findForPersonYear($personId, $year): ?Bmid
     {
         return self::where('person_id', $personId)->where('year', $year)->first();
     }
@@ -212,7 +223,7 @@ class Bmid extends ApiModel
         }
 
         // Bulk look up
-        $bmids = Bmid::where('year', $year)->whereIn('person_id', $personIds)->get();
+        $bmids = Bmid::where('year', $year)->whereIntegerInRaw('person_id', $personIds)->get();
         $bmidsByPerson = $bmids->keyBy('person_id');
 
         // Figure out which people do not have BMIDs yet.
@@ -239,17 +250,26 @@ class Bmid extends ApiModel
         return $bmids;
     }
 
-    public static function bulkLoadRelationships($bmids, $personIds)
+    /**
+     * Populate BMIDs with access date, desired provisions, approved photo check, and job provisions
+     *
+     * @param $bmids
+     * @param $personIds
+     * @return void
+     */
+
+    public static function bulkLoadRelationships($bmids, $personIds): void
     {
         $year = current_year();
 
         // Populate all the BMIDs with people..
-        $bmids->load([self::PERSON_WITH]);
+        $bmids->load(['person:id,callsign,status,first_name,last_name,email,bpguid,person_photo_id', 'person.person_photo:id,status']);
 
         // Load up the org insurance flags
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
         foreach ($bmids as $bmid) {
             $event = $personEvents->get($bmid->person_id);
+            $bmid->has_approved_photo = $bmid->person?->person_photo?->isApproved() ?? false;
             if ($event) {
                 $bmid->org_vehicle_insurance = $event->org_vehicle_insurance;
             }
@@ -265,7 +285,7 @@ class Bmid extends ApiModel
         // Figure out who has signed up for the year.
         $ids = DB::table('person')
             ->select('id')
-            ->whereIn('id', $personIds)
+            ->whereIntegerInRaw('id', $personIds)
             ->whereRaw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE person.id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
             ->get()
             ->pluck('id');
@@ -277,9 +297,9 @@ class Bmid extends ApiModel
         // The provisions are special - by default, the items are opt-out so treat an item qualified as
         // the same as claimed.
 
-        $itemsByPersonId = AccessDocument::whereIn('person_id', $bmids->pluck('person_id'))
-            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-            ->whereIn('type', [AccessDocument::ALL_EAT_PASS, AccessDocument::EVENT_EAT_PASS, AccessDocument::WET_SPOT])
+        $itemsByPersonId = Provision::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
+            ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
+            ->whereIn('type', [...Provision::MEAL_TYPES, Provision::WET_SPOT])
             ->get()
             ->groupBy('person_id');
 
@@ -289,23 +309,46 @@ class Bmid extends ApiModel
                 continue;
             }
 
+            $allocatedMeals = [];
+            $earnedMeals = [];
+
             foreach ($items as $item) {
-                switch ($item->type) {
-                    case AccessDocument::ALL_EAT_PASS:
-                        $bmid->want_meals = self::MEALS_ALL;
-                        break;
-                    case AccessDocument::EVENT_EAT_PASS:
-                        $bmid->want_meals = self::MEALS_EVENT;
-                        break;
-                    case AccessDocument::WET_SPOT:
-                        $bmid->want_showers = true;
-                        break;
+                $isMeal = in_array($item->type, Provision::MEAL_TYPES);
+                if ($isMeal) {
+                    if ($item->is_allocated) {
+                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $allocatedMeals);
+                    } else {
+                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $earnedMeals);
+                    }
                 }
+                if ($item->type == Provision::WET_SPOT) {
+                    if ($item->is_allocated) {
+                        $bmid->allocated_showers = true;
+                    } else {
+                        $bmid->earned_showers = true;
+                    }
+                }
+            }
+
+            if (!empty($allocatedMeals)) {
+                $bmid->allocated_meals = self::sortMeals($allocatedMeals);
+            }
+
+            if (!empty($earnedMeals)) {
+                $bmid->earned_meals = self::sortMeals($earnedMeals);
             }
         }
     }
 
-    public static function firstOrNewForPersonYear($personId, $year)
+    /**
+     * For a given person and year, find an existing record or create a new one.
+     *
+     * @param $personId
+     * @param $year
+     * @return Bmid
+     */
+
+    public static function firstOrNewForPersonYear($personId, $year): Bmid
     {
         $row = self::firstOrNew(['person_id' => $personId, 'year' => $year]);
         $row->loadRelationships();
@@ -313,7 +356,14 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public static function findForQuery($query)
+    /**
+     * Find access documents matching the criteria.
+     *
+     * @param $query
+     * @return Collection
+     */
+
+    public static function findForQuery($query): Collection
     {
         $sql = self::query();
 
@@ -329,8 +379,13 @@ class Bmid extends ApiModel
         return $bmids;
     }
 
+    /**
+     * Update any access documents with new access date
+     *
+     * @return void
+     */
 
-    public function updateWap()
+    public function updateWap(): void
     {
         AccessDocument::updateWAPsForPerson($this->person_id, $this->access_date, $this->access_any_time, 'set via BMID update');
 
@@ -412,19 +467,34 @@ class Bmid extends ApiModel
         return $this->wap ? $this->wap->type : null;
     }
 
-    public function getHasSignupsAttribute()
+    public function getHasSignupsAttribute(): bool
     {
         return $this->has_signups;
     }
 
-    public function getWantMealsAttribute()
+    public function getEarnedMealsAttribute()
     {
-        return $this->want_meals;
+        return $this->earned_meals;
     }
 
-    public function getWantShowersAttribute()
+    public function getAllocatedMealsAttribute()
     {
-        return $this->want_showers;
+        return $this->allocated_meals;
+    }
+
+    public function getEarnedShowersAttribute(): bool
+    {
+        return $this->earned_showers;
+    }
+
+    public function getAllocatedShowersAttribute(): bool
+    {
+        return $this->allocated_showers;
+    }
+
+    public function getHasApprovedPhotoAttribute(): bool
+    {
+        return $this->has_approved_photo;
     }
 
     /**
@@ -432,6 +502,7 @@ class Bmid extends ApiModel
      *
      * @return bool
      */
+
     public function isPrintable(): bool
     {
         if (!$this->person || !in_array($this->person->status, self::ALLOWED_PERSON_STATUSES)) {
@@ -461,32 +532,73 @@ class Bmid extends ApiModel
     /**
      * Builds a "meal matrix" indicating which weeks the person can
      * have meals. This is a union between what has been set by the
-     * BMID administrator, and what the person claimed.
+     * BMID administrator, the allocated provisions, and claimed earned provisions.
      *
      * @return array
      */
 
     public function buildMealsMatrix(): array
     {
-        if ($this->meals == self::MEALS_ALL || $this->want_meals == self::MEALS_ALL) {
+        if ($this->meals == self::MEALS_ALL
+            || $this->earned_meals == self::MEALS_ALL
+            || $this->allocated_meals == self::MEALS_ALL) {
             return [self::MEALS_PRE => true, self::MEALS_EVENT => true, self::MEALS_POST => true];
         }
 
         $matrix = [];
-        foreach (explode('+', $this->meals) as $week) {
-            $matrix[$week] = true;
-        }
-
-        if (!empty($this->want_meals)) {
-            $matrix[$this->want_meals] = true;
-        }
+        self::populateMealMatrix($this->meals, $matrix);
+        self::populateMealMatrix($this->earned_meals, $matrix);
+        self::populateMealMatrix($this->allocated_meals, $matrix);
 
         return $matrix;
     }
 
+    public static function populateMealMatrix($meals, &$matrix)
+    {
+        if (empty($meals)) {
+            return;
+        }
+
+        foreach (explode('+', $meals) as $week) {
+            $matrix[$week] = true;
+        }
+    }
+
     public function effectiveMeals(): string
     {
-        $meals = $this->buildMealsMatrix();
-        return count($meals) == 3 ? Bmid::MEALS_ALL : implode('+', array_keys($meals));
+        return self::sortMeals($this->buildMealsMatrix());
+    }
+
+    public function effectiveShowers(): bool
+    {
+        return $this->showers || $this->allocated_showers || $this->earned_showers;
+    }
+
+    /**
+     * Sort the meals into the expected order: pre-event, event, and post-event weeks.
+     *
+     * @param $meals
+     * @return string
+     */
+
+    public static function sortMeals($meals): string
+    {
+        if (count($meals) == 3) {
+            return self::MEALS_ALL;
+        }
+
+        $sorted = [];
+        if ($meals[self::MEALS_PRE] ?? null) {
+            $sorted[] = self::MEALS_PRE;
+        }
+        if ($meals[self::MEALS_EVENT] ?? null) {
+            $sorted[] = self::MEALS_EVENT;
+        }
+
+        if ($meals[self::MEALS_POST] ?? null) {
+            $sorted[] = self::MEALS_POST;
+        }
+
+        return implode('+', $sorted);
     }
 }

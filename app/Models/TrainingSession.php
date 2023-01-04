@@ -2,28 +2,28 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\PersonPosition;
-use App\Models\Position;
-use App\Models\Slot;
-use App\Models\TraineeStatus;
-
 /*
  * Extended Model
  *
  * Holds the training session information (aka a slot with extras)
  */
 
+use Illuminate\Support\Collection;
+
 class TrainingSession extends Slot
 {
     // don't calculate slot credits
     protected $hidden = ['credits'];
 
-    /*
+    /**
      * Find all the training sessions (slots) for a training (position) and year
+     *
+     * @param int $trainingId
+     * @param int $year
+     * @return Collection
      */
 
-    public static function findAllForTrainingYear($trainingId, $year)
+    public static function findAllForTrainingYear(int $trainingId, int $year): Collection
     {
         $positionIds = [$trainingId];
 
@@ -38,7 +38,7 @@ class TrainingSession extends Slot
             ->get();
     }
 
-    /*
+    /**
      * Find the students for a training session
      *
      * The student information has the structure:
@@ -59,20 +59,13 @@ class TrainingSession extends Slot
      * rank: trainer ranking - NULL, 1 to 4
      * passed: person has passed or failed training
      *
+     * @return array
      */
 
-    public function retrieveStudents()
+    public function retrieveStudents(): array
     {
-        // Find everyone signed up
-        $people = PersonSlot::with([
-            'person',
-            'person.person_position:person_id,position_id'
-        ])->where('slot_id', $this->id)->get();
-
+        $people = $this->retrieveBasicStudentRoster();
         $personIds = $people->pluck('person_id')->toArray();
-        $people = $people->sortBy(function ($p) {
-            return $p->person->callsign;
-        }, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
         $isDirtTraining = ($this->position_id == Position::TRAINING);
 
@@ -95,6 +88,8 @@ class TrainingSession extends Slot
         // Yarrr! Here be personnel issues matey..
         $personnelIssues = PersonIntake::retrievePersonnelIssueForIdsYear($personIds, $this->ends->year);
 
+        $positionsToReport = Position::where('on_trainer_report', true)->get()->keyBy('id');
+
         $students = [];
 
         foreach ($people as $row) {
@@ -108,6 +103,14 @@ class TrainingSession extends Slot
                 $status = 'unknown';
             }
 
+            $position_short_titles = $person->person_position
+                ->filter(fn($pp) => isset($positionsToReport[$pp->position_id]))
+                ->map(fn($pp) => !empty($positionsToReport[$pp->position_id]->short_title)
+                    ? $positionsToReport[$pp->position_id]->short_title
+                    : $positionsToReport[$pp->position_id]->title)
+                ->values()
+                ->toArray();
+
             $info = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
@@ -115,10 +118,14 @@ class TrainingSession extends Slot
                 'last_name' => $person->last_name,
                 'status' => $status,
                 'current_status' => $person->status,
-                'photo_url' => PersonPhoto::retrieveImageUrlForPerson($person->id),
+                'photo_url' => PersonPhoto::retrieveProfileUrlForPerson($person->id),
                 'email' => $person->email,
                 'years' => $peopleYearsRangered[$person->id] ?? 0,
+                // Remove this once the frontend is using team_short_titles.
                 'position_ids' => $person->person_position->pluck('position_id'),
+                // Currently we're just using position names as stand-ins for team names,
+                // but this will eventually be real team short titles.
+                'team_short_titles' => $position_short_titles,
                 'notes' => $traineeNotesByIds[$person->id] ?? [],
                 'fkas' => $person->formerlyKnownAsArray(true)
             ];
@@ -163,7 +170,24 @@ class TrainingSession extends Slot
         return $students;
     }
 
-    /*
+    /**
+     * Retrieve the people signed up for this training.
+     *
+     * @return Collection
+     */
+
+    public function retrieveBasicStudentRoster(): Collection
+    {
+        // Find everyone signed up
+        $people = PersonSlot::with([
+            'person',
+            'person.person_position'
+        ])->where('slot_id', $this->id)->get();
+
+        return $people->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    /**
      * Retrieve all the trainers for this session
      *
      * The trainer's information has  structure:
@@ -172,9 +196,10 @@ class TrainingSession extends Slot
      * position_title: the position title for the slot
      * trainers: found trainer array (id, callsign, first_name, last_name, email)
      *
+     * @return array
      */
 
-    public function retrieveTrainers()
+    public function retrieveTrainers(): array
     {
         $trainerPositions = Position::TRAINERS[$this->position_id] ?? null;
         if (!$trainerPositions) {
@@ -201,9 +226,7 @@ class TrainingSession extends Slot
                 ->where('slot_id', $trainerSlot->id)
                 ->get();
 
-            $rows = $rows->sortBy(function ($p) {
-                return $p->person->callsign;
-            }, SORT_NATURAL | SORT_FLAG_CASE)->values();
+            $rows = $rows->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
 
             if (!$rows->isEmpty()) {
                 $trainerStatuses = TrainerStatus::findBySlotPersonIds($this->id, $rows->pluck('person_id'))->keyBy('person_id');
@@ -231,8 +254,8 @@ class TrainingSession extends Slot
                 'position_title' => $trainerPosition->title,
                 'trainers' => $instructors,
                 'is_primary_trainer' => ($this->isArt() || (
-                    $trainerPositionId == Position::TRAINER_UBER ||
-                    $trainerPositionId == Position::TRAINER
+                        $trainerPositionId == Position::TRAINER_UBER ||
+                        $trainerPositionId == Position::TRAINER
                     ))
             ];
         }
@@ -240,7 +263,89 @@ class TrainingSession extends Slot
         return $trainers;
     }
 
-    public function getTrainersAttribute()
+    /**
+     * Retrieve the legend for team names to be shown with the report.
+     *
+     * This information has the following structure:
+     *
+     * title: the full position name, e.g. "Green Dot Sanctuary"
+     * short_title: an optional short position name, e.g. "GDSanc"
+     *
+     * @return array
+     */
+
+    public function retrieveTeamNameLegend(): array {
+        return Position::where('on_trainer_report', true)
+            ->select('title', 'short_title')
+            ->orderBy('title')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Report on which students can graduate.
+     *
+     * @return array|null
+     */
+
+    public function graduationCandidates(): ?array
+    {
+        $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->position_id] ?? null;
+        if (!$graduate) {
+            return null;
+        }
+
+        $fullyGraduatedPosition = $graduate['veteran'] ?? null;
+        $positions = $graduate['positions'];
+
+        $students = $this->retrieveBasicStudentRoster();
+
+        $people = [];
+        $traineeStatusByIds = TraineeStatus::where('slot_id', $this->id)->get()->keyBy('person_id');
+
+        foreach ($students as $student) {
+            $person = $student->person;
+            if ($person->status == Person::AUDITOR) {
+                $status = 'auditor';
+            } else {
+                $positionsGranted = $person->person_position;
+                if ($fullyGraduatedPosition && $positionsGranted->firstWhere('position_id', $fullyGraduatedPosition)) {
+                    $status = 'fully-graduated';
+                } else if ($positionsGranted->contains(fn ($p) => in_array($p->position_id, $positions))) {
+                    $status = 'graduated';
+                } else if ($traineeStatusByIds->has($person->id)) {
+                    $status = 'candidate';
+                } else {
+                    $status = 'not-passed';
+                }
+            }
+
+            $people[] = [
+                'id' => $person->id,
+                'callsign' => $person->callsign,
+                'status' => $person->status,
+                'eligibility' => $status
+            ];
+        }
+
+
+        $result = [
+            'status' => 'success',
+            'people' => $people,
+            'positions' => array_map(fn($p) => [ 'id' => $p, 'title' => Position::retrieveTitle($p)], $positions)
+        ];
+
+        if ($fullyGraduatedPosition) {
+            $result['fully_graduated_position'] = [
+                'id' => $fullyGraduatedPosition,
+                'title' => Position::retrieveTitle($fullyGraduatedPosition)
+            ];
+        }
+
+        return $result;
+    }
+
+    public function getTrainersAttribute(): array
     {
         return $this->retrieveTrainers();
     }
