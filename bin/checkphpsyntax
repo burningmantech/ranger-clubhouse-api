@@ -8,9 +8,9 @@
 #   checkphpsyntax  # check ./app ./tests ./database by default
 #   checkphpsyntax app/Console/ src/Bar
 
-set -x
 set -e
 set -u
+set -x
 
 php_cmd="$(type -p "${PHP:-php}")";
 
