@@ -3,13 +3,14 @@
 # -----------------------------------------------------------------------------
 FROM burningman/php-nginx:8.2.0-alpine3.16 as php
 
+# Install OS packages
 RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
     libxml2 libpng libjpeg-turbo libwebp mysql-client icu-dev libzip-dev zip \
     && docker-php-ext-configure gd \
       --with-webp=/usr/include/    \
       --with-jpeg=/usr/include/    \
     && docker-php-ext-configure exif \
-    &&  docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install -j$(nproc) gd \
     && docker-php-ext-install -j$(nproc) exif \
     && docker-php-ext-install -j$(nproc) pdo \
     && docker-php-ext-install -j$(nproc) pdo_mysql \
@@ -18,13 +19,17 @@ RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-d
     && docker-php-ext-install -j$(nproc) opcache \
     && docker-php-ext-configure intl \
     && docker-php-ext-install -j$(nproc) intl \
-    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
-    && install -d -o www-data -g www-data -m 775  \
+    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev
+
+# Create runtime directories
+RUN install -d -o www-data -g www-data -m 775  \
     ./storage/framework/cache                  \
     ./storage/framework/sessions               \
     ./storage/framework/views                  \
-    ./storage/logs \
-    && (curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer)
+    ./storage/logs
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 # -----------------------------------------------------------------------------
 # This stage contains source files.
