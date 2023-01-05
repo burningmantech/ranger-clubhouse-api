@@ -103,8 +103,8 @@ cleanup_db_container() {
 test_unit() {
     echo "Running unit tests...";
 
+    # Build a container with the application plus phpunit
     copy="$(grep "COPY --from=composer" "${wd}/Dockerfile" | head -1)";
-
     docker build --tag="${image_repo}_test" - << EOF
 from ${api_image_name} as unit
 ${copy}
