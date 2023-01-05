@@ -3,33 +3,60 @@
 # -----------------------------------------------------------------------------
 FROM burningman/php-nginx:8.2.0-alpine3.16 as php
 
-# Install OS packages
-RUN apk add --no-cache tzdata libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
-    libxml2 libpng libjpeg-turbo libwebp mysql-client icu-dev libzip-dev zip \
-    && docker-php-ext-configure gd \
-      --with-webp=/usr/include/    \
-      --with-jpeg=/usr/include/    \
-    && docker-php-ext-configure exif \
-    && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install -j$(nproc) exif \
-    && docker-php-ext-install -j$(nproc) pdo \
-    && docker-php-ext-install -j$(nproc) pdo_mysql \
-    && docker-php-ext-install -j$(nproc) zip \
-    && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) opcache \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install -j$(nproc) intl \
-    && apk del libxml2-dev libpng-dev libjpeg-turbo-dev libwebp-dev
+# Install OS packages required at runtime
+RUN apk add --no-cache  \
+  libjpeg-turbo         \
+  libpng                \
+  libwebp               \
+  libxml2               \
+  mysql-client          \
+  tzdata                \
+  zip                   \
+  ;
+
+# Build extensions
+RUN                                                     \
+  apk add --no-cache                                    \
+    icu-dev                                             \
+    libjpeg-turbo-dev                                   \
+    libpng-dev                                          \
+    libwebp-dev                                         \
+    libxml2-dev                                         \
+    libzip-dev                                          \
+  && docker-php-ext-configure gd                        \
+    --with-webp=/usr/include/                           \
+    --with-jpeg=/usr/include/                           \
+  && docker-php-ext-configure opcache --enable-opcache  \
+  && docker-php-ext-configure intl                      \
+  && docker-php-ext-configure exif                      \
+  && docker-php-ext-install -j$(nproc)                  \
+    exif                                                \
+    gd                                                  \
+    intl                                                \
+    opcache                                             \
+    pdo                                                 \
+    pdo_mysql                                           \
+    zip                                                 \
+  && apk del                                            \
+    icu-dev                                             \
+    libjpeg-turbo-dev                                   \
+    libpng-dev                                          \
+    libwebp-dev                                         \
+    libxml2-dev                                         \
+    libzip-dev                                          \
+    ;
 
 # Create runtime directories
 RUN install -d -o www-data -g www-data -m 775  \
-    ./storage/framework/cache                  \
-    ./storage/framework/sessions               \
-    ./storage/framework/views                  \
-    ./storage/logs
+  ./storage/framework/cache                    \
+  ./storage/framework/sessions                 \
+  ./storage/framework/views                    \
+  ./storage/logs                               \
+  ;
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+
 
 # -----------------------------------------------------------------------------
 # This stage contains source files.
@@ -55,6 +82,12 @@ COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./ser
 # -----------------------------------------------------------------------------
 FROM php as build
 
+# Install OS packages required by Composer
+RUN apk add --no-cache  \
+    icu-dev             \
+    libzip-dev          \
+    ;
+
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
 
@@ -72,7 +105,7 @@ USER www-data
 # Optimize for production and don't install development dependencies
 ARG COMPOSER_AUTH
 ENV COMPOSER_AUTH $COMPOSER_AUTH
-RUN  /usr/bin/composer install --no-plugins --no-scripts --optimize-autoloader --no-dev;
+RUN  /usr/bin/composer install --no-plugins --no-scripts --optimize-autoloader --no-dev
 
 # -----------------------------------------------------------------------------
 # This stage runs composer to build additional dependencies for development.
@@ -133,6 +166,4 @@ RUN chmod 555 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
 WORKDIR /var/www/application
 
 # Set ownership of storage directory to www-data user and group
-RUN chown -R www-data:www-data storage && rm -rf /var/cache/apk/*;
-
-
+RUN chown -R www-data:www-data storage
