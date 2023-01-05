@@ -1,6 +1,0 @@
-#!/bin/sh
-#
-# Run PHPInsights (see https://phpinsights.com/)
-#
-
-docker run -it --rm --volume "$(pwd):/app" nunomaduro/phpinsights "$@";
