@@ -76,7 +76,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Download Docker image artifact
+      - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
         with:
           name: docker
@@ -102,7 +102,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Download Docker image artifact
+      - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
         with:
           name: docker
@@ -128,7 +128,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Download Docker image artifact
+      - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
         with:
           name: docker
