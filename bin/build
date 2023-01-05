@@ -18,17 +18,19 @@ fi
 #
 # Build and tag each stage
 #
-docker build \
-    --target=php --tag="${php_image_name}" \
-    "${wd}";
+if [ "${CI:-false}" == "false" ]; then
+    docker build \
+        --target=php --tag="${php_image_name}" \
+        "${wd}";
 
-docker build \
-    --target=source --tag="${source_image_name}" \
-    "${wd}";
+    docker build \
+        --target=source --tag="${source_image_name}" \
+        "${wd}";
 
-docker build \
-    --target=build --tag="${build_image_name}" \
-    "${wd}";
+    docker build \
+        --target=build --tag="${build_image_name}" \
+        "${wd}";
+fi;
 
 docker build \
     --target=application --tag="${api_image_name}" \
