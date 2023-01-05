@@ -5,10 +5,12 @@ FROM burningman/php-nginx:8.2.0-alpine3.16 as php
 
 # Install OS packages required at runtime
 RUN apk add --no-cache  \
+  icu                   \
   libjpeg-turbo         \
   libpng                \
   libwebp               \
   libxml2               \
+  libzip                \
   mysql-client          \
   tzdata                \
   zip                   \
