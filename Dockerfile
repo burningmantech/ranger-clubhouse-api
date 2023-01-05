@@ -56,9 +56,6 @@ RUN install -d -o www-data -g www-data -m 775  \
   ./storage/logs                               \
   ;
 
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
-
 
 # -----------------------------------------------------------------------------
 # This stage contains source files.
@@ -89,6 +86,9 @@ RUN apk add --no-cache  \
     icu-dev             \
     libzip-dev          \
     ;
+
+# Install Composer
+COPY --from=composer:2.5 /usr/bin/composer /usr/bin/composer
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application

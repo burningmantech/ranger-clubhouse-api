@@ -103,6 +103,13 @@ cleanup_db_container() {
 test_unit() {
     echo "Running unit tests...";
 
+    # Build a container with the application plus phpunit
+    copy="$(grep "COPY --from=composer" "${wd}/Dockerfile" | head -1)";
+    docker build --tag="${image_repo}_test" - << EOF
+from ${api_image_name} as unit
+${copy}
+EOF
+
     docker run                                            \
         --rm                                              \
         --env="RANGER_DB_HOST_NAME=${db_container_name}"  \
@@ -110,7 +117,7 @@ test_unit() {
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
-        "${api_image_name}"                               \
+        "${image_repo}_test"                              \
         sh -c "/usr/bin/composer require --dev phpunit/phpunit && ./vendor/bin/phpunit \"$@\"";
 }
 
