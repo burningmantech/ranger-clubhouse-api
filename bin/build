@@ -6,15 +6,6 @@
 
 . "$(dirname "$0")/.common.sh";
 
-stages="";
-
-if [ "${1-}" != "" ]; then
-    auth="{\"github-oauth\":{\"github.com\":\"${1}\"}}"
-else
-    auth=""
-fi
-
-
 #
 # Build and tag each stage
 #
@@ -34,5 +25,4 @@ fi;
 
 docker build \
     --target=application --tag="${api_image_name}" \
-    --build-arg COMPOSER_AUTH="${auth}" \
     "${wd}";
