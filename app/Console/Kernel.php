@@ -46,6 +46,9 @@ class Kernel extends ConsoleKernel
             $schedule->command('clubhouse:ranger-waps-report')
                 ->cron('30 2 * 7-8 1')
                 ->onOneServer();
+
+            // Cleanup the mail log
+            $schedule->command('clubhouse:cleanup-maillog')->dailyAt('03:30')->onOneServer();
         }
 
         if (is_ghd_server()) {
