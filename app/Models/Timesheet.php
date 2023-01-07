@@ -669,15 +669,6 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Set the on duty time to now
-     */
-
-    public function setOnDutyToNow(): void
-    {
-        $this->on_duty = now();
-    }
-
-    /**
      * Set the off duty time to now
      */
 
@@ -702,15 +693,6 @@ class Timesheet extends ApiModel
 
         $this->refresh();
         $this->loadRelationships();
-    }
-
-    /**
-     * Set verified at time to now
-     */
-
-    public function setVerifiedAtToNow(): void
-    {
-        $this->verified_at = now();
     }
 
     /**
