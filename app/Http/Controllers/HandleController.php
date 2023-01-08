@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\ReservedCallsigns;
+use App\Models\HandleReservation;
 use App\Models\Person;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,10 @@ class HandleController extends ApiController
                 "$ranger->status ranger",
                 ['id' => $ranger->id, 'status' => $ranger->status, 'vintage' => $ranger->vintage]
             );
+        }
+        $handleReservations = HandleReservation::findAll(true);
+        foreach ($handleReservations as $reservation) {
+            $result[] = $this->jsonHandle($reservation->handle, $reservation->reservation_type);
         }
         foreach (ReservedCallsigns::PHONETIC as $handle) {
             $result[] = $this->jsonHandle($handle, 'phonetic-alphabet');

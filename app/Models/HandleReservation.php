@@ -44,8 +44,16 @@ class HandleReservation extends ApiModel
         'reason' => 'sometimes|string|max:255',
     ];
 
-    public static function findAll(): Collection
+    public static function findAll(bool $activeOnly = false): Collection
     {
-        return HandleReservation::all()->sortBy('handle', SORT_NATURAL)->values();
+        $rows = self::query();
+        if ($activeOnly) {
+            $today = now();
+            $rows->where(function ($q) use ($today) {
+                    $q->where('end_date', '>=', $today);
+                    $q->orWhereNull('end_date');
+                });
+        }
+        return $rows->orderBy('handle')->get();
     }
 }
