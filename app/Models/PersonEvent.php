@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property bool signed_personal_vehicle_agreement
  * @property bool timesheet_confirmed
  * @property Carbon timesheet_confirmed_at
+ * @property ?string lms_course_id
  */
 class PersonEvent extends ApiModel
 {
@@ -31,6 +32,7 @@ class PersonEvent extends ApiModel
 
     protected $fillable = [
         'asset_authorized',
+        'lms_course_id',
         'may_request_stickers',
         'org_vehicle_insurance',
         'pii_finished_at',

@@ -138,8 +138,6 @@ class SalesforceController extends ApiController
                 'bpguid' => $pca->bpguid,
                 'sfuid' => $pca->sfuid,
                 'chuid' => $pca->chuid,
-                'longsleeveshirt_size_style' => $pca->longsleeveshirt_size_style,
-                'teeshirt_size_style' => $pca->teeshirt_size_style,
                 'known_pnv_names' => $pca->known_pnv_names,
                 'known_ranger_names' => $pca->known_ranger_names,
                 'callsign' => $pca->callsign,

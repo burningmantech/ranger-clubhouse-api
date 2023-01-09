@@ -6,6 +6,7 @@ use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Mail\OnlineTrainingEnrollmentMail;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
 use App\Models\Setting;
 use App\Models\Timesheet;
@@ -47,6 +48,8 @@ class OnlineTrainingController extends ApiController
 
         prevent_if_ghd_server('Online Course setup');
 
+        $pe = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
+
         /*
          * Any active Ranger with 2 or more years experience gets to take the half course.
          * Everyone else (PNVs, Auditors, Binaries, Inactives, etc) take the full course.
@@ -80,15 +83,13 @@ class OnlineTrainingController extends ApiController
                 }
             }
 
-            // TODO before 2023: put back $person->lms_course != $courseId
-            // 2022 - half course implemented 1/2 way thru the training season and messed things up.
-            if (empty($person->lms_course)) {
+            if ($pe->lms_course_id != $courseId) {
                 if (!$lms) {
                     $lms = new Moodle;
                 }
 
                 // Enroll the person in the course
-                $lms->enrollPerson($person, $courseId);
+                $lms->enrollPerson($person, $pe, $courseId);
             }
         } catch (MoodleDownForMaintenanceException $e) {
             return response()->json([ 'status' => 'down-for-maintenance' ]);
@@ -103,7 +104,6 @@ class OnlineTrainingController extends ApiController
             'username' => $person->lms_username,
             'password' => $password,
             'course_type' => $type,
-            'expiry_date' => (string)$person->lms_course_expiry,
         ]);
     }
 

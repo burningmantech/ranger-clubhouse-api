@@ -30,7 +30,7 @@ class ClubhouseMoodleCompletion extends Command
 
     public function handle()
     {
-        if (setting('OnlineTrainingEnabled') == false) {
+        if (!setting('OnlineTrainingEnabled')) {
             $this->info("Online course is disabled. Aborting.");
             return;
         }

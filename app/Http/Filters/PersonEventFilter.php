@@ -18,6 +18,7 @@ class PersonEventFilter
     ];
 
     const ADMIN_FIELDS = [
+        'lms_course_id',
         'may_request_stickers',
         'org_vehicle_insurance',
         'sandman_affidavit',
@@ -25,16 +26,18 @@ class PersonEventFilter
         'signed_personal_vehicle_agreement',
     ];
 
-     const TIMESHEET_FIELDS = [
+    const TIMESHEET_FIELDS = [
         'timesheet_confirmed',
     ];
 
     const READONLY_FIELDS = [
         'timesheet_confirmed_at'
     ];
+
     const HQ_FIELDS = [
         'asset_authorized',
     ];
+
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
@@ -53,10 +56,10 @@ class PersonEventFilter
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::READONLY_FIELDS, false, [Role::ADMIN]],
         [self::HQ_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
-        [self::TIMESHEET_FIELDS, true, [ Role::ADMIN, Role::TIMESHEET_MANAGEMENT]]
+        [self::TIMESHEET_FIELDS, true, [Role::ADMIN, Role::TIMESHEET_MANAGEMENT]]
     ];
 
-    protected $record;
+    protected PersonEvent $record;
 
     public function __construct(PersonEvent $record)
     {
@@ -77,24 +80,15 @@ class PersonEventFilter
     {
         $fields = [];
 
-        if ($authorizedUser) {
-            $isUser = ($this->record->person_id == $authorizedUser->id);
-        } else {
-            $isUser = false;
-        }
+        $isUser = $authorizedUser && $this->record->person_id == $authorizedUser->id;
 
         foreach ($fieldGroups as $group) {
-            $anyone = count($group) == 1;
             $roles = null;
 
             if (count($group) == 1) {
                 $allow = true;
             } else {
-                if ($isUser && $group[1] == true) {
-                    $allow = true;
-                } else {
-                    $allow = false;
-                }
+                $allow = $isUser && $group[1];
                 if (isset($group[2])) {
                     $roles = $group[2];
                 }

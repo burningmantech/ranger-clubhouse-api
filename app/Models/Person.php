@@ -164,8 +164,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'callsign_approved' => 'boolean',
         'has_note_on_file' => 'boolean',
         'on_site' => 'boolean',
-        'osha10' => 'boolean',
-        'osha30' => 'boolean',
+
         'vehicle_blacklisted' => 'boolean',
 
         'create_date' => 'datetime',
@@ -175,7 +174,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'timestamp' => 'timestamp',
         'logged_in_at' => 'datetime',
         'last_seen_at' => 'datetime',
-        'lms_course_expiry' => 'datetime',
 
         'reviewed_pi_at' => 'datetime',
         'pi_reviewed_for_dashboard_at' => 'datetime',
@@ -225,11 +223,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'alt_phone',
 
         'on_site',
-        'longsleeveshirt_size_style',   // deprecated
-        'teeshirt_size_style',          // deprecated
+
+        'long_sleeve_swag_ig',
         'tshirt_swag_id',
         'tshirt_secondary_swag_id',
-        'long_sleeve_swag_ig',
 
         'emergency_contact',
         'camp_location',
@@ -242,9 +239,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         // various external services identifiers
         'bpguid',
         'sfuid',
+
         'lms_id',
-        'lms_course',
-        'lms_course_expiry',
         'lms_username',
 
         'active_next_event',
@@ -265,10 +261,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'sms_off_playa_stopped',
         'sms_on_playa_code',
         'sms_off_playa_code',
-
-        // Certifications
-        'osha10',
-        'osha30',
     ];
 
     // Various associated person tables
