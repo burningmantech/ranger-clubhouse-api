@@ -7,6 +7,7 @@ use App\Mail\OnlineTrainingCompletedMail;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
 use Carbon\Carbon;
 use Exception;
@@ -424,9 +425,9 @@ class Moodle
      * @param int $courseId course to enroll into
      */
 
-    public function enrollPerson(Person $person, int $courseId): void
+    public function enrollPerson(Person $person, PersonEvent $pe, int $courseId): void
     {
-        if ($person->lms_course == $courseId) {
+        if ($pe->lms_course_id == $courseId) {
             // Person already enrolled
             return;
         }
@@ -441,8 +442,8 @@ class Moodle
             ]
         ]);
 
-        $person->lms_course = $courseId;
-        $person->saveWithoutValidation();
+        $pe->lms_course_id = $courseId;
+        $pe->saveWithoutValidation();
 
         ActionLog::record(Auth::user(), 'lms-enrollment', '', ['course_id' => $courseId], $person->id);
     }
@@ -477,11 +478,13 @@ class Moodle
                 $notFound[] = $student;
                 continue;
             }
-            $person->lms_course = $courseId;
             $person->lms_id = $student->id;
             $person->lms_username = $student->username;
             $person->auditReason = 'moodle user id association';
             $person->saveWithoutValidation();
+            $pe = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
+            $pe->lms_course_id = $courseId;
+            $pe->saveWithoutValidation();
             $clubhouseId = $person->id;
             $this->updateUser([
                 'id' => $student->id,

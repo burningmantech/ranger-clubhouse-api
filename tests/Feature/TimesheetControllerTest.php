@@ -11,6 +11,7 @@ use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Slot;
+use App\Models\Swag;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
@@ -658,11 +659,26 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => "$year-08-25 04:00:00"
         ]);
 
+        $tshirt = Swag::factory()->create([
+            'active' => true,
+            'title' => 'Unisex T-Shirt',
+            'shirt_type' => Swag::SHIRT_T_SHIRT,
+            'type' => Swag::TYPE_DEPT_SHIRT,
+        ]);
+
+        $ls = Swag::factory()->create([
+            'active' => true,
+            'title' => 'Unisex Long Shirt',
+            'shirt_type' => Swag::SHIRT_LONG_SLEEVE,
+            'type' => Swag::TYPE_DEPT_SHIRT,
+        ]);
+
         // Person should have earned enough for a short slevee
         $ssPerson = Person::factory()->create([
-            'longsleeveshirt_size_style' => 'Womens M',
-            'teeshirt_size_style' => 'Womens V-Neck M'
+            'tshirt_swag_id' => $tshirt->id,
+            'long_sleeve_swag_ig' => $ls->id,
         ]);
+
         Timesheet::factory()->create([
             'person_id' => $ssPerson->id,
             'position_id' => Position::DIRT,
@@ -702,7 +718,7 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => "$year-08-26 5:00:00"
         ]);
 
-        // Person with potentail hours
+        // Person with potential hours
         $potentialPerson = Person::factory()->create();
         $slot = Slot::factory()->create([
             'position_id' => Position::DIRT,
@@ -731,21 +747,21 @@ class TimesheetControllerTest extends TestCase
             if ($person['id'] == $lsPerson->id) {
                 $this->assertTrue($person['earned_ls']);
                 $this->assertTrue($person['earned_ss']);
-                $this->assertEquals($person['actual_hours'], 12);
+                $this->assertEquals(12, $person['actual_hours']);
             } elseif ($person['id'] == $ssPerson->id) {
                 $this->assertFalse($person['earned_ls']);
                 $this->assertTrue($person['earned_ss']);
-                $this->assertEquals($person['actual_hours'], 8);
+                $this->assertEquals(8, $person['actual_hours']);
             } elseif ($person['id'] == $potentialPerson->id) {
                 $this->assertFalse($person['earned_ls']);
                 $this->assertFalse($person['earned_ss']);
-                $this->assertEquals($person['estimated_hours'], 10);
+                $this->assertEquals(10, $person['estimated_hours']);
             } elseif ($person['id'] == $fourHourPerson->id) {
                 $this->assertFalse($person['earned_ls']);
                 $this->assertFalse($person['earned_ss']);
-                $this->assertEquals($person['actual_hours'], 4);
+                $this->assertEquals(4, $person['actual_hours']);
             } else {
-                $this->assertFalse(true, "Unknown id");
+                $this->fail("Unknown id {$person['id']}");
             }
         }
     }

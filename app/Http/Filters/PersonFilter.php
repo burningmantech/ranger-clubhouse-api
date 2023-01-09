@@ -34,11 +34,6 @@ class PersonFilter
         'is_bouncing'
     ];
 
-     const CERTIFICATIONS_FIELDS = [
-        'osha10',
-        'osha30',
-    ];
-
     const NAME_GENDER_FIELDS = [
         'first_name',
         'mi',
@@ -71,8 +66,6 @@ class PersonFilter
         'home_phone',
         'alt_phone',
 
-        'longsleeveshirt_size_style',
-        'teeshirt_size_style',
         'tshirt_swag_id',
         'tshirt_secondary_swag_id',
         'long_sleeve_swag_ig',
@@ -112,8 +105,6 @@ class PersonFilter
     // Learning Management System fields
     const LMS_FIELDS = [
         'lms_id',
-        'lms_course',
-        'lms_course_expiry',
         'lms_username'
     ];
 
@@ -157,7 +148,6 @@ class PersonFilter
         [ self::STATUS_FIELDS ],
         [ self::ACCOUNT_FIELDS ],
         [ self::CALLSIGNS_FIELDS ],
-        [ self::CERTIFICATIONS_FIELDS ],
         [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
         [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
         [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
@@ -179,7 +169,6 @@ class PersonFilter
         [ self::NAME_GENDER_FIELDS, true, [ Role::VC ] ],
         [ self::ACCOUNT_FIELDS, false, [ Role::ADMIN ] ],
         [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
-        [ self::CERTIFICATIONS_FIELDS, false, [ Role::VC ]],
         [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
         [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
         [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
