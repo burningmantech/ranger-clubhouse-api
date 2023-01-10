@@ -16,7 +16,9 @@ class PersonFactory extends Factory
         $uuid = (string)Str::uuid();
         return [
             'status' => 'active',
-            'callsign' => $this->faker->unique()->word(),
+            // combine two words, since with one word, we seem to get duplicates,
+            // probably across different faker instances.
+            'callsign' => join("", $this->faker->unique()->words(2)),
             'callsign_approved' => true,
             'email' => $uuid . '@example.com',
             'first_name' => 'Bravo',
