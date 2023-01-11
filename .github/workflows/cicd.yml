@@ -21,6 +21,11 @@ jobs:
 
     steps:
 
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
+
       - name: Checkout source code
         uses: actions/checkout@v3
 
@@ -37,12 +42,21 @@ jobs:
     timeout-minutes: 10
 
     steps:
+
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
+
       - name: Checkout source code
         uses: actions/checkout@v3
+
       - name: Get Composer Cache Directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+
+      - name: Cache Composer Data
+        uses: actions/cache@v3
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -73,6 +87,11 @@ jobs:
 
     steps:
 
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
+
       - name: Checkout source code
         uses: actions/checkout@v3
 
@@ -99,6 +118,11 @@ jobs:
 
     steps:
 
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
+
       - name: Checkout source code
         uses: actions/checkout@v3
 
@@ -124,6 +148,11 @@ jobs:
     timeout-minutes: 5
 
     steps:
+
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
 
       - name: Checkout source code
         uses: actions/checkout@v3
