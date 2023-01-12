@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Lib\Reports\ProvisionUnsubmitRecommendationReport;
 use App\Models\AccessDocument;
+use App\Models\Bmid;
 use App\Models\Person;
 use App\Models\Provision;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -146,20 +148,65 @@ class ProvisionController extends ApiController
         $this->authorize('cleanProvisionsFromPriorEvent', [Provision::class]);
 
         $user = $this->user->callsign;
-        $rows = Provision::whereIn('status', [Provision::CLAIMED, Provision::SUBMITTED])
-            ->where('is_allocated', false)
+        $rows = Provision::where('is_allocated', false)
             ->with('person:id,callsign,status')
             ->get();
-        $rows = $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE);
+
+        if ($rows->isEmpty()) {
+            $timesheets = null;
+            $radios = null;
+        } else {
+            $peopleIds = $rows->pluck('person_id')->unique()->toArray();
+            $timesheets = DB::table('timesheet')
+                ->whereIntegerInRaw('person_id', $peopleIds)
+                ->whereYear('on_duty', maintenance_year())
+                ->distinct('person_id')
+                ->get()
+                ->keyBy('person_id');
+
+            $radios = DB::table('asset_person')
+                ->join('asset', 'asset.id', 'asset_person.asset_id')
+                ->whereIntegerInRaw('person_id', $peopleIds)
+                ->whereYear('checked_out', maintenance_year())
+                ->where('asset.description', 'Radio')
+                ->distinct('person_id')
+                ->get()
+                ->keyBy('person_id');
+        }
 
         $provisions = [];
 
         $reasonExpired = 'marked as expired via maintenance function';
         $reasonUsed = 'marked as used via maintenance function';
+
         foreach ($rows as $prov) {
+            if ($prov->status == Provision::AVAILABLE) {
+                if (!$prov->type == Provision::EVENT_RADIO) {
+                    // Other available provisions can be rolled over to the next event.
+                    continue;
+                }
+
+                $reasons = [];
+                if ($timesheets->has($prov->person_id)) {
+                    $reasons[] = 'person worked';
+                }
+
+                if ($radios->has($prov->person_id)) {
+                    $reasons[] = 'checked out radio';
+                }
+
+                if (empty($reasons)) {
+                    // Person did not work and/or checked out a radio.
+                    continue;
+                }
+                $reason = $reasonUsed . ' - reason ' . join(', ', $reasons);
+            } else {
+                $reason = $reasonUsed;
+            }
+
             $prov->status = Provision::USED;
-            $prov->addComment($reasonUsed, $user);
-            $prov->auditReason = $reasonUsed;
+            $prov->addComment($reason, $user);
+            $prov->auditReason = $reason;
             $this->saveProvision($prov, $provisions);
         }
 
@@ -169,8 +216,18 @@ class ProvisionController extends ApiController
             ->with('person:id,callsign,status')
             ->get();
 
+        if ($rows->isEmpty()) {
+            return response()->json(['provisions' => $provisions]);
+        }
+
+        $bmids = Bmid::whereIntegerInRaw('person_id', $rows->pluck('person_id')->unique())
+            ->where('year', maintenance_year())
+            ->where('status', Bmid::SUBMITTED)
+            ->get()
+            ->keyBy('person_id');
+
         foreach ($rows as $row) {
-            if ($row->type == Provision::SUBMITTED || $row->type == Provision::CLAIMED) {
+            if ($bmids->has($row->person_id) || $row->status == Provision::SUBMITTED || $row->status == Provision::CLAIMED) {
                 $row->status = Provision::USED;
                 $row->addComment($reasonUsed, $user);
                 $row->auditReason = $reasonUsed;
@@ -230,6 +287,7 @@ class ProvisionController extends ApiController
         $user = $this->user->callsign;
 
         $rows = Provision::whereIn('status', [Provision::BANKED, Provision::CLAIMED, Provision::AVAILABLE])
+            ->where('is_allocated', false)
             ->where('expires_on', '<=', now())
             ->with('person:id,callsign,status,email')
             ->get();
@@ -321,9 +379,19 @@ class ProvisionController extends ApiController
 
         // Expire or use all allocated items.
         $rows = Provision::where('is_allocated', true)
-            ->whereIn('status', [Provision::SUBMITTED, Provision::AVAILABLE, Provision::BANKED])
+            ->whereIn('status', [Provision::AVAILABLE, Provision::BANKED, Provision::CLAIMED, Provision::SUBMITTED])
             ->with('person:id,callsign,status')
             ->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json(['provisions' => []]);
+        }
+
+        $bmids = Bmid::whereIntegerInRaw('person_id', $rows->pluck('person_id')->unique())
+            ->where('year', maintenance_year())
+            ->where('status', Bmid::SUBMITTED)
+            ->get()
+            ->keyBy('person_id');
 
         $user = $this->user;
         $reasonUsed = 'maintenance function - marked submitted job provision used';
@@ -331,7 +399,8 @@ class ProvisionController extends ApiController
         $provisions = [];
 
         foreach ($rows as $row) {
-            if ($row->type == Provision::SUBMITTED) {
+            // Mark the provision as used if the person has a printed BMID, or the provision was submitted or claimed
+            if ($bmids->has($row->person_id) || $row->status == Provision::SUBMITTED || $row->status == Provision::CLAIMED) {
                 $row->status = Provision::USED;
                 $row->addComment($reasonUsed, $user);
                 $row->auditReason = $reasonUsed;
