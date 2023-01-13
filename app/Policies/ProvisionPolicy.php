@@ -86,7 +86,7 @@ class ProvisionPolicy
      * @return false
      */
 
-    public function bulkComment(Person $user)
+    public function bulkComment(Person $user): bool
     {
         return false;
     }
