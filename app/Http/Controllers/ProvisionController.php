@@ -149,6 +149,7 @@ class ProvisionController extends ApiController
 
         $user = $this->user->callsign;
         $rows = Provision::where('is_allocated', false)
+            ->whereIn('status', [ Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
             ->with('person:id,callsign,status')
             ->get();
 
@@ -181,7 +182,7 @@ class ProvisionController extends ApiController
 
         foreach ($rows as $prov) {
             if ($prov->status == Provision::AVAILABLE) {
-                if (!$prov->type == Provision::EVENT_RADIO) {
+                if ($prov->type != Provision::EVENT_RADIO) {
                     // Other available provisions can be rolled over to the next event.
                     continue;
                 }
