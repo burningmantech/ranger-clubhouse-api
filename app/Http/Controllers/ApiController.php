@@ -98,7 +98,7 @@ class ApiController extends Controller
     }
 
     /**
-     * Does the user hold the role or roles?
+     * Does the user hold the effective role or roles?
      *
      * @param $roles
      * @return bool
@@ -112,6 +112,23 @@ class ApiController extends Controller
 
         return $this->user->hasRole($roles);
     }
+
+    /**
+     * Does the user hold the true role or roles?
+     *
+     * @param $roles
+     * @return bool
+     */
+
+    public function userHasTrueRole($roles): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        return $this->user->hasTrueRole($roles);
+    }
+
 
     /**
      * Load a model record using a filter

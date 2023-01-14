@@ -3,19 +3,8 @@
 namespace Tests\Feature;
 
 
-use Tests\TestCase;
-
-use Carbon\Carbon;
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Queue;
-
 use App\Jobs\TrainingSignupEmailJob;
-
 use App\Mail\TrainingSessionFullMail;
-
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonOnlineTraining;
@@ -25,6 +14,11 @@ use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
 
 class PersonScheduleControllerTest extends TestCase
 {
@@ -519,9 +513,10 @@ class PersonScheduleControllerTest extends TestCase
      * Allow a trainer to add a person to past training shift
      */
 
-    public function testDenySignupForPastShiftForTrainer()
+    public function testDenySignupForPastShiftForTrainerSeasonal()
     {
-        $this->addRole(Role::TRAINER);
+        $this->setting('TrainingSeasonalRoleEnabled', true);
+        $this->addRole(Role::TRAINER_SEASONAL);
         $this->setupTrainingSlots();
 
         $person = $this->createPerson();
@@ -541,6 +536,36 @@ class PersonScheduleControllerTest extends TestCase
         $response->assertJson(['status' => 'has-started']);
 
         $this->assertDatabaseMissing(
+            'person_slot',
+            [
+                'person_id' => $personId,
+                'slot_id' => $training->id,
+            ]
+        );
+    }
+
+    public function testSignupForPastShiftForTrainerSuccess()
+    {
+        $this->addRole(Role::TRAINER);
+        $this->setupTrainingSlots();
+
+        $person = $this->createPerson();
+        $this->setupRequirements($person);
+        $personId = $person->id;
+
+        $training = $this->trainingSlots[0];
+        $training->update(['begins' => date('2010-08-25 10:00:00')]);
+
+        $response = $this->json(
+            'POST',
+            "person/{$personId}/schedule",
+            ['slot_id' => $training->id, 'force' => true]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'success']);
+
+        $this->assertDatabaseHas(
             'person_slot',
             [
                 'person_id' => $personId,
