@@ -539,6 +539,7 @@ class PersonController extends ApiController
             'status' => $person->status,
             'bpguid' => $person->bpguid,
             'roles' => $person->roles,
+            'true_roles' => $person->trueRoles,
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_art_trainer' => $isArtTrainer,

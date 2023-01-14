@@ -339,14 +339,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public $has_reviewed_pi;
 
-    /*
+    /**
      * The roles the person holds
-     * @var array
+     * @var ?array
      */
 
-    public $roles;
+    public ?array $roles = null;
+    public array $rolesById = [];
 
-    public $rolesById;
+    /**
+     * The raw / un-massaged roles a person holds
+     * @var ?array
+     */
+
+    public ?array $trueRoles;
+    public array $trueRolesById = [];
 
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
@@ -936,10 +943,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             ->where('person_team.person_id', $this->id);
 
         $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
-        $this->rolesById = [];
         foreach ($roleIds as $id) {
             $this->rolesById[$id] = true;
         }
+
+        // Save off the roles before mucking around.
+        $this->trueRolesById = $this->rolesById;
+        $this->trueRoles = array_keys($this->rolesById);
 
         $haveManage = $this->rolesById[Role::MANAGE] ?? false;
         if (!$haveManage
@@ -960,6 +970,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
                 // Don't allow the person to do anything until the NDA is signed.
                 $this->rolesById = [];
+                $this->trueRolesById = [];
+                $this->trueRoles = [];
             }
         }
 
@@ -967,7 +979,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Check to see if the person has a specific role or roles.
+     * Check to see if the person has an effective role or roles.
      *
      * @param array|int $role
      * @return bool true if the person has the role
@@ -990,6 +1002,33 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
         return false;
     }
+
+    /**
+     * Check to see if the person has an un-massaged role.
+     *
+     * @param array|int $role
+     * @return bool true if the person has the role
+     */
+
+    public function hasTrueRole(array|int $role): bool
+    {
+        if ($this->roles === null) {
+            $this->retrieveRoles();
+        }
+
+        if (!is_array($role)) {
+            return isset($this->trueRolesById[$role]);
+        }
+
+        foreach ($role as $r) {
+            if (isset($this->trueRolesById[$r])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     /**
      * Is the person an Admin?
