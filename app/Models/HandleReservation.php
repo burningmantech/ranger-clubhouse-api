@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Collection;
 
@@ -41,8 +42,16 @@ class HandleReservation extends ApiModel
         'reservation_type' => 'required|string|max:100',
         'start_date' => 'required|date:Y-m-d',
         'end_date' => 'sometimes|date:Y-m-d|after:start_date|nullable',
-        'reason' => 'sometimes|string|max:255',
+        'reason' => 'sometimes|string|max:255|nullable',
     ];
+
+    protected function endDate(): Attribute
+    {
+        return Attribute::make(
+            // Replace an empty date with null
+            set: fn ($value) => empty($value) ? null : $value,
+        );
+    }
 
     public static function findAll(bool $activeOnly = false): Collection
     {
