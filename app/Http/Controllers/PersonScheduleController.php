@@ -451,11 +451,12 @@ class PersonScheduleController extends ApiController
      *
      * - Admins are allowed
      * - ART Trainers (role) are allowed for any ART training
-     * - Trainers (role) are only allowed to remove people, not sign up (per 2020 TA request)
+     * - Trainers (effective role) are only allowed to remove people, not sign up (per 2020 TA request)
+     * - Trainers (true role) are allowed to force sign up trainees to dirt trainings.
      *
      * @param Slot $slot
-     * @param bool $isSignup true if check for a sign up, false for a removal
-     * @return array
+     * @param bool $isSignup true if is a sign-up, otherwise a removal.
+     * @return array<bool,bool>
      */
 
     private function canForceScheduleChange(Slot $slot, bool $isSignup = true): array
@@ -467,10 +468,18 @@ class PersonScheduleController extends ApiController
             if ($slot->isArt()) {
                 $roleCanForce = Role::ART_TRAINER;
                 $isTrainer = true;
-            } else if (!$isSignup) {
+            } else if ($isSignup) {
                 /*
-                 * Per request from TA 2020 - Dirt Trainers may NOT manually add students BUT
-                 * are allowed to remove students.
+                 * Per TA 2023 - T.A. cadre members now only have the Trainer role, all other trainers have Training Seasonal.
+                 * Allow the real Training role to force add trainees.
+                 */
+                if ($this->userHasTrueRole(Role::TRAINER)) {
+                    return [true, true];
+                }
+            } else {
+                /*
+                 * Per request from TA 2020 - Dirt Trainers may NOT manually add trainees BUT
+                 * are allowed to remove trainees.
                  */
                 $roleCanForce = Role::TRAINER;
                 $isTrainer = true;

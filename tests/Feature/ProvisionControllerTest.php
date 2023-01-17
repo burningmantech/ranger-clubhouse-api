@@ -162,23 +162,25 @@ class ProvisionControllerTest extends TestCase
     public function testCleanProvisionsFromPriorEvent()
     {
         $this->addAdminRole();
-
         $year = date('Y');
 
-        $person = Person::factory()->create();
+        $personA = Person::factory()->create();
+        $personB = Person::factory()->create();
 
         $submitted = Provision::factory()->create([
-            'person_id' => $person->id,
+            'person_id' => $personA->id,
             'source_year' => $year,
             'type' => Provision::ALL_EAT_PASS,
             'status' => Provision::SUBMITTED,
+            'is_allocated' => false,
         ]);
 
         $banked = Provision::factory()->create([
-            'person_id' => $person->id,
+            'person_id' => $personB->id,
             'source_year' => $year,
             'type' => Provision::WET_SPOT,
             'status' => Provision::BANKED,
+            'is_allocated' => false,
         ]);
 
         $response = $this->json('POST', 'provision/clean-provisions');
@@ -195,6 +197,7 @@ class ProvisionControllerTest extends TestCase
         $this->assertDatabaseHas('provision', ['id' => $submitted->id, 'status' => Provision::USED]);
         $this->assertDatabaseHas('provision', ['id' => $banked->id, 'status' => Provision::BANKED]);
 
+        $person = Person::factory()->create();
         $qualified = Provision::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
@@ -202,6 +205,7 @@ class ProvisionControllerTest extends TestCase
             'status' => Provision::AVAILABLE,
             'is_allocated' => true,
         ]);
+
         $response = $this->json('POST', 'provision/clean-provisions');
         $response->assertStatus(200);
 
@@ -212,6 +216,7 @@ class ProvisionControllerTest extends TestCase
                 'status' => Provision::EXPIRED
             ]
         ]]);
+
         $this->assertDatabaseHas('provision', ['id' => $qualified->id, 'status' => Provision::EXPIRED]);
     }
 
