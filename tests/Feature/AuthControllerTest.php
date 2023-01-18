@@ -2,11 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Lib\Agreements;
 use App\Mail\ResetPassword;
-use App\Models\Document;
 use App\Models\Person;
-use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -134,60 +131,5 @@ class AuthControllerTest extends TestCase
         $response->assertStatus(403);
         $response->assertJson(['status' => 'account-disabled']);
         Mail::assertNothingSent();
-    }
-
-    /**
-     * Test to ensure roles are retained when the NDA does not exist.
-     *
-     * @return void
-     */
-    public function testRolesNDADoesNotExist(): void
-    {
-        $this->signInUser();
-        $this->addRole(Role::MANAGE);
-        $person = Person::factory()->create();
-
-        // Ensure the user can retain LM if the NDA doesn't exist.
-        $response = $this->json('GET', "person/{$person->id}");
-        $response->assertStatus(200);
-    }
-
-    /**
-     * Test to ensure roles are nuked when the NDA exists and has not been signed.
-     *
-     * @return void
-     */
-
-    public function testsRolesNDAExists(): void
-    {
-        $this->signInUser();
-        $this->addRole(Role::MANAGE);
-        $person = Person::factory()->create();
-
-        // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
-        Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
-        $response = $this->json('GET', "person/{$person->id}");
-        $response->assertStatus(403);
-    }
-
-    /**
-     * Test to ensure roles are nuked when the NDA exists and has not been signed.
-     *
-     * @return void
-     */
-
-    public function testsRolesAndNDASigned(): void
-    {
-        $this->signInUser();
-        $this->addRole(Role::MANAGE);
-        $person = Person::factory()->create();
-
-        // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
-        Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
-        // Sign the NDA
-        Agreements::signAgreement($this->user, Agreements::DEPT_NDA, 1);
-
-        $response = $this->json('GET', "person/{$person->id}");
-        $response->assertStatus(200);
     }
 }

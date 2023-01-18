@@ -141,7 +141,7 @@ return [
         Illuminate\Pagination\PaginationServiceProvider::class,
         Illuminate\Pipeline\PipelineServiceProvider::class,
         Illuminate\Queue\QueueServiceProvider::class,
-//        Illuminate\Redis\RedisServiceProvider::class,
+        Illuminate\Redis\RedisServiceProvider::class,
 //        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
 //        Illuminate\Session\SessionServiceProvider::class,
         Illuminate\Translation\TranslationServiceProvider::class,
@@ -214,8 +214,8 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
 
         // For email message generation
-        'HyperLinkHelper'   => App\Helpers\HyperLinkHelper::class,
-        'PersonPhoto'       => App\Models\PersonPhoto::class,
+        'HyperLinkHelper' => App\Helpers\HyperLinkHelper::class,
+        'PersonPhoto' => App\Models\PersonPhoto::class,
 
     ],
 

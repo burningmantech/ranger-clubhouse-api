@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\PersonSlot;
 use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
@@ -96,12 +97,18 @@ class TrainingSessionController extends ApiController
         }
 
         $traineeStatus = TraineeStatus::firstOrNewForSession($personId, $slotId);
-        $traineeStatus->rank = $params['rank'];
+        if (isset($params['rank'])) {
+            $traineeStatus->rank = $params['rank'];
+        }
+
         if (!$training_session->isArt() && isset($params['feedback_delivered'])) {
             $traineeStatus->feedback_delivered = $params['feedback_delivered'];
 
         }
-        $traineeStatus->passed = $params['passed'];
+
+        if (isset($params['passed'])) {
+            $traineeStatus->passed = $params['passed'];
+        }
 
         if ($traineeStatus->isDirty('rank')) {
             $rankUpdated = true;
@@ -122,6 +129,9 @@ class TrainingSessionController extends ApiController
         if (!empty($note)) {
             TraineeNote::record($personId, $slotId, $note);
         }
+
+        // Kill the roles cache, the person might  be granted or revoked roles based on if the course was passed or not
+        PersonRole::clearCache($personId);
 
         return response()->json(['students' => $training_session->retrieveStudents()]);
     }

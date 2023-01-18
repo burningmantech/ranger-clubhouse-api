@@ -10,6 +10,7 @@ use App\Models\Person;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PositionController extends ApiController
@@ -49,6 +50,7 @@ class PositionController extends ApiController
             return $this->restError($position);
         }
 
+        Cache::flush();
         return $this->success($position);
     }
 
@@ -83,6 +85,7 @@ class PositionController extends ApiController
             return $this->success($position);
         }
 
+        Cache::flush();
         return $this->restError($position);
     }
 
@@ -99,6 +102,8 @@ class PositionController extends ApiController
         $this->authorize('delete', $position);
         $position->delete();
         DB::table('position_role')->where('position_id', $position->id)->delete();
+        DB::table('person_position')->where('position_id', $position->id)->delete();
+        Cache::flush();
         return $this->restDeleteSuccess();
     }
 

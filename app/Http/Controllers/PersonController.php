@@ -8,7 +8,6 @@ use App\Lib\Milestones;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
 use App\Lib\Reports\PeopleByLocationReport;
-use App\Lib\Reports\PeopleByRoleReport;
 use App\Lib\Reports\PeopleByStatusReport;
 use App\Lib\Reports\RecommendStatusChangeReport;
 use App\Lib\Reports\TimesheetWorkSummaryReport;
@@ -393,7 +392,7 @@ class PersonController extends ApiController
 
         if (request()->input('include_memberships')) {
             $results['team_roles'] = TeamRole::findRolesForPerson($person->id);
-            $results['position_roles'] = PositionRole::findRolesForPerson($person->id);
+            $results['position_roles'] = PositionRole::findRolesForPerson($person);
         }
 
         return response()->json($results);
@@ -776,20 +775,6 @@ class PersonController extends ApiController
         $year = $params['year'] ?? current_year();
 
         return response()->json(['people' => PeopleByLocationReport::execute($year, $this->userCanViewEmail())]);
-    }
-
-    /**
-     * People By Role report
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function peopleByRole(): JsonResponse
-    {
-        $this->authorize('peopleByRole', [Person::class]);
-
-        return response()->json(['roles' => PeopleByRoleReport::execute()]);
     }
 
     /**

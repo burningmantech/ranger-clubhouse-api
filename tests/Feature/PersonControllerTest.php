@@ -1360,7 +1360,7 @@ class PersonControllerTest extends TestCase
             'role_id' => Role::ADMIN
         ]);
 
-        $response = $this->json('GET', 'person/by-role');
+        $response = $this->json('GET', 'role/people-by-role');
         $response->assertStatus(200);
 
         $response->assertJson([

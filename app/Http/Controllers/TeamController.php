@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\TeamRole;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class TeamController extends ApiController
 {
@@ -80,6 +81,7 @@ class TeamController extends ApiController
 
         if ($team->save()) {
             $team->loadRoles();
+            Cache::forget();
             return $this->success($team);
         }
 
@@ -102,6 +104,7 @@ class TeamController extends ApiController
         PersonTeam::where('team_id', $team->id)->delete();
         PersonTeamLog::where('team_id', $team->id)->delete();
         TeamRole::where('team_id', $team->id)->delete();
+        Cache::forget();
         return $this->restDeleteSuccess();
     }
 

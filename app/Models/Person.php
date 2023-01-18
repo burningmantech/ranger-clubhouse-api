@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Normalizer;
@@ -926,26 +927,66 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return;
         }
 
-        $roleSql = DB::table('person_role')
-            ->select('role_id')
-            ->where('person_id', $this->id);
+        $noCache = false;
+        $cacheKey = PersonRole::CACHE_KEY . $this->id;
 
-        // Find the granted roles via assigned positions
-        $positionSql = DB::table('person_position')
-            ->select('role_id')
-            ->where('person_id', $this->id)
-            ->join('position_role', 'position_role.position_id', 'person_position.position_id');
-
-        // Find the granted roles via assigned positions
-        $teamSql = DB::table('person_team')
-            ->select('role_id')
-            ->join('team_role', 'team_role.team_id', 'person_team.team_id')
-            ->where('person_team.person_id', $this->id);
-
-        $roleIds = $positionSql->union($roleSql)->union($teamSql)->pluck('role_id')->toArray();
-        foreach ($roleIds as $id) {
-            $this->rolesById[$id] = true;
+        $cacheLock = Cache::lock('lock'.$cacheKey, 5);
+        if ($cacheLock->get()) {
+            $lockAcquired = true;
+        } else {
+            $noCache = true;
+            $lockAcquired = false;
         }
+
+        $cachedRoles = Cache::get($cacheKey);
+        if ($cachedRoles) {
+            if ($lockAcquired) {
+                $cacheLock->release();
+            }
+
+            list ($effectiveRoles, $trueRoles) = $cachedRoles;
+            $this->roles = $effectiveRoles;
+            $this->rolesById = array_fill_keys($this->roles, true);
+            $this->trueRoles = $trueRoles;
+            $this->trueRolesById = array_fill_keys($this->trueRoles, true);
+            return;
+        }
+
+
+        $grantedIds = DB::table('person_role')
+            ->where('person_id', $this->id)
+            ->pluck('role_id')
+            ->toArray();
+
+        // Find the granted roles via assigned positions
+        $positionRoles = DB::table('person_position')
+            ->select('role_id', 'require_training_for_roles', 'position.id', 'position.training_position_id')
+            ->join('position_role', 'position_role.position_id', 'person_position.position_id')
+            ->join('position', 'position.id', 'person_position.position_id')
+            ->where('person_id', $this->id)
+            ->get();
+
+        $roleIds = [];
+        $year = current_year();
+        foreach ($positionRoles as $pos) {
+            if ($pos->require_training_for_roles) {
+                if ($pos->training_position_id && Training::didPersonPassForYear($this, $pos->training_position_id, $year)) {
+                    // Person has passed the appropriate ART, grant the roles.
+                    $roleIds[] = $pos->role_id;
+                }
+            } else {
+                $roleIds[] = $pos->role_id;
+            }
+        }
+
+        // Find the granted roles via assigned positions
+        $teamRoles = DB::table('person_team')
+            ->join('team_role', 'team_role.team_id', 'person_team.team_id')
+            ->where('person_team.person_id', $this->id)
+            ->pluck('role_id')
+            ->toArray();
+
+        $this->rolesById = array_fill_keys(array_unique(array_merge($roleIds, $teamRoles, $grantedIds)), true);
 
         // Save off the roles before mucking around.
         $this->trueRolesById = $this->rolesById;
@@ -972,10 +1013,18 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $this->rolesById = [];
                 $this->trueRolesById = [];
                 $this->trueRoles = [];
+                $noCache = true;
             }
         }
 
         $this->roles = array_keys($this->rolesById);
+        if (!$noCache) {
+            Cache::put($cacheKey, [$this->roles, $this->trueRoles]);
+        }
+
+        if ($lockAcquired) {
+            $cacheLock->release();
+        }
     }
 
     /**

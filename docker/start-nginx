@@ -11,6 +11,9 @@ if [ ! -t 0 ]; then
     exec 1> /proc/1/fd/1 2> /proc/1/fd/2;
 fi;
 
+# Start the redis server before anything else
+supervisorctl start redis
+
 # Cache Laravel configuration and routes
 
 cd /var/www/application;
@@ -22,6 +25,9 @@ if [ -n "${RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME-}" ]; then
     echo "Creating training database";
     php artisan clubhouse:create-training-db;
 fi
+
+echo "Clearing existing cache"
+php artisan cache:clear
 
 echo "Purging obsoleted Clubhouse settings ...";
 php artisan clubhouse:purge-settings

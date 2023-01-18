@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TraineeStatus extends ApiModel
 {
@@ -19,16 +20,14 @@ class TraineeStatus extends ApiModel
 
     protected $casts = [
         'passed' => 'boolean',
-        'begins' => 'date',
-        'ends' => 'date'
     ];
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function slot()
+    public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
@@ -116,7 +115,7 @@ class TraineeStatus extends ApiModel
     }
 
     /**
-     * Delete all records refering to a slot. Used by slot deletion.
+     * Delete all records referring to a slot. Used by slot deletion.
      * @param int $slotId
      */
 

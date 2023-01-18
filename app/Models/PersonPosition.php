@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PersonPosition extends ApiModel
@@ -173,6 +174,8 @@ class PersonPosition extends ApiModel
                 PersonPositionLog::addPerson($id, $personId);
             }
         }
+
+        Cache::flush();
     }
 
 
@@ -207,6 +210,8 @@ class PersonPosition extends ApiModel
                 PersonPositionLog::removePerson($id, $personId);
             }
         }
+
+        Cache::flush();
     }
 
     /**

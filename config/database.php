@@ -61,7 +61,7 @@ return [
             'timezone' => '-07:00',
             // Turn on persistent connections.
             'options' => [
-                \PDO::ATTR_PERSISTENT => true
+                PDO::ATTR_PERSISTENT => true
             ]
         ],
 
@@ -81,7 +81,7 @@ return [
             'timezone' => '-07:00',
             // Turn on persistent connections.
             'options' => [
-                \PDO::ATTR_PERSISTENT => true
+                PDO::ATTR_PERSISTENT => true
             ]
         ],
 
@@ -101,7 +101,7 @@ return [
             'timezone' => '-07:00',
             // Turn on persistent connections.
             'options' => [
-                \PDO::ATTR_PERSISTENT => true
+                PDO::ATTR_PERSISTENT => true
             ]
         ],
 
@@ -156,13 +156,21 @@ return [
     */
 
     'redis' => [
+        'client' => 'phpredis',
 
-        'client' => 'predis',
-
-        'default' => [
+        'cache_connection' => [
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD', null),
+            'password' => env('REDIS_PASSWORD', ''),
             'port' => env('REDIS_PORT', 6379),
+            'prefix' => 'cache',
+            'database' => 0,
+        ],
+
+        'lock_connection' => [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD', ''),
+            'port' => env('REDIS_PORT', 6379),
+            'prefix' => 'lock',
             'database' => 0,
         ],
 

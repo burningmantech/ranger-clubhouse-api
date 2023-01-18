@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\Setting;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
 class SettingController extends ApiController
@@ -79,6 +80,7 @@ class SettingController extends ApiController
             return $this->restError($setting);
         }
 
+        Cache::flush(); // Kill all the caches
         Setting::kickQueues();
 
         return $this->success($setting);
