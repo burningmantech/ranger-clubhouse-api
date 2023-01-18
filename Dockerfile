@@ -25,6 +25,7 @@ RUN                                                     \
     libwebp-dev                                         \
     libxml2-dev                                         \
     libzip-dev                                          \
+    pcre-dev ${PHPIZE_DEPS}                             \
   && docker-php-ext-configure gd                        \
     --with-webp=/usr/include/                           \
     --with-jpeg=/usr/include/                           \
@@ -39,6 +40,8 @@ RUN                                                     \
     pdo                                                 \
     pdo_mysql                                           \
     zip                                                 \
+  && pecl install redis                                 \
+  && docker-php-ext-enable redis                        \
   && apk del                                            \
     icu-dev                                             \
     libjpeg-turbo-dev                                   \
@@ -46,8 +49,9 @@ RUN                                                     \
     libwebp-dev                                         \
     libxml2-dev                                         \
     libzip-dev                                          \
-    ;
-
+    pcre-dev                                            \
+    ${PHPIZE_DEPS}                                      \
+                                                        ;
 # Create runtime directories
 RUN install -d -o www-data -g www-data -m 775  \
   ./storage/framework/cache                    \
@@ -163,6 +167,9 @@ COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.co
 COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
 COPY ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
 RUN chmod 555 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
+
+# Redis cache server
+RUN apk add --no-cache redis
 
 # Set working directory to application directory
 WORKDIR /var/www/application

@@ -2,31 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\PeopleByRoleReport;
+use App\Models\PersonRole;
 use App\Models\Role;
-use App\Http\Controllers\ApiController;
-
-use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class RoleController extends ApiController
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return JsonResponse
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
-        //$this->authorize('view');
         return $this->success(Role::findAll(), null);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store(Request $request)
+
+    public function store(): JsonResponse
     {
         $this->authorize('store', Role::class);
 
@@ -43,10 +45,11 @@ class RoleController extends ApiController
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\JsonResponse
+     * @param Role $role
+     * @return JsonResponse
      */
-    public function show(Role $role)
+
+    public function show(Role $role): JsonResponse
     {
         return $this->success($role);
     }
@@ -54,11 +57,12 @@ class RoleController extends ApiController
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\JsonResponse
+     * @param Role $role
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function update(Request $request, Role $role)
+
+    public function update(Role $role): JsonResponse
     {
         $this->authorize('update', Role::class);
         $this->fromRest($role);
@@ -73,13 +77,48 @@ class RoleController extends ApiController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Role  $role
-     * @return \Illuminate\Http\JsonResponse
+     * @param Role $role
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(Role $role)
+
+    public function destroy(Role $role): JsonResponse
     {
         $this->authorize('delete', Role::class);
         $role->delete();
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * People By Role report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function peopleByRole(): JsonResponse
+    {
+        $this->authorize('peopleByRole', Role::class);
+
+        return response()->json(['roles' => PeopleByRoleReport::execute()]);
+    }
+
+    /**
+     * Clear the role cache for a person
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function clearCache(): JsonResponse
+    {
+        $this->authorize('clearCache', Role::class);
+        $params = request()->validate([
+            'person_id' => 'required|integer|exists:person,id'
+        ]);
+
+        PersonRole::clearCache($params['person_id']);
+
+        return $this->success();
     }
 }

@@ -149,11 +149,6 @@ class PersonPolicy
         return $user->hasRole([Role::ADMIN, Role::VIEW_PII, Role::MANAGE]);
     }
 
-    public function peopleByRole(Person $user): bool
-    {
-        return $user->hasRole([Role::ADMIN, Role::MANAGE]);
-    }
-
     public function peopleByStatus(Person $user): bool
     {
         return $user->hasRole([Role::ADMIN, Role::MANAGE]);

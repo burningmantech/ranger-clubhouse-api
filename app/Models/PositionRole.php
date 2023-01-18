@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
  * @property int $role_id
  * @property int $position_id
  */
-
 class PositionRole extends ApiModel
 {
     use HasCompositePrimaryKey;
@@ -36,18 +35,36 @@ class PositionRole extends ApiModel
     /**
      * Find all the positions with granted roles for a person
      *
-     * @param int $personId
-     * @return Collection
+     * @param Person $person
+     * @return array
      */
 
-    public static function findRolesForPerson(int $personId): Collection
+    public static function findRolesForPerson(Person $person): array
     {
-        return DB::table('person_position')
-            ->select('position.id', 'position.title', 'position_role.role_id')
-            ->where('person_id', $personId)
+        $rows = DB::table('person_position')
+            ->select('position.id', 'position.title', 'position_role.role_id', 'position.require_training_for_roles', 'position.training_position_id')
+            ->where('person_id', $person->id)
             ->join('position_role', 'position_role.position_id', 'person_position.position_id')
             ->join('position', 'position_role.position_id', 'position.id')
             ->get();
+
+        $positions = [];
+        $year = current_year();
+        foreach ($rows as $row) {
+            $position = [
+                'id' => $row->id,
+                'title' => $row->title,
+                'role_id' => $row->role_id,
+            ];
+
+            if ($row->require_training_for_roles) {
+                $position['require_training_for_roles'] = true;
+                $position['is_trained'] = Training::didPersonPassForYear($person, $row->training_position_id, $year);
+            }
+            $positions[] = $position;
+        }
+
+        return $positions;
     }
 
     /**
@@ -58,7 +75,8 @@ class PositionRole extends ApiModel
      * @param ?string $reason
      */
 
-    public static function add(int $positionId, int $roleId, ?string $reason) : void
+    public
+    static function add(int $positionId, int $roleId, ?string $reason): void
     {
         if ($roleId == Role::ADMIN || $roleId == Role::TECH_NINJA) {
             // Nope, don't allow unchecked privilege escalation.
@@ -79,7 +97,8 @@ class PositionRole extends ApiModel
      * @param string|null $reason
      */
 
-    public static function remove(int $positionId, int $roleId, ?string $reason) : void
+    public
+    static function remove(int $positionId, int $roleId, ?string $reason): void
     {
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         self::where($data)->delete();

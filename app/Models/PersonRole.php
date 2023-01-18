@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
  */
 class PersonRole extends ApiModel
 {
+
+    const CACHE_KEY = 'person-role-';
 
     protected $table = 'person_role';
 
@@ -113,6 +116,7 @@ class PersonRole extends ApiModel
 
         DB::table('person_role')->where('person_id', $personId)->whereIn('role_id', $ids)->delete();
         ActionLog::record(Auth::user(), 'person-role-remove', $message, ['role_ids' => array_values($ids)], $personId);
+        self::clearCache($personId);
     }
 
     /**
@@ -135,6 +139,7 @@ class PersonRole extends ApiModel
 
         if (!empty($addedIds)) {
             ActionLog::record(Auth::user(), 'person-role-add', $message, ['role_ids' => array_values($ids)], $personId);
+            self::clearCache($personId);
         }
     }
 
@@ -150,5 +155,17 @@ class PersonRole extends ApiModel
     public static function log(int $personId, int $id, string $action, ?string $reason = null)
     {
         ActionLog::record(Auth::user(), 'person-role-' . $action, $reason, ['role_id' => $id], $personId);
+    }
+
+    /**
+     * Clear the roles cache for the given person.
+     *
+     * @param int $personId
+     * @return void
+     */
+
+    public static function clearCache(int $personId) : void
+    {
+        Cache::forget(self::CACHE_KEY.$personId);
     }
 }

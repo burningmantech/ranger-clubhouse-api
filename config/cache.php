@@ -17,6 +17,7 @@ return [
     |
     */
 
+    // The database is used for development, and
     'default' => env('CACHE_DRIVER', 'database'),
 
     /*
@@ -44,6 +45,7 @@ return [
             'driver' => 'database',
             'table' => 'cache',
             'connection' => null,
+            'prefix' => ''
         ],
 
         'file' => [
@@ -72,9 +74,9 @@ return [
 
         'redis' => [
             'driver' => 'redis',
-            'connection' => 'default',
+            'connection' => 'cache_connection',
+            'lock_connection' => 'lock_connection',
         ],
-
     ],
 
     /*

@@ -31,6 +31,7 @@
     "league/flysystem-aws-s3-v3": "^3.5.0",
     "league/fractal": "^0.20",
     "php-open-source-saver/jwt-auth": "^2.0.0",
+    "predis/predis": "^2.1",
     "twilio/sdk": "^6.36.0"
   },
   "require-dev": {

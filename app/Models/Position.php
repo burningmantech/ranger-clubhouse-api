@@ -297,6 +297,7 @@ class Position extends ApiModel
         'on_trainer_report',
         'prevent_multiple_enrollments',
         'public_team_position',
+        'require_training_for_roles',
         'role_ids',
         'short_title',
         'team_id',
@@ -315,6 +316,7 @@ class Position extends ApiModel
         'on_trainer_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
         'public_team_position' => 'bool',
+        'require_training_for_roles' => 'bool'
     ];
 
     protected $rules = [
@@ -346,6 +348,23 @@ class Position extends ApiModel
                 Membership::updatePositionRoles($model->id, $model->role_ids, '');
             }
         });
+    }
+
+    /**
+     * Validate if require_training_for_roles is set, then  training_position_id has to be set as well.
+     *
+     * @param $options
+     * @return bool
+     */
+
+    public function save($options = []): bool
+    {
+        if ($this->require_training_for_roles && !$this->training_position_id) {
+            $this->addError('require_training_for_roles', 'Required training for roles set but no training position was given');
+            return false;
+        }
+
+        return parent::save($options);
     }
 
     public function training_positions(): HasMany
@@ -408,7 +427,13 @@ class Position extends ApiModel
         return $rows;
     }
 
-    public function loadRoles()
+    /**
+     * Load up the position roles.
+     *
+     * @return void
+     */
+
+    public function loadRoles() : void
     {
         $this->role_ids = $this->position_roles->pluck('role_id')->toArray();
         $this->append('role_ids');
@@ -546,6 +571,7 @@ class Position extends ApiModel
      *
      * @return array|null
      */
+
     public function getRoleIdsAttribute(): ?array
     {
         return $this->role_ids;

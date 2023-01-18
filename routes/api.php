@@ -195,7 +195,6 @@ Route::group([
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
     Route::get('person/languages', 'PersonController@languagesReport');
     Route::get('person/by-location', 'PersonController@peopleByLocation');
-    Route::get('person/by-role', 'PersonController@peopleByRole');
     Route::get('person/by-status', 'PersonController@peopleByStatus');
     Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
     Route::post('person/bulk-lookup', 'PersonController@bulkLookup');
@@ -291,6 +290,8 @@ Route::group([
     Route::post('rbs/retry', 'RbsController@retry');
     Route::post('rbs/transmit', 'RbsController@transmit');
 
+    Route::get('role/people-by-role', 'RoleController@peopleByRole');
+    Route::post('role/clear-cache', 'RoleController@clearCache');
     Route::resource('role', 'RoleController');
 
     Route::get('salesforce/config', 'SalesforceController@config');
