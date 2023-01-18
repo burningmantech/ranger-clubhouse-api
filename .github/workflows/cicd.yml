@@ -13,14 +13,12 @@ on:
 jobs:
 
   check-syntax:
-
     name: Check PHP Syntax
 
     runs-on: ubuntu-latest
     timeout-minutes: 1
 
     steps:
-
       - name: Harden CI
         uses: step-security/harden-runner@v2.0.0
         with:
@@ -35,8 +33,6 @@ jobs:
 
   docker-build:
     name: Build Docker image
-
-    needs: [check-syntax]
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,12 +71,10 @@ jobs:
           name: docker
           path: docker_image.tgz
 
-
   unit:
-
     name: Run unit tests
 
-    needs: [check-syntax, docker-build]
+    needs: [docker-build]
 
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -106,12 +100,10 @@ jobs:
       - name: Run unit tests
         run: ./bin/test_unit
 
-
   docker-test:
-
     name: Test Docker image
 
-    needs: [check-syntax, docker-build, unit]
+    needs: [docker-build]
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
