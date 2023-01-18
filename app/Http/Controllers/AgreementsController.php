@@ -6,6 +6,7 @@ use App\Lib\Agreements;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonRole;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -70,6 +71,10 @@ class AgreementsController extends ApiController
         ]);
 
         Agreements::signAgreement($person, $document->tag, $params['signature']);
+
+        if ($document->tag == Agreements::DEPT_NDA) {
+            PersonRole::clearCache($person->id);
+        }
 
         return $this->success();
     }
