@@ -930,28 +930,27 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $noCache = false;
         $cacheKey = PersonRole::CACHE_KEY . $this->id;
 
-        $cacheLock = Cache::lock('lock'.$cacheKey, 5);
+
+        $cachedRoles = Cache::get($cacheKey);
+        if ($cachedRoles) {
+            $this->setCachedRoles($cachedRoles);
+            return;
+        }
+
+        $cacheLock = Cache::lock('lock' . $cacheKey, 5);
         if ($cacheLock->get()) {
+            // Double check to see if parallel request managed to set up the cached roles
+            $cachedRoles = Cache::get($cacheKey);
+            if ($cachedRoles) {
+                $cacheLock->release();
+                $this->setCachedRoles($cachedRoles);
+                return;
+            }
             $lockAcquired = true;
         } else {
             $noCache = true;
             $lockAcquired = false;
         }
-
-        $cachedRoles = Cache::get($cacheKey);
-        if ($cachedRoles) {
-            if ($lockAcquired) {
-                $cacheLock->release();
-            }
-
-            list ($effectiveRoles, $trueRoles) = $cachedRoles;
-            $this->roles = $effectiveRoles;
-            $this->rolesById = array_fill_keys($this->roles, true);
-            $this->trueRoles = $trueRoles;
-            $this->trueRolesById = array_fill_keys($this->trueRoles, true);
-            return;
-        }
-
 
         $grantedIds = DB::table('person_role')
             ->where('person_id', $this->id)
@@ -1025,6 +1024,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         if ($lockAcquired) {
             $cacheLock->release();
         }
+    }
+
+    public function setCachedRoles(array $cachedRoles): void
+    {
+        list ($effectiveRoles, $trueRoles) = $cachedRoles;
+        $this->roles = $effectiveRoles;
+        $this->rolesById = array_fill_keys($this->roles, true);
+        $this->trueRoles = $trueRoles;
+        $this->trueRolesById = array_fill_keys($this->trueRoles, true);
     }
 
     /**
