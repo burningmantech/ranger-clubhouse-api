@@ -14,7 +14,7 @@ class Role extends ApiModel
     const EDIT_ACCESS_DOCS = 5;   // Edit Access Documents
     const EDIT_BMIDS       = 6;   // Edit BMIDs
     const EDIT_SLOTS       = 7;   // Edit Slots
-    const LOGIN            = 11;  // Person allowed to login (superseded by the suspend status)
+    const LOGIN            = 11;  // Person allowed to login (not used, superseded by the suspend status)
     const MANAGE           = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
     const INTAKE           = 13;  // Intake Management
     const MENTOR           = 101; // Mentor - access mentor section
