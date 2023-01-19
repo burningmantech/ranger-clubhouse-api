@@ -81,7 +81,7 @@ class TeamController extends ApiController
 
         if ($team->save()) {
             $team->loadRoles();
-            Cache::forget();
+            Cache::flush();
             return $this->success($team);
         }
 
@@ -104,7 +104,7 @@ class TeamController extends ApiController
         PersonTeam::where('team_id', $team->id)->delete();
         PersonTeamLog::where('team_id', $team->id)->delete();
         TeamRole::where('team_id', $team->id)->delete();
-        Cache::forget();
+        Cache::flush();
         return $this->restDeleteSuccess();
     }
 
