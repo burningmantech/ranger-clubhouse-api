@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\PositionRole;
@@ -74,6 +75,8 @@ class Membership
         if (!empty($newIds)) {
             PersonPosition::addIdsToPerson($personId, $newIds, $reason);
         }
+
+        PersonRole::clearCache($personId);
     }
 
     /**
@@ -188,6 +191,8 @@ class Membership
             $pt->auditReason = $reason;
             $pt->saveWithoutValidation();
         }
+
+        PersonRole::clearCache($personId);
     }
 
     /**

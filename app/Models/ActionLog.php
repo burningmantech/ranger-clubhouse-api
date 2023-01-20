@@ -162,6 +162,14 @@ class ActionLog extends Model
                 $row->roles = Role::whereIn('id', array_values($data['role_ids']))->orderBy('title')->get(['id', 'title']);
             }
 
+            if (isset($data['role_id']) ) {
+                $row->role = Role::select('id', 'title')->where('id', $data['role_id'])->first();
+            }
+
+            if (isset($data['team_id'])) {
+                $row->team = Team::select('id', 'title')->where('id', $data['team_id'])->first();
+            }
+
             if ($redactData) {
                 $row->data = null;
             }

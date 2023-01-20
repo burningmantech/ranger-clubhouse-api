@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -85,6 +86,7 @@ class PositionRole extends ApiModel
 
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         if (self::insertOrIgnore($data) == 1) {
+            Cache::flush();
             ActionLog::record(Auth::user(), 'position-role-add', $reason, $data);
         }
     }
@@ -102,6 +104,7 @@ class PositionRole extends ApiModel
     {
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         self::where($data)->delete();
+        Cache::flush();
         ActionLog::record(Auth::user(), 'position-role-remove', $reason, $data);
     }
 }
