@@ -48,7 +48,7 @@ class RoleOperationTest extends TestCase
         $response = $this->get('/person/' . $this->user->id);
         $response->assertStatus(200);
 
-        $cachedRoles = Cache::get(PersonRole::CACHE_KEY . $this->user->id);
+        $cachedRoles = Cache::get(PersonRole::getCacheKey($this->user->id));
         $this->assertNotNull($cachedRoles);
 
         list ($effectiveRoles, $trueRoles) = $cachedRoles;
