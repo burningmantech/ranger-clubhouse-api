@@ -182,7 +182,9 @@ class Membership
                 continue;
             }
 
-            $pt->is_manager = in_array($id, $managerIds);
+            if ($isAdmin) {
+                $pt->is_manager = in_array($id, $managerIds);
+            }
             $pt->auditReason = $reason;
             $pt->saveWithoutValidation();
         }

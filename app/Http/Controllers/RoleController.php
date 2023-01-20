@@ -7,6 +7,7 @@ use App\Models\PersonRole;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class RoleController extends ApiController
 {
@@ -18,7 +19,11 @@ class RoleController extends ApiController
 
     public function index(): JsonResponse
     {
-        return $this->success(Role::findAll(), null);
+        $params = request()->validate([
+            'include_associations' => 'sometimes|boolean'
+        ]);
+
+        return $this->success(Role::findForQuery($params), null, 'role');
     }
 
     /**
@@ -102,6 +107,49 @@ class RoleController extends ApiController
 
         return response()->json(['roles' => PeopleByRoleReport::execute()]);
     }
+
+    /**
+     * Diagnostic function - Inspect the role cache for a person
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function inspectCache(): JsonResponse
+    {
+        $this->authorize('inspectCache', Role::class);
+
+        $params = request()->validate([
+            'person_id' => 'integer|required|exists:person,id'
+        ]);
+
+        $cached = Cache::get(PersonRole::getCacheKey($params['person_id']));
+        if (!$cached) {
+            return response()->json(['not_cached' => true]);
+        }
+
+        list ($effectiveRoles, $trueRoles) = $cached;
+
+        $all = array_unique(array_merge($effectiveRoles, $trueRoles));
+        if (empty($all)) {
+            return response()->json(['roles' => []]);
+        }
+
+        $rows = Role::find($all);
+
+        $roles = [];
+        foreach ($rows as $row) {
+            $roles[] = [
+                'id' => $row->id,
+                'title' => $row->title,
+                'is_masquerading' => in_array($row->id, $effectiveRoles) && !in_array($row->id, $trueRoles)
+            ];
+        }
+
+        usort($roles, fn($a, $b) => strcasecmp($a['title'], $b['title']));
+        return response()->json(['roles' => $roles]);
+    }
+
 
     /**
      * Clear the role cache for a person

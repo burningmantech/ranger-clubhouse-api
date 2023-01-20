@@ -92,4 +92,16 @@ class RolePolicy
     {
         return $user->hasRole(Role::TECH_NINJA);
     }
+
+    /**
+     * Can the person inspect the cached roles for a person.
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function inspectCache(Person $user) : bool
+    {
+        return $user->hasRole(Role::TECH_NINJA);
+    }
 }

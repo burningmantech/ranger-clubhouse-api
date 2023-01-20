@@ -164,8 +164,19 @@ class PersonRole extends ApiModel
      * @return void
      */
 
-    public static function clearCache(int $personId) : void
+    public static function clearCache(int $personId): void
     {
-        Cache::forget(self::CACHE_KEY.$personId);
+        Cache::forget(self::getCacheKey($personId));
+    }
+
+    /**
+     * Get the cache key for the given person
+     * @param int $personId
+     * @return string
+     */
+
+    public static function getCacheKey(int $personId): string
+    {
+        return self::CACHE_KEY . $personId;
     }
 }

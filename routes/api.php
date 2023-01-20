@@ -11,19 +11,12 @@
 |
 */
 
-/*
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
-*/
-
-
-/*
- * API which do not require an authorized user
- */
-
 
 use Illuminate\Support\Facades\Route;
+
+/*
+ * APIs which do not require an authorized user
+ */
 
 Route::group([
     'middleware' => 'api',
@@ -291,6 +284,7 @@ Route::group([
     Route::post('rbs/transmit', 'RbsController@transmit');
 
     Route::get('role/people-by-role', 'RoleController@peopleByRole');
+    Route::get('role/inspect-cache', 'RoleController@inspectCache');
     Route::post('role/clear-cache', 'RoleController@clearCache');
     Route::resource('role', 'RoleController');
 

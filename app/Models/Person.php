@@ -928,7 +928,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         $noCache = false;
-        $cacheKey = PersonRole::CACHE_KEY . $this->id;
+        $cacheKey = PersonRole::getCacheKey($this->id);
 
 
         $cachedRoles = Cache::get($cacheKey);
