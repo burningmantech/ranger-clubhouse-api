@@ -14,6 +14,7 @@ use App\Models\Award;
 use App\Models\Bmid;
 use App\Models\Broadcast;
 use App\Models\Document;
+use App\Models\EmailHistory;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
 use App\Models\HandleReservation;
@@ -57,6 +58,7 @@ use App\Policies\AwardPolicy;
 use App\Policies\BmidPolicy;
 use App\Policies\BroadcastPolicy;
 use App\Policies\DocumentPolicy;
+use App\Policies\EmailHistoryPolicy;
 use App\Policies\ErrorLogPolicy;
 use App\Policies\EventDatePolicy;
 use App\Policies\HandleReservationPolicy;
@@ -111,6 +113,7 @@ class AuthServiceProvider extends ServiceProvider
         Bmid::class => BmidPolicy::class,
         Broadcast::class => BroadcastPolicy::class,
         Document::class => DocumentPolicy::class,
+        EmailHistory::class => EmailHistoryPolicy::class,
         ErrorLog::class => ErrorLogPolicy::class,
         EventDate::class => EventDatePolicy::class,
         HandleReservation::class => HandleReservationPolicy::class,

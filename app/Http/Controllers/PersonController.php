@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\BulkLookup;
 use App\Lib\Membership;
 use App\Lib\Milestones;
+use App\Lib\PersonSearch;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
 use App\Lib\Reports\PeopleByLocationReport;
@@ -14,6 +15,7 @@ use App\Lib\Reports\TimesheetWorkSummaryReport;
 use App\Lib\TicketsAndProvisionsProgress;
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
+use App\Models\EmailHistory;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
@@ -39,7 +41,7 @@ use InvalidArgumentException;
 class PersonController extends ApiController
 {
     /**
-     * Search and display person rows.
+     * Show a set of person records based on the given criteria.
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -50,74 +52,40 @@ class PersonController extends ApiController
         $this->authorize('index', Person::class);
 
         $params = request()->validate([
-            'query' => 'sometimes|string',
-            'search_fields' => 'sometimes|string',
+            'callsign' => 'sometimes|string',
             'statuses' => 'sometimes|string',
             'exclude_statuses' => 'sometimes|string',
             'limit' => 'sometimes|integer',
             'offset' => 'sometimes|integer',
-            'basic' => 'sometimes|boolean',
         ]);
 
-        $canViewEmail = $this->userCanViewEmail();
-        $results = Person::findForQuery($params, $canViewEmail);
-        $people = $results['people'];
-        $meta = ['limit' => $results['limit'], 'total' => $results['total']];
+        $results = Person::findForQuery($params);
 
-        if ($params['basic'] ?? false) {
-            if (!$this->userHasRole([Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER])) {
-                $this->notPermitted("Not authorized for basic search.");
-            }
+        return $this->toRestFiltered($results['people'], ['limit' => $results['limit'], 'total' => $results['total']], 'person');
+    }
 
-            $rows = [];
-            $searchFields = $params['search_fields'] ?? '';
-            $query = trim($params['query'] ?? '');
+    /**
+     * Fuzzy search for a person by callsign, fka, email (current or old), and/or real name.
+     * Primarily used by the various autocomplete search bars.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
 
-            if ($canViewEmail && stripos($searchFields, 'email') !== false) {
-                $searchingForEmail = stripos($query, '@') !== false;
-            } else {
-                $searchingForEmail = false;
-            }
+    public function search(): JsonResponse
+    {
+        $this->authorize('search', Person::class);
 
-            $searchingForFKA = stripos($searchFields, 'formerly_known_as') !== false;
-            foreach ($results['people'] as $person) {
-                $row = [
-                    'id' => $person->id,
-                    'callsign' => $person->callsign,
-                    'status' => $person->status,
-                    'first_name' => $person->first_name,
-                    'last_name' => $person->last_name,
-                ];
+        $params = request()->validate([
+            'query' => 'required|string',
+            'search_fields' => 'required|string',
+            'statuses' => 'sometimes|string',
+            'exclude_statuses' => 'sometimes|string',
+            'limit' => 'sometimes|integer',
+            'offset' => 'sometimes|integer',
+        ]);
 
-                if ($canViewEmail) {
-                    $row['email'] = $person->email;
-                    if ($searchingForEmail) {
-                        if (strcasecmp($person->email, $query) == 0) {
-                            $row['email_match'] = 'full';
-                        } elseif (stripos($person->email, $query) !== false) {
-                            $row['email_match'] = 'partial';
-                        }
-                    }
-                }
-
-                if ($searchingForFKA) {
-                    foreach ($person->formerlyKnownAsArray(true) as $fka) {
-                        // Don't bother matching on the FKA if it already matches the beginning of the current callsign.
-                        // Helps with callsigns which were truncated (fka: doctor hubcap -> hubcap)
-                        if (stripos($fka, $query) !== false && stripos($person->callsign_normalized, $query) !== 0) {
-                            $row['fka_match'] = $fka;
-                            break;
-                        }
-                    }
-                }
-
-                $rows[] = $row;
-            }
-
-            return response()->json(['person' => $rows, 'meta' => $meta]);
-        } else {
-            return $this->toRestFiltered($people, $meta, 'person');
-        }
+        return response()->json(PersonSearch::execute($params, $this->userCanViewEmail()));
     }
 
     /**
@@ -197,11 +165,12 @@ class PersonController extends ApiController
             PersonLanguage::updateForPerson($person->id, $person->languages);
         }
 
-        // Alert VCs when the email address changes for a prospective.
-        if ($emailChanged
-            && ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA)
-            && $person->id == $this->user->id) {
-            mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
+        if ($emailChanged) {
+            EmailHistory::record($person->id, $oldEmail, $this->user->id);
+            // Alert VCs when the email address changes for a prospective.
+            if ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA) {
+                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
+            }
         }
 
         if ($statusChanged) {

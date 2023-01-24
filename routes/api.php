@@ -132,6 +132,7 @@ Route::group([
     Route::get('language/speakers', 'LanguageController@speakers');
     Route::resource('language', 'LanguageController');
 
+    Route::get('email-history', 'EmailHistoryController@index');
     Route::delete('error-log/purge', 'ErrorLogController@purge');
     Route::resource('error-log', 'ErrorLogController', ['only' => 'index']);
 
@@ -191,6 +192,7 @@ Route::group([
     Route::get('person/by-status', 'PersonController@peopleByStatus');
     Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
     Route::post('person/bulk-lookup', 'PersonController@bulkLookup');
+    Route::get('person/search', 'PersonController@search');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');

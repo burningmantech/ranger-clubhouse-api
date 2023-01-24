@@ -457,6 +457,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return $this->hasMany(PersonRole::class);
     }
 
+    public function email_history(): HasMany
+    {
+        return $this->hasMany(EmailHistory::class);
+    }
+
     /**
      * Find an account by its email.
      *
@@ -583,178 +588,44 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /**
      * Find people based on criteria:
-     * query: string to search for
-     * search_fields: list of fields to search - callsign, name, formerly_known_as, email (comma separated)
+     * query: callsign to search for
      * statuses: list of statuses to match (comma separated)
      * limit: number of results to limit query to
      * offset: record offset in search
      *
      * @param array $query
-     * @param bool $canViewEmail
      * @return array
      */
 
-    public static function findForQuery(array $query, bool $canViewEmail = false): array
+    public static function findForQuery(array $query): array
     {
-        if (isset($query['query'])) {
-            $orderCallsigns = true;
-            $orderRealName = true;
-            $orderEmail = true;
-            $orderFKA = true;
+        $sql = self::orderBy('callsign');
+        $callsign = $query['callsign'] ?? null;
+        $statuses = $query['statuses'] ?? null;
+        $excludeStatuses = $query['exclude_statuses'] ?? null;
 
-            // remove duplicate spaces
-            $q = trim(preg_replace('/\s+/', ' ', $query['query']));
-            $normalized = self::normalizeCallsign($q);
-            $metaphone = metaphone(self::spellOutNumbers($normalized));
-
-            if (str_starts_with($q, '+')) {
-                // Search by number
-                $q = ltrim($q, '+');
-                $person = self::find(intval($q));
-
-                if ($person) {
-                    $total = $limit = 1;
-                } else {
-                    $total = $limit = 0;
-                }
-                return [
-                    'people' => $person ? [$person] : [],
-                    'total' => $total,
-                    'limit' => $limit
-                ];
-            }
-            $likeQuery = '%' . $q . '%';
-
-            $emailOnly = (stripos($q, '@') !== false);
-            if ($emailOnly && $canViewEmail) {
-                // Force email only search if @ is present
-                $sql = self::where('email', $q);
-                $orderCallsigns = false;
-                $orderFKA = false;
-                $orderRealName = false;
-            } elseif (isset($query['search_fields'])) {
-                $fields = explode(',', $query['search_fields']);
-
-                $orderCallsigns = false;
-                $orderRealName = false;
-                $orderEmail = false;
-                $orderFKA = false;
-
-                foreach ($fields as $field) {
-                    switch ($field) {
-                        case 'callsign':
-                            $orderCallsigns = true;
-                            break;
-                        case 'name':
-                            $orderRealName = true;
-                            break;
-                        case 'formerly_known_as':
-                            $orderFKA = true;
-                            break;
-                        case 'email':
-                            $orderEmail = true;
-                            break;
-                    }
-                }
-
-
-                $sql = self::where(function ($sql) use ($q, $fields, $likeQuery, $normalized, $metaphone, $canViewEmail) {
-                    foreach ($fields as $field) {
-                        switch ($field) {
-                            case 'callsign':
-                                $sql->orWhere('callsign_normalized', $normalized);
-                                $sql->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
-                                $sql->orWhere('callsign_soundex', $metaphone);
-                                $sql->orWhere('callsign_soundex', 'like', $metaphone . '%');
-                                break;
-
-                            case 'name':
-                                $sql->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE " . SqlHelper::quote($likeQuery));
-                                $sql->orWhere('last_name', 'like', SqlHelper::quote($q . '%'));
-                                break;
-
-                            case 'email':
-                                if ($canViewEmail) {
-                                    $sql->orWhere($field, 'like', $likeQuery);
-                                }
-                                break;
-                            case 'formerly_known_as':
-                                $sql->orWhere($field, 'like', $likeQuery);
-                                break;
-
-
-                            default:
-                                throw new InvalidArgumentException("Search field '$field' is invalid.");
-                        }
-                    }
-                });
-            } else {
-                $sql = self::where('callsign', 'like', $likeQuery);
-            }
-
-            if ($emailOnly) {
-                $sql->orderBy('email');
-            } else {
-                $orderBy = "CASE";
-                /*
-                 * Callsign sort priority is
-                 *  - Exact callsign match
-                 * - Beginning of callsign match
-                 * - Substring callsign match
-                 * - Exact phonetic callsign match
-                 * - Beginning of phonetic match
-                 * - substring phonetic match
-                 * - Everything else
-                 */
-                if ($orderCallsigns) {
-                    $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
-                    $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
-                    $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
-                    $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('04', callsign)";
-                    $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('05', callsign)";
-                    $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
-                }
-
-                if ($orderRealName) {
-                    $orderBy .= " WHEN CONCAT(first_name, ' ', last_name) LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('12', first_name, ' ', last_name)";
-                    $orderBy .= " WHEN CONCAT(last_name) LIKE " . SqlHelper::quote($q . "%") . " THEN CONCAT('11', 'last_name')";
-                }
-
-                if ($orderFKA) {
-                    $orderBy .= " WHEN formerly_known_as LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('20', formerly_known_as)";
-                }
-
-                if ($orderEmail) {
-                    $orderBy .= " WHEN email LIKE " . SqlHelper::quote("%" . $q . "%") . " THEN CONCAT('30', email)";
-                }
-                $orderBy .= " ELSE CONCAT('99', callsign) END";
-                $sql->orderBy(DB::raw($orderBy));
-            }
-        } else {
-            $sql = self::orderBy('callsign');
+        if ($callsign) {
+            $sql->where('callsign_normalized', self::normalizeCallsign($callsign));
         }
 
-        if (isset($query['statuses'])) {
-            $sql->whereIn('status', explode(',', $query['statuses']));
+        if ($statuses) {
+            $sql->whereIn('status', explode(',', $statuses));
         }
 
-        if (isset($query['exclude_statuses'])) {
-            $sql->whereNotIn('status', explode(',', $query['exclude_statuses']));
+        if ($excludeStatuses) {
+            $sql->whereNotIn('status', explode(',', $excludeStatuses));
         }
 
-
-        if (isset($query['limit'])) {
-            $limit = $query['limit'];
-        } else {
-            $limit = 50;
-        }
-
-        if (isset($query['offset'])) {
-            $sql = $sql->offset($query['offset']);
-        }
 
         $total = $sql->count();
+
+        $limit = $query['limit'] ?? 50;
         $sql->limit($limit);
+
+        $offset = $query['offset'] ?? null;
+        if ($offset) {
+            $sql = $sql->offset($offset);
+        }
 
         return [
             'people' => $sql->get(),
