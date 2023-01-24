@@ -12,14 +12,34 @@ class PersonPolicy
     use HandlesAuthorization;
 
     const AUTHORIZED_ROLES = [
-        Role::ADMIN, Role::MANAGE, Role::VC, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER
+        Role::ADMIN,
+        Role::ART_TRAINER,
+        Role::MANAGE,
+        Role::MENTOR,
+        Role::TRAINER,
+        Role::VC,
     ];
 
-    /*
+    /**
      * Can the user view a bunch of people?
+     *
+     * @param Person $user
+     * @return bool
      */
 
     public function index(Person $user): bool
+    {
+        return $user->hasRole([ Role::ADMIN, Role::VC ]);
+    }
+
+    /**
+     * Can the user search for people?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function search(Person $user) : bool
     {
         return $user->hasRole(self::AUTHORIZED_ROLES);
     }
