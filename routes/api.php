@@ -249,6 +249,7 @@ Route::group([
 
     Route::resource('person-position-log', 'PersonPositionLogController');
 
+    Route::get('person-swag/distribution', 'PersonSwagController@distribution');
     Route::resource('person-swag', 'PersonSwagController');
 
     Route::resource('person-team-log', 'PersonTeamLogController');

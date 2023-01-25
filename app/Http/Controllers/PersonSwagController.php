@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\SwagDistributionReport;
 use App\Models\PersonSwag;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -17,11 +18,12 @@ class PersonSwagController extends ApiController
 
     public function index(): JsonResponse
     {
-        $params = request()->validate(
-            ['person_id' => 'sometimes|integer'],
-            ['swag_id' => 'sometimes|integer'],
-            ['year_issued' => 'sometimes|integer'],
-        );
+        $params = request()->validate([
+            'person_id' => 'sometimes|integer',
+            'swag_id' => 'sometimes|integer',
+            'year_issued' => 'sometimes|integer',
+            'include_person' => 'sometimes|boolean',
+        ]);
 
         $this->authorize('index', [PersonSwag::class, $params['person_id'] ?? null]);
 
@@ -101,5 +103,19 @@ class PersonSwagController extends ApiController
         $personSwag->delete();
 
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Run the swag distribution report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function distribution() : JsonResponse
+    {
+        $this->authorize('distribution', PersonSwag::class);
+
+        return response()->json([ 'people' => SwagDistributionReport::execute($this->getYear())]);
     }
 }

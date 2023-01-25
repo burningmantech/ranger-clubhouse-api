@@ -66,4 +66,16 @@ class PersonSwagPolicy
     {
         return false;
     }
+
+    /**
+     * Can the user run the swag distribution report?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function distribution(Person $user) : bool
+    {
+        return false;
+    }
 }

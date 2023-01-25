@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\DB;
 
 class PersonSwag extends ApiModel
 {
@@ -47,6 +47,7 @@ class PersonSwag extends ApiModel
     public static function findForQuery(array $query): mixed
     {
         $personId = $query['person_id'] ?? null;
+        $includePerson = $query['include_person'] ?? null;
         $swagId = $query['swag_id'] ?? null;
         $yearIssued = $query['year_issued'] ?? null;
 
@@ -60,46 +61,40 @@ class PersonSwag extends ApiModel
         }
 
         if ($yearIssued) {
-            $sql->where('year_issued', $yearIssuede);
+            $sql->where('year_issued', $yearIssued);
+        }
+
+        if ($includePerson) {
+            $sql->with('person:id,callsign,status');
         }
 
         return $sql->get()->sortBy('swag.title', SORT_NATURAL)->values();
     }
 
-    /**
-     * Does the person have the swag?
-     *
-     * @param int $swagIg
-     * @param int $personId
-     * @return bool
-     */
-
-    public static function haveSwag(int $swagIg, int $personId): bool
-    {
-        return self::where(['swag_id' => $swagIg, 'person_id' => $personId])->exists();
-    }
 
     /**
-     * Set the notes
+     * Set the notes.
      *
-     * @param string|null $value
-     * @return void
+     * @return Attribute
      */
 
-    public function setNotesAttribute(?string $value): void
+    protected function notes(): Attribute
     {
-        $this->attributes['notes'] = empty($value) ? '' : $value;
+        return Attribute::make(
+            set: fn($value) => empty($value) ? '' : $value
+        );
     }
 
     /**
      * Set the year issued column. Null out if empty.
      *
-     * @param $value
-     * @return void
+     * @return Attribute
      */
 
-    public function setYearIssuedAttribute($value): void
+    protected function yearIssued(): Attribute
     {
-        $this->attributes['year_issued'] = empty($value) ? null : $value;
+        return Attribute::make(
+            set: fn($value) => empty($value) ? null : $value
+        );
     }
 }
