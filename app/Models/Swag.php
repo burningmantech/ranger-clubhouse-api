@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,7 +15,7 @@ class Swag extends ApiModel
     const TYPE_DEPT_PATCH = 'dept-patch';
     const TYPE_DEPT_PIN = 'dept-pin';
     const TYPE_DEPT_SHIRT = 'dept-shirt';
-    const TYPE_ORG_PIN = 'org-pin';
+    const TYPE_ORG_PATCH = 'org-patch';
     const TYPE_OTHER = 'other';
 
     const SHIRT_T_SHIRT = 't-shirt';
@@ -115,9 +116,11 @@ class Swag extends ApiModel
      * Set the shirt type column
      */
 
-    public function setShirtTypeAttribute($value)
+    protected function shirtType() : Attribute
     {
-        $this->attributes['shirt_type'] = empty($value) ? '' : $value;
+        return Attribute::make(
+            set: fn($value) => empty($value) ? '' : $value
+        );
     }
 
     /**
