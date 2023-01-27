@@ -460,6 +460,8 @@ class BulkUploader
     {
         $year = current_year();
 
+        $callsign = Auth::user()?->callsign ?? "unknown";
+
         foreach ($records as $record) {
             $person = $record->person;
             if (!$person) {
@@ -595,7 +597,7 @@ class BulkUploader
                     'type' => $type,
                     'source_year' => $sourceYear,
                     'expiry_date' => $expiryYear,
-                    'comments' => "$uploadDate {self::user->callsign}: $reason",
+                    'comments' => "$uploadDate {$callsign}: $reason",
                     'status' => AccessDocument::QUALIFIED,
                 ]
             );
