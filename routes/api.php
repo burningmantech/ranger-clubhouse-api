@@ -55,23 +55,25 @@ Route::group([
     Route::post('auth/logout', 'AuthController@logout');
     Route::post('auth/refresh', 'AuthController@refresh');
 
-    Route::post('access-document/bump-expiration', 'AccessDocumentController@bumpExpiration');
-    Route::get('access-document/current', 'AccessDocumentController@current');
-    Route::get('access-document/expiring', 'AccessDocumentController@expiring');
-    Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
+    Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
     Route::post('access-document/bulk-comment', 'AccessDocumentController@bulkComment');
-    Route::get('access-document/wap-candidates', 'AccessDocumentController@wapCandidates');
-    Route::post('access-document/grant-waps', 'AccessDocumentController@grantWAPs');
+    Route::post('access-document/bump-expiration', 'AccessDocumentController@bumpExpiration');
+    Route::get('access-document/claimed-tickets-with-no-signups', 'AccessDocumentController@claimedTicketsWithNoSignups');
+    Route::post('access-document/clean-access-documents', 'AccessDocumentController@cleanAccessDocsFromPriorEvent');
+    Route::get('access-document/current', 'AccessDocumentController@current');
+    Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
+    Route::get('access-document/expiring', 'AccessDocumentController@expiring');
     Route::post('access-document/grant-alpha-waps', 'AccessDocumentController@grantAlphaWAPs');
     Route::post('access-document/grant-vps', 'AccessDocumentController@grantVehiclePasses');
+    Route::post('access-document/grant-waps', 'AccessDocumentController@grantWAPs');
+    Route::post('access-document/mark-submitted', 'AccessDocumentController@markSubmitted');
     Route::post('access-document/set-staff-credentials-access-date', 'AccessDocumentController@setStaffCredentialsAccessDate');
-    Route::post('access-document/clean-access-documents', 'AccessDocumentController@cleanAccessDocsFromPriorEvent');
-    Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
-    Route::post('access-document/unbank-access-documents', 'AccessDocumentController@unbankAccessDocuments');
-    Route::post('access-document/expire-access-documents', 'AccessDocumentController@expireAccessDocuments');
+    Route::get('access-document/special-tickets', 'AccessDocumentController@specialTicketsReport');
     Route::patch('access-document/statuses', 'AccessDocumentController@statuses');
+    Route::post('access-document/unbank-access-documents', 'AccessDocumentController@unbankAccessDocuments');
     Route::get('access-document/unclaimed-tickets-with-signups', 'AccessDocumentController@unclaimedTicketsWithSignups');
-    Route::get('access-document/claimed-tickets-with-no-signups', 'AccessDocumentController@claimedTicketsWithNoSignups');
+    Route::get('access-document/wap-candidates', 'AccessDocumentController@wapCandidates');
+    Route::patch('access-document/{access_document}/status', 'AccessDocumentController@updateStatus');
     Route::resource('access-document', 'AccessDocumentController');
 
     Route::resource('action-log', 'ActionLogController', ['only' => 'index']);

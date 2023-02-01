@@ -13,9 +13,12 @@ set -u
 
 php_cmd="${PHP:-php}";
 
-type "${php_cmd}" > /dev/null;
+php_version=$(${php_cmd} -r "echo phpversion();");
 
-php_major="$("${php_cmd}" -v | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
+echo "PHP Version ${php_version}";
+
+type "${php_cmd}" > /dev/null;
+php_major="$(echo $php_version | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
 
 if [ ! ${php_major} -eq 8 ]; then
     echo "PHP major version 8 is required";

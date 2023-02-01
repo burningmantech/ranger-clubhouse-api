@@ -12,6 +12,7 @@ use App\Models\Person;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class AccessDocumentController extends ApiController
@@ -261,7 +262,7 @@ class AccessDocumentController extends ApiController
             $adStatus = $ad->status;
             switch ($status) {
                 case AccessDocument::BANKED:
-                    if (!in_array($adType, AccessDocument::TICKET_TYPES)
+                    if (!in_array($adType, AccessDocument::REGULAR_TICKET_TYPES)
                         || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
                         throw new InvalidArgumentException('Illegal type and status combination');
                     }
@@ -297,7 +298,7 @@ class AccessDocumentController extends ApiController
                 AccessDocumentChanges::log($ad, $this->user->id, $changes);
             }
 
-            if ($ad->isTicket()) {
+            if ($ad->isRegularTicket()) {
                 $haveTicket = true;
             }
         }
@@ -323,6 +324,48 @@ class AccessDocumentController extends ApiController
         }
 
         return $this->success($rows, null, 'access_document');
+    }
+
+    /**
+     * Update the status on a single special (Gift or LSD) access document.
+     *
+     * @param AccessDocument $accessDocument
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function updateStatus(AccessDocument $accessDocument): JsonResponse
+    {
+        $this->authorize('update', $accessDocument);
+
+        $params = request()->validate([
+            'status' => [
+                'required',
+                Rule::in([AccessDocument::CLAIMED, AccessDocument::TURNED_DOWN])
+            ]
+        ]);
+
+        if (!$accessDocument->isSpecialTicket()) {
+            throw new InvalidArgumentException("Record is not a Gift or LSD ticket");
+        }
+
+        $status = $accessDocument->status;
+        if ($status != AccessDocument::QUALIFIED
+            && $status != AccessDocument::CLAIMED
+            && $status != AccessDocument::TURNED_DOWN) {
+            throw new InvalidArgumentException('Existing status is not qualified, claimed, or turned down.');
+        }
+
+        $accessDocument->status = $params['status'];
+        $changes = $accessDocument->getChangedValues();
+
+        if (!empty($changes)) {
+            $accessDocument->saveWithoutValidation();
+            $changes['id'] = $accessDocument->id;
+            AccessDocumentChanges::log($accessDocument, $this->user->id, $changes);
+        }
+
+        return $this->success($accessDocument);
     }
 
     /**
@@ -559,9 +602,7 @@ class AccessDocumentController extends ApiController
             $this->saveAccessDocument($ad, $documents, true);
         }
 
-        usort($documents, function ($a, $b) {
-            return strcasecmp($a['person']['callsign'], $b['person']['callsign']);
-        });
+        usort($documents, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
 
         return response()->json(['access_documents' => $documents]);
     }
@@ -679,6 +720,8 @@ class AccessDocumentController extends ApiController
     }
 
     /**
+     * Report on claimed tickets yet the person has not signed up for anything.
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
@@ -687,5 +730,42 @@ class AccessDocumentController extends ApiController
     {
         $this->authorize('claimedTicketsWithNoSignups', AccessDocument::class);
         return response()->json(['people' => ClaimedTicketsWithNoSignups::execute()]);
+    }
+
+    /**
+     * Report on special tickets
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function specialTicketsReport(): JsonResponse
+    {
+        $this->authorize('specialTicketsReport', AccessDocument::class);
+
+        $rows = AccessDocument::whereIn('type', AccessDocument::SPECIAL_TICKET_TYPES)
+            ->whereIn('status', [
+                AccessDocument::CLAIMED,
+                AccessDocument::QUALIFIED,
+                AccessDocument::SUBMITTED,
+                AccessDocument::TURNED_DOWN,
+            ])
+            ->with('person:id,callsign,status')
+            ->get();
+
+        $results = [];
+        foreach ($rows as $row) {
+            $results[] = [
+                'id' => $row->id,
+                'type' => $row->type,
+                'status' => $row->status,
+                'person' => [
+                    'id' => $row->person->id,
+                    'callsign' => $row->person->callsign,
+                    'status' => $row->person->status,
+                ]
+            ];
+        }
+        return response()->json(['access_documents' => $results]);
     }
 }
