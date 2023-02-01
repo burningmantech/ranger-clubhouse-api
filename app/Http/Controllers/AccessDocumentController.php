@@ -735,8 +735,6 @@ class AccessDocumentController extends ApiController
     /**
      * Report on special tickets
      *
-     * TODO: Investigate combining this with current() somehow.
-     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
