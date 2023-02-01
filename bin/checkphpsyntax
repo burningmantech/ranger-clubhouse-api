@@ -13,7 +13,7 @@ set -u
 
 php_cmd="${PHP:-php}";
 
-php_version=`${php_cmd} -r "echo phpversion();"`;
+php_version=$(${php_cmd} -r "echo phpversion();");
 
 echo "PHP Version ${php_version}";
 
