@@ -12,25 +12,29 @@ on:
 
 jobs:
 
-# When uncommenting the below, be sure to look at the 'deploy-staging' task further down.
-#  check-syntax:
-#    name: Check PHP Syntax
-#
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 1
-#
-#    steps:
-#      - name: Harden CI
-#        uses: step-security/harden-runner@v2.0.0
-#        with:
-#          egress-policy: audit
-#
-#      - name: Checkout source code
-#        uses: actions/checkout@v3
-#
-#      - name: Check PHP Syntax
-#        run: ./bin/checkphpsyntax .
-#
+  check-syntax:
+    name: Check PHP Syntax
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.0.0
+        with:
+          egress-policy: audit
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Check PHP Syntax
+        run: ./bin/checkphpsyntax .
+
 
   docker-build:
     name: Build Docker image
@@ -134,8 +138,7 @@ jobs:
   deploy-staging:
     name: Deploy code from master branch to the staging environment
 
-#    needs: [check-syntax, unit, docker-build, docker-test]
-    needs: [unit, docker-build, docker-test]
+    needs: [check-syntax, unit, docker-build, docker-test]
     if: github.ref == 'refs/heads/master'
 
     runs-on: ubuntu-latest
