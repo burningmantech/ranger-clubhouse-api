@@ -29,6 +29,7 @@ class AccessDocumentPolicy
     /**
      * Determine whether the user can see the current access document summary.
      */
+
     public function current(Person $user): false
     {
         return false;
