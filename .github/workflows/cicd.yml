@@ -12,6 +12,7 @@ on:
 
 jobs:
 
+# When uncommenting the below, be sure to look at the 'deploy-staging' task further down.
 #  check-syntax:
 #    name: Check PHP Syntax
 #
@@ -133,7 +134,8 @@ jobs:
   deploy-staging:
     name: Deploy code from master branch to the staging environment
 
-    needs: [check-syntax, unit, docker-build, docker-test]
+#    needs: [check-syntax, unit, docker-build, docker-test]
+    needs: [unit, docker-build, docker-test]
     if: github.ref == 'refs/heads/master'
 
     runs-on: ubuntu-latest
