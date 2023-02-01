@@ -24,6 +24,11 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
       - name: Checkout source code
         uses: actions/checkout@v3
 

@@ -9,7 +9,7 @@ class UnclaimedTicketsWithSignupsReport
 {
     public static function execute(): array
     {
-        $unclaimedRows = AccessDocument::whereIn('type', AccessDocument::TICKET_TYPES)
+        $unclaimedRows = AccessDocument::whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
             ->where('status', AccessDocument::QUALIFIED)
             ->with('person:id,callsign,status,email')
             ->get();

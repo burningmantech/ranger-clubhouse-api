@@ -27,12 +27,25 @@ class TicketAndProvisionsPackage
 
         $pe = PersonEvent::firstOrNewForPersonYear($personId, current_year());
 
+        $accessDocuments = [];
+        $specialTickets = [];
+
+        $ads = AccessDocument::findForQuery(['person_id' => $personId]);
+        foreach ($ads as $ad) {
+            if ($ad->type == AccessDocument::GIFT || $ad->type == AccessDocument::LSD) {
+                $specialTickets[] = $ad;
+            } else {
+                $accessDocuments[] = $ad;
+            }
+        }
         $result = [
-            'access_documents' => AccessDocument::findForQuery(['person_id' => $personId]),
+            'access_documents' => $accessDocuments,
+            'special_tickets' => $specialTickets,
             'provisions' => Provision::findForQuery(['person_id' => $personId]),
             'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
             'year_earned' => $year,
             'period' => setting('TicketingPeriod'),
+            'special_tickets_enabled' => setting('TicketingForSpecialEnabled'),
             'started_at' => $pe->ticketing_started_at ? (string)$pe->ticketing_started_at : null,
             'finished_at' => $pe->ticketing_finished_at ? (string)$pe->ticketing_finished_at : null,
             'visited_at' => $pe->ticketing_last_visited_at ? ( string)$pe->ticketing_last_visited_at : null,
@@ -78,7 +91,7 @@ class TicketAndProvisionsPackage
             if ($isMeal) {
                 Bmid::populateMealMatrix(Provision::MEAL_MATRIX[$provision->type], $mealMatrix);
                 if (!$haveAllocated) {
-                    $mealsExpire = (string) $provision->expires_on;
+                    $mealsExpire = (string)$provision->expires_on;
                 }
                 continue;
             }
@@ -88,12 +101,12 @@ class TicketAndProvisionsPackage
                     $radios = $provision->item_count;
                 }
                 if (!$haveAllocated) {
-                    $radioExpires = (string) $provision->expires_on;
+                    $radioExpires = (string)$provision->expires_on;
                 }
             } else if ($provision->type == Provision::WET_SPOT) {
                 $haveShowers = true;
                 if (!$haveAllocated) {
-                    $showersExpire = (string) $provision->expires_on;
+                    $showersExpire = (string)$provision->expires_on;
                 }
             }
         }
@@ -115,6 +128,6 @@ class TicketAndProvisionsPackage
             $result['provisions_bankable'] = !$haveAllocated;
             $result['provisions_banked'] = $haveBanked;
         }
-     }
+    }
 
 }

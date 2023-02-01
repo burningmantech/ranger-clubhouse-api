@@ -30,7 +30,7 @@ class TopHourEarnersReport
 
         $bigBank = DB::table('access_document')
             ->whereIntegerInRaw('person_id', $personIds)
-            ->whereIn('type', AccessDocument::TICKET_TYPES)
+            ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
             ->whereIn('status', [AccessDocument::BANKED, AccessDocument::QUALIFIED])
             ->get()
             ->groupBy('person_id');

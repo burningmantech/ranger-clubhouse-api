@@ -20,6 +20,7 @@ class AccessDocument extends ApiModel
     const CANCELLED = 'cancelled';
     const EXPIRED = 'expired';
     const SUBMITTED = 'submitted';
+    const TURNED_DOWN = 'turned_down';
 
     const ACTIVE_STATUSES = [
         self::QUALIFIED,
@@ -56,6 +57,16 @@ class AccessDocument extends ApiModel
         self::STAFF_CREDENTIAL,
     ];
 
+    const REGULAR_TICKET_TYPES = [
+        self::RPT,
+        self::STAFF_CREDENTIAL,
+    ];
+
+    const SPECIAL_TICKET_TYPES = [
+        self::GIFT,
+        self::LSD,
+    ];
+
     const DELIVERABLE_TYPES = [
         self::GIFT,
         self::LSD,
@@ -71,9 +82,11 @@ class AccessDocument extends ApiModel
     ];
 
     const EXPIRE_THIS_YEAR_TYPES = [
+        self::GIFT,
+        self::LSD,
+        self::VEHICLE_PASS,
         self::WAP,
         self::WAPSO,
-        self::VEHICLE_PASS,
     ];
 
     const TYPE_LABELS = [
@@ -183,6 +196,10 @@ class AccessDocument extends ApiModel
                 $model->access_any_time = false;
             }
         });
+
+        self::updated(function ($model) {
+
+        });
     }
 
     public function person(): BelongsTo
@@ -210,6 +227,7 @@ class AccessDocument extends ApiModel
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
+        $excludeSpecial = $query['exclude_special'] ?? null;
 
         if ($status != 'all') {
             if (empty($status)) {
@@ -244,7 +262,7 @@ class AccessDocument extends ApiModel
     public static function noAvailableTickets(int $personId): bool
     {
         return self::where('person_id', $personId)
-            ->whereIn('type', self::TICKET_TYPES)
+            ->whereIn('type', self::REGULAR_TICKET_TYPES)
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED])
             ->doesntExist();
     }
@@ -564,15 +582,27 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Is this item a ticket?
+     * Is this a RPT or SC ticket?
      *
      * @return bool
      */
 
-    public function isTicket(): bool
+    public function isRegularTicket(): bool
     {
         return in_array($this->type, self::TICKET_TYPES);
     }
+
+    /**
+     * Is this a special ticket (Gift or LSD)?
+     *
+     * @return bool
+     */
+
+    public function isSpecialTicket() : bool
+    {
+        return in_array($this->type, self::SPECIAL_TICKET_TYPES);
+    }
+
 
     public function getTypeLabel()
     {

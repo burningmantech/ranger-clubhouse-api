@@ -21,7 +21,7 @@ class AccessDocumentPolicy
     /**
      * Determine whether the user can view the AccessDocument.
      */
-    public function index(Person $user, $personId)
+    public function index(Person $user, $personId): bool
     {
         return ($user->id == $personId);
     }
@@ -29,7 +29,8 @@ class AccessDocumentPolicy
     /**
      * Determine whether the user can see the current access document summary.
      */
-    public function current(Person $user)
+
+    public function current(Person $user): false
     {
         return false;
     }
@@ -37,7 +38,7 @@ class AccessDocumentPolicy
     /**
      * Determine whether the user can see the expiring tickets.
      */
-    public function expiring(Person $user)
+    public function expiring(Person $user): false
     {
         return false;
     }
@@ -46,7 +47,7 @@ class AccessDocumentPolicy
     /**
      * A normal user may not create access doucments
      */
-    public function create(Person $user)
+    public function create(Person $user): false
     {
         return false;
     }
@@ -54,9 +55,10 @@ class AccessDocumentPolicy
     /**
      * Is the person allowed to bump the expiration dates in mass?
      * @param Person $user
-     * @return bool
+     * @return false
      */
-    public function bumpExpiration(Person $user)
+
+    public function bumpExpiration(Person $user): false
     {
         return false;
     }
@@ -65,7 +67,7 @@ class AccessDocumentPolicy
      * Determine whether the user can view the AccessDocument.
      *
      */
-    public function view(Person $user, AccessDocument $accessDocument)
+    public function view(Person $user, AccessDocument $accessDocument): bool
     {
         return ($user->id == $accessDocument->person_id);
     }
@@ -74,7 +76,7 @@ class AccessDocumentPolicy
      * Determine whether the user can update the AccessDocument.
      *
      */
-    public function update(Person $user, AccessDocument $accessDocument)
+    public function update(Person $user, AccessDocument $accessDocument): bool
     {
         return ($user->id == $accessDocument->person_id);
     }
@@ -83,67 +85,67 @@ class AccessDocumentPolicy
      * Determine whether the user can delete the AccessDocument.
      *
      */
-    public function destroy(Person $user, AccessDocument $accessDocument)
+    public function destroy(Person $user, AccessDocument $accessDocument): bool
     {
         return ($user->id == $accessDocument->person_id);
     }
 
-    public function storeSOSWAP(Person $user, $personId)
+    public function storeSOSWAP(Person $user, $personId): bool
     {
         return ($user->id == $personId);
     }
 
-    public function bulkComment(Person $user)
+    public function bulkComment(Person $user): false
     {
         return false;
     }
 
-    public function markSubmitted(Person $user)
+    public function markSubmitted(Person $user): false
     {
         return false;
     }
 
-    public function grantWAPs(Person $user)
+    public function grantWAPs(Person $user): false
     {
         return false;
     }
 
-    public function grantAlphaWAPs(Person $user)
+    public function grantAlphaWAPs(Person $user): false
     {
         return false;
     }
 
-    public function grantVehiclePasses(Person $user)
+    public function grantVehiclePasses(Person $user): false
     {
         return false;
     }
 
-    public function setStaffCredentialsAccessDate(Person $user)
+    public function setStaffCredentialsAccessDate(Person $user): false
     {
         return false;
     }
 
-    public function cleanAccessDocsFromPriorEvent(Person $user)
+    public function cleanAccessDocsFromPriorEvent(Person $user): false
     {
         return false;
     }
 
-    public function bankAccessDocuments(Person $user)
+    public function bankAccessDocuments(Person $user): false
     {
         return false;
     }
 
-    public function expireAccessDocuments(Person $user)
+    public function expireAccessDocuments(Person $user): false
     {
         return false;
     }
 
-    public function delivery(Person $user, $personId)
+    public function delivery(Person $user, $personId): bool
     {
         return ($user->id == $personId);
     }
 
-    public function unbankAccessDocuments(Person $user)
+    public function unbankAccessDocuments(Person $user): false
     {
         return false;
     }
@@ -184,11 +186,24 @@ class AccessDocumentPolicy
      * Can the user update a person's ticketing progress?
      *
      * @param Person $user
-     * @return false
+     * @param Person $person
+     * @return bool
      */
 
     public function updateProgress(Person $user, Person $person): bool
     {
         return $user->id == $person->id;
+    }
+
+    /**
+     * Can the person run the special tickets report.
+     *
+     * @param Person $user
+     * @return false
+     */
+
+    public function specialTicketsReport(Person $user) : false
+    {
+        return false;
     }
 }
