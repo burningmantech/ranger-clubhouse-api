@@ -15,6 +15,8 @@ php_cmd="${PHP:-php}";
 
 php_version=`${php_cmd} -r "echo phpversion();"`;
 
+echo "PHP Version ${php_version}";
+
 type "${php_cmd}" > /dev/null;
 php_major="$(echo $php_version | head -1 | cut -f 2 -d " " | cut -f 1 -d ".")";
 
