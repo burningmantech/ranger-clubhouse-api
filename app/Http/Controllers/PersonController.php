@@ -455,7 +455,11 @@ class PersonController extends ApiController
             'manager_ids.*' => 'sometimes|integer',
         ]);
 
-        Membership::updateTeamsForPerson($this->user->id, $person->id, $params['team_ids'], $params['manager_ids'], 'person update', $this->user->isAdmin());
+        $userId = $this->user->id;
+        $isAdmin = $this->user->isAdmin();
+
+        Membership::updateTeamsForPerson($userId, $person->id, $params['team_ids'], 'person update', $isAdmin);
+        Membership::updateManagementForPerson($userId, $person->id, $params['manager_ids'], 'person update', $isAdmin);
 
         return $this->success();
     }

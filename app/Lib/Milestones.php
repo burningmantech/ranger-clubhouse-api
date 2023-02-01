@@ -157,7 +157,7 @@ class Milestones
             // Starting late 2022 - All (effective) login management roles require annual NDA signature.
             // MOAR PAPERWERKS! MOAR WINZ!
             // Don't require the NDA if the agreement does not exist.
-            if (PersonRole::haveRole($person->id, Role::MANAGE)
+            if ($person->hasRawRole(Role::MANAGE)
                 && !$event->signed_nda
                 && Document::haveTag(Agreements::DEPT_NDA)
             ) {

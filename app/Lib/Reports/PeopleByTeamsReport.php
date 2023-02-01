@@ -15,22 +15,22 @@ class PeopleByTeamsReport
     public static function execute(): array
     {
         $teams = Team::findAll();
-        $teams->load('members:person.id,callsign,status,is_manager');
+        $teams->load(['members:person.id,callsign,status', 'managers']);
 
         return $teams->map(function ($team) {
-            $members = $team->members->map(fn($member) => [
-                'id' => $member->id,
-                'callsign' => $member->callsign,
-                'status' => $member->status,
-                'is_manager' => $member->is_manager,
-            ])->toArray();
-
-            usort($members, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-
             return [
                 'id' => $team->id,
                 'title' => $team->title,
-                'members' => $members,
+                'managers' => $team->managers->map(fn($manager) => [
+                    'id' => $manager->id,
+                    'callsign' => $manager->callsign,
+                    'status' => $manager->status,
+                ])->toArray(),
+                'members' => $team->members->map(fn($member) => [
+                    'id' => $member->id,
+                    'callsign' => $member->callsign,
+                    'status' => $member->status,
+                ])->toArray(),
             ];
         })->toArray();
     }
