@@ -7,12 +7,10 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $person_id
  * @property int $team_id
- * @property bool $is_manager
  *
  */
 class PersonTeam extends ApiModel
@@ -24,10 +22,6 @@ class PersonTeam extends ApiModel
     protected $primaryKey = ['person_id', 'team_id'];
 
     protected $guarded = [];
-
-    protected $casts = [
-        'is_manager' => 'bool'
-    ];
 
     public function person(): BelongsTo
     {
@@ -48,27 +42,11 @@ class PersonTeam extends ApiModel
 
     public static function findAllTeamsForPerson(int $personId): Collection
     {
-        return Team::select('team.*', 'person_team.is_manager')
+        return Team::select('team.*')
             ->join('person_team', 'team.id', 'person_team.team_id')
             ->where('person_team.person_id', $personId)
             ->orderBy('team.title')
             ->get();
-    }
-
-    /**
-     * Retrieve the team ids the person is a manager for
-     *
-     * @param int $personId
-     * @return array
-     */
-
-    public static function retrieveTeamIdsForManager(int $personId): array
-    {
-        return DB::table('person_team')
-            ->where('person_id', $personId)
-            ->where('is_manager', true)
-            ->pluck('team_id')
-            ->toArray();
     }
 
     /**
@@ -89,14 +67,13 @@ class PersonTeam extends ApiModel
      *
      * @param int $teamId
      * @param int $personId
-     * @param bool $isManager
      * @param string|null $reason
      * @return void
      */
 
-    public static function addPerson(int $teamId, int $personId, bool $isManager, ?string $reason): void
+    public static function addPerson(int $teamId, int $personId, ?string $reason): void
     {
-        if (self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId, 'is_manager' => $isManager]) == 1) {
+        if (self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId]) == 1) {
             PersonTeamLog::addPerson($teamId, $personId);
             ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
         }

@@ -72,7 +72,8 @@ class Team extends ApiModel
 
     public function members(): HasManyThrough
     {
-        return $this->hasManyThrough(Person::class, PersonTeam::class, 'team_id', 'id', 'id', 'person_id')->orderBy('person.callsign');
+        return $this->hasManyThrough(Person::class, PersonTeam::class, 'team_id', 'id', 'id', 'person_id')
+            ->orderBy('person.callsign');
     }
 
     public function team_roles(): HasMany
@@ -87,9 +88,9 @@ class Team extends ApiModel
 
     public function managers(): BelongsToMany
     {
-        return $this->belongsToMany(Person::class, 'person_team')
-            ->select('person.id', 'person.callsign')
-            ->where('is_manager', true);
+        return $this->belongsToMany(Person::class, 'team_manager')
+            ->select('person.id', 'person.callsign', 'person.status')
+            ->orderBy('person.callsign');
     }
 
     /**
@@ -131,10 +132,10 @@ class Team extends ApiModel
         $sql = self::query()->select('team.*')->orderBy('team.title');
 
         if ($canManage && !$isAdmin) {
-            $sql->leftJoin('person_team', function ($j) use ($personId) {
-                $j->on('person_team.team_id', 'team.id');
-                $j->where('person_team.person_id', $personId);
-            })->addSelect(DB::raw('IFNULL(person_team.is_manager, false) AS can_manage'));
+            $sql->leftJoin('team_manager', function ($j) use ($personId) {
+                $j->on('team_manager.team_id', 'team.id');
+                $j->where('team_manager.person_id', $personId);
+            })->addSelect(DB::raw('IF(team_manager.team_id is null, false, true) AS can_manage'));
         }
 
         if ($includeManagers) {

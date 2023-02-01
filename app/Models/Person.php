@@ -291,6 +291,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'person_team',
         'person_team_log',
         'radio_eligible',
+        'team_manager',
         'timesheet',
         'timesheet_log',
         'timesheet_missing',
@@ -355,6 +356,14 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public ?array $trueRoles;
     public array $trueRolesById = [];
+
+    /**
+     * The raw effective roles not zapped by an unsigned NDA.
+     *
+     * @var array|null
+     */
+
+    public ?array $rawRolesById = [];
 
     /*
      * The languages the person speaks. (handled thru class PersonLanguage)
@@ -876,6 +885,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $this->rolesById[Role::TRAINER] = true;
         }
 
+        $this->rawRolesById = $this->rolesById;
+
         if ($haveManage && !isset($this->rolesById[Role::TECH_NINJA])) {
             // Kill the roles if the NDA is not signed and the NDA document exists.
             if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
@@ -950,6 +961,32 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         foreach ($role as $r) {
             if (isset($this->trueRolesById[$r])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check to see if the person has an effective role not zapped by an unsigned NDA.
+     *
+     * @param array|int $role
+     * @return bool true if the person has the role
+     */
+
+    public function hasRawRole(array|int $role): bool
+    {
+        if ($this->roles === null) {
+            $this->retrieveRoles();
+        }
+
+        if (!is_array($role)) {
+            return isset($this->rawRolesById[$role]);
+        }
+
+        foreach ($role as $r) {
+            if (isset($this->rawRolesById[$r])) {
                 return true;
             }
         }

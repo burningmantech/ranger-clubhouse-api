@@ -6,7 +6,6 @@ use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
-use App\Models\PersonRole;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\TraineeStatus;
@@ -196,7 +195,8 @@ class Agreements
         $peColumn = $paper['person_event'] ?? null;
         $role = $paper['role'] ?? null;
 
-        if ($role && !PersonRole::haveRole($person->id, $role)) {
+
+        if ($role && !$person->hasRawRole($role)) {
             return false;
         }
 
