@@ -11,22 +11,22 @@ class TicketingStatistics
     {
         return [
             'people_claimed' => AccessDocument::where('status', AccessDocument::CLAIMED)
-                ->whereIn('type', AccessDocument::TICKET_TYPES)
+                ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
                 ->distinct()
                 ->count('person_id'),
             'people_fully_banked' => AccessDocument::where('status', AccessDocument::BANKED)
-                ->whereIn('type', AccessDocument::TICKET_TYPES)
+                ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
                 ->whereRaw("NOT EXISTS (select 1 from access_document as claimed WHERE claimed.person_id=access_document.person_id and claimed.status='claimed' LIMIT 1)")
                 ->distinct()
                 ->count('access_document.person_id'),
             'people_tickets_unclaimed' => AccessDocument::where('status', AccessDocument::QUALIFIED)
-                ->whereIn('type', AccessDocument::TICKET_TYPES)
+                ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
                 ->whereRaw("NOT EXISTS (select 1 from access_document as claimed WHERE claimed.person_id=access_document.person_id and (claimed.status='claimed' or claimed.status = 'banked') LIMIT 1)")
                 ->distinct()
                 ->count('access_document.person_id'),
 
             'people_tickets_submitted' => AccessDocument::where('status', AccessDocument::SUBMITTED)
-                ->whereIn('type', AccessDocument::TICKET_TYPES)
+                ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
                 ->distinct()
                 ->count('access_document.person_id'),
 

@@ -453,8 +453,13 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'TAS_SpecialSubmitDate' => [
+            'description' => 'Ticketing Submission Deadline. Use to tell the user when the (regular) ticketing window will closed. Format: YYYY-MM-DD',
+            'type' => self::TYPE_STRING,
+        ],
+
         'TAS_SubmitDate' => [
-            'description' => 'Ticketing Submission Deadline',
+            'description' => 'Use to tell the user when the regular ticketing window will closed. Format: YYYY-MM-DD.',
             'type' => self::TYPE_STRING,
         ],
 
@@ -502,7 +507,7 @@ class Setting extends ApiModel
         ],
 
         'TAS_WAPDateRange' => [
-            'description' => 'WAP allowable date range. Format: MM/DD-MM/DD',
+            'description' => 'Allowable SC & WAP August day range. Use used Format: DD-DD. (just the start & ending days, not month). Use to build WAP date options and the TRS spreadsheet.',
             'type' => self::TYPE_STRING,
         ],
 
@@ -548,6 +553,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'TicketingForSpecialEnabled' => [
+            'description' => 'Tickets & Stuff Enabled For Special Tickets (LSD and/or Gift if person is eligible)',
+            'type' => self::TYPE_BOOL,
+            'default' => false,
+        ],
+
         'TicketingPeriod' => [
             'description' => 'Ticketing Period / Season',
             'type' => self::TYPE_STRING,
@@ -558,6 +569,7 @@ class Setting extends ApiModel
                 ['closed', 'closed - show claims and banks. Changes not directly allowed'],
             ]
         ],
+
 
         'TicketsAndStuffEnablePNV' => [
             'description' => 'Enable Ticketing Page for PNVs',

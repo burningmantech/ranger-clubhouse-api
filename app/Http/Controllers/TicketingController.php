@@ -39,7 +39,8 @@ class TicketingController extends ApiController
             'RpTicketThreshold', 'ScTicketThreshold',
             'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
             'TAS_Pickup_Locations',
-            'TAS_PayByDateTime'
+            'TAS_PayByDateTime',
+            'TAS_SpecialSubmitDate'
         ]);
 
         return response()->json([
@@ -60,6 +61,7 @@ class TicketingController extends ApiController
                 'wap_so_default_date' => $settings['TAS_DefaultSOWAPDate'],
 
                 'submit_date' => $settings['TAS_SubmitDate'],
+                'special_submit_date' => $settings['TAS_SpecialSubmitDate'],
 
                 'ticket_vendor_email' => $settings['TicketVendorEmail'],
                 'ticket_vendor_name' => $settings['TicketVendorName'],

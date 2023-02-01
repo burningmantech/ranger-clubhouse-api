@@ -22,7 +22,7 @@ class ProvisionUnsubmitRecommendationReport
             ->groupBy('person_id');
 
         if ($rows->isEmpty()) {
-            return [];
+            return ['people' => [], 'year' => $year];
         }
 
         $ids = $rows->keys()->toArray();

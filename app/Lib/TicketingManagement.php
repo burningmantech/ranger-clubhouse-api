@@ -110,7 +110,6 @@ class TicketingManagement
                         break;
 
                     case AccessDocument::VEHICLE_PASS:
-                    case AccessDocument::GIFT:
                         if ($row->type == AccessDocument::VEHICLE_PASS && $row->has_staff_credential) {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
                         } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
@@ -163,7 +162,7 @@ class TicketingManagement
 
     public static function retrieveExpiringTicketsByPerson(int $year): array
     {
-        $rows = AccessDocument::whereIn('type', AccessDocument::TICKET_TYPES)
+        $rows = AccessDocument::whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::BANKED])
             ->whereYear('expiry_date', '<=', $year)
             ->with(['person:id,callsign,email,status'])
