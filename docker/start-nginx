@@ -15,7 +15,7 @@ fi;
 supervisorctl start redis
 
 # Give Redis time to boot up.
-sleep 5
+sleep 10
 
 # Cache Laravel configuration and routes
 
