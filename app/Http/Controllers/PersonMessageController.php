@@ -2,23 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\ApiController;
-use App\Models\Person;
-use App\Models\PersonMessage;
-use App\Models\Role;
-
 use App\Lib\RBS;
+use App\Models\PersonMessage;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PersonMessageController extends ApiController
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index(Request $request)
+    public function index(): JsonResponse
     {
         $query = request()->validate([
             'person_id' => 'required|integer',
@@ -26,7 +25,7 @@ class PersonMessageController extends ApiController
 
         $personId = $query['person_id'];
 
-        $this->authorize('index', [PersonMessage::class, $personId ]);
+        $this->authorize('index', [PersonMessage::class, $personId]);
 
         return $this->success(PersonMessage::findForPerson($personId), null, 'person_message');
     }
@@ -34,11 +33,13 @@ class PersonMessageController extends ApiController
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
-        $this->authorize('store', [ PersonMessage::class ]);
+        $this->authorize('store', [PersonMessage::class]);
 
         $person_message = new PersonMessage;
         $this->fromRest($person_message);
@@ -59,10 +60,12 @@ class PersonMessageController extends ApiController
     /**
      *  Delete a message
      *
-     * @param  PersonMessage $person_message the message to delete
-     * @return \Illuminate\Http\JsonResponse
+     * @param PersonMessage $person_message the message to delete
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(PersonMessage $person_message)
+
+    public function destroy(PersonMessage $person_message): JsonResponse
     {
         $this->authorize('delete', $person_message);
         $person_message->delete();
@@ -73,10 +76,12 @@ class PersonMessageController extends ApiController
     /**
      * Mark message as read.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @param PersonMessage $person_message
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function markread(PersonMessage $person_message)
+    public function markread(PersonMessage $person_message): JsonResponse
     {
         $this->authorize('markread', $person_message);
 
