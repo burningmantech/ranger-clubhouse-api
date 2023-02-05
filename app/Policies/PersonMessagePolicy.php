@@ -3,9 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Person;
-use App\Models\Role;
 use App\Models\PersonMessage;
-
+use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class PersonMessagePolicy
@@ -15,17 +14,17 @@ class PersonMessagePolicy
     protected $user;
 
     /*
-     * Allow ADMIN or MANAGE (Ranger HQ) to do anything with messages
+     * Allow ADMIN or MANAGE  to do anything with messages
      */
 
     public function before(Person $user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([Role::ADMIN, Role::VC])) {
             return true;
         }
     }
 
-    private function isLMOPEnabled($user)
+    private function isLMOPEnabled(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE) && setting('LoginManageOnPlayaEnabled');
     }
@@ -34,10 +33,11 @@ class PersonMessagePolicy
      * Determine whether the user can view the message.
      *
      * @param Person $user
-     * @param Person $person
+     * @param int|null $personId
      * @return mixed
      */
-    public function index(Person $user, $personId)
+
+    public function index(Person $user, ?int $personId): bool
     {
         return ($this->isLMOPEnabled($user) || $user->id == $personId);
     }
@@ -46,10 +46,10 @@ class PersonMessagePolicy
      * Determine whether the user can store messages.
      *
      * @param Person $user
-     * @return mixed
+     * @return bool
      */
 
-    public function store(Person $user)
+    public function store(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -58,10 +58,11 @@ class PersonMessagePolicy
      * Determine whether the user can delete a message.
      *
      * @param Person $user
-     * @return mixed
+     * @param PersonMessage $person_message
+     * @return bool
      */
 
-    public function delete(Person $user, PersonMessage $person_message)
+    public function delete(Person $user, PersonMessage $person_message): bool
     {
         return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
     }
@@ -70,10 +71,11 @@ class PersonMessagePolicy
      * Determine whether the user can mark messages read.
      *
      * @param Person $user
-     * @return mixed
+     * @param PersonMessage $person_message
+     * @return bool
      */
 
-    public function markread(Person $user, PersonMessage $person_message)
+    public function markread(Person $user, PersonMessage $person_message): bool
     {
         return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
     }
