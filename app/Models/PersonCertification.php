@@ -69,25 +69,6 @@ class PersonCertification extends ApiModel
         return self::where('person_id', $personId)->where('certification_id', $certificationId)->first();
     }
 
-    public function save($options = []): bool
-    {
-        if ($this->isDirty('certification_id') || $this->isDirty('person_id')) {
-            // Ensure the certification does not already exist for the person
-            $sql = self::where('certification_id', $this->certification_id)
-                ->where('person_id', $this->person_id);
-            if ($this->exists) {
-                $sql->where('id', '!=', $this->id);
-            }
-            $exists = $sql->exists();
-            if ($exists) {
-                $this->addError('certification_id', 'The certification record already exists for the person');
-                return false;
-            }
-        }
-
-        return parent::save($options);
-    }
-
     /**
      * Find certifications
      *
