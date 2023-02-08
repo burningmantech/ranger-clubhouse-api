@@ -244,8 +244,9 @@ class TrainingSession extends Slot
                     'first_name' => $person->first_name,
                     'last_name' => $person->last_name,
                     'email' => $person->email,
-                    'status' => $trainer ? $trainer->status : 'pending',
+                    'status' => $trainer->status ?? 'pending',
                     'trainer_slot_id' => $trainerSlot->id,
+                    'is_lead' => $trainer->is_lead ?? 0,
                 ];
             });
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -17,17 +18,17 @@ class TrainerStatus extends ApiModel
 
     protected $guarded = [];
 
-    public function slot()
+    public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
 
-    public function trainer_slot()
+    public function trainer_slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -36,17 +37,17 @@ class TrainerStatus extends ApiModel
      * trainer_slot_id refers to the Trainer sign up (Trainer / Trainer Associate / Trainer Uber /etc)
      * slot_id refers to the training session (trainee)
      *
-     * @param $sessionId
-     * @param $personId
+     * @param int $sessionId
+     * @param int $personId
      * @return ?TrainerStatus
      */
 
-    public static function firstOrNewForSession($sessionId, $personId)
+    public static function firstOrNewForSession(int $sessionId, int $personId): ?TrainerStatus
     {
         return self::firstOrNew(['person_id' => $personId, 'slot_id' => $sessionId]);
     }
 
-    public static function findBySlotPersonIds($slotId, $personIds)
+    public static function findBySlotPersonIds(int $slotId, $personIds): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('slot_id', $slotId)->whereIntegerInRaw('person_id', $personIds)->get();
     }
@@ -81,12 +82,12 @@ class TrainerStatus extends ApiModel
      * Retrieve all the sessions the person may have taught
      *
      * @param int $personId the person to check
-     * @param array $positionIds the positions to check (Trainer / Trainer Assoc. / Uber /etc)
+     * @param  $positionIds the positions to check (Trainer / Trainer Assoc. / Uber /etc)
      * @param int $year the year to check
      * @return Collection
      */
 
-    public static function retrieveSessionsForPerson(int $personId, $positionIds, int $year)
+    public static function retrieveSessionsForPerson(int $personId, $positionIds, int $year): Collection
     {
         return DB::table('slot')
             ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', DB::raw('IFNULL(trainer_status.status, "pending") as status'))
@@ -105,11 +106,13 @@ class TrainerStatus extends ApiModel
             ->get();
     }
 
-    /*
+    /**
      * Delete all records referring to a slot. Used by slot deletion.
+     *
+     * @param int $slotId
      */
 
-    public static function deleteForSlot($slotId)
+    public static function deleteForSlot(int $slotId)
     {
         self::where('slot_id', $slotId)->delete();
         self::where('trainer_slot_id', $slotId)->delete();

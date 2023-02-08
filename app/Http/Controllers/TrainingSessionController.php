@@ -57,12 +57,10 @@ class TrainingSessionController extends ApiController
 
 
         $info = $sessions->map(
-            function ($session) {
-                return [
-                    'slot' => $session,
-                    'trainers' => $session->retrieveTrainers(),
-                ];
-            }
+            fn($session) => [
+                'slot' => $session,
+                'trainers' => $session->retrieveTrainers(),
+            ]
         );
 
         return response()->json(['sessions' => $info]);
@@ -152,14 +150,14 @@ class TrainingSessionController extends ApiController
             'trainers.*.id' => 'required|integer',
             'trainers.*.trainer_slot_id' => 'required|integer',
             'trainers.*.status' => 'nullable|string',
+            'trainers.*.is_lead' => 'required|boolean'
         ]);
 
         foreach ($params['trainers'] as $trainer) {
             $personId = $trainer['id'];
 
             $trainerStatus = TrainerStatus::firstOrNewForSession($training_session->id, $personId);
-            $trainerStatus->status = $trainer['status'];
-            $trainerStatus->trainer_slot_id = $trainer['trainer_slot_id'];
+            $trainerStatus->fill($trainer);
             $trainerStatus->save();
         }
 
@@ -187,9 +185,7 @@ class TrainingSessionController extends ApiController
             }
         }
 
-        usort($trainers, function ($a, $b) {
-            return strcasecmp($a['callsign'], $b['callsign']);
-        });
+        usort($trainers, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return response()->json(['trainers' => $trainers]);
     }
