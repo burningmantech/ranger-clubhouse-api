@@ -20,7 +20,7 @@ class TrainingController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function show($id)
+    public function show($id): JsonResponse
     {
         $training = Training::findOrFail($id);
         $this->authorize('show', $training);
@@ -28,7 +28,7 @@ class TrainingController extends ApiController
     }
 
     /**
-     * Show all people who have mulitple rollments for a given year
+     * Show all people who have multiple enrollments for a given year
      *
      * @param $id
      * @return JsonResponse
