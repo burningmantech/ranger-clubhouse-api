@@ -5,7 +5,9 @@
     <p>
         <b>What:</b> {{$position->title}} - {{$slot->description}}<br>
         <b>When:</b> {{$slot->beginsHumanFormat}}<br>
-        <b>Mentee Signups:</b> {{$menteeSignUps}}<br>
+        @if ($traineeSignups)
+            <b>Trainee / Mentee Signups:</b> {{$traineeSignups}}<br>
+        @endif
     </p>
     <p>
         Your humble servant,<br>

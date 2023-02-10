@@ -4,6 +4,7 @@ namespace App\Lib\PositionSanityCheck;
 
 use App\Models\PersonPosition;
 use App\Models\PersonTeam;
+use App\Models\Position;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -65,7 +66,7 @@ class TeamMembershipCheck extends SanityCheck
             $positionIds = DB::table('position')
                 ->select('id')
                 ->where('team_id', $team->id)
-                ->where('all_team_members', true)
+                ->where('team_category', Position::TEAM_CATEGORY_ALL_MEMBERS)
                 ->get()
                 ->pluck('id')
                 ->toArray();

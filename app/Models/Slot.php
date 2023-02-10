@@ -30,7 +30,7 @@ class Slot extends ApiModel
 {
     // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
-        'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_empty',
+        'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers',
         'trainer_slot:id,position_id,description,begins,ends',
         'trainer_slot.position:id,title'
     ];

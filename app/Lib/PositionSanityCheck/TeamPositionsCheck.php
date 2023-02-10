@@ -3,6 +3,7 @@
 namespace App\Lib\PositionSanityCheck;
 
 use App\Models\PersonPosition;
+use App\Models\Position;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -87,7 +88,7 @@ class TeamPositionsCheck extends SanityCheck
             ->join('person', 'person.id', 'person_team.person_id')
             ->join('position', function ($j) {
                 $j->on('position.team_id', 'team.id');
-                $j->where('position.all_team_members', true);
+                $j->where('position.team_category', Position::TEAM_CATEGORY_ALL_MEMBERS);
                 $j->where('position.active', true);
             })->leftJoin('person_position', function ($j) {
                 $j->on('person_position.position_id', 'position.id');

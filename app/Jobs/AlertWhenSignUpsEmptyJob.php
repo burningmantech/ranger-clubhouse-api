@@ -20,7 +20,7 @@ class AlertWhenSignUpsEmptyJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(public Position $position, public Slot $mentorSlot, public Slot $menteeSlot)
+    public function __construct(public Position $position, public Slot $slot, public ?Slot $traineeSlot = null)
     {
     }
 
@@ -30,20 +30,22 @@ class AlertWhenSignUpsEmptyJob implements ShouldQueue
      * @return void
      */
 
-    public function handle()
+    public function handle(): void
     {
         if (empty($this->position->contact_email)) {
             return;
         }
 
-        $this->menteeSlot->refresh();
-        $this->mentorSlot->refresh();
+        $this->slot->refresh();
+        if ($this->traineeSlot) {
+            $this->traineeSlot->refresh();
+        }
 
-        // Don't bother if there's mentors signed up OR no mentees are signed up
-        if ($this->mentorSlot->signed_up || !$this->menteeSlot->signed_up) {
+        // Don't bother if the slot has signups or if the trainee slot does not have any signups.
+        if ($this->slot->signed_up || ($this->traineeSlot && !$this->traineeSlot->signed_up)) {
             return;
         }
 
-        mail_to($this->position->contact_email, new AlertWhenSignUpsEmptyMail($this->position, $this->mentorSlot, $this->menteeSlot->signed_up));
+        mail_to($this->position->contact_email, new AlertWhenSignUpsEmptyMail($this->position, $this->slot, $this->traineeSlot ? $this->traineeSlot->signed_up : 0));
     }
 }
