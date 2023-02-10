@@ -282,12 +282,15 @@ class Position extends ApiModel
         ],
     ];
 
+    const TEAM_CATEGORY_ALL_MEMBERS = 'all_members';
+    const TEAM_CATEGORY_OPTIONAL  = 'optional';
+    const TEAM_CATEGORY_PUBLIC = 'public';
+
     protected $fillable = [
         'active',
-        'alert_when_empty',
+        'alert_when_no_trainers',
+        'alert_when_becomes_empty',
         'all_rangers',
-        'all_team_members',
-        'contact_email',
         'contact_email',
         'count_hours',
         'max',
@@ -296,10 +299,10 @@ class Position extends ApiModel
         'on_sl_report',
         'on_trainer_report',
         'prevent_multiple_enrollments',
-        'public_team_position',
         'require_training_for_roles',
         'role_ids',
         'short_title',
+        'team_category',
         'team_id',
         'title',
         'training_position_id',
@@ -308,14 +311,13 @@ class Position extends ApiModel
 
     protected $casts = [
         'active' => 'bool',
-        'alert_when_empty' => 'bool',
+        'alert_when_becomes_empty' => 'bool',
+        'alert_when_no_trainers' => 'bool',
         'all_rangers' => 'bool',
-        'all_team_members' => 'bool',
         'new_user_eligible' => 'bool',
         'on_sl_report' => 'bool',
         'on_trainer_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
-        'public_team_position' => 'bool',
         'require_training_for_roles' => 'bool'
     ];
 

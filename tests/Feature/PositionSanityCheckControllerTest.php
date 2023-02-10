@@ -200,7 +200,7 @@ class PositionSanityCheckControllerTest extends TestCase
             'title' => 'Team #1 Position',
             'team_id' => $team->id,
             'active' => true,
-            'all_team_members' => true,
+            'team_category' => Position::TEAM_CATEGORY_ALL_MEMBERS,
         ]);
 
         PersonTeam::factory()->create([

@@ -289,10 +289,16 @@ class Schedule extends ApiModel
             throw $e;
         }
 
-        if (!$signedUp && $slot->position->alert_when_empty) {
-            $menteeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
-            if ($menteeSlot && $menteeSlot->signed_up > 0) {
-                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $menteeSlot)->delay(now()->addMinutes(5));
+        if (!$signedUp) {
+            if ($slot->position->alert_when_no_trainers) {
+                $traineeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
+                if ($traineeSlot && $traineeSlot->signed_up > 0) {
+                    AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $traineeSlot)->delay(now()->addMinutes(5));
+                }
+            }
+
+            if ($slot->position->alert_when_becomes_empty) {
+                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot)->delay(now()->addMinutes(5));
             }
         }
 

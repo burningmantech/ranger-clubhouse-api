@@ -16,8 +16,7 @@ class PositionFactory extends Factory
             'max' => 1,
             'min' => 0,
             'active' => true,
-            'all_team_members' => false,
-            'public_team_position' => false,
+            'team_category' => Position::TEAM_CATEGORY_PUBLIC,
             'role_ids' => null,
         ];
     }

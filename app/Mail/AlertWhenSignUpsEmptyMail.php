@@ -11,7 +11,7 @@ class AlertWhenSignUpsEmptyMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Position $position, public Slot $slot, public $menteeSignUps)
+    public function __construct(public Position $position, public Slot $slot, public $traineeSignups)
     {
         parent::__construct();
     }
