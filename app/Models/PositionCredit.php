@@ -19,12 +19,9 @@ class PositionCredit extends ApiModel
     ];
 
     protected $casts = [
-        'credits_per_hour' => 'float'
-    ];
-
-    protected $dates = [
-        'start_time',
-        'end_time'
+        'credits_per_hour' => 'float',
+        'end_time' => 'datetime',
+        'start_time' => 'datetime',
     ];
 
     protected $rules = [

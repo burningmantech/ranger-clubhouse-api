@@ -26,10 +26,10 @@ class Motd extends ApiModel
         'expires_at' => 'required|date',
     ];
 
-    protected $dates = [
-        'created_at',
-        'updated_at',
-        'expires_at'
+    protected $casts = [
+        'created_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -38,7 +38,7 @@ class Motd extends ApiModel
     ];
 
 
-    public function person()
+    public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Person::class);
     }

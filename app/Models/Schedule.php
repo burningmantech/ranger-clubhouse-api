@@ -39,9 +39,9 @@ class Schedule extends ApiModel
         'slot_max',
     ];
 
-    protected $dates = [
-        'slot_begins',
-        'slot_ends'
+    protected $casts = [
+        'slot_begins' => 'datetime',
+        'slot_ends' => 'datetime',
     ];
 
     const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes

@@ -33,10 +33,7 @@ class Asset extends ApiModel
         'perm_assign' => 'boolean',
         'new_user_eligible' => 'boolean',
         'on_sl_report' => 'boolean',
-    ];
-
-    protected $dates = [
-        'create_date'
+        'create_date' => 'datetime'
     ];
 
     protected $rules = [

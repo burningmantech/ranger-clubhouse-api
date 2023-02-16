@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Carbon|string|null $left_on
  * @property Carbon|string|null $joined_on
  */
-
 class PersonPositionLog extends ApiModel
 {
     protected $table = 'person_position_log';
@@ -23,14 +22,11 @@ class PersonPositionLog extends ApiModel
         'updated_at'
     ];
 
-    protected $dates = [
-        'joined_on',
-        'left_on'
-    ];
-
     protected $casts = [
+        'created_at' => 'datetime',
         'joined_on' => 'date:Y-m-d',
-        'left_on' => 'date:Y-m-d'
+        'left_on' => 'date:Y-m-d',
+        'updated_at' => 'datetime',
     ];
 
     protected $rules = [

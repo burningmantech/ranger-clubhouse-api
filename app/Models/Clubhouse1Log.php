@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\Person;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Clubhouse1Log extends Model
 {
@@ -15,26 +12,26 @@ class Clubhouse1Log extends Model
 
     const PAGE_SIZE_DEFAULT = 50;
 
-    protected $dates = [
-        'occurred'
+    protected $casts = [
+        'occurred' => 'datetime',
     ];
 
-    public function user_person()
+    public function user_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function current_person()
+    public function current_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForQuery($query)
+    public static function findForQuery(array $query): array
     {
         $personId = $query['person_id'] ?? null;
-        $page = (int) ($query['page'] ?? 1);
-        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
-        $events = $query['events'] ?? [ ];
+        $page = (int)($query['page'] ?? 1);
+        $pageSize = (int)($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
+        $events = $query['events'] ?? [];
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
         $endTime = $query['end_time'] ?? null;
@@ -54,13 +51,13 @@ class Clubhouse1Log extends Model
             $events = explode(',', $events);
             $sql->where(function ($query) use ($events) {
                 foreach ($events as $event) {
-                    $query->orWhere('event', 'LIKE', $event.'%');
+                    $query->orWhere('event', 'LIKE', $event . '%');
                 }
             });
         }
 
         if (!empty($eventText)) {
-            $sql->where('event', 'LIKE', '%'.$eventText.'%');
+            $sql->where('event', 'LIKE', '%' . $eventText . '%');
         }
 
         if ($startTime) {
@@ -80,7 +77,7 @@ class Clubhouse1Log extends Model
 
         if (!$total) {
             // Nada.. don't bother
-            return [ 'logs' => [ ], 'page' => 0, 'total' => 0, 'total_pages' => 0 ];
+            return ['logs' => [], 'page' => 0, 'total' => 0, 'total_pages' => 0];
         }
 
         // Results sort 'asc' or 'desc'
@@ -98,24 +95,25 @@ class Clubhouse1Log extends Model
         $sql->offset($page * $pageSize)->limit($pageSize);
 
         // .. and go get it!
-        $rows = $sql->with([ 'current_person:id,callsign', 'user_person:id,callsign'])->get();
+        $rows = $sql->with(['current_person:id,callsign', 'user_person:id,callsign'])->get();
 
         return [
-            'logs'        => $rows,
-            'total'       => $total,
-            'total_pages' => (int) (($total + ($pageSize - 1))/$pageSize),
-            'page_size'   => $pageSize,
-            'page'        => $page + 1,
-         ];
+            'logs' => $rows,
+            'total' => $total,
+            'total_pages' => (int)(($total + ($pageSize - 1)) / $pageSize),
+            'page_size' => $pageSize,
+            'page' => $page + 1,
+        ];
     }
 
     /**
      * Prepare a date for array / JSON serialization.
      *
-     * @param  \DateTimeInterface  $date
+     * @param DateTimeInterface $date
      * @return string
      */
-    protected function serializeDate(DateTimeInterface $date)
+
+    protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
     }

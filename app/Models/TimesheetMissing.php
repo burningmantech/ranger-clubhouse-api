@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Auth;
  * @property ?int $create_person_id
  * @property ?string|Carbon $reviewed_at
  */
-
 class TimesheetMissing extends ApiModel
 {
     protected $table = "timesheet_missing";
@@ -47,16 +46,13 @@ class TimesheetMissing extends ApiModel
     ];
 
     protected $casts = [
-        'create_entry' => 'boolean'
-    ];
-
-    protected $dates = [
-        'created_at',
-        'new_off_duty',
-        'new_on_duty',
-        'off_duty',
-        'on_duty',
-        'reviewed_at',
+        'create_entry' => 'boolean',
+        'created_at' => 'datetime',
+        'new_off_duty' => 'datetime',
+        'new_on_duty' => 'datetime',
+        'off_duty' => 'datetime',
+        'on_duty' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     protected $appends = [
