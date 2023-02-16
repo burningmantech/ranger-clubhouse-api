@@ -36,11 +36,10 @@ class PersonPhoto extends ApiModel
         'review_person_id'
     ];
 
-    protected $dates = [
-        'uploaded_at',
-        'reviewed_at',
-        'uploaded_at',
-        'edited_at'
+    protected $casts = [
+        'edited_at' => 'datetime',
+        'reviewed_at' => 'datetime',
+        'uploaded_at' => 'datetime',
     ];
 
     protected $appends = [

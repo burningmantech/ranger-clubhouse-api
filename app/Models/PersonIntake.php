@@ -14,16 +14,16 @@ class PersonIntake extends ApiModel
     ];
 
     protected $casts = [
-        'created_at' => 'date',
-        'updated_at' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    public function person()
+    public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForPersonYearOrNew($personId, $year): PersonIntake
+    public static function findForPersonYearOrNew(int $personId, int $year): PersonIntake
     {
         $ps = self::where(['person_id' => $personId, 'year' => $year])->first();
         if ($ps) {

@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class SurveyAnswer extends ApiModel
@@ -39,21 +37,21 @@ class SurveyAnswer extends ApiModel
         'trainer_id' => 'sometimes|integer|nullable',
     ];
 
-    protected $dates = [
-        'created_at',
-        'updated_at'
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     protected $attributes = [
         'can_share_name' => false,
     ];
 
-    public function trainer()
+    public function trainer(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -80,7 +78,7 @@ class SurveyAnswer extends ApiModel
      * @param int $slotId
      */
 
-    public static function deleteForSlot(int $slotId) : void
+    public static function deleteForSlot(int $slotId): void
     {
         self::where('slot_id', $slotId)->delete();
     }
@@ -91,7 +89,7 @@ class SurveyAnswer extends ApiModel
      * @return bool
      */
 
-    public static function haveTrainerFeedback($personId) : bool
+    public static function haveTrainerFeedback($personId): bool
     {
         return self::where('trainer_id', $personId)->exists();
     }

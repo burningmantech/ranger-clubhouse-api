@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 
 class EventDate extends ApiModel
 {
@@ -30,13 +29,13 @@ class EventDate extends ApiModel
         'pre_event_start'
     ];
 
-    protected $dates = [
-        'event_end',
-        'event_start',
-        'post_event_end',
-        'pre_event_slot_end',
-        'pre_event_slot_start',
-        'pre_event_start'
+    protected $casts = [
+        'event_end' => 'datetime',
+        'event_start' => 'datetime',
+        'post_event_end' => 'datetime',
+        'pre_event_slot_end' => 'datetime',
+        'pre_event_slot_start' => 'datetime',
+        'pre_event_start' => 'datetime',
     ];
 
     protected $rules = [
@@ -48,12 +47,12 @@ class EventDate extends ApiModel
         'pre_event_start' => 'required|date',
     ];
 
-    public static function findAll()
+    public static function findAll(): Collection
     {
         return self::orderBy('event_start')->get();
     }
 
-    public static function findForYear($year)
+    public static function findForYear(int $year): ?EventDate
     {
         return self::whereYear('event_start', $year)->first();
     }
@@ -67,7 +66,7 @@ class EventDate extends ApiModel
      *
      * @return string
      */
-    public static function calculatePeriod() : string
+    public static function calculatePeriod(): string
     {
         $periodSetting = setting('DashboardPeriod');
         if (!empty($periodSetting) && $periodSetting != 'auto') {
@@ -104,7 +103,7 @@ class EventDate extends ApiModel
      * @return array start and ending time
      */
 
-    public static function retrieveBurnWeekendPeriod()
+    public static function retrieveBurnWeekendPeriod(): array
     {
         $year = current_year();
         $laborDay = new Carbon("September $year first monday");

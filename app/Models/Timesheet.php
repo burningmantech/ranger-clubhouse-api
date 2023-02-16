@@ -89,12 +89,12 @@ class Timesheet extends ApiModel
         'credits',
     ];
 
-    protected $dates = [
-        'off_duty',
-        'on_duty',
-        'reviewed_at',
-        'timesheet_confirmed_at',
-        'verified_at',
+    protected $casts = [
+        'off_duty' => 'datetime',
+        'on_duty' => 'datetime',
+        'reviewed_at' => 'datetime',
+        'timesheet_confirmed_at' => 'datetime',
+        'verified_at' => 'datetime',
     ];
 
     const RELATIONSHIPS = [

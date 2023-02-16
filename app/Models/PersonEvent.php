@@ -63,12 +63,12 @@ class PersonEvent extends ApiModel
         'id'        // Not real.
     ];
 
-    protected $dates = [
-        'pii_finished_at',
-        'pii_started_at',
-        'ticketing_finished_at',
-        'ticketing_last_visited_at',
-        'ticketing_started_at',
+    protected $casts = [
+        'pii_finished_at' => 'datetime',
+        'pii_started_at' => 'datetime',
+        'ticketing_finished_at' => 'datetime',
+        'ticketing_last_visited_at' => 'datetime',
+        'ticketing_started_at' => 'datetime',
     ];
 
     protected $createRules = [

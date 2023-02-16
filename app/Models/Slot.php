@@ -73,9 +73,9 @@ class Slot extends ApiModel
         'trainer_slot_id' => 'nullable|integer'
     ];
 
-    protected $dates = [
-        'ends',
-        'begins',
+    protected $casts = [
+        'ends' => 'datetime',
+        'begins' => 'datetime',
     ];
 
     // Don't track changes to the signed up count.
