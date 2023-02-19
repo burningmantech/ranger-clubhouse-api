@@ -5,6 +5,7 @@ namespace App\Models;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -33,7 +34,6 @@ class Setting extends ApiModel
         'options'
     ];
 
-    public static $cache = [];
 
     const TYPE_BOOL = 'bool';
     const TYPE_DATE = 'date';
@@ -640,13 +640,13 @@ class Setting extends ApiModel
         }
     }
 
-    /*
+    /**
      * Find a setting. Must be defined in the DESCRIPTIONS table
      */
 
-    public static function find($name)
+    public static function find($id)
     {
-        $desc = self::DESCRIPTIONS[$name] ?? null;
+        $desc = self::DESCRIPTIONS[$id] ?? null;
 
         if (!$desc) {
             // Setting is not defined.
@@ -654,21 +654,31 @@ class Setting extends ApiModel
         }
 
         // Lookup the value
-        return Setting::firstOrNew(['name' => $name]);
+        return Setting::firstOrNew(['name' => $id]);
     }
 
-    public static function findOrFail($name)
+    /**
+     * Find a setting or throw an exception
+     */
+
+    public static function findOrFail($id)
     {
-        $row = self::find($name);
+        $row = self::find($id);
 
         if ($row) {
             return $row;
         }
 
-        throw (new ModelNotFoundException)->setModel(Setting::class, $name);
+        throw (new ModelNotFoundException)->setModel(Setting::class, $id);
     }
 
-    public static function findAll()
+    /**
+     * Retrieve all the setting values.
+     *
+     * @return array<string,Setting>
+     */
+
+    public static function findAll(): array
     {
         $rows = Setting::all()->keyBy('name');
 
@@ -682,9 +692,15 @@ class Setting extends ApiModel
         return $settings;
     }
 
+    /**
+     * Restart the queues when a setting is updated.
+     *
+     * @return void
+     */
+
     public static function kickQueues()
     {
-        if (!app()->isLocal()) {
+        if (app()->isProduction()) {
             try {
                 // Kick the queue workers to pick up the new settings
                 Artisan::call('queue:restart');
@@ -694,80 +710,128 @@ class Setting extends ApiModel
         }
     }
 
-    public static function getValue($name, $throwOnEmpty = false)
+    /**
+     * Get the value of a setting(s)
+     *
+     * @param string|array $setting
+     * @param bool $throwOnEmpty
+     * @return mixed
+     */
+
+    public static function getValue(string|array $setting, bool $throwOnEmpty = false): mixed
     {
-        if (is_array($name)) {
-            $rows = self::select('name', 'value')->whereIn('name', $name)->get()->keyBy('name');
-            $settings = [];
-            foreach ($name as $setting) {
-                $row = $rows[$setting] ?? null;
-                $desc = self::DESCRIPTIONS[$setting] ?? null;
-                if (!$desc) {
-                    throw new InvalidArgumentException("'$setting' is an unknown setting.");
-                }
+        $isArray = is_array($setting);
 
-                if (isset(self::$cache[$setting])) {
-                    $settings[$setting] = self::$cache[$setting];
-                } else {
-                    if ($row) {
-                        $value = self::castValue($desc['type'], $row->value);
-                    } else if (isset($desc['default'])) {
-                        $value = self::castValue($desc['type'], $desc['default']);
-                    } else {
-                        $value = null;
-                    }
+        $names = $isArray ? $setting : [$setting];
 
-                    if ($throwOnEmpty && self::notEmpty($value)) {
-                        throw new RuntimeException("Setting '$setting' is empty.");
-                    }
-                    $settings[$setting] = $value;
-                    self::$cache[$setting] = $value;
-                }
-            }
+        $lookup = [];
+        $values = [];
 
-            return $settings;
-        } else {
+        // Find all the cached settings
+        foreach ($names as $name) {
             $desc = self::DESCRIPTIONS[$name] ?? null;
             if (!$desc) {
                 throw new InvalidArgumentException("'$name' is an unknown setting.");
             }
 
-            if (isset(self::$cache[$name])) {
-                return self::$cache[$name];
-            }
-
-            $row = self::select('value')->where('name', $name)->first();
-            if ($row) {
-                $value = self::castValue($desc['type'], $row->value);
-            } else if (isset($desc['default'])) {
-                $value = self::castValue($desc['type'], $desc['default']);
+            if (self::getCached($name, $value)) {
+                if ($isArray) {
+                    $values[$name] = $value;
+                } else {
+                    return $value;
+                }
             } else {
-                $value = null;
+                $lookup[] = $name;
             }
-            if ($throwOnEmpty && self::notEmpty($value)) {
-                throw new RuntimeException("Setting '$name' is empty.");
-            }
-            self::$cache[$name] = $value;
-            return $value;
         }
+
+        if (empty($lookup)) {
+            // Everything was cached
+            return $values;
+        }
+
+        // Lookup the settings
+        $rows = self::select('name', 'value')
+            ->whereIn('name', $lookup)
+            ->get()
+            ->keyBy('name');
+
+        foreach ($lookup as $name) {
+            $row = $rows[$name] ?? null;
+            $desc = self::DESCRIPTIONS[$name];
+
+            $value = self::storedOrDefault($row, $desc, $throwOnEmpty);
+            self::setCached($name, $value);
+            if ($isArray) {
+                $values[$name] = $value;
+            } else {
+                return $value;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * Clear the setting cache
+     *
+     * @return void
+     */
+
+    public static function clearCache()
+    {
+        self::cacheStore()->flush();
+    }
+
+    public static function getCached($name, &$value): bool
+    {
+        $cache = self::cacheStore();
+        if ($cache->has($name)) {
+            $value = $cache->get($name);
+            return true;
+        }
+
+        return false;
+    }
+
+    public static function setCached($name, $value)
+    {
+        self::cacheStore()->put($name, $value);
+    }
+
+    public static function cacheStore()
+    {
+        return Cache::store('array');
+    }
+
+    public static function storedOrDefault($row, $desc, bool $throwOnEmpty)
+    {
+        if ($row) {
+            $value = self::castValue($desc['type'], $row->value);
+        } else if (isset($desc['default'])) {
+            $value = self::castValue($desc['type'], $desc['default']);
+        } else {
+            $value = null;
+        }
+
+        if ($throwOnEmpty && self::notEmpty($value)) {
+            throw new RuntimeException("Setting '$name' is empty.");
+        }
+
+        return $value;
     }
 
     public static function castValue($type, $value)
     {
-        // Convert the values
-        switch ($type) {
-            case self::TYPE_BOOL:
-                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            case self::TYPE_INTEGER:
-                return (int)$value;
-            case self::TYPE_FLOAT:
-                return (float)$value;
-            default:
-                return $value;
-        }
+        return match ($type) {
+            self::TYPE_BOOL => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            self::TYPE_INTEGER => (int)$value,
+            self::TYPE_FLOAT => (float)$value,
+            default => $value,
+        };
     }
 
-    public static function notEmpty($value)
+    public static function notEmpty($value): bool
     {
         return !is_bool($value) && empty($value);
     }
