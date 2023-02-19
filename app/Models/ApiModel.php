@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AllowDynamicProperties;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ use RuntimeException;
  * @mixin \Illuminate\Database\Eloquent\Builder
  * @mixin Builder
  */
+#[AllowDynamicProperties]
 abstract class ApiModel extends Model
 {
     use HasFactory;

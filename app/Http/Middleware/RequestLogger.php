@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Log;
 
 class RequestLogger
 {
+    protected float $startTime = 0;
+
     /**
      * Handle an incoming request.
      *
@@ -15,6 +17,7 @@ class RequestLogger
      */
     public function handle($request, $next): mixed
     {
+        $this->startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
         return $next($request);
     }
 
@@ -32,10 +35,13 @@ class RequestLogger
             return;
         }
 
-        $endTime = microtime(true);
+        if (!$this->startTime) {
+            $this->startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
+        }
+
         $status = method_exists($response, 'status') ? $response->status() : 200;
         $type = $status >= 500 ? 'error' : 'debug';
 
-        Log::$type(number_format(($endTime - LARAVEL_START) * 100, 3) . ' ms: ' . $status . ' ' . $request->method() . ' ' . $request->fullUrl());
+        Log::$type(number_format((microtime(true) - $this->startTime) * 100, 3) . ' ms: ' . $status . ' ' . $request->method() . ' ' . $request->fullUrl());
     }
 }

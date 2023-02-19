@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class PositionCredit extends ApiModel
 {
@@ -34,8 +37,6 @@ class PositionCredit extends ApiModel
 
     const RELATIONS = ['position:id,title'];
 
-    public static array $yearCache = [];
-
     public int $start_timestamp;
     public int $end_timestamp;
 
@@ -43,18 +44,7 @@ class PositionCredit extends ApiModel
     {
         return $this->belongsTo(Position::class);
     }
-
-    /**
-     * Clear the cache, currently only used for testing.
-     *
-     * @return void
-     */
-
-    public static function clearCache(): void
-    {
-        self::$yearCache = [];
-    }
-
+    
     /**
      * Find all credits for a given year
      *
@@ -80,12 +70,15 @@ class PositionCredit extends ApiModel
      * @param int $year
      * @param int $positionId
      * @return mixed
+     * @throws InvalidArgumentException
      */
 
     public static function findForYearPosition(int $year, int $positionId): mixed
     {
-        if (isset(self::$yearCache[$year][$positionId])) {
-            return self::$yearCache[$year][$positionId];
+        $cacheKey = self::getCacheKey($year);
+        $cached = self::cacheStore()->get($cacheKey) ?? [];
+        if (isset($cached[$positionId])) {
+            return $cached[$positionId];
         }
 
         $rows = self::where('position_id', $positionId)
@@ -100,18 +93,11 @@ class PositionCredit extends ApiModel
             $row->end_timestamp = $row->end_time->timestamp;
         }
 
-        self::$yearCache[$year][$positionId] = $rows;
+        $cached[$positionId] = $rows;
+        self::cacheStore()->put($cacheKey, $cached);
 
         return $rows;
     }
-
-    /**
-     * Warm the position credit cache with credits based on the given year and position ids.
-     * A performance optimization to help computeCredits() avoid extra lookups.
-     *
-     * @param int $year
-     * @param $positionIds
-     */
 
     /**
      * Warm the position credit cache with credits based on the given year and position ids.
@@ -136,20 +122,23 @@ class PositionCredit extends ApiModel
     {
         $sql = self::query();
 
+        $cacheStore = self::cacheStore();
         $didCache = true;
         foreach ($bulkYears as $year => $positionIds) {
+            $cacheKey = self::getCacheKey($year);
             if (empty($positionIds)) {
                 $sql->orWhereYear('start_time', $year);
                 $didCache = false;
-                self::$yearCache[$year] = []; // Pulling in all positional credits for the year.
+                $cacheStore->put($cacheKey, []); // Pulling in all positional credits for the year.
                 continue;
             }
 
+            $yearCache = $cacheStore->get($cacheKey) ?? [];
             $findIds = [];
             foreach ($positionIds as $id) {
-                if (!isset(self::$yearCache[$year][$id])) {
+                if (!isset($yearCache[$id])) {
                     $findIds[] = $id;
-                    self::$yearCache[$year][$id] = [];
+                    $yearCache[$year][$id] = [];
                 }
             }
 
@@ -170,14 +159,31 @@ class PositionCredit extends ApiModel
             return;
         }
 
-        $rows = $sql->orderBy('start_time')->get();
+        $pcByYear = $sql->orderBy('start_time')
+            ->get()
+            ->groupBy(fn($row) => $row->start_time->year);
 
-        foreach ($rows as $row) {
-            // Cache the timestamp conversion
-            $row->start_timestamp = $row->start_time->timestamp;
-            $row->end_timestamp = $row->end_time->timestamp;
-            self::$yearCache[$row->start_time->year][$row->position_id][] = $row;
+        foreach ($pcByYear as $year => $rows) {
+            $cacheKey = self::getCacheKey($year);
+            $yearCache = $cacheStore->get($cacheKey) ?? [];
+            foreach ($rows as $row) {
+                // Cache the timestamp conversion
+                $row->start_timestamp = $row->start_time->timestamp;
+                $row->end_timestamp = $row->end_time->timestamp;
+                $yearCache[$row->position_id][] = $row;
+            }
+            $cacheStore->put($cacheKey, $yearCache);
         }
+    }
+
+    public static function cacheStore(): Repository
+    {
+        return Cache::store('array');
+    }
+
+    public static function getCacheKey(int $year): string
+    {
+        return 'pc-' . $year;
     }
 
     /**
@@ -187,6 +193,7 @@ class PositionCredit extends ApiModel
      * @param int $startTime the starting time of the shift
      * @param int $endTime the ending time of the shift
      * @return float earned credits
+     * @throws InvalidArgumentException
      */
 
     public static function computeCredits(int $positionId, int $startTime, int $endTime, int $year): float

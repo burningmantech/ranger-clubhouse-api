@@ -80,7 +80,10 @@ class SettingController extends ApiController
             return $this->restError($setting);
         }
 
-        Cache::flush(); // Kill all the caches
+        // Dump the entire app cache just in case
+        Cache::flush();
+
+        Setting::setCached($setting->name, $setting->value);
         Setting::kickQueues();
 
         return $this->success($setting);

@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
@@ -24,10 +25,9 @@ abstract class TestCase extends BaseTestCase
 
         // force garbage collection before each test
         // Faker triggers a memory allocation bug.
-        gc_collect_cycles();
+        // gc_collect_cycles();
 
-        Setting::$cache = [];
-        PositionCredit::clearCache();
+        Cache::flush();
 
         // Set the time to the beginning of the year
         Carbon::setTestNow(date('Y-01-01 12:34:56'));
