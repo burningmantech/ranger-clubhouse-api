@@ -26,7 +26,7 @@
     "doctrine/dbal": "^3.4.5",
     "guzzlehttp/guzzle": "^7.5.0",
     "intervention/image": "^2.7.2",
-    "laravel/framework": "^9.35.1",
+    "laravel/framework": "^10.0",
     "laravel/tinker": "^2.7.2",
     "league/flysystem-aws-s3-v3": "^3.5.0",
     "league/fractal": "^0.20",
@@ -35,12 +35,12 @@
     "twilio/sdk": "^6.36.0"
   },
   "require-dev": {
-    "spatie/laravel-ignition": "^1.5.1",
+    "spatie/laravel-ignition": "^2.0",
     "fakerphp/faker": "^1.20",
     "filp/whoops": "^2.14.5",
     "mockery/mockery": "~1.5.1",
-    "nunomaduro/collision": "^6.3.1",
-    "phpunit/phpunit": "^9.5.25"
+    "nunomaduro/collision": "^7.0",
+    "phpunit/phpunit": "^10.0"
   },
   "autoload": {
     "files": [
@@ -87,6 +87,6 @@
       "composer/package-versions-deprecated": true
     }
   },
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "prefer-stable": true
 }
