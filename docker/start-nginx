@@ -15,7 +15,7 @@ fi;
 supervisorctl start redis
 
 # Give Redis time to boot up.
-sleep 10
+sleep 2
 
 # Cache Laravel configuration and routes
 
@@ -48,8 +48,10 @@ echo "Starting queue runners and scheduler"
 supervisorctl start clubhouse-worker
 supervisorctl start clubhouse-scheduler
 
-echo "Starting php-fpm"
-supervisorctl start php-fpm
+#echo "Starting php-fpm"
+#supervisorctl start php-fpm
+echo "Starting php-octane"
+supervisorctl start php-octane
 
 sleep 5
 

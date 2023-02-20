@@ -27,6 +27,7 @@
     "guzzlehttp/guzzle": "^7.5.0",
     "intervention/image": "^2.7.2",
     "laravel/framework": "^10.0",
+    "laravel/octane": "^1.4",
     "laravel/tinker": "^2.7.2",
     "league/flysystem-aws-s3-v3": "^3.5.0",
     "league/fractal": "^0.20",
