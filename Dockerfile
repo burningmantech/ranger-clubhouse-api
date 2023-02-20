@@ -40,7 +40,9 @@ RUN                                                     \
     pdo                                                 \
     pdo_mysql                                           \
     zip                                                 \
-  && pecl install redis                                 \
+  && MAKEFLAGS="-j $(nproc)" pecl install swoole        \
+  && docker-php-ext-enable swoole                       \
+  && MAKEFLAGS="-j $(nproc)" pecl install redis         \
   && docker-php-ext-enable redis                        \
   && apk del                                            \
     icu-dev                                             \
@@ -154,19 +156,22 @@ COPY --from=build /var/www/application /var/www/application
 # Copy start-nginx script and override supervisor config to use it
 COPY ./docker/start-nginx /usr/bin/start-nginx
 COPY ./docker/supervisord-nginx.ini /etc/supervisor.d/nginx.ini
-COPY ./docker/supervisord-php-fpm.ini /etc/supervisor.d/php-fpm.ini
+#COPY ./docker/supervisord-php-fpm.ini /etc/supervisor.d/php-fpm.ini
+COPY ./docker/supervisord-php-octane.ini /etc/supervisor.d/php-octane.ini
 
 # Replace Nginx default site config
 COPY ./docker/nginx-default.conf /etc/nginx/http.d/default.conf
 
 # PHP tuning
 COPY ./php-inis/production.ini /usr/local/etc/php/conf.d/
-COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.conf
+#COPY ./php-inis/php-fpm-clubhouse.conf /usr/local/etc/php-fpm.d/zzz-clubhouse.conf
 
 # Laravel task scheduler and queue worker
 COPY ./docker/queue-worker.ini /etc/supervisor.d/queue-worker.ini
 COPY ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
 RUN chmod 555 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
+
+RUN rm /etc/supervisor.d/php-fpm.ini
 
 # Redis cache server
 RUN apk add --no-cache redis
