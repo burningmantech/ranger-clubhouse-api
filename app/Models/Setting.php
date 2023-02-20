@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Exception;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -799,9 +800,9 @@ class Setting extends ApiModel
         self::cacheStore()->put($name, $value);
     }
 
-    public static function cacheStore()
+    public static function cacheStore(): Repository
     {
-        return Cache::store('array');
+        return Cache::store(app()->isLocal() ? 'array' : config('cache.default'));
     }
 
     public static function storedOrDefault($row, $desc, bool $throwOnEmpty)
