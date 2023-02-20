@@ -807,29 +807,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return;
         }
 
-        $noCache = false;
         $cacheKey = PersonRole::getCacheKey($this->id);
-
-
         $cachedRoles = Cache::get($cacheKey);
         if ($cachedRoles) {
             $this->setCachedRoles($cachedRoles);
             return;
-        }
-
-        $cacheLock = Cache::lock('lock' . $cacheKey, 5);
-        if ($cacheLock->get()) {
-            // Double check to see if parallel request managed to set up the cached roles
-            $cachedRoles = Cache::get($cacheKey);
-            if ($cachedRoles) {
-                $cacheLock->release();
-                $this->setCachedRoles($cachedRoles);
-                return;
-            }
-            $lockAcquired = true;
-        } else {
-            $noCache = true;
-            $lockAcquired = false;
         }
 
         $grantedIds = DB::table('person_role')
@@ -887,6 +869,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $this->rawRolesById = $this->rolesById;
 
+        $noCache = false;
         if ($haveManage && !isset($this->rolesById[Role::TECH_NINJA])) {
             // Kill the roles if the NDA is not signed and the NDA document exists.
             if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
@@ -901,10 +884,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->roles = array_keys($this->rolesById);
         if (!$noCache) {
             Cache::put($cacheKey, [$this->roles, $this->trueRoles]);
-        }
-
-        if ($lockAcquired) {
-            $cacheLock->release();
         }
     }
 

@@ -735,7 +735,7 @@ class Setting extends ApiModel
                 throw new InvalidArgumentException("'$name' is an unknown setting.");
             }
 
-            if (self::getCached($name, $value)) {
+            if (self::getCached($name, $value, $desc['type'])) {
                 if ($isArray) {
                     $values[$name] = $value;
                 } else {
@@ -784,11 +784,11 @@ class Setting extends ApiModel
         self::cacheStore()->flush();
     }
 
-    public static function getCached($name, &$value): bool
+    public static function getCached($name, &$value, $type): bool
     {
         $cache = self::cacheStore();
         if ($cache->has($name)) {
-            $value = $cache->get($name);
+            $value = self::castValue($type, $cache->get($name));
             return true;
         }
 
