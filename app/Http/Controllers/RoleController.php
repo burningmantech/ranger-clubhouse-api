@@ -7,7 +7,7 @@ use App\Models\PersonRole;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class RoleController extends ApiController
 {
@@ -112,7 +112,7 @@ class RoleController extends ApiController
      * Diagnostic function - Inspect the role cache for a person
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|InvalidArgumentException
      */
 
     public function inspectCache(): JsonResponse
@@ -123,7 +123,7 @@ class RoleController extends ApiController
             'person_id' => 'integer|required|exists:person,id'
         ]);
 
-        $cached = Cache::get(PersonRole::getCacheKey($params['person_id']));
+        $cached = PersonRole::getCache($params['person_id']);
         if (!$cached) {
             return response()->json(['not_cached' => true]);
         }

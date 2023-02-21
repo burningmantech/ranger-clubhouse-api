@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\ClubhouseCache;
 use Exception;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -773,17 +774,6 @@ class Setting extends ApiModel
         return $values;
     }
 
-    /**
-     * Clear the setting cache
-     *
-     * @return void
-     */
-
-    public static function clearCache()
-    {
-        self::cacheStore()->flush();
-    }
-
     public static function getCached($name, &$value, $type): bool
     {
         $cache = self::cacheStore();
@@ -802,7 +792,7 @@ class Setting extends ApiModel
 
     public static function cacheStore(): Repository
     {
-        return Cache::store(app()->isLocal() ? 'array' : config('cache.default'));
+        return app()->isLocal() ? Cache::store('array') : ClubhouseCache::store();
     }
 
     public static function storedOrDefault($row, $desc, bool $throwOnEmpty)

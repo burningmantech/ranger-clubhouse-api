@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Lib\ClubhouseCache;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class TeamRole extends ApiModel
@@ -61,7 +61,7 @@ class TeamRole extends ApiModel
 
         $data = ['team_id' => $teamId, 'role_id' => $roleId];
         if (self::insertOrIgnore($data) == 1) {
-            Cache::flush();
+            ClubhouseCache::flush();
             ActionLog::record(Auth::user(), 'team-role-add', $reason, $data);
         }
     }
@@ -79,7 +79,7 @@ class TeamRole extends ApiModel
     {
         $data = ['team_id' => $teamId, 'role_id' => $roleId];
         self::where($data)->delete();
-        Cache::flush();
+        ClubhouseCache::flush();
         ActionLog::record(Auth::user(), 'team-role-remove', $reason, $data);
     }
 }

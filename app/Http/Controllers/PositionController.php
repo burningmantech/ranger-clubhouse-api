@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\BulkPositionGrantRevoke;
+use App\Lib\ClubhouseCache;
 use App\Lib\Reports\PeopleByPositionReport;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\SandmanQualificationReport;
@@ -10,18 +11,17 @@ use App\Models\Person;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PositionController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Show a lsit of positions
      *
      * @return JsonResponse
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'type' => 'sometimes|string',
@@ -50,12 +50,12 @@ class PositionController extends ApiController
             return $this->restError($position);
         }
 
-        Cache::flush();
+        ClubhouseCache::flush();
         return $this->success($position);
     }
 
     /**
-     * Display the specified resource.
+     * Show a position
      *
      * @param Position $position
      * @return JsonResponse
@@ -68,7 +68,7 @@ class PositionController extends ApiController
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update a position
      *
      * @param Position $position
      * @return JsonResponse
@@ -85,12 +85,13 @@ class PositionController extends ApiController
             return $this->success($position);
         }
 
-        Cache::flush();
+        // Positions affect role permissions, dump the cache.
+        ClubhouseCache::flush();
         return $this->restError($position);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Delete the position controller
      *
      * @param Position $position
      * @return JsonResponse
@@ -103,7 +104,7 @@ class PositionController extends ApiController
         $position->delete();
         DB::table('position_role')->where('position_id', $position->id)->delete();
         DB::table('person_position')->where('position_id', $position->id)->delete();
-        Cache::flush();
+        ClubhouseCache::flush();
         return $this->restDeleteSuccess();
     }
 

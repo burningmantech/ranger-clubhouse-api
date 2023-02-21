@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\ClubhouseCache;
 use App\Models\Role;
 use App\Models\Setting;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -81,7 +82,7 @@ class SettingController extends ApiController
         }
 
         // Dump the entire app cache just in case
-        Cache::flush();
+        ClubhouseCache::flush();
 
         Setting::setCached($setting->name, $setting->value);
         Setting::kickQueues();
