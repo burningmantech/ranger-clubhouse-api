@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\ClubhouseCache;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Models\PersonTeam;
 use App\Models\PersonTeamLog;
@@ -81,7 +82,7 @@ class TeamController extends ApiController
 
         if ($team->save()) {
             $team->loadRoles();
-            Cache::flush();
+            ClubhouseCache::flush();
             return $this->success($team);
         }
 
@@ -104,7 +105,7 @@ class TeamController extends ApiController
         PersonTeam::where('team_id', $team->id)->delete();
         PersonTeamLog::where('team_id', $team->id)->delete();
         TeamRole::where('team_id', $team->id)->delete();
-        Cache::flush();
+        ClubhouseCache::flush();
         return $this->restDeleteSuccess();
     }
 

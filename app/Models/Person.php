@@ -807,8 +807,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             return;
         }
 
-        $cacheKey = PersonRole::getCacheKey($this->id);
-        $cachedRoles = Cache::get($cacheKey);
+        $cachedRoles = PersonRole::getCache($this->id);
         if ($cachedRoles) {
             $this->setCachedRoles($cachedRoles);
             return;
@@ -883,7 +882,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $this->roles = array_keys($this->rolesById);
         if (!$noCache) {
-            Cache::put($cacheKey, [$this->roles, $this->trueRoles]);
+            PersonRole::putCache($this->id, [$this->roles, $this->trueRoles]);
         }
     }
 

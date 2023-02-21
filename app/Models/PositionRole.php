@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Lib\ClubhouseCache;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -76,8 +76,7 @@ class PositionRole extends ApiModel
      * @param ?string $reason
      */
 
-    public
-    static function add(int $positionId, int $roleId, ?string $reason): void
+    public static function add(int $positionId, int $roleId, ?string $reason): void
     {
         if ($roleId == Role::ADMIN || $roleId == Role::TECH_NINJA) {
             // Nope, don't allow unchecked privilege escalation.
@@ -86,7 +85,7 @@ class PositionRole extends ApiModel
 
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         if (self::insertOrIgnore($data) == 1) {
-            Cache::flush();
+            ClubhouseCache::flush();
             ActionLog::record(Auth::user(), 'position-role-add', $reason, $data);
         }
     }
@@ -99,12 +98,11 @@ class PositionRole extends ApiModel
      * @param string|null $reason
      */
 
-    public
-    static function remove(int $positionId, int $roleId, ?string $reason): void
+    public static function remove(int $positionId, int $roleId, ?string $reason): void
     {
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         self::where($data)->delete();
-        Cache::flush();
+        ClubhouseCache::flush();
         ActionLog::record(Auth::user(), 'position-role-remove', $reason, $data);
     }
 }

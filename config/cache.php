@@ -17,7 +17,7 @@ return [
     |
     */
 
-    // The database is used for development, and
+    // Leave as database so schedule-only-once can work
     'default' => env('CACHE_DRIVER', 'database'),
 
     /*

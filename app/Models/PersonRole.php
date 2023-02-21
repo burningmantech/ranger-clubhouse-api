@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Lib\ClubhouseCache;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\DB;
  */
 class PersonRole extends ApiModel
 {
-
-    const CACHE_KEY = 'person-role-';
-
     protected $table = 'person_role';
 
     public function person(): BelongsTo
@@ -166,7 +163,7 @@ class PersonRole extends ApiModel
 
     public static function clearCache(int $personId): void
     {
-        Cache::forget(self::getCacheKey($personId));
+        ClubhouseCache::forget(self::cacheKey($personId));
     }
 
     /**
@@ -175,8 +172,32 @@ class PersonRole extends ApiModel
      * @return string
      */
 
-    public static function getCacheKey(int $personId): string
+    public static function cacheKey(int $personId): string
     {
-        return self::CACHE_KEY . $personId;
+        return 'person-role-' . $personId;
+    }
+
+    /**
+     * Obtain the cache roles for a person
+     *
+     * @param int $personId
+     * @return mixed
+     */
+
+    public static function getCache(int $personId): mixed
+    {
+        return ClubhouseCache::get(self::cacheKey($personId));
+    }
+
+    /**
+     * Put the cached roles for a person
+     *
+     * @param int $personId
+     * @param mixed $roles
+     */
+
+    public static function putCache(int $personId, mixed $roles): void
+    {
+        ClubhouseCache::put(self::cacheKey($personId), $roles);
     }
 }
