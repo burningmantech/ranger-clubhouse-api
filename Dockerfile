@@ -42,8 +42,6 @@ RUN                                                     \
     zip                                                 \
   && MAKEFLAGS="-j $(nproc)" pecl install swoole        \
   && docker-php-ext-enable swoole                       \
-  && MAKEFLAGS="-j $(nproc)" pecl install redis         \
-  && docker-php-ext-enable redis                        \
   && apk del                                            \
     icu-dev                                             \
     libjpeg-turbo-dev                                   \
@@ -172,9 +170,6 @@ COPY ["./docker/clubhouse-scheduler", "./docker/clubhouse-worker", "/usr/bin/"]
 RUN chmod 555 /usr/bin/clubhouse-scheduler /usr/bin/clubhouse-worker
 
 RUN rm /etc/supervisor.d/php-fpm.ini
-
-# Redis cache server
-RUN apk add --no-cache redis
 
 # Set working directory to application directory
 WORKDIR /var/www/application
