@@ -89,7 +89,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /*
      * Locked status are those which the account cannot be allowed
-     * to logged into (either tempoarily or permanently), and which
+     * to logged into (either temporarily or permanently), and which
      * should not receive messages.
      */
 
@@ -1146,6 +1146,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
                 // Remove all roles
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
+
+                // Remove all teams
+                PersonTeam::removeAllForPerson($personId, $changeReason);
                 break;
 
             case Person::BONKED:

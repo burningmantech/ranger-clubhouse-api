@@ -14,7 +14,7 @@ class PeopleByTeamsReport
 
     public static function execute(): array
     {
-        $teams = Team::findAll();
+        $teams = Team::findAll(true);
         $teams->load(['members:person.id,callsign,status', 'managers']);
 
         return $teams->map(function ($team) {
