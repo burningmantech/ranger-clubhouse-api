@@ -17,6 +17,7 @@ class PositionSanityCheck
         'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
         'team_positions' => 'App\Lib\PositionSanityCheck\TeamPositionsCheck',
         'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
+        'deactivated_teams' => 'App\Lib\PositionSanityCheck\DeactivatedTeamsCheck',
         'lmyr' => 'App\Lib\PositionSanityCheck\LoginManagementYearRoundCheck',
     ];
 

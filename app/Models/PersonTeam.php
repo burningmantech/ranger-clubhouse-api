@@ -95,4 +95,21 @@ class PersonTeam extends ApiModel
             ActionLog::record(Auth::user(), 'person-team-remove', $reason, ['team_id' => $teamId], $personId);
         }
     }
+
+    /**
+     * Remove all teams for a person
+     *
+     * @param int $personId
+     * @param string $reason
+     * @return void
+     */
+
+    public static function removeAllForPerson(int $personId, string $reason) : void
+    {
+        $teams = self::findAllTeamsForPerson($personId);
+
+        foreach ($teams as $team) {
+            self::removePerson($team->id, $personId, $reason);
+        }
+    }
 }

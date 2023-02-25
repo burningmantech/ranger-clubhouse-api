@@ -96,12 +96,19 @@ class Team extends ApiModel
     /**
      * Find all Team records
      *
+     * @param bool $onlyActive
      * @return Collection
      */
 
-    public static function findAll(): Collection
+    public static function findAll(bool $onlyActive = false): Collection
     {
-        return self::orderBy('title')->get();
+        $sql = self::orderBy('title');
+
+        if ($onlyActive) {
+            $sql->where('active', true);
+        }
+
+        return $sql->get();
     }
 
     /**
