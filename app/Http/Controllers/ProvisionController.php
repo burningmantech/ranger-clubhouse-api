@@ -206,6 +206,7 @@ class ProvisionController extends ApiController
             }
 
             $prov->status = Provision::USED;
+            $prov->consumed_year = maintenance_year();
             $prov->addComment($reason, $user);
             $prov->auditReason = $reason;
             $this->saveProvision($prov, $provisions);
@@ -230,6 +231,7 @@ class ProvisionController extends ApiController
         foreach ($rows as $row) {
             if ($bmids->has($row->person_id) || $row->status == Provision::SUBMITTED || $row->status == Provision::CLAIMED) {
                 $row->status = Provision::USED;
+                $row->consumed_year = maintenance_year();
                 $row->addComment($reasonUsed, $user);
                 $row->auditReason = $reasonUsed;
             } else {
@@ -403,6 +405,7 @@ class ProvisionController extends ApiController
             // Mark the provision as used if the person has a printed BMID, or the provision was submitted or claimed
             if ($bmids->has($row->person_id) || $row->status == Provision::SUBMITTED || $row->status == Provision::CLAIMED) {
                 $row->status = Provision::USED;
+                $row->consumed_year = maintenance_year();
                 $row->addComment($reasonUsed, $user);
                 $row->auditReason = $reasonUsed;
             } else {
@@ -446,6 +449,9 @@ class ProvisionController extends ApiController
 
         foreach ($rows as $row) {
             $row->status = $status;
+            if ($status == Provision::CLAIMED) {
+                $row->consumed_year = current_year();
+            }
             $row->saveWithoutValidation();
         }
 

@@ -72,27 +72,40 @@ class Asset extends ApiModel
     public static function findForQuery($query): Collection
     {
         $year = $query['year'] ?? current_year();
+        $barcode = $query['barcode'] ?? null;
+        $exclude = $query['exclude'] ?? null;
+        $type = $query['type'] ?? null;
+        $checkedOut = $query['checked_out'] ?? null;
+        $includeHistory = $query['include_history'] ?? null;
+
         $sql = self::whereYear('create_date', $year);
 
-        if (isset($query['barcode'])) {
-            $sql = $sql->where('barcode', $query['barcode']);
+        if ($barcode) {
+            $sql = $sql->where('barcode', $barcode);
         }
 
-        if (isset($query['exclude'])) {
-            $sql = $sql->where('description', '!=', $query['exclude']);
+        if ($exclude) {
+            $sql = $sql->where('description', '!=', $exclude);
         }
 
-        if (isset($query['type'])) {
-            $sql = $sql->where('description', $query['type']);
+        if ($type) {
+            $sql = $sql->where('description', $type);
         }
 
-        if (isset($query['checked_out'])) {
+        if ($checkedOut) {
             $sql = $sql->whereRaw('EXISTS (SELECT 1 FROM asset_person WHERE asset_person.asset_id=asset.id AND asset_person.checked_in IS NULL LIMIT 1)');
-            $sql = $sql->with(['checked_out', 'checked_out.person:id,callsign', 'checked_out.attachment']);
-        } else if (isset($query['include_history'])) {
+            $sql = $sql->with([
+                'checked_out',
+                'checked_out.person:id,callsign',
+                'checked_out.check_out_person:id,callsign',
+                'checked_out.attachment'
+            ]);
+        } else if ($includeHistory) {
             $sql = $sql->with([
                 'asset_history',
                 'asset_history.person:id,callsign',
+                'asset_history.check_out_person:id,callsign',
+                'asset_history.check_in_person:id,callsign',
                 'asset_history.attachment'
             ]);
         }
