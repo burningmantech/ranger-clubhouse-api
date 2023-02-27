@@ -68,7 +68,7 @@ if (!function_exists('mail_to')) {
 }
 
 if (!function_exists('mail_to_person')) {
-    function mail_to_person(Person $person, Mailable $message, bool $queueMail = false)
+    function mail_to_person(Person $person, Mailable $message, bool $queueMail = false): bool
     {
         return mail_to($person->email, $message, $queueMail, $person->id);
     }

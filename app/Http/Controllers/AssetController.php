@@ -163,6 +163,7 @@ class AssetController extends ApiController
             'attachment_id' => $params['attachment_id'] ?? null,
             'checked_out' => now(),
             'person_id' => $params['person_id'],
+            'check_out_person_id' => $this->user->id,
         ]);
 
         if (!$row->save()) {
@@ -189,6 +190,7 @@ class AssetController extends ApiController
         }
 
         $asset_person->checked_in = now();
+        $asset_person->check_in_person_id = $this->user->id;
 
         if (!$asset_person->save()) {
             return $this->restError($asset);

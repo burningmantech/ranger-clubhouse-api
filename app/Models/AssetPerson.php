@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssetPerson extends ApiModel
 {
@@ -16,6 +18,8 @@ class AssetPerson extends ApiModel
         'asset_id',
         'checked_out',
         'checked_in',
+        'check_out_person_id',
+        'check_int_person_id',
         'attachment_id'
     ];
 
@@ -29,21 +33,37 @@ class AssetPerson extends ApiModel
         'asset_id' => 'required|integer',
     ];
 
-    const RELATIONSHIPS = ['asset', 'attachment', 'person:id,callsign'];
+    const RELATIONSHIPS = [
+        'asset',
+        'attachment',
+        'person:id,callsign',
+        'check_out_person:id,callsign',
+        'check_in_person:id,callsign',
+    ];
 
-    public function person()
+    public function person(): BelongsTo
     {
-        return $this->belongsTo('App\Models\Person');
+        return $this->belongsTo(Person::class);
     }
 
-    public function attachment()
+    public function check_out_person(): BelongsTo
     {
-        return $this->belongsTo('App\Models\AssetAttachment');
+        return $this->belongsTo(Person::class);
     }
 
-    public function asset()
+    public function check_in_person(): BelongsTo
     {
-        return $this->belongsTo('App\Models\Asset');
+        return $this->belongsTo(Person::class);
+    }
+
+    public function attachment(): BelongsTo
+    {
+        return $this->belongsTo(AssetAttachment::class);
+    }
+
+    public function asset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class);
     }
 
     public function loadRelationships()
@@ -58,20 +78,18 @@ class AssetPerson extends ApiModel
      * person_id: person to search for if absent, person callsign will also be looked up
      *
      * @param array $query conditions to look up
-     * @return Collection|array
+     * @return Collection
      */
 
-    public static function findForQuery($query): Collection|array
+    public static function findForQuery(array $query): Collection
     {
-        $sql = self::with(['asset', 'attachment']);
+        $sql = self::with(self::RELATIONSHIPS);
 
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
 
         if ($personId) {
             $sql->where('person_id', $personId);
-        } else {
-            $sql = $sql->with(['person:id,callsign']);
         }
 
         if ($year) {
@@ -91,17 +109,18 @@ class AssetPerson extends ApiModel
     public static function retrieveHistory($assetId): Collection|array
     {
         return self::where('asset_id', $assetId)
-            ->with(['person:id,callsign', 'attachment'])
+            ->with(['person:id,callsign', 'attachment', 'check_out_person', 'check_in_person'])
             ->get();
     }
 
     /**
      * Find if a person has checked out an asset.
+     *
      * @param $assetId
-     * @return Builder|Model|null
+     * @return ?Model
      */
 
-    public static function findCheckedOutPerson($assetId): Model|Builder|null
+    public static function findCheckedOutPerson($assetId): ?Model
     {
         return self::where('asset_id', $assetId)
             ->whereNull('checked_in')
@@ -112,11 +131,13 @@ class AssetPerson extends ApiModel
     /**
      * Set the attachment_id column, set to null if value is empty
      *
-     * @param $value
+     * @return Attribute
      */
 
-    public function setAttachmentIdAttribute($value)
+    protected function attachmentId(): Attribute
     {
-        $this->attributes['attachment_id'] = empty($value) ? null : $value;
+        return Attribute::make(
+            set: fn($value) => empty($value) ? null : $value,
+        );
     }
 }
