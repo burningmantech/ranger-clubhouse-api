@@ -48,6 +48,8 @@ class PersonFilter
         'callsign',
         'callsign_approved',
         'formerly_known_as',
+        'used_vanity_change',
+        'vanity_changed_at'
     ];
 
     const EMAIL_FIELDS = [

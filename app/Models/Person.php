@@ -177,6 +177,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'reviewed_pi_at' => 'datetime',
         'pi_reviewed_for_dashboard_at' => 'datetime',
+
+        'used_vanity_change' => 'boolean',
+        'vanity_changed_at' => 'datetime',
     ];
 
     /*
@@ -188,6 +191,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'callsign_approved',
         'formerly_known_as',
         'callsign_pronounce',
+        'used_vanity_change',
 
         'status',
         'status_date',
@@ -411,6 +415,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             // Clear the bouncing flag when the email changes.
             if ($model->isDirty('email')) {
                 $model->is_bouncing = false;
+            }
+
+            if ($model->isDirty('used_vanity_change') && $model->used_vanity_change) {
+                $model->vanity_changed_at = now();
             }
 
             /*
