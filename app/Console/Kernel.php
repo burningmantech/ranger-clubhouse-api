@@ -38,8 +38,8 @@ class Kernel extends ConsoleKernel
             $schedule->command('clubhouse:vehicle-pending')->dailyAt('19:00')->onOneServer();
 
             // Talk with Moodle to see who completed online training
-            // Runs every 15 mins March through September
-            $schedule->command('clubhouse:moodle-completion')->cron('0,15,30,45 * * 3-9 *')->onOneServer();
+            // Runs every 30 mins April through September
+            $schedule->command('clubhouse:moodle-completion')->cron('0,30 * * 4-9 *')->onOneServer();
 
             // Run the Rangers Who Need WAPs Report
             // At 02:30 on Mondays July through August.

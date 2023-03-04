@@ -12,6 +12,7 @@ use App\Models\PersonOnlineTraining;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -49,9 +50,10 @@ class Moodle
      * Attempt to get a login token to make Moodle web service requests.
      *
      * @return void
+     * @throws MoodleDownForMaintenanceException
      */
 
-    public function retrieveAccessToken()
+    public function retrieveAccessToken(): void
     {
         $query = [
             'username' => $this->clientId,
@@ -70,7 +72,9 @@ class Moodle
      * Find all available courses.
      *
      * @return array
+     * @throws MoodleDownForMaintenanceException
      */
+
     public function retrieveAvailableCourses(): array
     {
         return $this->requestWebService('GET', self::WS_COURSE_AVAILABLE);
@@ -81,6 +85,7 @@ class Moodle
      *
      * @param $query
      * @return array
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function findPersonByEmail($query): mixed
@@ -96,6 +101,7 @@ class Moodle
      *
      * @param int $courseId
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function retrieveCourseEnrollment(int $courseId): mixed
@@ -109,6 +115,7 @@ class Moodle
      * @param int $courseId
      * @param $userId
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function retrieveCourseCompletion(int $courseId, $userId): mixed
@@ -119,16 +126,19 @@ class Moodle
 
     /**
      * Retrieve everyone who is enrolled in a given course and check to see if
-     * they have completed the course. NOTE: This is a *** SLOW *** lookup due to
+     * they have completed the course. NOTE: This is a *** SLOW *** lookup due to the number of API requests fired off.
      *
      * @param int $courseId
      * @return array
+     * @throws MoodleDownForMaintenanceException
      */
+
     public function retrieveCourseEnrollmentWithCompletion(int $courseId): array
     {
         $students = $this->retrieveCourseEnrollment($courseId);
         $people = $this->findClubhouseUsers($students);
         $idNumbers = [];
+
         foreach ($students as $student) {
             if (!empty($student->idnumber)) {
                 $idNumbers[(int)$student->idnumber] = $student;
@@ -170,7 +180,11 @@ class Moodle
                 continue;
             }
 
-            $student->person = (object)['id' => $person->id, 'callsign' => $person->callsign, 'status' => $person->status];
+            $student->person = (object)[
+                'id' => $person->id,
+                'callsign' => $person->callsign,
+                'status' => $person->status
+            ];
         }
 
         usort($students, function ($a, $b) {
@@ -193,6 +207,7 @@ class Moodle
      *
      * @param array $user
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function updateUser(array $user): mixed
@@ -206,12 +221,12 @@ class Moodle
      *
      * @param int $courseId the Moodle course id to scan
      * @return void
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function processCourseCompletion(int $courseId): void
     {
         $enrolled = $this->retrieveCourseEnrollment($courseId);
-
         $students = $this->findClubhouseUsers($enrolled);
 
         $peopleIds = [];
@@ -219,6 +234,7 @@ class Moodle
             $peopleIds[] = $student->person->id;
         }
 
+        $completedAlready = [];
         if (!empty($peopleIds)) {
             $peopleCompleted = PersonOnlineTraining::whereIntegerInRaw('person_id', $peopleIds)
                 ->whereYear('completed_at', current_year())
@@ -231,7 +247,7 @@ class Moodle
         foreach ($students as $student) {
             $person = $student->person;
 
-            if (isset($completedAlready[$person->id])) {
+            if (isset($completedAlready[$person->id]) || $person->lms_course_id != $courseId) {
                 continue;
             }
 
@@ -268,7 +284,8 @@ class Moodle
             $ot->auditReason = 'course completion';
             $ot->save();
 
-            if (!in_array($person->status, Person::LOCKED_STATUSES)) {
+            if (!in_array($person->status, Person::LOCKED_STATUSES)
+                && !in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
                 mail_to_person($person, new OnlineTrainingCompletedMail($person));
             }
         }
@@ -281,7 +298,7 @@ class Moodle
      * @return array
      */
 
-    public function findClubhouseUsers($users)
+    public function findClubhouseUsers($users): array
     {
         $ids = [];
         foreach ($users as $user) {
@@ -294,12 +311,17 @@ class Moodle
             return [];
         }
 
-        $people = Person::select('id', 'callsign', 'status', 'email', 'lms_id')
-            ->whereIntegerInRaw('id', $ids)
+        $people = DB::table('person')
+            ->select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id', 'person_event.lms_course_id')
+            ->leftJoin('person_event', function ($j) {
+                $j->on('person_event.person_id', 'person.id');
+                $j->where('person_event.year', current_year());
+            })
+            ->whereIntegerInRaw('person.id', $ids)
             ->get();
 
-        $found = [];
 
+        $found = [];
         $peopleById = [];
         foreach ($people as $person) {
             $peopleById[(int)$person->id] = $person;
@@ -324,14 +346,11 @@ class Moodle
      *
      * @param Person $person account to link
      * @return bool true if the Moodle user was found
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function findPerson(Person $person): bool
     {
-        if (!empty($person->lms_id)) {
-            return true;
-        }
-
         /*
          * Look up by email
          */
@@ -384,6 +403,7 @@ class Moodle
      * @param Person $person
      * @param  $password
      * @return bool
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function createUser(Person $person, &$password): bool
@@ -415,6 +435,7 @@ class Moodle
             'lms_id' => $person->lms_id,
             'lms_username' => $username,
         ], $person->id);
+
         return true;
     }
 
@@ -423,6 +444,7 @@ class Moodle
      *
      * @param Person $person person to enroll
      * @param int $courseId course to enroll into
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function enrollPerson(Person $person, PersonEvent $pe, int $courseId): void
@@ -453,6 +475,7 @@ class Moodle
      *
      * @param $course
      * @return array
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function linkUsersInCourse($courseId): array
@@ -504,6 +527,7 @@ class Moodle
      * @param string $service
      * @param array $data
      * @return mixed
+     * @throws MoodleDownForMaintenanceException
      */
 
     public function requestWebService(string $method, string $service, array $data = []): mixed
