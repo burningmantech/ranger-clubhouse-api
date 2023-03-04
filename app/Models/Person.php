@@ -12,6 +12,7 @@
 namespace App\Models;
 
 use App\Helpers\SqlHelper;
+use App\Jobs\OnlineTrainingSyncPersonJob;
 use App\Lib\Agreements;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
@@ -432,7 +433,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $model->resetCallsign();
                 $model->callsign_approved = false;
             }
+        });
 
+        self::updated(function ($model) {
+           if (!empty($model->lms_id)
+           && $model->wasChanged([ 'callsign', 'email', 'first_name', 'last_name' ])) {
+               OnlineTrainingSyncPersonJob::dispatch($model);
+           }
         });
     }
 

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use stdClass;
 
 class Moodle
 {
@@ -88,12 +89,28 @@ class Moodle
      * @throws MoodleDownForMaintenanceException
      */
 
-    public function findPersonByEmail($query): mixed
+    public function findPersonByEmail($query): array
     {
         $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, [
-            'criteria' => [['key' => 'email', 'value' => $query]]
+            'criteria' => [['key' => 'email', 'value' => self::normalizeEmail($query)]]
         ]);
         return $result->users;
+    }
+
+    /**
+     * Find a user by the moodle id
+     *
+     * @param $id
+     * @return stdClass|null
+     * @throws MoodleDownForMaintenanceException
+     */
+
+    public function findPersonByMoodleId($id): ?stdClass
+    {
+        $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, [
+            'criteria' => [['key' => 'id', 'value' => $id]]
+        ]);
+        return $result->users[0] ?? null;
     }
 
     /**
@@ -383,7 +400,7 @@ class Moodle
         $lastName = ucfirst(strtolower(Person::convertDiacritics($person->last_name)));
         $firstName = Person::convertDiacritics($person->first_name);
         $password = ucfirst(preg_replace('/[^\w]/', '', $lastName) . ucfirst(substr($firstName, 0, 1))) . '!';
-        $password .= ((string)rand(0, 9) . (string)rand(0, 9) . (string)rand(0, 9));
+        $password .= (rand(0, 9) . rand(0, 9) . rand(0, 9));
 
         while (strlen($password) < 10) {
             $password .= substr(str_shuffle($letters), 0, 1);
@@ -398,6 +415,21 @@ class Moodle
     }
 
     /**
+     * Build up the username name.
+     *
+     * @param Person $person
+     * @return string
+     */
+
+    public static function buildMoodleUsername(Person $person): string
+    {
+        $username = str_ireplace('(NR)', '', $person->callsign);
+        $username = strtolower(trim($username));
+
+        return preg_replace('/[^\w]/', '', Person::convertDiacritics($username));
+    }
+
+    /**
      * Create a Moodle user.
      *
      * @param Person $person
@@ -409,17 +441,14 @@ class Moodle
     public function createUser(Person $person, &$password): bool
     {
         $password = self::generatePassword($person);
-
-        $username = str_ireplace('(NR)', '', $person->callsign);
-        $username = strtolower(trim($username));
-        $username = preg_replace('/[^\w]/', '', Person::convertDiacritics($username));
+        $username = self::buildMoodleUsername($person);
 
         $result = $this->requestWebService(
             'POST', self::WS_CREATE_USERS,
             [
                 'users' => [[
                     'username' => $username,
-                    'email' => strtolower($person->email),
+                    'email' => self::normalizeEmail($person->email),
                     'password' => $password,
                     'firstname' => $person->first_name,
                     'lastname' => $person->last_name,
@@ -473,7 +502,7 @@ class Moodle
     /**
      * Scan an enrollment to see who is missing a Clubhouse ID
      *
-     * @param $course
+     * @param $courseId
      * @return array
      * @throws MoodleDownForMaintenanceException
      */
@@ -521,6 +550,47 @@ class Moodle
     }
 
     /**
+     * Sync the user's moodle information (including username) with the Clubhouse info.
+     *
+     * @param Person $person
+     * @return void
+     * @throws MoodleDownForMaintenanceException
+     */
+
+    public function syncPersonInfo(Person $person): void
+    {
+        $username = self::buildMoodleUsername($person);
+        $person->lms_username = $username;
+
+        $this->updateUser([
+            'id' => $person->lms_id,
+            'username' => $username,
+            'email' => self::normalizeEmail($person->email),
+            'firstname' => $person->first_name,
+            'lastname' => $person->last_name,
+        ]);
+    }
+
+    /**
+     * Reset the person's password
+     *
+     * @param Person $person
+     * @param $password
+     * @return void
+     * @throws MoodleDownForMaintenanceException
+     */
+
+    public function resetPassword(Person $person, &$password): void
+    {
+        $password = self::generatePassword($person);
+
+        $this->updateUser([
+            'id' => $person->lms_id,
+            'password' => $password,
+        ]);
+    }
+
+    /**
      * Make a Moodle API request
      *
      * @param string $method HTTP verb (GET, POST, PUT, etc.)
@@ -536,9 +606,9 @@ class Moodle
             'wstoken' => $this->token,
             'moodlewsrestformat' => 'json',
             'wsfunction' => $service,
+            ...$data
         ];
 
-        $query = array_merge($query, $data);
         $url = $this->domain . self::WEB_SERVICE_URL . '?' . http_build_query($query);
         $client = Http::connectTimeout(10);
         $response = match ($method) {
@@ -594,5 +664,20 @@ class Moodle
         }
 
         return $json;
+    }
+
+    /**
+     * Strip any alias out of an email address.
+     * e.g., convert 'account+alias@domain.com' to 'account@domain.com'
+     *
+     * Moodle cannot deal with such email addresses
+     *
+     * @param string $email
+     * @return string
+     */
+
+    public static function normalizeEmail(string $email): string
+    {
+        return preg_replace('/(\+.*)(?=\@)/', '', $email);
     }
 }

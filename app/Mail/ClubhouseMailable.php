@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ClubhouseMailable extends Mailable
 {
-    public $senderId;
-    public $personId;
+    public ?int $senderId;
+    public ?int $personId;
 
     public function __construct()
     {

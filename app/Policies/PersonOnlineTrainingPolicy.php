@@ -120,6 +120,11 @@ class PersonOnlineTrainingPolicy
         return $user->id == $person->id;
     }
 
+    public function resetPassword(Person $user, Person $person) : bool
+    {
+        return $user->id == $person->id || $user->hasRole(Role::TRAINER);
+    }
+
     public function markCompleted(Person $user): bool
     {
         return false;
