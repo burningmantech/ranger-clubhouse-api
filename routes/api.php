@@ -165,8 +165,10 @@ Route::group([
     Route::post('online-training/set-course-type', 'OnlineTrainingController@setCourseType');
     Route::get('online-training', 'OnlineTrainingController@index');
     Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
-    Route::post('online-training/{person}/reset-password', 'OnlineTrainingController@resetPassword');
     Route::post('online-training/{person}/mark-completed', 'OnlineTrainingController@markCompleted');
+    Route::post('online-training/{person}/reset-password', 'OnlineTrainingController@resetPassword');
+    Route::get('online-training/{person}/info', 'OnlineTrainingController@getInfo');
+    Route::post('online-training/{person}/sync-info', 'OnlineTrainingController@syncInfo');
 
     Route::get('mail-log/stats', 'MailLogController@stats');
     Route::get('mail-log', 'MailLogController@index');

@@ -263,6 +263,6 @@ class TimesheetPolicy
 
     public function eventStatsReport(Person $user) : bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 }
