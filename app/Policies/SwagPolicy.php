@@ -13,7 +13,7 @@ class SwagPolicy
 
     public function before($user)
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([Role::ADMIN, Role::EDIT_SWAG])) {
             return true;
         }
     }

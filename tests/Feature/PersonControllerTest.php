@@ -20,6 +20,7 @@ use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -1341,6 +1342,9 @@ class PersonControllerTest extends TestCase
 
     public function testPeopleByRole()
     {
+        // New roles may have seeder migrations, and we don't want that here.
+        DB::table('role')->delete();
+
         $this->addRole(Role::MANAGE);
 
         $adminRole = Role::factory()->create([
