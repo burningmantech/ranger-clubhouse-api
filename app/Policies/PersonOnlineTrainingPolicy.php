@@ -127,6 +127,16 @@ class PersonOnlineTrainingPolicy
 
     public function markCompleted(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::TRAINER);
+    }
+
+    public function syncInfo(Person $user, Person $person) : bool
+    {
+        return $user->hasRole(Role::TRAINER);
+    }
+
+    public function getInfo(Person $user, Person $person) : bool
+    {
+        return $user->hasRole(Role::TRAINER);
     }
 }

@@ -141,7 +141,7 @@ class OnlineTrainingController extends ApiController
         $lms->resetPassword($person, $password);
 
         mail_to_person($person, new OnlineTrainingResetPasswordMail($person, $password), true);
-        ActionLog::record($person, 'lms-password-reset', '');
+        ActionLog::record($person, 'lms-password-reset', 'password reset requested');
 
         return response()->json(['status' => 'success', 'password' => $password]);
     }
@@ -302,6 +302,88 @@ class OnlineTrainingController extends ApiController
             return $this->restError($ot);
         }
 
+        return response()->json(['status' => 'success']);
+    }
+
+    /**
+     * Obtain the user information from the Online Course
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException|MoodleDownForMaintenanceException
+     */
+
+    public function getInfo(Person $person): Jsonresponse
+    {
+        $this->authorize('getInfo', [PersonOnlineTraining::class, $person]);
+
+        if (empty($person->lms_id)) {
+            return response()->json(['status' => 'not-setup']);
+        }
+
+        $user = (new Moodle())->findPersonByMoodleId($person->lms_id);
+
+        if (!$user) {
+            return response()->json(['status' => 'missing-account', 'lms_id' => $person->lms_id]);
+        }
+
+        $userInfo = [
+            'idnumber' => $user->idnumber,
+            'username' => $user->username,
+            'first_name' => $user->firstname,
+            'last_name' => $user->lastname,
+            'email' => $user->email,
+        ];
+
+        $inSync = true;
+        if ($user->idnumber != $person->id) {
+            $userInfo['username_expected'] = $person->id;
+            $inSync = false;
+        }
+
+        $username = Moodle::buildMoodleUsername($person);
+        if ($username != $userInfo['username']) {
+            $userInfo['username_expected'] = $username;
+            $inSync = false;
+        }
+
+        if ($user->firstname != $person->first_name) {
+            $userInfo['first_name_expected'] = $person->first_name;
+            $inSync = false;
+        }
+
+        if ($user->lastname != $person->last_name) {
+            $userInfo['last_name_expected'] = $person->last_name;
+            $inSync = false;
+        }
+
+        $email = Moodle::normalizeEmail($person->email);
+        if ($user->email != $email) {
+            $userInfo['email_expected'] = $email;
+            $inSync = false;
+        }
+
+        return response()->json(['status' => 'success', 'user' => $userInfo, 'in_sync' => $inSync]);
+    }
+
+    /**
+     * Sync the Moodle account with the Clubhouse
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws MoodleDownForMaintenanceException
+     */
+
+    public function syncInfo(Person $person): JsonResponse
+    {
+        $this->authorize('syncInfo', [PersonOnlineTraining::class, $person]);
+
+        if (empty($person->lms_id)) {
+            return response()->json(['status' => 'not-setup']);
+        }
+
+        (new Moodle())->syncPersonInfo($person);
         return response()->json(['status' => 'success']);
     }
 }
