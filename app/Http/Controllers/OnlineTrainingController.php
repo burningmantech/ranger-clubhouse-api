@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Mail\OnlineTrainingEnrollmentMail;
+use App\Mail\OnlineTrainingResetPasswordMail;
+use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
@@ -58,10 +60,10 @@ class OnlineTrainingController extends ApiController
         if ($person->status == Person::ACTIVE
             && !setting('OnlineTrainingFullCourseForVets')
             && count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) >= 2) {
-            $courseId = setting('MoodleHalfCourseId');
+            $courseId = setting('MoodleHalfCourseId', true);
             $type = 'half';
         } else {
-            $courseId = setting('MoodleFullCourseId');
+            $courseId = setting('MoodleFullCourseId', true);
             $type = 'full';
         }
 
@@ -88,11 +90,22 @@ class OnlineTrainingController extends ApiController
                     $lms = new Moodle;
                 }
 
+                if ($exists) {
+                    // Sync the existing user's info when enrolling a new course.
+                    // Assumes - this is the first enrollment for the event cycle.
+                    $lms->syncPersonInfo($person);
+                    $person->auditReason = 'moodle user info sync';
+                    $person->saveWithoutValidation();
+                    ActionLog::record($person, 'lms-sync-user', 'course enrollment sync');
+                }
+
                 // Enroll the person in the course
                 $lms->enrollPerson($person, $pe, $courseId);
+                $pe->saveWithoutValidation();
             }
+
         } catch (MoodleDownForMaintenanceException $e) {
-            return response()->json([ 'status' => 'down-for-maintenance' ]);
+            return response()->json(['status' => 'down-for-maintenance']);
         }
 
         if (!$exists) {
@@ -108,10 +121,36 @@ class OnlineTrainingController extends ApiController
     }
 
     /**
+     * Reset the password for a moodle account.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException|MoodleDownForMaintenanceException
+     */
+
+    public function resetPassword(Person $person): JsonResponse
+    {
+        $this->authorize('resetPassword', [PersonOnlineTraining::class, $person]);
+
+        if (empty($person->lms_id)) {
+            return response()->json(['status' => 'no-account']);
+        }
+
+        $lms = new Moodle();
+        $password = null;
+        $lms->resetPassword($person, $password);
+
+        mail_to_person($person, new OnlineTrainingResetPasswordMail($person, $password), true);
+        ActionLog::record($person, 'lms-password-reset', '');
+
+        return response()->json(['status' => 'success', 'password' => $password]);
+    }
+
+    /**
      * Attempt to scan the Moodle enrollments and associate any account that does not have a user id
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|MoodleDownForMaintenanceException
      */
 
     public function linkUsers(): JsonResponse
@@ -156,7 +195,7 @@ class OnlineTrainingController extends ApiController
      * Retrieve all available courses
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|MoodleDownForMaintenanceException
      */
 
     public function courses(): JsonResponse
@@ -212,7 +251,7 @@ class OnlineTrainingController extends ApiController
      * Retrieve everyone who is enrolled.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|MoodleDownForMaintenanceException
      */
 
     public function enrollment(): JsonResponse
@@ -235,9 +274,11 @@ class OnlineTrainingController extends ApiController
      * Mark a person as having completed the online course.
      * (Very dangerous, only use this superpower for good.)
      *
+     * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function markCompleted(Person $person): JsonResponse
     {
         $this->authorize('markCompleted', PersonOnlineTraining::class);
