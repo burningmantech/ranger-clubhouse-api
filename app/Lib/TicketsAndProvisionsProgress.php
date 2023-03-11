@@ -16,7 +16,8 @@ class TicketsAndProvisionsProgress
     const ITEM_RPT = 'rpt';
 
     const ITEM_SHOWER_POG = 'shower_pog';
-    const ITEM_SHOWER_ACCESS = 'shower_access';
+    const ITEM_SHOWER_ACCESS_ENTIRE_EVENT = 'shower_access_entire_event';
+    const ITEM_SHOWER_ACCESS_EVENT_WEEK = 'shower_access_event_week';
 
     const ITEM_EVENT_WEEK_MEAL_PASS = 'event_week_eats';
     const ITEM_ALL_EAT_PASS = 'all_eats';
@@ -24,8 +25,8 @@ class TicketsAndProvisionsProgress
     const ITEM_TSHIRT = 't_shirt';
     const ITEM_LONG_SLEEVE_SHIRT = 'long_sleeve_shirt';
 
-    public $items = [];
-    public $other_duration = 0;
+    public array $items = [];
+    public int $other_duration = 0;
 
     /**
      * Figure out what the tickets and provisions (meals, showers, clothing) the person
@@ -47,7 +48,8 @@ class TicketsAndProvisionsProgress
             'ScTicketThreshold',
             'RpTicketThreshold',
             'ShowerPogThreshold',
-            'ShowerAccessThreshold',
+            'ShowerAccessEntireEventThreshold',
+            'ShowerAccessEventWeekThreshold',
             'ShirtLongSleeveHoursThreshold',
             'ShirtShortSleeveHoursThreshold',
         ]);
@@ -84,9 +86,12 @@ class TicketsAndProvisionsProgress
             $timesheetSummary->event_duration, $timesheetSummary->event_duration + $remaining->event_duration,
             $thresholds['ShowerPogThreshold'], self::MEASURE_HOURS);
 
-        $progress->calculateItem(self::ITEM_SHOWER_ACCESS,
+        $progress->calculateItem(self::ITEM_SHOWER_ACCESS_EVENT_WEEK,
             $timesheetSummary->event_duration, $timesheetSummary->event_duration + $remaining->event_duration,
-            $thresholds['ShowerAccessThreshold'], self::MEASURE_HOURS);
+            $thresholds['ShowerAccessEventWeekThreshold'], self::MEASURE_HOURS);
+
+        $progress->calculateItem(self::ITEM_SHOWER_ACCESS_ENTIRE_EVENT, $hours, $expectedHours,
+            $thresholds['ShowerAccessEntireEventThreshold'], self::MEASURE_HOURS);
 
         $progress->calculateItem(self::ITEM_TSHIRT,
             $preEventAndEventHours, $expectedPreEventAndEventHours,
@@ -103,7 +108,7 @@ class TicketsAndProvisionsProgress
         return $progress;
     }
 
-    public function calculateItem($item, $value, $expectedValue, $threshold, $measure)
+    public function calculateItem($item, $value, $expectedValue, $threshold, $measure): void
     {
         if ($measure === self::MEASURE_HOURS) {
             $thresholdAdjusted = $threshold * 3600;

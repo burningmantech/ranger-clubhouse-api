@@ -46,7 +46,7 @@ class Schedule extends ApiModel
 
     const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes
 
-    const MAY_START_SHIFT_WITHIN = 15; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
+    const MAY_START_SHIFT_WITHIN = 25; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
 
     /*
      * Sign up statuses

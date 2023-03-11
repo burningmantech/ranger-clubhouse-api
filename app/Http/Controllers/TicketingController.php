@@ -226,7 +226,8 @@ class TicketingController extends ApiController
             'ScTicketThreshold',
             'RpTicketThreshold',
             'ShowerPogThreshold',
-            'ShowerAccessThreshold',
+            'ShowerAccessEntireEventThreshold',
+            'ShowerAccessEventWeekThreshold',
             'ShirtLongSleeveHoursThreshold',
             'ShirtShortSleeveHoursThreshold',
         ]);

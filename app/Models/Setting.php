@@ -399,9 +399,17 @@ class Setting extends ApiModel
             'type' => self::TYPE_INTEGER
         ],
 
-        'ShowerAccessThreshold' => [
-            'description' => 'Hour threshold to earn shower access for the next event',
+        'ShowerAccessEventWeekThreshold' => [
+            'description' => 'Event week hour threshold to earn shower access for the next event',
             'type' => self::TYPE_INTEGER,
+            'default' => 60,
+        ],
+
+        'ShowerAccessEntireEventThreshold' => [
+            'description' => 'Pre-event/event/post-event period hour threshold to earn shower access for the next event',
+            'type' => self::TYPE_INTEGER,
+            'default' => 130,
+
         ],
 
         'TAS_Alpha_FAQ' => [
