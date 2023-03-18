@@ -161,7 +161,7 @@ class PersonPolicy
 
     public function alphaShirts(Person $user): bool
     {
-        return $user->hasRole([Role::ADMIN, Role::VC]);
+        return $user->hasRole(Role::MANAGE);
     }
 
     public function peopleByLocation(Person $user): bool
