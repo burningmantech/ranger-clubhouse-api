@@ -117,7 +117,7 @@ class PositionController extends ApiController
 
     public function peopleByPosition(): JsonResponse
     {
-        $this->authorize('peopleByPosition', Person::class);
+        $this->authorize('peopleByPosition', Position::class);
         $params = request()->validate([
             'onPlaya' => 'sometimes|boolean'
         ]);
