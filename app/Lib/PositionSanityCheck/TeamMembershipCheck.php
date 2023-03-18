@@ -42,7 +42,7 @@ class TeamMembershipCheck extends SanityCheck
                 throw new InvalidArgumentException("Person #{$personId} was not found in the options");
             }
             foreach ($teamIds as $tid) {
-                PersonTeam::addPerson($personId, $tid, 'position sanity checker repair - add missing team');
+                PersonTeam::addPerson($tid, $personId, 'position sanity checker repair - add missing team');
                 $results[] = ['id' => $personId, 'team_id' => $tid];
             }
         }
