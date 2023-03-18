@@ -108,7 +108,7 @@ class PositionController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /**
+    /**w
      * Report on all positions who has been granted said position
      *
      * @return JsonResponse
@@ -117,7 +117,7 @@ class PositionController extends ApiController
 
     public function peopleByPosition(): JsonResponse
     {
-        $this->authorize('index', Person::class);
+        $this->authorize('peopleByPosition', Person::class);
         $params = request()->validate([
             'onPlaya' => 'sometimes|boolean'
         ]);

@@ -170,7 +170,7 @@ class AssetController extends ApiController
             return $this->restError($row);
         }
 
-        return response()->json(['status' => 'success']);
+        return response()->json(['status' => 'success', 'asset' => $asset]);
     }
 
     /**

@@ -126,4 +126,14 @@ class PositionPolicy
         // Only admins are allowed to run it.
         return $user->hasRole(Role::ADMIN);
     }
+
+    /**
+     * Determine who can run the people by position report
+     *
+     */
+
+    public function peopleByPosition(Person $user) : bool
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
 }

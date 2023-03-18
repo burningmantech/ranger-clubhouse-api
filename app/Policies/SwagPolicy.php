@@ -89,6 +89,6 @@ class SwagPolicy
 
     public function potentialSwagReport(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 }
