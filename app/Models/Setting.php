@@ -164,6 +164,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'MealHalfPogEnabled' => [
+          'description' => 'Enable or disable issuing of half meal pogs',
+          'type' => self::TYPE_BOOL,
+          'default' => true,
+        ],
+
         'MealInfoAvailable' => [
             'description' => 'True if meal information is available.',
             'type' => self::TYPE_BOOL,

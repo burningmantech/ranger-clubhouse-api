@@ -33,6 +33,7 @@ class Role extends ApiModel
     const CERTIFICATION_MGMT = 110; // Person can add certifications on a person's behalf, and view detailed info (card number, notes, etc.)
     const EDIT_ASSETS = 111;    // Person can create and edit asset records
     const EDIT_SWAG = 112;      // Person can create and edit swag records
+    const CAN_FORCE_SHIFT = 113; // Person can force a shift start
 
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 

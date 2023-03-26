@@ -138,6 +138,7 @@ Route::group([
     Route::delete('error-log/purge', 'ErrorLogController@purge');
     Route::resource('error-log', 'ErrorLogController', ['only' => 'index']);
 
+    Route::get('event-dates/period', 'EventDatesController@period');
     Route::get('event-dates/year', 'EventDatesController@showYear');
     Route::resource('event-dates', 'EventDatesController');
 
@@ -250,6 +251,7 @@ Route::group([
     Route::get('person-photo/{person_photo}/reject-preview', 'PersonPhotoController@rejectPreview');
     Route::resource('person-photo', 'PersonPhotoController');
 
+    Route::get('person-pog/config', 'PersonPogController@config');
     Route::resource('person-pog', 'PersonPogController');
 
     Route::resource('person-position-log', 'PersonPositionLogController');
@@ -390,6 +392,7 @@ Route::group([
     Route::get('timesheet/totals', 'TimesheetController@timesheetTotals');
     Route::get('timesheet/unconfirmed-people', 'TimesheetController@unconfirmedPeople');
     Route::match(['GET', 'POST'], 'timesheet/special-teams', 'TimesheetController@specialTeamsReport');
+    Route::delete('timesheet/{timesheet}/delete-mistake', 'TimesheetController@deleteMistake');
     Route::post('timesheet/{timesheet}/resignin', 'TimesheetController@resignin');
     Route::post('timesheet/{timesheet}/signoff', 'TimesheetController@signoff');
     Route::patch('timesheet/{timesheet}/update-position', 'TimesheetController@updatePosition');

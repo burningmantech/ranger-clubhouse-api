@@ -225,7 +225,6 @@ class TicketingController extends ApiController
             'AllYouCanEatEventPeriodThreshold',
             'ScTicketThreshold',
             'RpTicketThreshold',
-            'ShowerPogThreshold',
             'ShowerAccessEntireEventThreshold',
             'ShowerAccessEventWeekThreshold',
             'ShirtLongSleeveHoursThreshold',

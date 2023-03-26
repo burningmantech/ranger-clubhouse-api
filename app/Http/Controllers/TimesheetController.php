@@ -453,6 +453,30 @@ class TimesheetController extends ApiController
     }
 
     /**
+     * Delete an accidental shift.
+     *
+     * @param Timesheet $timesheet
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function deleteMistake(Timesheet $timesheet): JsonResponse
+    {
+        $this->authorize('deleteMistake', $timesheet);
+
+        if ($timesheet->off_duty) {
+            throw new InvalidArgumentException('Delete-for-mistake request can only happen on still on duty entries.');
+        }
+
+        $timesheet->auditReason = 'accidental creation';
+        $timesheet->delete();
+
+        $timesheet->log(TimesheetLog::DELETE_MISTAKE, ['position_id' => $timesheet->position_id,]);
+
+        return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
+    }
+
+    /**
      * Restart a shift - use for accidental sign out.
      *
      * @param Timesheet $timesheet

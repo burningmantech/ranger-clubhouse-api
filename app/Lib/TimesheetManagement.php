@@ -61,7 +61,7 @@ class TimesheetManagement
                                                   bool   &$signonForced,
                                                          &$unqualifiedReason): bool
     {
-        $canForceSignon = Auth::user()?->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
+        $canForceSignon = Auth::user()?->hasRole([Role::ADMIN, Role::CAN_FORCE_SHIFT]);
 
         $personId = $person->id;
 
