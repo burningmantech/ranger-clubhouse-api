@@ -18,10 +18,11 @@ class PersonPogController extends ApiController
 
     public function index(): JsonResponse
     {
-        $params = request()->validate(
-            ['person_id' => 'sometimes|integer'],
-            ['pog_id' => 'sometimes|integer']
-        );
+        $params = request()->validate([
+            'person_id' => 'sometimes|integer',
+            'pog_id' => 'sometimes|integer',
+            'year' => 'sometimes|integer',
+        ]);
 
         $this->authorize('index', [PersonPog::class, $params['person_id'] ?? null]);
 
@@ -57,7 +58,7 @@ class PersonPogController extends ApiController
         $personPog = new PersonPog();
         $this->fromRest($personPog);
         $personPog->issued_by_id = $this->user->id;
-        
+
         if ($personPog->save()) {
             $personPog->loadRelationships();
             return $this->success($personPog);
@@ -102,5 +103,15 @@ class PersonPogController extends ApiController
         $personPog->delete();
 
         return $this->restDeleteSuccess();
+    }
+
+    public function config() : JsonResponse
+    {
+        return response()->json([
+            'config' => [
+                'meal_half_pog_enabled' => setting('MealHalfPogEnabled'),
+                'shower_pog_threshold' => setting('ShowerPogThreshold'),
+            ],
+        ]);
     }
 }

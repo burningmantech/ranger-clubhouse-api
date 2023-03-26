@@ -23,17 +23,24 @@ class PersonPog extends ApiModel
     const RELATIONSHIPS = ['issued_by:id,callsign', 'timesheet:id,position_id,on_duty,off_duty'];
 
     protected $fillable = [
+        'issued_at',
+        'notes',
         'person_id',
-        'timesheet_id',
         'pog',
         'status',
-        'notes'
+        'timesheet_id',
     ];
 
     protected $attributes = [
         'notes' => '',
         'status' => self::STATUS_ISSUED,
     ];
+
+     protected $casts = [
+         'created_at' => 'datetime',
+         'issued_at' => 'datetime',
+         'updated_at' => 'datetime'
+     ];
 
     public function person(): BelongsTo
     {
@@ -48,6 +55,17 @@ class PersonPog extends ApiModel
     public function timesheet(): BelongsTo
     {
         return $this->belongsTo(Timesheet::class);
+    }
+
+    public static function boot()
+    {
+        parent::boot();
+
+        self::creating(function ($model) {
+           if (empty($model->issued_at)) {
+               $model->issued_at = now();
+           }
+        });
     }
 
     public function save($options = []): bool
@@ -89,7 +107,7 @@ class PersonPog extends ApiModel
         $pog = $query['pog'] ?? null;
         $year = $query['year'] ?? null;
 
-        $sql = self::with(self::RELATIONSHIPS);
+        $sql = self::with(self::RELATIONSHIPS)->orderBy('created_at', 'desc');
         if ($personId) {
             $sql->where('person_id', $personId);
         }
@@ -101,6 +119,7 @@ class PersonPog extends ApiModel
         if ($year) {
             $sql->whereYear('created_at', $year);
         }
+
         return $sql->get();
     }
 

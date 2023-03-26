@@ -11,9 +11,17 @@ class EventDate extends ApiModel
     protected $auditModel = true;
 
     /**
-     * Event periods throughout the year wrt the {Ranger,PNV,Auditor} dashboards.
+     * On playa operation periods
+     */
+    const PRE_EVENT_OPS = 'pre';
+    const POST_EVENT_OPS = 'post';
+    const EVENT_WEEK_OPS = 'event';
+
+    /**
+     * Event cycle periods throughout the year wrt the {Ranger,PNV,Auditor} dashboards.
      * (not to be confuse with the {pre,post}-event weeks.)
      */
+
     const AFTER_EVENT = 'after-event';
     const BEFORE_EVENT = 'before-event';
     const EVENT = 'event';
@@ -112,5 +120,41 @@ class EventDate extends ApiModel
         $end = $laborDay->clone()->setTime(0, 0, 0);
 
         return [$start, $end];
+    }
+
+    /**
+     * Retrieve the event period (pre, event week, post)
+     *
+     * @return string
+     */
+
+    public static function retrieveEventOpsPeriod() : string
+    {
+        $year = current_year();
+        $eventDates = EventDate::findForYear($year);
+        $now = now();
+
+        if ($eventDates) {
+            if ($eventDates->event_start->gt($now)) {
+                return self::PRE_EVENT_OPS;
+            } else if ($eventDates->event_end->lte($now)) {
+                return self::POST_EVENT_OPS;
+            } else {
+                return self::EVENT_WEEK_OPS;
+            }
+        }
+
+        $laborDay = new Carbon("September $year first monday");
+        // Work backwards
+        if ($laborDay->lte($now)) {
+            return self::POST_EVENT_OPS;
+        }
+
+        $gateOpen = $laborDay->subDays(8);
+        if ($gateOpen->gt($now)){
+            return self::PRE_EVENT_OPS;
+        }
+
+        return self::EVENT_WEEK_OPS;
     }
 }

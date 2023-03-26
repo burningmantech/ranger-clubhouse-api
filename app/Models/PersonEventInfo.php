@@ -4,24 +4,30 @@ namespace App\Models;
 
 class PersonEventInfo extends ApihouseResult
 {
-    public $person_id;
-    public $year;
+    public int $person_id = 0;
+    public int $year = 0;
 
-    public $trainings;
-    public $radio_eligible;
-    public $radio_max;
-    public $radio_banked;
-    public $meals;
-    public $showers;
-    public $radio_info_available;
+    public mixed $trainings;
+    public bool $radio_eligible = false;
+    public int $radio_max = 0;
+    public bool $radio_banked = false;
+    public string $meals = '';
+    public bool $showers = false;
+    public bool $radio_info_available = false;
 
-    public $online_training_passed;
-    public $online_training_date;
+    public bool $online_training_passed = false;
+    public ?string $online_training_date = null;
 
-    public $vehicles;
+    public mixed $vehicles;
 
-    public $is_binary;
-    public $online_training_only;
+    public bool $is_binary = false;
+    public bool $online_training_only = false;
+
+    public bool $may_request_stickers = false;
+    public bool $org_vehicle_insurance = false;
+    public bool $signed_motorpool_agreement = false;
+
+    public ?string $event_period = '';
 
     /*
      * Gather all information related to a given year for a person
@@ -33,7 +39,7 @@ class PersonEventInfo extends ApihouseResult
      * @return PersonEventInfo
      */
 
-    public static function findForPersonYear(Person $person, $year)
+    public static function findForPersonYear(Person $person, $year): PersonEventInfo
     {
         $personId = $person->id;
         $info = new PersonEventInfo();
@@ -85,6 +91,8 @@ class PersonEventInfo extends ApihouseResult
             $info->meals = '';
             $info->showers = false;
         }
+
+        $info->event_period = EventDate::retrieveEventOpsPeriod();
 
         $ot = PersonOnlineTraining::findForPersonYear($personId, $year);
 

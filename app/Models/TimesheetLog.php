@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class TimesheetLog extends ApiModel
@@ -18,6 +19,7 @@ class TimesheetLog extends ApiModel
     const SIGNOFF = 'signoff';  // Shift was ended
     const UPDATE = 'update';    // Timesheet entry updated
     const DELETE = 'delete';    // Timesheet entry deleted
+    const DELETE_MISTAKE = 'delete-mistake';    // Timesheet entry deleted due to accidental creation
 
     const UNVERIFIED = 'unverified'; // Entry was marked unverified
     const VERIFY = 'verify';    // Entry marked verified (aka correct)
@@ -31,17 +33,17 @@ class TimesheetLog extends ApiModel
         'created_at' => 'datetime'
     ];
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function creator()
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'create_person_id');
     }
 
-    public function timesheet()
+    public function timesheet(): BelongsTo
     {
         return $this->belongsTo(Timesheet::class);
     }
@@ -52,11 +54,12 @@ class TimesheetLog extends ApiModel
      * Use the on_duty date to lookup, timesheet_log.created_at may
      * be in different year.
      *
-     * @param integer $personId
-     * @param integer $year
+     * @param int $personId
+     * @param int $year
+     * @return array
      */
 
-    public static function findForPersonYear($personId, $year)
+    public static function findForPersonYear(int $personId, int $year): array
     {
         $timesheets = self::select('timesheet_log.*')
             ->with([
@@ -100,7 +103,7 @@ class TimesheetLog extends ApiModel
      * @param int $year
      */
 
-    public static function record(string $action, int $personId, int $userId, int|null $timesheetId, $data, int $year = 0)
+    public static function record(string $action, int $personId, int $userId, int|null $timesheetId, mixed $data, int $year = 0)
     {
         $columns = [
             'action' => $action,

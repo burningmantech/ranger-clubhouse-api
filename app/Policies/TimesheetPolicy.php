@@ -73,6 +73,20 @@ class TimesheetPolicy
         return false;
     }
 
+    /**
+     * Can a user delete a timesheet? Only timesheet manager,
+     * or admin, covered in before()
+     *
+     * @param Person $user
+     * @param Timesheet $timesheet
+     * @return bool
+     */
+
+    public function deleteMistake(Person $user, Timesheet $timesheet): bool
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
     /*
      * Can user signin the person?
      */
@@ -256,12 +270,12 @@ class TimesheetPolicy
         return false;
     }
 
-    public function repairSlotAssociations(Person $user) : bool
+    public function repairSlotAssociations(Person $user): bool
     {
         return false;
     }
 
-    public function eventStatsReport(Person $user) : bool
+    public function eventStatsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }

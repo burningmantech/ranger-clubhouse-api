@@ -59,6 +59,8 @@ class Timesheet extends ApiModel
         Position::TRAINING,
     ];
 
+    const TOO_SHORT_LENGTH = (15*60);
+
     protected $fillable = [
         'off_duty',
         'on_duty',

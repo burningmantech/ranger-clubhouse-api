@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\EventDate;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class EventDatesController extends ApiController
 {
@@ -12,7 +12,7 @@ class EventDatesController extends ApiController
      * Show all the event dates
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $dates = EventDate::findAll();
 
@@ -21,8 +21,11 @@ class EventDatesController extends ApiController
 
     /**
      * Store a newly created event date
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function store(Request $request)
+    public function store(): JsonResponse
     {
         $this->authorize('store', EventDate::class);
         $event_date = new EventDate;
@@ -37,31 +40,37 @@ class EventDatesController extends ApiController
 
     /**
      * Display the event date
-     *
      */
-    public function show(EventDate $event_date)
+
+    public function show(EventDate $event_date): JsonResponse
     {
         return $this->success($event_date);
     }
 
     /**
      * Show for year
+     *
+     * @return JsonResponse
      */
 
-    public function showYear()
+    public function showYear(): JsonResponse
     {
         $params = request()->validate([
-            'year'  => 'required|integer'
+            'year' => 'required|integer'
         ]);
 
-        return response()->json([ 'event_date' => EventDate::findForYear($params['year']) ]);
+        return response()->json(['event_date' => EventDate::findForYear($params['year'])]);
     }
 
     /**
      * Update the event date
      *
+     * @param EventDate $event_date
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function update(EventDate $event_date)
+
+    public function update(EventDate $event_date): JsonResponse
     {
         $this->authorize('update', EventDate::class);
         $this->fromRest($event_date);
@@ -75,11 +84,27 @@ class EventDatesController extends ApiController
 
     /**
      * Remove an event date
+     *
+     * @param EventDate $event_date
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(EventDate $event_date)
+
+    public function destroy(EventDate $event_date): JsonResponse
     {
         $this->authorize('delete', $event_date);
         $event_date->delete();
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Retrieve the current event period.
+     *
+     * @return JsonResponse
+     */
+
+    public function period(): JsonResponse
+    {
+        return response()->json(['period' => EventDate::retrieveEventOpsPeriod()]);
     }
 }
