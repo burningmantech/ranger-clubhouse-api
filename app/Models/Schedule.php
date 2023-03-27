@@ -417,15 +417,18 @@ class Schedule extends ApiModel
     {
         $now = now();
         $rows = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
-            ->whereRaw(
-                '? BETWEEN DATE_SUB(slot.begins, INTERVAL ? MINUTE) AND DATE_ADD(slot.begins, INTERVAL ? MINUTE)',
-                [$now, self::LOCATE_SHIFT_START_WITHIN, self::LOCATE_SHIFT_START_WITHIN]
-            )
+            ->whereYear('slot.begins', $now->year)
+            ->where('slot.begins', '>=', now()->subMinutes(self::LOCATE_SHIFT_START_WITHIN))
             ->where('person_id', $personId)
             ->with('slot.position:id,title')
+            ->orderBy('slot.begins')
             ->get();
 
-        return $rows->map(function ($row) use ($now) {
+
+        $upcoming = [];
+        $imminent = [];
+
+        foreach ($rows as $row) {
             $slot = $row->slot;
             $start = $slot->begins->clone()->subMinutes(self::MAY_START_SHIFT_WITHIN);
             $withinStart = $start->lte($now);
@@ -438,18 +441,30 @@ class Schedule extends ApiModel
                 'slot_ends' => (string)$slot->ends,
                 'is_within_start_time' => $withinStart,
             ];
+
             if (!$withinStart) {
                 $shift['can_start_in'] = $now->diffInMinutes($start);
             }
-            return $shift;
-        })->toArray();
+
+            if ($slot->begins->clone()->subMinutes(self::LOCATE_SHIFT_START_WITHIN)->gte($now)) {
+                $upcoming[] = $shift;
+            } else {
+                $imminent[] = $shift;
+            }
+        }
+
+        return [
+            'upcoming' => $upcoming,
+            'imminent' => $imminent,
+            'locate_start_minutes' => self::LOCATE_SHIFT_START_WITHIN,
+            'may_start_minutes' => self::MAY_START_SHIFT_WITHIN
+        ];
     }
 
     /**
      * Find the (probable) slot  sign up for a person based on the position and time.
      *
      * NOTE: This assumes the slots inspected are in the same timezone as the event.
-
      * @param integer $personId the person in question
      * @param integer $positionId the position to search for
      * @param string|Carbon $begins the time to look for.

@@ -212,7 +212,7 @@ Route::group([
     Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/recommendations', 'PersonScheduleController@recommendations');
-    Route::get('person/{person}/schedule/imminent', 'PersonScheduleController@imminent');
+    Route::get('person/{person}/schedule/upcoming', 'PersonScheduleController@upcoming');
     Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');
     Route::get('person/{person}/schedule/log', 'PersonScheduleController@scheduleLog');
