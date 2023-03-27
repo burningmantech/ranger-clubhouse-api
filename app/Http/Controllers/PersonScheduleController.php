@@ -336,20 +336,19 @@ class PersonScheduleController extends ApiController
     }
 
     /**
-     * Find one or more about to start shifts - used to suggest starting position.
+     * Find one or more about to start shifts and future shifts - used to suggest starting position and
+     * suggest marking a person off site.
      *
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function imminent(Person $person): JsonResponse
+    public function upcoming(Person $person): JsonResponse
     {
         $this->authorize('view', [Schedule::class, $person]);
 
-        return response()->json([
-            'slots' => Schedule::retrieveStartingSlotsForPerson($person->id)
-        ]);
+        return response()->json(Schedule::retrieveStartingSlotsForPerson($person->id));
     }
 
     /**
