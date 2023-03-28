@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 class PositionController extends ApiController
 {
     /**
-     * Show a lsit of positions
+     * Show a list of positions
      *
      * @return JsonResponse
      */
@@ -27,6 +27,7 @@ class PositionController extends ApiController
             'type' => 'sometimes|string',
             'can_manage' => 'sometimes|boolean',
             'include_roles' => 'sometimes|boolean',
+            'has_paycode' => 'sometimes|boolean',
         ]);
 
         return $this->success(Position::findForQuery($params), null, 'position');
