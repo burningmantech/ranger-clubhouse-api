@@ -180,7 +180,7 @@ class SalesforceClubhouseInterface
         }
 
         $r = $this->sf->soqlQuery($q);
-        if ($r == false
+        if (!$r
             || (is_array($r) && $r[0]->message != "")) {
             $this->sf->errorMessage = "Salesforce API query failed for $q: {$this->sf->errorMessage}";
             return false;
@@ -190,11 +190,13 @@ class SalesforceClubhouseInterface
     }
 
     /**
-     * Set the Clubbouse import status message in Salesforce for this account.
+     * Set the Clubhouse import status message in Salesforce for this account.
+     *
      * @param $pca
+     * @param $isNew
      */
 
-    public function updateSalesforceClubhouseImportStatusMessage($pca, $isNew)
+    public function updateSalesforceClubhouseImportStatusMessage($pca, $isNew): void
     {
         $status = $pca->status;
         $message = $pca->message;
@@ -222,7 +224,7 @@ class SalesforceClubhouseInterface
      * @param $isNew
      */
 
-    public function updateSalesforceVCStatus($pca, $isNew)
+    public function updateSalesforceVCStatus($pca, $isNew): void
     {
         switch ($pca->status) {
             case "succeeded":
@@ -250,7 +252,7 @@ class SalesforceClubhouseInterface
      * @param $pca
      */
 
-    public function updateSalesforceClubhouseUserID($pca)
+    public function updateSalesforceClubhouseUserID($pca): void
     {
         if ($pca->status != "succeeded") {
             return;
@@ -269,7 +271,7 @@ class SalesforceClubhouseInterface
      * @param $value
      */
 
-    public function updateSalesforceField($id, $field, $value)
+    public function updateSalesforceField($id, $field, $value): void
     {
         if (setting('SFEnableWritebacks')) {
             $this->sf->objUpdate("Ranger__c", $id, [$field => $value]);

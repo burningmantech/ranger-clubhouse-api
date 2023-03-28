@@ -115,7 +115,7 @@ class SalesforceController extends ApiController
                 $sfch->updateSalesforceVCStatus($pca, false);
             }
 
-            if (($pca->status == "ready" || $pca->status == 'existing') && $createAccounts) {
+            if (($pca->status == "ready" || $pca->status == 'existing' || $pca->status == 'existing-claim-callsign') && $createAccounts) {
                 $this->importPerson($sfch, $pca, $updateSf);
             }
 
@@ -165,10 +165,10 @@ class SalesforceController extends ApiController
      * @param $sfch
      * @param $pca
      * @param $updateSf
-     * @return bool
+     * @return void
      */
 
-    private function importPerson($sfch, $pca, $updateSf): bool
+    private function importPerson($sfch, $pca, $updateSf): void
     {
         if ($pca->status == 'existing') {
             $person = $pca->existingPerson;
@@ -176,6 +176,15 @@ class SalesforceController extends ApiController
         } else {
             $person = new Person;
             $isNew = true;
+            if ($pca->status == 'existing-claim-callsign') {
+                $old = $pca->existingPerson;
+
+                if ($old) {
+                    $old->resetCallsign();
+                    $old->auditReason = 'Recycled callsign due to Salesforce import';
+                    $old->saveWithoutValidation();
+                }
+            }
         }
 
         $person->callsign = $pca->callsign;
@@ -222,13 +231,13 @@ class SalesforceController extends ApiController
                     'person' => $person,
                     'errors' => $person->getErrors()
                 ]);
-                return false;
+                return;
             }
         } catch (QueryException $e) {
             $pca->message = "SQL Error: " . $e->getMessage();
             $pca->status = "failed";
             ErrorLog::recordException($e, 'salesforce-import-fail', ['person' => $person]);
-            return false;
+            return;
         }
 
 
@@ -261,10 +270,9 @@ class SalesforceController extends ApiController
             $sfch->updateSalesforceClubhouseUserID($pca);
 
             if ($pca->status != 'succeeded') {
-                return false;
+                return;
             }
         }
 
-        return true;
     }
 }

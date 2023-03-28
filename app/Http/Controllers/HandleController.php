@@ -58,7 +58,7 @@ class HandleController extends ApiController
         return response()->json(['data' => $result]);
     }
 
-    private function jsonHandle(string $name, string $entityType, array $person = null)
+    private function jsonHandle(string $name, string $entityType, array $person = null): array
     {
         $result = ['name' => $name, 'entityType' => $entityType];
         if ($person) {
