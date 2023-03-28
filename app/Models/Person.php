@@ -343,7 +343,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     protected $rules = self::ALL_VALIDATIONS;
 
-    public $has_reviewed_pi;
+    public bool $has_reviewed_pi = false;
 
     /**
      * The roles the person holds
@@ -506,7 +506,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function findByCallsign(string $callsign): ?Person
     {
-        return self::where('callsign', $callsign)->first();
+        return self::where('callsign_normalized', self::normalizeCallsign($callsign))->first();
     }
 
     /**
@@ -518,7 +518,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function findIdByCallsign(string $callsign): ?int
     {
-        $row = self::select('id')->where('callsign', $callsign)->first();
+        $row = self::select('id')->where('callsign_normalized', self::normalizeCallsign($callsign))->first();
         if ($row) {
             return $row->id;
         }

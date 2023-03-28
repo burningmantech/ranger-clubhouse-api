@@ -45,7 +45,7 @@ class PotentialClubhouseAccountFromSalesforce
 
     public $status;     /* "null", "invalid", "ready", "imported", "succeeded" */
     public $message;
-    public $existingPerson; // Person record which matches callsign, email, sfuid, or bpguid.
+    public ?Person $existingPerson = null; // Person record which matches callsign, email, sfuid, or bpguid.
     public $applicant_type;
     public $salesforce_ranger_object_id;        /* Internal Salesforce ID */
     public $salesforce_ranger_object_name;      /* "R-201" etc. */
@@ -100,24 +100,24 @@ class PotentialClubhouseAccountFromSalesforce
         * Clubhouse don't have to be aware of the cthuluhian horror of the
         * Salesforce object naming scheme.
         */
-        $this->salesforce_ranger_object_name = trim(@$sobj->Name);
-        $this->salesforce_ranger_object_id = trim(@$sobj->Id);
-        $this->applicant_type = trim(@$sobj->Ranger_Applicant_Type__c);
-        $this->firstname = trim(@$sobj->Ranger_Info__r->FirstName);
-        $this->lastname = trim(@$sobj->Ranger_Info__r->LastName);
-        $this->street1 = self::sanitizeStreet(trim(@$sobj->Ranger_Info__r->MailingStreet));
-        $this->city = trim(@$sobj->Ranger_Info__r->MailingCity);
-        $this->state = trim(@$sobj->Ranger_Info__r->MailingState);
-        $this->zip = trim(@$sobj->Ranger_Info__r->MailingPostalCode);
-        $this->country = trim(@$sobj->Ranger_Info__r->MailingCountry);
-        $this->phone = trim(@$sobj->Ranger_Info__r->Phone);
-        $this->email = trim(@$sobj->Contact_Email__c);
+        $this->salesforce_ranger_object_name = trim($sobj->Name ?? '');
+        $this->salesforce_ranger_object_id = trim($sobj->Id ?? '');
+        $this->applicant_type = trim($sobj->Ranger_Applicant_Type__c ?? '');
+        $this->firstname = trim($sobj->Ranger_Info__r->FirstName ?? '');
+        $this->lastname = trim($sobj->Ranger_Info__r->LastName ?? '');
+        $this->street1 = self::sanitizeStreet(trim($sobj->Ranger_Info__r->MailingStreet) ?? '');
+        $this->city = trim($sobj->Ranger_Info__r->MailingCity ?? '');
+        $this->state = trim($sobj->Ranger_Info__r->MailingState ?? '');
+        $this->zip = trim($sobj->Ranger_Info__r->MailingPostalCode ?? '');
+        $this->country = trim($sobj->Ranger_Info__r->MailingCountry ?? '');
+        $this->phone = trim($sobj->Ranger_Info__r->Phone ?? '');
+        $this->email = trim($sobj->Contact_Email__c ?? '');
         if (empty($this->email)) {
-            $this->email = trim(@$sobj->Ranger_Info__r->npe01__HomeEmail__c);
+            $this->email = trim($sobj->Ranger_Info__r->npe01__HomeEmail__c ?? '');
         }
-        $ecName = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Name__c);
-        $ecRelation = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Relationship__c);
-        $ecPhone = trim(@$sobj->Ranger_Info__r->Emergency_Contact_Phone__c);
+        $ecName = trim($sobj->Ranger_Info__r->Emergency_Contact_Name__c ?? '');
+        $ecRelation = trim($sobj->Ranger_Info__r->Emergency_Contact_Relationship__c ?? '');
+        $ecPhone = trim($sobj->Ranger_Info__r->Emergency_Contact_Phone__c ?? '');
         $ec = [];
         if (!empty($ecName)) {
             $ec[] = $ecName;
@@ -132,18 +132,18 @@ class PotentialClubhouseAccountFromSalesforce
         }
         $this->emergency_contact = implode(" ", $ec);
 
-        $this->bpguid = trim(@$sobj->Ranger_Info__r->BPGUID__c);
-        $this->sfuid = trim(@$sobj->Ranger_Info__r->SFUID__c);
-        $this->chuid = trim(@$sobj->CH_UID__c);
-        $this->known_pnv_names = trim(@$sobj->Known_Prospective_Volunteer_Names__c);
-        $this->known_ranger_names = trim(@$sobj->Known_Rangers_Names__c);
-        $this->callsign = trim(@$sobj->VC_Approved_Radio_Call_Sign__c);
-        $this->vc_status = trim(@$sobj->VC_Status__c);
-        $this->vc_comments = trim(@$sobj->VC_Comments__c);
+        $this->bpguid = trim($sobj->Ranger_Info__r->BPGUID__c ?? '');
+        $this->sfuid = trim($sobj->Ranger_Info__r->SFUID__c ?? '');
+        $this->chuid = trim($sobj->CH_UID__c ?? '');
+        $this->known_pnv_names = trim($sobj->Known_Prospective_Volunteer_Names__c ?? '');
+        $this->known_ranger_names = trim($sobj->Known_Rangers_Names__c ?? '');
+        $this->callsign = trim($sobj->VC_Approved_Radio_Call_Sign__c ?? '');
+        $this->vc_status = trim($sobj->VC_Status__c ?? '');
+        $this->vc_comments = trim($sobj->VC_Comments__c ?? '');
 
         // Shirts no longer part of the VolQ.
-        //$this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(trim(@$sobj->Long_Sleeve_Shirt_Size__c));
-        //$this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(trim(@$sobj->Tee_Shirt_Size__c));
+        //$this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(trim($sobj->Long_Sleeve_Shirt_Size__c) ?? '');
+        //$this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(trim($sobj->Tee_Shirt_Size__c) ?? '');
 
         if ($this->vc_status == "Released to Upload"
             && ($this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
@@ -202,18 +202,28 @@ class PotentialClubhouseAccountFromSalesforce
      * Only do this for accounts that are presumed ready for import.
      */
 
-    public function checkIfAlreadyExists()
+    public function checkIfAlreadyExists(): void
     {
         if ($this->status != self::STATUS_READY) {
             return;
         }
 
-        $person = $this->callsignAlreadyExists();
-        if ($person) {
-            $this->status = 'existing-callsign';
-            $this->message = "Clubhouse account with this callsign already exists";
-            $this->existingPerson = $person;
-            return;
+        $person = Person::findByCallsign($this->callsign);
+        if ($person && $person->bpguid != $this->bpguid) {
+            if ($person->status != Person::RETIRED && $person->status != Person::RESIGNED) {
+                $this->status = 'existing-callsign';
+                $this->message = "Callsign already exists";
+                $this->existingPerson = $person;
+                return;
+            } else if ($person->vintage) {
+                $this->status = 'existing-callsign';
+                $this->message = "Account (status {$person->status}) has vintage callsign";
+                $this->existingPerson = $person;
+                return;
+            } else {
+                $this->status = 'existing-claim-callsign';
+                $this->existingPerson = $person;
+            }
         }
 
         if ($this->callsignIsReserved()) {
@@ -222,20 +232,20 @@ class PotentialClubhouseAccountFromSalesforce
             return;
         }
 
-        $person = $this->bpguidAlreadyExists();
+        $person = Person::where('bpguid', $this->bpguid)->first();
         if ($person) {
             $this->checkExisting('BPGUID', $person);
             return;
         }
 
-        $person = $this->emailAlreadyExists();
+        $person = Person::findByEmail($this->email);
         if ($person) {
             $this->checkExisting('email address', $person);
             return;
         }
 
 
-        $person = $this->sfuidAlreadyExists();
+        $person = Person::where('sfuid', $this->sfuid)->first();
         if ($person) {
             $this->checkExisting('SFUID', $person);
         }
@@ -249,39 +259,18 @@ class PotentialClubhouseAccountFromSalesforce
      * @return void
      */
 
-    public function checkExisting($type, $person)
+    public function checkExisting($type, $person): void
     {
         $status = $person->status;
         $this->message = "Clubhouse account with this {$type} already exists";
+
         if ($status != Person::AUDITOR && $status != Person::PAST_PROSPECTIVE) {
             $this->status = 'existing-bad-status';
-            $this->message .= ' and is not an auditor or past prospective';
+            $this->message .= ' and is not an auditor / past prospective';
         } else {
             $this->status = 'existing';
         }
         $this->existingPerson = $person;
-    }
-
-    /**
-     * See if an account with this exact email exists.
-     * return account that has the email otherwise null
-     * @return Person|null
-     */
-
-    public function emailAlreadyExists(): ?Person
-    {
-        return Person::where('email', $this->email)->first();
-    }
-
-    /**
-     * See if an account with this exact callsign exists.
-     * Return account that has the callsign otherwise null;
-     * @return Person|null
-     */
-
-    public function callsignAlreadyExists(): ?Person
-    {
-        return Person::where('callsign', $this->callsign)->first();
     }
 
     /**
@@ -301,28 +290,6 @@ class PotentialClubhouseAccountFromSalesforce
     }
 
     /**
-     * See if an account with this exact BPGUID already exists.
-     * Return person if so, null otherwise.
-     * @return Person|null
-     */
-
-    public function bpguidAlreadyExists(): ?Person
-    {
-        return Person::where('bpguid', $this->bpguid)->first();
-    }
-
-    /**
-     * See if an account with this exact SFUID already exists.
-     * Return person if so, null otherwise.
-     * @return Person|null
-     */
-
-    public function sfuidAlreadyExists(): ?Person
-    {
-        return Person::where('sfuid', $this->sfuid)->first();
-    }
-
-    /**
      * Street addresses in salesforce can contain \r\n,
      * so we get rid of the \rs and convert the \ns to space.
      * @param $s
@@ -336,14 +303,13 @@ class PotentialClubhouseAccountFromSalesforce
         return trim($s);
     }
 
-    public static function sanitizeTeeshirtSizeStyle($s)
+    public static function sanitizeTeeshirtSizeStyle($s): string
     {
-        $s = self::fixMultibyteCrap($s);
-        $s = str_replace("Tee ", "", $s);       // Gag.
-        return $s;
+        // Gag.
+        return str_replace("Tee ", "", self::fixMultibyteCrap($s));
     }
 
-    public static function sanitizeLongsleeveshirtSizeStyle($s)
+    public static function sanitizeLongsleeveshirtSizeStyle($s): string
     {
         return self::fixMultibyteCrap($s);
     }
@@ -374,9 +340,7 @@ class PotentialClubhouseAccountFromSalesforce
 
     public static function cookCallsign($callsign): string
     {
-        $callsign = str_replace([' ', '-', '!', '?', '.'], '', $callsign);
-        $callsign = strtolower($callsign);
-        return $callsign;
+        return strtolower(str_replace([' ', '-', '!', '?', '.'], '', $callsign));
     }
 
     /**
@@ -398,9 +362,7 @@ class PotentialClubhouseAccountFromSalesforce
             ReservedCallsigns::RESERVED
         );
         if ($style == 'cooked') {
-            $reservedCallsigns = array_map(function ($callsign) {
-                return self::cookCallsign($callsign);
-            }, $reservedCallsigns);
+            $reservedCallsigns = array_map(fn($callsign) => self::cookCallsign($callsign), $reservedCallsigns);
         }
         return $reservedCallsigns;
     }
