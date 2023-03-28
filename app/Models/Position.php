@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Lib\Membership;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -298,6 +299,7 @@ class Position extends ApiModel
         'new_user_eligible',
         'on_sl_report',
         'on_trainer_report',
+        'paycode',
         'prevent_multiple_enrollments',
         'require_training_for_roles',
         'role_ids',
@@ -410,11 +412,17 @@ class Position extends ApiModel
     {
         $type = $query['type'] ?? null;
         $includeRoles = $query['include_roles'] ?? false;
+        $hasPaycode = $query['has_paycode'] ?? false;
 
         $sql = self::orderBy('title');
 
         if (!empty($type)) {
             $sql->where('type', $type);
+        }
+
+        if ($hasPaycode) {
+            $sql->where('paycode', '!=', '');
+            $sql->where('active', true);
         }
 
         $rows = $sql->get();
@@ -589,5 +597,18 @@ class Position extends ApiModel
     public function setRoleIdsAttribute($value): void
     {
         $this->role_ids = $value;
+    }
+
+    /**
+     * Set the paycode to null if empty
+     *
+     * @return Attribute
+     */
+
+    public function paycode() : Attribute
+    {
+        return Attribute::make(
+            set: fn($value) => empty($value) ? '' : $value
+        );
     }
 }
