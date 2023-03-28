@@ -107,7 +107,7 @@ class PotentialClubhouseAccountFromSalesforce
         $this->applicant_type = self::sanitizeField($sobj, 'Ranger_Applicant_Type__c');
         $this->firstname = self::sanitizeField($rInfo, 'FirstName');
         $this->lastname = self::sanitizeField($rInfo, 'LastName');
-        $this->street1 = self::sanitizeStreet($rInfo->MailingStreet ?? '');
+        $this->street1 = self::sanitizeStreet($rInfo);
         $this->city = self::sanitizeField($rInfo, 'MailingCity');
         $this->state = self::sanitizeField($rInfo, 'MailingState');
         $this->zip = self::sanitizeField($rInfo, 'MailingPostalCode');
@@ -300,6 +300,7 @@ class PotentialClubhouseAccountFromSalesforce
 
     public static function sanitizeStreet($s): string
     {
+        $s = $s->MailingStreet ?? '';
         $s = str_replace("\r", "", $s);
         $s = str_replace("\n", " ", $s);
         return trim($s);
