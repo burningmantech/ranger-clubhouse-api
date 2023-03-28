@@ -100,24 +100,26 @@ class PotentialClubhouseAccountFromSalesforce
         * Clubhouse don't have to be aware of the cthuluhian horror of the
         * Salesforce object naming scheme.
         */
-        $this->salesforce_ranger_object_name = trim($sobj->Name ?? '');
-        $this->salesforce_ranger_object_id = trim($sobj->Id ?? '');
-        $this->applicant_type = trim($sobj->Ranger_Applicant_Type__c ?? '');
-        $this->firstname = trim($sobj->Ranger_Info__r->FirstName ?? '');
-        $this->lastname = trim($sobj->Ranger_Info__r->LastName ?? '');
-        $this->street1 = self::sanitizeStreet(trim($sobj->Ranger_Info__r->MailingStreet) ?? '');
-        $this->city = trim($sobj->Ranger_Info__r->MailingCity ?? '');
-        $this->state = trim($sobj->Ranger_Info__r->MailingState ?? '');
-        $this->zip = trim($sobj->Ranger_Info__r->MailingPostalCode ?? '');
-        $this->country = trim($sobj->Ranger_Info__r->MailingCountry ?? '');
-        $this->phone = trim($sobj->Ranger_Info__r->Phone ?? '');
-        $this->email = trim($sobj->Contact_Email__c ?? '');
+
+        $rInfo = $sobj->Ranger_Info__r;
+        $this->salesforce_ranger_object_name = self::sanitizeField($sobj, 'Name');
+        $this->salesforce_ranger_object_id = self::sanitizeField($sobj, 'Id');
+        $this->applicant_type = self::sanitizeField($sobj, 'Ranger_Applicant_Type__c');
+        $this->firstname = self::sanitizeField($rInfo, 'FirstName');
+        $this->lastname = self::sanitizeField($rInfo, 'LastName');
+        $this->street1 = self::sanitizeStreet($rInfo->MailingStreet ?? '');
+        $this->city = self::sanitizeField($rInfo, 'MailingCity');
+        $this->state = self::sanitizeField($rInfo, 'MailingState');
+        $this->zip = self::sanitizeField($rInfo, 'MailingPostalCode');
+        $this->country = self::sanitizeField($rInfo, 'MailingCountry');
+        $this->phone = self::sanitizeField($rInfo, 'Phone');
+        $this->email = self::sanitizeField($sobj, 'Contact_Email__c');
         if (empty($this->email)) {
-            $this->email = trim($sobj->Ranger_Info__r->npe01__HomeEmail__c ?? '');
+            $this->email = self::sanitizeField($rInfo, 'npe01__HomeEmail__c');
         }
-        $ecName = trim($sobj->Ranger_Info__r->Emergency_Contact_Name__c ?? '');
-        $ecRelation = trim($sobj->Ranger_Info__r->Emergency_Contact_Relationship__c ?? '');
-        $ecPhone = trim($sobj->Ranger_Info__r->Emergency_Contact_Phone__c ?? '');
+        $ecName = self::sanitizeField($rInfo, 'Emergency_Contact_Name__c');
+        $ecRelation = self::sanitizeField($rInfo, 'Emergency_Contact_Relationship__c');
+        $ecPhone = self::sanitizeField($rInfo, 'Emergency_Contact_Phone__c');
         $ec = [];
         if (!empty($ecName)) {
             $ec[] = $ecName;
@@ -132,18 +134,18 @@ class PotentialClubhouseAccountFromSalesforce
         }
         $this->emergency_contact = implode(" ", $ec);
 
-        $this->bpguid = trim($sobj->Ranger_Info__r->BPGUID__c ?? '');
-        $this->sfuid = trim($sobj->Ranger_Info__r->SFUID__c ?? '');
-        $this->chuid = trim($sobj->CH_UID__c ?? '');
-        $this->known_pnv_names = trim($sobj->Known_Prospective_Volunteer_Names__c ?? '');
-        $this->known_ranger_names = trim($sobj->Known_Rangers_Names__c ?? '');
-        $this->callsign = trim($sobj->VC_Approved_Radio_Call_Sign__c ?? '');
-        $this->vc_status = trim($sobj->VC_Status__c ?? '');
-        $this->vc_comments = trim($sobj->VC_Comments__c ?? '');
+        $this->bpguid = self::sanitizeField($rInfo, 'BPGUID__c');
+        $this->sfuid = self::sanitizeField($rInfo, 'SFUID__c');
+        $this->chuid = self::sanitizeField($sobj, 'CH_UID__c');
+        $this->known_pnv_names = self::sanitizeField($sobj, 'Known_Prospective_Volunteer_Names__c');
+        $this->known_ranger_names = self::sanitizeField($sobj, 'Known_Rangers_Names__c');
+        $this->callsign = self::sanitizeField($sobj, 'VC_Approved_Radio_Call_Sign__c');
+        $this->vc_status = self::sanitizeField($sobj, 'VC_Status__c');
+        $this->vc_comments = self::sanitizeField($sobj, 'VC_Comments__c');
 
         // Shirts no longer part of the VolQ.
-        //$this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(trim($sobj->Long_Sleeve_Shirt_Size__c) ?? '');
-        //$this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(trim($sobj->Tee_Shirt_Size__c) ?? '');
+        //$this->longsleeveshirt_size_style = self::sanitizeLongsleeveshirtSizeStyle(self::sanitizeField($sobj, 'Long_Sleeve_Shirt_Size__c)');
+        //$this->teeshirt_size_style = self::sanitizeTeeshirtSizeStyle(self::sanitizeField($sobj, 'Tee_Shirt_Size__c)');
 
         if ($this->vc_status == "Released to Upload"
             && ($this->applicant_type == "Prospective New Volunteer - Black Rock Ranger"
@@ -165,16 +167,16 @@ class PotentialClubhouseAccountFromSalesforce
         $errors = [];
         foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
             if ($req == 'MailingState'
-                && !in_array($sobj->Ranger_Info__r->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
+                && !in_array($rInfo->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
                 continue;
             }
 
-            if (!isset($sobj->Ranger_Info__r->$req)) {
+            if (!isset($rInfo->$req)) {
                 $errors[] = "Missing required field $req";
                 continue;
             }
 
-            $x = trim($sobj->Ranger_Info__r->$req);
+            $x = trim($rInfo->$req);
             if ($x == "") {
                 $errors[] = "Blank required field $req";
                 continue;
@@ -312,6 +314,11 @@ class PotentialClubhouseAccountFromSalesforce
     public static function sanitizeLongsleeveshirtSizeStyle($s): string
     {
         return self::fixMultibyteCrap($s);
+    }
+
+    public static function sanitizeField($obj, $name): string
+    {
+        return trim($obj->{$name} ?? '');
     }
 
     /**
