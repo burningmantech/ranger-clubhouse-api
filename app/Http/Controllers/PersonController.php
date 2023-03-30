@@ -83,6 +83,7 @@ class PersonController extends ApiController
             'exclude_statuses' => 'sometimes|string',
             'limit' => 'sometimes|integer',
             'offset' => 'sometimes|integer',
+            'status_groups' => 'sometimes|boolean',
         ]);
 
         return response()->json(PersonSearch::execute($params, $this->userCanViewEmail()));

@@ -20,6 +20,55 @@ class PersonSearch
 
     const BASE_COLUMNS = ['person.id', 'person.callsign', 'person.status', 'person.first_name', 'person.last_name'];
 
+    const STATUS_GROUPS = [
+        [
+            'title' => 'Active/Current',
+            'statuses' => [
+                Person::ACTIVE,
+                Person::ALPHA,
+                Person::INACTIVE,
+                Person::INACTIVE_EXTENSION,
+                Person::NON_RANGER,
+                Person::PROSPECTIVE,
+                Person::SUSPENDED,
+            ]
+        ],
+        [
+            'title' => 'Auditor',
+            'statuses' => [
+                Person::AUDITOR,
+            ]
+        ],
+        [
+            'title' => 'Resigned/Retired',
+            'statuses' => [
+                Person::RESIGNED,
+                Person::RETIRED
+            ]
+        ],
+        [
+            'title' => 'Dismissed/Bonked',
+            'statuses' => [
+                Person::BONKED,
+                Person::DISMISSED,
+                Person::UBERBONKED
+            ]
+        ],
+        [
+            'title' => 'Past Prospective',
+            'statuses' => [
+                Person::PAST_PROSPECTIVE
+            ],
+        ],
+        [
+            'title' => 'Deceased',
+            'statuses' => [
+                Person::DECEASED
+            ]
+        ],
+    ];
+
+
     public array $results = [];
     public int $limit;
     public int $offset;
@@ -51,11 +100,38 @@ class PersonSearch
                 [
                     'field' => self::FIELD_ID,
                     'total' => $person ? 1 : 0,
-                    'people' => $person ? [$person] : []
+                    'people' => $person ? [self::buildPerson($person, null)] : []
                 ]
             ];
         }
 
+        if ($query['status_groups'] ?? false) {
+            return self::executeSearchStatusGroups($q, $query, $canViewEmail);
+        } else {
+            return self::executeQuery($q, $query, $canViewEmail);
+        }
+    }
+
+    public static function executeSearchStatusGroups(string $q, array $query, bool $canViewEmail): array
+    {
+        $resultGroups = [];
+
+        foreach (self::STATUS_GROUPS as $group) {
+            $groupQuery = [...$query, 'statuses' => join(',', $group['statuses'])];
+            $results = self::executeQuery($q, $groupQuery, $canViewEmail);
+            if (!empty($results)) {
+                $resultGroups[] = [
+                    'title' => $group['title'],
+                    'results' => $results
+                ];
+            }
+        }
+
+        return $resultGroups;
+    }
+
+    public static function executeQuery(string $q, array $query, bool $canViewEmail): array
+    {
         $search = new self();
         $search->query = $q;
         $search->statuses = $query['statuses'] ?? null;
@@ -242,7 +318,7 @@ class PersonSearch
         $sql = DB::table('person')->select(self::BASE_COLUMNS);
 
         if ($addStatuses) {
-            if ($this->statuses) {
+            if ($this->statuses && $this->statuses != 'all') {
                 $sql->whereIn('status', explode(',', $this->statuses));
             }
 
@@ -277,19 +353,7 @@ class PersonSearch
         return [
             'field' => $field,
             'total' => $total,
-            'people' => array_map(function ($p) use ($callback) {
-                $result = [
-                    'id' => $p->id,
-                    'callsign' => $p->callsign,
-                    'status' => $p->status,
-                    'first_name' => $p->first_name,
-                    'last_name' => $p->last_name,
-                ];
-                if ($callback) {
-                    $callback($p, $result);
-                }
-                return $result;
-            }, $rows)
+            'people' => array_map(fn($p) => self::buildPerson($p, $callback), $rows)
         ];
     }
 
@@ -312,5 +376,22 @@ class PersonSearch
         }
 
         $this->results[] = $result;
+    }
+
+    public static function buildPerson($person, $callback): array
+    {
+        $result = [
+            'id' => $person->id,
+            'callsign' => $person->callsign,
+            'status' => $person->status,
+            'first_name' => $person->first_name,
+            'last_name' => $person->last_name,
+        ];
+
+        if ($callback) {
+            $callback($person, $result);
+        }
+
+        return $result;
     }
 }
