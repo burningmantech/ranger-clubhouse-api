@@ -16,7 +16,7 @@ class TrainerStatus extends ApiModel
     const PENDING = 'pending';
     const NO_SHOW = 'no-show';
 
-    protected $guarded = [];
+    protected $guarded = [ 'id' ];
 
     public function slot(): BelongsTo
     {

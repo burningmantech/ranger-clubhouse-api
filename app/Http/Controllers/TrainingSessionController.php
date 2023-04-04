@@ -147,14 +147,14 @@ class TrainingSessionController extends ApiController
         $this->authorize('trainerStatus', $training_session);
 
         $params = request()->validate([
-            'trainers.*.id' => 'required|integer',
+            'trainers.*.person_id' => 'required|integer',
             'trainers.*.trainer_slot_id' => 'required|integer',
             'trainers.*.status' => 'nullable|string',
             'trainers.*.is_lead' => 'required|boolean'
         ]);
 
         foreach ($params['trainers'] as $trainer) {
-            $personId = $trainer['id'];
+            $personId = $trainer['person_id'];
 
             $trainerStatus = TrainerStatus::firstOrNewForSession($training_session->id, $personId);
             $trainerStatus->fill($trainer);
