@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Models\Person;
+use App\Models\PersonStatus;
 
 class PotentialClubhouseAccountFromSalesforce
 {
@@ -212,19 +213,44 @@ class PotentialClubhouseAccountFromSalesforce
 
         $person = Person::findByCallsign($this->callsign);
         if ($person && $person->bpguid != $this->bpguid) {
-            if ($person->status != Person::RETIRED && $person->status != Person::RESIGNED) {
-                $this->status = 'existing-callsign';
-                $this->message = "Callsign already exists";
-                $this->existingPerson = $person;
-                return;
-            } else if ($person->vintage) {
+            if ($person->vintage) {
                 $this->status = 'existing-callsign';
                 $this->message = "Account (status {$person->status}) has vintage callsign";
+                $this->existingPerson = $person;
+                return;
+            } else if ($person->status == Person::DECEASED) {
+                $now = now();
+                $deceased = PersonStatus::findForTime($person->id, $now);
+                if (!$deceased || $deceased->new_status != Person::DECEASED) {
+                    // Hmm, cannot figure out when the person passed on, either no record exists,
+                    // or the very last status update was NOT to deceased
+                    $this->status = 'existing-callsign';
+                    $this->message = 'Person deceased but cannot determine if still within the grieving period';
+                    $this->existingPerson = $person;
+                    return;
+                } else {
+                    $releaseDate = $deceased->created_at->clone()->addYears(Person::GRIEVING_PERIOD_YEARS);
+                    if ($releaseDate->gt($now)){
+                        // Status still within the grieving period
+                        $this->status = 'existing-callsign';
+                        $this->message = 'Person deceased, still in grieving period ('.Person::GRIEVING_PERIOD_YEARS.' years). Can be released on '.$releaseDate->toDateTimeString();
+                        $this->existingPerson = $person;
+                        return;
+                    } else  {
+                        $this->status = 'existing-claim-callsign';
+                        $this->existingPerson = $person;
+                        // fall thru to additional checks
+                    }
+                }
+            } else if ($person->status != Person::RETIRED && $person->status != Person::RESIGNED) {
+                $this->status = 'existing-callsign';
+                $this->message = "Callsign already exists";
                 $this->existingPerson = $person;
                 return;
             } else {
                 $this->status = 'existing-claim-callsign';
                 $this->existingPerson = $person;
+                // fall thru to additional checks
             }
         }
 
@@ -245,7 +271,6 @@ class PotentialClubhouseAccountFromSalesforce
             $this->checkExisting('email address', $person);
             return;
         }
-
 
         $person = Person::where('sfuid', $this->sfuid)->first();
         if ($person) {

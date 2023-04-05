@@ -36,7 +36,7 @@ class PersonStatus extends ApiModel
      * @param int|null $personSourceId user who made the change
      */
 
-    public static function record(int $personId, ?string $oldStatus, string $newStatus, ?string $reason, ?int $personSourceId)
+    public static function record(int $personId, ?string $oldStatus, string $newStatus, ?string $reason, ?int $personSourceId): void
     {
         self::create([
             'person_id' => $personId,
