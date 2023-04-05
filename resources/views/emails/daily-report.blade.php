@@ -116,9 +116,9 @@
             @endforeach
         </table>
     @endif
-    <h3>Role Changes ({{count($roleLogs)}})</h3>
+    <h3>Manual Permission Changes ({{count($roleLogs)}})</h3>
     @if (count($roleLogs) == 0)
-        <p>No role changes happened.</p>
+        <p>No manual permission changes happened.</p>
     @else
         <table class="table table-sm table-striped">
             <thead>
@@ -126,7 +126,7 @@
                 <th>Timestamp (UTC-7)</th>
                 <th>Callsign</th>
                 <th>Source</th>
-                <th>Roles</th>
+                <th>Permission(s)</th>
                 <th>Reason</th>
             </tr>
             </thead>
@@ -134,7 +134,13 @@
             @foreach ($roleLogs as $log)
                 <tr>
                     <td>{{$log->created_at}}</td>
-                    <td>{{$log->target_person->callsign}}</td>
+                    <td>
+                        @if ($log->target_person)
+                            {{$log->target_person->callsign}}
+                        @else
+                            Deleted #{{$log->target_person_id}}
+                        @endif
+                    </td>
                     <td>
                         @if ($log->person)
                             {{$log->person->callsign}}
@@ -188,8 +194,22 @@
             @foreach ($statusLogs as $log)
                 <tr>
                     <td>{{$log->created_at}}</td>
-                    <td>{{$log->person->callsign}}</td>
-                    <td>{{$log->person_source->callsign}}</td>
+                    <td>
+                        @if ($log->person)
+                            {{$log->person->callsign}}
+                        @else
+                            Deleted #{{$log->person_id}}
+                        @endif
+                    </td>
+                    <td>
+                        @if ($log->person_source)
+                            {{$log->person_source->callsign}}
+                        @elseif ($log->person_source_id)
+                            {{$log->person_source_id}}
+                        @else
+                            Uknown source, no id
+                        @endif
+                    </td>
                     <td>{{$log->old_status}}</td>
                     <td>{{$log->new_status}}</td>
                     <td>{{$log->reason}}</td>
@@ -198,7 +218,7 @@
         </table>
     @endif
     <h3>Failed Broadcasts ({{count($failedBroadcasts)}})</h3>
-    @if (count($failedBroadcasts) == 0)
+    @if (!count($failedBroadcasts))
         <p>No broadcast failures.</p>
     @else
         <table class="table table-sm table-striped">
@@ -217,7 +237,7 @@
             @foreach ($failedBroadcasts as $log)
                 <tr>
                     <td>{{$log->created_at}}</td>
-                    <td>{{$log->sender->callsign}}</td>
+                    <td>{{$log->sender->callsign ?? "Deleted #{$log->sender_id}"}}</td>
                     <td>
                         {{$log->alert->on_playa ? "On Playa" : "Pre-Event"}}: {{$log->alert->title}}
                     </td>
@@ -231,9 +251,10 @@
                     </td>
                     <td>
                         @if ($log->retry_at)
-                            Retry at {{$log->retry_at}} by {{$log->retry_person->callsign}}
+                            Retry at {{$log->retry_at}}
+                            by {{$log->retry_person->callsign ?? "Deleted #{$log->retry_person_id}"}}
                         @else
-                            -
+                            No retry attempt
                         @endif
                     </td>
                 </tr>
