@@ -1,15 +1,19 @@
 # Black Rock Ranger Secret Clubhouse API Service
 
+NOTE: THIS DOC IS NOT ACTIVELY MAINTAINED. The information contained here in may be out of date.
+
 [![Build Status](https://github.com/burningmantech/ranger-clubhouse-api/workflows/CI%2fCD/badge.svg)](https://github.com/burningmantech/ranger-clubhouse-api/actions)
 
 ## Prerequisites
 
+The following list may be out of date with respect to the Dockerfile.
+
 You will need the following things properly installed on your computer.
 
 * [Git](https://git-scm.com/)
-* [PHP >= 7.3](https://php.net/)
-* [Composer >= 2.0](https://getcomposer.org/)
-* [MySQL >= 5.6](https://www.mysql.com/downloads/)
+* [PHP >= 8.2.4](https://php.net/)
+* [Composer >= 2.5.5](https://getcomposer.org/)
+* [MariaDB >= 10.5.17](https://mariadb.org/)
 
 ## Installation
 
