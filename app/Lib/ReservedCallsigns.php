@@ -491,7 +491,7 @@ class ReservedCallsigns
         'Cat',
         'ChAos',
         'Chef',
-        'Chef Juke',
+//        'Chef Juke', -- 4/7/23, applied to be a Ranger. Commented out to allow his Salesforce record to be imported
         'Cherub',
         'Cliff',
         'Coyote',

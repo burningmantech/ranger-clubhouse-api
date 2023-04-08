@@ -160,8 +160,7 @@ class PotentialClubhouseAccountFromSalesforce
 
         if ($this->callsign == "") {
             $this->status = self::STATUS_INVALID;
-            $this->message =
-                "VC_Approved_Radio_Call_Sign is blank";
+            $this->message = "VC_Approved_Radio_Call_Sign is blank";
             return false;
         }
 
@@ -213,6 +212,7 @@ class PotentialClubhouseAccountFromSalesforce
 
         $person = Person::findByCallsign($this->callsign);
         if ($person && $person->bpguid != $this->bpguid) {
+            // See if the callsign can be reused from an existing account.
             if ($person->vintage) {
                 $this->status = 'existing-callsign';
                 $this->message = "Account (status {$person->status}) has vintage callsign";
@@ -230,13 +230,13 @@ class PotentialClubhouseAccountFromSalesforce
                     return;
                 } else {
                     $releaseDate = $deceased->created_at->clone()->addYears(Person::GRIEVING_PERIOD_YEARS);
-                    if ($releaseDate->gt($now)){
+                    if ($releaseDate->gt($now)) {
                         // Status still within the grieving period
                         $this->status = 'existing-callsign';
-                        $this->message = 'Person deceased, still in grieving period ('.Person::GRIEVING_PERIOD_YEARS.' years). Can be released on '.$releaseDate->toDateTimeString();
+                        $this->message = 'Person deceased, still in grieving period (' . Person::GRIEVING_PERIOD_YEARS . ' years). Can be released on ' . $releaseDate->toDateTimeString();
                         $this->existingPerson = $person;
                         return;
-                    } else  {
+                    } else {
                         $this->status = 'existing-claim-callsign';
                         $this->existingPerson = $person;
                         // fall thru to additional checks
@@ -289,11 +289,13 @@ class PotentialClubhouseAccountFromSalesforce
     public function checkExisting($type, $person): void
     {
         $status = $person->status;
-        $this->message = "Clubhouse account with this {$type} already exists";
+        $this->message = "Account with this {$type} already exists";
 
-        if ($status != Person::AUDITOR && $status != Person::PAST_PROSPECTIVE) {
+        if ($status != Person::AUDITOR
+            && $status != Person::PAST_PROSPECTIVE
+            && $status != Person::NON_RANGER) {
             $this->status = 'existing-bad-status';
-            $this->message .= ' and is not an auditor / past prospective';
+            $this->message .= ' and is not an auditor, past prospective, or non-ranger';
         } else {
             $this->status = 'existing';
         }
