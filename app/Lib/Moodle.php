@@ -328,8 +328,7 @@ class Moodle
             return [];
         }
 
-        $people = DB::table('person')
-            ->select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id', 'person_event.lms_course_id')
+        $people = Person::select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id', 'person_event.lms_course_id')
             ->leftJoin('person_event', function ($j) {
                 $j->on('person_event.person_id', 'person.id');
                 $j->where('person_event.year', current_year());
