@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
@@ -166,24 +167,21 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'active_next_event' => 'boolean',
         'behavioral_agreement' => 'boolean',
         'callsign_approved' => 'boolean',
-        'has_note_on_file' => 'boolean',
-        'on_site' => 'boolean',
-
-        'vehicle_blacklisted' => 'boolean',
-
         'create_date' => 'datetime',
         'date_verified' => 'date',
-        'status_date' => 'date',
-        'message_updated_at' => 'datetime',
-        'timestamp' => 'timestamp',
-        'logged_in_at' => 'datetime',
+        'has_note_on_file' => 'boolean',
         'last_seen_at' => 'datetime',
-
-        'reviewed_pi_at' => 'datetime',
+        'logged_in_at' => 'datetime',
+        'message_updated_at' => 'datetime',
+        'on_site' => 'boolean',
         'pi_reviewed_for_dashboard_at' => 'datetime',
-
+        'reviewed_pi_at' => 'datetime',
+        'status_date' => 'date',
+        'timestamp' => 'timestamp',
         'used_vanity_change' => 'boolean',
         'vanity_changed_at' => 'datetime',
+        'vehicle_blacklisted' => 'boolean',
+        'vintage' => 'boolean',
     ];
 
     /*
@@ -250,6 +248,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         'lms_id',
         'lms_username',
+
+        'employee_id',
 
         'active_next_event',
         'has_note_on_file',
@@ -1451,6 +1451,17 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function setPronounsAttribute($value): void
     {
         $this->attributes['pronouns'] = $value ?? '';
+    }
+
+    /**
+     * Set the employee_id fields
+     */
+
+    public function employeeId() : Attribute
+    {
+        return Attribute::make(
+            set: fn ($value) => empty($value) ? null : $value,
+        );
     }
 
     /**

@@ -172,18 +172,17 @@ class IntakeControllerTest extends TestCase
 
     public function testAppendNotesAndSetRanks()
     {
-        $this->addRole(Role::INTAKE);
+        $this->addRole(Role::VC);
 
         $person = Person::factory()->create();
         $year = $this->year;
-        $note = 'Prospectiveses brings us tasty, tasty treats, my precious!';
+        $note = 'Prospectives brings us tasty, tasty treats, my precious!';
 
         $response = $this->json('POST', "intake/{$person->id}/note", [
             'year' => $year,
-            'type' => 'rrn',
+            'type' => 'vc',
             'ranking' => Intake::FLAG,
             'note' => $note
-
         ]);
 
         $response->assertStatus(200);
@@ -191,13 +190,13 @@ class IntakeControllerTest extends TestCase
         $this->assertDatabaseHas('person_intake', [
             'person_id' => $person->id,
             'year' => $year,
-            'rrn_rank' => Intake::FLAG
+            'vc_rank' => Intake::FLAG
         ]);
 
         $this->assertDatabaseHas('person_intake_note', [
             'person_id' => $person->id,
             'year' => $year,
-            'type' => 'rrn',
+            'type' => 'vc',
             'note' => $note
         ]);
     }
