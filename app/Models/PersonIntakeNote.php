@@ -40,18 +40,23 @@ class PersonIntakeNote extends ApiModel
      *
      * @param  $pnvIds
      * @param int $year include all records up to the year
+     * @param $notePersonId
      * @return Collection
      */
 
-    public static function retrieveHistoryForPersonIds($pnvIds, int $year): Collection
+    public static function retrieveHistoryForPersonIds($pnvIds, int $year, $notePersonId): Collection
     {
-        return self::whereIntegerInRaw('person_id', $pnvIds)
+        $sql = self::whereIntegerInRaw('person_id', $pnvIds)
             ->where('year', '<=', $year)
             ->orderBy('person_id')
             ->orderBy('created_at')
-            ->with('person_source:id,callsign')
-            ->get()
-            ->groupBy('person_id');
+            ->with('person_source:id,callsign');
+
+        if ($notePersonId) {
+            $sql->where('person_source_id', $notePersonId);
+        }
+
+        return $sql->get()->groupBy('person_id');
     }
 
     /**

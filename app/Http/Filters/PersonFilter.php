@@ -31,7 +31,8 @@ class PersonFilter
         'sfuid',
         'logged_in_at',
         'last_seen_at',
-        'is_bouncing'
+        'is_bouncing',
+        'employee_id',
     ];
 
     const NAME_GENDER_FIELDS = [

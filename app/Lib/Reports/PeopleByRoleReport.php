@@ -3,7 +3,9 @@
 namespace App\Lib\Reports;
 
 use App\Models\Person;
+use App\Models\Role;
 use App\Models\Training;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class PeopleByRoleReport
@@ -24,8 +26,16 @@ class PeopleByRoleReport
         $year = current_year();
 
         $roles = [];
+
+        $isAdmin = Auth::user()?->isAdmin();
+
         foreach ($rows as $role) {
             $roleId = $role->id;
+            if ($roleId == Role::PAYROLL && !$isAdmin) {
+                // Hide payroll role from non-admins.
+                continue;
+            }
+
             $roleGrants = DB::table('person_role')
                 ->select('person.id', 'person.callsign', 'person.status')
                 ->join('person', 'person.id', 'person_role.person_id')

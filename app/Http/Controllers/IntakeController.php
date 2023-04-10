@@ -11,6 +11,8 @@ use App\Models\PersonIntakeNote;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class IntakeController extends ApiController
@@ -51,15 +53,23 @@ class IntakeController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
      */
 
     public function history(Person $person): JsonResponse
     {
-        $this->authorize('isIntake');
+        Gate::allowIf(fn(Person $user) => $user->hasRole([Role::INTAKE, Role::REGIONAL_MANAGEMENT]));
+
         $year = $this->getYear();
 
-        return response()->json(['person' => Intake::retrieveIdsForYear([$person->id], $year, false)[0]]);
+        if (!$this->userHasRole(Role::INTAKE) && $this->userHasRole(Role::REGIONAL_MANAGEMENT)) {
+            $intakeId = Auth::id();
+        } else {
+            $intakeId = null;
+        }
+
+        return response()->json([
+            'person' => Intake::retrieveIdsForYear([$person->id], $year, false, $intakeId)[0]
+        ]);
     }
 
     /**
@@ -93,25 +103,18 @@ class IntakeController extends ApiController
             PersonIntakeNote::record($personId, $year, $type, $note);
         }
 
-        if (isset($params['ranking'])) {
-            $rankAttr = $type . "_rank";
-            $intake = PersonIntake::findForPersonYearOrNew($personId, $year);
+        $rankAttr = $type . "_rank";
+        $intake = PersonIntake::findForPersonYearOrNew($personId, $year);
+        if (isset($params['ranking']) && $params['ranking'] != $intake->{$rankAttr}) {
             $intake->{$rankAttr} = $params['ranking'];
-            if ($intake->isDirty($rankAttr)) {
-                $rankUpdated = true;
-                $oldRank = $intake->getOriginal($rankAttr);
-            } else {
-                $rankUpdated = false;
-            }
+            $oldRank = $intake->getOriginal($rankAttr);
 
             if (!$intake->save()) {
                 return $this->restError($intake);
             }
 
-            if ($rankUpdated) {
-                PersonIntakeNote::record($personId, $year, $type,
-                    "rank change [" . ($oldRank ?? 'no rank') . "] -> [" . ($intake->{$rankAttr} ?? 'no rank') . "]", true);
-            }
+            PersonIntakeNote::record($personId, $year, $type,
+                "rank change [" . ($oldRank > 0 ? $oldRank : 'no rank') . "] -> [" . ($intake->{$rankAttr} ?? 'no rank') . "]", true);
         }
 
         return $this->success();
@@ -148,7 +151,7 @@ class IntakeController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function deleteNote(PersonIntakeNote $person_intake_note)
+    public function deleteNote(PersonIntakeNote $person_intake_note): JsonResponse
     {
         $this->checkIntakePermissions($person_intake_note->type);
         if ($person_intake_note->is_log) {
@@ -194,6 +197,7 @@ class IntakeController extends ApiController
             'vc' => Role::VC,
             'mentor' => Role::MENTOR,
             'personnel' => Role::ADMIN,
+            'rrn' => Role::REGIONAL_MANAGEMENT,
             default => Role::INTAKE,
         };
 

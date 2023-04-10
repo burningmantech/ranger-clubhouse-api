@@ -31,8 +31,8 @@ class Intake
      * @return array
      */
 
-     public static function retrieveAllForYear(int $year): array
-     {
+    public static function retrieveAllForYear(int $year): array
+    {
         // Find any PNVs in a given year
         $pnvIds = PersonStatus::select('person_id')
             ->whereYear('created_at', $year)
@@ -50,7 +50,7 @@ class Intake
      * @return array
      */
 
-    public static function retrieveSpigotFlowForYear(int $year) : array
+    public static function retrieveSpigotFlowForYear(int $year): array
     {
         $dates = [];
         // Find any PNVs in a given year
@@ -216,10 +216,14 @@ class Intake
      * @param array $pnvIds PNV ids to find
      * @param int $year
      * @param bool $onlyFlagged
+     * @param int|null $intakeId
      * @return array
      */
 
-    public static function retrieveIdsForYear(array $pnvIds, int $year, bool $onlyFlagged = true): array
+    public static function retrieveIdsForYear(array $pnvIds,
+                                              int   $year,
+                                              bool  $onlyFlagged = true,
+                                              ?int  $rrnId = null): array
     {
         // Find the ALL intake records for the folks in question.
         $peopleIntake = PersonIntake::whereIntegerInRaw('person_id', $pnvIds)
@@ -237,10 +241,15 @@ class Intake
             ->get()
             ->groupBy('person_id');
 
-        $peopleIntakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year);
-
-        $trainings = Training::retrieveTrainingHistoryForIds($pnvIds, Position::TRAINING, $year);
+        $peopleIntakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year, $rrnId);
         $mentors = PersonMentor::retrieveAllMentorsForIds($pnvIds, $year);
+
+        if (!$rrnId) {
+            $trainings = Training::retrieveTrainingHistoryForIds($pnvIds, Position::TRAINING, $year);
+        } else {
+            $trainings = [];
+        }
+
         $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA);
 
         // Find the people
@@ -265,8 +274,13 @@ class Intake
 
             $intakeYears = $peopleIntake[$personId] ?? null;
             $intakeNotes = $peopleIntakeNotes[$personId] ?? null;
-            foreach (['rrn', 'mentor', 'vc', 'personnel'] as $type) {
-                $pnv[$type . '_team'] = self::buildIntakeTeam($type, $intakeYears, $intakeNotes, $haveFlag);
+
+            if ($rrnId) {
+                $pnv['rrn_team'] = self::buildIntakeTeam('rrn', $intakeYears, $intakeNotes, $haveFlag);
+            } else {
+                foreach (['rrn', 'mentor', 'vc', 'personnel'] as $type) {
+                    $pnv[$type . '_team'] = self::buildIntakeTeam($type, $intakeYears, $intakeNotes, $haveFlag);
+                }
             }
 
             /*
