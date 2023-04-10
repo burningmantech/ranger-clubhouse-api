@@ -40,11 +40,11 @@ class PersonIntakeNote extends ApiModel
      *
      * @param  $pnvIds
      * @param int $year include all records up to the year
-     * @param $notePersonId
+     * @param int|null $notePersonId
      * @return Collection
      */
 
-    public static function retrieveHistoryForPersonIds($pnvIds, int $year, $notePersonId): Collection
+    public static function retrieveHistoryForPersonIds($pnvIds, int $year, ?int $notePersonId = null): Collection
     {
         $sql = self::whereIntegerInRaw('person_id', $pnvIds)
             ->where('year', '<=', $year)
