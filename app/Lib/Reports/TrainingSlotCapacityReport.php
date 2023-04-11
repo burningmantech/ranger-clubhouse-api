@@ -37,7 +37,7 @@ class TrainingSlotCapacityReport
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
-        $trainerPositions = Position::TRAINERS[$position->id];
+        $trainerPositions = Position::TRAINERS[$position->id] ?? [ ];
         $rows = DB::table('slot')
             ->select('id', 'description', 'begins', 'ends', 'max')
             ->whereYear('slot.begins', $year)
