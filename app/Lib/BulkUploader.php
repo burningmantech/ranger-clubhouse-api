@@ -93,7 +93,7 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and rpt",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and rpt",
                 ],
                 [
                     'id' => 'wap',
@@ -497,6 +497,7 @@ class BulkUploader
             }
 
             $accessDate = null;
+
             switch (strtoupper($type)) {
                 case 'CRED':
                     $type = AccessDocument::STAFF_CREDENTIAL;
@@ -512,6 +513,14 @@ class BulkUploader
 
                 case 'VP':
                     $type = AccessDocument::VEHICLE_PASS;
+                    break;
+
+                case 'VPGIFT':
+                    $type = AccessDocument::VEHICLE_PASS_GIFT;
+                    break;
+
+                case 'VPLSD':
+                    $type = AccessDocument::VEHICLE_PASS_LSD;
                     break;
 
                 case 'WAP':
@@ -536,6 +545,7 @@ class BulkUploader
                     $sourceYear = trim($data[$nextInd++]);
                 }
             }
+
             // Optionally pop an expiry year if this type supports them
             if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
                 if ($dataCount >= $nextInd + 1) {
@@ -554,11 +564,13 @@ class BulkUploader
                 $record->details = "Expected a year for sourceYear, got $sourceYear";
                 continue;
             }
+
             if (!is_numeric($expiryYear) || $expiryYear > 9999) {
                 $record->status = self::STATUS_FAILED;
                 $record->details = "Expected a year for expiryYear, got $expiryYear";
                 continue;
             }
+
             if ($expiryYear < $sourceYear) {
                 $record->status = self::STATUS_FAILED;
                 $record->details = "Source year [$sourceYear] must not be after expiry year [$expiryYear]";

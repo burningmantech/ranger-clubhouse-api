@@ -13,14 +13,14 @@ class AccessDocument extends ApiModel
     protected $auditModel = true;
 
     // Statuses
-    const QUALIFIED = 'qualified';
-    const CLAIMED = 'claimed';
     const BANKED = 'banked';
-    const USED = 'used';
     const CANCELLED = 'cancelled';
+    const CLAIMED = 'claimed';
     const EXPIRED = 'expired';
+    const QUALIFIED = 'qualified';
     const SUBMITTED = 'submitted';
     const TURNED_DOWN = 'turned_down';
+    const USED = 'used';
 
     const ACTIVE_STATUSES = [
         self::QUALIFIED,
@@ -42,11 +42,13 @@ class AccessDocument extends ApiModel
     ];
 
     // Access Document types
-    const STAFF_CREDENTIAL = 'staff_credential';
-    const RPT = 'reduced_price_ticket';
     const GIFT = 'gift_ticket';
     const LSD = 'lsd_ticket';
+    const RPT = 'reduced_price_ticket';
+    const STAFF_CREDENTIAL = 'staff_credential';
     const VEHICLE_PASS = 'vehicle_pass';
+    const VEHICLE_PASS_GIFT = 'vehicle_pass_gift';
+    const VEHICLE_PASS_LSD = 'vehicle_pass_lsd';
     const WAP = 'work_access_pass';
     const WAPSO = 'work_access_pass_so';
 
@@ -67,6 +69,11 @@ class AccessDocument extends ApiModel
         self::LSD,
     ];
 
+    const SPECIAL_VP_TYPES = [
+        self::VEHICLE_PASS_LSD,
+        self::VEHICLE_PASS_GIFT
+    ];
+
     const DELIVERABLE_TYPES = [
         self::GIFT,
         self::LSD,
@@ -85,6 +92,8 @@ class AccessDocument extends ApiModel
         self::GIFT,
         self::LSD,
         self::VEHICLE_PASS,
+        self::VEHICLE_PASS_GIFT,
+        self::VEHICLE_PASS_LSD,
         self::WAP,
         self::WAPSO,
     ];
@@ -95,6 +104,8 @@ class AccessDocument extends ApiModel
         self::RPT => 'Reduced-Price Ticket',
         self::STAFF_CREDENTIAL => 'Staff Credential',
         self::VEHICLE_PASS => 'Vehicle Pass',
+        self::VEHICLE_PASS_GIFT => 'Vehicle Pass (Gift)',
+        self::VEHICLE_PASS_LSD => 'Vehicle Pass (LSD)',
         self::WAP => 'WAP',
         self::WAPSO => 'SO WAP',
     ];
@@ -105,6 +116,8 @@ class AccessDocument extends ApiModel
         self::RPT => 'RPT',
         self::STAFF_CREDENTIAL => 'SC',
         self::VEHICLE_PASS => 'VP',
+        self::VEHICLE_PASS_GIFT => 'VPGIFT',
+        self::VEHICLE_PASS_LSD => 'VPLSD',
         self::WAP => 'WAP',
         self::WAPSO => 'SO WAP',
     ];
@@ -132,7 +145,7 @@ class AccessDocument extends ApiModel
         'city',
         'state',
         'postal_code',
-        'country'
+        'country',
     ];
 
     protected $casts = [
@@ -155,10 +168,10 @@ class AccessDocument extends ApiModel
     ];
 
     protected $attributes = [
-        'delivery_method' => 'none'
+        'delivery_method' => 'none',
     ];
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 
@@ -180,13 +193,16 @@ class AccessDocument extends ApiModel
                 case self::WAPSO:
                     $model->delivery_method = self::DELIVERY_EMAIL;
                     break;
+
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
                     break;
             }
 
             // Only Gift, LSD, and WAP SOs can have names
-            if ($model->type != self::WAPSO && $model->type != self::LSD && $model->type != self::GIFT) {
+            if ($model->type != self::WAPSO
+                && $model->type != self::LSD
+                && $model->type != self::GIFT) {
                 $model->name = null;
             }
 
@@ -195,10 +211,6 @@ class AccessDocument extends ApiModel
                 $model->access_date = null;
                 $model->access_any_time = false;
             }
-        });
-
-        self::updated(function ($model) {
-
         });
     }
 
@@ -598,11 +610,17 @@ class AccessDocument extends ApiModel
      * @return bool
      */
 
-    public function isSpecialTicket() : bool
+    public function isSpecialTicket(): bool
     {
         return in_array($this->type, self::SPECIAL_TICKET_TYPES);
     }
 
+    public function isAvailable() : bool
+    {
+        return $this->status == AccessDocument::QUALIFIED
+            || $this->status == AccessDocument::CLAIMED
+            || $this->status == AccessDocument::SUBMITTED;
+    }
 
     public function getTypeLabel()
     {
@@ -667,7 +685,7 @@ class AccessDocument extends ApiModel
      * @return bool
      */
 
-    public function doesExpireThisYear() : bool
+    public function doesExpireThisYear(): bool
     {
         return in_array($this->type, self::EXPIRE_THIS_YEAR_TYPES);
     }

@@ -28,24 +28,41 @@ class TicketAndProvisionsPackage
         $pe = PersonEvent::firstOrNewForPersonYear($personId, current_year());
 
         $accessDocuments = [];
-        $specialTickets = [];
+
+        $giftItems = [];
+        $lsdItems = [];
 
         $ads = AccessDocument::findForQuery(['person_id' => $personId]);
         foreach ($ads as $ad) {
-            if ($ad->type == AccessDocument::GIFT || $ad->type == AccessDocument::LSD) {
-                $specialTickets[] = $ad;
-            } else {
-                $accessDocuments[] = $ad;
+            switch ($ad->type) {
+                case AccessDocument::GIFT:
+                case AccessDocument::VEHICLE_PASS_GIFT:
+                    if ($ad->isAvailable()) {
+                        $giftItems[] = $ad;
+                    }
+                    break;
+
+                case AccessDocument::LSD:
+                case AccessDocument::VEHICLE_PASS_LSD:
+                    if ($ad->isAvailable()) {
+                        $lsdItems[] = $ad;
+                    }
+                    break;
+
+                default:
+                    $accessDocuments[] = $ad;
             }
         }
+
         $result = [
             'access_documents' => $accessDocuments,
-            'special_tickets' => $specialTickets,
+            'gift_items' => $giftItems,
+            'lsd_items' => $lsdItems,
+            'special_tickets' => [],  // TODO: Remove beginning of May '23. Just in case the most recent frontend is not being used.
             'provisions' => Provision::findForQuery(['person_id' => $personId]),
             'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
             'year_earned' => $year,
             'period' => setting('TicketingPeriod'),
-            'special_tickets_enabled' => setting('TicketingForSpecialEnabled'),
             'started_at' => $pe->ticketing_started_at ? (string)$pe->ticketing_started_at : null,
             'finished_at' => $pe->ticketing_finished_at ? (string)$pe->ticketing_finished_at : null,
             'visited_at' => $pe->ticketing_last_visited_at ? ( string)$pe->ticketing_last_visited_at : null,

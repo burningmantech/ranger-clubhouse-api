@@ -36,6 +36,13 @@ class TicketingManagement
             '*',
             DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
         )
+            // Special tickets & associated VPs are handled by a separate interface.
+            ->whereNotIn('type', [
+                AccessDocument::GIFT,
+                AccessDocument::VEHICLE_PASS_GIFT,
+                AccessDocument::LSD,
+                AccessDocument::VEHICLE_PASS_LSD
+            ])
             ->with(['person:id,callsign,status,first_name,last_name,email,home_phone,street1,street2,city,state,zip,country'])
             ->orderBy('source_year')
             ->get();
