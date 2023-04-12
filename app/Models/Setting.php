@@ -443,17 +443,6 @@ class Setting extends ApiModel
             'type' => self::TYPE_DATE,
         ],
 
-        'TAS_Delivery' => [
-            'description' => 'Ticket Delivery View',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['none', 'not available yet'],
-                ['view', 'ticket announcement'],
-                ['accept', 'allow ticket submissions'],
-                ['frozen', 'ticket window is closed'],
-            ]
-        ],
-
         'TAS_Email' => [
             'description' => 'Ranger Ticketing Support Email',
             'type' => self::TYPE_EMAIL,
@@ -484,58 +473,14 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
-        'TAS_Tickets' => [
-            'description' => 'Event Ticket Mode',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['none', 'not available yet'],
-                ['view', 'ticket announcement'],
-                ['accept', 'allow ticket submissions'],
-                ['frozen', 'ticket window is closed'],
-            ]
-        ],
-
-        'TAS_VP' => [
-            'description' => 'Vehicle Pass Mode',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['none', 'not available yet'],
-                ['view', 'ticket announcement'],
-                ['accept', 'allow ticket submissions'],
-                ['frozen', 'ticket window is closed'],
-            ]
-        ],
-
-        'TAS_VP_FAQ' => [
+         'TAS_VP_FAQ' => [
             'description' => 'Vehicle Pass FAQ Link',
             'type' => self::TYPE_STRING,
-        ],
-
-        'TAS_WAP' => [
-            'description' => 'Work Access Pass Mode',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['none', 'not available yet'],
-                ['view', 'ticket announcement'],
-                ['accept', 'allow ticket submissions'],
-                ['frozen', 'ticket window is closed'],
-            ]
         ],
 
         'TAS_WAPDateRange' => [
             'description' => 'Allowable SC & WAP August day range. Use used Format: DD-DD. (just the start & ending days, not month). Use to build WAP date options and the TRS spreadsheet.',
             'type' => self::TYPE_STRING,
-        ],
-
-        'TAS_WAPSO' => [
-            'description' => 'WAP SO Mode',
-            'type' => self::TYPE_STRING,
-            'options' => [
-                ['none', 'not available yet'],
-                ['view', 'ticket announcement'],
-                ['accept', 'allow ticket submissions'],
-                ['frozen', 'ticket window is closed'],
-            ]
         ],
 
         'TAS_WAPSOMax' => [
@@ -581,7 +526,7 @@ class Setting extends ApiModel
             'options' => [
                 ['offseason', 'off season - show banked tickets'],
                 ['announce', 'announce - tickets have been awarded but ticketing window is not open'],
-                ['open', 'open - tickets can be claimed and TAS_Tickets, TAS_VP, TAS_WAP, TAS_WAPSO, TAS_Delivery come into play'],
+                ['open', 'open - tickets can be claimed'],
                 ['closed', 'closed - show claims and banks. Changes not directly allowed'],
             ]
         ],

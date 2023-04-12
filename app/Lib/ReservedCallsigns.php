@@ -587,7 +587,7 @@ class ReservedCallsigns
         'Trash Dad',
         'Trinka',
         'V-Spot',
-        'Vegas Queen',
+ //       'Vegas Queen',
         'Vertigo',
         'Vivibaby',
         'Vortex',
