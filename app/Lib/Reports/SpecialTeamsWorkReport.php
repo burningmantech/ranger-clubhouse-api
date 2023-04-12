@@ -36,6 +36,7 @@ class SpecialTeamsWorkReport
                 $q->whereYear('on_duty', '<=', $endYear);
                 $q->whereIn('timesheet.position_id', $positionIds);
             })
+            ->whereNotIn('person.status', Person::LOCKED_STATUSES)
             ->where(function ($q) {
                 $q->whereNotNull('timesheet.id');
                 $q->orWhereNotNull('person_position.position_id');
