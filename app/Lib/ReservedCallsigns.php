@@ -455,7 +455,7 @@ class ReservedCallsigns
         'Trippi',
         'V-Spot',
         'Valkyrie',
-        'Vegas Queen',
+       // 'Vegas Queen',
         'Vortex',
         'Wanda Power',
         'Weapons Grade',
