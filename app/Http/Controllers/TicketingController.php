@@ -14,10 +14,8 @@ use App\Lib\TicketingStatistics;
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
 use App\Models\Person;
-use App\Models\PersonEvent;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class TicketingController extends ApiController
@@ -32,7 +30,7 @@ class TicketingController extends ApiController
     {
         $settings = setting([
             'TicketingPeriod', 'TicketsAndStuffEnablePNV',
-            'TAS_Tickets', 'TAS_VP', 'TAS_WAP', 'TAS_WAPSO', 'TAS_Delivery', 'TAS_WAPSOMax',
+            'TAS_WAPSOMax',
             'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_WAPDateRange', 'TAS_DefaultAlphaWAPDate',
             'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
             'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
@@ -48,11 +46,6 @@ class TicketingController extends ApiController
                 'period' => $settings['TicketingPeriod'],
                 'is_enabled_for_pnv' => $settings['TicketsAndStuffEnablePNV'],
 
-                'ticket_status' => $settings['TAS_Tickets'],
-                'vp_status' => $settings['TAS_VP'],
-                'wap_status' => $settings['TAS_WAP'],
-                'wap_so_status' => $settings['TAS_WAPSO'],
-                'delivery_status' => $settings['TAS_Delivery'],
                 'wap_so_max' => $settings['TAS_WAPSOMax'],
                 'box_office_open_date' => $settings['TAS_BoxOfficeOpenDate'],
                 'wap_default_date' => $settings['TAS_DefaultWAPDate'],
@@ -210,7 +203,7 @@ class TicketingController extends ApiController
         return $this->success($tickets, null, 'access_document');
     }
 
-     /**
+    /**
      * Return the appreciation credit/hour thresholds for tickets, All-You-Can-Eat pass, shirts, and showers.
      *
      * @return JsonResponse

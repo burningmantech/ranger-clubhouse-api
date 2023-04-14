@@ -35,6 +35,10 @@ class Role extends ApiModel
     const EDIT_SWAG = 112;      // Person can create and edit swag records
     const CAN_FORCE_SHIFT = 113; // Person can force a shift start
 
+    const REGIONAL_MANAGEMENT = 114;    // Person can access Regional Ranger liaison features.
+    const PAYROLL = 115;                // Can access payroll features
+    const VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
+
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     protected $casts = [

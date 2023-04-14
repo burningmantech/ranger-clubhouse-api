@@ -122,7 +122,8 @@ class AccessDocumentController extends ApiController
 
         foreach ($rows as $row) {
             $comment = "bulk marked submitted\ndelivery ";
-            if ($row->type == AccessDocument::VEHICLE_PASS && $staffCredentials->has($row->person_id)) {
+            if ($row->type == AccessDocument::VEHICLE_PASS
+                && $staffCredentials->has($row->person_id)) {
                 $comment .= 'w/Staff Credential';
             } else {
                 $comment .= $row->delivery_method;
@@ -275,8 +276,10 @@ class AccessDocumentController extends ApiController
                     break;
 
                 case AccessDocument::QUALIFIED:
-                    if ($adType != AccessDocument::WAP && $adType != AccessDocument::VEHICLE_PASS) {
-                        throw new InvalidArgumentException('Document is not a WAP or Vehicle Pass.');
+                    if ($adType != AccessDocument::WAP
+                        && $adType != AccessDocument::VEHICLE_PASS
+                        && $adType != AccessDocument::GIFT) {
+                        throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass or Gift Ticket.');
                     }
 
                     if ($adStatus != AccessDocument::CLAIMED) {
@@ -743,7 +746,7 @@ class AccessDocumentController extends ApiController
     {
         $this->authorize('specialTicketsReport', AccessDocument::class);
 
-        $rows = AccessDocument::whereIn('type', AccessDocument::SPECIAL_TICKET_TYPES)
+        $rows = AccessDocument::whereIn('type', [...AccessDocument::SPECIAL_TICKET_TYPES, ...AccessDocument::SPECIAL_VP_TYPES ])
             ->whereIn('status', [
                 AccessDocument::CLAIMED,
                 AccessDocument::QUALIFIED,
@@ -766,6 +769,8 @@ class AccessDocumentController extends ApiController
                 ]
             ];
         }
+
+        usort($results, fn ($a,$b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
         return response()->json(['access_documents' => $results]);
     }
 }

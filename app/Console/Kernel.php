@@ -39,7 +39,7 @@ class Kernel extends ConsoleKernel
 
             // Talk with Moodle to see who completed online training
             // Runs every 30 mins April through September
-            $schedule->command('clubhouse:moodle-completion')->cron('0,30 * * 4-9 *')->onOneServer();
+            $schedule->command('clubhouse:moodle-completion')->cron('0,10,20,30,40,50 * * 4-9 *')->onOneServer();
 
             // Run the Rangers Who Need WAPs Report
             // At 02:30 on Mondays July through August.
