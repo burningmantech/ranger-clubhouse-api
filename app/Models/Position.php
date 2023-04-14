@@ -302,6 +302,7 @@ class Position extends ApiModel
         'paycode',
         'prevent_multiple_enrollments',
         'require_training_for_roles',
+        'resource_tag',
         'role_ids',
         'short_title',
         'team_category',
@@ -606,6 +607,19 @@ class Position extends ApiModel
      */
 
     public function paycode() : Attribute
+    {
+        return Attribute::make(
+            set: fn($value) => empty($value) ? '' : $value
+        );
+    }
+
+    /**
+     * Set the resource tag (aka document tag)
+     *
+     * @return Attribute
+     */
+
+    public function resourceTag() : Attribute
     {
         return Attribute::make(
             set: fn($value) => empty($value) ? '' : $value
