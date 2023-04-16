@@ -431,7 +431,12 @@ class Slot extends ApiModel
 
     public function getTimezoneAbbrAttribute(): string
     {
-        return $this->begins_adjusted->format('T');
+        $tz = $this->begins_adjusted->format('T');
+        if (str_starts_with($tz, '+') || str_starts_with($tz, '-')) {
+            return 'UTC'.$tz;
+        } else {
+            return $tz;
+        }
     }
 
     /**
