@@ -32,6 +32,18 @@ class PersonOnlineTrainingPolicy
     }
 
     /**
+     * Can the person run the progress report?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function progressReport(Person $user) : bool
+    {
+        return $user->hasRole(Role::TRAINER);
+    }
+
+    /**
      * Determine whether the user can create online training.
      *
      * @param Person $user

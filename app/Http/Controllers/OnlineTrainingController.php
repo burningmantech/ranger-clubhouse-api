@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
+use App\Lib\Reports\OnlineTrainingReport;
 use App\Mail\OnlineTrainingEnrollmentMail;
 use App\Mail\OnlineTrainingResetPasswordMail;
 use App\Models\ActionLog;
@@ -26,15 +27,31 @@ class OnlineTrainingController extends ApiController
      */
     public function index(): JsonResponse
     {
+        $this->authorize('view', PersonOnlineTraining::class);
+
         $query = request()->validate([
             'year' => 'required|integer',
             'person_id' => 'sometimes|integer'
         ]);
 
-        $this->authorize('view', PersonOnlineTraining::class);
         $rows = PersonOnlineTraining::findForQuery($query);
         return $this->success($rows, null, 'person_ot');
     }
+
+    /**
+     * Run the progress report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function progressReport(): JsonResponse
+    {
+        $this->authorize('progressReport', PersonOnlineTraining::class);
+
+        return response()->json(['people' => OnlineTrainingReport::execute($this->getYear())]);
+    }
+
 
     /**
      * Create an online training account (if none exists)
@@ -101,6 +118,7 @@ class OnlineTrainingController extends ApiController
 
                 // Enroll the person in the course
                 $lms->enrollPerson($person, $pe, $courseId);
+                $pe->lms_enrolled_at = now();
                 $pe->saveWithoutValidation();
             }
 
