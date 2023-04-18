@@ -33,6 +33,7 @@ class PersonEvent extends ApiModel
     protected $fillable = [
         'asset_authorized',
         'lms_course_id',
+        'lms_enrolled_at',
         'may_request_stickers',
         'org_vehicle_insurance',
         'pii_finished_at',
@@ -64,6 +65,7 @@ class PersonEvent extends ApiModel
     ];
 
     protected $casts = [
+        'lms_enrolled_at' => 'datetime',
         'pii_finished_at' => 'datetime',
         'pii_started_at' => 'datetime',
         'ticketing_finished_at' => 'datetime',

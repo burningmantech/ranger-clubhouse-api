@@ -163,6 +163,7 @@ Route::group([
     Route::get('online-training/config', 'OnlineTrainingController@config');
     Route::get('online-training/courses', 'OnlineTrainingController@courses');
     Route::get('online-training/enrollment', 'OnlineTrainingController@enrollment');
+    Route::get('online-training/progress', 'OnlineTrainingController@progressReport');
     Route::post('online-training/set-course-type', 'OnlineTrainingController@setCourseType');
     Route::get('online-training', 'OnlineTrainingController@index');
     Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
