@@ -15,18 +15,18 @@ class PotentialClubhouseAccountFromSalesforce
     const STATUS_SUCCEEDED = "succeeded";
 
     const REQUIRED_RANGER_INFO_FIELDS = [
-        'FirstName',
-        'LastName',
-        'MailingStreet',
-        'MailingCity',
-        'MailingState',
-        'MailingCountry',
-        'MailingPostalCode',
+        'BPGUID__c' => 'Burner Profile GUID',
+        'SFUID__c' => 'Salesforce UID',
+        'FirstName' => 'First Name',
+        'LastName' => 'Last Name',
+        'MailingStreet' => 'Street Address',
+        'MailingCity' => 'City',
+        'MailingState' => 'State',
+        'MailingPostalCode' => 'Postal Code',
+        'MailingCountry' => 'Country',
         //'npe01__HomeEmail__c', -- This is a backup in case the Ranger Record Contact Email is blank. Totally optional.
-        'Phone',
+        //'Phone',
         //                'Birthdate',
-        'BPGUID__c',
-        'SFUID__c',
         // March 19, 2019 - BMIT removed the emergency contact from Volunteer Questionnaire.
         // *sigh*
         //        'Emergency_Contact_Name__c',
@@ -42,6 +42,12 @@ class PotentialClubhouseAccountFromSalesforce
         //            'npe01__WorkPhone__c',
         //            'MobilePhone',
         //            'OtherPhone',
+    ];
+
+    const PHONE_FIELDS = [
+        'Phone',    // Home Phone
+        'MobilePhone',
+        'OtherPhone',
     ];
 
     public $status;     /* "null", "invalid", "ready", "imported", "succeeded" */
@@ -113,7 +119,7 @@ class PotentialClubhouseAccountFromSalesforce
         $this->state = self::sanitizeField($rInfo, 'MailingState');
         $this->zip = self::sanitizeField($rInfo, 'MailingPostalCode');
         $this->country = self::sanitizeField($rInfo, 'MailingCountry');
-        $this->phone = self::sanitizeField($rInfo, 'Phone');
+        //$this->phone = self::sanitizeField($rInfo, 'Phone');
         $this->email = self::sanitizeField($sobj, 'Contact_Email__c');
         if (empty($this->email)) {
             $this->email = self::sanitizeField($rInfo, 'npe01__HomeEmail__c');
@@ -165,22 +171,40 @@ class PotentialClubhouseAccountFromSalesforce
         }
 
         $errors = [];
-        foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req) {
+        $blankFields = [];
+
+
+        if (!isset($rInfo->SFUID__c)) {
+            $errors[] = "Possible Tech Cadre import account permission issue, cannot see Salesforce UID from Contact Record";
+        }
+
+        foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req => $label) {
             if ($req == 'MailingState'
                 && !in_array($rInfo->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
                 continue;
             }
 
-            if (!isset($rInfo->$req)) {
-                $errors[] = "Missing required field $req";
-                continue;
+            if (!isset($rInfo->$req) || empty(trim($rInfo->$req))) {
+                $blankFields[] = $label;
             }
+        }
 
-            $x = trim($rInfo->$req);
-            if ($x == "") {
-                $errors[] = "Blank required field $req";
-                continue;
+        foreach (self::PHONE_FIELDS as $field) {
+            if (isset($rInfo->{$field})) {
+                $phone = trim($rInfo->{$field});
+                if (!empty($phone)) {
+                    $this->phone = $phone;
+                    break;
+                }
             }
+        }
+
+        if (empty($this->phone)) {
+            $blankFields[] = 'Phone (home, mobile, and other)';
+        }
+
+        if (!empty($blankFields)) {
+            $errors[] = "Required fields are blank: " . implode(', ', $blankFields);
         }
 
         if (empty($this->email)) {

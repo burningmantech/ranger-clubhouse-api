@@ -138,7 +138,7 @@ class SalesforceConnector
         $client = new Client(['base_uri' => $this->instanceurl]);
 
         try {
-            $response = $client->request('GET', 'services/data/v51.0/query', [
+            $response = $client->request('GET', 'services/data/v57.0/query', [
                 RequestOptions::HEADERS => ['Authorization' => 'Bearer ' . $this->access_token],
                 RequestOptions::QUERY => ['q' => $q]
             ]);
