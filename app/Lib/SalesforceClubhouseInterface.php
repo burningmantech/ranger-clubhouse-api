@@ -89,8 +89,8 @@ class SalesforceClubhouseInterface
 
 //		'Ranger_Info__r.npe01__PreferredPhone__c',
 //		'Ranger_Info__r.HomePhone',
-//		'Ranger_Info__r.MobilePhone',
-//		'Ranger_Info__r.OtherPhone',
+		'Ranger_Info__r.MobilePhone',
+		'Ranger_Info__r.OtherPhone',
 //		'Ranger_Info__r.npe01__WorkPhone__c',
 
 //		'Ranger_Info__r.Birthdate',
