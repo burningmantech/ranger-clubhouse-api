@@ -127,6 +127,17 @@ class Provision extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
+    public static function boot()
+    {
+        parent::boot();
+
+        self::saving(function ($model) {
+            if ($model->type === self::EVENT_RADIO && !$model->item_count) {
+                $model->item_count = 1;
+            }
+        });
+    }
+
     /**
      * Save function. Don't allow an allocated provision to be banked.
      *

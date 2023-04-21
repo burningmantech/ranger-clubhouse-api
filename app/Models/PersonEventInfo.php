@@ -70,7 +70,7 @@ class PersonEventInfo extends ApihouseResult
                         ->get();
             if ($radios->isNotEmpty()) {
                 $info->radio_eligible = true;
-                $info->radio_max = $radios->max('item_count');
+                $info->radio_max = $radios->max('item_count') ?? 1;
                 $info->radio_banked = false;
             } else {
                 $info->radio_eligible = false;
