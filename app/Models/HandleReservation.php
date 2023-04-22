@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Collection;
@@ -47,10 +48,7 @@ class HandleReservation extends ApiModel
 
     protected function endDate(): Attribute
     {
-        return Attribute::make(
-            // Replace an empty date with null
-            set: fn ($value) => empty($value) ? null : $value,
-        );
+        return NullIfEmptyAttribute::make();
     }
 
     public static function findAll(bool $activeOnly = false): Collection

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -38,7 +38,7 @@ class Motd extends ApiModel
     ];
 
 
-    public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -102,8 +102,8 @@ class Motd extends ApiModel
     public static function findForBulletin(int $personId, string $status, array $params): array
     {
         $type = $params['type'] ?? 'all';
-        $page = (int) ($params['page'] ?? 1);
-        $pageSize = (int) ($params['page_size'] ?? 20);
+        $page = (int)($params['page'] ?? 1);
+        $pageSize = (int)($params['page_size'] ?? 20);
 
         switch ($status) {
             case Person::AUDITOR:
@@ -175,9 +175,9 @@ class Motd extends ApiModel
         ];
     }
 
-    public function setExpiresAtAttribute($value)
+    public function expiresAt($value): Attribute
     {
-        $this->attributes['expires_at'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 
     public function getHasReadAttribute()

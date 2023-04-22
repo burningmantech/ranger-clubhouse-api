@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
@@ -94,9 +96,8 @@ class SurveyAnswer extends ApiModel
         return self::where('trainer_id', $personId)->exists();
     }
 
-    public function setTrainerIdAttribute($value)
+    public function trainerId(): Attribute
     {
-        $this->attributes['trainer_id'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
-
 }

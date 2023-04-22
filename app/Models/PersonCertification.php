@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -93,18 +95,18 @@ class PersonCertification extends ApiModel
         return $sql->with(self::RELATIONSHIPS)->get();
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
         $this->load(self::RELATIONSHIPS);
     }
 
-    public function setIssuedOnAttribute($value)
+    public function issuedOn() : Attribute
     {
-        $this->attributes['issued_on'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setTrainedOnAttribute($value)
+    public function trainedOn($value) : Attribute
     {
-        $this->attributes['trained_on'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 }

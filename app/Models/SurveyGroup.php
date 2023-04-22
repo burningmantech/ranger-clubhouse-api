@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\SurveyQuestion;
+use App\Attributes\BlankIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SurveyGroup extends ApiModel
 {
@@ -45,32 +47,33 @@ class SurveyGroup extends ApiModel
         'report_title' => ''
     ];
 
-    public function survey_questions()
+    public function survey_questions(): HasMany
     {
         return $this->hasMany(SurveyQuestion::class);
     }
 
-    public static function findAllForSurvey(int $surveyId)
+    public static function findAllForSurvey(int $surveyId): Collection
     {
         return self::where('survey_id', $surveyId)->orderBy('sort_index')->get();
     }
 
-    public function setDescriptionAttribute($value)
+    public function description(): Attribute
     {
-        $this->attributes['description'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setReportTitleAttribute($value)
+    public function reportTitle()  : Attribute
     {
-        $this->attributes['report_title'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setTypeAttribute($value)
+    public function type() : Attribute
     {
-        $this->attributes['type'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function getReportId() {
+    public function getReportId()
+    {
         if ($this->type == self::TYPE_NORMAL) {
             return 'main';
         } else {
@@ -78,7 +81,8 @@ class SurveyGroup extends ApiModel
         }
     }
 
-    public function getReportTitleDefault() {
+    public function getReportTitleDefault()
+    {
         switch ($this->type) {
             case self::TYPE_NORMAL:
                 return '';

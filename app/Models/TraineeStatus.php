@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -124,8 +126,9 @@ class TraineeStatus extends ApiModel
         self::where('slot_id', $slotId)->delete();
     }
 
-    public function setRankAttribute($value)
+
+    public function rank() : Attribute
     {
-        $this->attributes['rank'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 }

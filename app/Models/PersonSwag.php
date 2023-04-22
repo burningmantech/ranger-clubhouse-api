@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -93,8 +94,6 @@ class PersonSwag extends ApiModel
 
     protected function yearIssued(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => empty($value) ? null : $value
-        );
+        return NullIfEmptyAttribute::make();
     }
 }
