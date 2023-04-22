@@ -3,7 +3,8 @@
 namespace App\Models;
 
 
-use App\Models\ApiModel;
+use App\Attributes\BlankIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class SurveyQuestion extends ApiModel
 {
@@ -20,7 +21,7 @@ class SurveyQuestion extends ApiModel
         'options',
         'type',
         'summarize_rating'
-     ];
+    ];
 
     protected $rules = [
         'type' => 'required|string',
@@ -60,12 +61,13 @@ class SurveyQuestion extends ApiModel
             ->get();
     }
 
-    public function setOptionsAttribute($value)
+    public function options(): Attribute
     {
-        $this->attributes['options'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function responseToOptionLabel($value) {
+    public function responseToOptionLabel($value): ?string
+    {
         if (empty($this->options)) {
             return $value;
         }

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -169,14 +171,11 @@ class TimesheetMissing extends ApiModel
 
     /**
      * Set the partner column.
-     *
-     * @param string|null $value
-     * @return void
-     */
+      */
 
-    public function setPartnerAttribute(?string $value): void
+    public function partner(): Attribute
     {
-        $this->attributes['partner'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 
     /**

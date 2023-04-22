@@ -24,6 +24,7 @@
     "aws/aws-php-sns-message-validator": "^1.8.0",
     "aws/aws-sdk-php": "^3.238.3",
     "doctrine/dbal": "^3.4.5",
+    "giggsey/libphonenumber-for-php": "^8.13",
     "guzzlehttp/guzzle": "^7.5.0",
     "intervention/image": "^2.7.2",
     "laravel/framework": "^10.0",

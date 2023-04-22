@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
 class PersonIntake extends ApiModel
 {
     protected $table = 'person_intake';
@@ -46,24 +49,23 @@ class PersonIntake extends ApiModel
             ->toArray();
     }
 
-    public function setRrnRankAttribute($value)
+    public function rrnRank() : Attribute
     {
-        $this->attributes['rrn_rank'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setMentorRankAttribute($value)
+    public function mentorRank(): Attribute
     {
-        $this->attributes['mentor_rank'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setVcRankAttribute($value)
+    public function vcRank() : Attribute
     {
-        $this->attributes['vc_rank'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setPersonnelRankAttribute($value)
+    public function personnelRank() : Attribute
     {
-        $this->attributes['personnel_rank'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
-
 }

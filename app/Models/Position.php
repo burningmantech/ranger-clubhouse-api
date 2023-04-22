@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
 use App\Lib\Membership;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -284,7 +285,7 @@ class Position extends ApiModel
     ];
 
     const TEAM_CATEGORY_ALL_MEMBERS = 'all_members';
-    const TEAM_CATEGORY_OPTIONAL  = 'optional';
+    const TEAM_CATEGORY_OPTIONAL = 'optional';
     const TEAM_CATEGORY_PUBLIC = 'public';
 
     protected $fillable = [
@@ -444,7 +445,7 @@ class Position extends ApiModel
      * @return void
      */
 
-    public function loadRoles() : void
+    public function loadRoles(): void
     {
         $this->role_ids = $this->position_roles->pluck('role_id')->toArray();
         $this->append('role_ids');
@@ -606,11 +607,9 @@ class Position extends ApiModel
      * @return Attribute
      */
 
-    public function paycode() : Attribute
+    public function paycode(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => empty($value) ? '' : $value
-        );
+        return BlankIfEmptyAttribute::make();
     }
 
     /**
@@ -619,10 +618,8 @@ class Position extends ApiModel
      * @return Attribute
      */
 
-    public function resourceTag() : Attribute
+    public function resourceTag(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => empty($value) ? '' : $value
-        );
+        return BlankIfEmptyAttribute::make();
     }
 }

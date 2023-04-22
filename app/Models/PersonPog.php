@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -125,13 +127,10 @@ class PersonPog extends ApiModel
 
     /**
      * Set the notes
-     *
-     * @param string|null $value
-     * @return void
      */
 
-    public function setNotesAttribute(?string $value): void
+    public function notes() : Attribute
     {
-        $this->attributes['notes'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 }

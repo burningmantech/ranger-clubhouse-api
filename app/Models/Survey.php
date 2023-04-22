@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +45,16 @@ class Survey extends ApiModel
     public function survey_group(): HasMany
     {
         return $this->hasMany(SurveyGroup::class);
+    }
+
+    public function survey_groups(): HasMany
+    {
+        return $this->hasMany(SurveyGroup::class);
+    }
+
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
     }
 
     /**
@@ -254,15 +267,13 @@ class Survey extends ApiModel
             ->whereRaw('NOT EXISTS (SELECT 1 FROM survey_answer JOIN survey ON survey.id=survey_answer.survey_id WHERE survey.position_id=slot.position_id AND survey.type != "trainer" AND survey_answer.person_id=? AND survey_answer.slot_id=trainee_status.slot_id LIMIT 1)', [$personId])
             ->with(['slot:id,description,begins,position_id', 'slot.position:id,title'])
             ->get()
-            ->map(function ($s) {
-                return [
-                    'id' => $s->slot_id,
-                    'begins' => (string)$s->slot->begins,
-                    'description' => $s->slot->description,
-                    'position_id' => $s->slot->position_id,
-                    'position_title' => $s->slot->position->title,
-                ];
-            })->values()->toArray();
+            ->map(fn($s) => [
+                'id' => $s->slot_id,
+                'begins' => (string)$s->slot->begins,
+                'description' => $s->slot->description,
+                'position_id' => $s->slot->position_id,
+                'position_title' => $s->slot->position->title,
+            ])->values()->toArray();
 
         $positionIds = [];
 
@@ -325,18 +336,8 @@ class Survey extends ApiModel
         ];
     }
 
-    public function survey_groups()
+    public function positionId(): Attribute
     {
-        return $this->hasMany(SurveyGroup::class);
-    }
-
-    public function position()
-    {
-        return $this->belongsTo(Position::class);
-    }
-
-    public function setPositionIdAttribute($value)
-    {
-        $this->attributes['position_id'] = empty($value) ? null : $value;
+        return NullIfEmptyAttribute::make();
     }
 }

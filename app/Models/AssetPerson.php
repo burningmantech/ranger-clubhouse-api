@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -136,8 +137,6 @@ class AssetPerson extends ApiModel
 
     protected function attachmentId(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => empty($value) ? null : $value,
-        );
+        return NullIfEmptyAttribute::make();
     }
 }

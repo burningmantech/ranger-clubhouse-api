@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
@@ -68,9 +70,9 @@ class PersonAward extends ApiModel
      * @return bool
      */
 
-    public static function haveAward(int $awardId, int $personId) : bool
+    public static function haveAward(int $awardId, int $personId): bool
     {
-        return self::where([ 'award_id' => $awardId, 'person_id' => $personId])->exists();
+        return self::where(['award_id' => $awardId, 'person_id' => $personId])->exists();
     }
 
     /**
@@ -103,13 +105,10 @@ class PersonAward extends ApiModel
 
     /**
      * Set the notes
-     *
-     * @param string|null $value
-     * @return void
      */
 
-    public function setNotesAttribute(?string $value): void
+    public function notes(): Attribute
     {
-        $this->attributes['notes'] = empty($value) ? '' : $value;
+        return BlankIfEmptyAttribute::make();
     }
 }

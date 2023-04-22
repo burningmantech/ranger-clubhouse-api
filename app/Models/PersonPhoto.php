@@ -6,6 +6,7 @@ use Aws\Credentials\Credentials;
 use Aws\Rekognition\RekognitionClient;
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -225,8 +226,8 @@ class PersonPhoto extends ApiModel
         $includeRejects = $params['include_rejects'] ?? null;
         $sort = $params['sort'] ?? '';
 
-        $page = (int) ($params['page'] ?? 1);
-        $pageSize = (int) ($params['page_size'] ?? 100);
+        $page = (int)($params['page'] ?? 1);
+        $pageSize = (int)($params['page_size'] ?? 100);
 
         $sql = self::select('person_photo.*', DB::raw("(SELECT 1 FROM person WHERE person.id=person_photo.person_id AND person.person_photo_id=person_photo.id LIMIT 1) AS is_active"))
             ->join('person', 'person.id', 'person_photo.person_id')
@@ -427,43 +428,50 @@ class PersonPhoto extends ApiModel
         }
     }
 
-    public function deleteAllVersions()
+    public function deleteAllVersions(): void
     {
         $this->deleteImage();
         $this->deleteOrigImage();
         $this->deleteProfileImage();
     }
 
-    public function setUploadedAtToNow()
+    public function imageUrl(): Attribute
     {
-        $this->uploaded_at = now();
+        return Attribute::make(
+            get: function (mixed $value, array $attributes) {
+                if (!empty($attributes['image_filename'])) {
+                    return PersonPhoto::storage()->url(PersonPhoto::storagePath($attributes['image_filename']));
+                }
+
+                return '';
+            }
+        );
     }
 
-    public function getImageUrlAttribute(): string
+    public function origUrl(): Attribute
     {
-        if (!empty($this->image_filename)) {
-            return self::storage()->url(self::storagePath($this->image_filename));
-        }
+        return Attribute::make(
+            get: function (mixed $value, array $attributes) {
+                if (!empty($attributes['orig_filename'])) {
+                    return PersonPhoto::storage()->url(PersonPhoto::storagePath($attributes['orig_filename']));
+                }
 
-        return '';
+                return '';
+            }
+        );
     }
 
-    public function getOrigUrlAttribute(): string
+    public function profileUrl(): Attribute
     {
-        if (!empty($this->orig_filename)) {
-            return self::storage()->url(self::storagePath($this->orig_filename));
-        }
+        return Attribute::make(
+            get: function (mixed $value, array $attributes) {
+                if (!empty($attributes['profile_filename'])) {
+                    return PersonPhoto::storage()->url(PersonPhoto::storagePath($attributes['profile_filename']));
+                }
 
-        return '';
-    }
-
-    public function getProfileUrlAttribute(): string
-    {
-        if (!empty($this->profile_filename)) {
-            return self::storage()->url(self::storagePath($this->profile_filename));
-        }
-
-        return '';
+                return '';
+            }
+        );
     }
 
     /**
@@ -554,7 +562,7 @@ class PersonPhoto extends ApiModel
      * @return bool - true if succesful
      */
 
-    public function storeImage($contents, $timestamp, $type)
+    public function storeImage($contents, $timestamp, $type): bool
     {
         switch ($type) {
             case self::SIZE_ORIGINAL:
@@ -601,7 +609,7 @@ class PersonPhoto extends ApiModel
      * Delete the photo from storage
      */
 
-    public function deleteImage()
+    public function deleteImage(): void
     {
         if (!empty($this->image_filename)) {
             self::storage()->delete(self::storagePath($this->image_filename));
@@ -612,7 +620,7 @@ class PersonPhoto extends ApiModel
      * Delete the original photo from storage
      */
 
-    public function deleteOrigImage()
+    public function deleteOrigImage(): void
     {
         if (!empty($this->orig_filename)) {
             self::storage()->delete(self::storagePath($this->orig_filename));
@@ -623,25 +631,19 @@ class PersonPhoto extends ApiModel
      * Delete the profile photo from storage
      */
 
-    public function deleteProfileImage()
+    public function deleteProfileImage(): void
     {
         if (!empty($this->profile_filename)) {
             self::storage()->delete(self::storagePath($this->profile_filename));
         }
     }
 
-    public function setRejectReasonsAttribute($value)
+    public function rejectReasons(): Attribute
     {
-        $this->attributes['reject_reasons'] = empty($value) ? null : json_encode($value);
-    }
-
-    public function getRejectReasonsAttribute()
-    {
-        if (!empty($this->attributes['reject_reasons'])) {
-            return json_decode($this->attributes['reject_reasons']);
-        }
-
-        return [];
+        return Attribute::make(
+            get: fn($value) => empty($value) ? [] : json_decode($value),
+            set: fn($value) => empty($value) ? null : json_encode($value)
+        );
     }
 
     public function getRejectLabelsAttribute(): ?array
@@ -732,7 +734,7 @@ class PersonPhoto extends ApiModel
      * @param $contents
      */
 
-    public function analyzeImage($contents)
+    public function analyzeImage($contents): void
     {
         if (!setting('PhotoAnalysisEnabled')) {
             return;
@@ -791,7 +793,7 @@ class PersonPhoto extends ApiModel
      * @return bool
      */
 
-    public function isApproved() : bool
+    public function isApproved(): bool
     {
         return $this->status === self::APPROVED;
     }

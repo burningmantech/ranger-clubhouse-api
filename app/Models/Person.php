@@ -11,6 +11,9 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
+use App\Attributes\NullIfEmptyAttribute;
+use App\Attributes\PhoneAttribute;
 use App\Helpers\SqlHelper;
 use App\Jobs\OnlineTrainingSyncPersonJob;
 use App\Lib\Agreements;
@@ -439,10 +442,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         });
 
         self::updated(function ($model) {
-           if (!empty($model->lms_id)
-           && $model->wasChanged([ 'callsign', 'email', 'first_name', 'last_name' ])) {
-               OnlineTrainingSyncPersonJob::dispatch($model);
-           }
+            if (!empty($model->lms_id)
+                && $model->wasChanged(['callsign', 'email', 'first_name', 'last_name'])) {
+                OnlineTrainingSyncPersonJob::dispatch($model);
+            }
         });
     }
 
@@ -1279,36 +1282,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /**
      * Set the callsign pronunciation column. Remove quotes because people are too "literal" sometimes.
-     *
-     * @param string|null $value
-     * @return void
      */
 
-    public function setCallsignPronounceAttribute(?string $value): void
+    public function callsignPronounce(): Attribute
     {
-        $this->attributes['callsign_pronounce'] = empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)));
-    }
-
-    /**
-     * Normalize long sleeve shirt sizes
-     *
-     * @return string
-     */
-
-    public function getLongsleeveshirtSizeStyleAttribute(): string
-    {
-        return $this->attributes['longsleeveshirt_size_style'] ?? 'Unknown';
-    }
-
-    /**
-     * Normalize T-Shirt sizes
-     *
-     * @return string
-     */
-
-    public function getTeeshirtSizeStyleAttribute(): string
-    {
-        return $this->attributes['teeshirt_size_style'] ?? 'Unknown';
+        return Attribute::make(
+            set: fn ($value) => empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)))
+        );
     }
 
     /**
@@ -1431,37 +1411,49 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /**
      * Set pronouns_custom field to a string value or empty string
-     *
-     * @param $value
-     * @return void
      */
 
-    public function setPronounsCustomAttribute($value): void
+    public function pronounsCustom(): Attribute
     {
-        $this->attributes['pronouns_custom'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
     /**
      * Set pronouns field to a string value or empty string
-     *
-     * @param $value
-     * @return void
-     */
+      */
 
-    public function setPronounsAttribute($value): void
+    public function pronouns(): Attribute
     {
-        $this->attributes['pronouns'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
     /**
      * Set the employee_id fields
      */
 
-    public function employeeId() : Attribute
+    public function employeeId(): Attribute
     {
-        return Attribute::make(
-            set: fn ($value) => empty($value) ? null : $value,
-        );
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function homePhone(): Attribute
+    {
+        return PhoneAttribute::make();
+    }
+
+    public function altPhone(): Attribute
+    {
+        return PhoneAttribute::make();
+    }
+
+    public function smsOnPlaya() : Attribute
+    {
+        return PhoneAttribute::make();
+    }
+
+    public function smsOffPlaya() : Attribute
+    {
+        return PhoneAttribute::make();
     }
 
     /**

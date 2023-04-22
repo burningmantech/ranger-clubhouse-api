@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -118,9 +119,7 @@ class Swag extends ApiModel
 
     protected function shirtType() : Attribute
     {
-        return Attribute::make(
-            set: fn($value) => empty($value) ? '' : $value
-        );
+        return BlankIfEmptyAttribute::make();
     }
 
     /**
