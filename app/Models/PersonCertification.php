@@ -105,7 +105,7 @@ class PersonCertification extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function trainedOn($value) : Attribute
+    public function trainedOn() : Attribute
     {
         return NullIfEmptyAttribute::make();
     }
