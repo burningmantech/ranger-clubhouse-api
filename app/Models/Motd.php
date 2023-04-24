@@ -175,7 +175,7 @@ class Motd extends ApiModel
         ];
     }
 
-    public function expiresAt($value): Attribute
+    public function expiresAt(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
