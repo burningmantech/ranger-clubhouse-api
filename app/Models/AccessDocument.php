@@ -196,6 +196,17 @@ class AccessDocument extends ApiModel
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
                     break;
+
+                case self::LSD:
+                case self::VEHICLE_PASS_LSD:
+                    /*
+                     * LSD items are uploaded to the Clubhouse AFTER the recipient has stated they want the goodies.
+                     * End-users are only told about the items and not be given an opportunity to
+                     */
+                    if ($model->status == self::QUALIFIED) {
+                        $model->status = self::CLAIMED;
+                    }
+                    break;
             }
 
             // Only Gift, LSD, and WAP SOs can have names
