@@ -31,24 +31,27 @@ class TicketingManagement
             $sql = AccessDocument::whereIn('status', AccessDocument::ACTIVE_STATUSES);
         }
 
-
         $rows = $sql->select(
             '*',
-            DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
+        #    DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
         )
-            // Special tickets & associated VPs are handled by a separate interface.
-            ->whereNotIn('type', [
-                AccessDocument::GIFT,
-                AccessDocument::VEHICLE_PASS_GIFT,
-                AccessDocument::LSD,
-                AccessDocument::VEHICLE_PASS_LSD
-            ])
             ->with(['person:id,callsign,status,first_name,last_name,email,home_phone,street1,street2,city,state,zip,country'])
             ->orderBy('source_year')
             ->get();
 
-        $people = [];
+        if ($rows->isNotEmpty()) {
+            $peopleHaveStaffCredentials = DB::table('access_document')
+                ->select('person_id')
+                ->whereIntegerInRaw('person_id', $rows->pluck('person_id')->toArray())
+                ->where('type', AccessDocument::STAFF_CREDENTIAL)
+                ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                ->get()
+                ->keyBy('person_id');
+        } else {
+            $peopleHaveStaffCredentials = collect([]);
+        }
 
+        $people = [];
 
         $dateRange = setting('TAS_WAPDateRange');
         if ($dateRange) {
@@ -117,7 +120,8 @@ class TicketingManagement
                         break;
 
                     case AccessDocument::VEHICLE_PASS:
-                        if ($row->type == AccessDocument::VEHICLE_PASS && $row->has_staff_credential) {
+                        $hasSC = $peopleHaveStaffCredentials->has($row->person_id);
+                        if ($row->type == AccessDocument::VEHICLE_PASS && $hasSC) {
                             $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
                         } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                             $errors[] = 'missing delivery method';

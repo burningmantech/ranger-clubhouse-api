@@ -31,6 +31,7 @@ class AccessDocumentController extends ApiController
             'person_id' => 'sometimes|numeric',
             'status' => 'sometimes|string',
             'type' => 'sometimes|string',
+            'include_person' => 'sometimes|boolean',
         ]);
 
         $this->authorize('index', [AccessDocument::class, $query['person_id'] ?? 0]);
