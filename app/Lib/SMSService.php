@@ -9,7 +9,11 @@
 namespace App\Lib;
 
 use Exception;
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
 use RuntimeException;
+use Twilio\Exceptions\ConfigurationException;
 use Twilio\Exceptions\RestException;
 use Twilio\Exceptions\TwilioException;
 use Twilio\Rest\Client;
@@ -25,7 +29,7 @@ class SMSService
     const NO_STOP_REPLIES = 1;
 
     /*
-     * Retrieve the authenitication tokens needed
+     * Retrieve the authentication tokens needed
      */
 
     public static function getTokens()
@@ -51,7 +55,10 @@ class SMSService
      * @throw SMSException if Twilio experienced an error.
      */
 
-    public static function broadcast($phoneNumbers, $message)
+    /**
+     * @throws SMSException
+     */
+    public static function broadcast($phoneNumbers, $message): string
     {
         list ($accountSid, $authToken) = SMSService::getTokens();
 
@@ -104,10 +111,10 @@ class SMSService
      * @return bool true if the phone can text.
      * @throws RestException
      * @throws TwilioException
-     * @throws \Twilio\Exceptions\ConfigurationException
+     * @throws ConfigurationException
      */
 
-    public static function isSMSCapable($phoneNumber)
+    public static function isSMSCapable($phoneNumber): bool
     {
         list ($accountSid, $authToken) = SMSService::getTokens();
 
@@ -141,7 +148,7 @@ class SMSService
      *
      */
 
-    public static function processIncoming($request)
+    public static function processIncoming($request): object
     {
         return (object)[
             'phone' => $request->input('From') ?? '',
@@ -154,7 +161,7 @@ class SMSService
      * Process a status callback. (currently unused.)
      */
 
-    public static function processStatusCallback()
+    public static function processStatusCallback(): array
     {
         $statusCode = Input::get('MessageStatus');
 
@@ -213,7 +220,7 @@ class SMSService
     }
 
     /*
-     * Normalize a phone number for use by Twilio.
+     * Normalize a phone number to the E164 format for use by Twilio.
      *  - number needs to start with a '+'
      *  - number needs to have a country code
      *  - 10 chars long with no + prefix assumes to be a US/Canadian number.
@@ -223,18 +230,23 @@ class SMSService
      *
      */
 
-    public static function normalizePhone($phone)
+    public static function normalizePhone(string $phone): string
     {
-        // Assume + the number good to go
-        if (substr($phone, 0, 1) == '+') {
+        $phone = trim($phone);
+        $normalized = preg_replace("/\W+/", "", $phone);
+        $len = strlen($normalized);
+
+        $country = null;
+        if ($len == 10 || (str_starts_with($phone, '1') && $len == 11)) {
+            $country = 'US';
+        }
+
+        $util = PhoneNumberUtil::getInstance();
+        try {
+            $parsedPhone = $util->parse($phone, $country);
+            return $util->format($parsedPhone, PhoneNumberFormat::E164);
+        } catch (NumberParseException $e) {
             return $phone;
         }
-
-        // Assume USA/Canada
-        if (strlen($phone) == 10) {
-            return '+1' . $phone;
-        }
-
-        return '+' . $phone;
     }
 }
