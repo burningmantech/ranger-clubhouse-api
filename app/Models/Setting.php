@@ -448,18 +448,18 @@ class Setting extends ApiModel
             'type' => self::TYPE_EMAIL,
         ],
 
+        'TAS_LSD_PayByDateTime' => [
+            'description' => 'The date and time LSD items have to be paid for. Shown on various banners.',
+            'type' => self::TYPE_DATETIME,
+        ],
+
         'TAS_PayByDateTime' => [
-            'description' => 'The date and time items have to be paid for. Shown on the Ticketing is closed page',
+            'description' => 'The date and time items have (non-LSD & Gift) to be paid for. Shown on the Ticketing is closed page.',
             'type' => self::TYPE_DATETIME,
         ],
 
         'TAS_Pickup_Locations' => [
             'description' => 'Locations w/hours to pickup staff credentials and will-call items. Shown on the ticketing page',
-            'type' => self::TYPE_STRING,
-        ],
-
-        'TAS_SpecialSubmitDate' => [
-            'description' => 'Ticketing Submission Deadline. Use to tell the user when the (regular) ticketing window will closed. Format: YYYY-MM-DD',
             'type' => self::TYPE_STRING,
         ],
 
@@ -512,12 +512,6 @@ class Setting extends ApiModel
         'TicketVendorName' => [
             'description' => 'Ticketing Vendor Name',
             'type' => self::TYPE_STRING,
-        ],
-
-        'TicketingForSpecialEnabled' => [
-            'description' => 'Tickets & Stuff Enabled For Special Tickets (LSD and/or Gift if person is eligible)',
-            'type' => self::TYPE_BOOL,
-            'default' => false,
         ],
 
         'TicketingPeriod' => [
