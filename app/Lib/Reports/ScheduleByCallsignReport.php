@@ -13,8 +13,7 @@ class ScheduleByCallsignReport
 
     public static function execute(int $year): array
     {
-        $slots = Slot::select('id', 'begins', 'ends', 'description', 'position_id')
-            ->whereYear('slot.begins', $year)
+        $slots = Slot::whereYear('slot.begins', $year)
             ->with('position:id,title,active')
             ->orderBy('begins')
             ->get();
@@ -62,10 +61,21 @@ class ScheduleByCallsignReport
 
         $people = array_values($people);
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+
+        $slotResults = $slots->map(fn ($slot) => [
+            'id' => $slot->id,
+            'begins' => (string) $slot->begins,
+            'ends' => (string) $slot->ends,
+            'duration' => $slot->duration,
+            'description' =>$slot->description,
+            'tz' => $slot->timezone_abbr,
+            'position_id' => $slot->position_id
+        ])->values();
+
         return [
             'people' => $people,
             'positions' => $positions,
-            'slots' => $slots->keyBy('id')->toArray(),
+            'slots' => $slotResults->keyBy('id')->toArray(),
         ];
     }
 }

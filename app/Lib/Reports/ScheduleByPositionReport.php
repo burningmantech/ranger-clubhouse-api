@@ -39,6 +39,8 @@ class ScheduleByPositionReport
                         'id' => $slot->id,
                         'begins' => (string)$slot->begins,
                         'ends' => (string)$slot->ends,
+                        'duration' => $slot->duration,
+                        'tz' => $slot->timezone_abbr,
                         'active' => $slot->active,
                         'description' => (string)$slot->description,
                         'max' => $slot->max,

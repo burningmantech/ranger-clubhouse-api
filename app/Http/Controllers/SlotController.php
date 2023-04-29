@@ -217,6 +217,7 @@ class SlotController extends ApiController
                     $target->signed_up = 0;
                     $target->active = $activate;
                     $target->auditReason = 'slot copy';
+                    $target->timezone = $source->timezone;
                     $target->saveOrThrow();
                     $results[] = $target;
                 }
