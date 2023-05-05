@@ -33,7 +33,7 @@ class Slot extends ApiModel
     // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers',
-        'trainer_slot:id,position_id,description,begins,ends',
+        'trainer_slot',
         'trainer_slot.position:id,title'
     ];
 
@@ -91,7 +91,6 @@ class Slot extends ApiModel
     public $auditExclude = [
         'signed_up'
     ];
-
 
     public function trainer_slot(): BelongsTo
     {
@@ -347,7 +346,7 @@ class Slot extends ApiModel
     public function getCreditsAttribute(): float
     {
         if ($this->position_id) {
-            return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins_year);
+            return PositionCredit::computeCredits($this->position_id, $this->begins_time, $this->ends_time, $this->begins_year);
         }
 
         return 0.0;
