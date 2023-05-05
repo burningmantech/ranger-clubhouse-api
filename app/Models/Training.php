@@ -556,7 +556,7 @@ class Training extends Position
                 'slot_id' => $row->id,
                 'slot_description' => $row->description,
                 'slot_begins' => (string)$row->begins,
-                'slot_year' => $row->begins->year,
+                'slot_year' => $row->begins_year,
                 'slot_tz' => $row->timezone,
                 'slot_tz_abbr' => $row->timezone_abbr,
                 'slot_has_ended' => $row->has_ended,
@@ -567,6 +567,24 @@ class Training extends Position
         }
 
         return collect($trainings)->groupBy('person_id');
+    }
+
+    /**
+     * Does the person require full training and/or are they a binary?
+     */
+
+    public static function doesRequireInPersonTrainingFullDay(Person $person): array
+    {
+        if ($person->status == Person::ACTIVE) {
+            $isBinary = Timesheet::isPersonBinary($person);
+            // Binaries have to take the full day's training
+            $fullDay = $isBinary;
+        } else {
+            $fullDay = true;
+            $isBinary = false;
+        }
+
+        return [$fullDay, $isBinary];
     }
 
     /**

@@ -298,7 +298,7 @@ class BMIDManagement
 
             case 'signedup':
                 // Find any vets who are signed up and/or passed training
-                $slotIds = Slot::whereYear('begins', $year)
+                $slotIds = Slot::where('begins_year', $year)
                     ->where('begins', '>=', "$year-08-10")
                     ->pluck('id');
 
