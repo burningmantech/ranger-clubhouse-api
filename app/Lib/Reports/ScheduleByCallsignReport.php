@@ -13,7 +13,7 @@ class ScheduleByCallsignReport
 
     public static function execute(int $year): array
     {
-        $slots = Slot::whereYear('slot.begins', $year)
+        $slots = Slot::where('slot.begins_year', $year)
             ->with('position:id,title,active')
             ->orderBy('begins')
             ->get();

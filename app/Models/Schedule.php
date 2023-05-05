@@ -10,39 +10,33 @@ use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class Schedule extends ApiModel
+class Schedule
 {
-    protected $fillable = [
-        'position_count_hours',
-        'position_id',
-        'position_title',
-        'position_type',
-        'slot_active',
-        'slot_begins',
-        'slot_begins_time',
-        'slot_description',
-        'slot_ends',
-        'slot_ends_time',
-        'slot_id',
-        'slot_signed_up',
-        'slot_url',
-        'timezone',
-        'timezone_abbr',
-        'trainers',
-    ];
-
-    // And the rest are calculated
-    protected $appends = [
-        'slot_duration',
-        'year',
-        'credits',
-        'slot_max',
-    ];
-
-    protected $casts = [
-        'slot_begins' => 'datetime',
-        'slot_ends' => 'datetime',
-    ];
+    public $id;
+    public $credits;
+    public $has_ended;
+    public $has_started;
+    public $person_assigned;
+    public $position_id;
+    public $position_title;
+    public $slot_active;
+    public $slot_begins;
+    public $slot_begins_time;
+    public $slot_description;
+    public $slot_duration;
+    public $slot_ends;
+    public $slot_ends_time;
+    public $slot_id;
+    public $slot_max;
+    public $slot_max_potential;
+    public $slot_signed_up;
+    public $slot_tz;
+    public $slot_tz_abbr;
+    public $slot_url;
+    public $timezone;
+    public $trainer_count;
+    public $trainer_slot_id;
+    public $year;
 
     const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes
 
@@ -94,60 +88,78 @@ class Schedule extends ApiModel
 
         $sql = Slot::select('slot.*', 'trainer_slot.signed_up as trainer_count')
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->orderBy('slot.begins');
 
         if ($onlySignups) {
-            $sql->whereNotNull('person_slot.person_id');
             $sql->join('person_slot', function ($join) use ($personId) {
                 $join->where('person_slot.person_id', $personId)
                     ->on('slot.id', 'person_slot.slot_id');
             });
         } else {
+            $personPositions = DB::table('person_position')->where('person_id', $personId)->pluck('position_id');
             $sql->leftJoin('person_slot', function ($join) use ($personId) {
                 $join->where('person_slot.person_id', $personId)
                     ->on('slot.id', 'person_slot.slot_id');
             });
-            $sql->distinct('slot.id');
             $sql->addSelect(DB::raw("IF(person_slot.person_id IS NULL, FALSE, TRUE) as person_assigned"));
-            $sql->leftJoin('person_position', function ($join) use ($personId) {
-                $join->where('person_position.person_id', $personId)
-                    ->on('person_position.position_id', 'slot.position_id');
-            })->whereRaw('(person_slot.person_id IS NOT NULL OR person_position.person_id IS NOT NULL)');
+            $sql->where(function ($q) use ($personPositions) {
+                $q->whereNotNull('person_slot.person_id');
+                if ($personPositions->isNotEmpty()) {
+                    $q->orWhereIn('slot.position_id', $personPositions);
+                }
+            });
         }
 
         $rows = $sql->get();
 
         $slots = [];
         $positionIds = [];
+
+        foreach ($rows as $row) {
+            $positionIds[$row->position_id] = true;
+        }
+
+        if (!empty($positionIds)) {
+            PositionCredit::warmYearCache($year, array_keys($positionIds));
+        }
+
         foreach ($rows as $row) {
             if ($remaining && $row->has_ended) {
                 continue;
             }
 
-            $positionIds[$row->position_id] = true;
+            $entry = new Schedule;
+            $slots[] = $entry;
 
-            $slots[] = [
-                'id' => $row->id,
-                'has_ended' => $row->has_ended,
-                'has_started' => $row->has_started,
-                'person_assigned' => $onlySignups ? true : $row->person_assigned,
-                'position_id' => $row->position_id,
-                'slot_active' => $row->active,
-                'slot_begins' => (string)$row->begins,
-                'slot_begins_time' => $row->begins_time,
-                'slot_description' => $row->description,
-                'slot_ends' => (string)$row->ends,
-                'slot_ends_time' => $row->ends_time,
-                'slot_max_potential' => $row->max,
-                'slot_signed_up' => $row->signed_up,
-                'slot_tz' => $row->timezone,
-                'slot_tz_abbr' => $row->timezone_abbr,
-                'slot_url' => $row->url,
-                'trainer_count' => $row->trainer_count,
-                'trainer_slot_id' => $row->trainer_slot_id,
-            ];
+            // Copy over the slot
+            $entry->id = $row->id;
+            $entry->has_ended = $row->has_ended;
+            $entry->has_started = $row->has_started;
+            $entry->person_assigned = $onlySignups ? true : $row->person_assigned;
+            $entry->position_id = $row->position_id;
+            $entry->slot_active = $row->active;
+            $entry->slot_begins = $row->begins;
+            $entry->slot_begins_time = $row->begins_time;
+            $entry->slot_description = $row->description;
+            $entry->slot_ends = $row->ends;
+            $entry->slot_ends_time = $row->ends_time;
+            $entry->slot_duration = $row->duration;
+
+            $entry->slot_max_potential = $row->max;
+            $entry->slot_signed_up = $row->signed_up;
+            $entry->slot_tz = $row->timezone;
+            $entry->slot_tz_abbr = $row->timezone_abbr;
+            $entry->slot_url = $row->url;
+            $entry->trainer_count = $row->trainer_count;
+            $entry->trainer_slot_id = $row->trainer_slot_id;
+
+            // Compute some values
+            $entry->year = $year;
+            $entry->slot_max = ($entry->trainer_slot_id ? $entry->trainer_count * $entry->slot_max_potential : $entry->slot_max_potential);
         }
+
+        PositionCredit::bulkComputeCredits($slots, $year, 'slot_begins_time', 'slot_ends_time');
 
         if (!empty($positionIds)) {
             $positions = DB::table('position')
@@ -159,9 +171,8 @@ class Schedule extends ApiModel
             $positions = [];
         }
 
-
         // return an array of Schedule loaded from the rows
-        return [Schedule::hydrate($slots), $positions];
+        return [$slots, $positions];
     }
 
     /**
@@ -344,7 +355,7 @@ class Schedule extends ApiModel
     {
         $enrollments = null;
 
-        $year = $slot->begins->year;
+        $year = $slot->begins_year;
         $positionId = $slot->position_id;
 
         $slotIds = self::findEnrolledSlotIds($personId, $year, $positionId);
@@ -557,13 +568,8 @@ class Schedule extends ApiModel
             $positionsById[(int)$position->id] = $position;
         }
 
-        if (!$rows->isEmpty()) {
-            // Warm the position credit cache.
-            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
-        }
-
         // Skip any training shifts which don't earn credits.
-        $rows = $rows->filter(fn($r) => $r->credits > 0 || $positionsById[(int)$r->position_id]->type != Position::TYPE_TRAINING);
+        $rows = array_filter($rows, fn($r) => $r->credits > 0 || $positionsById[(int)$r->position_id]->type != Position::TYPE_TRAINING);
 
         $totalDuration = 0.0;
         $countedDuration = 0.0;
@@ -624,20 +630,17 @@ class Schedule extends ApiModel
         if ($remaining) {
             $query['remaining'] = true;
         }
+
         $now = now();
 
         list ($rows, $positions) = self::findForQuery($personId, $year, $query);
 
         $eventDates = EventDate::findForYear($year);
 
-        if (!$rows->isEmpty()) {
-            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
-        }
-
         if (!$eventDates) {
             // No event dates - return everything as happening during the event
-            $time = $rows->pluck('slot_duration')->sum();
-            $credits = $rows->pluck('credits')->sum();
+            $time = array_sum(array_column($rows, 'slot_duration'));
+            $credits = array_sum(array_column($rows, 'credits'));
 
             return (object)[
                 'pre_event_duration' => 0,
@@ -650,6 +653,7 @@ class Schedule extends ApiModel
                 'total_credits' => $credits,
                 'other_duration' => 0,
                 'counted_duration' => 0,
+                'credits_earned' => 0.0,
             ];
         }
 
@@ -683,6 +687,7 @@ class Schedule extends ApiModel
             'counted_duration' => ($summary->pre_event_duration + $summary->event_duration + $summary->post_event_duration),
             'event_start' => (string)$eventDates->event_start,
             'event_end' => (string)$eventDates->event_end,
+            'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year)
         ];
     }
 
@@ -759,53 +764,48 @@ class Schedule extends ApiModel
         }
 
         $slots = array_values($slots);
-        usort($slots, function ($a, $b) {
-            return strcmp($a['slot_begins'], $b['slot_begins']);
-        });
+        usort($slots, fn($a, $b) => strcmp($a['slot_begins'], $b['slot_begins']));
         return $slots;
     }
 
     /**
-     * Calculate how long the shift is in seconds.
-     *
-     * @return int
+     * Render the object to an array - used by Laravel response encoder.
+     * @return array
      */
 
-    public function getSlotDurationAttribute(): int
+    public function toArray(): array
     {
-        return $this->slot_ends_time - $this->slot_begins_time;
+        return [
+            'id' => $this->id,
+            'credits' => $this->credits,
+            'has_ended' => $this->has_ended,
+            'has_started' => $this->has_started,
+            'person_assigned' => $this->person_assigned,
+            'position_id' => $this->position_id,
+            'position_title' => $this->position_title,
+            'slot_active' => $this->slot_active,
+            'slot_begins' => (string)$this->slot_begins,
+            'slot_begins_time' => $this->slot_begins_time,
+            'slot_description' => $this->slot_description,
+            'slot_duration' => $this->slot_duration,
+            'slot_ends' => (string) $this->slot_ends,
+            'slot_ends_time' => $this->slot_ends_time,
+            'slot_id' => $this->slot_id,
+            'slot_max' => $this->slot_max,
+            'slot_max_potential' => $this->slot_max_potential,
+            'slot_signed_up' => $this->slot_signed_up,
+            'slot_tz' => $this->slot_tz,
+            'slot_tz_abbr' => $this->slot_tz_abbr,
+            'slot_url' => $this->slot_url,
+            'timezone' => $this->timezone,
+            'trainer_count' => $this->trainer_count,
+            'trainer_slot_id' => $this->trainer_slot_id,
+            'year' => $this->year,
+        ];
     }
 
-    /**
-     * Return the year the slot is for
-     *
-     * @return int
-     */
-
-    public function getYearAttribute(): int
+    public function toJson() : string
     {
-        return $this->slot_begins->year;
-    }
-
-    /**
-     * Return how many credits this slot is worth
-     *
-     * @return float
-     */
-
-    public function getCreditsAttribute(): float
-    {
-        return PositionCredit::computeCredits($this->position_id, $this->slot_begins_time, $this->slot_ends_time, $this->year);
-    }
-
-    /**
-     * Figure out how many signups are allowed.
-     *
-     * @return int
-     */
-
-    public function getSlotMaxAttribute(): int
-    {
-        return ($this->trainer_slot_id ? $this->trainer_count * $this->slot_max_potential : $this->slot_max_potential);
+        return json_encode($this->toArray());
     }
 }

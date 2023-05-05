@@ -21,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
         ini_set('upload_max_filesize', '32M');
         ini_set('post_max_size', '32M');
 
-        if (env('APP_DEBUG')) {
+        if (env('APP_SQL_DEBUG')) {
             DB::listen(function ($query) {
                 $placeholder = preg_quote('?', '/');
                 $sql = $query->sql;

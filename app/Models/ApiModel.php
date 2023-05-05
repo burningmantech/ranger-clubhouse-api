@@ -55,6 +55,8 @@ abstract class ApiModel extends Model
     protected $resourceSingle;
     protected $resourceCollection;
 
+    protected $virtualColumns;
+
     public static function boot()
     {
         parent::boot();
@@ -172,6 +174,10 @@ abstract class ApiModel extends Model
     {
         if (!$this->validate()) {
             return false;
+        }
+
+        if (!empty($this->virtualColumns)) {
+            $this->attributes = array_diff_key($this->attributes, array_flip($this->virtualColumns));
         }
 
         return parent::save($options);

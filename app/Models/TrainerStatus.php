@@ -16,7 +16,7 @@ class TrainerStatus extends ApiModel
     const PENDING = 'pending';
     const NO_SHOW = 'no-show';
 
-    protected $guarded = [ 'id' ];
+    protected $guarded = ['id'];
 
     public function slot(): BelongsTo
     {
@@ -82,12 +82,12 @@ class TrainerStatus extends ApiModel
      * Retrieve all the sessions the person may have taught
      *
      * @param int $personId the person to check
-     * @param  $positionIds the positions to check (Trainer / Trainer Assoc. / Uber /etc)
+     * @param array $positionIds positions to check (Trainer / Trainer Assoc. / Uber /etc)
      * @param int $year the year to check
      * @return Collection
      */
 
-    public static function retrieveSessionsForPerson(int $personId, $positionIds, int $year): Collection
+    public static function retrieveSessionsForPerson(int $personId, array $positionIds, int $year): Collection
     {
         return DB::table('slot')
             ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', DB::raw('IFNULL(trainer_status.status, "pending") as status'))
