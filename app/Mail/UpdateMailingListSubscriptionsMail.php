@@ -15,7 +15,11 @@ class UpdateMailingListSubscriptionsMail extends ClubhouseMailable
      *
      * @return void
      */
-    public function __construct(public Person $person, public Person $user, public string $oldEmail, public string $additionalLists)
+    public function __construct(public Person $person,
+                                public Person $user,
+                                public string $oldEmail,
+                                public string $additionalLists,
+                                public        $teams)
     {
         parent::__construct();
 
