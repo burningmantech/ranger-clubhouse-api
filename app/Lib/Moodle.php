@@ -243,6 +243,7 @@ class Moodle
 
     public function processCourseCompletion(int $courseId): void
     {
+        $year = current_year();
         $enrolled = $this->retrieveCourseEnrollment($courseId);
         $students = $this->findClubhouseUsers($enrolled);
 
@@ -254,7 +255,7 @@ class Moodle
         $completedAlready = [];
         if (!empty($peopleIds)) {
             $peopleCompleted = PersonOnlineTraining::whereIntegerInRaw('person_id', $peopleIds)
-                ->whereYear('completed_at', current_year())
+                ->whereYear('completed_at', $year)
                 ->get();
             foreach ($peopleCompleted as $person) {
                 $completedAlready[$person->person_id] = true;
@@ -293,10 +294,20 @@ class Moodle
                 }
             }
 
+            if ($finished) {
+                $completed = Carbon::createFromTimestamp($finished);
+                if ($completed->year != $year) {
+                    // Not completed in the current year, skip it.
+                    continue;
+                }
+            } else {
+                $completed = now();
+            }
+
             $ot = new PersonOnlineTraining([
                 'person_id' => $person->id,
                 'type' => PersonOnlineTraining::MOODLE,
-                'completed_at' => $finished ? Carbon::createFromTimestamp($finished) : now()
+                'completed_at' => $completed,
             ]);
             $ot->auditReason = 'course completion';
             $ot->save();

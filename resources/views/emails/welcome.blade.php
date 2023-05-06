@@ -77,7 +77,7 @@
         <p>
             The general locations of Ranger Trainings are posted at this link:
             <a href="https://rangers.burningman.org/training">rangers.burningman.org/training</a>,
-            which will continue to be updated through the end of May, as
+            which will continue to be updated through the end of Spring, as
             new trainings are announced. Specific location information will be released by email
             closer to the training date to those Rangers signed up for that date. Stay tuned to
             Ranger Applicant News as new trainings are posted. Please sign up for a training by June

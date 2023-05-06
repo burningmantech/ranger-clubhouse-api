@@ -35,6 +35,11 @@ class PositionCredit extends ApiModel
         'credits_per_hour' => 'required|numeric',
     ];
 
+    protected $virtualColumns = [
+        'start_year',
+        'end_year'
+    ];
+
     const RELATIONS = ['position:id,title'];
 
     public int $start_timestamp;
@@ -44,7 +49,7 @@ class PositionCredit extends ApiModel
     {
         return $this->belongsTo(Position::class);
     }
-    
+
     /**
      * Find all credits for a given year
      *
@@ -82,8 +87,8 @@ class PositionCredit extends ApiModel
         }
 
         $rows = self::where('position_id', $positionId)
-            ->whereYear('start_time', $year)
-            ->whereYear('end_time', $year)
+            ->where('start_year', $year)
+            ->where('end_year', $year)
             ->orderBy('start_time')
             ->get();
 
@@ -107,7 +112,7 @@ class PositionCredit extends ApiModel
      * @param $positionIds
      */
 
-    public static function warmYearCache(int $year, $positionIds)
+    public static function warmYearCache(int $year, $positionIds): void
     {
         self::warmBulkYearCache([$year => $positionIds]);
     }
@@ -116,9 +121,10 @@ class PositionCredit extends ApiModel
      * Warm the position credit cache with credits based on the given year and position ids.
      *
      * @param $bulkYears
+     * @throws InvalidArgumentException
      */
 
-    public static function warmBulkYearCache($bulkYears)
+    public static function warmBulkYearCache($bulkYears): void
     {
         $sql = self::query();
 
@@ -127,7 +133,7 @@ class PositionCredit extends ApiModel
         foreach ($bulkYears as $year => $positionIds) {
             $cacheKey = self::getCacheKey($year);
             if (empty($positionIds)) {
-                $sql->orWhereYear('start_time', $year);
+                $sql->orWhere('start_year', $year);
                 $didCache = false;
                 $cacheStore->put($cacheKey, []); // Pulling in all positional credits for the year.
                 continue;
@@ -149,7 +155,7 @@ class PositionCredit extends ApiModel
 
             $didCache = false;
             $sql->orWhere(function ($q) use ($year, $findIds) {
-                $q->whereYear('start_time', $year);
+                $q->where('start_year', $year);
                 $q->whereIn('position_id', $findIds);
             });
         }
@@ -161,7 +167,7 @@ class PositionCredit extends ApiModel
 
         $pcByYear = $sql->orderBy('start_time')
             ->get()
-            ->groupBy(fn($row) => $row->start_time->year);
+            ->groupBy(fn($row) => $row->start_year);
 
         foreach ($pcByYear as $year => $rows) {
             $cacheKey = self::getCacheKey($year);
@@ -215,6 +221,50 @@ class PositionCredit extends ApiModel
         }
 
         return $total;
+    }
+
+    /**
+     * Bulk compute the credits. This avoids the overhead with hitting the cache over, and over when iterating over
+     * a large slot/timesheet set and magic accessor methods (e.g., $slot->credits)
+     *
+     * Note: the cache must be warmed before running this.
+     *
+     * @param $rows array of objects with properties position_id,  & credits
+     * @param int $year the year being computed
+     * @param string $startColumn the start timestamp (integer) column name in the $rows
+     * @param string $endColumn the end timestamp (integer) column name in the $rows
+     * @throws InvalidArgumentException
+     */
+
+    public static function bulkComputeCredits($rows, int $year, string $startColumn, string $endColumn): void
+    {
+        $cacheKey = self::getCacheKey($year);
+        $cached = self::cacheStore()->get($cacheKey) ?? [];
+
+        foreach ($rows as $row) {
+            if (isset($cached[$row->position_id])) {
+                $credits = $cached[$row->position_id];
+                if (empty($credits)) {
+                    $row->credits = 0.0;
+                    continue;
+                }
+            } else {
+                $row->credits = 0.0;
+                continue;
+            }
+
+            $total = 0.0;
+
+            foreach ($credits as $credit) {
+                $minutes = self::minutesOverlap($row->{$startColumn}, $row->{$endColumn}, $credit->start_timestamp, $credit->end_timestamp);
+
+                if ($minutes > 0) {
+                    $total += $minutes * $credit->credits_per_hour / 60.0;
+                }
+            }
+
+            $row->credits = $total;
+        }
     }
 
     public static function minutesOverlap(int $startA, int $endA, int $startB, int $endB): float

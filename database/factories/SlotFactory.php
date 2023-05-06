@@ -19,6 +19,21 @@ class SlotFactory extends Factory
             'description' => 'slot',
             'signed_up' => 0,
             'timezone' => 'America/Los_Angeles',
+            'timezone_abbr' => 'PST',
         ];
+    }
+
+    /**
+     * Configure the model factory.
+     */
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function ($slot) {
+            $slot->begins_year = $slot->begins->year;
+            $slot->begins_time = $slot->begins_adjusted->timestamp;
+            $slot->ends_time = $slot->ends_adjusted->timestamp;
+            $slot->duration = $slot->ends_time - $slot->begins_time;
+        });
     }
 }

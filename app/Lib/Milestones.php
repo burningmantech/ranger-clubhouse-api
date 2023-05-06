@@ -8,7 +8,6 @@ use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPosition;
-use App\Models\PersonRole;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Schedule;
@@ -40,7 +39,8 @@ class Milestones
 
         $event = PersonEvent::firstOrNewForPersonYear($person->id, $year);
         $period = EventDate::calculatePeriod();
-        $isBinary = Timesheet::isPersonBinary($person);
+        list ($fullTraining, $isBinary) = Training::doesRequireInPersonTrainingFullDay($person);
+
         $isNonRanger = ($status == Person::NON_RANGER);
 
         $settings = setting([
@@ -55,6 +55,7 @@ class Milestones
             'online_training_passed' => $isNonRanger || PersonOnlineTraining::didCompleteForYear($person->id, $year),
             'online_training_enabled' => $settings['OnlineTrainingEnabled'],
             'online_training_url' => $settings['OnlineTrainingUrl'],
+            'needs_full_training' => $fullTraining,
             'behavioral_agreement' => $person->behavioral_agreement,
             'has_reviewed_pi' => !empty($event->pii_finished_at) && $event->pii_finished_at->year == $year,
             'asset_authorized' => $event->asset_authorized,
@@ -87,7 +88,6 @@ class Milestones
 
         $milestones['art_trainings'] = $artTrainings;
 
-
         if (in_array($status, Person::ACTIVE_STATUSES)) {
             // Only require Online Training to be passed in order to work? (2021 social distancing training)
             $milestones['online_training_only'] = setting($isBinary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
@@ -115,15 +115,11 @@ class Milestones
                         ];
                     }
                 }
-                $milestones['needs_full_training'] = true;
                 break;
 
             case Person::ACTIVE:
                 if ($isBinary) {
-                    // Binaries have to take a full day's training, or
-                    // everyone is being forced to take the full version.
-                    $milestones['needs_full_training'] = true;
-                    $milestones['is_binary'] = $isBinary;
+                     $milestones['is_binary'] = true;
                 }
 
                 if (setting('OnlineTrainingFullCourseForVets')) {
@@ -131,16 +127,10 @@ class Milestones
                 }
                 break;
 
-            case Person::INACTIVE:
-                // Inactives need a full day's training
-                $milestones['needs_full_training'] = true;
-                break;
-
             case Person::INACTIVE_EXTENSION:
             case Person::RETIRED:
             case Person::RESIGNED:
                 // Full day's training required, and walk a cheetah shift.
-                $milestones['needs_full_training'] = true;
                 $milestones['is_cheetah_cub'] = true;
                 $cheetah = Schedule::findEnrolledSlots($person->id, $year, Position::CHEETAH_CUB)->last();
                 if ($cheetah) {

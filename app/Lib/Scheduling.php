@@ -7,6 +7,7 @@ use App\Models\Person;
 use App\Models\PersonOnlineTraining;
 use App\Models\PersonPhoto;
 use App\Models\Schedule;
+use App\Models\Training;
 
 class Scheduling
 {
@@ -55,7 +56,8 @@ class Scheduling
         if ($isAuditor && setting('OnlineTrainingOnlyForAuditors')) {
             return [
                 'online_training_only' => true,
-                'online_training_enabled' => $otEnabled
+                'online_training_enabled' => $otEnabled,
+                'needs_full_training' => true,
             ];
         }
 
@@ -131,6 +133,8 @@ class Scheduling
             $canSignUpForAllShifts = false;
         }
 
+        list ($needsFullTraining, $isBinary) = Training::doesRequireInPersonTrainingFullDay($person);
+
         return [
             // Can the person sign up for all (except training) shifts?
             'all_signups_allowed' => $canSignUpForAllShifts,
@@ -139,6 +143,7 @@ class Scheduling
             'training_signups_allowed' => $canSignUpForTraining,
             'requirements' => $requirements,
             'recommend_burn_weekend_shift' => self::recommendBurnWeekendShift($person),
+            'needs_full_training' => $needsFullTraining,
         ];
     }
 

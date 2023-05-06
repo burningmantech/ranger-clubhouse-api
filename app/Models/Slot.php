@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * @property Carbon $begins
@@ -31,7 +33,7 @@ class Slot extends ApiModel
     // related tables to be loaded with row
     const WITH_POSITION_TRAINER = [
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers',
-        'trainer_slot:id,position_id,description,begins,ends',
+        'trainer_slot',
         'trainer_slot.position:id,title'
     ];
 
@@ -55,12 +57,19 @@ class Slot extends ApiModel
         'url',
     ];
 
+    // Computed from the other fields
+    protected $guarded = [
+        'begins_time',
+        'begins_year',
+        'duration',
+        'ends_time',
+        'timezone_abbr',
+    ];
+
     protected $appends = [
         'credits',
         'has_started',
         'has_ended',
-        'duration',
-        'timezone_abbr'
     ];
 
     protected $rules = [
@@ -108,10 +117,41 @@ class Slot extends ApiModel
         return $this->belongsTo(Position::class, 'position_id');
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
         $this->load(self::WITH_POSITION_TRAINER);
     }
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::saving(function ($model) {
+            // Compute the timezone abbreviation. Have to use the begins time because it could be PDT or PST.
+            if (($model->isDirty('begins') || $model->isDirty('timezone')) && $model->begins) {
+                $tz = $model->begins_adjusted->format('T');
+                if (str_starts_with($tz, '+') || str_starts_with($tz, '-')) {
+                    $tz = 'UTC' . $tz;
+                }
+
+                $model->timezone_abbr = $tz;
+            }
+
+            if ($model->isDirty('begins')) {
+                $model->begins_year = $model->begins->year;
+                $model->begins_time = $model->begins_adjusted->timestamp;
+            }
+
+            if ($model->isDirty('ends')) {
+                $model->ends_time = $model->ends_adjusted->timestamp;
+            }
+
+            if ($model->isDirty('begins') || $model->isDirty('ends')) {
+                $model->duration = $model->ends_time - $model->begins_time;
+            }
+        });
+    }
+
 
     /**
      * Find slots based on the given criteria
@@ -158,7 +198,7 @@ class Slot extends ApiModel
 
     public static function findWithSignupsForYear(int $year): \Illuminate\Database\Eloquent\Collection
     {
-        return self::whereYear('begins', $year)
+        return self::where('begins_year', $year)
             ->where('signed_up', '>', 0)
             ->with('position:id,title')
             ->orderBy('begins')
@@ -229,7 +269,7 @@ class Slot extends ApiModel
             $q->where('person_slot.person_id', $personId);
         })->where('position_id', $positionId)
             ->where('slot.active', true)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->where('slot.position_id', $positionId)
             ->orderBy('begins')
             ->first();
@@ -243,9 +283,9 @@ class Slot extends ApiModel
 
     public static function findYears(): array
     {
-        return self::selectRaw('YEAR(begins) as year')
-            ->groupBy(DB::raw('YEAR(begins)'))
-            ->pluck('year')
+        return self::select('begins_year')
+            ->groupBy('begins_year')
+            ->pluck('begins_year')
             ->toArray();
     }
 
@@ -259,7 +299,7 @@ class Slot extends ApiModel
 
     public static function haveActiveForPosition(int $positionId): bool
     {
-        return self::whereYear('begins', current_year())
+        return self::where('begins_year', current_year())
             ->where('position_id', $positionId)
             ->where('active', true)
             ->exists();
@@ -275,8 +315,8 @@ class Slot extends ApiModel
     public static function retrieveDirtTimes(int $year): Collection
     {
         $rows = DB::table('slot')
-            ->select('position_id', 'begins', 'ends', DB::raw('timestampdiff(second, begins, ends) as duration'))
-            ->whereYear('begins', $year)
+            ->select('position_id', 'begins', 'ends', 'duration')
+            ->where('begins_year', $year)
             ->whereIn('position_id', [Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT])
             ->orderBy('begins')
             ->get();
@@ -300,12 +340,13 @@ class Slot extends ApiModel
      * Retrieve the credits potential for the slot
      *
      * @return float
+     * @throws InvalidArgumentException
      */
 
     public function getCreditsAttribute(): float
     {
         if ($this->position_id) {
-            return PositionCredit::computeCredits($this->position_id, $this->begins->timestamp, $this->ends->timestamp, $this->begins->year);
+            return PositionCredit::computeCredits($this->position_id, $this->begins_time, $this->ends_time, $this->begins_year);
         }
 
         return 0.0;
@@ -363,7 +404,7 @@ class Slot extends ApiModel
 
     public function getHasStartedAttribute(): bool
     {
-        return $this->begins_adjusted->lt(now());
+        return $this->begins_adjusted?->lt(now()) ?? false;
     }
 
     /**
@@ -374,80 +415,32 @@ class Slot extends ApiModel
 
     public function getHasEndedAttribute(): bool
     {
-        return $this->ends_adjusted->lte(now());
+        return $this->ends_adjusted?->lte(now()) ?? false;
     }
 
     /**
-     * Set the timezone, set null if the string is empty.
+     * Set the timezone, default to Pacific timezone if blank.
      *
-     * @param string|null $timezone
-     * @return void
+     * @return Attribute
      */
 
-    public function setTimezoneAttribute(?string $timezone): void
+    public function timezone(): Attribute
     {
-        $this->attributes['timezone'] = empty($timezone) ? 'America/Los_Angeles' : $timezone;
+        return Attribute::make(
+            set: fn ($timezone) =>  empty($timezone) ? 'America/Los_Angeles' : $timezone
+        );
     }
 
     /**
      * Adjust the timezone if one was given.
      *
-     * @param Carbon $time
-     * @return Carbon
+     * @param ?Carbon $time
+     * @return ?Carbon
      */
 
-    public function adjustTimezone(Carbon $time): Carbon
+    public function adjustTimezone(?Carbon $time): ?Carbon
     {
-        return $time->clone()->shiftTimezone($this->timezone);
-    }
-
-    /**
-     * Get the beginning time timestamp
-     *
-     * @return int
-     */
-
-    public function getBeginsTimeAttribute(): int
-    {
-        return $this->begins_adjusted->timestamp;
-    }
-
-    /**
-     * Get the ending time timestamp
-     *
-     * @return int
-     */
-
-    public function getEndsTimeAttribute(): int
-    {
-        return $this->ends_adjusted->timestamp;
-    }
-
-    /**
-     * Obtain the timezone abbreviation
-     *
-     * @return string
-     */
-
-    public function getTimezoneAbbrAttribute(): string
-    {
-        $tz = $this->begins_adjusted->format('T');
-        if (str_starts_with($tz, '+') || str_starts_with($tz, '-')) {
-            return 'UTC'.$tz;
-        } else {
-            return $tz;
-        }
-    }
-
-    /**
-     * Calculate the slot duration (in seconds)
-     *
-     * @return int
-     */
-
-    public function getDurationAttribute(): int
-    {
-        return $this->ends->timestamp - $this->begins->timestamp;
+        return $time?->clone()->shiftTimezone($this->timezone);
     }
 
     /**
@@ -461,15 +454,16 @@ class Slot extends ApiModel
         return max(now()->timestamp - $this->ends_adjusted->timestamp, 0);
     }
 
-    public function getBeginsAdjustedAttribute(): Carbon
+    public function getBeginsAdjustedAttribute(): ?Carbon
     {
         return $this->adjustTimezone($this->begins);
     }
 
-    public function getEndsAdjustedAttribute(): Carbon
+    public function getEndsAdjustedAttribute(): ?Carbon
     {
         return $this->adjustTimezone($this->ends);
     }
+
 
     /**
      * Check to see if the slot begins within the pre-event period and is not a training slot
@@ -484,6 +478,7 @@ class Slot extends ApiModel
             return false;
         }
 
+        // Note: don't use begins_year since it may have not been set yet.
         $eventDate = EventDate::findForYear($this->begins->year);
 
         if (!$eventDate || !$eventDate->pre_event_slot_start || !$eventDate->pre_event_slot_end) {

@@ -365,7 +365,7 @@ class Timesheet extends ApiModel
      * YEARS_NON_RANGERED: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_non_ranger=true)
      *
      * @param int $personId
-     * @param string $whichYears
+     * @param string $type
      * @return array
      */
 

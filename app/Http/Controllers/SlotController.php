@@ -18,6 +18,7 @@ use App\Models\TraineeNote;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -217,6 +218,10 @@ class SlotController extends ApiController
                     $target->signed_up = 0;
                     $target->active = $activate;
                     $target->auditReason = 'slot copy';
+                    $target->timezone = $source->timezone;
+                    if (!$this->validateRestrictions($target)) {
+                        throw new UnexpectedValueException("One more or slots occur in the pre-event period and require Admin permissions to create. Check with the Logistics Manager to approve.");
+                    }
                     $target->saveOrThrow();
                     $results[] = $target;
                 }
@@ -329,6 +334,7 @@ class SlotController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws Exception
      */
 
     public function shiftLeadReport(): JsonResponse

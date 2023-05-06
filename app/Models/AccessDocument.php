@@ -158,7 +158,6 @@ class AccessDocument extends ApiModel
     ];
 
     protected $hidden = [
-        'person',
         'additional_comments',   // pseudo-column, write-only. used to append to comments.
     ];
 
@@ -197,6 +196,17 @@ class AccessDocument extends ApiModel
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
                     break;
+
+                case self::LSD:
+                case self::VEHICLE_PASS_LSD:
+                    /*
+                     * LSD items are uploaded to the Clubhouse AFTER the recipient has stated they want the goodies.
+                     * End-users are only told about the items and not be given an opportunity to
+                     */
+                    if ($model->status == self::QUALIFIED) {
+                        $model->status = self::CLAIMED;
+                    }
+                    break;
             }
 
             // Only Gift, LSD, and WAP SOs can have names
@@ -233,13 +243,13 @@ class AccessDocument extends ApiModel
 
     public static function findForQuery($query): Collection
     {
-        $sql = self::orderBy('source_year')->orderBy('type');
+        $sql = self::orderBy('type');
 
         $status = $query['status'] ?? null;
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
-        $excludeSpecial = $query['exclude_special'] ?? null;
+        $includePerson = $query['include_person'] ?? null;
 
         if ($status != 'all') {
             if (empty($status)) {
@@ -261,7 +271,18 @@ class AccessDocument extends ApiModel
             $sql->where('source_year', $year);
         }
 
-        return $sql->get();
+        if ($includePerson) {
+            $sql->with('person:id,callsign');
+        } else {
+            $sql->orderBy('source_year');
+        }
+
+        $rows = $sql->get();
+        if ($includePerson) {
+            return $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
+        } else {
+            return $rows;
+        }
     }
 
     /**
@@ -302,7 +323,7 @@ class AccessDocument extends ApiModel
      * @param array $type
      */
 
-    public static function markSubmittedForBMID(int $personId, array $type)
+    public static function markSubmittedForBMID(int $personId, array $type): void
     {
         $rows = self::whereIn('type', $type)
             ->where('person_id', $personId)
@@ -615,7 +636,7 @@ class AccessDocument extends ApiModel
         return in_array($this->type, self::SPECIAL_TICKET_TYPES);
     }
 
-    public function isAvailable() : bool
+    public function isAvailable(): bool
     {
         return $this->status == AccessDocument::QUALIFIED
             || $this->status == AccessDocument::CLAIMED

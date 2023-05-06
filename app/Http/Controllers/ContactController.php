@@ -8,6 +8,7 @@ use App\Models\Alert;
 use App\Models\AlertPerson;
 use App\Models\ErrorLog;
 use App\Models\Person;
+use App\Models\PersonTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use InvalidArgumentException;
@@ -102,7 +103,8 @@ class ContactController extends ApiController
             return $this->success();
         }
 
-        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? ''), true);
+        $teams = PersonTeam::findAllTeamsForPerson($person->id);
+        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? '', $teams), true);
         return $this->success();
     }
 }

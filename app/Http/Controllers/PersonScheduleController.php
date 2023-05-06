@@ -41,29 +41,25 @@ class PersonScheduleController extends ApiController
 
         $year = $query['year'];
 
+
         list ($rows, $positions) = Schedule::findForQuery($person->id, $year, $query);
 
         $results = [
-            'slots' => $rows,
+            'slots' => array_map(fn($r) => $r->toArray(), $rows),
             'positions' => $positions
         ];
 
         // Try to reduce the round trips to the backend by including common associated scheduling info
         if ($query['credits_earned'] ?? false) {
-            $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
+           $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
         }
 
         if ($query['schedule_summary'] ?? false) {
-            $results['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
+           $results['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
         }
 
         if ($query['signup_permission'] ?? false) {
             $results['signup_permission'] = Scheduling::retrieveSignUpPermission($person, $year);
-        }
-
-        if (!$rows->isEmpty()) {
-            // Warm the position credit cache.
-            PositionCredit::warmYearCache($query['year'], array_unique($rows->pluck('position_id')->toArray()));
         }
 
         return response()->json($results);
@@ -298,6 +294,8 @@ class PersonScheduleController extends ApiController
 
             $this->log('person-slot-remove', 'removed', $data, $person->id);
         }
+
+        $result['recommend_burn_weekend_shift'] = Scheduling::recommendBurnWeekendShift($person);
 
         return response()->json($result);
     }

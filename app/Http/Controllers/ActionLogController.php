@@ -8,17 +8,18 @@ use App\Models\Person;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class ActionLogController extends ApiController
 {
     /**
      * Retrieve the action log
      *
-     * @return JsonResponse|mixed
+     * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $this->authorize('index', ActionLog::class);
 
@@ -74,10 +75,15 @@ class ActionLogController extends ApiController
             'message' => 'sometimes|string'
         ]);
 
+        $id = Auth::id();
+        if (!$id) {
+            $id = $params['person_id'] ?? null;
+        }
+
         $log = new ActionLog([
             'ip' => request_ip(),
             'user_agent' => request()->userAgent(),
-            'person_id' => $params['person_id'] ?? null,
+            'person_id' => $id,
             'target_person_id' => $params['target_person_id'] ?? null,
             'event' => $params['event'],
             'data' => $params['data'] ?? null,

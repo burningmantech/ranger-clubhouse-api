@@ -8,6 +8,16 @@
         Old email address: {{$oldEmail}}<br>
         New email address: {{$person->email}}<br>
     </p>
+    <p>
+        @if ($teams->isNotEmpty())
+            The person is a member of the following Clubhouse Teams:<br>
+            @foreach ($teams as $team)
+                {{$team->title}}<br>
+            @endforeach
+        @else
+            The person does not appear to be a member of any Clubhouse Team.
+        @endif
+    </p>
     @if (empty($additionalLists))
         <p>
             {{$person->callsign}} did not state if other mailing lists should be updated.

@@ -35,6 +35,22 @@ class TicketingStatistics
             'rpt_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::RPT),
             'rpt_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::RPT),
 
+            'gift_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::GIFT),
+            'gift_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::GIFT),
+            'gift_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::GIFT),
+
+            'gift_vp_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::VEHICLE_PASS_GIFT),
+            'gift_vp_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::VEHICLE_PASS_GIFT),
+            'gift_vp_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::VEHICLE_PASS_GIFT),
+
+            'lsd_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::LSD),
+            'lsd_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::LSD),
+            'lsd_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::LSD),
+
+            'lsd_vp_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::VEHICLE_PASS_LSD),
+            'lsd_vp_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::VEHICLE_PASS_LSD),
+            'lsd_vp_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::VEHICLE_PASS_LSD),
+
             'sc_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::STAFF_CREDENTIAL),
             'sc_banked' => self::countStatusType(AccessDocument::BANKED, AccessDocument::STAFF_CREDENTIAL),
             'sc_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::STAFF_CREDENTIAL),
