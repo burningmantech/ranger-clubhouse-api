@@ -52,7 +52,7 @@ class Milestones
         ]);
 
         $milestones = [
-            'online_training_passed' => $isNonRanger || PersonOnlineTraining::didCompleteForYear($person->id, $year),
+            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
             'online_training_enabled' => $settings['OnlineTrainingEnabled'],
             'online_training_url' => $settings['OnlineTrainingUrl'],
             'needs_full_training' => $fullTraining,
