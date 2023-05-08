@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\BulkLookup;
 use App\Lib\Membership;
 use App\Lib\Milestones;
+use App\Lib\PersonAdvancedSearch;
 use App\Lib\PersonSearch;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
@@ -36,6 +37,7 @@ use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class PersonController extends ApiController
@@ -87,6 +89,51 @@ class PersonController extends ApiController
         ]);
 
         return response()->json(PersonSearch::execute($params, $this->userCanViewEmail()));
+    }
+
+    /**
+     * Advanced search
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function advancedSearch(): JsonResponse
+    {
+        $this->authorize('advancedSearch', Person::class);
+
+        $params = request()->validate([
+            'statuses' => 'sometimes|string',
+            'status_year' => 'sometimes|integer',
+            'year_created' => 'sometimes|integer',
+            'years' => 'sometimes|integer',
+            'years_types' => 'sometimes|string',
+            'years_worked' => 'sometimes|integer',
+            'years_worked_op' => [
+                'sometimes',
+                'string',
+                Rule::in(['eq', 'lte', 'gte']),
+            ],
+            'include_years_worked' => 'sometimes|boolean',
+            'photo_status' => 'sometimes|string',
+            'include_photo_status' => 'sometimes|boolean',
+
+            'online_course_status' => [
+                'sometimes',
+                'string',
+                Rule::in(['missing', 'started', 'completed'])
+            ],
+            'include_online_course' => 'sometimes|boolean',
+
+            'training_status' => [
+                'sometimes',
+                'string',
+                Rule::in(['missing', 'signed-up', 'passed', 'failed'])
+            ],
+            'include_training_status' => 'sometimes|boolean',
+        ]);
+
+        return response()->json(PersonAdvancedSearch::execute($params, $this->userCanViewEmail()));
     }
 
     /**

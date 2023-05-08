@@ -460,9 +460,11 @@ class Training extends Position
      * Is the given time within a grace period? (up to 12 hours afterwards)
      * @param Carbon|string $time
      * @param $now
+     * @param string $timezone
      * @return bool
      */
-    private static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
+
+    public static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
         $time->shiftTimezone($timezone);
