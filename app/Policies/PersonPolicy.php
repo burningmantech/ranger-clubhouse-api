@@ -45,6 +45,18 @@ class PersonPolicy
     }
 
     /**
+     * Can the user perform an advanced search for people?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function advancedSearch(Person $user) : bool
+    {
+        return $user->hasRole([ Role::ADMIN, Role::VC ]);
+    }
+
+    /**
      * Determine whether the user can view the person.
      * @param Person $user
      * @param Person $person
