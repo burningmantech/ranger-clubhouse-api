@@ -482,7 +482,7 @@ class Timesheet extends ApiModel
         }
 
         $excludePositions = implode(',', [Position::ALPHA, Position::TRAINING]);
-        $rows = DB::select("SELECT person_id, COUNT(year) as years FROM (SELECT YEAR(on_duty) as year, person_id FROM timesheet WHERE person_id in (" . implode(',', $ids) . ") AND  position_id not in ($excludePositions) GROUP BY person_id,year ORDER BY year) as rangers group by person_id");
+        $rows = DB::select("SELECT person_id, COUNT(year) as years FROM (SELECT YEAR(on_duty) as year, person_id FROM timesheet WHERE person_id in (" . implode(',', $ids) . ") AND  position_id not in ($excludePositions) AND is_non_ranger IS FALSE GROUP BY person_id,year ORDER BY year) as rangers group by person_id");
 
         $people = [];
         foreach ($rows as $row) {
