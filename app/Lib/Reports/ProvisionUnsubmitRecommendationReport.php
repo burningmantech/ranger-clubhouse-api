@@ -58,7 +58,7 @@ class ProvisionUnsubmitRecommendationReport
             ->select('person_slot.person_id')
             ->join('slot', 'person_slot.person_id', 'slot.id')
             ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->whereIntegerInRaw('person_slot.person_id', $ids)
             ->where('position.type', '!=', Position::TYPE_TRAINING)
             ->groupBy('person_slot.person_id')

@@ -42,12 +42,12 @@ class GroundHogDay
         DB::table('timesheet_missing')->where('created_at', '>=', $groundHogDay)->delete();
 
         // Clear out all slots in future years
-        $slotIds = DB::table('slot')->select('id')->whereYear('begins', '>', $year)->get()->pluck('id')->toArray();
+        $slotIds = DB::table('slot')->select('id')->where('begins_year', '>', $year)->get()->pluck('id')->toArray();
         if (!empty($slotIds)) {
             // kill future year signups
             DB::table('person_slot')->whereIntegerInRaw('slot_id', $slotIds)->delete();
         }
-        DB::table('slot')->whereYear('begins', '>', $year)->delete();
+        DB::table('slot')->where('begins_year', '>', $year)->delete();
 
         DB::table('position_credit')->whereYear('start_time', '>', $year);
 

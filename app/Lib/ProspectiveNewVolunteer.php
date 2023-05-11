@@ -76,7 +76,7 @@ class ProspectiveNewVolunteer
         }
 
         $slotIds = Slot::where('position_id', Position::TRAINING)
-            ->whereYear('begins', current_year())
+            ->where('begins_year', current_year())
             ->pluck('id')
             ->toArray();
 

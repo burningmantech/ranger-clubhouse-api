@@ -34,7 +34,7 @@ class TrainingUntrainedPeopleReport
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
-        $trainingSlotIds = Slot::whereIn('position_id', $positionIds)->whereYear('begins', $year)->pluck('id');
+        $trainingSlotIds = Slot::whereIn('position_id', $positionIds)->where('begins_year', $year)->pluck('id');
 
         if ($trainingSlotIds->isEmpty()) {
             return [

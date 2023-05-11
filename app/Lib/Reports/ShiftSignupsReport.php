@@ -17,7 +17,7 @@ class ShiftSignupsReport
 
     public static function execute(int $year): array
     {
-        $rows = Slot::whereYear('begins', $year)
+        $rows = Slot::where('begins_year', $year)
             ->where('active', true)
             ->orderBy('begins')
             ->with(['position:id,title'])

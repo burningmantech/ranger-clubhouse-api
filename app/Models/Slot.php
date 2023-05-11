@@ -170,7 +170,7 @@ class Slot extends ApiModel
         $forRollcall = $query['for_rollcall'] ?? null;
 
         if ($year) {
-            $sql->whereYear('begins', $year);
+            $sql->where('begins_year', $year);
         }
 
         if ($type) {

@@ -40,7 +40,7 @@ class TrainingSlotCapacityReport
         $trainerPositions = Position::TRAINERS[$position->id] ?? [ ];
         $rows = DB::table('slot')
             ->select('id', 'description', 'begins', 'ends', 'max')
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->whereIn('slot.position_id', $positionIds)
             ->where('active', 1)
             ->orderBy('slot.begins')

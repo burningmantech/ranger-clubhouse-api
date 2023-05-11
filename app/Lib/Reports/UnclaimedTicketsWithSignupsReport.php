@@ -25,7 +25,7 @@ class UnclaimedTicketsWithSignupsReport
         $signUps = DB::table('slot')
             ->select('person_slot.person_id')
             ->join('person_slot', 'slot.id', 'person_slot.slot_id')
-            ->whereYear('begins', current_year())
+            ->where('begins_year', current_year())
             ->where('begins', '>=', "$year-08-15")
             ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->groupBy('person_slot.person_id')

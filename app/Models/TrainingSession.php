@@ -32,7 +32,7 @@ class TrainingSession extends Slot
             $positionIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
-        return self::whereYear('begins', $year)
+        return self::where('begins_year', $year)
             ->whereIn('position_id', $positionIds)
             ->orderBy('begins')
             ->get();
