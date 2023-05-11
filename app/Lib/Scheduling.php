@@ -164,6 +164,10 @@ class Scheduling
             return false;
         }
 
+        if (!Schedule::haveAvailableBurnWeekendShiftsForPerson($person)) {
+            return false;
+        }
+
         list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
 
         if (now()->gt($end)) {

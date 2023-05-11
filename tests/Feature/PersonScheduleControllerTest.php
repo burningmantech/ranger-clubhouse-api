@@ -185,13 +185,13 @@ class PersonScheduleControllerTest extends TestCase
         return $person;
     }
 
-    public function setupRequirements($person)
+    public function setupRequirements($person): void
     {
         $this->markOnlineTrainingPassed($person);
         $this->setupPhotoStatus(PersonPhoto::APPROVED, $person);
     }
 
-    private function setupPhotoStatus($status, $person = null)
+    private function setupPhotoStatus($status, $person = null): void
     {
         if ($person == null) {
             $person = $this->user;
@@ -206,7 +206,7 @@ class PersonScheduleControllerTest extends TestCase
         $person->saveWithoutValidation();
     }
 
-    private function markOnlineTrainingPassed($person)
+    private function markOnlineTrainingPassed($person): void
     {
         $ot = new PersonOnlineTraining;
         $ot->person_id = $person->id;
@@ -1114,6 +1114,22 @@ class PersonScheduleControllerTest extends TestCase
         $year = $this->year;
 
         $this->setupRequirements($this->user);
+
+        list ($start, $end) = EventDate::retrieveBurnWeekendPeriod();
+
+        $slot = Slot::factory()->create([
+            'position_id' => Position::TRAINING,
+            'begins' => $start,
+            'ends' => $start->clone()->addHour(1),
+            'active' => true,
+            'max' => 10,
+        ]);
+
+        PersonPosition::factory()->create([
+            'person_id' => $this->user->id,
+            'position_id' => Position::TRAINING
+        ]);
+
 
         // Check for scheduling
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", ['year' => $year]);
