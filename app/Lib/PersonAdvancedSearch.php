@@ -48,6 +48,10 @@ class PersonAdvancedSearch
             $includePhotoStatus = true;
         }
 
+        if ($trainingStatus) {
+            $includeTrainingStatus = true;
+        }
+
         if ($statusYear) {
             if (empty($statuses)) {
                 throw new InvalidArgumentException("status_year set yet not statuses given");
@@ -175,6 +179,7 @@ class PersonAdvancedSearch
         }
 
         $trainingStatusById = [];
+
         if ($includeTrainingStatus) {
             $filteredRows = [];
             $now = now();
