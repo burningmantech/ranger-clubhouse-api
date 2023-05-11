@@ -34,7 +34,7 @@ class GrantPasses
         // Find all training slots
         $slotIds = DB::table('slot')
             ->select('id')
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->where('position_id', Position::TRAINING)
             ->get()
             ->pluck('id');
@@ -129,7 +129,7 @@ class GrantPasses
             ->pluck('id');
 
         // .. and find everyone signed up this year.
-        $slotIds = DB::table('slot')->whereYear('begins', $year)->pluck('id');
+        $slotIds = DB::table('slot')->where('begins_year', $year)->pluck('id');
         $signUpIds = DB::table('person_slot')
             ->whereIntegerInRaw('slot_id', $slotIds)
             ->groupBy('person_id')
@@ -246,7 +246,7 @@ class GrantPasses
     {
         $signUps = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
             ->where('person_id', $personId)
-            ->whereYear('slot.begins', current_year())
+            ->where('slot.begins_year', current_year())
             ->with(['slot:id,description,begins,position_id', 'slot.position:id,title'])
             ->get();
 

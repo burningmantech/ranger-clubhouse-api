@@ -23,7 +23,7 @@ class HQWindowCheckInOutForecastReport
         $row = DB::table('slot')
             ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor(unix_timestamp(begins)/$intervalSeconds)) as opening")
             ->whereIn('position_id', $hqPositions)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->orderBy('begins')
             ->first();
 
@@ -42,7 +42,7 @@ class HQWindowCheckInOutForecastReport
         $row = DB::table('slot')
             ->selectRaw("FROM_UNIXTIME($intervalSeconds*floor((unix_timestamp(ends) + $roundUp)/$intervalSeconds)) as closing")
             ->whereIn('position_id', $hqPositions)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->orderBy('ends', 'desc')
             ->first();
         $hqEnd = $row->closing;
@@ -52,7 +52,7 @@ class HQWindowCheckInOutForecastReport
 
         // Find all the Burn Perimeter slots for the given year
         $burnPerimeterSlots = Slot::where('position_id', Position::BURN_PERIMETER)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->orderBy('begins')
             ->get();
         $burnsByTime = [];

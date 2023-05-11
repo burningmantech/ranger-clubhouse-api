@@ -200,7 +200,7 @@ class ShiftCoverageReport
                 DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
                 DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
             )
-            ->whereYear('begins', $year);
+            ->where('begins_year', $year);
 
         if (is_array($positionId)) {
             $sql->whereIn('position_id', $positionId);

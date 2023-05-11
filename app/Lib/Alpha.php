@@ -107,7 +107,7 @@ class Alpha
                 'person_slot.person_id'
             )->join('slot', function ($j) use ($year) {
                 $j->on('slot.id', 'person_slot.slot_id');
-                $j->whereYear('slot.begins', $year);
+                $j->where('slot.begins_year', $year);
                 $j->where('slot.position_id', Position::ALPHA);
             })
             ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
@@ -302,7 +302,7 @@ class Alpha
     public static function retrieveAlphaScheduleForYear(int $year): Collection
     {
         // Find the Alpha slots
-        $slots = Slot::whereYear('begins', $year)
+        $slots = Slot::where('begins_year', $year)
             ->where('position_id', Position::ALPHA)
             ->orderBy('begins')
             ->get();

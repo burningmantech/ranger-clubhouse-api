@@ -74,7 +74,7 @@ class RadioEligibilityReport
         $rows = DB::table('slot')
             ->select('person_id')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
-            ->whereYear('slot.begins', $currentYear)
+            ->where('slot.begins_year', $currentYear)
             ->where('slot.begins', '>=', "$currentYear-08-15 00:00:00")
             ->whereNotIn('slot.position_id', [Position::ALPHA, Position::TRAINING])
             ->groupBy('person_id')

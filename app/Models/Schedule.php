@@ -410,7 +410,7 @@ class Schedule
             ->join('slot', function ($query) use ($positionId, $year) {
                 $query->whereColumn('slot.id', 'person_slot.slot_id');
                 $query->where('slot.position_id', $positionId);
-                $query->whereYear('slot.begins', $year);
+                $query->where('slot.begins_year', $year);
             })->orderBy('slot.begins')
             ->get();
     }
@@ -428,7 +428,7 @@ class Schedule
     {
         $now = now();
         $rows = PersonSlot::join('slot', 'slot.id', 'person_slot.slot_id')
-            ->whereYear('slot.begins', $now->year)
+            ->where('slot.begins_year', $now->year)
             ->where('slot.begins', '>=', now()->subMinutes(self::LOCATE_SHIFT_START_WITHIN))
             ->where('person_id', $personId)
             ->with('slot.position:id,title')
@@ -527,6 +527,7 @@ class Schedule
                 $j->where('person_position.person_id', $person->id);
             })
             ->where('slot.active', true)
+            ->where('slot.begins_year', current_year())
             ->where(function ($q) use ($start, $end) {
                 $q->whereBetween('slot.begins', [$start, $end]);
                 $q->orWhereBetween('slot.ends', [$start, $end]);
@@ -545,7 +546,7 @@ class Schedule
     {
         return DB::table('slot')
             ->where('slot.active', true)
-            ->whereYear('slot.begins', current_year())
+            ->where('slot.begins_year', current_year())
             ->where('slot.position_id', Position::DIRT)
             ->exists();
     }

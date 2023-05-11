@@ -47,7 +47,7 @@ class BMIDManagement
         $shiftsBeforeSubmittedWaps = [];
 
         $slotIds = DB::table('slot')
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->where('active', true)
             ->where('begins', '>', "$year-08-15")
             ->whereNotIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
@@ -172,7 +172,7 @@ class BMIDManagement
         $checkDate = "$year-08-10";
 
         $slotIds = DB::table('slot')
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->where('begins', '>', $checkDate)
             ->pluck('id');
 
@@ -312,7 +312,7 @@ class BMIDManagement
                     ->toArray();
 
                 $slotIds = Slot::join('position', 'position.id', '=', 'slot.position_id')
-                    ->whereYear('begins', $year)
+                    ->where('begins_year', $year)
                     ->where('position.type', Position::TYPE_TRAINING)
                     ->get(['slot.id'])
                     ->pluck('id')

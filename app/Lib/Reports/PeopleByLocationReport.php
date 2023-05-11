@@ -15,7 +15,7 @@ class PeopleByLocationReport
      */
     public static function execute($year, $includeEmail): array
     {
-        $slotIds = DB::table('slot')->whereYear('begins', $year)->where('position_id', '!=', Position::ALPHA)->pluck('id')->toArray();
+        $slotIds = DB::table('slot')->where('begins_year', $year)->where('position_id', '!=', Position::ALPHA)->pluck('id')->toArray();
         $sql = DB::table('person')
             ->select(
                 'id',

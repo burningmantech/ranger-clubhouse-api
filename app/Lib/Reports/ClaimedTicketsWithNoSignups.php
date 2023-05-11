@@ -28,7 +28,7 @@ class ClaimedTicketsWithNoSignups
             ->join('person_slot', 'slot.id', 'person_slot.slot_id')
             ->join('position', 'position.id', 'slot.position_id')
             ->where('position.type', '!=', Position::TYPE_TRAINING)
-            ->whereYear('begins', current_year())
+            ->where('begins_year', current_year())
             ->where('begins', '>=', "$year-08-15")
             ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->groupBy('person_slot.person_id')

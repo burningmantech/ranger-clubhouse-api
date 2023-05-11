@@ -45,7 +45,7 @@ class PotentialSwagReport
             ->join('slot', 'person_slot.slot_id', 'slot.id')
             ->join('position', 'position.id', 'slot.position_id')
             ->whereIntegerInRaw('person_slot.person_id', $ids)
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->where('position.type', '!=', Position::TYPE_TRAINING)
             ->groupBy('person_slot.person_id')
             ->get()

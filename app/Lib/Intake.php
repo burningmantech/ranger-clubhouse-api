@@ -116,7 +116,7 @@ class Intake
         // Grab the training slots
         $trainingSlotIds = Slot::select('id')
             ->where('position_id', Position::TRAINING)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->get()
             ->pluck('id')
             ->toArray();
@@ -150,7 +150,7 @@ class Intake
         // Grab the Alpha slots
         $alphaSlotIds = Slot::select('id')
             ->where('position_id', Position::ALPHA)
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->get()
             ->pluck('id')
             ->toArray();
