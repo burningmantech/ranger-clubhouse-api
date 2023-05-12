@@ -365,18 +365,14 @@ class PersonScheduleController extends ApiController
         $now = now();
         $year = $now->year;
 
-        list($rows, $positions) = Schedule::findForQuery($person->id, $year, ['remaining' => true, 'only_signups' => true]);
+        list($rows, $positionsById) = Schedule::findForQuery($person->id, $year, ['remaining' => true, 'only_signups' => true, 'positions_by_id' => true]);
 
         if (!$rows->isEmpty()) {
             // Warm the position credit cache.
-            PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
+            PositionCredit::warmYearCache($year, array_keys($positionsById));
         }
 
         $eventDates = EventDate::findForYear($year);
-        $positionsById = [];
-        foreach ($positions as $position) {
-            $positionsById[$position->id] = $position;
-        }
 
         $summary = new WorkSummary($eventDates->event_start->timestamp, $eventDates->event_end->timestamp, $year);
         foreach ($rows as $slot) {

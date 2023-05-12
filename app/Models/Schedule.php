@@ -18,7 +18,6 @@ class Schedule
     public $has_started;
     public $person_assigned;
     public $position_id;
-    public $position_title;
     public $slot_active;
     public $slot_begins;
     public $slot_begins_time;
@@ -37,6 +36,8 @@ class Schedule
     public $trainer_count;
     public $trainer_slot_id;
     public $year;
+
+    private $position;
 
     const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes
 
@@ -82,6 +83,7 @@ class Schedule
     {
         $onlySignups = $query['only_signups'] ?? false;
         $remaining = $query['remaining'] ?? false;
+        $keepPositionsById = $query['positions_by_id'] ?? false;
 
         // Find all slots the person is eligible for AND all slots the person is already signed up for
         // Note: a person may be signed up for a position they no longer hold. e.g., Alpha, Green Dot Mentee, etc.
@@ -89,7 +91,8 @@ class Schedule
         $sql = Slot::select('slot.*', 'trainer_slot.signed_up as trainer_count')
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->where('slot.begins_year', $year)
-            ->orderBy('slot.begins');
+            ->orderBy('slot.begins')
+            ->with('position:id,title,type,contact_email,count_hours');
 
         if ($onlySignups) {
             $sql->join('person_slot', function ($join) use ($personId) {
@@ -114,14 +117,14 @@ class Schedule
         $rows = $sql->get();
 
         $slots = [];
-        $positionIds = [];
+        $positionsById = [];
 
         foreach ($rows as $row) {
-            $positionIds[$row->position_id] = true;
+            $positionsById[$row->position_id] = $row->position;
         }
 
-        if (!empty($positionIds)) {
-            PositionCredit::warmYearCache($year, array_keys($positionIds));
+        if (!empty($positionsById)) {
+            PositionCredit::warmYearCache($year, array_keys($positionsById));
         }
 
         foreach ($rows as $row) {
@@ -160,19 +163,9 @@ class Schedule
         }
 
         PositionCredit::bulkComputeCredits($slots, $year, 'slot_begins_time', 'slot_ends_time');
-
-        if (!empty($positionIds)) {
-            $positions = DB::table('position')
-                ->select('id', 'title', 'type', 'contact_email', 'count_hours')
-                ->whereIn('id', array_keys($positionIds))
-                ->get()
-                ->toArray();
-        } else {
-            $positions = [];
-        }
-
+        
         // return an array of Schedule loaded from the rows
-        return [$slots, $positions];
+        return [$slots, $keepPositionsById ? $positionsById : array_values($positionsById)];
     }
 
     /**
@@ -562,7 +555,7 @@ class Schedule
     public static function summarizeShiftSignups(Person $person): array
     {
         $year = current_year();
-        list ($rows, $positions) = self::findForQuery($person->id, $year, ['only_signups' => true]);
+        list ($rows, $positions) = self::findForQuery($person->id, $year, ['only_signups' => true, 'positions_by_id' => true]);
 
         $positionsById = [];
         foreach ($positions as $position) {
@@ -579,7 +572,7 @@ class Schedule
         foreach ($rows as $row) {
             $credits += $row->credits;
             $totalDuration += $row->slot_duration;
-            if ($row->position_count_hours) {
+            if ($positionsById[$row->position_id]->count_hours) {
                 $countedDuration += $row->slot_duration;
             }
         }
@@ -783,7 +776,6 @@ class Schedule
             'has_started' => $this->has_started,
             'person_assigned' => $this->person_assigned,
             'position_id' => $this->position_id,
-            'position_title' => $this->position_title,
             'slot_active' => $this->slot_active,
             'slot_begins' => (string)$this->slot_begins,
             'slot_begins_time' => $this->slot_begins_time,
