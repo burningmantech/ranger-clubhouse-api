@@ -555,4 +555,54 @@ class SlotControllerTest extends TestCase
 
         ]);
     }
+
+    public function test_trainer_slot_should_not_be_crossed_link()
+    {
+        $this->addRole(Role::EDIT_SLOTS);
+        $year = $this->year;
+
+        $trainer = $this->trainingSlots[0];
+
+        $slot = Slot::factory()->create([
+            'position_id' => Position::DIRT,
+            'begins' => date("$year-m-d 10:00:00"),
+            'ends' => date("$year-m-d 11:00:00"),
+            'max' => 10,
+        ]);
+
+        $this->withoutExceptionHandling();
+        $response = $this->json('PUT', "slot/{$slot->id}", [
+            'slot' => ['trainer_slot_id' => $slot->id]
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'errors' => [
+                [
+                    'title' => 'The trainer multiplier slot cannot be set to itself.',
+                    'source' => [
+                        'pointer' => '/data/attributes/trainer_slot_id'
+                    ]
+                ]
+            ]
+        ]);
+
+        $trainer->update(['trainer_slot_id' => $slot->id]);
+
+        $response = $this->json('PUT', "slot/{$slot->id}", [
+            'slot' => ['trainer_slot_id' => $trainer->id]
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'errors' => [
+                [
+                    'title' => 'This slot and the trainer slot cannot point to one another. On the trainer slot, the trainer multiplier slot should not be set.',
+                    'source' => [
+                        'pointer' => '/data/attributes/trainer_slot_id'
+                    ]
+                ]
+            ]
+        ]);
+    }
 }
