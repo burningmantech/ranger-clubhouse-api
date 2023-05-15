@@ -39,7 +39,7 @@ abstract class ApiModel extends Model
      * The reason the record is being created or updated. Works with $auditModel
      * @var ?string
      */
-    public ?string $auditReason;
+    public ?string $auditReason = null;
 
     /**
      * Audit the changes to the record?
@@ -59,7 +59,7 @@ abstract class ApiModel extends Model
 
     protected $virtualColumns;
 
-    public static function boot(): void
+    public static function boot()
     {
         parent::boot();
         self::saving(function ($model) {
