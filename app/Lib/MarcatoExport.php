@@ -24,7 +24,7 @@ class MarcatoExport
         'Notes',
         'Playa Name/Radio Handle',
         'Arrival Date',
-        'Shower Access For Entire Event - Shower - Tue9',
+        'Shower Access For Entire Event - Shower - Wed9',
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',

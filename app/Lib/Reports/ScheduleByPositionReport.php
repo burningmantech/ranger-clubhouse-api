@@ -17,7 +17,7 @@ class ScheduleByPositionReport
     {
         $rows = Slot::select('slot.*')
             ->join('position', 'position.id', 'slot.position_id')
-            ->whereYear('begins', $year)
+            ->where('begins_year', $year)
             ->with(['position:id,title,active', 'person_slot.person:id,callsign,first_name,last_name,status'])
             ->orderBy('position.title')
             ->orderBy('slot.begins')

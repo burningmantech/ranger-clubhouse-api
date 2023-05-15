@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SurveyGroup extends ApiModel
 {
     protected $table = 'survey_group';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     // Group is nothing special, presented with the main report.

@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
 class PersonEvent extends ApiModel
 {
     protected $table = 'person_event';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     use HasCompositePrimaryKey;
 

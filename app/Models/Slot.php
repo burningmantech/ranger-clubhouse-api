@@ -39,7 +39,7 @@ class Slot extends ApiModel
 
     protected $table = 'slot';
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $with = self::WITH_POSITION_TRAINER;
 
@@ -88,7 +88,7 @@ class Slot extends ApiModel
     ];
 
     // Don't track changes to the signed up count.
-    public $auditExclude = [
+    public array $auditExclude = [
         'signed_up'
     ];
 
@@ -152,6 +152,29 @@ class Slot extends ApiModel
         });
     }
 
+    /**
+     * Attempt to save the slot. Check for infinite recursion if the trainer slot is specified.
+     * @param $options
+     * @return bool
+     */
+    public function save($options = []): bool
+    {
+        if ($this->exists) {
+            if ($this->isDirty('trainer_slot_id') && $this->trainer_slot_id) {
+                if (DB::table('slot')->where('id', $this->trainer_slot_id)->where('trainer_slot_id', $this->id)->exists()) {
+                    $this->addError('trainer_slot_id', 'This slot and the trainer slot cannot point to one another. On the trainer slot, the trainer multiplier slot should not be set.');
+                    return false;
+                }
+            }
+
+            if ($this->id == $this->trainer_slot_id) {
+                $this->addError('trainer_slot_id', 'The trainer multiplier slot cannot be set to itself.');
+                return false;
+            }
+        }
+
+        return parent::save($options);
+    }
 
     /**
      * Find slots based on the given criteria
@@ -170,7 +193,7 @@ class Slot extends ApiModel
         $forRollcall = $query['for_rollcall'] ?? null;
 
         if ($year) {
-            $sql->whereYear('begins', $year);
+            $sql->where('begins_year', $year);
         }
 
         if ($type) {
@@ -427,7 +450,7 @@ class Slot extends ApiModel
     public function timezone(): Attribute
     {
         return Attribute::make(
-            set: fn ($timezone) =>  empty($timezone) ? 'America/Los_Angeles' : $timezone
+            set: fn($timezone) => empty($timezone) ? 'America/Los_Angeles' : $timezone
         );
     }
 
@@ -539,10 +562,10 @@ class Slot extends ApiModel
      * "Pre-Event - Part 1" becomes "Pre-Event"
      *
      * @param string $description
-     * @return mixed|null
+     * @return string|null
      */
 
-    public static function sessionGroupName(string $description): mixed
+    public static function sessionGroupName(string $description): ?string
     {
         $matched = preg_match('/^(.*?)\s*-?\s*\bPart\s*\d\s*$/', $description, $matches);
         return $matched ? $matches[1] : null;

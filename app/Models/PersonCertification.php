@@ -11,7 +11,7 @@ class PersonCertification extends ApiModel
 {
     protected $table = 'person_certification';
     public $timestamps = true;
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'person_id',

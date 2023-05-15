@@ -7,7 +7,7 @@ use App\Models\ApiModel;
 class Alert extends ApiModel
 {
     protected $table = 'alert';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     const SHIFT_CHANGE               = 1;
     const SHIFT_MUSTER               = 2;

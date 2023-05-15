@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PersonTeamLog extends ApiModel
 {
     protected $table = 'person_team_log';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     protected $guarded = [

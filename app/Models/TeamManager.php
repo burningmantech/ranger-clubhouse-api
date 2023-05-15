@@ -13,7 +13,7 @@ class TeamManager extends ApiModel
 
     protected $table = 'team_manager';
     public $timestamps = true;
-    public $auditModel = true;
+    public bool $auditModel = true;
 
     // Model is not publicly accessible
     protected $guarded = [];

@@ -33,13 +33,13 @@ class SandmanQualificationReport {
             ->get()
             ->pluck('person_id');
 
-        $trainingIds = DB::table('slot')->whereYear('begins', $year)
+        $trainingIds = DB::table('slot')->where('begins_year', $year)
                     ->where('position_id', Position::SANDMAN_TRAINING)
                     ->where('active', true)
                     ->get()
                     ->pluck('id');
 
-        $trainerSlotIds = DB::table('slot')->whereYear('begins', $year)
+        $trainerSlotIds = DB::table('slot')->where('begins_year', $year)
             ->where('position_id', Position::SANDMAN_TRAINER)
             ->where('active', true)
             ->get()
@@ -60,7 +60,7 @@ class SandmanQualificationReport {
             ->keyBy('person_id');
 
         $sandmanSlotIds = DB::table('slot')
-                ->whereYear('begins', $year)
+                ->where('begins_year', $year)
                 ->where('position_id', Position::SANDMAN)
                 ->get()
                 ->pluck('id');

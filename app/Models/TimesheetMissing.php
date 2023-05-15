@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Auth;
 class TimesheetMissing extends ApiModel
 {
     protected $table = "timesheet_missing";
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     const APPROVED = 'approved';
     const REJECTED = 'rejected';

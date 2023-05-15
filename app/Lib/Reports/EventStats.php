@@ -28,7 +28,7 @@ class EventStats
             $sql->whereIntegerNotInRaw('person_slot.person_id', $alphaIds);
         }
 
-        $rangerSignups = $sql->whereYear('begins', $year)
+        $rangerSignups = $sql->where('begins_year', $year)
             ->where('position_id', '!=', Position::ALPHA)
             ->where('position.type', '!=', Position::TYPE_TRAINING)
             ->distinct('person_slot.person_id')
@@ -108,7 +108,7 @@ class EventStats
             'working_people_estimate' => DB::table('slot')
                 ->join('position', 'slot.position_id', 'position.id')
                 ->join('person_slot', 'person_slot.slot_id', 'slot.id')
-                ->whereYear('begins', $year)
+                ->where('begins_year', $year)
                 ->where('position_id', '!=', Position::ALPHA)
                 ->where('position.type', '!=', Position::TYPE_TRAINING)
                 ->distinct('person_slot.person_id')

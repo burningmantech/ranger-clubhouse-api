@@ -216,7 +216,7 @@ class Training extends Position
             ->join('slot', 'slot.id', 'trainee_status.slot_id')
             ->whereIn('trainee_status.person_id', $personIds)
             ->whereIn('slot.position_id', $traineePositionIds)
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->where('passed', 1);
 
         $trainerPositionIds = Position::TRAINERS[$positionId] ?? null;
@@ -226,7 +226,7 @@ class Training extends Position
                 ->join('slot', 'slot.id', 'trainer_status.slot_id')
                 ->whereIn('trainer_status.person_id', $personIds)
                 ->whereIn('slot.position_id', $trainerPositionIds)
-                ->whereYear('slot.begins', $year)
+                ->where('slot.begins_year', $year)
                 ->where('status', TrainerStatus::ATTENDED);
             $sql->union($trainerSql);
         }
@@ -331,7 +331,7 @@ class Training extends Position
             }
             $slot = Slot::join('person_slot', 'person_slot.slot_id', 'slot.id')
                 ->whereIn('position_id', $ids)
-                ->whereYear('begins', $year)
+                ->where('begins_year', $year)
                 ->where('slot.active', true)
                 ->where('person_slot.person_id', $personId)
                 ->orderBy('begins', 'desc')
@@ -460,9 +460,11 @@ class Training extends Position
      * Is the given time within a grace period? (up to 12 hours afterwards)
      * @param Carbon|string $time
      * @param $now
+     * @param string $timezone
      * @return bool
      */
-    private static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
+
+    public static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
     {
         $time = is_string($time) ? Carbon::parse($time) : $time->clone();
         $time->shiftTimezone($timezone);
@@ -532,7 +534,7 @@ class Training extends Position
                 $j->on('trainee_status.person_id', 'person_slot.person_id');
                 $j->on('trainee_status.slot_id', 'person_slot.slot_id');
             })
-            ->whereYear('slot.begins', '<=', $year)
+            ->where('slot.begins_year', '<=', $year)
             ->where('slot.position_id', $positionId)
             ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
             ->orderBy('person_slot.person_id')

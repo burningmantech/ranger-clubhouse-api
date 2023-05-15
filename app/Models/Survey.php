@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class Survey extends ApiModel
 {
     protected $table = 'survey';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     // Survey is for trainers on trainers.
@@ -181,7 +181,7 @@ class Survey extends ApiModel
             'description',
             'signed_up',
             DB::raw('EXISTS (SELECT 1 FROM survey_answer WHERE slot_id=slot.id LIMIT 1) AS has_responses'),
-        )->whereYear('begins', $this->year)
+        )->where('begins_year', $this->year)
             ->where('position_id', $this->position_id)
             ->orderBy('begins')
             ->get();
@@ -256,7 +256,7 @@ class Survey extends ApiModel
     {
         $slots = TraineeStatus::select('trainee_status.*')
             ->join('slot', 'slot.id', 'trainee_status.slot_id')
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->where('person_id', $personId)
             ->where('passed', true)
             // is there a survey available?
@@ -288,7 +288,7 @@ class Survey extends ApiModel
             // Find all the sessions the person taught (aka marked as attended)
             $taught = TrainerStatus::join('slot', 'slot.id', 'trainer_status.trainer_slot_id')
                 ->whereIntegerInRaw('slot.position_id', $positionIds)
-                ->whereYear('slot.begins', $year)
+                ->where('slot.begins_year', $year)
                 ->where('trainer_status.person_id', $personId)
                 ->where('trainer_status.status', TrainerStatus::ATTENDED)
                 ->get();

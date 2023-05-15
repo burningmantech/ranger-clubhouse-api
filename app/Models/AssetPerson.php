@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AssetPerson extends ApiModel
 {
     protected $table = 'asset_person';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'person_id',

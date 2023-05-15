@@ -10,7 +10,7 @@ class Vehicle extends ApiModel
     protected $table = 'vehicle';
     public $timestamps = true;
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     // Request status
     const PENDING = 'pending';

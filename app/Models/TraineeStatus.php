@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TraineeStatus extends ApiModel
 {
     protected $table = 'trainee_status';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'person_id',
@@ -53,7 +53,7 @@ class TraineeStatus extends ApiModel
                 $q->on('person_slot.slot_id', 'trainee_status.slot_id');
                 $q->where('person_slot.person_id', $personId);
             })
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->where('slot.active', true)
             ->where('trainee_status.person_id', $personId)
             ->orderBy('trainee_status.passed')
@@ -90,7 +90,7 @@ class TraineeStatus extends ApiModel
         return self::join('slot', 'slot.id', 'trainee_status.slot_id')
             ->where('trainee_status.person_id', $personId)
             ->whereIn('slot.position_id', $positionIds)
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->where('passed', 1)
             ->exists();
     }

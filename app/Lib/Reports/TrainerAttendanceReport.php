@@ -24,7 +24,7 @@ class TrainerAttendanceReport
             return [];
         }
 
-        $slots = Slot::whereYear('begins', $year)
+        $slots = Slot::where('begins_year', $year)
             ->whereIn('position_id', $teachingPositions)
             ->with(['position:id,title', 'person_slot.person:id,callsign', 'trainer_slot'])
             ->orderBy('begins')

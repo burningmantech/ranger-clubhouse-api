@@ -9,7 +9,7 @@ class PersonOnlineTraining extends ApiModel
 {
     protected $table = 'person_online_training';
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $casts = [
         'completed_at' => 'datetime',

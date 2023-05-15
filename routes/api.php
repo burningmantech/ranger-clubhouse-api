@@ -200,6 +200,7 @@ Route::group([
     Route::get('person/by-status-change', 'PersonController@peopleByStatusChange');
     Route::post('person/bulk-lookup', 'PersonController@bulkLookup');
     Route::get('person/search', 'PersonController@search');
+    Route::get('person/advanced-search', 'PersonController@advancedSearch');
 
     Route::get('person/{person}/alerts', 'AlertPersonController@index');
     Route::patch('person/{person}/alerts', 'AlertPersonController@update');

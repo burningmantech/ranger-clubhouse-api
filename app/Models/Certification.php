@@ -8,7 +8,7 @@ class Certification extends ApiModel
 {
     protected $table = 'certification';
     public $timestamps = true;
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $guarded = [];
 

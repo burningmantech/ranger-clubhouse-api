@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 class EventDate extends ApiModel
 {
     protected $table = 'event_dates';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     /**
      * On playa operation periods

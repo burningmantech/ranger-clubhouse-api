@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class TrainerStatus extends ApiModel
 {
     protected $table = 'trainer_status';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     const ATTENDED = 'attended';
@@ -70,7 +70,7 @@ class TrainerStatus extends ApiModel
 
         return DB::table('slot')
             ->join('trainer_status', 'slot.id', 'trainer_status.trainer_slot_id')
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->whereIn('slot.position_id', $positionIds)
             ->where('trainer_status.person_id', $personId)
             ->where('trainer_status.status', self::ATTENDED)
@@ -100,7 +100,7 @@ class TrainerStatus extends ApiModel
                 $q->where('trainer_status.person_id', $personId);
             })
             ->where('slot.active', true)
-            ->whereYear('slot.begins', $year)
+            ->where('slot.begins_year', $year)
             ->whereIn('position_id', $positionIds)
             ->orderBy('slot.begins')
             ->get();

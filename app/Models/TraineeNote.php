@@ -12,7 +12,7 @@ class TraineeNote extends ApiModel
 {
     protected $table = 'trainee_note';
     public $timestamps = true;
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     // Trainee Notes are not directly accessed
     protected $guarded = [];
