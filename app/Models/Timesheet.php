@@ -36,8 +36,8 @@ use Illuminate\Support\Facades\DB;
 class Timesheet extends ApiModel
 {
     protected $table = 'timesheet';
-    protected $auditModel = true;
-    public $auditExclude = [
+    protected bool $auditModel = true;
+    public array $auditExclude = [
         'credits',
         'duration'
     ];

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PersonPositionLog extends ApiModel
 {
     protected $table = 'person_position_log';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     protected $guarded = [

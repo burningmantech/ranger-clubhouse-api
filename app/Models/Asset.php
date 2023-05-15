@@ -12,7 +12,7 @@ class Asset extends ApiModel
 {
     protected $table = 'asset';
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'description',

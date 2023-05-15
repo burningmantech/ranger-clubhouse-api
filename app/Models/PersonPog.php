@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class PersonPog extends ApiModel
 {
     protected $table = 'person_pog';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     const POG_SHOWER = 'shower';

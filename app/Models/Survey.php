@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class Survey extends ApiModel
 {
     protected $table = 'survey';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     // Survey is for trainers on trainers.

@@ -12,7 +12,7 @@ class Document extends ApiModel
     use HasFactory;
 
     protected $table = 'document';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     protected $fillable = [

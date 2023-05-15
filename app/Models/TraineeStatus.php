@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TraineeStatus extends ApiModel
 {
     protected $table = 'trainee_status';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'person_id',

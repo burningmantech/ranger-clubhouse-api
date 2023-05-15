@@ -22,7 +22,7 @@ class Setting extends ApiModel
     protected $primaryKey = 'name';
     public $incrementing = false;
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $rules = [
         'name' => 'required|string',

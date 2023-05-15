@@ -11,7 +11,7 @@ use Psr\SimpleCache\InvalidArgumentException;
 class PositionCredit extends ApiModel
 {
     protected $table = 'position_credit';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'credits_per_hour',
@@ -60,11 +60,12 @@ class PositionCredit extends ApiModel
     public static function findForYear(int $year): Collection
     {
         return self::with(self::RELATIONS)
-            ->whereYear('start_time', $year)
-            ->orderBy('start_time')->get();
+            ->where('start_year', $year)
+            ->orderBy('start_time')
+            ->get();
     }
 
-    public function loadRelations()
+    public function loadRelations(): void
     {
         $this->load(self::RELATIONS);
     }

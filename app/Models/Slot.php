@@ -39,7 +39,7 @@ class Slot extends ApiModel
 
     protected $table = 'slot';
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $with = self::WITH_POSITION_TRAINER;
 
@@ -88,7 +88,7 @@ class Slot extends ApiModel
     ];
 
     // Don't track changes to the signed up count.
-    public $auditExclude = [
+    public array $auditExclude = [
         'signed_up'
     ];
 

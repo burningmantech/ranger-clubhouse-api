@@ -7,7 +7,7 @@ use App\Models\ApiModel;
 class AssetAttachment extends ApiModel
 {
     protected $table = 'asset_attachment';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'parent_type',

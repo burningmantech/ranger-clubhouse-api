@@ -11,7 +11,7 @@ class PersonIntakeNote extends ApiModel
     protected $table = 'person_intake_note';
     public $timestamps = true;
 
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $guarded = [];
 

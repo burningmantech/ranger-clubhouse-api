@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PersonSwag extends ApiModel
 {
     protected $table = 'person_swag';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     protected $fillable = [
