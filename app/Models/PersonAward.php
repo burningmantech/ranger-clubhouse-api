@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class PersonAward extends ApiModel
 {
     protected $table = 'person_award';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     protected $fillable = [

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class Bmid extends ApiModel
 {
     protected $table = 'bmid';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     const MEALS_ALL = 'all';
     const MEALS_EVENT = 'event';

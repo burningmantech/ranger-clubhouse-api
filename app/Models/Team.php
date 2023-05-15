@@ -22,7 +22,7 @@ class Team extends ApiModel
 
     protected $table = 'team';
     public $timestamps = true;
-    public $auditModel = true;
+    public bool $auditModel = true;
 
     const TYPE_TEAM = 'team';
     const TYPE_CADRE = 'cadre';

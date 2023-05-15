@@ -10,7 +10,7 @@ class Provision extends ApiModel
 {
     public $table = 'provision';
     public $timestamps = true;
-    public $auditModel = true;
+    public bool $auditModel = true;
 
     // Statuses
     const AVAILABLE = 'available';

@@ -135,7 +135,7 @@ class PositionCreditController extends ApiController
             return $this->restError('Must specify new position or a day/time delta');
         }
         $sourceCredits = PositionCredit::find($params['ids']);
-        $results = array();
+        $results = [];
         DB::transaction(function () use ($sourceCredits, $delta, $position, &$results) {
             // TODO add a unique index on (position_id, start_time, end_time) so it's hard to double-copy
             foreach ($sourceCredits as $source) {
@@ -149,7 +149,7 @@ class PositionCreditController extends ApiController
                 }
                 $target->auditReason = 'position credit copy';
                 $target->saveOrThrow();
-                array_push($results, $target);
+                $results[] = $target;
             }
         });
         return $this->success($results, null, 'position_credit');

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class Position extends ApiModel
 {
     protected $table = 'position';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     const ALPHA = 1;
 

@@ -31,20 +31,22 @@ abstract class ApiModel extends Model
      * @var bool
      */
     public $timestamps = false;
-    public $auditIsNew = false;
+    public bool $auditIsNew = false;
     public $auditChanges = null;
-    public $auditExclude = [];
+    public array $auditExclude = [];
+
     /**
      * The reason the record is being created or updated. Works with $auditModel
-     * @var string
+     * @var ?string
      */
-    public $auditReason;
+    public ?string $auditReason = null;
+
     /**
      * Audit the changes to the record?
      * @var bool
      */
 
-    protected $auditModel = false;
+    protected bool $auditModel = false;
     protected $errors;
 
     protected $rules;
@@ -170,20 +172,76 @@ abstract class ApiModel extends Model
         ActionLog::record(Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
     }
 
+    /**
+     * Strip out any virtual / computed columns before attempting any save.
+     *
+     * @return void
+     */
+
+    private function beforeSaveSetup(): void
+    {
+        if (!empty($this->virtualColumns)) {
+            $this->attributes = array_diff_key($this->attributes, array_flip($this->virtualColumns));
+        }
+    }
+
+    /**
+     * Attempt to save a record with validation.
+     *
+     * @param $options
+     * @return bool
+     * @throws ValidationException
+     */
+
     public function save($options = []): bool
     {
         if (!$this->validate()) {
             return false;
         }
 
-        if (!empty($this->virtualColumns)) {
-            $this->attributes = array_diff_key($this->attributes, array_flip($this->virtualColumns));
-        }
-
+        $this->beforeSaveSetup();
         return parent::save($options);
     }
 
-    public function validate($rules = null, $throwOnFailure = false)
+    /**
+     * Save a model. Throw an exception if the save failed.
+     *
+     * @param array $options
+     * @return void
+     * @throws ValidationException
+     */
+
+    public function saveOrThrow(array $options = []): void
+    {
+        $this->validate(null, true); // throws if validation fails
+        if (!$this->save($options)) {
+            throw new RuntimeException("Could not save $this");
+        }
+    }
+
+    /**
+     * Save a record without validation.
+     *
+     * @param array $options
+     * @return bool
+     */
+
+    public function saveWithoutValidation(array $options = []): bool
+    {
+        $this->beforeSaveSetup();
+        return parent::save($options);
+    }
+
+    /**
+     * Validate the object, usually upon create or save.
+     *
+     * @param null $rules
+     * @param bool $throwOnFailure
+     * @return bool
+     * @throws ValidationException
+     */
+
+    public function validate($rules = null, bool $throwOnFailure = false): bool
     {
         if ($rules === null) {
             if ($this->exists) {
@@ -214,18 +272,6 @@ abstract class ApiModel extends Model
         return true;
     }
 
-    public function saveOrThrow($options = [])
-    {
-        $this->validate(null, true); // throws if validation fails
-        if (!parent::save($options)) {
-            throw new RuntimeException("Could not save $this");
-        }
-    }
-
-    public function saveWithoutValidation($options = [])
-    {
-        return parent::save($options);
-    }
 
     public function getResults()
     {
@@ -256,22 +302,26 @@ abstract class ApiModel extends Model
         return $this->appends;
     }
 
-    /*
+    /**
      * Return the name of the root resource for a collection when building a REST response or
      * filling a record from a REST request.
+     *
+     * @return string
      */
 
-    public function getResourceCollection()
+    public function getResourceCollection(): string
     {
         return (empty($this->resourceCollection) ? $this->getTable() : $this->resourceCollection);
     }
 
-    /*
+    /**
      * Return the name of the root resource for a single record when building a REST response or
      * filling a record from a REST request.
+     *
+     * @return string
      */
 
-    public function getResourceSingle()
+    public function getResourceSingle(): string
     {
         return (empty($this->resourceSingle) ? $this->getTable() : $this->resourceSingle);
     }
@@ -284,12 +334,12 @@ abstract class ApiModel extends Model
      * @return string
      */
 
-    protected function serializeDate(DateTimeInterface $date)
+    protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
     }
 
-    public function setAuditModel($audit)
+    public function setAuditModel(bool $audit): void
     {
         $this->auditModel = $audit;
     }

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 class AccessDocument extends ApiModel
 {
     protected $table = 'access_document';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     // Statuses
     const BANKED = 'banked';

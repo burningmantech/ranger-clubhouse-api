@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Swag extends ApiModel
 {
     protected $table = 'swag';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     const TYPE_DEPT_PATCH = 'dept-patch';

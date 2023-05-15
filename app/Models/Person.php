@@ -139,9 +139,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @var string
      */
     protected $table = 'person';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
-    public $auditExclude = [
+    public array $auditExclude = [
         'password',
         'tpassword',
         'tpassword_expire',

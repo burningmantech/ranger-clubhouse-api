@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Award extends ApiModel
 {
     protected $table = 'award';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     // Year round contribution (cadre membership, extraordinary work, etc.)

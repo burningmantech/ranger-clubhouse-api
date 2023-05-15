@@ -7,7 +7,7 @@ use App\Models\ApiModel;
 class Help extends ApiModel
 {
     protected $table = 'help';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'slug',

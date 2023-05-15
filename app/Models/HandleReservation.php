@@ -12,7 +12,7 @@ class HandleReservation extends ApiModel
     use HasFactory;
 
     protected $table = 'handle_reservation';
-    protected $auditModel = true;
+    protected bool $auditModel = true;
     public $timestamps = true;
 
     // Handle reservation types
