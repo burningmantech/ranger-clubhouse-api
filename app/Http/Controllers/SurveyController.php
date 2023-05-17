@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
 use App\Lib\SurveyReports;
-
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyGroup;
 use App\Models\SurveyQuestion;
-
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class SurveyController extends ApiController
@@ -27,7 +24,7 @@ class SurveyController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'year' => 'required|integer',
@@ -40,6 +37,7 @@ class SurveyController extends ApiController
          */
 
         $this->authorize('index', Survey::class);
+
         return $this->success(Survey::findForQuery($params), null, 'survey');
     }
 
@@ -47,10 +45,10 @@ class SurveyController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $this->authorize('store', [Survey::class]);
         $survey = new Survey;
@@ -67,11 +65,12 @@ class SurveyController extends ApiController
      * Display the specified resource.
      *
      * Survey $survey
+     * @param Survey $survey
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function show(Survey $survey)
+    public function show(Survey $survey): JsonResponse
     {
         $this->authorize('show', [Survey::class]);
 
@@ -83,9 +82,9 @@ class SurveyController extends ApiController
      *
      * @param Survey $survey
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
-    public function update(Survey $survey)
+    public function update(Survey $survey): JsonResponse
     {
         $this->authorize('update', $survey);
         $this->fromRest($survey);
@@ -104,7 +103,7 @@ class SurveyController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function destroy(Survey $survey)
+    public function destroy(Survey $survey): JsonResponse
     {
         $this->authorize('destroy', $survey);
         $survey->delete();
@@ -118,12 +117,13 @@ class SurveyController extends ApiController
 
     /**
      * Clone/duplicate a survey (and dependent tables) set to the current year
+     *
      * @param Survey $survey
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
-    public function duplicate(Survey $survey)
+    public function duplicate(Survey $survey): JsonResponse
     {
         $this->authorize('duplicate', $survey);
 
@@ -165,12 +165,10 @@ class SurveyController extends ApiController
     /**
      * Prepare a questionnaire
      *
-     * @param Survey $survey
      * @return JsonResponse
-     * @throws AuthorizationException
      */
 
-    public function questionnaire()
+    public function questionnaire(): JsonResponse
     {
         $params = request()->validate([
             'slot_id' => 'required|integer',
@@ -194,7 +192,7 @@ class SurveyController extends ApiController
      * @throws InvalidArgumentException
      */
 
-    public function submit()
+    public function submit(): JsonResponse
     {
         $params = request()->validate([
             'slot_id' => 'required|integer',
@@ -260,7 +258,7 @@ class SurveyController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function trainerSurveys()
+    public function trainerSurveys(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'required|integer'
@@ -279,7 +277,7 @@ class SurveyController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function trainerReport()
+    public function trainerReport(): JsonResponse
     {
         $params = request()->validate([
             'trainer_id' => 'required|integer|exists:person,id',
@@ -303,7 +301,7 @@ class SurveyController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function allTrainersReport(Survey $survey)
+    public function allTrainersReport(Survey $survey): JsonResponse
     {
         $this->authorize('allTrainersReport', $survey);
 
@@ -322,7 +320,7 @@ class SurveyController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function report(Survey $survey)
+    public function report(Survey $survey): JsonResponse
     {
         $this->authorize('report', $survey);
         return response()->json(['reports' => SurveyReports::buildSurveyReports($survey)]);
