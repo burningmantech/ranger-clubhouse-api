@@ -4,6 +4,7 @@ namespace App\Lib;
 
 use App\Helpers\SqlHelper;
 use App\Models\Person;
+use App\Models\Position;
 use Closure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,13 @@ class PersonSearch
     const FIELD_ID = 'id';
     const FIELD_NAME = 'name';
     const FIELD_LAST_NAME = 'last';
+
+    /*
+     * Pseudo status - find any one who is signed up for a Cheetah Cub shift. Useful for when a HQ Window Worker
+     * is handling a retired Ranger returning back.
+     */
+
+    const CHEETAH_CUB_STATUS = 'cheetahcub';
 
     const BASE_COLUMNS = ['person.id', 'person.callsign', 'person.status', 'person.first_name', 'person.last_name'];
 
@@ -319,7 +327,19 @@ class PersonSearch
 
         if ($addStatuses) {
             if ($this->statuses && $this->statuses != 'all') {
-                $sql->whereIn('status', explode(',', $this->statuses));
+                $statuses = explode(',', $this->statuses);
+                if (stripos($this->statuses, self::CHEETAH_CUB_STATUS) !== false) {
+                    $statuses = array_diff($statuses, [self::CHEETAH_CUB_STATUS]);
+                    $sql->where(function ($w) use ($statuses) {
+                        if (!empty($statuses)) {
+                            $w->whereIn('status', $statuses);
+                        }
+                        $w->orWhereRaw("EXISTS (SELECT 1 FROM slot JOIN person_slot ON person_slot.person_id=person.id WHERE begins_year=? AND position_id=? AND person_slot.slot_id=slot.id LIMIT 1)",
+                            [current_year(), Position::CHEETAH_CUB]);
+                    });
+                } else {
+                    $sql->whereIn('status', $statuses);
+                }
             }
 
             if ($this->excludeStatuses) {
