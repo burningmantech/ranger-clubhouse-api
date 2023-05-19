@@ -394,7 +394,7 @@ class Slot extends ApiModel
 
     public function isArt(): bool
     {
-        return ($this->position_id != Position::TRAINING);
+        return ($this->position_id != Position::TRAINING && $this->position_id != Position::TRAINER);
     }
 
     /**
