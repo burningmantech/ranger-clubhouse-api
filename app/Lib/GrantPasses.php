@@ -4,6 +4,7 @@ namespace App\Lib;
 
 use App\Models\AccessDocument;
 use App\Models\AccessDocumentChanges;
+use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonSlot;
 use App\Models\Position;
@@ -87,7 +88,7 @@ class GrantPasses
         list ($people, $startYear) = self::findRangersWhoNeedWAPs();
         self::grantAccessDocumentToPeople($people, AccessDocument::WAP, setting('TAS_DefaultWAPDate'), current_year());
 
-        return [ $people, $startYear];
+        return [$people, $startYear];
     }
 
     /**
@@ -212,7 +213,7 @@ class GrantPasses
             }
         }
 
-        return [ $people, $startYear];
+        return [$people, $startYear];
     }
 
     /**
@@ -313,6 +314,7 @@ class GrantPasses
         $user = Auth::user();
         $userId = Auth::id();
 
+        $documents = [];
         foreach ($people as $person) {
             $ad = new AccessDocument([
                 'person_id' => $person->id,
@@ -325,6 +327,17 @@ class GrantPasses
             $ad->addComment('created via maintenance function', $user);
             $ad->saveWithoutValidation();
             AccessDocumentChanges::log($ad, $userId, $ad, 'create');
+            $documents[] = [
+                'id' => $ad->id,
+                'person_id' => $person->id,
+            ];
+        }
+
+        if (!empty($documents)) {
+            ActionLog::record($user, 'access-document-bulk-grant', 'bulk grant', [
+                'type' => $type,
+                'documents' => $documents
+            ]);
         }
     }
 }
