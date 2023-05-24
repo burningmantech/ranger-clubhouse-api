@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $person_id
@@ -42,8 +43,10 @@ class PersonTeam extends ApiModel
 
     public static function findAllTeamsForPerson(int $personId): Collection
     {
-        return Team::select('team.*')
-            ->join('person_team', 'team.id', 'person_team.team_id')
+        return Team::select(
+            'team.*',
+            DB::raw('EXISTS (SELECT 1 FROM position WHERE team.id=position.team_id LIMIT 1) as has_positions')
+        )->join('person_team', 'team.id', 'person_team.team_id')
             ->where('person_team.person_id', $personId)
             ->orderBy('team.title')
             ->get();
@@ -104,7 +107,7 @@ class PersonTeam extends ApiModel
      * @return void
      */
 
-    public static function removeAllForPerson(int $personId, string $reason) : void
+    public static function removeAllForPerson(int $personId, string $reason): void
     {
         $teams = self::findAllTeamsForPerson($personId);
 
