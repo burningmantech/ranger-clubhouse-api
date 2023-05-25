@@ -116,6 +116,10 @@ class PersonSwagController extends ApiController
     {
         $this->authorize('distribution', PersonSwag::class);
 
-        return response()->json([ 'people' => SwagDistributionReport::execute($this->getYear())]);
+        $params = request()->validate([
+            'year' => 'sometimes|integer'
+        ]);
+
+        return response()->json([ 'people' => SwagDistributionReport::execute($params['year'] ?? null)]);
     }
 }

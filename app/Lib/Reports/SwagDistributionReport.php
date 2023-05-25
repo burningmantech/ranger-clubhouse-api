@@ -6,9 +6,17 @@ use App\Models\PersonSwag;
 
 class SwagDistributionReport
 {
-    public static function execute(int $year): array
+    public static function execute(?int $year): array
     {
-        $swag = PersonSwag::findForQuery(['year_issued' => $year, 'include_person' => true]);
+        $query = [
+            'include_person' => true
+        ];
+
+        if ($year) {
+            $query['year_issued'] = $year;
+        }
+
+        $swag = PersonSwag::findForQuery($query);
         $swagByPerson = $swag->groupBy('person_id');
 
         $people = [];
