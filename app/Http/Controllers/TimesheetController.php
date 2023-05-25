@@ -30,6 +30,7 @@ use App\Models\TimesheetLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class TimesheetController extends ApiController
@@ -39,7 +40,7 @@ class TimesheetController extends ApiController
      *
      * @param Request $request
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
      */
     public function index(Request $request): JsonResponse
     {
@@ -177,7 +178,7 @@ class TimesheetController extends ApiController
      * Create a new timesheet
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -201,7 +202,7 @@ class TimesheetController extends ApiController
      *
      * @param Timesheet $timesheet
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Timesheet $timesheet): JsonResponse
@@ -302,7 +303,7 @@ class TimesheetController extends ApiController
      *
      * @param Timesheet $timesheet
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function updatePosition(Timesheet $timesheet): JsonResponse
@@ -365,7 +366,7 @@ class TimesheetController extends ApiController
      * Start a shift for a person
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function signin(): JsonResponse
@@ -722,7 +723,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function specialTeamsReport()
+    public function specialTeamsReport(): JsonResponse
     {
         $this->authorize('specialTeamsReport', [Timesheet::class]);
 

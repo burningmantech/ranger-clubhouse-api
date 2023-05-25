@@ -890,8 +890,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
         $noCache = false;
         if ($haveManage && !isset($this->rolesById[Role::TECH_NINJA])) {
-            // Kill the roles if the NDA is not signed and the NDA document exists.
-            if (!PersonEvent::isSet($this->id, 'signed_nda') && Document::haveTag(Agreements::DEPT_NDA)) {
+            // Kill the roles if the NDA is not signed, the NDA document exists and this is not a Ground Hog Day server
+            if (!config('clubhouse.GroundhogDayTime')
+                && !PersonEvent::isSet($this->id, 'signed_nda')
+                && Document::haveTag(Agreements::DEPT_NDA)) {
                 // Don't allow the person to do anything until the NDA is signed.
                 $this->rolesById = [];
                 $this->trueRolesById = [];
