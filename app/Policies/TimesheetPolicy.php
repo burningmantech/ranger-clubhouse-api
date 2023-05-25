@@ -63,13 +63,16 @@ class TimesheetPolicy
         return $user->hasRole(Role::TECH_NINJA) || ($user->id == $personId);
     }
 
-    /*
-     * Can a user delete a timesheet? Only timesheet manager,
-     * or admin, covered in before()
+    /**
+     * Can a user delete a timesheet?
      */
 
     public function destroy(Person $user, Timesheet $timesheet): bool
     {
+        // Allow a timesheet to be deleted if the duration is too short - i.e., accidental shift start.
+        if ($user->hasRole(Role::MANAGE) && $timesheet->duration < Timesheet::TOO_SHORT_LENGTH) {
+            return true;
+        }
         return false;
     }
 
@@ -87,8 +90,8 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
-     * Can user signin the person?
+    /**
+     * Can user sign in the person?
      */
 
     public function signin(Person $user): bool
@@ -96,8 +99,8 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
-     * Can user re-signin the person?
+    /**
+     * Can user re-sign in the person?
      */
 
     public function resignin(Person $user): bool
@@ -105,7 +108,7 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
+    /**
      * Can user signoff the timesheet?
      */
 
@@ -114,7 +117,7 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
+    /**
      * Can user see a timesheet log?
      */
 
@@ -123,7 +126,7 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
+    /**
      * Can the user see the timesheet correction requests?
      */
 
@@ -132,7 +135,7 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
+    /**
      * Can the user see the timesheet unconfirmed people?
      */
 
@@ -141,7 +144,7 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    /*
+    /**
      * Can the user see the timesheet unconfirmed people?
      */
 
