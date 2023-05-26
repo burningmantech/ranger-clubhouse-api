@@ -39,7 +39,7 @@ class Schedule
 
     private $position;
 
-    const LOCATE_SHIFT_START_WITHIN = 45; // Find a shift starting within +/- X minutes
+    const LOCATE_SHIFT_START_WITHIN = 60; // Find a shift starting within +/- X minutes
 
     const MAY_START_SHIFT_WITHIN = 25; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
 
