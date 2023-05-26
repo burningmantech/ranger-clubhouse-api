@@ -411,6 +411,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         });
 
         self::saving(function ($model) {
+            if ($model->isDirty('status')) {
+                $model->status_date = now();
+            }
+
             if ($model->isDirty('message')) {
                 $model->message_updated_at = now();
             }
@@ -1132,7 +1136,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         }
 
         $personId = $this->id;
-        $this->status_date = now();
         $this->status = $newStatus;
 
         PersonStatus::record($this->id, $oldStatus, $newStatus, $reason, Auth::id());
