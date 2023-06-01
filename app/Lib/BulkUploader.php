@@ -518,7 +518,6 @@ class BulkUploader
                     break;
 
                 case 'VP':
-                    $sourceYear = $year;
                     $type = AccessDocument::VEHICLE_PASS;
                     break;
 

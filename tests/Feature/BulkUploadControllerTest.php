@@ -461,7 +461,7 @@ class BulkUploadControllerTest extends TestCase
 
     public function testSubmitTicketsWithCommit()
     {
-        $year = date('Y');
+        $year = (int)date('Y');
         $callsign = $this->user->callsign;
 
         $response = $this->json('POST', 'bulk-upload', [
@@ -484,15 +484,16 @@ class BulkUploadControllerTest extends TestCase
                 'person_id' => $this->user->id,
                 'source_year' => $year - 1,
                 'status' => 'qualified',
-                'type' => 'staff_credential'
+                'type' => AccessDocument::STAFF_CREDENTIAL,
             ]
         );
 
         $types = [
-            'RPT' => 'reduced_price_ticket',
-            'GIFT' => 'gift_ticket',
-            'VP' => 'vehicle_pass',
-            'WAP' => 'work_access_pass',
+            'RPT' => AccessDocument::RPT,
+            'GIFT' => AccessDocument::GIFT,
+            'LSD' => AccessDocument::LSD,
+            'VP' => AccessDocument::VEHICLE_PASS,
+            'WAP' => AccessDocument::WAP,
         ];
 
         // Run through each type to make sure it works
@@ -514,8 +515,10 @@ class BulkUploadControllerTest extends TestCase
                 'access_document',
                 [
                     'person_id' => $this->user->id,
-                    'source_year' => $year - 1,
-                    'status' => 'qualified',
+                    // LSD & Gift default to the current year for source.
+                    'source_year' => ($adType == AccessDocument::LSD || $adType == AccessDocument::GIFT) ? $year : $year - 1,
+                    // LSD tickets are claimed.
+                    'status' => ($adType == AccessDocument::LSD) ? AccessDocument::CLAIMED : AccessDocument::QUALIFIED,
                     'type' => $adType
                 ]
             );
