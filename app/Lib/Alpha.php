@@ -24,22 +24,38 @@ class Alpha
      *
      * @return Collection
      */
-    public static function retrieveMentors()
+
+    public static function retrieveMentors(): Collection
+    {
+        return self::retrieveMentorType(Position::MENTOR);
+    }
+
+    /**
+     * Find all MITtens and indicate if they are on duty.
+     *
+     * @return Collection
+     */
+
+    public static function retrieveMittens(): Collection
+    {
+        return self::retrieveMentorType(Position::MENTOR_MITTEN);
+    }
+
+    public static function retrieveMentorType($positionId): Collection
     {
         $year = current_year();
-        $positionId = Position::MENTOR;
 
-        $rows = DB::table('person')
+        return DB::table('person')
             ->select(
                 'person.id',
                 'person.callsign',
                 DB::raw("EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND position_id=$positionId AND YEAR(on_duty)=$year AND off_duty IS NULL) as working")
             )
             ->join('person_position', 'person_position.person_id', '=', 'person.id')
-            ->where('person_position.position_id', Position::MENTOR)
+            ->where('person_position.position_id', $positionId)
             ->orderBy('callsign')
             ->get();
-        return $rows;
+
     }
 
     /**

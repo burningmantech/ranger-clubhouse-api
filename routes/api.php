@@ -181,6 +181,7 @@ Route::group([
     Route::get('mentor/alphas', 'MentorController@alphas');
     Route::get('mentor/alpha-schedule', 'MentorController@alphaSchedule');
     Route::get('mentor/eligible-alphas', 'MentorController@eligibleAlphas');
+    Route::get('mentor/mittens', 'MentorController@mittens');
     Route::get('mentor/mentees', 'MentorController@mentees');
     Route::get('mentor/mentors', 'MentorController@mentors');
     Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
@@ -265,6 +266,12 @@ Route::group([
 
     Route::post('position-credit/copy', 'PositionCreditController@copy');
     Route::resource('position-credit', 'PositionCreditController');
+
+    Route::post('pod/create-alpha-set', 'PodController@createAlphaSet');
+    Route::post('pod/{pod}/person', 'PodController@addPerson');
+    Route::delete('pod/{pod}/person', 'PodController@removePerson');
+    Route::patch('pod/{pod}/person', 'PodController@updatePerson');
+    Route::resource('pod', 'PodController');
 
     Route::post('position/bulk-grant-revoke', 'PositionController@bulkGrantRevoke');
     Route::get('position/people-by-position', 'PositionController@peopleByPosition');
