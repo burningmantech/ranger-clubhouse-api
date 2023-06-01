@@ -7,6 +7,7 @@ use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonOnlineTraining;
+use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\Role;
@@ -63,6 +64,7 @@ class Milestones
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
             'surveys' => Survey::retrieveUnansweredForPersonYear($person->id, $year),
             'period' => $period,
+            'photo' => PersonPhoto::retrieveInfo($person),
         ];
 
         if ($status != Person::AUDITOR && empty($person->bpguid)) {
@@ -119,7 +121,7 @@ class Milestones
 
             case Person::ACTIVE:
                 if ($isBinary) {
-                     $milestones['is_binary'] = true;
+                    $milestones['is_binary'] = true;
                 }
 
                 if (setting('OnlineTrainingFullCourseForVets')) {
