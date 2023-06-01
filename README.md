@@ -24,7 +24,7 @@ You will need the following things properly installed on your computer.
 * Create the mysql database rangers. The mysql account 'rangers' will need appropriate
 permissions to access the rangers database.
 * If you did not receive a redacted database from the Ranger Tech Team, a basic database will need
-to be setup. Run `php artisan migrate:fresh --seed` to setup the database. A single account
+to be setup. Run `php artisan migrate:fresh ` to load the database schema. A single account
 will be created - email: admin@example.com password: forkyourburn
 
 ## Running / Development
