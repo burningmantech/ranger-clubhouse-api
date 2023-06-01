@@ -84,6 +84,19 @@ class MentorController extends ApiController
     }
 
     /**
+     * Find the current mittens and if they are on duty.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function mittens(): JsonResponse
+    {
+        $this->authorize('isMentor');
+        return response()->json(['mittens' => Alpha::retrieveMittens()]);
+    }
+
+    /**
      * Assign or update the mentors a person
      *
      * @throws AuthorizationException

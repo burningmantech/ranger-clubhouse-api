@@ -133,6 +133,7 @@ class Timesheet extends ApiModel
          */
 
         self::saving(function ($model) {
+
             if (!$model->isDirty('slot_id')
                 && (
                     ($model->isDirty('position_id') && $model->position_id)
@@ -150,6 +151,15 @@ class Timesheet extends ApiModel
                         ->first();
                     $model->slot_id = $slot?->id;
                 }
+            }
+        });
+
+        self::saved(function ($model) {
+            $offDuty = $model->getChangedValues()['off_duty'] ?? null;
+
+            // Did the off duty column go from nothing to a value? (i.e. shift ended)
+            if ($offDuty && !$offDuty[0] && $offDuty[1]) {
+                Pod::shiftEnded($model->person_id, $model->id);
             }
         });
     }

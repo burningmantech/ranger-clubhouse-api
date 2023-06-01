@@ -43,6 +43,7 @@ class SlotController extends ApiController
             'type' => 'sometimes|string',
             'position_id' => 'sometimes|integer',
             'for_rollcall' => 'sometimes|boolean',
+            'is_active' => 'sometimes|bool',
         ]);
 
         $rows = Slot::findForQuery($query);

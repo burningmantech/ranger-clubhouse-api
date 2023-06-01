@@ -191,6 +191,7 @@ class Slot extends ApiModel
         $type = $query['type'] ?? null;
         $positionId = $query['position_id'] ?? null;
         $forRollcall = $query['for_rollcall'] ?? null;
+        $isActive = $query['active'] ?? null;
 
         if ($year) {
             $sql->where('begins_year', $year);
@@ -202,6 +203,10 @@ class Slot extends ApiModel
 
         if ($positionId) {
             $sql->where('position_id', $positionId);
+        }
+
+        if ($isActive !== null) {
+            $sql->where('active', $isActive);
         }
 
         if ($forRollcall) {
