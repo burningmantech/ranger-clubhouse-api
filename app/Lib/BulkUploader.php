@@ -508,22 +508,27 @@ class BulkUploader
                     break;
 
                 case 'LSD':
+                    $sourceYear = $year;
                     $type = AccessDocument::LSD;
                     break;
 
                 case 'GIFT':
+                    $sourceYear = $year;
                     $type = AccessDocument::GIFT;
                     break;
 
                 case 'VP':
+                    $sourceYear = $year;
                     $type = AccessDocument::VEHICLE_PASS;
                     break;
 
                 case 'VPGIFT':
+                    $sourceYear = $year;
                     $type = AccessDocument::VEHICLE_PASS_GIFT;
                     break;
 
                 case 'VPLSD':
+                    $sourceYear = $year;
                     $type = AccessDocument::VEHICLE_PASS_LSD;
                     break;
 
@@ -544,18 +549,20 @@ class BulkUploader
                 }
             }
             // Optionally pop a source year if this type supports them
-            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+            if (in_array($type, AccessDocument::TICKET_TYPES)) {
                 if ($dataCount >= $nextInd + 1) {
                     $sourceYear = trim($data[$nextInd++]);
                 }
+
             }
 
-            // Optionally pop an expiry year if this type supports them
             if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+                // Optionally pop an expiry year if this type supports them
                 if ($dataCount >= $nextInd + 1) {
                     $expiryYear = trim($data[$nextInd++]);
                 }
             }
+
             // Fail if there are additional unconsumed data columns
             if ($dataCount != $nextInd) {
                 $record->status = self::STATUS_FAILED;
