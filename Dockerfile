@@ -42,6 +42,8 @@ RUN                                                     \
     zip                                                 \
   && MAKEFLAGS="-j $(nproc)" pecl install swoole        \
   && docker-php-ext-enable swoole                       \
+  && docker-php-ext-configure pcntl --enable-pcntl      \
+  && docker-php-ext-install pcntl                       \
   && apk del                                            \
     icu-dev                                             \
     libjpeg-turbo-dev                                   \
