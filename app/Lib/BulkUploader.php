@@ -507,6 +507,10 @@ class BulkUploader
                     $type = AccessDocument::RPT;
                     break;
 
+                case 'LSD':
+                    $type = AccessDocument::LSD;
+                    break;
+
                 case 'GIFT':
                     $type = AccessDocument::GIFT;
                     break;
