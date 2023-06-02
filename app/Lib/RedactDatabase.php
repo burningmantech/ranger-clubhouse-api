@@ -7,6 +7,7 @@ use App\Models\Person;
 use App\Models\Provision;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Class RedactDatabase
@@ -72,7 +73,9 @@ class RedactDatabase
         ];
 
         foreach ($tables as $table) {
-            DB::statement("TRUNCATE $table");
+            if (Schema::hasTable($table)) {
+                DB::statement("TRUNCATE $table");
+            }
         }
 
         DB::table('provision')->update(['status' => Provision::AVAILABLE]);
@@ -80,7 +83,7 @@ class RedactDatabase
         DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
 
         DB::table('access_document')->update(['comments' => '']);
-        DB::table('access_document')->whereYear('expiry_date', '>', current_year()+3);
+        DB::table('access_document')->whereYear('expiry_date', '>', current_year() + 3);
 
         $address = [
             'street1' => '1 Main St',
