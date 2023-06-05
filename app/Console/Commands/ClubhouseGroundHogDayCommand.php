@@ -68,10 +68,28 @@ class ClubhouseGroundHogDayCommand extends Command
         putenv("MYSQL_PWD=$pwd");
         $this->info("Creating groundhog day database from $db for day $groundHogDay");
         $this->info("Cloning $db to $ghdname");
-        if (shell_exec("mysqldump -u $user $db | mysql -u $user $ghdname")) {
-            $this->error("Cannot clone database");
+
+        if (shell_exec("mysqldump --ignore-table=$db.log --ignore-table=$db.mail_log --ignore-table=$db.action_logs -u $user $db > dump-tmp.sql")) {
+            $this->error("Cannot dump the ignore database.");
             return true;
         }
+
+        if (shell_exec("mysqldump --no-data  -u $user $db log mail_log >> dump-tmp.sql")) {
+            $this->error("Cannot dump the database structure for selected tables.");
+            return true;
+        }
+
+        if (shell_exec("mysqldump --where=\"event in ('person-slot-add', 'person-slot-remove')\" -u $user $db action_logs  >> dump-tmp.sql")) {
+            $this->error("Cannot dump the database structure for selected tables.");
+            return true;
+        }
+
+        if (shell_exec("mysql -u $user $ghdname < dump-tmp.sql")) {
+            $this->error("Failed to load ghd database");
+            return true;
+        }
+
+        unlink("dump-tmp.sql");
 
         // Switch databases
         config(['database.connections.mysql.database' => $ghdname]);
