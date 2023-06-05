@@ -60,6 +60,8 @@ class RedactDatabase
             'broadcast_message',
             'broadcast',
             'contact_log',
+            'jobs',
+            'failed_jobs',
             'log',
             'mail_log',
             'motd',
