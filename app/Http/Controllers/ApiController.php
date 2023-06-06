@@ -31,12 +31,15 @@ class ApiController extends Controller
          * The JWT token has an expiry timestamp - do the authentication check
          * before setting up the ground hog day time, otherwise the JWT token will be invalidated
          */
-        $check = Auth::check();
 
         $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
+            Carbon::setTestNow();
+            $check = Auth::check();
             // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
             Carbon::setTestNow($ghdTime);
+        } else {
+            $check = Auth::check();
         }
 
         if ($check) {
