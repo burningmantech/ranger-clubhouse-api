@@ -2,9 +2,15 @@
 
 namespace App\Lib;
 
+use App\Models\Person;
+use App\Models\PersonSlot;
+use App\Models\Position;
 use App\Models\Setting;
+use App\Models\Slot;
+use App\Models\TraineeStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GroundHogDay
 {
@@ -115,6 +121,10 @@ class GroundHogDay
         }
 
         Setting::find('DashboardPeriod')->update(['value' => 'event']);
+
+        self::passHQTraining("hqworkertest@nomail.none", $year);
+        self::passHQTraining("hqshorttest@nomail.none", $year);
+        self::passHQTraining("hqleadtest@nomail.none", $year);
     }
 
     /**
@@ -126,6 +136,31 @@ class GroundHogDay
     public static function trainingDatabaseDumpName(Carbon|string $dt) : string
     {
         $date = Carbon::parse($dt)->format('Y-m-d');
-        return "training-$date.sql.gz";
+        return "training-{$date}.sql.gz";
+    }
+
+    /**
+     * Setup to an account has passed HQ Training
+     */
+
+    public static function passHQTraining(string $email, int $year): void
+    {
+        $person = Person::findByEmail($email);
+
+        if (!$person) {
+            Log::error("Account {$email} not found");
+            return;
+        }
+
+        $slot = Slot::where('position_id', Position::HQ_FULL_TRAINING)->where('active', true)->where('begins_year', $year)->first();
+        if (!$slot) {
+            Log::error("Cannot find HQ training slot");
+            return;
+        }
+
+        PersonSlot::insert([ 'slot_id' => $slot->id, 'person_id' => $person->id]);
+        $ts = TraineeStatus::firstOrNewForSession($person->id, $slot->id);
+        $ts->passed = true;
+        $ts->saveWithoutValidation();
     }
 }
