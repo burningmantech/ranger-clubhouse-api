@@ -46,12 +46,23 @@ class ClubhouseCreateTrainingDatabase extends Command
         $cloneDb = config('database.connections.mysql_clone_from.database');
         $cloneHost = config('database.connections.mysql_clone_from.host');
         putenv("MYSQL_PWD=$clonePwd");
-        $cloneSql = "clone.sql.gz";
+        $cloneDump = "clone-dump.sql";
 
         $this->info("Dumping from $cloneDb");
-        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table -e --ignore-table=$cloneDb.log --single-transaction --skip-add-locks --quick $cloneDb | gzip > $cloneSql")) {
-            $this->error("Cannot dump database host=[$cloneHost] user=[$cloneUser] db=[$cloneDb]");
-            return 1;
+
+        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --single-transaction --skip-add-locks --quick  --ignore-table=$cloneDb.log --ignore-table=$cloneDb.mail_log --ignore-table=$cloneDb.action_logs > $cloneDump")) {
+            $this->error("Cannot dump the ignore database.");
+            return true;
+        }
+
+        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --no-data $cloneDb log mail_log >> $cloneDump")) {
+            $this->error("Cannot dump the database structure for selected tables.");
+            return true;
+        }
+
+        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser   --single-transaction --skip-add-locks --quick --where=\"event in ('person-slot-add', 'person-slot-remove')\" $cloneDb action_logs  >> $cloneDump")) {
+            $this->error("Cannot dump the database structure for selected tables.");
+            return true;
         }
 
         // Load database up here.
@@ -61,9 +72,9 @@ class ClubhouseCreateTrainingDatabase extends Command
         $host = config('database.connections.mysql.host');
         putenv("MYSQL_PWD=$pwd");
         $this->info("Loading into $db");
-        if (shell_exec("gunzip < clone.sql.gz | mysql -h $host -u $user $db")) {
+        if (shell_exec("mysql -h $host -u $user $db < dump-tmp.sql")) {
             $this->error("Could not load database from production server");
-            unlink($cloneSql);
+            unlink($cloneDump);
             return 1;
         }
 
@@ -71,7 +82,7 @@ class ClubhouseCreateTrainingDatabase extends Command
         RedactDatabase::execute($year);
         GroundHogDay::build($groundHogDay);
 
-        unlink($cloneSql);
+        unlink($cloneDump);
         $this->info("Dumping training database to $dumpFile");
         // password set above
         if (shell_exec("mysqldump -h $host -u $user $db | gzip > $dumpFile")) {
