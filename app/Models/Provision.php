@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class Provision extends ApiModel
 {
@@ -114,7 +115,6 @@ class Provision extends ApiModel
     ];
 
     protected $hidden = [
-        'person',
         'additional_comments',   // pseudo-column, write-only. used to append to comments.
     ];
 
@@ -143,6 +143,7 @@ class Provision extends ApiModel
      *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
 
     public function save($options = []): bool
@@ -169,12 +170,14 @@ class Provision extends ApiModel
 
     public static function findForQuery($query): Collection
     {
-        $sql = self::orderBy('source_year')->orderBy('type');
 
         $status = $query['status'] ?? null;
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
+        $includePerson = $query['include_person'] ?? false;
+
+        $sql = self::query()->orderBy('type')->orderBy('source_year');
 
         if ($status != 'all') {
             if (empty($status)) {
@@ -188,6 +191,10 @@ class Provision extends ApiModel
             $sql->where('person_id', $personId);
         }
 
+        if ($includePerson) {
+            $sql->with('person:id,callsign,status');
+        }
+
         if ($type) {
             $sql->whereIn('type', is_array($type) ? $type : explode(',', $type));
         }
@@ -196,8 +203,12 @@ class Provision extends ApiModel
             $sql->where('source_year', $year);
         }
 
-        return $sql->get();
-    }
+        $rows = $sql->get();
+        if ($includePerson) {
+            return $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
+        } else {
+            return $rows;
+        }}
 
     /**
      * Find provisions (available, claimed, banked, submitted) for the given person & type(s)

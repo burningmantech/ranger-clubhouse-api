@@ -27,6 +27,7 @@ class ProvisionController extends ApiController
         $query = request()->validate([
             'year' => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
+            'include_person' => 'sometimes|bool',
             'status' => 'sometimes|string',
             'type' => 'sometimes|string',
         ]);
