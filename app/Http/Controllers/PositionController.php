@@ -7,7 +7,6 @@ use App\Lib\ClubhouseCache;
 use App\Lib\Reports\PeopleByPositionReport;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\SandmanQualificationReport;
-use App\Models\Person;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +27,7 @@ class PositionController extends ApiController
             'can_manage' => 'sometimes|boolean',
             'include_roles' => 'sometimes|boolean',
             'has_paycode' => 'sometimes|boolean',
+            'active' => 'sometimes|boolean',
         ]);
 
         return $this->success(Position::findForQuery($params), null, 'position');

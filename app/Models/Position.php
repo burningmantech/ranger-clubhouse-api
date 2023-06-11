@@ -299,6 +299,7 @@ class Position extends ApiModel
         'max',
         'min',
         'new_user_eligible',
+        'no_payroll_hours_adjustment',
         'on_sl_report',
         'on_trainer_report',
         'paycode',
@@ -321,10 +322,11 @@ class Position extends ApiModel
         'all_rangers' => 'bool',
         'deselect_on_team_join' => 'bool',
         'new_user_eligible' => 'bool',
+        'no_payroll_hours_adjustment' => 'bool',
         'on_sl_report' => 'bool',
         'on_trainer_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
-        'require_training_for_roles' => 'bool'
+        'require_training_for_roles' => 'bool',
     ];
 
     protected $rules = [
@@ -426,7 +428,11 @@ class Position extends ApiModel
 
         if ($hasPaycode) {
             $sql->where('paycode', '!=', '');
-            $sql->where('active', true);
+            $sql->whereNotNull('paycode');
+        }
+
+        if (isset($params['active'])) {
+            $sql->where('active', $params['active']);
         }
 
         $rows = $sql->get();

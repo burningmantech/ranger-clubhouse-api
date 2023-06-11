@@ -8,6 +8,7 @@ use App\Lib\Reports\EventStats;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
+use App\Lib\Reports\PayrollReport;
 use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
 use App\Lib\Reports\PotentialEarnedShirtsReport;
 use App\Lib\Reports\RadioEligibilityReport;
@@ -25,9 +26,11 @@ use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Position;
 use App\Models\PositionCredit;
+use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -897,5 +900,29 @@ class TimesheetController extends ApiController
     {
         $this->authorize('eventStatsReport', Timesheet::class);
         return response()->json(['stats' => EventStats::execute($this->getYear())]);
+    }
+
+
+    /**
+     * Payroll report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function payrollReport(): JsonResponse
+    {
+        Gate::allowIf(fn ($user) => $user->hasRole(Role::PAYROLL));
+
+        $params = request()->validate([
+            'start_time' => 'required|date|before:end_time',
+            'end_time' => 'required|date|after:start_time',
+            'break_duration' => 'required|integer',
+            'hour_cap' => 'sometimes|integer',
+        ]);
+
+        return response()->json([
+            'people' => PayrollReport::execute($params['start_time'], $params['end_time'], $params['break_duration'], $params['hour_cap'] ?? 0)
+        ]);
     }
 }
