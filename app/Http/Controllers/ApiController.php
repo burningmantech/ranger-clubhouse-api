@@ -145,7 +145,7 @@ class ApiController extends Controller
         return DeserializeRecord::fromRest(request(), $record, $this->user);
     }
 
-    public function fromRest($record)
+    public function fromRest($record): void
     {
         $resourceName = $record->getResourceSingle();
         $fields = request()->input($resourceName);

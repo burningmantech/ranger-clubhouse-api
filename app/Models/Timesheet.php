@@ -102,7 +102,7 @@ class Timesheet extends ApiModel
     const RELATIONSHIPS = [
         'reviewer_person:id,callsign',
         'verified_person:id,callsign',
-        'position:id,title,count_hours',
+        'position:id,title,count_hours,paycode,no_payroll_hours_adjustment',
         'slot'
     ];
 

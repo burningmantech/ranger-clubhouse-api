@@ -558,6 +558,7 @@ class PersonController extends ApiController
             'callsign_approved' => $person->callsign_approved,
             'status' => $person->status,
             'bpguid' => $person->bpguid,
+            'employee_id' => $person->employee_id,
             'roles' => $person->roles,
             'true_roles' => $person->trueRoles,
             'teacher' => [
