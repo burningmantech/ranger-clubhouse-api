@@ -162,7 +162,8 @@ class RbsController extends ApiController
         }
 
         if (isset($attrs['has_position']) || isset($attrs['has_muster_position'])) {
-            $validations['position_id'] = 'required|integer|exists:position,id';
+            $validations['position_ids'] = 'required|array';
+            $validations['position_ids.*'] = 'integer|exists:position,id';
             $validations['position_signed_up'] = 'required|string';
         }
 
