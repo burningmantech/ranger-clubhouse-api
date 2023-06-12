@@ -586,14 +586,14 @@ class RBS
             case Broadcast::TYPE_RECRUIT_POSITION:
                 $isRecruitPosition = ($broadcastType == Broadcast::TYPE_RECRUIT_POSITION);
 
-                $positionId = $params['position_id'];
+                $positionIds = $params['position_ids'];
 
                 $sql = DB::table('person_position')
                     ->join('person', function ($j) {
                         $j->on('person.id', '=', 'person_position.person_id');
                         $j->where('person.status', 'active');
                     })
-                    ->where('person_position.position_id', $positionId);
+                    ->whereIn('person_position.position_id', $positionIds);
 
                 if ($onSite || $isRecruitPosition) {
                     self::addOnSiteCond($sql);
@@ -604,12 +604,15 @@ class RBS
                     self::addNotOnDutyJoin($sql);
                 } elseif ($positionSignedup != 'any') {
                     // Is the person signed up for shift this year?
-                    $cond = "EXISTS (SELECT 1 FROM slot INNER JOIN person_slot ON person_slot.slot_id=slot.id WHERE YEAR(begins)=$year AND slot.position_id=$positionId AND person_slot.person_id=person.id LIMIT 1)";
-                    if ($positionSignedup == 'not-signed-up') {
-                        $cond = "NOT $cond";
-                    }
-
-                    $sql->whereRaw($cond);
+                    $sql->{$positionSignedup == 'not-signed-up' ? 'whereNotExists' : 'whereExists'}(function ($q) use ($positionIds, $year) {
+                        $q->select(DB::raw(1))
+                            ->from('slot')
+                            ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+                            ->where('begins_year', $year)
+                            ->whereIn('slot.position_id', $positionIds)
+                            ->whereColumn('person_slot.person_id', 'person.id')
+                            ->limit(1);
+                    });
                 }
                 break;
 
