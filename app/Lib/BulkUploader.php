@@ -45,19 +45,23 @@ class BulkUploader
     const HELP_CERTIFICATION = "callsign,issued on date,card number,trained on date\ndate format = YYYY-MM-DD\nAll fields, other than the callsign, are optional and may be left blank.
     Examples: hubcap,,12345 to record the card number\nhubcap,2022-01-4,,2021-12-20 to record the issued on and trained on dates.";
 
+    const HELP_PROVISIONS = "callsign[,source year,expiry year] = Source year and expiry year are optional.";
+    const HELP_PROVISION_EVENT_RADIO = "callsign,count[,source year,expiry year] = Source year and expiry year are optional";
+
+
     // Note: certification actions will be added by the BulkUploadControl actions method.
 
     const ACTION_DESCRIPTIONS = [
         [
             'label' => 'Earned Provisions Actions',
             'options' => [
-                ['id' => Provision::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => Provision::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => Provision::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_CALLSIGN],
+                ['id' => Provision::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_PROVISIONS],
+                ['id' => Provision::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_PROVISIONS],
+                ['id' => Provision::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_PROVISIONS],
                 [
                     'id' => Provision::EVENT_RADIO,
                     'label' => 'Earned Event Radio',
-                    'help' => self::HELP_RADIO
+                    'help' => self::HELP_PROVISION_EVENT_RADIO,
                 ]
             ]
         ],
@@ -78,13 +82,21 @@ class BulkUploader
         [
             'label' => 'BMID Actions',
             'options' => [
-                ['id' => 'meals', 'label' => 'Set meals on BMID',
+                [
+                    'id' => 'meals',
+                    'label' => 'Set meals on BMID',
                     'help' => "callsign,meals\nmeals = pre, post, event, all\nAdd plus (+) or minus (-) to add or subtract a meal period\n(e.g., hubcap,-event will remove the event week meal period",
                 ],
-                ['id' => 'showers', 'label' => 'Set showers on BMID',
+                [
+                    'id' => 'showers',
+                    'label' => 'Set showers on BMID',
                     'help' => "callsign,y/n/1/0"
                 ],
-                ['id' => 'bmidsubmitted', 'label' => 'Mark BMID as submitted', 'help' => self::HELP_CALLSIGN],
+                [
+                    'id' => 'bmidsubmitted',
+                    'label' => 'Mark BMID as submitted',
+                    'help' => self::HELP_CALLSIGN
+                ],
             ]
         ],
         [
@@ -759,6 +771,30 @@ class BulkUploader
             }
 
             $record->status = self::STATUS_SUCCESS;
+            $sourceYear = current_year();
+            $expiryYear = $sourceYear + 3;
+
+            $data = $record->data;
+            $fieldCount = count($data);
+
+            $itemCount = 0;
+            if ($isEventRadio) {
+                if ($fieldCount) {
+                    $itemCount = (int) array_shift($data);
+                    $fieldCount--;
+                } else {
+                    $itemCount = 1;
+                }
+            }
+
+            if ($fieldCount >= 1) {
+                $sourceYear = (int) $data[0];
+            }
+
+            if ($fieldCount >= 2) {
+                $expiryYear = (int) $data[1];
+            }
+
             if (!$commit) {
                 continue;
             }
@@ -774,7 +810,7 @@ class BulkUploader
             ]);
 
             if ($isEventRadio) {
-                $ad->item_count = empty($record->data) ? 1 : (int)$record->data[0];
+                $ad->item_count = $itemCount;
             }
 
             $ad->auditReason = 'created via bulk upload';
