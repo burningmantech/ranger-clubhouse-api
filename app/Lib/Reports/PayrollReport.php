@@ -16,10 +16,12 @@ class PayrollReport
 
         $entriesByPerson = Timesheet::select('timesheet.*')
             ->join('position', 'position.id', 'timesheet.position_id')
+            ->join('person', 'person.id', 'timesheet.person_id')
             ->with([
                 'person:id,callsign,first_name,last_name,email,employee_id',
                 'position:id,title,paycode,no_payroll_hours_adjustment'
             ])
+            ->whereNotNull('person.employee_id')
             ->whereIn('timesheet.position_id', $positionIds)
             ->where(function ($w) use ($startTime, $endTime) {
                 $w->where(function ($q) use ($startTime, $endTime) {
