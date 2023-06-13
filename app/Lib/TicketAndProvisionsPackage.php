@@ -58,8 +58,6 @@ class TicketAndProvisionsPackage
             'access_documents' => $accessDocuments,
             'gift_items' => $giftItems,
             'lsd_items' => $lsdItems,
-            'special_tickets' => [],  // TODO: Remove beginning of May '23. Just in case the most recent frontend is not being used.
-            'provisions' => Provision::findForQuery(['person_id' => $personId]),
             'credits_earned' => Timesheet::earnedCreditsForYear($personId, $year),
             'year_earned' => $year,
             'period' => setting('TicketingPeriod'),
@@ -88,6 +86,7 @@ class TicketAndProvisionsPackage
     public static function buildProvisions(int $personId, &$result): void
     {
         $provisions = Provision::findForQuery(['person_id' => $personId]);
+        $result['provision_records'] = $provisions;
 
         $mealMatrix = [];
         $haveAllocated = false;
@@ -146,5 +145,4 @@ class TicketAndProvisionsPackage
             $result['provisions_banked'] = $haveBanked;
         }
     }
-
 }

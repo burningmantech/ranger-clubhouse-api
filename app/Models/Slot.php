@@ -190,6 +190,7 @@ class Slot extends ApiModel
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
         $positionId = $query['position_id'] ?? null;
+        $positionIds = $query['position_ids'] ?? null;
         $forRollcall = $query['for_rollcall'] ?? null;
         $isActive = $query['active'] ?? null;
 
@@ -203,6 +204,10 @@ class Slot extends ApiModel
 
         if ($positionId) {
             $sql->where('position_id', $positionId);
+        }
+
+        if ($positionIds) {
+            $sql->whereIn('position_id', $positionIds);
         }
 
         if ($isActive !== null) {
@@ -337,31 +342,40 @@ class Slot extends ApiModel
      * Retrieve all the dirt shifts for a given year
      *
      * @param int $year
-     * @return Collection
+     * @return array
      */
 
-    public static function retrieveDirtTimes(int $year): Collection
+    public static function retrieveDirtTimes(int $year): array
     {
-        $rows = DB::table('slot')
-            ->select('position_id', 'begins', 'ends', 'duration')
-            ->where('begins_year', $year)
+        $rows = self::where('begins_year', $year)
             ->whereIn('position_id', [Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT])
+            ->where('active', true)
             ->orderBy('begins')
             ->get();
 
+        $slots = [];
         foreach ($rows as $row) {
             $start = new Carbon($row->begins);
 
+            $duration = $row->duration;
             if ($start->timestamp % 3600) {
                 // If it's not on an hour boundary, bump it by 15 minutes
                 $start->addMinutes(15);
-                $row->duration -= 30 * 60;
+                $duration -= 30 * 60;
             }
 
-            $row->shift_start = (string)$start;
+            $slots[] = [
+                'position_id' => $row->position_id,
+                'shift_start' => (string)$start,
+                'begins' => (string)$row->begins,
+                'ends' => (string)$row->ends,
+                'duration' => $duration,
+                'has_started' => $row->has_started,
+                'has_ended' => $row->has_ended,
+            ];
         }
 
-        return $rows;
+        return $slots;
     }
 
     /**
