@@ -7,7 +7,10 @@ use Carbon\Carbon;
 
 class PayrollReport
 {
-    public static function execute(string $startTime, string $endTime, int $breakDuration, int $hourCap): array
+    public static function execute(string $startTime,
+                                   string $endTime,
+                                   int $breakDuration,
+                                   int $hourCap, array $positionIds): array
     {
         $secondCap = $hourCap * 3600;
 
@@ -17,20 +20,20 @@ class PayrollReport
                 'person:id,callsign,first_name,last_name,email,employee_id',
                 'position:id,title,paycode,no_payroll_hours_adjustment'
             ])
-            ->whereNotNull('position.paycode')
+            ->whereIn('timesheet.position_id', $positionIds)
             ->where(function ($w) use ($startTime, $endTime) {
                 $w->where(function ($q) use ($startTime, $endTime) {
                     $q->where('timesheet.on_duty', '<=', $startTime);
                     $q->where('timesheet.off_duty', '>=', $endTime);
-                })->orwhere(function ($q) use ($startTime, $endTime) {
+                })->orWhere(function ($q) use ($startTime, $endTime) {
                     // Shift happens within the period
                     $q->where('timesheet.on_duty', '>=', $startTime);
                     $q->where('timesheet.off_duty', '<=', $endTime);
-                })->orwhere(function ($q) use ($startTime, $endTime) {
+                })->orWhere(function ($q) use ($startTime, $endTime) {
                     // Shift ends within the period
                     $q->where('timesheet.off_duty', '>', $startTime);
                     $q->where('timesheet.off_duty', '<=', $endTime);
-                })->orwhere(function ($q) use ($startTime, $endTime) {
+                })->orWhere(function ($q) use ($startTime, $endTime) {
                     // Shift begins within the period
                     $q->where('timesheet.on_duty', '>=', $startTime);
                     $q->where('timesheet.on_duty', '<', $endTime);
