@@ -42,6 +42,8 @@ class SlotController extends ApiController
             'year' => 'required_without:for_rollcall|digits:4',
             'type' => 'sometimes|string',
             'position_id' => 'sometimes|integer',
+            'position_ids' => 'sometimes|array',
+            'position_ids.*' => 'sometimes|integer|exists:position,id',
             'for_rollcall' => 'sometimes|boolean',
             'is_active' => 'sometimes|bool',
         ]);
