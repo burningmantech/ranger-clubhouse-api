@@ -30,9 +30,9 @@ use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -912,17 +912,22 @@ class TimesheetController extends ApiController
 
     public function payrollReport(): JsonResponse
     {
-        Gate::allowIf(fn ($user) => $user->hasRole(Role::PAYROLL));
+        Gate::allowIf(fn($user) => $user->hasRole(Role::PAYROLL));
 
         $params = request()->validate([
             'start_time' => 'required|date|before:end_time',
             'end_time' => 'required|date|after:start_time',
             'break_duration' => 'required|integer',
             'hour_cap' => 'sometimes|integer',
+            'position_ids' => 'required|array',
+            'position_ids.*' => 'integer|exists:position,id'
         ]);
 
         return response()->json([
-            'people' => PayrollReport::execute($params['start_time'], $params['end_time'], $params['break_duration'], $params['hour_cap'] ?? 0)
+            'people' => PayrollReport::execute(
+                $params['start_time'], $params['end_time'],
+                $params['break_duration'], $params['hour_cap'] ?? 0,
+                $params['position_ids'])
         ]);
     }
 }
