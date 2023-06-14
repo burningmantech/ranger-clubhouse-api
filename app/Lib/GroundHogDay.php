@@ -7,6 +7,7 @@ use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Setting;
 use App\Models\Slot;
+use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class GroundHogDay
         // Kill anytime sheets in the future
         DB::table('timesheet')->where('on_duty', '>', $groundHogDay)->delete();
         // Mark timesheets ending after groundhog day as still on duty
-        DB::table('timesheet')->where('off_duty', '>', $groundHogDay)->update(['off_duty' => null]);
+        DB::table('timesheet')->where('off_duty', '>', $groundHogDay)->update(['off_duty' => null, 'review_status' => Timesheet::STATUS_UNVERIFIED]);
 
         // Remove any timesheet logs after groundhog day
         DB::table('timesheet_log')->where('created_at', '>=', $groundHogDay)->delete();
