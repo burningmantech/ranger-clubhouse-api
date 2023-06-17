@@ -59,7 +59,7 @@ class Timesheet extends ApiModel
         Position::TRAINING,
     ];
 
-    const TOO_SHORT_LENGTH = (15*60);
+    const TOO_SHORT_LENGTH = (15 * 60);
 
     protected $fillable = [
         'off_duty',
@@ -213,6 +213,7 @@ class Timesheet extends ApiModel
         $onDutyStart = $query['on_duty_start'] ?? null;
         $onDutyEnd = $query['on_duty_end'] ?? null;
         $positionId = $query['position_id'] ?? null;
+        $positionIds = $query['position_ids'] ?? null;
         $includePhoto = $query['include_photo'] ?? false;
 
         if ($year) {
@@ -247,6 +248,10 @@ class Timesheet extends ApiModel
 
         if ($positionId) {
             $sql->where('position_id', $positionId);
+        }
+
+        if ($positionIds) {
+            $sql->whereIn('position_id', $positionIds);
         }
 
         $sql->with(self::RELATIONSHIPS);

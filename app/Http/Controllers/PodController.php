@@ -55,6 +55,7 @@ class PodController extends ApiController
             return $this->restError($pod);
         }
 
+        $pod->people = [];
         return $this->success($pod);
     }
 
@@ -120,6 +121,7 @@ class PodController extends ApiController
     {
         $this->authorize('show', $pod);
         $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
         return $this->success($pod);
     }
 
@@ -141,6 +143,7 @@ class PodController extends ApiController
         }
 
         $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
 
         return $this->success($pod);
     }
@@ -206,6 +209,7 @@ class PodController extends ApiController
         }
         $pod->saveWithoutValidation();
         $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
         return $this->success($pod);
     }
 
@@ -243,6 +247,7 @@ class PodController extends ApiController
         }
         $personPod->save();
         $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
         return $this->success($pod);
     }
 
@@ -280,11 +285,10 @@ class PodController extends ApiController
             $pod->disbanded_at = now();
         }
         $pod->saveWithoutValidation();
-        $pod->load(Pod::RELATIONSHIPS);
 
-        for ($idx = 0; $idx < count($pod->people) ; $idx++) {
+        for ($idx = 0; $idx < count($pod->people); $idx++) {
             $person = $pod->people[$idx];
-            $sortIdx = $idx+1;
+            $sortIdx = $idx + 1;
             if ($person->sort_index != $sortIdx) {
                 // Update to send back.
                 $person->sort_index = $sortIdx;
@@ -296,6 +300,8 @@ class PodController extends ApiController
             }
         }
 
+        $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
         return $this->success($pod);
     }
 }
