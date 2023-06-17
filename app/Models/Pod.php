@@ -55,8 +55,17 @@ class Pod extends ApiModel
     public function people(): HasManyThrough
     {
         return $this->hasManyThrough(Person::class, PersonPod::class, 'pod_id', 'id', 'id', 'person_id')
+            ->leftJoin('timesheet', function ($j) {
+                $j->on('timesheet.person_id', 'person_pod.person_id')
+                    ->whereNull('timesheet.off_duty');
+            })
+            ->leftJoin('position', 'position.id', 'timesheet.position_id')
             ->whereNull('person_pod.removed_at')
-            ->select('person.id', 'person.callsign', 'person.status', 'person_pod.is_lead', 'person_pod.sort_index')
+            ->select(
+                'person.id', 'person.callsign', 'person.status',
+                'person_pod.is_lead', 'person_pod.sort_index',
+                'timesheet.on_duty', 'timesheet.position_id',
+                'position.title as position_title')
             ->orderBy('person_pod.sort_index')
             ->orderBy('person.callsign');
     }
@@ -110,8 +119,24 @@ class Pod extends ApiModel
             $sql->with(self::RELATIONSHIPS);
         }
 
-        return $sql->orderBy('sort_index')->get();
+        $rows = $sql->orderBy('sort_index')->get();
+
+        if ($includePeople) {
+            foreach ($rows as $pod) {
+                $pod->loadPhotos();
+            }
+        }
+
+        return $rows;
     }
+
+    public function loadPhotos(): void
+    {
+        foreach ($this->people as $person) {
+            $person->photo_url = PersonPhoto::retrieveProfileUrlForPerson($person->id);
+        }
+    }
+
 
     /**
      * Handle the case where a person is in a pod, and has gone off duty. Indicate the

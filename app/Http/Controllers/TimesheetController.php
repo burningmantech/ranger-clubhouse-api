@@ -56,6 +56,8 @@ class TimesheetController extends ApiController
             'on_duty_start' => 'sometimes|date',
             'on_duty_end' => 'sometimes|date',
             'position_id' => 'sometimes|integer',
+            'position_ids' => 'sometimes|array',
+            'position_ids.*' => 'integer|exists:position,id',
             'include_photo' => 'sometimes|boolean',
         ]);
 

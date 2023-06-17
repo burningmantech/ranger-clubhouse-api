@@ -365,6 +365,7 @@ class Slot extends ApiModel
             }
 
             $slots[] = [
+                'id' => $row->id,
                 'position_id' => $row->position_id,
                 'shift_start' => (string)$start,
                 'begins' => (string)$row->begins,
