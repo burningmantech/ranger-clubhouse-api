@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -135,6 +136,11 @@ class Provision extends ApiModel
             if ($model->type === self::EVENT_RADIO && !$model->item_count) {
                 $model->item_count = 1;
             }
+
+            // All allocated provisions in the current year.
+            if ($model->is_allocated && !$model->exists) {
+                $model->expires_on = current_year();
+            }
         });
     }
 
@@ -208,7 +214,8 @@ class Provision extends ApiModel
             return $rows->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
         } else {
             return $rows;
-        }}
+        }
+    }
 
     /**
      * Find provisions (available, claimed, banked, submitted) for the given person & type(s)
@@ -310,21 +317,21 @@ class Provision extends ApiModel
 
     /**
      * Setter for expires_on. Fix the date if it's only a year.
-     *
-     * @param $date
-     */
+     **/
 
-    public function setExpiresOnAttribute($date)
+    public function expiresOn(): Attribute
     {
-        if (is_numeric($date)) {
-            $date = (string)$date;
-        }
+        return Attribute::make(set: function ($date) {
+            if (is_numeric($date)) {
+                $date = (string)$date;
+            }
 
-        if (strlen($date) == 4) {
-            $date .= "-09-15 00:00:00";
-        }
+            if (strlen($date) == 4) {
+                $date .= "-09-15 00:00:00";
+            }
 
-        $this->attributes['expires_on'] = $date;
+            return $date;
+        });
     }
 
     /**

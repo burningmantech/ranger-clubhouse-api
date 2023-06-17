@@ -87,6 +87,29 @@ class ProvisionControllerTest extends TestCase
     }
 
     /*
+ * Test creating a provision
+ */
+
+    public function testCreateAllocatedProvisions()
+    {
+        $this->addAdminRole();
+
+        $data = [
+            'person_id' => $this->user->id,
+            'type' => Provision::ALL_EAT_PASS,
+            'status' => Provision::AVAILABLE,
+            'source_year' => date('Y'),
+            'is_allocated' => true,
+        ];
+
+        $provision = [...$data, 'expires_on' => date('2040-12-31')];
+
+        $response = $this->json('POST', 'provision', ['provision' => $provision]);
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('provision', [...$data, 'expires_on' => date('Y-09-15')]);
+    }
+
+    /*
      * Update an access Document for allowed user
      */
 
