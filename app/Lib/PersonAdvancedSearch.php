@@ -39,6 +39,9 @@ class PersonAdvancedSearch
         $includeTrainingStatus = $query['include_training_status'] ?? false;
         $trainingStatus = $query['training_status'] ?? null;
 
+        $includeTicketingInfo = $query['include_ticketing_info'] ?? false;
+        $ticketingStatus = $query['ticketing_status'] ?? null;
+
         $peopleByStatusChange = [];
 
         $sql = Person::select('person.*');
@@ -119,6 +122,41 @@ class PersonAdvancedSearch
                 });
             } else {
                 $sql->with('person_photo:id,status');
+            }
+        }
+
+        if ($includeTicketingInfo || $ticketingStatus) {
+            if (!$onlineCourseStatus && !$includeOnlineCourse) {
+                $sql->leftJoin('person_event', function ($j) use ($year) {
+                    $j->on('person_event.person_id', 'person.id');
+                    $j->where('person_event.year', $year);
+                });
+            }
+
+            $sql->addSelect(
+                'person_event.ticketing_started_at',
+                'person_event.ticketing_finished_at',
+            );
+
+            if ($ticketingStatus) {
+                switch ($ticketingStatus) {
+                    case 'started':
+                        $sql->whereNotNull('person_event.ticketing_started_at');
+                        break;
+
+                    case 'not-started':
+                        $sql->whereNull('person_event.ticketing_started_at');
+                        break;
+
+                    case 'finished':
+                        $sql->whereNotNull('person_event.ticketing_finished_at');
+                        break;
+
+                    case 'not-finished':
+                        $sql->whereNotNull('person_event.ticketing_started_at');
+                        $sql->whereNull('person_event.ticketing_finished_at');
+                        break;
+                 }
             }
         }
 
@@ -204,7 +242,7 @@ class PersonAdvancedSearch
                             $status = 'pending';
                         }
                     }
-                 } else if ($trainee) {
+                } else if ($trainee) {
                     foreach ($trainee as $slot) {
                         $date = $slot->begins;
                         $signup = $slot->timestamp;
@@ -280,6 +318,11 @@ class PersonAdvancedSearch
                 } else {
                     $result['training_status'] = 'missing';
                 }
+            }
+
+            if ($includeTicketingInfo || $ticketingStatus) {
+                $result['ticketing_started_at'] = $person->ticketing_started_at;
+                $result['ticketing_finished_at'] = $person->ticketing_finished_at;
             }
             $people[] = $result;
         }

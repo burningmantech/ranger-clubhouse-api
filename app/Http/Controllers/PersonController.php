@@ -131,6 +131,13 @@ class PersonController extends ApiController
                 Rule::in(['missing', 'signed-up', 'passed', 'failed'])
             ],
             'include_training_status' => 'sometimes|boolean',
+
+            'ticketing_status' => [
+                'sometimes',
+                'string',
+                Rule::in([ 'started', 'not-started', 'finished', 'not-finished'])
+            ],
+            'include_ticketing_info' => 'sometimes|boolean',
         ]);
 
         return response()->json(PersonAdvancedSearch::execute($params, $this->userCanViewEmail()));
