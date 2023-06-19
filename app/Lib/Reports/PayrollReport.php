@@ -9,8 +9,10 @@ class PayrollReport
 {
     public static function execute(string $startTime,
                                    string $endTime,
-                                   int $breakDuration,
-                                   int $hourCap, array $positionIds): array
+                                   int    $breakAfterHours,
+                                   int    $breakDuration,
+                                   int    $hourCap,
+                                   array  $positionIds): array
     {
         $secondCap = $hourCap * 3600;
 
@@ -63,8 +65,8 @@ class PayrollReport
                     'position_title' => $entry->position->title,
                     'paycode' => $entry->position->paycode,
                     'verified' => $entry->review_status == Timesheet::STATUS_VERIFIED || $entry->review_status == Timesheet::STATUS_APPROVED,
-                    'orig_on_duty' => (string) $onDuty,
-                    'orig_off_duty' => (string) $offDuty,
+                    'orig_on_duty' => (string)$onDuty,
+                    'orig_off_duty' => (string)$offDuty,
                     'orig_duration' => $offDuty->diffInSeconds($onDuty),
                 ];
 
@@ -88,7 +90,7 @@ class PayrollReport
 
                 $duration = $offDuty->diffInSeconds($onDuty);
                 if (!$entry->position->no_payroll_hours_adjustment && $secondCap && $duration > $secondCap) {
-                    array_unshift($notes, 'Entry capped at '.$hourCap.' hours');
+                    array_unshift($notes, 'Entry capped at ' . $hourCap . ' hours');
                     $duration = $secondCap;
                     $offDuty = $onDuty->clone()->addHours($hourCap);
                 }
@@ -96,19 +98,10 @@ class PayrollReport
                 $shift['on_duty'] = self::formatDt($onDuty);
                 $shift['off_duty'] = self::formatDt($offDuty);
 
-                $startHour = $onDuty->hour;
                 if ($entry->position->no_payroll_hours_adjustment) {
                     array_unshift($notes, 'Position set to not adjust hours.');
-                } else if ($duration >= (6 * 3600)) {
-                    if ($startHour >= 6 && $startHour <= 10) {
-                        $shift['meal_adjusted'] = self::computeMealBreak('lunch', $onDuty, $duration, 12, 0, $breakDuration);
-                    } else if ($startHour >= 12 && $startHour < 15) {
-                        $shift['meal_adjusted'] = self::computeMealBreak('dinner', $onDuty, $duration, 17, 0, $breakDuration);
-                    } else {
-                        array_unshift($notes, 'No break - start not between 06:00 & 10:00, or 12:00 & 15:00');
-                    }
-                } else {
-                    array_unshift($notes, 'No break - duration < 6 hours');
+                } else if ($breakAfterHours && $duration >= ($breakAfterHours * 3600)) {
+                    $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $duration, $breakAfterHours, $breakDuration);
                 }
 
                 $shift['notes'] = implode("\n", $notes);
@@ -131,20 +124,19 @@ class PayrollReport
         return $people;
     }
 
-    public static function computeMealBreak(string $meal,
-                                            Carbon $onDuty, int $duration,
-                                            int    $startBreakHour, int $startBreakMin,
+    public static function computeMealBreak(Carbon $onDuty,
+                                            int    $duration,
+                                            int    $breakAfterHours,
                                             int    $breakDuration): array
     {
         // Split at Lunch
         $breakForMeal = $onDuty->clone();
-        $breakForMeal->setTime($startBreakHour, $startBreakMin);
+        $breakForMeal->addHours($breakAfterHours);
         $remaining = $breakForMeal->diffInSeconds($onDuty);
         $afterMeal = $breakForMeal->clone()->addMinutes($breakDuration);
         $endTime = $afterMeal->clone()->addSeconds($duration - $remaining);
 
         return [
-            'meal' => $meal,
             'first_half' => [
                 'on_duty' => self::formatDt($onDuty),
                 'off_duty' => self::formatDt($breakForMeal),
