@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM ghcr.io/burningmantech/php-nginx:8.2.6-alpine3.18 as php
+FROM ghcr.io/burningmantech/php-nginx:8.2.7-alpine3.18 as php
 
 # Install OS packages required at runtime
 RUN apk add --no-cache  \
