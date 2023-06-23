@@ -195,7 +195,7 @@ class TimesheetPolicy
 
     public function bulkSignInOut(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::TIMESHEET_MANAGEMENT);
     }
 
     /**
