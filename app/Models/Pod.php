@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,10 +19,12 @@ class Pod extends ApiModel
     public $timestamps = true;
 
     protected $fillable = [
-        'type',
-        'slot_id',
+        'location',
         'mentor_pod_id',
-        'sort_index'
+        'slot_id',
+        'sort_index',
+        'transport',
+        'type',
     ];
 
     public $casts = [
@@ -37,10 +41,19 @@ class Pod extends ApiModel
         'past_people'
     ];
 
+
     const TYPE_SHIFT = 'shift';     // Normal shift, dirt pair or group
     const TYPE_MENTOR = 'mentor';   // Alpha Mentor pod
     const TYPE_MITTEN = 'mitten';   // Alpha  Mentor-In-Training pod
     const TYPE_ALPHA = 'alpha';     // Alpha pod
+
+    const TRANSPORT_FOOT = 'foot'; // On foot
+    const TRANSPORT_BICYCLE = 'bicycle'; // Bike mobile
+    const TRANSPORT_VEHICLE = 'vehicle'; // In a vehicle
+
+    protected $attributes = [
+        'transport' => self::TRANSPORT_FOOT,
+    ];
 
     public function person_pod(): HasMany
     {
@@ -180,5 +193,16 @@ class Pod extends ApiModel
 
         // Last person in the pod
         $this->saveWithoutValidation();
+    }
+
+    /**
+     * Null the location if it's empty.
+     *
+     * @return Attribute
+     */
+
+    public function location() : Attribute
+    {
+        return NullIfEmptyAttribute::make();
     }
 }
