@@ -144,11 +144,6 @@ class Setting extends ApiModel
             'default' => true,
         ],
 
-        'GeneralSupportEmail' => [
-            'description' => 'General Ranger Email Address',
-            'type' => self::TYPE_EMAIL,
-        ],
-
         'JoiningRangerSpecialTeamsUrl' => [
             'description' => 'How To Join Ranger Special Teams Document URL',
             'type' => self::TYPE_STRING,

@@ -33,12 +33,13 @@ class RBS
      * Positions which may have frequenty shift muster requests.
      */
     const FREQUENT_MUSTER_POSITIONS = [
-        Position::RSC_SHIFT_LEAD,
-        Position::HQ_WINDOW,
+        Position::DOUBLE_OH_7,
         Position::DIRT_GREEN_DOT,
         Position::GREEN_DOT_LEAD,
+        Position::GREEN_DOT_MENTOR,
+        Position::HQ_WINDOW,
+        Position::RSC_SHIFT_LEAD,
         Position::TROUBLESHOOTER,
-        Position::DOUBLE_OH_7
     ];
 
     /*

@@ -15,17 +15,13 @@ class ConfigController extends Controller
     const CLIENT_CONFIGS = [
         'AdminEmail',
         'AuditorRegistrationDisabled',
-        'EditorUrl',
-        'GeneralSupportEmail',
         'HQWindowInterfaceEnabled',
         'JoiningRangerSpecialTeamsUrl',
         'LoginManageOnPlayaEnabled',
         'MealDates',
         'MealInfoAvailable',
         'MentorEmail',
-        'MotorpoolPolicyEnable',
         'PersonnelEmail',
-        'RadioCheckoutAgreementEnabled',
         'RangerFeedbackFormUrl',
         'RangerManualUrl',
         'RangerPoliciesUrl',
@@ -41,7 +37,7 @@ class ConfigController extends Controller
      * @return JsonResponse
      */
 
-    public function show()
+    public function show(): JsonResponse
     {
         $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
