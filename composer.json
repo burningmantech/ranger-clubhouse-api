@@ -29,18 +29,18 @@
     "guzzlehttp/guzzle": "^7.5.0",
     "intervention/image": "^2.7.2",
     "laravel/framework": "^10.0",
-    "laravel/octane": "^1.4",
+    "laravel/octane": "^2.0.1",
     "laravel/tinker": "^2.7.2",
     "league/flysystem-aws-s3-v3": "^3.5.0",
     "league/fractal": "^0.20",
     "php-open-source-saver/jwt-auth": "^2.0.0",
-    "twilio/sdk": "^6.36.0"
+    "twilio/sdk": "^7.4.1"
   },
   "require-dev": {
     "fakerphp/faker": "^1.20",
     "filp/whoops": "^2.14.5",
     "itsgoingd/clockwork": "^5.1",
-    "mockery/mockery": "~1.5.1",
+    "mockery/mockery": "~1.6.2",
     "nunomaduro/collision": "^7.0",
     "phpunit/phpunit": "^10.0",
     "spatie/laravel-ignition": "^2.0"

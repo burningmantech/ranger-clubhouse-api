@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f2d1d07ec3b96a0b674bf11da66b6e72",
+    "content-hash": "bddcb4b3cd9af033c0426f68fd3c62cb",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -120,16 +120,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.273.5",
+            "version": "3.273.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "dbb8640e651351b47f50548c26abbe316d36632b"
+                "reference": "1d3e7ae37f31dfe1d4e9d9e361fd8e6702074fbe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/dbb8640e651351b47f50548c26abbe316d36632b",
-                "reference": "dbb8640e651351b47f50548c26abbe316d36632b",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/1d3e7ae37f31dfe1d4e9d9e361fd8e6702074fbe",
+                "reference": "1d3e7ae37f31dfe1d4e9d9e361fd8e6702074fbe",
                 "shasum": ""
             },
             "require": {
@@ -209,9 +209,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.273.5"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.273.7"
             },
-            "time": "2023-06-21T18:22:15+00:00"
+            "time": "2023-06-23T18:19:24+00:00"
         },
         {
             "name": "brick/math",
@@ -438,16 +438,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "3.6.3",
+            "version": "3.6.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "9a747d29e7e6b39509b8f1847e37a23a0163ea6a"
+                "reference": "19f0dec95edd6a3c3c5ff1d188ea94c6b7fc903f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/9a747d29e7e6b39509b8f1847e37a23a0163ea6a",
-                "reference": "9a747d29e7e6b39509b8f1847e37a23a0163ea6a",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/19f0dec95edd6a3c3c5ff1d188ea94c6b7fc903f",
+                "reference": "19f0dec95edd6a3c3c5ff1d188ea94c6b7fc903f",
                 "shasum": ""
             },
             "require": {
@@ -530,7 +530,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/dbal/issues",
-                "source": "https://github.com/doctrine/dbal/tree/3.6.3"
+                "source": "https://github.com/doctrine/dbal/tree/3.6.4"
             },
             "funding": [
                 {
@@ -546,7 +546,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-06-01T05:46:46+00:00"
+            "time": "2023-06-15T07:40:12+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -1055,16 +1055,16 @@
         },
         {
             "name": "giggsey/libphonenumber-for-php",
-            "version": "8.13.14",
+            "version": "8.13.15",
             "source": {
                 "type": "git",
                 "url": "https://github.com/giggsey/libphonenumber-for-php.git",
-                "reference": "31b94ef2aa349b76bb725f375e9cfa2e398a1620"
+                "reference": "b294846e26ea985e6b1fbdfaf15387daca60c2de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/giggsey/libphonenumber-for-php/zipball/31b94ef2aa349b76bb725f375e9cfa2e398a1620",
-                "reference": "31b94ef2aa349b76bb725f375e9cfa2e398a1620",
+                "url": "https://api.github.com/repos/giggsey/libphonenumber-for-php/zipball/b294846e26ea985e6b1fbdfaf15387daca60c2de",
+                "reference": "b294846e26ea985e6b1fbdfaf15387daca60c2de",
                 "shasum": ""
             },
             "require": {
@@ -1123,7 +1123,7 @@
                 "issues": "https://github.com/giggsey/libphonenumber-for-php/issues",
                 "source": "https://github.com/giggsey/libphonenumber-for-php"
             },
-            "time": "2023-06-13T08:08:40+00:00"
+            "time": "2023-06-23T07:47:45+00:00"
         },
         {
             "name": "giggsey/locale",
@@ -1732,29 +1732,26 @@
         },
         {
             "name": "laminas/laminas-diactoros",
-            "version": "2.25.2",
+            "version": "3.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laminas/laminas-diactoros.git",
-                "reference": "9f3f4bf5b99c9538b6f1dbcc20f6fec357914f9e"
+                "reference": "2515f4134258b1b418c23cb86606b8a09dd01aea"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laminas/laminas-diactoros/zipball/9f3f4bf5b99c9538b6f1dbcc20f6fec357914f9e",
-                "reference": "9f3f4bf5b99c9538b6f1dbcc20f6fec357914f9e",
+                "url": "https://api.github.com/repos/laminas/laminas-diactoros/zipball/2515f4134258b1b418c23cb86606b8a09dd01aea",
+                "reference": "2515f4134258b1b418c23cb86606b8a09dd01aea",
                 "shasum": ""
             },
             "require": {
                 "php": "~8.0.0 || ~8.1.0 || ~8.2.0",
-                "psr/http-factory": "^1.0",
-                "psr/http-message": "^1.1"
-            },
-            "conflict": {
-                "zendframework/zend-diactoros": "*"
+                "psr/http-factory": "^1.0.2",
+                "psr/http-message": "^1.1 || ^2.0"
             },
             "provide": {
-                "psr/http-factory-implementation": "1.0",
-                "psr/http-message-implementation": "1.0"
+                "psr/http-factory-implementation": "^1.1 || ^2.0",
+                "psr/http-message-implementation": "^1.1 || ^2.0"
             },
             "require-dev": {
                 "ext-curl": "*",
@@ -1762,11 +1759,11 @@
                 "ext-gd": "*",
                 "ext-libxml": "*",
                 "http-interop/http-factory-tests": "^0.9.0",
-                "laminas/laminas-coding-standard": "^2.5",
-                "php-http/psr7-integration-tests": "^1.2",
+                "laminas/laminas-coding-standard": "~2.5.0",
+                "php-http/psr7-integration-tests": "^1.3",
                 "phpunit/phpunit": "^9.5.28",
                 "psalm/plugin-phpunit": "^0.18.4",
-                "vimeo/psalm": "^5.6"
+                "vimeo/psalm": "^5.9"
             },
             "type": "library",
             "extra": {
@@ -1781,18 +1778,9 @@
                     "src/functions/marshal_headers_from_sapi.php",
                     "src/functions/marshal_method_from_sapi.php",
                     "src/functions/marshal_protocol_version_from_sapi.php",
-                    "src/functions/marshal_uri_from_sapi.php",
                     "src/functions/normalize_server.php",
                     "src/functions/normalize_uploaded_files.php",
-                    "src/functions/parse_cookie_header.php",
-                    "src/functions/create_uploaded_file.legacy.php",
-                    "src/functions/marshal_headers_from_sapi.legacy.php",
-                    "src/functions/marshal_method_from_sapi.legacy.php",
-                    "src/functions/marshal_protocol_version_from_sapi.legacy.php",
-                    "src/functions/marshal_uri_from_sapi.legacy.php",
-                    "src/functions/normalize_server.legacy.php",
-                    "src/functions/normalize_uploaded_files.legacy.php",
-                    "src/functions/parse_cookie_header.legacy.php"
+                    "src/functions/parse_cookie_header.php"
                 ],
                 "psr-4": {
                     "Laminas\\Diactoros\\": "src/"
@@ -1825,7 +1813,7 @@
                     "type": "community_bridge"
                 }
             ],
-            "time": "2023-04-17T15:44:17+00:00"
+            "time": "2023-05-04T21:18:23+00:00"
         },
         {
             "name": "laravel/framework",
@@ -2029,38 +2017,44 @@
         },
         {
             "name": "laravel/octane",
-            "version": "v1.5.6",
+            "version": "v2.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/octane.git",
-                "reference": "065310f5baec40c61b68eeb8058b041079c3453e"
+                "reference": "0a3523e6b785a102f7c2923652e1adca9b88845e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/octane/zipball/065310f5baec40c61b68eeb8058b041079c3453e",
-                "reference": "065310f5baec40c61b68eeb8058b041079c3453e",
+                "url": "https://api.github.com/repos/laravel/octane/zipball/0a3523e6b785a102f7c2923652e1adca9b88845e",
+                "reference": "0a3523e6b785a102f7c2923652e1adca9b88845e",
                 "shasum": ""
             },
             "require": {
-                "laminas/laminas-diactoros": "^2.5",
-                "laravel/framework": "^8.83.26|^9.38.0|^10.0",
-                "laravel/serializable-closure": "^1.0",
-                "nesbot/carbon": "^2.60",
-                "php": "^8.0",
-                "symfony/psr-http-message-bridge": "^2.0"
+                "laminas/laminas-diactoros": "^3.0.0",
+                "laravel/framework": "^10.10.1",
+                "laravel/serializable-closure": "^1.3.0",
+                "nesbot/carbon": "^2.66.0",
+                "php": "^8.1.0",
+                "symfony/psr-http-message-bridge": "^2.2.0"
+            },
+            "conflict": {
+                "spiral/roadrunner": "<2023.1.0",
+                "spiral/roadrunner-cli": "<2.5.0",
+                "spiral/roadrunner-http": "<3.0.1"
             },
             "require-dev": {
-                "guzzlehttp/guzzle": "^7.2",
+                "guzzlehttp/guzzle": "^7.6.1",
                 "inertiajs/inertia-laravel": "^0.6.9",
-                "laravel/scout": "^9.8",
-                "laravel/socialite": "^5.6",
-                "livewire/livewire": "^2.12",
-                "mockery/mockery": "^1.4",
-                "nunomaduro/collision": "^5.10|^6.0|^7.0",
-                "orchestra/testbench": "^6.16|^7.0|^8.0",
-                "phpstan/phpstan": "^1.10",
-                "phpunit/phpunit": "^9.3",
-                "spiral/roadrunner": "^2.8.2"
+                "laravel/scout": "^10.2.1",
+                "laravel/socialite": "^5.6.1",
+                "livewire/livewire": "^2.12.3",
+                "mockery/mockery": "^1.5.1",
+                "nunomaduro/collision": "^6.4.0|^7.5.2",
+                "orchestra/testbench": "^8.5.2",
+                "phpstan/phpstan": "^1.10.15",
+                "phpunit/phpunit": "^10.1.3",
+                "spiral/roadrunner-cli": "^2.5.0",
+                "spiral/roadrunner-http": "^3.0.1"
             },
             "bin": [
                 "bin/roadrunner-worker",
@@ -2069,7 +2063,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.x-dev"
+                    "dev-master": "2.x-dev"
                 },
                 "laravel": {
                     "providers": [
@@ -2106,7 +2100,7 @@
                 "issues": "https://github.com/laravel/octane/issues",
                 "source": "https://github.com/laravel/octane"
             },
-            "time": "2023-05-16T06:47:34+00:00"
+            "time": "2023-05-26T15:02:52+00:00"
         },
         {
             "name": "laravel/serializable-closure",
@@ -3384,16 +3378,16 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v4.15.5",
+            "version": "v4.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "11e2663a5bc9db5d714eedb4277ee300403b4a9e"
+                "reference": "19526a33fb561ef417e822e85f08a00db4059c17"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/11e2663a5bc9db5d714eedb4277ee300403b4a9e",
-                "reference": "11e2663a5bc9db5d714eedb4277ee300403b4a9e",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/19526a33fb561ef417e822e85f08a00db4059c17",
+                "reference": "19526a33fb561ef417e822e85f08a00db4059c17",
                 "shasum": ""
             },
             "require": {
@@ -3434,9 +3428,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v4.15.5"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v4.16.0"
             },
-            "time": "2023-05-19T20:20:00+00:00"
+            "time": "2023-06-25T14:52:30+00:00"
         },
         {
             "name": "nunomaduro/termwind",
@@ -6909,16 +6903,16 @@
         },
         {
             "name": "twilio/sdk",
-            "version": "6.44.4",
+            "version": "7.4.1",
             "source": {
                 "type": "git",
                 "url": "git@github.com:twilio/twilio-php.git",
-                "reference": "08aad5f377e2245b9cd7508e7762d95e7392fa4d"
+                "reference": "427baa8472006bf0ec6aa1bc79be10ae37b2389f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/08aad5f377e2245b9cd7508e7762d95e7392fa4d",
-                "reference": "08aad5f377e2245b9cd7508e7762d95e7392fa4d",
+                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/427baa8472006bf0ec6aa1bc79be10ae37b2389f",
+                "reference": "427baa8472006bf0ec6aa1bc79be10ae37b2389f",
                 "shasum": ""
             },
             "require": {
@@ -6954,7 +6948,7 @@
                 "sms",
                 "twilio"
             ],
-            "time": "2023-02-22T19:59:53+00:00"
+            "time": "2023-05-18T07:58:57+00:00"
         },
         {
             "name": "vlucas/phpdotenv",
@@ -7434,38 +7428,44 @@
         },
         {
             "name": "mockery/mockery",
-            "version": "1.5.1",
+            "version": "1.6.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mockery/mockery.git",
-                "reference": "e92dcc83d5a51851baf5f5591d32cb2b16e3684e"
+                "reference": "13a7fa2642c76c58fa2806ef7f565344c817a191"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mockery/mockery/zipball/e92dcc83d5a51851baf5f5591d32cb2b16e3684e",
-                "reference": "e92dcc83d5a51851baf5f5591d32cb2b16e3684e",
+                "url": "https://api.github.com/repos/mockery/mockery/zipball/13a7fa2642c76c58fa2806ef7f565344c817a191",
+                "reference": "13a7fa2642c76c58fa2806ef7f565344c817a191",
                 "shasum": ""
             },
             "require": {
                 "hamcrest/hamcrest-php": "^2.0.1",
                 "lib-pcre": ">=7.0",
-                "php": "^7.3 || ^8.0"
+                "php": "^7.4 || ^8.0"
             },
             "conflict": {
                 "phpunit/phpunit": "<8.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "^8.5 || ^9.3"
+                "phpunit/phpunit": "^8.5 || ^9.3",
+                "psalm/plugin-phpunit": "^0.18",
+                "vimeo/psalm": "^5.9"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.4.x-dev"
+                    "dev-main": "1.6.x-dev"
                 }
             },
             "autoload": {
-                "psr-0": {
-                    "Mockery": "library/"
+                "files": [
+                    "library/helpers.php",
+                    "library/Mockery.php"
+                ],
+                "psr-4": {
+                    "Mockery\\": "library/Mockery"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -7500,9 +7500,9 @@
             ],
             "support": {
                 "issues": "https://github.com/mockery/mockery/issues",
-                "source": "https://github.com/mockery/mockery/tree/1.5.1"
+                "source": "https://github.com/mockery/mockery/tree/1.6.2"
             },
-            "time": "2022-09-07T15:32:08+00:00"
+            "time": "2023-06-07T09:07:52+00:00"
         },
         {
             "name": "myclabs/deep-copy",

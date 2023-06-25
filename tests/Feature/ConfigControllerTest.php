@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ConfigControllerTest extends TestCase
 {
@@ -17,9 +16,9 @@ class ConfigControllerTest extends TestCase
      */
     public function testConfigResults()
     {
-        $this->setting('GeneralSupportEmail', 'test@example.com');
+        $this->setting('AdminEmail', 'test@example.com');
         $response = $this->json('GET', 'config');
         $response->assertStatus(200);
-        $response->assertJson([ 'GeneralSupportEmail' => 'test@example.com' ]);
+        $response->assertJson(['AdminEmail' => 'test@example.com']);
     }
 }
