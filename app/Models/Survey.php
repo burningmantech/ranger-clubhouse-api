@@ -284,7 +284,6 @@ class Survey extends ApiModel
         $trainerSurveys = [];
         // Is the person a teacher of any kind?
         if (PersonPosition::havePosition($personId, $positionIds)) {
-
             // Find all the sessions the person taught (aka marked as attended)
             $taught = TrainerStatus::join('slot', 'slot.id', 'trainer_status.trainer_slot_id')
                 ->whereIntegerInRaw('slot.position_id', $positionIds)
@@ -306,7 +305,7 @@ class Survey extends ApiModel
                     ->whereRaw('NOT EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.slot_id=trainer_status.slot_id AND survey_answer.trainer_id=trainer_status.person_id AND survey_answer.person_id=? LIMIT 1)', [$personId])
                     ->with(['slot:id,begins,description,position_id', 'slot.position:id,title', 'person:id,callsign', 'trainer_slot.position:id,title'])
                     ->get()
-                    ->groupBy('trainer_status.slot_id');
+                    ->groupBy('slot_id');
 
                 foreach ($trainerSlots as $slotId => $trainers) {
                     $slot = $trainers[0]->slot;
@@ -317,13 +316,11 @@ class Survey extends ApiModel
                         'begins' => (string)$slot->begins,
                         'position_id' => $slot->position_id,
                         'position_title' => $slot->position->title,
-                        'trainers' => $trainers->map(function ($t) {
-                            return [
-                                'id' => $t->person_id,
-                                'callsign' => $t->person->callsign,
-                                'position_title' => $t->trainer_slot->position->title,
-                            ];
-                        })->values()->toArray()
+                        'trainers' => $trainers->map(fn($t) => [
+                            'id' => $t->person_id,
+                            'callsign' => $t->person->callsign,
+                            'position_title' => $t->trainer_slot->position->title,
+                        ])->values()->toArray()
                     ];
                 }
 
