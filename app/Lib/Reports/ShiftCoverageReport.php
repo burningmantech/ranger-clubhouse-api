@@ -16,9 +16,19 @@ class ShiftCoverageReport
     const PRE_EVENT = [
         [Position::OOD, 'OOD', self::CALLSIGNS],
         [Position::RSC_SHIFT_LEAD_PRE_EVENT, 'RSL', self::CALLSIGNS],
-        [Position::LEAL_PRE_EVENT, 'LEAL', self::CALLSIGNS],
+        [Position::TROUBLESHOOTER_PRE_EVENT, 'TS', self::CALLSIGNS],
         [Position::DIRT_PRE_EVENT, 'Dirt', self::CALLSIGNS],
         [Position::DIRT_PRE_EVENT, 'Dirt Count', self::COUNT]
+    ];
+
+    const POST_EVENT = [
+        [Position::OOD, 'OOD', self::CALLSIGNS],
+        [Position::RSC_SHIFT_LEAD, 'RSL', self::CALLSIGNS],
+        [Position::TROUBLESHOOTER, 'TS', self::CALLSIGNS],
+        [Position::DIRT_GREEN_DOT, 'GD', self::CALLSIGNS],
+        [Position::DPW_RANGER, 'DPW', self::CALLSIGNS],
+        [Position::DIRT_POST_EVENT, 'Dirt', self::CALLSIGNS],
+        [Position::DIRT_POST_EVENT, 'Dirt Count', self::COUNT],
     ];
 
     const HQ = [
@@ -134,6 +144,7 @@ class ShiftCoverageReport
         'gerlach-patrol' => [Position::GERLACH_PATROL, self::GERLACH_PATROL],
         'echelon' => [Position::ECHELON_FIELD, self::ECHELON],
         'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
+        'post-event' => [Position::DIRT_POST_EVENT, self::POST_EVENT],
         'command' => [[Position::DIRT, Position::DIRT_POST_EVENT, Position::OPERATOR_SMOOTH], self::COMMAND],
     ];
 
@@ -228,6 +239,7 @@ class ShiftCoverageReport
         $ends = Carbon::parse($ends)->subMinutes(90);
 
         $sql = DB::table('slot')
+            ->where('slot.begins_year', $begins->year)
             // Shift spans the entire period
             ->where(function ($w) use ($begins, $ends) {
                 $w->where(function ($q) use ($begins, $ends) {
@@ -314,7 +326,7 @@ class ShiftCoverageReport
 
         $shifts = array_values($shifts);
 
-        foreach ($shifts as $shift) {
+        foreach ($shifts as &$shift) {
             usort($shift['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
         }
 
