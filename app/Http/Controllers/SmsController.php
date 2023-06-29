@@ -19,7 +19,11 @@ use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use InvalidArgumentException;
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberUtil;
+use Twilio\Exceptions\ConfigurationException;
 use Twilio\Exceptions\RestException;
+use Twilio\Exceptions\TwilioException;
 
 /*
  * Handle setting and verifing the SMS numbers for a person
@@ -52,7 +56,11 @@ class SmsController extends ApiController
      * Update a person's SMS numbers and send a verification code if changed.
      *
      * @return JsonResponse
-     * @throws RestException|AuthorizationException|SMSException
+     * @throws AuthorizationException
+     * @throws RestException
+     * @throws SMSException
+     * @throws ConfigurationException
+     * @throws TwilioException
      */
 
     public function updateNumbers(): JsonResponse
@@ -107,13 +115,13 @@ class SmsController extends ApiController
 
         // Check to see either number is a text capable device.
         if ($onPlayaChanged && $onPlaya != '' && !$person->sms_on_playa_verified) {
-            if (SMSService::isSMSCapable($onPlaya) == false) {
+            if (!SMSService::isSMSCapable($onPlaya)) {
                 throw new InvalidArgumentException("Sorry, $onPlaya does not appear to be a cellphone.");
             }
         }
 
         if ($offPlayaChanged && $offPlaya != '' && $onPlaya != $offPlaya && !$person->sms_off_playa_verified) {
-            if (SMSService::isSMSCapable($offPlaya) == false) {
+            if (!SMSService::isSMSCapable($offPlaya)) {
                 throw new InvalidArgumentException("Sorry, $offPlaya does not appear to be a cellphone.");
             }
         }
@@ -215,9 +223,9 @@ class SmsController extends ApiController
 
     /**
      * Send a new verification code.
+     *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws SMSException
      */
 
     public function sendNewCode(): JsonResponse
@@ -405,7 +413,7 @@ class SmsController extends ApiController
      * and if both numbers are the same.
      *
      * @param Person $person person record to build response from
-     * @param array - the response
+     * @return array
      */
 
     public static function buildSMSResponse(Person $person): array
@@ -472,6 +480,22 @@ class SmsController extends ApiController
             throw new InvalidArgumentException("SMS number should begin with a '+' for International numbers.");
         }
 
+        /**
+         * Start July 3, 2023 - the UK requires a UK alpha sender id or UK domestic number to send to. Revisit this
+         * if we wanna go down the RBS restructuring rabbit to support multiple sender ids.
+         */
+
+        $util = PhoneNumberUtil::getInstance();
+        try {
+            $parsedPhone = $util->parse($phone, 'US');
+            if ($util->getRegionCodeForNumber($parsedPhone) == 'GB' || str_starts_with($phone, '+44')) {
+                throw new InvalidArgumentException("Sorry, United Kingdom phone numbers cannot be used.");
+            }
+        } catch (NumberParseException $e) {
+            // ignore
+        }
+
+
         /*
          * Ensure the number does not belong to someone else.
          */
@@ -493,7 +517,6 @@ class SmsController extends ApiController
      * @param Person $person person record to use
      * @param string $column which column the number is in ('off_playa', 'on_playa')
      * @return bool
-     * @throws SMSException
      */
 
     private function sendVerificationCode($person, $column): bool
@@ -545,10 +568,11 @@ class SmsController extends ApiController
      * @return void
      * @throws AuthorizationException
      */
+
     private function allowedToSMS(Person $person): void
     {
         /*
-         * Only Admins are allowed to deal with another's number.
+         * Only Admins are allowed to deal with another number.
          */
 
         if ($person->id != $this->user->id && !$this->userHasRole(Role::ADMIN)) {
@@ -564,7 +588,7 @@ class SmsController extends ApiController
      * @param int $which number to update 0: pre-event, 1: on playa, 2: both
      */
 
-    private static function updateStoppedNumbers($person, $stop, $which)
+    private static function updateStoppedNumbers($person, $stop, $which): void
     {
         switch ($which) {
             case 0:
