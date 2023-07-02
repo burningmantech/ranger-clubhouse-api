@@ -3,6 +3,7 @@
 namespace App\Lib\Reports;
 
 use App\Models\Position;
+use App\Models\Slot;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -10,122 +11,126 @@ use InvalidArgumentException;
 
 class ShiftCoverageReport
 {
-    const CALLSIGNS = 1;
-    const COUNT = 2;
+    const COUNT_ONLY = true;
 
     const PRE_EVENT = [
-        [Position::OOD, 'OOD', self::CALLSIGNS],
-        [Position::RSC_SHIFT_LEAD_PRE_EVENT, 'RSL', self::CALLSIGNS],
-        [Position::TROUBLESHOOTER_PRE_EVENT, 'TS', self::CALLSIGNS],
-        [Position::DIRT_PRE_EVENT, 'Dirt', self::CALLSIGNS],
-        [Position::DIRT_PRE_EVENT, 'Dirt Count', self::COUNT]
+        [Position::OOD, 'OOD'],
+        [Position::RSC_SHIFT_LEAD_PRE_EVENT, 'RSL'],
+        [Position::TROUBLESHOOTER_PRE_EVENT, 'TS'],
+        [Position::DIRT_PRE_EVENT, 'Dirt'],
+        [Position::DIRT_PRE_EVENT, 'Dirt Count', self::COUNT_ONLY],
     ];
 
     const POST_EVENT = [
-        [Position::OOD, 'OOD', self::CALLSIGNS],
-        [Position::RSC_SHIFT_LEAD, 'RSL', self::CALLSIGNS],
-        [Position::TROUBLESHOOTER, 'TS', self::CALLSIGNS],
-        [Position::DIRT_GREEN_DOT, 'GD', self::CALLSIGNS],
-        [Position::DPW_RANGER, 'DPW', self::CALLSIGNS],
-        [Position::DIRT_POST_EVENT, 'Dirt', self::CALLSIGNS],
-        [Position::DIRT_POST_EVENT, 'Dirt Count', self::COUNT],
+        [Position::OOD, 'OOD'],
+        [Position::RSC_SHIFT_LEAD, 'RSL'],
+        [Position::TROUBLESHOOTER, 'TS'],
+        [Position::DIRT_GREEN_DOT, 'GD'],
+        [Position::DPW_RANGER, 'DPW'],
+        [Position::DIRT_POST_EVENT, 'Dirt'],
+        [Position::DIRT_POST_EVENT, 'Dirt Count', self::COUNT_ONLY],
     ];
 
     const HQ = [
-        [[Position::HQ_LEAD, Position::HQ_LEAD_PRE_EVENT], 'Lead', self::CALLSIGNS],
-        [Position::HQ_SHORT, 'Short', self::CALLSIGNS],
-        [[Position::HQ_WINDOW, Position::HQ_WINDOW_PRE_EVENT], 'Window', self::CALLSIGNS],
-        [Position::HQ_RUNNER, 'Runner', self::CALLSIGNS]
+        [[Position::HQ_LEAD, Position::HQ_LEAD_PRE_EVENT], 'Lead'],
+        [Position::HQ_SHORT, 'Short'],
+        [[Position::HQ_WINDOW, Position::HQ_WINDOW_PRE_EVENT], 'Window'],
+        [Position::HQ_RUNNER, 'Runner']
     ];
 
     const GREEN_DOT = [
-        [Position::GREEN_DOT_LEAD, 'GDL', self::CALLSIGNS],
-        [Position::GREEN_DOT_LEAD_INTERN, 'GDL Intern', self::CALLSIGNS],
-        [Position::DIRT_GREEN_DOT, 'GD Dirt', self::CALLSIGNS],
-        [Position::GREEN_DOT_MENTOR, 'GD Mentors', self::CALLSIGNS],
-        [Position::GREEN_DOT_MENTEE, 'GD Mentees', self::CALLSIGNS],
-        [Position::SANCTUARY, 'Sanctuary', self::CALLSIGNS],
-        [Position::SANCTUARY_MENTEE, 'Sanc Mentee', self::CALLSIGNS],
-        // [ Position::SANCTUARY_HOST, 'Sanctuary Host', self::CALLSIGNS ] -- GD cadre deprecated the position for 2019.
-        [Position::GERLACH_PATROL_GREEN_DOT, 'Gerlach GD', self::CALLSIGNS],
+        [Position::GREEN_DOT_LEAD, 'GDL'],
+        [Position::GREEN_DOT_LEAD_INTERN, 'GDL Intern'],
+        [Position::DIRT_GREEN_DOT, 'GD Dirt'],
+        [Position::GREEN_DOT_MENTOR, 'GD Mentors'],
+        [Position::GREEN_DOT_MENTEE, 'GD Mentees'],
+        [Position::SANCTUARY, 'Sanctuary'],
+        [Position::SANCTUARY_MENTEE, 'Sanc Mentee'],
+        // [ Position::SANCTUARY_HOST, 'Sanctuary Host' ] -- GD cadre deprecated the position for 2019.
+        [Position::GERLACH_PATROL_GREEN_DOT, 'Gerlach GD'],
     ];
 
     const GERLACH_PATROL = [
-        [Position::GERLACH_PATROL_LEAD, 'GP Lead', self::CALLSIGNS],
-        [Position::GERLACH_PATROL, 'GP Rangers', self::CALLSIGNS],
-        [Position::GERLACH_PATROL_GREEN_DOT, 'GP Green Dot', self::CALLSIGNS]
+        [Position::GERLACH_PATROL_LEAD, 'GP Lead'],
+        [Position::GERLACH_PATROL, 'GP Rangers'],
+        [Position::GERLACH_PATROL_GREEN_DOT, 'GP Green Dot']
     ];
 
     const ECHELON = [
-        [Position::ECHELON_FIELD_LEAD, 'Echelon Lead', self::CALLSIGNS],
-        [Position::ECHELON_FIELD, 'Echelon Field', self::CALLSIGNS],
-        [Position::ECHELON_FIELD_LEAD_TRAINING, 'Lead Training', self::CALLSIGNS],
+        [Position::ECHELON_FIELD_LEAD, 'Echelon Lead'],
+        [Position::ECHELON_FIELD, 'Echelon Field'],
+        [Position::ECHELON_FIELD_LEAD_TRAINING, 'Lead Training'],
     ];
 
     const RSCI_MENTOR = [
-        [Position::RSCI_MENTOR, 'RSCI Mentors', self::CALLSIGNS],
-        [Position::RSCI_MENTEE, 'RSCI Mentees', self::CALLSIGNS]
+        [Position::RSCI_MENTOR, 'RSCI Mentors'],
+        [Position::RSCI_MENTEE, 'RSCI Mentees']
     ];
 
     const INTERCEPT = [
-        [Position::INTERCEPT_DISPATCH, 'Dispatch', self::CALLSIGNS],
+        [Position::INTERCEPT_DISPATCH, 'Dispatch'],
         // Intercept Operator position deprecated in favor of Operator shifts matching Intercept hours
-        [[Position::INTERCEPT_OPERATOR, Position::OPERATOR], 'Operator', self::CALLSIGNS],
-        [Position::INTERCEPT, 'Interceptors', self::CALLSIGNS],
-        [Position::INTERCEPT, 'Count', self::COUNT]
+        [[Position::INTERCEPT_OPERATOR, Position::OPERATOR], 'Operator'],
+        [Position::INTERCEPT, 'Interceptors', self::COUNT_ONLY],
+        [Position::INTERCEPT, 'Count', self::COUNT_ONLY],
     ];
 
     const COMMAND = [
-        [Position::OOD, 'OOD', self::CALLSIGNS],
-        [Position::DEPUTY_OOD, 'DOOD', self::CALLSIGNS],
-        [Position::RSC_SHIFT_LEAD, 'RSL', self::CALLSIGNS],
-        [Position::RSCI, 'RSCI', self::CALLSIGNS],
-        [Position::RSCI_MENTEE, 'RSCIM', self::CALLSIGNS],
-        [Position::RSC_WESL, 'WESL', self::CALLSIGNS],
-        [[Position::OPERATOR, Position::OPERATOR_SMOOTH], 'Opr', self::CALLSIGNS, [Position::OPERATOR_SMOOTH => 'Smooth']],
+        [Position::OOD, 'OOD'],
+        [Position::DEPUTY_OOD, 'DOOD'],
+        [Position::RSC_SHIFT_LEAD, 'RSL'],
+        [Position::RSCI, 'RSCI'],
+        [Position::RSCI_MENTEE, 'RSCIM'],
+        [Position::RSC_WESL, 'WESL'],
+        [[Position::OPERATOR, Position::OPERATOR_SMOOTH], 'Opr', false, [Position::OPERATOR_SMOOTH => 'Smooth']],
         [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_MENTEE, Position::TROUBLESHOOTER_LEAL],
-            'TS', self::CALLSIGNS,
+            'TS',
+            false,
             [
                 Position::TROUBLESHOOTER_MENTEE => 'Mentee',
                 Position::TROUBLESHOOTER_LEAL => 'TSLEAL'
             ]
         ],
-        [[Position::LEAL, Position::LEAL_PARTNER], 'LEAL', self::CALLSIGNS, [Position::LEAL_PARTNER => 'Partner']],
-        [[Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN], 'GDL', self::CALLSIGNS, [Position::GREEN_DOT_LEAD_INTERN => 'Intern']],
-        [[Position::TOW_TRUCK_DRIVER, Position::TOW_TRUCK_MENTEE], 'Tow', self::CALLSIGNS, [Position::TOW_TRUCK_MENTEE => 'Mentee']],
-        [[Position::SANCTUARY, Position::SANCTUARY_MENTEE], 'Sanc', self::CALLSIGNS, [Position::SANCTUARY_MENTEE => 'Mentee']],
-        //[ Position::SANCTUARY_HOST, 'SancHst', self::CALLSIGNS ],
-        [Position::GERLACH_PATROL_LEAD, 'GerPatLd', self::CALLSIGNS],
-        [[Position::GERLACH_PATROL, Position::GERLACH_PATROL_GREEN_DOT], 'GerPat', self::CALLSIGNS],
-        [[Position::DIRT, Position::DIRT_SHINY_PENNY, Position::DIRT_POST_EVENT], 'Dirt', self::COUNT],
-        [Position::DIRT_GREEN_DOT, 'GD', self::COUNT],
-        [[Position::RNR, Position::RNR_RIDE_ALONG], 'RNR', self::COUNT],
-        [[Position::BURN_PERIMETER, Position::ART_CAR_WRANGLER, Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN], 'Burn', self::COUNT]
+        [[Position::LEAL, Position::LEAL_PARTNER], 'LEAL', false, [Position::LEAL_PARTNER => 'Partner']],
+        [[Position::GREEN_DOT_LEAD, Position::GREEN_DOT_LEAD_INTERN], 'GDL', false, [Position::GREEN_DOT_LEAD_INTERN => 'Intern']],
+        [[Position::TOW_TRUCK_DRIVER, Position::TOW_TRUCK_MENTEE], 'Tow', false, [Position::TOW_TRUCK_MENTEE => 'Mentee']],
+        [[Position::SANCTUARY, Position::SANCTUARY_MENTEE], 'Sanc', false, [Position::SANCTUARY_MENTEE => 'Mentee']],
+        //[ Position::SANCTUARY_HOST, 'SancHst' ],
+        [Position::GERLACH_PATROL_LEAD, 'GerPatLd'],
+        [[Position::GERLACH_PATROL, Position::GERLACH_PATROL_GREEN_DOT], 'GerPat'],
+        [[Position::DIRT, Position::DIRT_SHINY_PENNY], 'Dirt', self::COUNT_ONLY],
+        [Position::DIRT_GREEN_DOT, 'GD', self::COUNT_ONLY],
+        [[Position::RNR, Position::RNR_RIDE_ALONG], 'RNR', self::COUNT_ONLY],
+        [[Position::BURN_PERIMETER, Position::ART_CAR_WRANGLER, Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN], 'Burn', self::COUNT_ONLY]
     ];
 
     const PERIMETER = [
-        [Position::BURN_COMMAND_TEAM, 'Burn Command', self::CALLSIGNS],
+        [Position::BURN_COMMAND_TEAM, 'Burn Command'],
         // As of 2019 the Burn Quad Lead position has not been used
-        // [ Position::BURN_QUAD_LEAD, 'Quad Lead', self::CALLSIGNS ],
-        [Position::SANDMAN, 'Sandman', self::CALLSIGNS],
-        [Position::ART_CAR_WRANGLER, 'Art Car', self::CALLSIGNS],
-        [Position::BURN_PERIMETER, 'Perimeter', self::CALLSIGNS],
-        [Position::BURN_PERIMETER, 'Perimeter #', self::COUNT],
-        [[Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN, Position::ART_CAR_WRANGLER, Position::BURN_PERIMETER], 'Total #', self::COUNT],
+        // [ Position::BURN_QUAD_LEAD, 'Quad Lead' ],
+        [Position::SANDMAN, 'Sandman'],
+        [Position::ART_CAR_WRANGLER, 'Art Car'],
+        [Position::BURN_PERIMETER, 'Perimeter'],
+        [Position::BURN_PERIMETER, 'Perimeter #', self::COUNT_ONLY],
+        [
+            [Position::BURN_COMMAND_TEAM, Position::BURN_QUAD_LEAD, Position::SANDMAN, Position::ART_CAR_WRANGLER, Position::BURN_PERIMETER],
+            'Total #',
+            self::COUNT_ONLY
+        ],
         // Troubleshooter not included in count because some are in the city
-        [Position::TROUBLESHOOTER, 'Troubleshooter', self::CALLSIGNS],
+        [Position::TROUBLESHOOTER, 'Troubleshooter'],
     ];
 
     const MENTORS = [
-        [Position::MENTOR_LEAD, 'Lead', self::CALLSIGNS],
-        [Position::MENTOR_SHORT, 'Short', self::CALLSIGNS],
-        [Position::MENTOR, 'Mentor', self::CALLSIGNS],
-        [Position::MENTOR_MITTEN, 'Mitten', self::CALLSIGNS],
-        [Position::MENTOR_APPRENTICE, 'Apprentice', self::CALLSIGNS],
-        [Position::MENTOR_KHAKI, 'Khaki', self::CALLSIGNS],
-        [Position::MENTOR_RADIO_TRAINER, 'Radio', self::CALLSIGNS],
-        [Position::ALPHA, 'Alpha', self::CALLSIGNS],
-        [Position::QUARTERMASTER, 'QM', self::CALLSIGNS],
+        [Position::MENTOR_LEAD, 'Lead'],
+        [Position::MENTOR_SHORT, 'Short'],
+        [Position::MENTOR, 'Mentor'],
+        [Position::MENTOR_MITTEN, 'Mitten'],
+        [Position::MENTOR_APPRENTICE, 'Apprentice'],
+        [Position::MENTOR_KHAKI, 'Khaki'],
+        [Position::MENTOR_RADIO_TRAINER, 'Radio'],
+        [Position::ALPHA, 'Alpha'],
+        [Position::QUARTERMASTER, 'QM'],
     ];
 
     /*
@@ -135,17 +140,17 @@ class ShiftCoverageReport
       */
 
     const COVERAGE_TYPES = [
-        'perimeter' => [Position::BURN_PERIMETER, self::PERIMETER],
-        'intercept' => [Position::INTERCEPT, self::INTERCEPT],
-        'hq' => [[Position::HQ_SHORT, Position::HQ_WINDOW_PRE_EVENT], self::HQ],
-        'gd' => [Position::DIRT_GREEN_DOT, self::GREEN_DOT],
-        'mentor' => [Position::ALPHA, self::MENTORS],
-        'rsci-mentor' => [Position::RSCI_MENTOR, self::RSCI_MENTOR],
-        'gerlach-patrol' => [Position::GERLACH_PATROL, self::GERLACH_PATROL],
-        'echelon' => [Position::ECHELON_FIELD, self::ECHELON],
-        'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
-        'post-event' => [Position::DIRT_POST_EVENT, self::POST_EVENT],
         'command' => [[Position::DIRT, Position::DIRT_POST_EVENT, Position::OPERATOR_SMOOTH], self::COMMAND],
+        'echelon' => [Position::ECHELON_FIELD, self::ECHELON],
+        'gd' => [Position::DIRT_GREEN_DOT, self::GREEN_DOT],
+        'gerlach-patrol' => [Position::GERLACH_PATROL, self::GERLACH_PATROL],
+        'hq' => [[Position::HQ_SHORT, Position::HQ_WINDOW_PRE_EVENT], self::HQ],
+        'intercept' => [Position::INTERCEPT, self::INTERCEPT],
+        'mentor' => [Position::ALPHA, self::MENTORS],
+        'perimeter' => [Position::BURN_PERIMETER, self::PERIMETER],
+        'post-event' => [Position::DIRT_POST_EVENT, self::POST_EVENT],
+        'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
+        'rsci-mentor' => [Position::RSCI_MENTOR, self::RSCI_MENTOR],
     ];
 
     public static function execute(int $year, string $type): array
@@ -159,27 +164,36 @@ class ShiftCoverageReport
         $shifts = self::getShiftsByPosition($year, $basePositionId);
 
         $periods = [];
-        foreach ($shifts as $shift) {
-            $positions = [];
+        if (!empty($shifts)) {
+            $startTime = $shifts[0]->begins_epoch;
+            $endTime = $shifts[count($shifts) - 1]->ends_epoch;
+
+            $signups = [];
             foreach ($coverage as $post) {
-                list($positionId, $shortTitle, $flag) = $post;
-                $parenthetical = empty($post[3]) ? array() : $post[3];
-
-                $shifts = self::getSignUps($positionId, $shift->begins_epoch, $shift->ends_epoch, $flag, $parenthetical);
-
-                $positions[] = [
-                    'position_id' => $positionId,
-                    'type' => ($flag == self::COUNT ? 'count' : 'people'),
-                    'shifts' => $shifts
-                ];
+                $signups[] = self::getSignUps($post[0], $startTime, $endTime, $post[2] ?? false);
             }
 
-            $periods[] = [
-                'begins' => (string)$shift->begins_epoch,
-                'ends' => (string)$shift->ends_epoch,
-                'date' => $shift->begins_epoch,
-                'positions' => $positions,
-            ];
+            foreach ($shifts as $shift) {
+                $positions = [];
+                $idx = 0;
+                foreach ($coverage as $post) {
+                    $isCount = $post[2] ?? false;
+
+                    $positions[] = [
+                        'position_id' => $post[0],
+                        'type' => ($isCount ? 'count' : 'people'),
+                        'shifts' => self::retrievePeriodSignups($shift, $signups[$idx], $post, $isCount)
+                    ];
+                    $idx++;
+                }
+
+                $periods[] = [
+                    'begins' => (string)$shift->begins_epoch,
+                    'ends' => (string)$shift->ends_epoch,
+                    'date' => $shift->begins_epoch,
+                    'positions' => $positions,
+                ];
+            }
         }
 
         $columns = [];
@@ -206,12 +220,13 @@ class ShiftCoverageReport
 
     public static function getShiftsByPosition($year, $positionId): Collection
     {
-        $sql = DB::table('slot')
-            ->select('slot.*',
-                DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
-                DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
-            )
-            ->where('begins_year', $year);
+        $sql = Slot::select('slot.*',
+            DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
+            DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
+        )->withCasts([
+            'begins_epoch' => 'datetime',
+            'ends_epoch' => 'datetime'
+        ])->where('begins_year', $year);
 
         if (is_array($positionId)) {
             $sql->whereIn('position_id', $positionId);
@@ -228,18 +243,21 @@ class ShiftCoverageReport
      * @param $positionId
      * @param $begins
      * @param $ends
-     * @param $flag
-     * @param $parenthetical
-     * @return array|int
+     * @param $isCount
+     * @return array
      */
 
-    public static function getSignUps($positionId, $begins, $ends, $flag, $parenthetical): array|int
+    public static function getSignUps($positionId, $begins, $ends, $isCount): array
     {
         $begins = Carbon::parse($begins)->addMinutes(90);
         $ends = Carbon::parse($ends)->subMinutes(90);
 
         $sql = DB::table('slot')
-            ->where('slot.begins_year', $begins->year)
+            ->select(
+                'slot.id', 'position_id', 'begins', 'ends',
+                DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
+                DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
+            )->where('slot.begins_year', $begins->year)
             // Shift spans the entire period
             ->where(function ($w) use ($begins, $ends) {
                 $w->where(function ($q) use ($begins, $ends) {
@@ -247,17 +265,17 @@ class ShiftCoverageReport
                     $q->where('slot.ends', '>=', $ends);
                 })
                     // Shift happens within the period
-                    ->orwhere(function ($q) use ($begins, $ends) {
+                    ->orWhere(function ($q) use ($begins, $ends) {
                         $q->where('slot.begins', '>=', $begins);
                         $q->where('slot.ends', '<=', $ends);
                     })
                     // Shift ends within the period
-                    ->orwhere(function ($q) use ($begins, $ends) {
+                    ->orWhere(function ($q) use ($begins, $ends) {
                         $q->where('slot.ends', '>', $begins);
                         $q->where('slot.ends', '<=', $ends);
                     })
                     // Shift begins within the period
-                    ->orwhere(function ($q) use ($begins, $ends) {
+                    ->orWhere(function ($q) use ($begins, $ends) {
                         $q->where('slot.begins', '>=', $begins);
                         $q->where('slot.begins', '<', $ends);
                     });
@@ -270,53 +288,100 @@ class ShiftCoverageReport
             $sql->where('slot.position_id', $positionId);
         }
 
-        $slots = $sql->get();
+        if ($isCount) {
+            $sql->addSelect('signed_up');
+        } else {
+            $sql->leftJoin('person_slot', 'person_slot.slot_id', 'slot.id')
+                ->leftJoin('person', 'person.id', 'person_slot.person_id')
+                ->addSelect('person.id as person_id', 'person.callsign', 'person.callsign_pronounce')
+                ->orderBy('slot.begins')
+                ->orderBy('person.callsign');
+        }
 
-        if ($slots->isEmpty()) {
-            if ($flag == self::COUNT) {
-                return 0;
+        $shifts = $sql->get();
+
+        foreach ($shifts as $shift) {
+            $shift->begins_time = Carbon::parse($shift->begins)->timestamp;
+            $shift->ends_time = Carbon::parse($shift->ends)->timestamp;
+            $shift->begins_epoch_time = Carbon::parse($shift->begins_epoch)->timestamp;
+            $shift->ends_epoch_time = Carbon::parse($shift->ends_epoch)->timestamp;
+        }
+
+        return $shifts->toArray();
+    }
+
+    /**
+     * Retrieve all the signs up (either callsign list or count) for a given period.
+     *
+     * @param $shift
+     * @param $signups
+     * @param $post
+     * @param $isCount
+     * @return array|int
+     */
+
+    public static function retrievePeriodSignups($shift, $signups, $post, $isCount): array|int
+    {
+        $parenthetical = $post[3] ?? [];
+
+        $begins = $shift->begins_epoch->timestamp;
+        $ends = $shift->ends_epoch->timestamp;
+
+        $periodSignsUp = array_filter($signups, function ($row) use ($begins, $ends) {
+            if ($row->begins_epoch_time <= $begins && $row->ends_epoch_time >= $ends) {
+                return true;
             }
 
-            return [];
+            if ($row->begins_epoch_time >= $begins && $row->ends_epoch_time <= $ends) {
+                return true;
+            }
+
+            if ($row->ends_epoch_time > $begins && $row->ends_epoch_time <= $ends) {
+                return true;
+            }
+
+            if ($row->begins_epoch_time >= $begins && $row->begins_epoch_time < $ends) {
+                return true;
+            }
+            return false;
+        });
+
+        if ($isCount) {
+            $people = 0;
+            foreach ($periodSignsUp as $signup) {
+                $people += $signup->signed_up;
+            }
+
+            return $people;
         }
-
-        $slotIds = $slots->pluck('id');
-        if ($flag == self::COUNT) {
-            return DB::table('person_slot')->whereIntegerInRaw('slot_id', $slotIds)->count();
-        }
-
-        $slotsById = $slots->keyBy('id');
-
-        $people = DB::table('person_slot')
-            ->whereIntegerInRaw('slot_id', $slotIds)
-            ->select('person_slot.*', 'person.callsign', 'person.callsign_pronounce')
-            ->join('person', 'person.id', 'person_slot.person_id')
-            ->get();
 
         $shifts = [];
-        foreach ($people as $personSlot) {
-            $slot = $slotsById[$personSlot->slot_id];
-            $begins = (string)$slot->begins;
+        foreach ($periodSignsUp as $signup) {
+            if (!$signup->person_id) {
+                // No signups in the slot, skip it.
+                continue;
+            }
+            $begins = $signup->begins;
             if (!isset($shifts[$begins])) {
                 $shifts[$begins] = [
                     'people' => [],
                     'begins' => $begins,
-                    'ends' => (string)$slot->ends,
+                    'ends' => $signup->ends,
                 ];
             }
 
             $p = [
-                'id' => $personSlot->person_id,
-                'callsign' => $personSlot->callsign,
+                'id' => $signup->person_id,
+                'callsign' => $signup->callsign,
             ];
 
-            $parens = $parenthetical[$slot->position_id] ?? null;
+            $parens = $parenthetical[$signup->position_id] ?? null;
             if ($parens) {
                 $p['parenthetical'] = $parens;
             }
 
-            if (!empty($personSlot->callsign_pronounce)) {
-                $p['callsign_pronounce'] = $personSlot->callsign_pronounce;
+            if (!empty($signup->callsign_pronounce)) {
+                $p['callsign_pronounce'] = $signup->callsign_pronounce;
             }
 
             $shifts[$begins]['people'][] = $p;
@@ -326,8 +391,8 @@ class ShiftCoverageReport
 
         $shifts = array_values($shifts);
 
-        foreach ($shifts as &$shift) {
-            usort($shift['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+        foreach ($shifts as &$s) {
+            usort($s['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
         }
 
         return $shifts;
