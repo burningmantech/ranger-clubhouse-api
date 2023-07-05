@@ -173,7 +173,7 @@ class AccessDocumentController extends ApiController
             return $this->restError($accessDocument);
         }
 
-        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, 'create');
+        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_CREATE);
 
         return $this->success($accessDocument);
     }
@@ -218,9 +218,36 @@ class AccessDocumentController extends ApiController
         $this->authorize('destroy', $accessDocument);
 
         $accessDocument->delete();
-        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, 'delete');
+        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_DELETE);
 
         return $this->restDeleteSuccess();
+    }
+
+    /**
+     * Retrieve the change log for a given access document.
+     *
+     * @param AccessDocument $accessDocument
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function changes(AccessDocument $accessDocument): JsonResponse
+    {
+        $this->authorize('changes', $accessDocument);
+
+        $changes = [];
+        $rows = $accessDocument->access_document_changes()->with('changer_person:id,callsign')->get();
+        foreach ($rows as $row) {
+            $changes[] = [
+                'person_id' => $row->changer_person_id,
+                'callsign' => $row->changer_person->callsign ?? "Deleted #{$row->changer_person_id}",
+                'operation' => $row->operation,
+                'timestamp' => (string)$row->timestamp,
+                'changes' => $row->changes,
+            ];
+        }
+
+        return response()->json(['changes' => $changes]);
     }
 
     /**
@@ -747,7 +774,7 @@ class AccessDocumentController extends ApiController
     {
         $this->authorize('specialTicketsReport', AccessDocument::class);
 
-        $rows = AccessDocument::whereIn('type', [...AccessDocument::SPECIAL_TICKET_TYPES, ...AccessDocument::SPECIAL_VP_TYPES ])
+        $rows = AccessDocument::whereIn('type', [...AccessDocument::SPECIAL_TICKET_TYPES, ...AccessDocument::SPECIAL_VP_TYPES])
             ->whereIn('status', [
                 AccessDocument::CLAIMED,
                 AccessDocument::QUALIFIED,
@@ -771,7 +798,7 @@ class AccessDocumentController extends ApiController
             ];
         }
 
-        usort($results, fn ($a,$b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+        usort($results, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
         return response()->json(['access_documents' => $results]);
     }
 }

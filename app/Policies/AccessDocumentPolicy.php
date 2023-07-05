@@ -95,6 +95,11 @@ class AccessDocumentPolicy
         return ($user->id == $personId);
     }
 
+    public function changes(Person $user, AccessDocument $accessDocument) : bool
+    {
+        return false;
+    }
+
     public function bulkComment(Person $user): false
     {
         return false;

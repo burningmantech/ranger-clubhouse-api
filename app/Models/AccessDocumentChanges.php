@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 // Do not use ApiModel, do not want to audit the audit table.
 
@@ -16,15 +16,34 @@ class AccessDocumentChanges extends Model
     protected $table = 'access_document_changes';
     public $timestamps = false;
 
-    protected $fillable = [
-        'table_name',
-        'record_id',
-        'operation',
-        'changes',
-        'changer_person_id',
+    // Allow all columns to be filed -- model is not directly accessible by the client.
+    protected $guarded = [];
+
+    public $casts = [
+        'changes' => 'array',
+        'timestamp' => 'datetime'
     ];
 
-    public static function log($record, $personId, $changes, $op = 'modify')
+    const OP_MODIFY = 'modify';
+    const OP_CREATE = 'create';
+    const OP_DELETE = 'delete';
+
+    public function changer_person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    /**
+     * Log changes to an access document
+     *
+     * @param $record
+     * @param $personId
+     * @param $changes
+     * @param string $op
+     * @return void
+     */
+
+    public static function log($record, $personId, $changes, string $op = self::OP_MODIFY): void
     {
         if (is_integer($record)) {
             $id = $record;
@@ -44,7 +63,7 @@ class AccessDocumentChanges extends Model
             'table_name' => 'access_document',
             'record_id' => $id,
             'operation' => $op,
-            'changes' => json_encode($changes),
+            'changes' => $changes,
             'changer_person_id' => $personId
         ]);
 
@@ -57,7 +76,8 @@ class AccessDocumentChanges extends Model
      * @param DateTimeInterface $date
      * @return string
      */
-    protected function serializeDate(DateTimeInterface $date)
+
+    protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
     }

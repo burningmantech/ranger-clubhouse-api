@@ -643,7 +643,7 @@ class BulkUploader
             $record->status = self::STATUS_SUCCESS;
             if ($commit) {
                 if (self::saveModel($ad, $record)) {
-                    AccessDocumentChanges::log($ad, Auth::id(), $ad, 'create');
+                    AccessDocumentChanges::log($ad, Auth::id(), $ad, AccessDocumentChanges::OP_CREATE);
                 }
             }
         }

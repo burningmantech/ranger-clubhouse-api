@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
 class AccessDocument extends ApiModel
@@ -169,6 +170,11 @@ class AccessDocument extends ApiModel
     protected $attributes = [
         'delivery_method' => 'none',
     ];
+
+    public function access_document_changes(): HasMany
+    {
+        return $this->hasMany(AccessDocumentChanges::class, 'record_id');
+    }
 
     public static function boot(): void
     {

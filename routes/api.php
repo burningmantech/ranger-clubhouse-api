@@ -73,6 +73,7 @@ Route::group([
     Route::post('access-document/unbank-access-documents', 'AccessDocumentController@unbankAccessDocuments');
     Route::get('access-document/unclaimed-tickets-with-signups', 'AccessDocumentController@unclaimedTicketsWithSignups');
     Route::get('access-document/wap-candidates', 'AccessDocumentController@wapCandidates');
+    Route::get('access-document/{access_document}/changes', 'AccessDocumentController@changes');
     Route::patch('access-document/{access_document}/status', 'AccessDocumentController@updateStatus');
     Route::resource('access-document', 'AccessDocumentController');
 
