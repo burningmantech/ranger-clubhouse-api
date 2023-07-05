@@ -131,7 +131,7 @@ class TicketingController extends ApiController
 
                 // Looks good, create it
                 $accessDocument = AccessDocument::createSOWAP($personId, $year, $soName);
-                AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, 'create');
+                AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_CREATE);
                 $documents[] = ['id' => $accessDocument->id, 'name' => $soName];
             } else {
                 // Find the existing record
@@ -155,7 +155,7 @@ class TicketingController extends ApiController
                     $documents[] = $dirty;
 
                     if ($isNew) {
-                        AccessDocumentChanges::log($wap, $this->user->id, $wap, 'create');
+                        AccessDocumentChanges::log($wap, $this->user->id, $wap, AccessDocumentChanges::OP_CREATE);
                     } else {
                         AccessDocumentChanges::log($wap, $this->user->id, $changes);
                     }

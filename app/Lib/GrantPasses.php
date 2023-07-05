@@ -326,7 +326,7 @@ class GrantPasses
             ]);
             $ad->addComment('created via maintenance function', $user);
             $ad->saveWithoutValidation();
-            AccessDocumentChanges::log($ad, $userId, $ad, 'create');
+            AccessDocumentChanges::log($ad, $userId, $ad, AccessDocumentChanges::OP_CREATE);
             $documents[] = [
                 'id' => $ad->id,
                 'person_id' => $person->id,
