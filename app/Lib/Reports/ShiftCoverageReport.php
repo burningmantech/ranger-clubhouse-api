@@ -146,7 +146,7 @@ class ShiftCoverageReport
         'gerlach-patrol' => [Position::GERLACH_PATROL, self::GERLACH_PATROL],
         'hq' => [[Position::HQ_SHORT, Position::HQ_WINDOW_PRE_EVENT], self::HQ],
         'intercept' => [Position::INTERCEPT, self::INTERCEPT],
-        'mentor' => [Position::ALPHA, self::MENTORS],
+        'mentor' => [[Position::MENTOR, Position::ALPHA], self::MENTORS],
         'perimeter' => [Position::BURN_PERIMETER, self::PERIMETER],
         'post-event' => [Position::DIRT_POST_EVENT, self::POST_EVENT],
         'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
@@ -164,7 +164,7 @@ class ShiftCoverageReport
         $shifts = self::getShiftsByPosition($year, $basePositionId);
 
         $periods = [];
-        if (!empty($shifts)) {
+        if ($shifts->isNotEmpty()) {
             $startTime = $shifts[0]->begins_epoch;
             $endTime = $shifts[count($shifts) - 1]->ends_epoch;
 
