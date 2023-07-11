@@ -280,11 +280,10 @@ class AuthController extends Controller
      * Get the JWT token array structure.
      *
      * @param string $token
-     * @param $person
      * @return JsonResponse
      */
 
-    protected function respondWithToken($token): JsonResponse
+    protected function respondWithToken(string $token): JsonResponse
     {
         return response()->json([
             'token' => $token,
