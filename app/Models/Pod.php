@@ -17,6 +17,11 @@ class Pod extends ApiModel
 
     public $table = 'pod';
     public $timestamps = true;
+    public bool $auditModel = true;
+
+    public array $auditExclude = [
+        'sort_index'
+    ];
 
     protected $fillable = [
         'location',

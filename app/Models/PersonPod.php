@@ -16,6 +16,10 @@ class PersonPod extends ApiModel
     public bool $auditModel = true;
     public $timestamps = true;
 
+    public array $auditExclude = [
+        'sort_index'
+    ];
+
     public $guarded = [];   // Not directly accessible via APIs
 
     public $casts = [
