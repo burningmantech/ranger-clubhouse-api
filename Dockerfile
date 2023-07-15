@@ -1,59 +1,8 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM ghcr.io/burningmantech/php-nginx:8.2.7-alpine3.18 as php
+FROM ghcr.io/burningmantech/php-nginx:8.2.8-alpine3.18 as php
 
-# Install OS packages required at runtime
-RUN apk add --no-cache  \
-  icu                   \
-  libjpeg-turbo         \
-  libpng                \
-  libwebp               \
-  libxml2               \
-  libzip                \
-  mysql-client          \
-  tzdata                \
-  zip                   \
-  ;
-
-# Build extensions
-RUN                                                     \
-  apk add --no-cache                                    \
-    icu-dev                                             \
-    libjpeg-turbo-dev                                   \
-    libpng-dev                                          \
-    libwebp-dev                                         \
-    libxml2-dev                                         \
-    libzip-dev                                          \
-    pcre-dev ${PHPIZE_DEPS}                             \
-  && docker-php-ext-configure gd                        \
-    --with-webp=/usr/include/                           \
-    --with-jpeg=/usr/include/                           \
-  && docker-php-ext-configure opcache --enable-opcache  \
-  && docker-php-ext-configure intl                      \
-  && docker-php-ext-configure exif                      \
-  && docker-php-ext-install -j$(nproc)                  \
-    exif                                                \
-    gd                                                  \
-    intl                                                \
-    opcache                                             \
-    pdo                                                 \
-    pdo_mysql                                           \
-    zip                                                 \
-  && MAKEFLAGS="-j $(nproc)" pecl install swoole        \
-  && docker-php-ext-enable swoole                       \
-  && docker-php-ext-configure pcntl --enable-pcntl      \
-  && docker-php-ext-install pcntl                       \
-  && apk del                                            \
-    icu-dev                                             \
-    libjpeg-turbo-dev                                   \
-    libpng-dev                                          \
-    libwebp-dev                                         \
-    libxml2-dev                                         \
-    libzip-dev                                          \
-    pcre-dev                                            \
-    ${PHPIZE_DEPS}                                      \
-                                                        ;
 # Create runtime directories
 RUN install -d -o www-data -g www-data -m 775  \
   ./storage/framework/cache                    \
