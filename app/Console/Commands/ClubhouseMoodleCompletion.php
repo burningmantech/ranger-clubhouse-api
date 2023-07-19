@@ -35,7 +35,7 @@ class ClubhouseMoodleCompletion extends Command
             return;
         }
 
-        $courses = [ setting('MoodleHalfCourseId'), setting('MoodleFullCourseId') ];
+        $courses = array_unique([ setting('MoodleHalfCourseId'), setting('MoodleFullCourseId') ]);
 
         $this->info('Connecting to the Moodle Server.');
         $moodle = new Moodle;

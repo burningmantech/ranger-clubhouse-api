@@ -31,25 +31,37 @@ class TicketingManagement
             $sql = AccessDocument::whereIn('status', AccessDocument::ACTIVE_STATUSES);
         }
 
-        $rows = $sql->select(
-            '*',
-        #    DB::raw('EXISTS (SELECT 1 FROM access_document sc WHERE sc.person_id=access_document.person_id AND sc.type="staff_credential" AND sc.status IN ("claimed", "submitted") LIMIT 1) as has_staff_credential')
-        )
-            ->with(['person:id,callsign,status,first_name,last_name,email,home_phone,street1,street2,city,state,zip,country'])
-            ->orderBy('source_year')
-            ->get();
+        $rows = $sql->orderBy('source_year')->get();
 
         if ($rows->isNotEmpty()) {
+            $personIds = array_unique($rows->pluck('person_id')->toArray());
+            $ticketHolders = DB::table('person')
+                ->select(
+                    'id',
+                    'callsign',
+                    'status',
+                    'first_name',
+                    'last_name',
+                    'email',
+                    'home_phone',
+                )
+                ->whereIntegerInRaw('id', $personIds)
+                ->orderBy('callsign')
+                ->get();
+
             $peopleHaveStaffCredentials = DB::table('access_document')
                 ->select('person_id')
-                ->whereIntegerInRaw('person_id', $rows->pluck('person_id')->toArray())
+                ->whereIntegerInRaw('person_id', $personIds)
                 ->where('type', AccessDocument::STAFF_CREDENTIAL)
                 ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
                 ->get()
                 ->keyBy('person_id');
         } else {
             $peopleHaveStaffCredentials = collect([]);
+            $ticketHolders = [];
         }
+
+        $rows = $rows->groupBy('person_id');
 
         $people = [];
 
@@ -61,101 +73,84 @@ class TicketingManagement
             $high = 26;
         }
 
-        foreach ($rows as $row) {
-            // skip deleted person records
-            if (!$row->person) {
+        foreach ($ticketHolders as $holder) {
+            $personId = $holder->id;
+            $tickets = $rows->get($personId);
+            if (!$tickets) {
                 continue;
             }
 
-            $personId = $row->person_id;
+            $people[] = [
+                'person' => $holder,
+                'documents' => $tickets
+            ];
 
-            if (!isset($people[$personId])) {
-                $people[$personId] = (object)[
-                    'person' => $row->person,
-                    'documents' => []
-                ];
-            }
-
-            $person = $people[$personId];
-            $person->documents[] = $row;
-
-            $errors = [];
-            switch ($row->type) {
-                case AccessDocument::STAFF_CREDENTIAL:
-                case AccessDocument::WAP:
-                case AccessDocument::WAPSO:
-                    if (!$row->access_any_time) {
-                        $accessDate = $row->access_date;
-                        if (!$accessDate) {
-                            $errors[] = "missing access date";
-                        } elseif ($accessDate->year < $currentYear) {
-                            $errors[] = "access date [$accessDate] is less than current year [$currentYear]";
-                        } else {
-                            $day = $accessDate->day;
-                            if ($day < $low || $day > $high) {
-                                $errors[] = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
-                            }
-                        }
-                    }
-                    break;
-            }
-
-            $deliveryType = $row->delivery_method;
-            if ($forDelivery) {
-                // Override delivery methods if need be.
+            foreach ($tickets as $row) {
+                $errors = [];
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
-                        $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
-                        break;
-
                     case AccessDocument::WAP:
                     case AccessDocument::WAPSO:
-                        $deliveryType = AccessDocument::DELIVERY_EMAIL;
-                        break;
-
-                    case AccessDocument::RPT:
-                        if ($deliveryType == AccessDocument::DELIVERY_NONE) {
-                            $errors[] = 'missing delivery method';
-                        }
-                        break;
-
-                    case AccessDocument::VEHICLE_PASS:
-                        $hasSC = $peopleHaveStaffCredentials->has($row->person_id);
-                        if ($row->type == AccessDocument::VEHICLE_PASS && $hasSC) {
-                            $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
-                        } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
-                            $errors[] = 'missing delivery method';
-                        } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
-                            /*if ($row->hasAddress()) {
-                                $row->delivery_address = [
-                                    'street' => $row->street,
-                                    'city' => $row->city,
-                                    'state' => $row->state,
-                                    'postal_code' => $row->postal_code,
-                                    'country' => 'US',
-                                    'phone' => $row->person->home_phone,
-                                ];
+                        if (!$row->access_any_time) {
+                            $accessDate = $row->access_date;
+                            if (!$accessDate) {
+                                $errors[] = "missing access date";
+                            } elseif ($accessDate->year < $currentYear) {
+                                $errors[] = "access date [$accessDate] is less than current year [$currentYear]";
                             } else {
-                                $errors[] = 'missing mailing address';
-                            }*/
-                            $deliveryType = AccessDocument::DELIVERY_POSTAL;
-                        } else {
-                            $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
+                                $day = $accessDate->day;
+                                if ($day < $low || $day > $high) {
+                                    $errors[] = "access date [$accessDate] outside day [$day] range low [$low], high [$high]";
+                                }
+                            }
                         }
                         break;
                 }
 
-                $row->delivery_type = $deliveryType;
-                $person->delivery_type = $deliveryType;
-            }
+                $deliveryType = $row->delivery_method;
+                if ($forDelivery) {
+                    // Override delivery methods if need be.
+                    switch ($row->type) {
+                        case AccessDocument::STAFF_CREDENTIAL:
+                            $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
+                            break;
 
-            if (!empty($errors)) {
-                $row->error = implode('; ', $errors);
-                $row->has_error = true;
+                        case AccessDocument::WAP:
+                        case AccessDocument::WAPSO:
+                            $deliveryType = AccessDocument::DELIVERY_EMAIL;
+                            break;
+
+                        case AccessDocument::RPT:
+                            if ($deliveryType == AccessDocument::DELIVERY_NONE) {
+                                $errors[] = 'missing delivery method';
+                            }
+                            break;
+
+                        case AccessDocument::VEHICLE_PASS:
+                            $hasSC = $peopleHaveStaffCredentials->has($row->person_id);
+                            if ($hasSC) {
+                                $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
+                            } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
+                                $errors[] = 'missing delivery method';
+                            } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
+                                $deliveryType = AccessDocument::DELIVERY_POSTAL;
+                            } else {
+                                $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
+                            }
+                            break;
+                    }
+
+                    $row->delivery_type = $deliveryType;
+                    $holder->delivery_type = $deliveryType;
+                }
+
+                if (!empty($errors)) {
+                    $row->error = implode('; ', $errors);
+                    $row->has_error = true;
+                }
             }
         }
 
-        usort($people, fn($a, $b) => strcasecmp($a->person->callsign, $b->person->callsign));
 
         return [
             'people' => $people,
