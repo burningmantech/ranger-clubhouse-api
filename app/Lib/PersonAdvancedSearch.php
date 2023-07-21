@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\AccessDocument;
 use App\Models\Person;
 use App\Models\PersonPhoto;
 use App\Models\Position;
@@ -152,11 +153,22 @@ class PersonAdvancedSearch
                         $sql->whereNotNull('person_event.ticketing_finished_at');
                         break;
 
-                    case 'not-finished':
-                        $sql->whereNotNull('person_event.ticketing_started_at');
-                        $sql->whereNull('person_event.ticketing_finished_at');
+                    case 'not-finished-claimed':
+                        $sql->whereExists(function ($q) {
+                            $q->from('access_document as claimed')
+                                ->select(DB::raw(1))
+                                ->whereColumn('claimed.person_id', 'person.id')
+                                ->whereIn('claimed.type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
+                                ->where('claimed.status', AccessDocument::CLAIMED)
+                                ->limit(1);
+                        });
                         break;
-                 }
+                }
+
+                if ($ticketingStatus == 'not-finished' || $ticketingStatus == 'not-finished-claimed' || $ticketingStatus == 'not-finished-banked') {
+                    $sql->whereNotNull('person_event.ticketing_started_at');
+                    $sql->whereNull('person_event.ticketing_finished_at');
+                }
             }
         }
 
