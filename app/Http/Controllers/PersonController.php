@@ -135,7 +135,7 @@ class PersonController extends ApiController
             'ticketing_status' => [
                 'sometimes',
                 'string',
-                Rule::in([ 'started', 'not-started', 'finished', 'not-finished'])
+                Rule::in([ 'started', 'not-started', 'finished', 'not-finished', 'not-finished-claimed'])
             ],
             'include_ticketing_info' => 'sometimes|boolean',
         ]);
