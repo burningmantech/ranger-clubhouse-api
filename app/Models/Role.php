@@ -38,7 +38,7 @@ class Role extends ApiModel
     const REGIONAL_MANAGEMENT = 114;    // Person can access Regional Ranger liaison features.
     const PAYROLL = 115;                // Can access payroll features
     const VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
-
+    const TIMECARD_YEAR_ROUND = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     protected $casts = [

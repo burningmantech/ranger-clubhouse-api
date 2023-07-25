@@ -51,7 +51,7 @@ class TimesheetPolicy
 
     public function updatePosition(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $user->id == $timesheet->person_id);
     }
 
     /*
@@ -70,7 +70,8 @@ class TimesheetPolicy
     public function destroy(Person $user, Timesheet $timesheet): bool
     {
         // Allow a timesheet to be deleted if the duration is too short - i.e., accidental shift start.
-        if ($user->hasRole(Role::MANAGE) && $timesheet->duration < Timesheet::TOO_SHORT_LENGTH) {
+        if (($user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $timesheet->person_id == $user->id))
+            && $timesheet->duration < Timesheet::TOO_SHORT_LENGTH) {
             return true;
         }
         return false;
@@ -87,7 +88,7 @@ class TimesheetPolicy
 
     public function deleteMistake(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $timesheet->person_id == $user->id);
     }
 
     /**
@@ -96,7 +97,7 @@ class TimesheetPolicy
 
     public function signin(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole([ Role::MANAGE, Role::TIMECARD_YEAR_ROUND]);
     }
 
     /**
@@ -114,7 +115,7 @@ class TimesheetPolicy
 
     public function signoff(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole([ Role::MANAGE, Role::TIMECARD_YEAR_ROUND ]);
     }
 
     /**
