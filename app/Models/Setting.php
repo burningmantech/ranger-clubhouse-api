@@ -527,7 +527,7 @@ class Setting extends ApiModel
         ],
 
         'TimesheetCorrectionEnable' => [
-            'description' => 'Allow users to submit Timesheet Corrections',
+            'description' => 'Allow users to submit Timesheet Corrections. Note: The Timecard Year Round permission allows access year round.',
             'type' => self::TYPE_BOOL,
         ],
 

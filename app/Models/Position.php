@@ -63,6 +63,7 @@ class Position extends ApiModel
     const DOUBLE_OH_7_STANDBY = 110;
 
     const DPW_RANGER = 105;
+    const NVO_RANGER = 168;
 
     const DEEP_FREEZE = 38;
 
