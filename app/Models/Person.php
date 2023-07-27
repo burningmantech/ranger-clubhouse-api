@@ -676,6 +676,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign(string $callsign): string
     {
+        $callsign = preg_replace('/&/', ' and ',$callsign);
         return strtolower(preg_replace('/[^\w]/', '', self::convertDiacritics($callsign)));
     }
 
