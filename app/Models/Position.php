@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class Position extends ApiModel
 {
@@ -301,6 +302,7 @@ class Position extends ApiModel
         'min',
         'new_user_eligible',
         'no_payroll_hours_adjustment',
+        'no_training_required',
         'on_sl_report',
         'on_trainer_report',
         'paycode',
@@ -323,6 +325,7 @@ class Position extends ApiModel
         'all_rangers' => 'bool',
         'deselect_on_team_join' => 'bool',
         'new_user_eligible' => 'bool',
+        'no_training_required' => 'bool',
         'no_payroll_hours_adjustment' => 'bool',
         'on_sl_report' => 'bool',
         'on_trainer_report' => 'bool',
@@ -366,12 +369,18 @@ class Position extends ApiModel
      *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
 
     public function save($options = []): bool
     {
         if ($this->require_training_for_roles && !$this->training_position_id) {
             $this->addError('require_training_for_roles', 'Required training for roles set but no training position was given');
+            return false;
+        }
+
+        if ($this->no_training_required && $this->training_position_id) {
+            $this->addError('no_training_required', 'Training position and no training required flag cannot be set together.');
             return false;
         }
 
