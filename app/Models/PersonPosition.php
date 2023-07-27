@@ -98,7 +98,8 @@ class PersonPosition extends ApiModel
                 'position.active',
                 'position.type',
                 'position.all_rangers',
-                'position.team_id'
+                'position.team_id',
+                'position.no_training_required'
             )->join('position', 'position.id', 'person_position.position_id')
             ->where('person_id', $personId)
             ->orderBy('position.title')
@@ -106,7 +107,7 @@ class PersonPosition extends ApiModel
 
         if ($includeMentee) {
             // Find mentee and alpha positions
-            $sql = Position::select('id', 'title', 'training_position_id', 'active', 'type', 'all_rangers', 'team_id')
+            $sql = Position::select('id', 'title', 'training_position_id', 'active', 'type', 'all_rangers', 'team_id','no_training_required')
                 ->where('title', 'like', '%mentee%');
 
             if (Timesheet::hasAlphaEntry($personId)) {

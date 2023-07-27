@@ -71,8 +71,9 @@ class TimesheetManagement
             return false;
         }
 
+        $position = Position::find($positionId);
         // Are they trained for this position?
-        if (!Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
+        if (!$position->no_training_required && !Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($canForceSignon) {
                 $signonForced = true;

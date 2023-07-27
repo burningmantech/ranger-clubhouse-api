@@ -107,6 +107,7 @@ class Training extends Position
                 'title' => $position->title,
                 'active' => $position->active,
                 'type' => $position->type,
+                'no_training_required' => $position->no_training_required,
             ];
 
             $personPositions[] = $info;
@@ -116,17 +117,10 @@ class Training extends Position
              */
 
             $positionId = $position->id;
-            switch ($positionId) {
-                case Position::DIRT:
-                case Position::DIRT_PRE_EVENT:
-                case Position::DIRT_POST_EVENT:
-                    $trainingId = Position::TRAINING;
-                    break;
-
-                default:
-                    $trainingId = $position->training_position_id;
-                    break;
-            }
+            $trainingId = match ($positionId) {
+                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT => Position::TRAINING,
+                default => $position->training_position_id,
+            };
 
             // See if the person taught a training session required by the position
             $trainer = null;
