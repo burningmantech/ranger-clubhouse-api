@@ -100,8 +100,11 @@ class PayrollReport
 
                 if ($entry->position->no_payroll_hours_adjustment) {
                     array_unshift($notes, 'Position set to not adjust hours.');
-                } else if ($breakAfterHours && $duration >= ($breakAfterHours * 3600)) {
-                    $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $duration, $breakAfterHours, $breakDuration);
+                } else if ($breakAfterHours) {
+                    $hoursRoundedDown = (int)floor($duration / 3600);
+                    if ($hoursRoundedDown > $breakAfterHours) {
+                        $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $duration, $breakAfterHours, $breakDuration);
+                    }
                 }
 
                 $shift['notes'] = implode("\n", $notes);
@@ -131,10 +134,9 @@ class PayrollReport
     {
         // Split at Lunch
         $breakForMeal = $onDuty->clone();
+        $endTime = $onDuty->clone()->addSeconds($duration)->addMinutes($breakDuration);
         $breakForMeal->addHours($breakAfterHours);
-        $remaining = $breakForMeal->diffInSeconds($onDuty);
         $afterMeal = $breakForMeal->clone()->addMinutes($breakDuration);
-        $endTime = $afterMeal->clone()->addSeconds($duration - $remaining);
 
         return [
             'first_half' => [
