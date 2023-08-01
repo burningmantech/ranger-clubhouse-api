@@ -106,7 +106,8 @@ class TimesheetMissingController extends ApiController
         if ($createNew) {
             // Verify the person may hold the position
             if (!PersonPosition::havePosition($person->id, $timesheetMissing->new_position_id)) {
-                throw new InvalidArgumentException('Person does not hold the position.');
+                $timesheetMissing->addError('new_position_id', 'Person does not hold the position.');
+                return $this->restError($timesheetMissing);
             }
         }
 
