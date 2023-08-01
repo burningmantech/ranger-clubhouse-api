@@ -190,7 +190,7 @@ class ShiftCoverageReport
                 $periods[] = [
                     'begins' => (string)$shift->begins_epoch,
                     'ends' => (string)$shift->ends_epoch,
-                    'date' => $shift->begins_epoch,
+                    'date' => (string)$shift->begins_epoch,
                     'positions' => $positions,
                 ];
             }
