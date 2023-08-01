@@ -3,7 +3,6 @@
 namespace App\Lib;
 
 use App\Exceptions\MoodleDownForMaintenanceException;
-use App\Mail\OnlineTrainingCompletedMail;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
@@ -12,7 +11,6 @@ use App\Models\PersonOnlineTraining;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use stdClass;
@@ -311,11 +309,14 @@ class Moodle
             ]);
             $ot->auditReason = 'course completion';
             $ot->save();
-
+            /*
+             * Uncomment when a better solution to preventing spamming from multiple servers (aka the on playa server
+             * fired up during the off season) is found.
             if (!in_array($person->status, Person::LOCKED_STATUSES)
                 && !in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
                 mail_to_person($person, new OnlineTrainingCompletedMail($person));
             }
+            */
         }
     }
 
