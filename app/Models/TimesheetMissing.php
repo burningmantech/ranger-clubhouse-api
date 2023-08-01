@@ -70,14 +70,14 @@ class TimesheetMissing extends ApiModel
 
         'create_entry' => 'sometimes|boolean|nullable',
 
-        'new_on_duty' => 'date|nullable|required_if:create_entry,true',
-        'new_off_duty' => 'date|nullable|after:new_on_duty|required_if:create_entry,true',
-        'new_position_id' => 'integer|nullable|required_if:create_entry,true'
+        'new_on_duty' => 'date|nullable|required_if:create_entry,1',
+        'new_off_duty' => 'date|nullable|after:new_on_duty|required_if:create_entry,1',
+        'new_position_id' => 'integer|nullable|required_if:create_entry,1'
     ];
 
-    public ?string $new_off_duty;
-    public ?string $new_on_duty;
-    public ?int $new_position_id;
+    public ?string $new_off_duty = null;
+    public ?string $new_on_duty = null;
+    public ?int $new_position_id = null;
     public bool $create_entry = false;
 
     const PARTNER_SHIFT_STARTS_WITHIN = 30;
