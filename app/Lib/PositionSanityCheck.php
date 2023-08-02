@@ -19,6 +19,8 @@ class PositionSanityCheck
         'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
         'deactivated_teams' => 'App\Lib\PositionSanityCheck\DeactivatedTeamsCheck',
         'lmyr' => 'App\Lib\PositionSanityCheck\LoginManagementYearRoundCheck',
+        'deactivated_accounts' => 'App\Lib\PositionSanityCheck\DeactivatedAccounts',
+        'retired_accounts' => 'App\Lib\PositionSanityCheck\RetiredAccounts',
     ];
 
     public static function issues(): array
