@@ -1149,7 +1149,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 $addIds = Position::where('all_rangers', true)->pluck('id');
                 PersonPosition::addIdsToPerson($personId, $addIds, $changeReason);
 
-                // Add login role
+                // Ensure any default permissions are added
                 $addIds = Role::where('new_user_eligible', true)->pluck('id');
                 PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
 
@@ -1183,24 +1183,23 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
                 break;
 
-            // Note that it used to be that changing status to INACTIVE
-            // removed all of your positions other than "Training."  We decided
-            // in 2015 not to do this anymore because we lose too much historical
-            // information.
-
-            // If you are one of the below, the only role you get is login
-            // and position is Training
-
             case Person::RETIRED:
+                PersonTeam::removeAllForPerson($personId, $changeReason);
+            // fall thru
             case Person::AUDITOR:
             case Person::PROSPECTIVE:
-            case Person::PROSPECTIVE_WAITLIST:
-            case Person::PAST_PROSPECTIVE:
                 // Remove all roles, and reset back to the default roles
                 PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
 
                 // Remove all positions, and reset back to the default positions
                 PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
+                break;
+
+            case Person::PAST_PROSPECTIVE:
+                // Remove all positions and permissions
+                PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
+                PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+                PersonTeam::removeAllForPerson($personId, $changeReason);
                 break;
         }
 

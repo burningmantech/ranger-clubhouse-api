@@ -136,7 +136,7 @@ class PersonPosition extends ApiModel
 
         if ($action == Person::ADD_NEW_USER) {
             $addIds = [];
-            $ids = Position::where('new_user_eligible', true)->pluck('id')->toArray();
+            $ids = Position::where('active', true)->where('new_user_eligible', true)->pluck('id')->toArray();
             foreach ($ids as $positionId) {
                 $key = array_search($positionId, $removeIds);
                 if ($key !== false) {
