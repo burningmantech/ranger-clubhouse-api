@@ -4,8 +4,13 @@ namespace App\Console\Commands;
 
 use App\Lib\GroundHogDay;
 use App\Lib\RedactDatabase;
+use App\Models\Person;
+use App\Models\Position;
+use App\Models\Role;
+use App\Models\Slot;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class ClubhouseCreateTrainingDatabase extends Command
 {
@@ -36,10 +41,10 @@ class ClubhouseCreateTrainingDatabase extends Command
             $this->error("$ghdVar environment variable not set");
             return true;
         }
-
-        $dumpFile = GroundHogDay::trainingDatabaseDumpName($groundHogDay);
         $groundHogDay = Carbon::parse($groundHogDay);
         $year = $groundHogDay->year;
+
+        $dumpFile = GroundHogDay::trainingDatabaseDumpName($groundHogDay);
 
         $cloneUser = config('database.connections.mysql_clone_from.username');
         $clonePwd = config('database.connections.mysql_clone_from.password');
@@ -97,8 +102,10 @@ COMMIT;
         $this->info('Redacting and Ground Hog Day-zing the database');
         RedactDatabase::execute($year);
         GroundHogDay::build($groundHogDay);
+        $this->trainActives($year);
 
         unlink($cloneDump);
+
         $this->info("Dumping training database to $dumpFile");
         // password set above
         if (shell_exec("mysqldump -h $host -u $user $db | gzip > $dumpFile")) {
@@ -109,5 +116,39 @@ COMMIT;
 
         $this->info("Training database created. Database $db setup.");
         return 0;
+    }
+
+    public function trainActives($year) : void
+    {
+        // Create a catchall slot
+        $slot = Slot::create([
+            'active' => true,
+            'description' => 'Ground Hog Day Catch All',
+            'position_id' => Position::TRAINING,
+            'begins' => "$year-01-01 10:00:00",
+            'ends' => "$year-01-01 11:00:00",
+            'max' => 10000,
+            'min' => 1,
+            'timezone' => 'America/Los_Angeles',
+            'signed_up' => 0,
+        ]);
+
+        if (!$slot?->id) {
+            throw new \InvalidArgumentException("Cannot create catch all slot");
+        }
+
+        // Grant everyone LMOP and pass training.
+        DB::table('person')
+            ->select('id')
+            ->where('status', Person::ACTIVE)
+            ->orderBy('id')
+            ->chunk(100, function ($rows) use ($slot) {
+                foreach ($rows as $row) {
+                    DB::table('person_slot')->insertOrIgnore([ 'slot_id' => $slot->id, 'person_id' => $row->id ]);
+                    DB::table('trainee_status')
+                        ->insertOrIgnore(['slot_id' => $slot->id, 'person_id' => $row->id, 'rank' => 2, 'passed' => 1, 'notes' => 'GHD passed']);
+                    DB::table('person_role')->insertOrIgnore(['person_id' => $row->id, 'role_id' => Role::MANAGE_ON_PLAYA]);
+                }
+            });
     }
 }
