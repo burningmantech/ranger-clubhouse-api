@@ -272,7 +272,7 @@ class Schedule
      * @throws Exception
      */
 
-    public static function deleteFromSchedule(int $personId, Slot $slot, ?string $reason): array
+    public static function deleteFromSchedule(int $personId, Slot $slot, ?string $reason = null): array
     {
         $personSlot = PersonSlot::where([
             ['person_id', $personId],
