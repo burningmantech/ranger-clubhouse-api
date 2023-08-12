@@ -676,7 +676,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public static function normalizeCallsign(string $callsign): string
     {
-        $callsign = preg_replace('/&/', ' and ',$callsign);
+        $callsign = preg_replace('/&/', ' and ', $callsign);
         return strtolower(preg_replace('/[^\w]/', '', self::convertDiacritics($callsign)));
     }
 
@@ -1176,11 +1176,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
                 // Remove all teams
                 PersonTeam::removeAllForPerson($personId, $changeReason);
+
+                // Remove any signups.
+                Schedule::removeFutureSignUps($personId, "conversion to $newStatus");
                 break;
 
             case Person::BONKED:
                 // Remove all positions
                 PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
+                Schedule::removeFutureSignUps($personId, 'conversion to bonked');
                 break;
 
             case Person::RETIRED:
@@ -1200,6 +1204,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
                 PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
                 PersonTeam::removeAllForPerson($personId, $changeReason);
+                Schedule::removeFutureSignUps($personId, 'conversion to past prospective');
                 break;
         }
 
@@ -1292,7 +1297,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function callsignPronounce(): Attribute
     {
         return Attribute::make(
-            set: fn ($value) => empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)))
+            set: fn($value) => empty($value) ? '' : trim(preg_replace("/['\"]/", '', trim($value)))
         );
     }
 
@@ -1425,7 +1430,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     /**
      * Set pronouns field to a string value or empty string
-      */
+     */
 
     public function pronouns(): Attribute
     {
@@ -1451,12 +1456,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return PhoneAttribute::make();
     }
 
-    public function smsOnPlaya() : Attribute
+    public function smsOnPlaya(): Attribute
     {
         return PhoneAttribute::make();
     }
 
-    public function smsOffPlaya() : Attribute
+    public function smsOffPlaya(): Attribute
     {
         return PhoneAttribute::make();
     }

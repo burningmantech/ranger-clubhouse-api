@@ -8,6 +8,7 @@ use App\Lib\WorkSummary;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class Schedule
@@ -163,7 +164,7 @@ class Schedule
         }
 
         PositionCredit::bulkComputeCredits($slots, $year, 'slot_begins_time', 'slot_ends_time');
-        
+
         // return an array of Schedule loaded from the rows
         return [$slots, $keepPositionsById ? $positionsById : array_values($positionsById)];
     }
@@ -268,13 +269,10 @@ class Schedule
     /**
      * Remove a sign-up for a person
      *
-     * @param int $personId
-     * @param Slot $slot
-     * @return array
      * @throws Exception
      */
 
-    public static function deleteFromSchedule(int $personId, Slot $slot): array
+    public static function deleteFromSchedule(int $personId, Slot $slot, ?string $reason): array
     {
         $personSlot = PersonSlot::where([
             ['person_id', $personId],
@@ -283,6 +281,9 @@ class Schedule
 
         try {
             DB::beginTransaction();
+            if ($reason) {
+                $personSlot->auditReason = $reason;
+            }
             $personSlot->delete();
             $signedUp = DB::table('person_slot')->where('slot_id', $slot->id)->count();
             $slot->signed_up = $signedUp;
@@ -308,6 +309,35 @@ class Schedule
 
         return ['status' => self::SUCCESS, 'signed_up' => $signedUp];
     }
+
+    /**
+     * Remove all future signups for a person.
+     */
+
+    public static function removeFutureSignUps(int $personId, string $reason)
+    {
+        // Find all upcoming shifts and remove 'em.
+        $now = now();
+        $rows = PersonSlot::select('person_slot.*')
+            ->join('slot', 'slot.id', 'person_slot.slot_id')
+            ->where('slot.begins_year', $now->year)
+            ->where('slot.begins', '>', $now)
+            ->where('person_id', $personId)
+            ->with('slot')
+            ->get();
+
+        foreach ($rows as $row) {
+            self::deleteFromSchedule($personId, $row->slot, $reason);
+            ActionLog::record(
+                Auth::user(),
+                'person-slot-remove',
+                'conversion to past prospective',
+                ['slot_id' => $row->slot_id],
+                $personId
+            );
+        }
+    }
+
 
     /**
      * Does a person have multiple enrollments for the same position (aka Training or Alpha shift)
@@ -781,7 +811,7 @@ class Schedule
             'slot_begins_time' => $this->slot_begins_time,
             'slot_description' => $this->slot_description,
             'slot_duration' => $this->slot_duration,
-            'slot_ends' => (string) $this->slot_ends,
+            'slot_ends' => (string)$this->slot_ends,
             'slot_ends_time' => $this->slot_ends_time,
             'slot_id' => $this->slot_id,
             'slot_max' => $this->slot_max,
@@ -797,7 +827,7 @@ class Schedule
         ];
     }
 
-    public function toJson() : string
+    public function toJson(): string
     {
         return json_encode($this->toArray());
     }
