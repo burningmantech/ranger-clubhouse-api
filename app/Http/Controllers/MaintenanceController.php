@@ -80,6 +80,7 @@ class MaintenanceController extends ApiController
         }
 
         $newUserPositions = Position::where('new_user_eligible', true)
+            ->where('active', true)
             ->orderBy('title')
             ->get();
 
@@ -132,7 +133,7 @@ class MaintenanceController extends ApiController
                 }
 
                 if (!empty($removePositions)) {
-                    PersonPosition::removeIdsFromPerson($person->id, $removePositions, 'maintenance - update position');
+                    PersonPosition::removeIdsFromPerson($person->id, $removeIds, 'maintenance - update position');
                 }
             }
         }
