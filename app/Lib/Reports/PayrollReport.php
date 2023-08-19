@@ -11,11 +11,8 @@ class PayrollReport
                                    string $endTime,
                                    int    $breakAfterHours,
                                    int    $breakDuration,
-                                   int    $hourCap,
                                    array  $positionIds): array
     {
-        $secondCap = $hourCap * 3600;
-
         $entriesByPerson = Timesheet::select('timesheet.*')
             ->join('position', 'position.id', 'timesheet.position_id')
             ->join('person', 'person.id', 'timesheet.person_id')
@@ -45,8 +42,6 @@ class PayrollReport
             })->orderBy('timesheet.on_duty')
             ->get()
             ->groupBy('person_id');
-
-        $results = [];
 
         $startTime = Carbon::parse($startTime);
         $endTime = Carbon::parse($endTime);
@@ -79,31 +74,26 @@ class PayrollReport
                 }
 
                 if ($startTime->gt($onDuty)) {
-                    $notes[] = 'Split start time - original ' . self::formatDt($onDuty);
+                    $notes[] = 'Truncated start time - orig. ' . self::formatDt($onDuty);
                     $onDuty = $startTime;
                 }
 
                 if ($offDuty->gt($endTime)) {
-                    $notes[] = 'Split end time - original ' . self::formatDt($offDuty);
+                    $notes[] = 'Truncated end time - orig. ' . self::formatDt($offDuty);
                     $offDuty = $endTime;
                 }
 
-                $duration = $offDuty->diffInSeconds($onDuty);
-                if (!$entry->position->no_payroll_hours_adjustment && $secondCap && $duration > $secondCap) {
-                    array_unshift($notes, 'Entry capped at ' . $hourCap . ' hours');
-                    $duration = $secondCap;
-                    $offDuty = $onDuty->clone()->addHours($hourCap);
-                }
-                $shift['duration'] = $duration;
+                $durationSeconds = $offDuty->diffInSeconds($onDuty);
+                $shift['duration'] = $durationSeconds;
                 $shift['on_duty'] = self::formatDt($onDuty);
                 $shift['off_duty'] = self::formatDt($offDuty);
 
                 if ($entry->position->no_payroll_hours_adjustment) {
                     array_unshift($notes, 'Position set to not adjust hours.');
                 } else if ($breakAfterHours) {
-                    $hoursRoundedDown = (int)floor($duration / 3600);
+                    $hoursRoundedDown = (int)floor($durationSeconds / 3600);
                     if ($hoursRoundedDown > $breakAfterHours) {
-                        $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $duration, $breakAfterHours, $breakDuration);
+                        $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $durationSeconds, $breakAfterHours, $breakDuration);
                     }
                 }
 
@@ -128,15 +118,16 @@ class PayrollReport
     }
 
     public static function computeMealBreak(Carbon $onDuty,
-                                            int    $duration,
+                                            int    $durationSeconds,
                                             int    $breakAfterHours,
-                                            int    $breakDuration): array
+                                            int    $breakDurationMinutes): array
     {
-        // Split at Lunch
+        // Split at meal
         $breakForMeal = $onDuty->clone();
-        $endTime = $onDuty->clone()->addSeconds($duration)->addMinutes($breakDuration);
         $breakForMeal->addHours($breakAfterHours);
-        $afterMeal = $breakForMeal->clone()->addMinutes($breakDuration);
+        $afterMeal = $breakForMeal->clone()->addMinutes($breakDurationMinutes);
+        $afterMealDurationSeconds = ($durationSeconds - (($breakAfterHours * 3600) + ($breakDurationMinutes * 60)));
+        $endTime = $afterMeal->clone()->addSeconds($afterMealDurationSeconds);
 
         return [
             'first_half' => [

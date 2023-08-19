@@ -921,7 +921,6 @@ class TimesheetController extends ApiController
             'end_time' => 'required|date|after:start_time',
             'break_duration' => 'required|integer',
             'break_after' => 'sometimes|integer',
-            'hour_cap' => 'sometimes|integer',
             'position_ids' => 'required|array',
             'position_ids.*' => 'integer|exists:position,id'
         ]);
@@ -932,7 +931,6 @@ class TimesheetController extends ApiController
                 $params['end_time'],
                 $params['break_after'] ?? 0,
                 $params['break_duration'],
-                $params['hour_cap'] ?? 0,
                 $params['position_ids'])
         ]);
     }
