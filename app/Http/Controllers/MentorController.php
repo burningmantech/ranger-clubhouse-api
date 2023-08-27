@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\PersonMentor;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class MentorController extends ApiController
@@ -52,7 +53,22 @@ class MentorController extends ApiController
     public function alphas(): JsonResponse
     {
         $this->authorize('isMentor');
-        return response()->json(['alphas' => Alpha::retrieveAllAlphas()]);
+        $params = request()->validate([
+            'off_duty' => 'sometimes|boolean'
+        ]);
+
+        if ($params['off_duty'] ?? false) {
+            $alphas = DB::table('person')
+                ->select('person.id', 'person.callsign')
+                ->leftJoin('timesheet', 'timesheet.person_id', 'person.id')
+                ->where('person.status', Person::ALPHA)
+                ->whereNull('timesheet.on_duty')
+                ->orderBy('callsign')
+                ->get();
+            return response()->json([ 'alphas' => $alphas]);
+        } else {
+            return response()->json(['alphas' => Alpha::retrieveAllAlphas()]);
+        }
     }
 
     /**
