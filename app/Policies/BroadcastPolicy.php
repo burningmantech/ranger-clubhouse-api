@@ -80,4 +80,15 @@ class BroadcastPolicy
 
         return false;
     }
+
+    /**
+     * Can the person transmit?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function transmit(Person $user) : bool {
+        return $user->hasRole(Role::MEGAPHONE);
+    }
 }

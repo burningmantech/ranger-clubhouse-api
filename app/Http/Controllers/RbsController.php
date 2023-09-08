@@ -22,10 +22,13 @@ class RbsController extends ApiController
      * Broadcast configuration
      *
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function config(): JsonResponse
     {
+        $this->authorize('transmit', Broadcast::class);
+
         return response()->json([
             'config' => [
                 // Is the event happening?
@@ -106,6 +109,8 @@ class RbsController extends ApiController
 
     public function recipients(): JsonResponse
     {
+        $this->authorize('transmit', Broadcast::class);
+
         $params = request()->validate([
             'type' => 'required|string',
             'count_only' => 'sometimes|boolean'
@@ -199,6 +204,9 @@ class RbsController extends ApiController
     public function details(): JsonResponse
     {
         prevent_if_ghd_server('RBS stats');
+
+        $this->authorize('stats', Broadcast::class);
+
         $params = request()->validate([
             'type' => 'required|string'
         ]);
@@ -388,7 +396,7 @@ class RbsController extends ApiController
     }
 
     /**
-     * Attempt to resend a failed broadcast
+     * Attempt to send a broadcast
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -397,6 +405,8 @@ class RbsController extends ApiController
     public function transmit(): JsonResponse
     {
         prevent_if_ghd_server('RBS transmission');
+
+        $this->authorize('transmit', Broadcast::class);
 
         $params = request()->validate([
             'type' => 'required|string',
