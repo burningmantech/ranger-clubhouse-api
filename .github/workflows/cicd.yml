@@ -30,7 +30,7 @@ jobs:
           php-version: '8.2'
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax .
@@ -50,7 +50,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get Composer Cache Directory
         id: composer-cache
@@ -92,7 +92,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
@@ -121,7 +121,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
@@ -152,7 +152,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v3
