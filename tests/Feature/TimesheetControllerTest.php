@@ -1075,7 +1075,7 @@ class TimesheetControllerTest extends TestCase
      * Test Timesheet Sanity Checker
      */
 
-    public function testTImesheetSanityChecker()
+    public function testTimesheetSanityChecker()
     {
         $this->addRole(Role::ADMIN);
         $year = current_year();
