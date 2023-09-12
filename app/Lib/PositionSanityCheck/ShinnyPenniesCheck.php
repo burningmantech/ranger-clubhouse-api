@@ -2,6 +2,7 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Person;
 use App\Models\Position;
 use App\Models\PersonPosition;
 use App\Models\PersonMentor;
@@ -12,19 +13,24 @@ class ShinnyPenniesCheck extends SanityCheck
 {
     public static function issues(): array
     {
-        $year = current_year();
-
-        return DB::select(
-            "SELECT * FROM (SELECT p.id AS id, callsign, status, year, " .
-            "EXISTS(SELECT 1 FROM person_position WHERE person_id = p.id AND position_id = ?) AS has_shiny_penny " .
-            "FROM person p INNER JOIN " .
-            "(SELECT person_id, MAX(mentor_year) as year FROM person_mentor " .
-            "  WHERE status = 'pass' GROUP BY person_id) pm " .
-            "ON pm.person_id = p.id) t1 " .
-            "WHERE (NOT has_shiny_penny AND year = $year) OR (has_shiny_penny AND year != $year) " .
-            "ORDER BY year desc, callsign",
-            [Position::DIRT_SHINY_PENNY]
-        );
+        return DB::table('person')
+            ->where('person.status', Person::ACTIVE)
+            ->whereExists(function ($sql) {
+                $sql->from('timesheet')
+                    ->select(DB::raw(1))
+                    ->where('position_id', Position::ALPHA)
+                    ->whereYear('on_duty', current_year())
+                    ->whereColumn('person.id', 'timesheet.person_id')
+                    ->limit(1);
+            })->whereNotExists(function ($sql) {
+                $sql->from('person_position')
+                    ->select(DB::raw(1))
+                    ->whereColumn('person.id', 'person_position.person_id')
+                    ->where('person_position.position_id', Position::DIRT_SHINY_PENNY)
+                    ->limit(1);
+            })->orderBy('callsign')
+            ->get()
+            ->toArray();
     }
 
     public static function repair($peopleIds, ...$options): array
