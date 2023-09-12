@@ -112,17 +112,17 @@ class PositionSanityCheckControllerTest extends TestCase
             // Response is sorted by year descending, callsign
             'shiny_pennies' => [
                 [
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'has_shiny_penny' => 1,
+                    'year' => $personYear,
+                ],
+                [
                     'id' => $shinyPenny->id,
                     'callsign' => $shinyPenny->callsign,
                     'has_shiny_penny' => 0,
                     'year' => (int)date('Y'),
                 ],
-                [
-                    'id' => $person->id,
-                    'callsign' => $person->callsign,
-                    'has_shiny_penny' => 1,
-                    'year' => $personYear,
-                ]
             ]
         ]);
     }
