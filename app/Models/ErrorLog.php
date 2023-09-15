@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class ErrorLog extends ApiModel
 {
@@ -16,16 +18,18 @@ class ErrorLog extends ApiModel
          'data' => 'array'
      ];*/
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    /*
+    /**
      * Record an error
+     * @param string $error_type
+     * @param array $data
      */
 
-    public static function record($error_type, $data = [])
+    public static function record(string $error_type, array $data = []): void
     {
         $error = [
             'error_type' => $error_type,
@@ -46,15 +50,15 @@ class ErrorLog extends ApiModel
         self::create($error);
     }
 
-    /*
+    /**
      * Record a PHP exception
      *
-     * @param Exception $e the exception which occured
+     * @param Throwable $e the exception which occurred
      * @param string $error_type the type to record
      * @param array $extra any additional data to be logged
      */
 
-    public static function recordException($e, $error_type, $extra = [])
+    public static function recordException(Throwable $e, string $error_type, array $extra = []): void
     {
         // Inspect the exception for name, message, source location,
         // and backtrace
@@ -72,6 +76,7 @@ class ErrorLog extends ApiModel
         if ($req) {
             $data['method'] = $req->method();
             $data['url'] = $req->fullUrl();
+            $data['parameters'] = $req->all();
         }
 
         $data = array_merge($data, $extra);
@@ -101,7 +106,7 @@ class ErrorLog extends ApiModel
         }
     }
 
-    /*
+    /**
      * Find error log based on a criteria
      *
      * @param array $query
@@ -115,7 +120,7 @@ class ErrorLog extends ApiModel
      * page_size - size of page
      */
 
-    public static function findForQuery($query)
+    public static function findForQuery(array $query): array
     {
         $sql = self::query();
 
