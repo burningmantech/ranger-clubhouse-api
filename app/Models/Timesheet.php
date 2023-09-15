@@ -83,6 +83,7 @@ class Timesheet extends ApiModel
     protected $rules = [
         'person_id' => 'required|integer',
         'position_id' => 'required|integer',
+        'on_duty' => 'required|date',
         'off_duty' => 'nullable|sometimes|after_or_equal:on_duty'
     ];
 
@@ -133,11 +134,9 @@ class Timesheet extends ApiModel
          */
 
         self::saving(function ($model) {
-
             if (!$model->isDirty('slot_id')
-                && (
-                    ($model->isDirty('position_id') && $model->position_id)
-                    || ($model->isDirty('on_duty') && $model->on_duty))
+                && $model->on_duty && $model->position_id
+                && ($model->isDirty('position_id') || $model->isDirty('on_duty'))
             ) {
                 // Find new sign up to associate with
                 $model->slot_id = Schedule::findSlotIdSignUpByPositionTime($model->person_id, $model->position_id, $model->on_duty);
