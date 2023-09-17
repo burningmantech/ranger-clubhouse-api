@@ -9,6 +9,7 @@ use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Team;
+use App\Models\Timesheet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -73,6 +74,13 @@ class PositionSanityCheckControllerTest extends TestCase
             'status' => 'pass'
         ]);
 
+        Timesheet::factory()->create([
+            'person_id' => $this->shinyPenny->id,
+            'position_id' => Position::ALPHA,
+            'on_duty' => date('Y-01-01 00:00'),
+            'off_duty' => date('Y-01-01 01:00'),
+        ]);
+
         // Trainer to test Login Management Year Round
         $this->trainer = Person::factory()->create(['callsign' => 'Trainer']);
         // person has a Login Management position but no LM role
@@ -94,7 +102,6 @@ class PositionSanityCheckControllerTest extends TestCase
         $person = $this->person;
         $personYear = $this->personYear;
         $shinyPenny = $this->shinyPenny;
-        $trainer = $this->trainer;
 
         $response = $this->json('GET', 'position/sanity-checker');
         $response->assertStatus(200);
@@ -105,17 +112,17 @@ class PositionSanityCheckControllerTest extends TestCase
             // Response is sorted by year descending, callsign
             'shiny_pennies' => [
                 [
+                    'id' => $person->id,
+                    'callsign' => $person->callsign,
+                    'has_shiny_penny' => 1,
+                    'year' => $personYear,
+                ],
+                [
                     'id' => $shinyPenny->id,
                     'callsign' => $shinyPenny->callsign,
                     'has_shiny_penny' => 0,
                     'year' => (int)date('Y'),
                 ],
-                [
-                    'id' => $person->id,
-                    'callsign' => $person->callsign,
-                    'has_shiny_penny' => 1,
-                    'year' => $personYear,
-                ]
             ]
         ]);
     }

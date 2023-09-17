@@ -14,7 +14,7 @@ class TimesheetSanityCheckReport
 
     public static function execute(int $year): array
     {
-        $withBase = ['position:id,title', 'person:id,callsign', 'slot:id,description,begins,ends,timezone'];
+        $withBase = ['position:id,title', 'person:id,callsign', 'slot:id,description,begins,ends,timezone,duration'];
 
         $rows = Timesheet::whereYear('on_duty', $year)
             ->whereNull('off_duty')
@@ -132,7 +132,8 @@ class TimesheetSanityCheckReport
             ->values()
             ->toArray();
 
-        $rows = Timesheet::join('slot', 'slot.id', 'timesheet.slot_id')
+        $rows = Timesheet::select('timesheet.*')
+            ->join('slot', 'slot.id', 'timesheet.slot_id')
             ->whereYear('on_duty', $year)
             ->whereNotNull('timesheet.slot_id')
             ->whereRaw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) >= TIMESTAMPDIFF(SECOND, slot.begins, slot.ends)*1.5")
