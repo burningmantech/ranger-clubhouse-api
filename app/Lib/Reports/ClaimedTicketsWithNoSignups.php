@@ -12,7 +12,7 @@ class ClaimedTicketsWithNoSignups
 {
     public static function execute(): array
     {
-        $claimedRows = AccessDocument::whereIn('type', [AccessDocument::RPT, AccessDocument::STAFF_CREDENTIAL])
+        $claimedRows = AccessDocument::whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
             ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->with('person:id,callsign,status,first_name,last_name,email')
             ->get();

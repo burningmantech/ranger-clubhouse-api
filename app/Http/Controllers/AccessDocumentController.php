@@ -451,8 +451,8 @@ class AccessDocumentController extends ApiController
     }
 
     /**
-     * Grant Vehicle Passes to anyone who has a staff credential or
-     * a reduced-price ticket and who doesn't already have a VP.
+     * Grant Vehicle Passes to anyone who has a Staff Credential or
+     * a Special Price Ticket and who doesn't already have a VP.
      *
      * @return JsonResponse
      * @throws AuthorizationException

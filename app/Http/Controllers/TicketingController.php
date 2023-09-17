@@ -58,7 +58,7 @@ class TicketingController extends ApiController
                 'ticket_vendor_name' => $settings['TicketVendorName'],
                 'ranger_ticketing_email' => $settings['TAS_Email'],
 
-                'rpt_credits' => $settings['RpTicketThreshold'],
+                'spt_credits' => $settings['RpTicketThreshold'],
                 'sc_credits' => $settings['ScTicketThreshold'],
 
                 'pickup_locations' => $settings['TAS_Pickup_Locations'],

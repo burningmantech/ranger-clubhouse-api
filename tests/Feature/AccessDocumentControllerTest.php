@@ -389,7 +389,7 @@ class AccessDocumentControllerTest extends TestCase
         $t = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => date('Y'),
-            'type' => 'reduced_price_ticket',
+            'type' => AccessDocument::SPT,
             'status' => 'qualified'
         ]);
 
@@ -399,7 +399,7 @@ class AccessDocumentControllerTest extends TestCase
         AccessDocument::factory()->create([
             'person_id' => $noVP->id,
             'source_year' => date('Y'),
-            'type' => 'reduced_price_ticket',
+            'type' => AccessDocument::SPT,
             'status' => 'qualified'
         ]);
 
@@ -507,7 +507,7 @@ class AccessDocumentControllerTest extends TestCase
         $banked = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'reduced_price_ticket',
+            'type' => AccessDocument::SPT,
             'status' => 'banked',
         ]);
 

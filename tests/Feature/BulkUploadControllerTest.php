@@ -489,7 +489,7 @@ class BulkUploadControllerTest extends TestCase
         );
 
         $types = [
-            'RPT' => AccessDocument::RPT,
+            'SPT' => AccessDocument::SPT,
             'GIFT' => AccessDocument::GIFT,
             'LSD' => AccessDocument::LSD,
             'VP' => AccessDocument::VEHICLE_PASS,
