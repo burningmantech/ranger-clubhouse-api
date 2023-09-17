@@ -31,7 +31,7 @@ class BMIDManagement
      *
      * - Find any a person who has non-Training shifts starting before the access date
      * - Find any BMID for a person who does not have a WAP or a Staff Credential
-     * - Find any BMID for a person who has reduced-price-ticket and a WAP with an access date before the box office opens.
+     * - Find any BMID for a person who has Special Price Ticket and a WAP with an access date before the box office opens.
      *
      * @param int $year
      * @return array[]
@@ -207,10 +207,10 @@ class BMIDManagement
         $boxOfficeOpenDate = setting('TAS_BoxOfficeOpenDate', true);
 
         $waps = AccessDocument::select('access_document.*')
-            ->join('access_document as rpt', function ($j) {
-                $j->on('access_document.person_id', 'rpt.person_id')
-                    ->where('rpt.type', AccessDocument::RPT)
-                    ->whereIn('rpt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
+            ->join('access_document as spt', function ($j) {
+                $j->on('access_document.person_id', 'spt.person_id')
+                    ->where('spt.type', AccessDocument::SPT)
+                    ->whereIn('spt.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
             })->join('person', function ($j) {
                 $j->on('person.id', 'access_document.person_id')
                     ->whereNotIn('person.status', [Person::ALPHA, Person::PROSPECTIVE, Person::AUDITOR]);
@@ -264,7 +264,7 @@ class BMIDManagement
             ],
 
             [
-                'type' => 'rpt-before-box-office',
+                'type' => 'spt-before-box-office',
                 'box_office' => $boxOfficeOpenDate,
                 'people' => $rptBeforeBoxOfficeOpens
             ],

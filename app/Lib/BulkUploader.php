@@ -105,7 +105,7 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), rpt (Reduced-Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and rpt",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), spt (Special Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and spt",
                 ],
                 [
                     'id' => 'wap',
@@ -459,7 +459,7 @@ class BulkUploader
     }
 
     /**
-     * Process ticket actions (create Staff Credentials, Reduced Priced Tickets, etc)
+     * Process ticket actions (create Staff Credentials, Special Price Tickets, etc)
      *
      * @param $records
      * @param $action
@@ -504,7 +504,7 @@ class BulkUploader
              * 2020 is year 3 ... and it expires AFTER the 2020 event.
              */
 
-            if ($type == "CRED" || $type == "RPT" || $type == "GIFT") {
+            if ($type == "CRED" || $type == "SPT" || $type == "GIFT") {
                 $expiryYear = $year + 3;
             }
 
@@ -515,8 +515,8 @@ class BulkUploader
                     $type = AccessDocument::STAFF_CREDENTIAL;
                     break;
 
-                case 'RPT':
-                    $type = AccessDocument::RPT;
+                case 'SPT':
+                    $type = AccessDocument::SPT;
                     break;
 
                 case 'LSD':
@@ -567,7 +567,7 @@ class BulkUploader
 
             }
 
-            if ($type == AccessDocument::RPT || $type == AccessDocument::STAFF_CREDENTIAL) {
+            if ($type == AccessDocument::SPT || $type == AccessDocument::STAFF_CREDENTIAL) {
                 // Optionally pop an expiry year if this type supports them
                 if ($dataCount >= $nextInd + 1) {
                     $expiryYear = trim($data[$nextInd++]);

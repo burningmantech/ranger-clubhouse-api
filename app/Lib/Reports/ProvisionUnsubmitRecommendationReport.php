@@ -28,7 +28,7 @@ class ProvisionUnsubmitRecommendationReport
         $ids = $rows->keys()->toArray();
 
         $tickets = AccessDocument::whereIntegerInRaw('person_id', $ids)
-            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
+            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::SPT])
             ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->get()
             ->keyBy('person_id');

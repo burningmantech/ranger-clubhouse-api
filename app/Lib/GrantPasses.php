@@ -96,11 +96,11 @@ class GrantPasses
      *
      * 1. Find active & inactives who worked in the last 3 events. (pandemic years adjusted for.)
      * 2. Find active, inactives, inactive extends, and retirees who are signed up this year.
-     * 3. Merge #1 & #2, and pull their WAP, RPT, and Staff Credential if present.
+     * 3. Merge #1 & #2, and pull their WAP, SPT, and Staff Credential if present.
      * 4. Run through the combined #1 & #2 lists and report on potential people to give WAPs to whom:
      *      - Do not already have a WAP or SC
      *              AND
-     *      - Have a reduced-price ticket OR signed up this year.
+     *      - Have a Special Price Ticket OR signed up this year.
      *
      * @return mixed
      */
@@ -143,7 +143,7 @@ class GrantPasses
 
         $personIds = $signUpIds->merge($workedIds)->unique()->toArray();
 
-        // Pull any WAPs (qualified, claimed, submitted) or RPT & SCs (qualified, claimed, submitted, banked)
+        // Pull any WAPs (qualified, claimed, submitted) or SPT & SCs (qualified, claimed, submitted, banked)
         $accessDocuments = AccessDocument::whereIntegerInRaw('person_id', $personIds)
             ->where(function ($check) {
                 $check->where(function ($wap) {
@@ -151,7 +151,7 @@ class GrantPasses
                         ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED]);
                 });
                 $check->orWhere(function ($ticket) {
-                    $ticket->whereIn('type', [AccessDocument::RPT, AccessDocument::STAFF_CREDENTIAL])
+                    $ticket->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
                         ->whereIn('status', AccessDocument::CURRENT_STATUSES);
                 });
             })->get()
@@ -193,9 +193,9 @@ class GrantPasses
                 continue;
             }
 
-            $rpt = $docs->firstWhere('type', AccessDocument::RPT);
-            if ($rpt) {
-                // have an existing RPT, WAP 'em.
+            $spt = $docs->firstWhere('type', AccessDocument::SPT);
+            if ($spt) {
+                // have an existing SPT, WAP 'em.
                 $people[] = $person;
                 $person->schedule = self::retrieveScheduleForPerson($id);
                 $person->has_rpt = true;
@@ -278,7 +278,7 @@ class GrantPasses
 
         $ids = DB::table('access_document')
             ->select('person_id')
-            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
+            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::SPT])
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
             ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document ad WHERE ad.person_id=access_document.person_id AND ad.type="vehicle_pass" AND ad.status IN ("qualified", "claimed", "submitted") LIMIT 1)')
             ->groupBy('person_id')

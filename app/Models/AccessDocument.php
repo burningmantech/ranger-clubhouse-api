@@ -45,7 +45,8 @@ class AccessDocument extends ApiModel
     // Access Document types
     const GIFT = 'gift_ticket';
     const LSD = 'lsd_ticket';
-    const RPT = 'reduced_price_ticket';
+    const SPT = 'special_price_ticket'; // fka Reduced-Price Ticket (RPT)
+   // const RPT = 'reduced_price_ticket';
     const STAFF_CREDENTIAL = 'staff_credential';
     const VEHICLE_PASS = 'vehicle_pass';
     const VEHICLE_PASS_GIFT = 'vehicle_pass_gift';
@@ -56,12 +57,12 @@ class AccessDocument extends ApiModel
     const TICKET_TYPES = [
         self::GIFT,
         self::LSD,
-        self::RPT,
+        self::SPT,
         self::STAFF_CREDENTIAL,
     ];
 
     const REGULAR_TICKET_TYPES = [
-        self::RPT,
+        self::SPT,
         self::STAFF_CREDENTIAL,
     ];
 
@@ -78,7 +79,7 @@ class AccessDocument extends ApiModel
     const DELIVERABLE_TYPES = [
         self::GIFT,
         self::LSD,
-        self::RPT,
+        self::SPT,
         self::STAFF_CREDENTIAL,
         self::VEHICLE_PASS
     ];
@@ -102,7 +103,7 @@ class AccessDocument extends ApiModel
     const TYPE_LABELS = [
         self::GIFT => 'Gift Ticket',
         self::LSD => 'LSD Ticket',
-        self::RPT => 'Reduced-Price Ticket',
+        self::SPT => 'Special Price Ticket',
         self::STAFF_CREDENTIAL => 'Staff Credential',
         self::VEHICLE_PASS => 'Vehicle Pass',
         self::VEHICLE_PASS_GIFT => 'Vehicle Pass (Gift)',
@@ -114,7 +115,7 @@ class AccessDocument extends ApiModel
     const SHORT_TICKET_LABELS = [
         self::GIFT => 'GIFT',
         self::LSD => 'LSD',
-        self::RPT => 'RPT',
+        self::SPT => 'SPT',
         self::STAFF_CREDENTIAL => 'SC',
         self::VEHICLE_PASS => 'VP',
         self::VEHICLE_PASS_GIFT => 'VPGIFT',
@@ -621,7 +622,7 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Is this a RPT or SC ticket?
+     * Is this a SPT or SC ticket?
      *
      * @return bool
      */
