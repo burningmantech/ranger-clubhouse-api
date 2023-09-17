@@ -2,17 +2,17 @@
 
 use App\Models\AccessDocument;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
      * Run the migrations.
      */
-
-
     public function up(): void
     {
-        $newEnums = [
+        $updateTypes = [
             AccessDocument::GIFT,
             AccessDocument::LSD,
             AccessDocument::SPT,
@@ -24,7 +24,13 @@ return new class extends Migration {
             AccessDocument::WAPSO,
         ];
 
-        $this->adjustEnums($newEnums);
+        DB::statement("ALTER TABLE `access_document` CHANGE `type` `type` ENUM("
+            .implode(',', array_map(fn ($t) =>  "'$t'", [...$updateTypes, 'reduced_price_ticket'])).
+             ") NOT NULL DEFAULT 'special_price_ticket'");
+            DB::table('access_document')->where('type', 'reduced_price_ticket')->update([ 'type' => AccessDocument::SPT ]);
+        DB::statement("ALTER TABLE `access_document` CHANGE `type` `type` ENUM("
+            .implode(',', array_map(fn ($t) =>  "'$t'", $updateTypes)).
+            ") NOT NULL DEFAULT 'special_price_ticket'");
     }
 
     /**
@@ -32,21 +38,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        $oldEnums = [
-            AccessDocument::GIFT,
-            AccessDocument::LSD,
-            AccessDocument::SPT,
-            AccessDocument::STAFF_CREDENTIAL,
-            AccessDocument::VEHICLE_PASS,
-            AccessDocument::WAP,
-            AccessDocument::WAPSO,
-        ];
-
-        $this->adjustEnums($oldEnums);
-    }
-
-    public function adjustEnums(array $enums): void
-    {
-        DB::statement("ALTER TABLE access_document MODIFY COLUMN type ENUM(" . implode(',', array_map(fn($e) => "'$e'", $enums)) . ")");
+        //
     }
 };

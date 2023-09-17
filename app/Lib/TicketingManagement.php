@@ -120,7 +120,7 @@ class TicketingManagement
                             $deliveryType = AccessDocument::DELIVERY_EMAIL;
                             break;
 
-                        case AccessDocument::RPT:
+                        case AccessDocument::SPT:
                             if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                                 $errors[] = 'missing delivery method';
                             }

@@ -30,10 +30,10 @@ class TicketingStatistics
                 ->distinct()
                 ->count('access_document.person_id'),
 
-            'rpt_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::RPT),
-            'rpt_banked' => self::countStatusType(AccessDocument::BANKED, AccessDocument::RPT),
-            'rpt_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::RPT),
-            'rpt_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::RPT),
+            'spt_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::SPT),
+            'spt_banked' => self::countStatusType(AccessDocument::BANKED, AccessDocument::SPT),
+            'spt_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::SPT),
+            'spt_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::SPT),
 
             'gift_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::GIFT),
             'gift_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::GIFT),

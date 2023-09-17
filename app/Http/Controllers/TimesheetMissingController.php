@@ -129,7 +129,7 @@ class TimesheetMissingController extends ApiController
                     'position_id' => $timesheetMissing->new_position_id,
                 ]);
 
-                if (!$timesheet->slot_id) {
+                if (!$timesheet->slot_id && $timesheet->position_id && $timesheet->on_duty) {
                     // Try to associate a slot with the sign on
                     $timesheet->slot_id = Schedule::findSlotIdSignUpByPositionTime($person->id, $timesheet->position_id, $timesheet->on_duty);
                 }

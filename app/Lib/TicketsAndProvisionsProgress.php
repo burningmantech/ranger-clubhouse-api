@@ -13,7 +13,7 @@ class TicketsAndProvisionsProgress
     const MEASURE_HOURS = 'hours';
 
     const ITEM_STAFF_CREDENTIAL = 'staff_credential';
-    const ITEM_RPT = 'rpt';
+    const ITEM_RPT = 'spt';
 
     const ITEM_SHOWER_POG = 'shower_pog';
     const ITEM_SHOWER_ACCESS_ENTIRE_EVENT = 'shower_access_entire_event';

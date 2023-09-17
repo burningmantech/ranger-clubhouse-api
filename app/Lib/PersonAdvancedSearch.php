@@ -158,7 +158,7 @@ class PersonAdvancedSearch
                             $q->from('access_document as claimed')
                                 ->select(DB::raw(1))
                                 ->whereColumn('claimed.person_id', 'person.id')
-                                ->whereIn('claimed.type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::RPT])
+                                ->whereIn('claimed.type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::SPT])
                                 ->where('claimed.status', AccessDocument::CLAIMED)
                                 ->limit(1);
                         });

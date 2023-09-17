@@ -9,7 +9,7 @@
             <tr>
                 <th>Person</th>
                 <th>Status</th>
-                <th>Has RPT?</th>
+                <th>Has SPT?</th>
                 <th>Years worked {{$startYear}} &amp; later</th>
                 <th>Schedule</th>
             </tr>
@@ -28,7 +28,7 @@
                                 RAD-{{$ticket->id}} {{$ticket->getShortTypeLabel()}} {{$ticket->status}}<br>
                             @endforeach
                         @else
-                            NO RPT
+                            NO SPT
                         @endif
                     </td>
                     <td>

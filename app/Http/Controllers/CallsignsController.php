@@ -2,29 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
 use App\Models\Person;
-use App\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 
 class CallsignsController extends ApiController
 {
-    public function index() {
+    /**
+     * Search for a callsign. Used primarily to send messages with.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function index(): JsonResponse
+    {
         $params = request()->validate([
             'query' => 'required|string',
-            'type' => 'required|string',
+            'type' => [
+                'required',
+                Rule::in(['message', 'contact', 'all'])
+            ],
             'limit' => 'required|integer'
         ]);
 
         $type = $params['type'];
 
-        if (!in_array($type, [ 'message', 'contact', 'all' ])) {
-            throw new \InvalidArgumentException('type parameter is invalid');
-        }
-
         if ($type == 'all') {
             $this->authorize('isAdmin');
         }
 
-        return response()->json([ 'callsigns' => Person::searchCallsigns($params['query'], $type, $params['limit']) ]);
+        return response()->json(['callsigns' => Person::searchCallsigns($params['query'], $type, $params['limit'])]);
     }
 }
