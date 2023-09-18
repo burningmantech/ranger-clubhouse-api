@@ -11,10 +11,12 @@ use App\Models\PersonIntakeNote;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
+use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class SalesforceController extends ApiController
 {
@@ -44,6 +46,7 @@ class SalesforceController extends ApiController
     public function import(): JsonResponse
     {
         prevent_if_ghd_server('Salesforce import');
+        Gate::allowIf(fn (Person $user) => $user->hasRole([ Role::ADMIN, Role::SALESFORCE_IMPORT]));
 
         $params = request()->validate([
             'create_accounts' => 'sometimes|boolean|required',

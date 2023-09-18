@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class AccessDocumentController extends ApiController
@@ -679,9 +680,10 @@ class AccessDocumentController extends ApiController
      * @param AccessDocument $ad
      * @param $documents
      * @param bool $includeEmail
+     * @throws ValidationException
      */
 
-    private function saveAccessDocument(AccessDocument $ad, &$documents, bool $includeEmail = false)
+    private function saveAccessDocument(AccessDocument $ad, &$documents, bool $includeEmail = false): void
     {
         $changes = $ad->getChangedValues();
         $ad->save();
@@ -711,7 +713,7 @@ class AccessDocumentController extends ApiController
      * Find all banked items and set the status to qualified.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function unbankAccessDocuments(): JsonResponse
