@@ -332,6 +332,7 @@ class BMIDManagement
 
             case 'submitted':
             case 'printed':
+            case 'in_prep':
                 // Any BMIDs already submitted or printed out
                 $ids = Bmid::where('year', $year)
                     ->where('status', $filter)
