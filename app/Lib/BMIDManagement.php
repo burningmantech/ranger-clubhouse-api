@@ -330,9 +330,9 @@ class BMIDManagement
                 $ids = array_merge($trainedIds, $signedUpIds);
                 break;
 
-            case 'submitted':
-            case 'printed':
-            case 'in_prep':
+            case Bmid::SUBMITTED:
+            case Bmid::IN_PREP:
+            case Bmid::READY_TO_PRINT:
                 // Any BMIDs already submitted or printed out
                 $ids = Bmid::where('year', $year)
                     ->where('status', $filter)
