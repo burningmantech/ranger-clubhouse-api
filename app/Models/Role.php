@@ -39,7 +39,10 @@ class Role extends ApiModel
     const PAYROLL = 115;                // Can access payroll features
     const VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
     const TIMECARD_YEAR_ROUND = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
+    const SALESFORCE_IMPORT = 118;      // Allowed to import new accounts from Salesforce
+    const MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round regardless of LMOP Enabled setting.
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
+
 
     protected $casts = [
         'new_user_eligible' => 'bool'
