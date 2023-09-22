@@ -10,21 +10,26 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 class PersonMessagePolicy
 {
     use HandlesAuthorization;
-
-    protected $user;
-
-    /*
-     * Allow ADMIN or MANAGE  to do anything with messages
+    
+    /**
+     * Allow ADMIN, VC or Message Management to do anything with messages
      */
 
     public function before(Person $user)
     {
-        if ($user->hasRole([Role::ADMIN, Role::VC])) {
+        if ($user->hasRole([Role::ADMIN, Role::VC, Role::MESSAGE_MANAGEMENT])) {
             return true;
         }
     }
 
-    private function isLMOPEnabled(Person $user): bool
+    /**
+     * Can a person with LMOP/LMYR be allowed to access messages? Only if LoginManageOnPlayaEnabled is true.
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    private function isLMAccessAllowed(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE) && setting('LoginManageOnPlayaEnabled');
     }
@@ -39,11 +44,11 @@ class PersonMessagePolicy
 
     public function index(Person $user, ?int $personId): bool
     {
-        return ($this->isLMOPEnabled($user) || $user->id == $personId);
+        return ($this->isLMAccessAllowed($user) || $user->id == $personId);
     }
 
     /**
-     * Determine whether the user can store messages.
+     * Determine whether the user can store / send messages.
      *
      * @param Person $user
      * @return bool
@@ -64,7 +69,7 @@ class PersonMessagePolicy
 
     public function delete(Person $user, PersonMessage $person_message): bool
     {
-        return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
+        return ($this->isLMAccessAllowed($user) || $user->id == $person_message->person_id);
     }
 
     /**
@@ -77,6 +82,6 @@ class PersonMessagePolicy
 
     public function markread(Person $user, PersonMessage $person_message): bool
     {
-        return ($this->isLMOPEnabled($user) || $user->id == $person_message->person_id);
+        return ($this->isLMAccessAllowed($user) || $user->id == $person_message->person_id);
     }
 }
