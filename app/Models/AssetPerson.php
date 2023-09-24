@@ -67,7 +67,7 @@ class AssetPerson extends ApiModel
         return $this->belongsTo(Asset::class);
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
         $this->load(self::RELATIONSHIPS);
     }

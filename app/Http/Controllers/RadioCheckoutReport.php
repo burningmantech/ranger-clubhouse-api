@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asset;
 use App\Models\AssetPerson;
 use App\Models\Provision;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class RadioCheckoutReport
             ->join('person', 'person.id', 'asset_person.person_id')
             ->join('asset', 'asset.id', 'asset_person.asset_id')
             ->whereYear('checked_out', $year)
-            ->where('description', 'radio');
+            ->where('type', Asset::TYPE_RADIO);
 
         if ($eventSummary) {
             $sql->where(function ($q) use ($seconds) {
