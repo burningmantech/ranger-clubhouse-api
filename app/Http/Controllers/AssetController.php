@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\AssetPerson;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class AssetController extends ApiController
@@ -38,7 +39,7 @@ class AssetController extends ApiController
      * Create a new asset
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -74,7 +75,7 @@ class AssetController extends ApiController
      *
      * @param Asset $asset
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Asset $asset): JsonResponse
@@ -125,7 +126,7 @@ class AssetController extends ApiController
      * Checkout Asset
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function checkout(): JsonResponse

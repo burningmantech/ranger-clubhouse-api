@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class Asset extends ApiModel
 {
@@ -14,38 +15,37 @@ class Asset extends ApiModel
 
     protected bool $auditModel = true;
 
-    protected $fillable = [
-        'description',
-        'barcode',
-        'temp_id',
-        'perm_assign',
+    const TYPE_GEAR = 'gear';
+    const TYPE_RADIO = 'radio';
+    const TYPE_TEMP_ID = 'temp-id';
 
-        // Vehicle parameters Not used since the 2015 event.
-        'subtype',
-        'model',
-        'color',
-        'style',
+    // Only used
+    const TYPE_AMBER = 'amber';     // Only used in 2013
+    const TYPE_KEY = 'key';         // Only used in 2013 & 2014
+    const TYPE_VEHICLE = 'vehicle'; // Only used from 2013 to 2015
+
+    protected $fillable = [
+        'barcode',
         'category',
+        'description',
         'notes',
+        'perm_assign',
+        'type',
+        'year',
     ];
 
     protected $casts = [
         'perm_assign' => 'boolean',
-        'new_user_eligible' => 'boolean',
-        'on_sl_report' => 'boolean',
-        'create_date' => 'datetime'
+        'created_at' => 'datetime'
     ];
 
     protected $rules = [
         'barcode' => 'required|string|max:25',
-        'temp_id' => 'sometimes|nullable|string|max:25',
-        'subtype' => 'sometimes|nullable|string|max:25',
-        'model' => 'sometimes|nullable|string|max:25',
-        'color' => 'sometimes|nullable|string|max:25',
-        'style' => 'sometimes|nullable|string|max:25',
         'category' => 'sometimes|nullable|string|max:25',
+        'type' => 'required|string',
+        'description' => 'sometimes|nullable|string|max:25',
+        'year' => 'required|integer',
     ];
-
 
     public function asset_person(): BelongsTo
     {
@@ -78,30 +78,30 @@ class Asset extends ApiModel
         $checkedOut = $query['checked_out'] ?? null;
         $includeHistory = $query['include_history'] ?? null;
 
-        $sql = self::whereYear('create_date', $year);
+        $sql = self::where('year', $year);
 
         if ($barcode) {
-            $sql = $sql->where('barcode', $barcode);
+            $sql->where('barcode', $barcode);
         }
 
         if ($exclude) {
-            $sql = $sql->where('description', '!=', $exclude);
+            $sql->where('type', '!=', $exclude);
         }
 
         if ($type) {
-            $sql = $sql->where('description', $type);
+            $sql->where('type', $type);
         }
 
         if ($checkedOut) {
-            $sql = $sql->whereRaw('EXISTS (SELECT 1 FROM asset_person WHERE asset_person.asset_id=asset.id AND asset_person.checked_in IS NULL LIMIT 1)');
-            $sql = $sql->with([
+            $sql->whereRaw('EXISTS (SELECT 1 FROM asset_person WHERE asset_person.asset_id=asset.id AND asset_person.checked_in IS NULL LIMIT 1)');
+            $sql->with([
                 'checked_out',
                 'checked_out.person:id,callsign',
                 'checked_out.check_out_person:id,callsign',
                 'checked_out.attachment'
             ]);
         } else if ($includeHistory) {
-            $sql = $sql->with([
+            $sql->with([
                 'asset_history',
                 'asset_history.person:id,callsign',
                 'asset_history.check_out_person:id,callsign',
@@ -124,7 +124,7 @@ class Asset extends ApiModel
     public static function findByBarcodeYear(string $barcode, int $year): ?Asset
     {
         return self::where('barcode', $barcode)
-            ->whereYear('create_date', $year)
+            ->where('year', $year)
             ->first();
     }
 
@@ -133,21 +133,21 @@ class Asset extends ApiModel
      *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
 
     public function save($options = []): bool
     {
         // Ensure the barcode is unique for the year
-        if (!$this->exists || $this->isDirty('barcode') || $this->isDirty('create_date')) {
-            $model = $this; // can't "function A use ($this) { }", grr.
+        if (!$this->exists || $this->isDirty('barcode') || $this->isDirty('year')) {
             $this->rules['barcode'] = [
                 'required',
                 'string',
-                Rule::unique('asset')->where(function ($q) use ($model) {
-                    $q->where('barcode', $model->barcode);
-                    $q->whereYear('create_date', ($model->create_date ? $model->create_date->year : current_year()));
-                    if ($model->exists) {
-                        $q->where('id', '!=', $model->id);
+                Rule::unique('asset')->where(function ($q) {
+                    $q->where('barcode', $this->barcode);
+                    $q->whereYear('year', $this->year);
+                    if ($this->exists) {
+                        $q->where('id', '!=', $this->id);
                     }
                 })
             ];
