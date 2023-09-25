@@ -9,7 +9,8 @@
         Hello from the Black Rock Rangers Secret Clubhouse.
     </p>
     <p>
-        Ranger {{$senderPerson->callsign}} has sent you a contact message:
+        Ranger {{$senderPerson->callsign}} has sent you a Contact Message through the Clubhouse. Please note,
+        Contact Messages are NOT retained in the Clubhouse. The message is:
     </p>
     <hr>
     <p>
@@ -23,7 +24,7 @@
     </p>
 
     <p>
-        Your email address has not been revealed to the sender. Your are under no
+        Your email address has not been revealed to the sender. You are under no
         obligation to respond to the Ranger wishing to get in contact.
     </p>
 
