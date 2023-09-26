@@ -16,7 +16,7 @@ class ClubhouseRedactDatabaseCommand extends Command
      * @var string
      */
     protected $signature = 'clubhouse:redact-db
-                    {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-redacted-YYYY-MM-DD.sql}
+                    {--dumpfile= : filename to dump the groundhog day database into. Default is rangers-redacted-YYYY-MM-DD.sql}
                     {--tempdb=rangers_redacted_temp : temporary database name}
                     ';
 
