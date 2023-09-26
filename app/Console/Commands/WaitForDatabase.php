@@ -2,11 +2,9 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-
-use App\Models\Person;
-use App\Models\Setting;
 
 class WaitForDatabase extends Command
 {
@@ -15,9 +13,7 @@ class WaitForDatabase extends Command
      *
      * @var string
      */
-    protected $signature = 'db:wait
-                    {-t|--time= : wait X seconds until database is ready}
-                    ';
+    protected $signature = 'db:wait {--time=60: wait X seconds until database is ready}';
 
     /**
      * The console command description.
@@ -39,23 +35,22 @@ class WaitForDatabase extends Command
     /**
      * Execute the console command.
      *
-     * @return mixed
+     * @return void
      */
-    public function handle()
+    public function handle(): void
     {
-        $time = $this->option('time') ?? 60;
+        $time = $this->option('time');
         for ($i = 0; $i < $time; $i++) {
             try {
                 DB::connection()->getPdo();
                 $this->info('Database is alive');
                 exit(0);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 sleep(1);
             }
         }
 
         $this->error('Database is offline or credentials are wrong.');
         exit(1);
-        // Clean up
     }
 }
