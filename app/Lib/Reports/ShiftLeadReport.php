@@ -2,6 +2,7 @@
 
 namespace App\Lib\Reports;
 
+use App\Lib\SummarizeGender;
 use App\Models\Certification;
 use App\Models\Person;
 use App\Models\PersonCertification;
@@ -116,7 +117,8 @@ class ShiftLeadReport
             'person.callsign',
             'person.callsign_pronounce',
             'person.on_site',
-            'person.gender',
+            'person.gender_identity',
+            'person.gender_custom',
             'person.pronouns',
             'person.pronouns_custom',
             'person.vehicle_blacklisted',
@@ -218,7 +220,7 @@ class ShiftLeadReport
                 'slot_id' => $row->id,
                 'callsign' => $row->callsign,
                 'callsign_pronounce' => $row->callsign_pronounce,
-                'gender' => Person::summarizeGender($row->gender),
+                'gender' => SummarizeGender::parse($row->gender_identity, $row->gender_custom),
                 'pronouns' => $row->pronouns,
                 'pronouns_custom' => $row->pronouns_custom,
                 'on_site' => $row->on_site,
@@ -284,7 +286,7 @@ class ShiftLeadReport
     public static function countGreenDotsScheduled(Carbon $shiftStart, Carbon $shiftEnd): array
     {
         $sql = DB::table('slot')
-            ->select('person.id', 'person.gender')
+            ->select('person.id', 'person.gender_identity', 'person.gender_custom')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
             ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR]);
@@ -294,7 +296,7 @@ class ShiftLeadReport
         $greenDots = $sql->get();
 
         $total = $greenDots->count();
-        $females = $greenDots->filter(fn($person) => Person::summarizeGender($person->gender) == 'F')
+        $females = $greenDots->filter(fn($person) => SummarizeGender::parse($person->gender_identity, $person->gender_custom) == SummarizeGender::FEMALE)
             ->count();
 
         return [$total, $females];

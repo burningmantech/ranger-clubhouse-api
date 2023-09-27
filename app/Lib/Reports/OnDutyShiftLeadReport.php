@@ -2,6 +2,7 @@
 
 namespace App\Lib\Reports;
 
+use App\Lib\SummarizeGender;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Slot;
@@ -111,7 +112,8 @@ class OnDutyShiftLeadReport
             'person.id AS person_id',
             'person.callsign',
             'person.callsign_pronounce',
-            'person.gender',
+            'person.gender_identity',
+            'person.gender_custom',
             'person.pronouns',
             'person.pronouns_custom',
             'person.vehicle_blacklisted',
@@ -174,7 +176,7 @@ class OnDutyShiftLeadReport
                 'id' => $row->person_id,
                 'callsign' => $row->callsign,
                 'callsign_pronounce' => $row->callsign_pronounce,
-                'gender' => Person::summarizeGender($row->gender),
+                'gender' => SummarizeGender::parse($row->gender_identity, $row->gender_custom),
                 'on_site' => true,  // Any person on duty is considered to be on site.
                 'pronouns' => $row->pronouns,
                 'pronouns_custom' => $row->pronouns_custom,
@@ -241,7 +243,7 @@ class OnDutyShiftLeadReport
     public static function countGreenDotsOnDuty(): array
     {
         $greenDots = DB::table('timesheet')
-            ->select('person.id', 'person.gender')
+            ->select('person.id', 'person.gender_identity', 'person.gender_custom')
             ->join('person', 'person.id', 'timesheet.person_id')
             ->whereYear('timesheet.on_duty', current_year())
             ->whereNull('timesheet.off_duty')
@@ -249,7 +251,7 @@ class OnDutyShiftLeadReport
             ->get();
 
         $total = $greenDots->count();
-        $females = $greenDots->filter(fn($person) => Person::summarizeGender($person->gender) == 'F')
+        $females = $greenDots->filter(fn($person) => SummarizeGender::parse($person->gender_identity, $person->gender_custom) == SummarizeGender::FEMALE)
             ->count();
 
         return [$total, $females];

@@ -134,10 +134,28 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         self::RETIRED,
     ];
 
+    /*
+     * Gender identities.
+     */
+
+    const GENDER_CIS_FEMALE = 'cis-female';
+    const GENDER_CIS_MALE = 'cis-male';
+    const GENDER_CUSTOM = 'custom';     // Used when the person wants to state a gender not listed. gender_custom is used.
+    const GENDER_FEMALE = 'female';
+    const GENDER_FLUID = 'fluid';
+    const GENDER_MALE = 'male';
+    const GENDER_NONE = ''; // Not stated
+    const GENDER_NON_BINARY = 'non-binary';
+    const GENDER_QUEER = 'queer';
+    const GENDER_TRANS_FEMALE = 'trans-female';
+    const GENDER_TRANS_MALE = 'trans-male';
+    const GENDER_TWO_SPIRIT = 'two-spirit';
+
     /**
      * The database table name.
      * @var string
      */
+
     protected $table = 'person';
     protected bool $auditModel = true;
 
@@ -209,7 +227,9 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'vintage',
         'behavioral_agreement',
 
-        'gender',
+        'gender_identity',
+        'gender_custom',
+
         'pronouns',
         'pronouns_custom',
 
@@ -325,7 +345,8 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'has_reviewed_pi' => 'sometimes|boolean',
 
         'camp_location' => 'sometimes|string|nullable|max:200',
-        'gender' => 'sometimes|string|nullable|max:32',
+        'gender_type' => 'sometimes|string',
+        'gender_custom' => 'sometimes|string|nullable|max:32',
         'pronouns' => 'sometimes|string|nullable',
         'pronouns_custom' => 'sometimes|string|nullable',
 
@@ -430,6 +451,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
             if ($model->isDirty('used_vanity_change') && $model->used_vanity_change) {
                 $model->vanity_changed_at = now();
+            }
+
+            if ($model->isDirty('gender_custom')
+                && $model->gender_identity == self::GENDER_CUSTOM
+                && empty($model->gender_custom)) {
+                $model->gender_identity = self::GENDER_NONE;
             }
 
             /*
@@ -822,7 +849,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * Add MANAGE if person has MANAGE_ON_PLAYA and if LoginManageOnPlayaEnabled is true
      * Add TRAINER if person has TRAINER_SEASONAL and if TrainingSeasonalRoleEnabled is true
      *
-     * User has to have the Ranger NDA signed if an effective LM role is in effect, otherwise kill
+     * User has to have the Ranger NDA signed if an LM role is in effect, otherwise kill
      * all the roles (unless the user is a Tech Ninja) until the NDA has been agreed to.
      */
 
@@ -1302,63 +1329,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Summarize gender - used by the Shift Lead Report
-     *
-     * @param ?string $gender
-     * @return string
-     */
-
-    public static function summarizeGender(?string $gender): string
-    {
-        if (empty($gender)) {
-            return '';
-        }
-
-        $check = trim(strtolower($gender));
-
-        // Female gender
-        if (preg_match('/\b(female|girl|femme|lady|she|her|woman|famale|femal|fem|cis[\s\-]?female)\b/', $check) || $check == 'f') {
-            return 'F';
-        }
-
-        // Male gender
-        if (preg_match('/\b(male|dude|fella|man|boy)\b/', $check) || $check == 'm') {
-            return 'M';
-        }
-
-        // Non-Binary
-        if (preg_match('/\bnon[\s\-]?binary\b/', $check)) {
-            return 'NB';
-        }
-
-        // Queer (no gender stated)
-        if (preg_match('/\bqueer\b/', $check)) {
-            return 'Q';
-        }
-
-        // Gender Fluid
-        if (preg_match('/\bfluid\b/', $check)) {
-            return 'GF';
-        }
-
-        // Gender, "yes"? what does that even mean?
-        if ($check == 'yes') {
-            return '';
-        }
-
-        // Can't determine - return the value
-        return $gender ?? '';
-    }
-
-    /**
      * Split the FKA into an array
      *
      * @param bool $filter
      * @return array
      */
 
-    public
-    function formerlyKnownAsArray(bool $filter = false): array
+    public function formerlyKnownAsArray(bool $filter = false): array
     {
         return self::splitCommas($this->formerly_known_as, $filter);
     }
@@ -1433,6 +1410,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     public function pronouns(): Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
+    /**
+     * Set custom gender to blank if empty
+     */
+
+    public function genderCustom(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }

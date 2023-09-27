@@ -39,7 +39,8 @@ class PersonFilter
         'first_name',
         'mi',
         'last_name',
-        'gender',
+        'gender_identity',
+        'gender_custom',
         'callsign_pronounce',
         'pronouns',
         'pronouns_custom'
