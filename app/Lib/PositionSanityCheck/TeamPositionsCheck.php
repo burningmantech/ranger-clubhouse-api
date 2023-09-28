@@ -2,6 +2,7 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Support\Collection;
@@ -94,6 +95,7 @@ class TeamPositionsCheck extends SanityCheck
                 $j->on('person_position.position_id', 'position.id');
                 $j->whereColumn('person_position.person_id', 'person.id');
             })->whereNull('person_position.position_id')
+            ->whereNotIn('person.status', Person::DEACTIVATED_STATUSES)
             ->orderBy('person.callsign')
             ->orderBy('team.title')
             ->orderBy('position.title');

@@ -2,6 +2,7 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
@@ -11,20 +12,20 @@ class DeactivatedPositionCheck
 {
     public static function issues(): array
     {
-        $rows = DB::select(
-            "SELECT
-              person.id AS person_id, person.callsign, person.status,
-              position.id AS position_id, position.title AS position_title
-            FROM
-              person
-            JOIN
-              person_position ON person_position.person_id = person.id
-            JOIN
-              position ON position.id = person_position.position_id
-            WHERE
-              position.active IS FALSE
-            ORDER BY position_title, person.callsign"
-        );
+        $rows = DB::table('person')
+            ->select(
+                'person.id AS person_id',
+                'person.callsign',
+                'person.status',
+                'position.id AS position_id',
+                'position.title AS position_title'
+            )->join('person_position', 'person.id', 'person_position.person_id')
+            ->join('position', 'position.id', 'person_position.position_id')
+            ->where('position.active', false)
+            ->whereNotIn('person.status', Person::DEACTIVATED_STATUSES)
+            ->orderBy('position_title')
+            ->orderBy('person.callsign')
+            ->get();
 
         $positions = [];
         $people = [];

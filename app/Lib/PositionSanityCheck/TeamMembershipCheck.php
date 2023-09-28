@@ -2,6 +2,7 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonTeam;
 use App\Models\Position;
@@ -90,6 +91,7 @@ class TeamMembershipCheck extends SanityCheck
                     $j->on('person_team.person_id', 'person_position.person_id');
                     $j->where('person_team.team_id', $team->id);
                 })
+                ->whereNotIn('person.status', Person::DEACTIVATED_STATUSES)
                 ->whereNotNull('position.team_id')
                 ->whereIn('person_position.position_id', $positionIds)
                 ->whereNull('person_team.person_id');
