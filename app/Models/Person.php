@@ -1211,7 +1211,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
 
                 // Remove all teams
-                PersonTeam::removeAllForPerson($personId, $changeReason);
+                PersonTeam::removeAllFromPerson($personId, $changeReason);
 
                 // Remove any signups.
                 Schedule::removeFutureSignUps($personId, "conversion to $newStatus");
@@ -1224,7 +1224,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 break;
 
             case Person::RETIRED:
-                PersonTeam::removeAllForPerson($personId, $changeReason);
+                PersonTeam::removeAllFromPerson($personId, $changeReason);
             // fall thru
             case Person::AUDITOR:
             case Person::PROSPECTIVE:
@@ -1239,7 +1239,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 // Remove all positions and permissions
                 PersonRole::resetRoles($personId, $changeReason, Person::REMOVE_ALL);
                 PersonPosition::resetPositions($personId, $changeReason, Person::REMOVE_ALL);
-                PersonTeam::removeAllForPerson($personId, $changeReason);
+                PersonTeam::removeAllFromPerson($personId, $changeReason);
                 Schedule::removeFutureSignUps($personId, 'conversion to past prospective');
                 break;
         }

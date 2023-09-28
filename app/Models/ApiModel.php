@@ -19,7 +19,17 @@ use RuntimeException;
  * @package App\Models
  * @mixin \Illuminate\Database\Eloquent\Builder
  * @mixin Builder
+ *
+ * Declarations for phpstorm
+ * @method static $this find(array|string|integer $id)
+ * @method static $this findOrFail(array|string|integer $id)
+ * @method static $this select(...$args)
+ * @method static $this where(...$args)
+ * @method static $this whereIn(...$args)
+ * @method static $this whereIntegerInRaw(...$args)
+ * @method static $this whereNotIn(...$args)
  */
+
 #[AllowDynamicProperties]
 abstract class ApiModel extends Model
 {

@@ -107,7 +107,7 @@ class PersonTeam extends ApiModel
      * @return void
      */
 
-    public static function removeAllForPerson(int $personId, string $reason): void
+    public static function removeAllFromPerson(int $personId, string $reason): void
     {
         $teams = self::findAllTeamsForPerson($personId);
 
