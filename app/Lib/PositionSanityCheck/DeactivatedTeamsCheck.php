@@ -2,6 +2,7 @@
 
 namespace App\Lib\PositionSanityCheck;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonTeam;
 use App\Models\Team;
@@ -26,6 +27,7 @@ class DeactivatedTeamsCheck
                 'people' => DB::table('person_team')
                     ->select('person.id', 'person.callsign', 'person.status', 'person_team.team_id')
                     ->join('person', 'person.id', 'person_team.person_id')
+                    ->whereNotIn('person.status', Person::DEACTIVATED_STATUSES)
                     ->where('person_team.team_id', $team->id)
                     ->orderBy('callsign')
                     ->get()

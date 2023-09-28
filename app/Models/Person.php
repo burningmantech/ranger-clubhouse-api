@@ -134,6 +134,15 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         self::RETIRED,
     ];
 
+    const DEACTIVATED_STATUSES = [
+        Person::BONKED,
+        Person::DECEASED,
+        Person::DISMISSED,
+        Person::PAST_PROSPECTIVE,
+        Person::RESIGNED,
+        Person::UBERBONKED
+    ];
+
     /*
      * Gender identities.
      */
