@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * @property int person_id
@@ -55,19 +56,6 @@ class PersonRole extends ApiModel
     }
 
     /**
-     * Does the person have the role?
-     *
-     * @param $personId
-     * @param $roleId
-     * @return bool
-     */
-
-    public static function haveRole($personId, $roleId): bool
-    {
-        return DB::table('person_role')->where(['person_id' => $personId, 'role_id' => $roleId])->exists();
-    }
-
-    /**
      * Remove all roles from a person in response to status change, add back
      * the default roles if requested.
      *
@@ -76,7 +64,7 @@ class PersonRole extends ApiModel
      * @param int $action
      */
 
-    public static function resetRoles(int $personId, ?string $reason, int $action)
+    public static function resetRoles(int $personId, ?string $reason, int $action): void
     {
         $removeIds = self::findRoleIdsForPerson($personId);
 
@@ -105,7 +93,7 @@ class PersonRole extends ApiModel
      * @param ?string $message reason for removal
      */
 
-    public static function removeIdsFromPerson(int $personId, mixed $ids, ?string $message)
+    public static function removeIdsFromPerson(int $personId, mixed $ids, ?string $message = null): void
     {
         if (empty($ids)) {
             return;
@@ -117,6 +105,21 @@ class PersonRole extends ApiModel
     }
 
     /**
+     * Remove all roles from a person.
+     *
+     * @param int $personId
+     * @param string|null $message
+     * @return void
+     */
+
+    public static function removeAllFromPerson(int $personId, ?string $message = null): void
+    {
+        $ids = DB::table('person_role')->where('person_id', $personId)->pluck('role_id')->toArray();
+        self::removeIdsFromPerson($personId, $ids, $message);
+    }
+
+
+    /**
      * Add roles to a person. Log the action.
      *
      * @param int $personId person to remove
@@ -124,12 +127,12 @@ class PersonRole extends ApiModel
      * @param ?string $message reason for addition
      */
 
-    public static function addIdsToPerson(int $personId, mixed $ids, ?string $message)
+    public static function addIdsToPerson(int $personId, mixed $ids, ?string $message): void
     {
         $addedIds = [];
         foreach ($ids as $id) {
             // Don't worry if there is a duplicate record.
-            if (DB::affectingStatement("INSERT IGNORE INTO person_role SET person_id=?,role_id=?", [$personId, $id]) == 1) {
+            if (DB::table('person_role')->insertOrIgnore([ 'person_id' => $personId, 'role_id' => $id]) == 1) {
                 $addedIds[] = $id;
             }
         }
@@ -149,7 +152,7 @@ class PersonRole extends ApiModel
      * @param ?string $reason optional reason for action ('schedule add', 'trainer removed', etc.)
      */
 
-    public static function log(int $personId, int $id, string $action, ?string $reason = null)
+    public static function log(int $personId, int $id, string $action, ?string $reason = null): void
     {
         ActionLog::record(Auth::user(), 'person-role-' . $action, $reason, ['role_id' => $id], $personId);
     }
@@ -182,6 +185,7 @@ class PersonRole extends ApiModel
      *
      * @param int $personId
      * @return mixed
+     * @throws InvalidArgumentException
      */
 
     public static function getCache(int $personId): mixed

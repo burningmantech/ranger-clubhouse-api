@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\ApiModel;
 
 class ApiController extends Controller
 {
@@ -29,7 +30,7 @@ class ApiController extends Controller
     {
         /*
          * The JWT token has an expiry timestamp - do the authentication check
-         * before setting up the ground hog day time, otherwise the JWT token will be invalidated
+         * before setting up the groundhog day time, otherwise the JWT token will be invalidated
          */
 
         $ghdTime = config('clubhouse.GroundhogDayTime');
@@ -45,7 +46,7 @@ class ApiController extends Controller
         if ($check) {
             $this->user = Auth::user();
             if (in_array($this->user->status, Person::LOCKED_STATUSES)) {
-                // A user should not be able to login when not authorized.
+                // A user should not be able to log in when not authorized.
                 // However, a user could be logged in when their account is disabled.
                 throw new AuthorizationException('Account is disabled.');
             }
@@ -150,7 +151,7 @@ class ApiController extends Controller
         $resourceName = $record->getResourceSingle();
         $fields = request()->input($resourceName);
 
-        if (!is_null($fields) && !empty($fields)) {
+        if (!empty($fields)) {
             $record->fill($fields);
         }
     }
@@ -171,10 +172,8 @@ class ApiController extends Controller
     {
         $user = $this->user;
         if ($resource instanceof Collection) {
-            if ($resource->isEmpty()) {
-                $results = [];
-            } else {
-                $results = [];
+            $results = [];
+            if (!$resource->isEmpty()) {
                 foreach ($resource as $row) {
                     $results[] = (new SerializeRecord($row))->toRest($user);
                 }
@@ -197,13 +196,13 @@ class ApiController extends Controller
      * Return either a JSON success if all arguments are null or
      * a REST json success response
      *
-     * @param mixed $resource an array, eloquent collection, or similar to return
-     * @param mixed $meta any meta information
-     * @param mixed $resourceName name of the resource, used when the collection is empty.
+     * @param mixed|null $resource an array, eloquent collection, or similar to return
+     * @param mixed|null $meta any meta information
+     * @param mixed|null $resourceName name of the resource, used when the collection is empty.
      * @return JsonResponse
      */
 
-    public function success($resource = null, $meta = null, $resourceName = null): JsonResponse
+    public function success(mixed $resource = null, mixed $meta = null, mixed $resourceName = null): JsonResponse
     {
         if ($resource === null) {
             return response()->json(['status' => 'success']);
@@ -237,11 +236,11 @@ class ApiController extends Controller
      * Send back a single error response
      *
      * @param $message
-     * @param $status
+     * @param int $status
      * @return JsonResponse
      */
 
-    public function error($message, $status = 400): JsonResponse
+    public function error($message, int $status = 400): JsonResponse
     {
         return response()->json(['error' => $message], $status);
     }
@@ -261,11 +260,11 @@ class ApiController extends Controller
      * Respond a REST api error.
      *
      * @param $item
-     * @param $status
+     * @param int $status
      * @return JsonResponse
      */
 
-    public function restError($item, $status = 422): JsonResponse
+    public function restError($item, int $status = 422): JsonResponse
     {
         if (gettype($item) == 'string') {
             $payload = [['title' => $item]];
