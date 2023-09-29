@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS `access_document`;
 CREATE TABLE `access_document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `person_id` int(11) NOT NULL,
-  `type` enum('staff_credential','reduced_price_ticket','gift_ticket','lsd_ticket','vehicle_pass','work_access_pass','work_access_pass_so') DEFAULT NULL,
+  `type` enum('gift_ticket','lsd_ticket','special_price_ticket','staff_credential','vehicle_pass','vehicle_pass_gift','vehicle_pass_lsd','work_access_pass','work_access_pass_so') NOT NULL DEFAULT 'special_price_ticket',
   `status` enum('qualified','claimed','banked','used','cancelled','expired','submitted','turned_down') NOT NULL DEFAULT 'qualified',
   `source_year` int(4) DEFAULT NULL,
   `access_date` datetime DEFAULT NULL,
@@ -46,6 +46,22 @@ CREATE TABLE `access_document_changes` (
   `changer_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `access_document_delivery`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `access_document_delivery` (
+  `person_id` int(11) NOT NULL,
+  `year` int(4) NOT NULL,
+  `method` enum('will_call','mail','none') NOT NULL DEFAULT 'none',
+  `street` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(2) DEFAULT NULL,
+  `postal_code` varchar(10) DEFAULT NULL,
+  `country` enum('United States','Canada') DEFAULT NULL,
+  `modified_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`person_id`,`year`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `action_logs`;
@@ -102,18 +118,17 @@ DROP TABLE IF EXISTS `asset`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `asset` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `description` enum('Radio','Vehicle','Gear','Key','Amber') DEFAULT NULL,
+  `type` varchar(255) DEFAULT NULL,
   `barcode` varchar(25) NOT NULL,
-  `temp_id` varchar(25) DEFAULT NULL COMMENT 'placed by staff',
+  `description` varchar(25) DEFAULT NULL COMMENT 'placed by staff',
   `perm_assign` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'assigned "permanently" to a person?',
-  `create_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subtype` varchar(25) DEFAULT NULL,
-  `model` varchar(25) DEFAULT NULL,
-  `color` varchar(25) DEFAULT NULL,
-  `style` varchar(25) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `category` varchar(25) DEFAULT NULL,
   `notes` text DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `year` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `asset_type_year_barcode_index` (`type`,`year`,`barcode`),
+  KEY `asset_year_barcode_index` (`year`,`barcode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `asset_attachment`;
@@ -433,21 +448,6 @@ CREATE TABLE `lambase_photo` (
   PRIMARY KEY (`person_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `log` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_person_id` bigint(20) unsigned DEFAULT NULL COMMENT 'person_id of user making change',
-  `current_person_id` bigint(20) unsigned DEFAULT NULL COMMENT 'person_id of person affected by change (if any)',
-  `occurred` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time log entry created',
-  `event` varchar(500) NOT NULL COMMENT 'summary of what was done',
-  PRIMARY KEY (`id`),
-  KEY `current_person_id` (`current_person_id`),
-  KEY `user_person_id` (`user_person_id`),
-  KEY `occurred` (`occurred`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci COMMENT='logs certain actions';
-/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `mail_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -558,7 +558,7 @@ CREATE TABLE `person` (
   `tpassword_expire` int(11) DEFAULT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Most recent modification time.',
   `shirt_style` varchar(32) DEFAULT NULL,
-  `gender` varchar(32) DEFAULT NULL,
+  `gender_custom` varchar(32) DEFAULT NULL,
   `bpguid` varchar(64) DEFAULT NULL,
   `sfuid` varchar(64) DEFAULT NULL,
   `emergency_contact` mediumtext DEFAULT NULL,
@@ -598,6 +598,8 @@ CREATE TABLE `person` (
   `long_sleeve_swag_ig` int(11) DEFAULT NULL,
   `vanity_changed_at` datetime DEFAULT NULL,
   `used_vanity_change` tinyint(1) NOT NULL DEFAULT 0,
+  `employee_id` varchar(255) DEFAULT NULL,
+  `gender_identity` enum('cis-female','cis-male','custom','female','fluid','male','','non-binary','queer','trans-female','trans-male','two-spirit') NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `callsign` (`callsign`),
   UNIQUE KEY `email` (`email`),
@@ -662,6 +664,7 @@ CREATE TABLE `person_event` (
   `pii_started_at` datetime DEFAULT NULL,
   `pii_finished_at` datetime DEFAULT NULL,
   `lms_course_id` varchar(255) DEFAULT NULL,
+  `lms_enrolled_at` datetime DEFAULT NULL,
   UNIQUE KEY `person_event_year_person_id_unique` (`year`,`person_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -922,6 +925,26 @@ CREATE TABLE `person_photo` (
   KEY `person_photo_person_id_index` (`person_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `person_pod`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `person_pod` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `pod_id` int(11) NOT NULL,
+  `person_id` int(11) NOT NULL,
+  `is_lead` tinyint(1) NOT NULL DEFAULT 0,
+  `joined_at` datetime NOT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `removed_at` datetime DEFAULT NULL,
+  `sort_index` int(11) NOT NULL DEFAULT 0,
+  `timesheet_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `person_pod_pod_id_person_id_index` (`pod_id`,`person_id`),
+  KEY `person_pod_timesheet_id_index` (`timesheet_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_pog`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -1045,6 +1068,28 @@ CREATE TABLE `person_team_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `pod`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pod` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `type` enum('alpha','mentor','mitten','shift') NOT NULL,
+  `formed_at` datetime NOT NULL,
+  `disbanded_at` datetime DEFAULT NULL,
+  `slot_id` int(11) DEFAULT NULL,
+  `mentor_pod_id` int(11) DEFAULT NULL,
+  `person_count` int(11) NOT NULL DEFAULT 0,
+  `sort_index` int(11) NOT NULL DEFAULT 0,
+  `location` varchar(255) DEFAULT NULL,
+  `transport` enum('foot','bicycle','vehicle') NOT NULL DEFAULT 'foot',
+  PRIMARY KEY (`id`),
+  KEY `pod_slot_id_index` (`slot_id`),
+  KEY `pod_slot_id_formed_at_index` (`slot_id`,`formed_at`),
+  KEY `pod_formed_at_index` (`formed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `position`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -1071,6 +1116,10 @@ CREATE TABLE `position` (
   `alert_when_becomes_empty` tinyint(1) NOT NULL DEFAULT 0,
   `alert_when_no_trainers` tinyint(1) NOT NULL DEFAULT 0,
   `paycode` varchar(255) DEFAULT NULL,
+  `resource_tag` varchar(255) DEFAULT NULL,
+  `deselect_on_team_join` tinyint(1) NOT NULL DEFAULT 0,
+  `no_payroll_hours_adjustment` tinyint(1) NOT NULL DEFAULT 0,
+  `no_training_required` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1084,8 +1133,13 @@ CREATE TABLE `position_credit` (
   `end_time` datetime NOT NULL,
   `credits_per_hour` decimal(4,2) NOT NULL,
   `description` varchar(25) NOT NULL,
+  `start_year` int(11) GENERATED ALWAYS AS (year(`start_time`)) STORED,
+  `end_year` int(11) GENERATED ALWAYS AS (year(`end_time`)) STORED,
   PRIMARY KEY (`id`),
-  KEY `position_credit_position_id_start_time_index` (`position_id`,`start_time`)
+  KEY `position_credit_position_id_start_time_index` (`position_id`,`start_time`),
+  KEY `position_credit_start_year_index` (`start_year`),
+  KEY `position_credit_start_year_end_year_index` (`start_year`,`end_year`),
+  KEY `position_credit_start_year_position_id_index` (`start_year`,`position_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `position_role`;
@@ -1167,9 +1221,15 @@ CREATE TABLE `slot` (
   `min` int(10) NOT NULL DEFAULT 1,
   `active` tinyint(1) NOT NULL DEFAULT 0,
   `timezone` varchar(255) NOT NULL DEFAULT 'America/Los_Angeles',
+  `timezone_abbr` varchar(255) NOT NULL,
+  `begins_year` int(11) NOT NULL DEFAULT 0,
+  `duration` int(11) NOT NULL DEFAULT 0,
+  `begins_time` int(11) NOT NULL DEFAULT 0,
+  `ends_time` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `begins` (`begins`),
-  KEY `position_id` (`position_id`)
+  KEY `position_id` (`position_id`),
+  KEY `slot_begins_year_position_id_index` (`begins_year`,`position_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedule slot';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `survey`;
@@ -1456,168 +1516,188 @@ CREATE TABLE `vehicle` (
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
-INSERT INTO `migrations` VALUES (1,'2018_01_01_154333_create_access_document_changes_table',1);
-INSERT INTO `migrations` VALUES (2,'2018_01_01_154333_create_access_document_delivery_table',1);
-INSERT INTO `migrations` VALUES (3,'2018_01_01_154333_create_access_document_table',1);
-INSERT INTO `migrations` VALUES (4,'2018_01_01_154333_create_alert_person_table',1);
-INSERT INTO `migrations` VALUES (5,'2018_01_01_154333_create_alert_table',1);
-INSERT INTO `migrations` VALUES (6,'2018_01_01_154333_create_asset_attachment_table',1);
-INSERT INTO `migrations` VALUES (7,'2018_01_01_154333_create_asset_person_table',1);
-INSERT INTO `migrations` VALUES (8,'2018_01_01_154333_create_asset_table',1);
-INSERT INTO `migrations` VALUES (9,'2018_01_01_154333_create_bmid_table',1);
-INSERT INTO `migrations` VALUES (10,'2018_01_01_154333_create_broadcast_message_table',1);
-INSERT INTO `migrations` VALUES (11,'2018_01_01_154333_create_broadcast_table',1);
-INSERT INTO `migrations` VALUES (12,'2018_01_01_154333_create_contact_log_table',1);
-INSERT INTO `migrations` VALUES (13,'2018_01_01_154333_create_early_arrival_table',1);
-INSERT INTO `migrations` VALUES (14,'2018_01_01_154333_create_event_dates_table',1);
-INSERT INTO `migrations` VALUES (15,'2018_01_01_154333_create_feedback_table',1);
-INSERT INTO `migrations` VALUES (16,'2018_01_01_154333_create_log_table',1);
-INSERT INTO `migrations` VALUES (17,'2018_01_01_154333_create_manual_review_table',1);
-INSERT INTO `migrations` VALUES (18,'2018_01_01_154333_create_mentee_status_table',1);
-INSERT INTO `migrations` VALUES (19,'2018_01_01_154333_create_person_language_table',1);
-INSERT INTO `migrations` VALUES (20,'2018_01_01_154333_create_person_mentor_table',1);
-INSERT INTO `migrations` VALUES (21,'2018_01_01_154333_create_person_message_table',1);
-INSERT INTO `migrations` VALUES (22,'2018_01_01_154333_create_person_position_table',1);
-INSERT INTO `migrations` VALUES (23,'2018_01_01_154333_create_person_role_table',1);
-INSERT INTO `migrations` VALUES (24,'2018_01_01_154333_create_person_slot_table',1);
-INSERT INTO `migrations` VALUES (25,'2018_01_01_154333_create_person_table',1);
-INSERT INTO `migrations` VALUES (26,'2018_01_01_154333_create_person_xfield_table',1);
-INSERT INTO `migrations` VALUES (27,'2018_01_01_154333_create_position_credit_table',1);
-INSERT INTO `migrations` VALUES (28,'2018_01_01_154333_create_position_table',1);
-INSERT INTO `migrations` VALUES (29,'2018_01_01_154333_create_radio_eligible_table',1);
-INSERT INTO `migrations` VALUES (30,'2018_01_01_154333_create_role_table',1);
-INSERT INTO `migrations` VALUES (31,'2018_01_01_154333_create_sessions_table',1);
-INSERT INTO `migrations` VALUES (32,'2018_01_01_154333_create_slot_table',1);
-INSERT INTO `migrations` VALUES (33,'2018_01_01_154333_create_ticket_table',1);
-INSERT INTO `migrations` VALUES (34,'2018_01_01_154333_create_timesheet_log_table',1);
-INSERT INTO `migrations` VALUES (35,'2018_01_01_154333_create_timesheet_missing_table',1);
-INSERT INTO `migrations` VALUES (36,'2018_01_01_154333_create_timesheet_table',1);
-INSERT INTO `migrations` VALUES (37,'2018_01_01_154333_create_trainee_status_table',1);
-INSERT INTO `migrations` VALUES (38,'2018_01_01_154333_create_training_table',1);
-INSERT INTO `migrations` VALUES (39,'2018_01_01_154333_create_xfield_table',1);
-INSERT INTO `migrations` VALUES (40,'2018_01_01_154333_create_xgroup_table',1);
-INSERT INTO `migrations` VALUES (41,'2018_01_01_154333_create_xoption_table',1);
-INSERT INTO `migrations` VALUES (42,'2019_01_01_102126_create_action_logs_table',1);
-INSERT INTO `migrations` VALUES (43,'2019_01_19_092840_create_error_logs_table',1);
-INSERT INTO `migrations` VALUES (44,'2019_02_28_123922_create_settings_table',1);
-INSERT INTO `migrations` VALUES (45,'2019_03_08_100500_create_jobs_table',1);
-INSERT INTO `migrations` VALUES (46,'2019_03_08_102057_create_failed_jobs_table',1);
-INSERT INTO `migrations` VALUES (47,'2019_03_09_172301_increase_state_size',2);
-INSERT INTO `migrations` VALUES (48,'2019_03_09_172301_increase_state_size',2);
-INSERT INTO `migrations` VALUES (49,'2019_03_10_160311_normalize_country_state',2);
-INSERT INTO `migrations` VALUES (50,'2019_03_10_160311_normalize_country_state',2);
-INSERT INTO `migrations` VALUES (51,'2019_03_10_160311_normalize_country_state',3);
-INSERT INTO `migrations` VALUES (52,'2019_03_29_140904_add_pre_event_slot_dates_to_event_dates',4);
-INSERT INTO `migrations` VALUES (53,'2019_04_04_100406_increase_slot_url_size',5);
-INSERT INTO `migrations` VALUES (54,'2019_04_08_195447_increase_slot_description_and_position_title',6);
-INSERT INTO `migrations` VALUES (55,'2019_04_08_195447_increase_slot_description_and_position_title',6);
-INSERT INTO `migrations` VALUES (56,'2019_04_10_222214_add_callsign_normalized_to_person',7);
-INSERT INTO `migrations` VALUES (57,'2019_04_01_170636_fix_bmid_schema_migration',8);
-INSERT INTO `migrations` VALUES (58,'2019_04_02_102747_add_indexes_to_access_document_migration',8);
-INSERT INTO `migrations` VALUES (59,'2019_04_02_103034_add_indexes_to_trainee_status',8);
-INSERT INTO `migrations` VALUES (60,'2019_04_13_172044_create_motd',9);
-INSERT INTO `migrations` VALUES (61,'2019_04_13_190543_add_osha_to_person',9);
-INSERT INTO `migrations` VALUES (62,'2019_04_13_191303_add_message_to_person',9);
-INSERT INTO `migrations` VALUES (63,'2019_04_19_122739_add_behavior_flag_to_person',10);
-INSERT INTO `migrations` VALUES (64,'2019_04_24_111128_create_help_table',11);
-INSERT INTO `migrations` VALUES (65,'2019_05_16_211819_create_person_photo',12);
-INSERT INTO `migrations` VALUES (66,'2019_05_20_163914_add_id_to_person_mentor',12);
-INSERT INTO `migrations` VALUES (67,'2019_06_16_153827_add_sandman_affidavit',13);
-INSERT INTO `migrations` VALUES (68,'2019_06_24_220101_switch_soundex_to_metaphone',14);
-INSERT INTO `migrations` VALUES (69,'2019_06_24_220101_switch_soundex_to_metaphone',14);
-INSERT INTO `migrations` VALUES (70,'2019_06_24_220101_switch_soundex_to_metaphone',14);
-INSERT INTO `migrations` VALUES (71,'2019_06_24_220101_switch_soundex_to_metaphone',14);
-INSERT INTO `migrations` VALUES (72,'2019_07_31_174227_create_help_hit_table_migration',15);
-INSERT INTO `migrations` VALUES (73,'2019_08_06_113056_allow_emojis_migration',16);
-INSERT INTO `migrations` VALUES (74,'2019_08_06_113056_allow_emojis_migration',16);
-INSERT INTO `migrations` VALUES (75,'2019_08_06_175703_fixcollation',17);
-INSERT INTO `migrations` VALUES (76,'2019_10_27_142743_cleanup_legacy_schema_migration',18);
-INSERT INTO `migrations` VALUES (77,'2019_10_30_114058_remove_setting_columns',19);
-INSERT INTO `migrations` VALUES (78,'2019_11_10_202334_create_trainer_status_table',20);
-INSERT INTO `migrations` VALUES (79,'2019_11_18_104922_add_slot_id_to_timesheet',21);
-INSERT INTO `migrations` VALUES (80,'2019_12_12_090508_add_pronounce_to_person',22);
-INSERT INTO `migrations` VALUES (81,'2019_12_15_102855_add_fields_to_position',22);
-INSERT INTO `migrations` VALUES (82,'2019_12_20_160318_add_milestones_to_person',23);
-INSERT INTO `migrations` VALUES (83,'2020_01_11_162151_clubhouse_photo',24);
-INSERT INTO `migrations` VALUES (84,'2020_02_02_091228_create_person_status_table',25);
-INSERT INTO `migrations` VALUES (85,'2020_02_09_165557_add_types_to_motd',26);
-INSERT INTO `migrations` VALUES (86,'2020_02_10_150001_create_person_intake',27);
-INSERT INTO `migrations` VALUES (87,'2020_02_11_111332_add_intake_role',27);
-INSERT INTO `migrations` VALUES (88,'2020_02_20_165528_create_trainee_note',27);
-INSERT INTO `migrations` VALUES (89,'2020_03_07_143821_create_cache_table',28);
-INSERT INTO `migrations` VALUES (90,'2020_03_07_165445_create_task_log_table',28);
-INSERT INTO `migrations` VALUES (91,'2020_03_03_165913_create_person_ot',29);
-INSERT INTO `migrations` VALUES (92,'2020_03_04_202505_add_lms_id_to_person',29);
-INSERT INTO `migrations` VALUES (93,'2020_03_11_082010_add_personnel_to_notes',30);
-INSERT INTO `migrations` VALUES (94,'2020_03_13_134847_add_lms_course_expiry_at_to_person',31);
-INSERT INTO `migrations` VALUES (95,'2020_03_19_161147_rename_slot_full_email',32);
-INSERT INTO `migrations` VALUES (96,'2020_03_31_090614_create_survey_tables',33);
-INSERT INTO `migrations` VALUES (97,'2020_05_10_092109_create_cache_locks',34);
-INSERT INTO `migrations` VALUES (98,'2020_05_10_093554_drop_task_log',34);
-INSERT INTO `migrations` VALUES (99,'2020_05_11_123730_drop_user_authorized_column',35);
-INSERT INTO `migrations` VALUES (100,'2020_05_19_153417_drop_mentor_columns',36);
-INSERT INTO `migrations` VALUES (101,'2020_05_15_121654_create_vehicle',37);
-INSERT INTO `migrations` VALUES (102,'2020_06_05_215405_create_person_event_table',37);
-INSERT INTO `migrations` VALUES (103,'2020_07_24_155418_enhance_motd',38);
-INSERT INTO `migrations` VALUES (104,'2020_07_24_155438_create_person_motd_table',38);
-INSERT INTO `migrations` VALUES (105,'2020_07_29_134241_convert_ts_confirmation_to_person_event',38);
-INSERT INTO `migrations` VALUES (106,'2020_08_16_101204_add_reviewed_pi_at_to_person',39);
-INSERT INTO `migrations` VALUES (107,'2020_09_12_134959_create_document_table',40);
-INSERT INTO `migrations` VALUES (108,'2020_09_15_154301_drop_auto_signout',41);
-INSERT INTO `migrations` VALUES (109,'2020_09_17_143217_add_active_flag_to_position',42);
-INSERT INTO `migrations` VALUES (110,'2020_10_26_150235_convert_timesheets',43);
-INSERT INTO `migrations` VALUES (111,'2020_11_27_215720_add_pronouns_to_person',44);
-INSERT INTO `migrations` VALUES (112,'2020_12_28_162128_add_ip_and_user_agent_to_action_logs',45);
-INSERT INTO `migrations` VALUES (113,'2020_12_29_122848_add_lm_on_playa_to_roles',46);
-INSERT INTO `migrations` VALUES (114,'2021_01_28_153101_add_moodle_to_person_online_training',47);
-INSERT INTO `migrations` VALUES (115,'2021_01_30_184959_add_person_status_to_timesheet',48);
-INSERT INTO `migrations` VALUES (116,'2021_02_20_173303_adjust_access_documents',49);
-INSERT INTO `migrations` VALUES (117,'2021_03_14_163615_remetaphone_numeric_callsigns',50);
-INSERT INTO `migrations` VALUES (118,'2021_03_16_124400_add_subreport_to_survey_group',51);
-INSERT INTO `migrations` VALUES (119,'2021_03_26_214244_adjust_access_document_types',52);
-INSERT INTO `migrations` VALUES (120,'2021_04_02_110550_add_bmid_export_table',52);
-INSERT INTO `migrations` VALUES (121,'2021_05_06_100933_add_address_to_access_document',53);
-INSERT INTO `migrations` VALUES (122,'2021_08_05_133147_add_indexes_to_tables',54);
-INSERT INTO `migrations` VALUES (123,'2021_12_08_180207_add_trainer_seasonal_role',55);
-INSERT INTO `migrations` VALUES (124,'2022_03_14_081537_add_pi_dashboard_review_to_person',56);
-INSERT INTO `migrations` VALUES (125,'2022_03_21_114028_add_lms_username_to_person',57);
-INSERT INTO `migrations` VALUES (126,'2022_04_16_200144_add_profile_image_to_person_photo',58);
-INSERT INTO `migrations` VALUES (127,'2022_04_21_072909_track_bounces',59);
-INSERT INTO `migrations` VALUES (128,'2022_04_21_073355_create_mail_log',59);
-INSERT INTO `migrations` VALUES (129,'2022_04_24_094422_change_person_id_on_mail_log',60);
-INSERT INTO `migrations` VALUES (130,'2022_04_27_165438_add_alert_when_empty_to_position',61);
-INSERT INTO `migrations` VALUES (131,'2022_04_28_173246_add_is_job_provision_to_access_document',62);
-INSERT INTO `migrations` VALUES (132,'2022_05_03_111156_add_did_complain_to_mail_log',63);
-INSERT INTO `migrations` VALUES (133,'2022_05_12_111452_create_certifications',64);
-INSERT INTO `migrations` VALUES (134,'2022_05_28_192502_rename_is_job_provision',65);
-INSERT INTO `migrations` VALUES (135,'2022_06_08_132121_add_more_meals_to_access_documents',66);
-INSERT INTO `migrations` VALUES (136,'2022_09_20_235413_add_timezone_to_slot',67);
-INSERT INTO `migrations` VALUES (137,'2022_09_28_172100_create_person_provision_table',68);
-INSERT INTO `migrations` VALUES (138,'2022_10_17_144511_create_award_table',69);
-INSERT INTO `migrations` VALUES (139,'2021_05_16_110807_add_teams_to_positions',70);
-INSERT INTO `migrations` VALUES (140,'2021_05_16_111000_create_team',70);
-INSERT INTO `migrations` VALUES (141,'2021_11_15_123753_create_person_position_log',70);
-INSERT INTO `migrations` VALUES (142,'2022_09_16_134724_add_roles_to_positions',70);
-INSERT INTO `migrations` VALUES (143,'2022_11_11_065414_add_on_trainer_report_to_position',70);
-INSERT INTO `migrations` VALUES (144,'2022_12_01_163428_cleanup_schema',71);
-INSERT INTO `migrations` VALUES (145,'2022_12_03_141101_add_nda_to_person_event',72);
-INSERT INTO `migrations` VALUES (146,'2022_12_07_165355_add_ticket_info_to_person_event',73);
-INSERT INTO `migrations` VALUES (147,'2022_12_11_115854_create_swag',74);
-INSERT INTO `migrations` VALUES (148,'2022_12_16_120136_create_person_pog',75);
-INSERT INTO `migrations` VALUES (149,'2022_12_17_152231_add_pii_to_person_event',76);
-INSERT INTO `migrations` VALUES (150,'2022_12_30_171846_create_handle_reservation_table',77);
-INSERT INTO `migrations` VALUES (151,'2023_01_08_164233_add_lms_course_id_to_person_event',78);
-INSERT INTO `migrations` VALUES (152,'2023_01_08_175055_drop_old_person_columns',78);
-INSERT INTO `migrations` VALUES (153,'2023_01_16_205430_add_require_training_for_roles_to_position',79);
-INSERT INTO `migrations` VALUES (154,'2023_01_20_165433_create_email_history',80);
-INSERT INTO `migrations` VALUES (155,'2023_01_13_001226_add_special_types_to_access_document',81);
-INSERT INTO `migrations` VALUES (156,'2023_02_01_010852_create_team_manager',82);
-INSERT INTO `migrations` VALUES (157,'2023_02_08_160749_add_is_lead_to_trainer_status',83);
-INSERT INTO `migrations` VALUES (158,'2023_02_09_154311_change_teams_categories',84);
-INSERT INTO `migrations` VALUES (159,'2023_02_09_173103_change_position_alerts',84);
-INSERT INTO `migrations` VALUES (160,'2023_02_26_173705_add_people_to_asset_person',85);
-INSERT INTO `migrations` VALUES (161,'2023_02_27_095240_add_consumed_year_to_provision',85);
-INSERT INTO `migrations` VALUES (162,'2023_03_03_210107_add_vanity_tracking_to_person',86);
-INSERT INTO `migrations` VALUES (163,'2023_03_04_200659_add_asset_and_swag_to_roles',87);
-INSERT INTO `migrations` VALUES (164,'2023_03_25_151941_add_issued_at_to_person_pog',88);
-INSERT INTO `migrations` VALUES (165,'2023_03_25_173152_add_shift_force_roll',88);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (1,'2018_01_01_154333_create_access_document_changes_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (2,'2018_01_01_154333_create_access_document_delivery_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (3,'2018_01_01_154333_create_access_document_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (4,'2018_01_01_154333_create_alert_person_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (5,'2018_01_01_154333_create_alert_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (6,'2018_01_01_154333_create_asset_attachment_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (7,'2018_01_01_154333_create_asset_person_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (8,'2018_01_01_154333_create_asset_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (9,'2018_01_01_154333_create_bmid_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (10,'2018_01_01_154333_create_broadcast_message_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (11,'2018_01_01_154333_create_broadcast_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (12,'2018_01_01_154333_create_contact_log_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (13,'2018_01_01_154333_create_early_arrival_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (14,'2018_01_01_154333_create_event_dates_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (15,'2018_01_01_154333_create_feedback_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (16,'2018_01_01_154333_create_log_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (17,'2018_01_01_154333_create_manual_review_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (18,'2018_01_01_154333_create_mentee_status_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (19,'2018_01_01_154333_create_person_language_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (20,'2018_01_01_154333_create_person_mentor_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (21,'2018_01_01_154333_create_person_message_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (22,'2018_01_01_154333_create_person_position_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (23,'2018_01_01_154333_create_person_role_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (24,'2018_01_01_154333_create_person_slot_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (25,'2018_01_01_154333_create_person_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (26,'2018_01_01_154333_create_person_xfield_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (27,'2018_01_01_154333_create_position_credit_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (28,'2018_01_01_154333_create_position_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (29,'2018_01_01_154333_create_radio_eligible_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (30,'2018_01_01_154333_create_role_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (31,'2018_01_01_154333_create_sessions_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (32,'2018_01_01_154333_create_slot_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (33,'2018_01_01_154333_create_ticket_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (34,'2018_01_01_154333_create_timesheet_log_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (35,'2018_01_01_154333_create_timesheet_missing_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (36,'2018_01_01_154333_create_timesheet_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (37,'2018_01_01_154333_create_trainee_status_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (38,'2018_01_01_154333_create_training_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (39,'2018_01_01_154333_create_xfield_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (40,'2018_01_01_154333_create_xgroup_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (41,'2018_01_01_154333_create_xoption_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (42,'2019_01_01_102126_create_action_logs_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (43,'2019_01_19_092840_create_error_logs_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (44,'2019_02_28_123922_create_settings_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (45,'2019_03_08_100500_create_jobs_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (46,'2019_03_08_102057_create_failed_jobs_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (47,'2019_03_09_172301_increase_state_size',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (48,'2019_03_09_172301_increase_state_size',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (49,'2019_03_10_160311_normalize_country_state',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (50,'2019_03_10_160311_normalize_country_state',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (51,'2019_03_10_160311_normalize_country_state',3);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (52,'2019_03_29_140904_add_pre_event_slot_dates_to_event_dates',4);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (53,'2019_04_04_100406_increase_slot_url_size',5);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (54,'2019_04_08_195447_increase_slot_description_and_position_title',6);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (55,'2019_04_08_195447_increase_slot_description_and_position_title',6);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (56,'2019_04_10_222214_add_callsign_normalized_to_person',7);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (57,'2019_04_01_170636_fix_bmid_schema_migration',8);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (58,'2019_04_02_102747_add_indexes_to_access_document_migration',8);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (59,'2019_04_02_103034_add_indexes_to_trainee_status',8);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (60,'2019_04_13_172044_create_motd',9);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (61,'2019_04_13_190543_add_osha_to_person',9);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (62,'2019_04_13_191303_add_message_to_person',9);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (63,'2019_04_19_122739_add_behavior_flag_to_person',10);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (64,'2019_04_24_111128_create_help_table',11);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (65,'2019_05_16_211819_create_person_photo',12);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (66,'2019_05_20_163914_add_id_to_person_mentor',12);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (67,'2019_06_16_153827_add_sandman_affidavit',13);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (68,'2019_06_24_220101_switch_soundex_to_metaphone',14);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (69,'2019_06_24_220101_switch_soundex_to_metaphone',14);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (70,'2019_06_24_220101_switch_soundex_to_metaphone',14);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (71,'2019_06_24_220101_switch_soundex_to_metaphone',14);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (72,'2019_07_31_174227_create_help_hit_table_migration',15);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (73,'2019_08_06_113056_allow_emojis_migration',16);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (74,'2019_08_06_113056_allow_emojis_migration',16);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (75,'2019_08_06_175703_fixcollation',17);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (76,'2019_10_27_142743_cleanup_legacy_schema_migration',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (77,'2019_10_30_114058_remove_setting_columns',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (78,'2019_11_10_202334_create_trainer_status_table',20);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (79,'2019_11_18_104922_add_slot_id_to_timesheet',21);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (80,'2019_12_12_090508_add_pronounce_to_person',22);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (81,'2019_12_15_102855_add_fields_to_position',22);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (82,'2019_12_20_160318_add_milestones_to_person',23);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (83,'2020_01_11_162151_clubhouse_photo',24);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (84,'2020_02_02_091228_create_person_status_table',25);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (85,'2020_02_09_165557_add_types_to_motd',26);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (86,'2020_02_10_150001_create_person_intake',27);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (87,'2020_02_11_111332_add_intake_role',27);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (88,'2020_02_20_165528_create_trainee_note',27);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (89,'2020_03_07_143821_create_cache_table',28);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (90,'2020_03_07_165445_create_task_log_table',28);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (91,'2020_03_03_165913_create_person_ot',29);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (92,'2020_03_04_202505_add_lms_id_to_person',29);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (93,'2020_03_11_082010_add_personnel_to_notes',30);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (94,'2020_03_13_134847_add_lms_course_expiry_at_to_person',31);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (95,'2020_03_19_161147_rename_slot_full_email',32);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (96,'2020_03_31_090614_create_survey_tables',33);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (97,'2020_05_10_092109_create_cache_locks',34);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (98,'2020_05_10_093554_drop_task_log',34);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (99,'2020_05_11_123730_drop_user_authorized_column',35);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (100,'2020_05_19_153417_drop_mentor_columns',36);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (101,'2020_05_15_121654_create_vehicle',37);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (102,'2020_06_05_215405_create_person_event_table',37);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (103,'2020_07_24_155418_enhance_motd',38);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (104,'2020_07_24_155438_create_person_motd_table',38);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (105,'2020_07_29_134241_convert_ts_confirmation_to_person_event',38);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (106,'2020_08_16_101204_add_reviewed_pi_at_to_person',39);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (107,'2020_09_12_134959_create_document_table',40);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (108,'2020_09_15_154301_drop_auto_signout',41);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (109,'2020_09_17_143217_add_active_flag_to_position',42);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (110,'2020_10_26_150235_convert_timesheets',43);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (111,'2020_11_27_215720_add_pronouns_to_person',44);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (112,'2020_12_28_162128_add_ip_and_user_agent_to_action_logs',45);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (113,'2020_12_29_122848_add_lm_on_playa_to_roles',46);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (114,'2021_01_28_153101_add_moodle_to_person_online_training',47);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (115,'2021_01_30_184959_add_person_status_to_timesheet',48);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (116,'2021_02_20_173303_adjust_access_documents',49);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (117,'2021_03_14_163615_remetaphone_numeric_callsigns',50);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (118,'2021_03_16_124400_add_subreport_to_survey_group',51);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (119,'2021_03_26_214244_adjust_access_document_types',52);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (120,'2021_04_02_110550_add_bmid_export_table',52);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (121,'2021_05_06_100933_add_address_to_access_document',53);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (122,'2021_08_05_133147_add_indexes_to_tables',54);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (123,'2021_12_08_180207_add_trainer_seasonal_role',55);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (124,'2022_03_14_081537_add_pi_dashboard_review_to_person',56);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (125,'2022_03_21_114028_add_lms_username_to_person',57);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (126,'2022_04_16_200144_add_profile_image_to_person_photo',58);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (127,'2022_04_21_072909_track_bounces',59);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (128,'2022_04_21_073355_create_mail_log',59);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (129,'2022_04_24_094422_change_person_id_on_mail_log',60);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (130,'2022_04_27_165438_add_alert_when_empty_to_position',61);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (131,'2022_04_28_173246_add_is_job_provision_to_access_document',62);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (132,'2022_05_03_111156_add_did_complain_to_mail_log',63);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (133,'2022_05_12_111452_create_certifications',64);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (134,'2022_05_28_192502_rename_is_job_provision',65);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (135,'2022_06_08_132121_add_more_meals_to_access_documents',66);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (136,'2022_09_20_235413_add_timezone_to_slot',67);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (137,'2022_09_28_172100_create_person_provision_table',68);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (138,'2022_10_17_144511_create_award_table',69);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (139,'2021_05_16_110807_add_teams_to_positions',70);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (140,'2021_05_16_111000_create_team',70);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (141,'2021_11_15_123753_create_person_position_log',70);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (142,'2022_09_16_134724_add_roles_to_positions',70);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (143,'2022_11_11_065414_add_on_trainer_report_to_position',70);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (144,'2022_12_01_163428_cleanup_schema',71);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (145,'2022_12_03_141101_add_nda_to_person_event',72);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (146,'2022_12_07_165355_add_ticket_info_to_person_event',73);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (147,'2022_12_11_115854_create_swag',74);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (148,'2022_12_16_120136_create_person_pog',75);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (149,'2022_12_17_152231_add_pii_to_person_event',76);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (150,'2022_12_30_171846_create_handle_reservation_table',77);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (151,'2023_01_08_164233_add_lms_course_id_to_person_event',78);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (152,'2023_01_08_175055_drop_old_person_columns',78);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (153,'2023_01_16_205430_add_require_training_for_roles_to_position',79);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (154,'2023_01_20_165433_create_email_history',80);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (155,'2023_01_13_001226_add_special_types_to_access_document',81);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (156,'2023_02_01_010852_create_team_manager',82);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (157,'2023_02_08_160749_add_is_lead_to_trainer_status',83);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (158,'2023_02_09_154311_change_teams_categories',84);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (159,'2023_02_09_173103_change_position_alerts',84);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (160,'2023_02_26_173705_add_people_to_asset_person',85);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (161,'2023_02_27_095240_add_consumed_year_to_provision',85);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (162,'2023_03_03_210107_add_vanity_tracking_to_person',86);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (163,'2023_03_04_200659_add_asset_and_swag_to_roles',87);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (164,'2023_03_25_151941_add_issued_at_to_person_pog',88);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (165,'2023_03_25_173152_add_shift_force_roll',88);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (166,'2023_03_27_121527_add_paycode_to_position',89);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (167,'2023_04_07_235540_add_employee_code_to_person',90);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (168,'2023_04_09_210435_add_new_roles',90);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (169,'2023_04_11_214636_add_vehicle_pass_type_to_access_document',91);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (170,'2023_04_14_111417_add_resource_tag_to_position',92);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (171,'2023_04_17_173707_add_lms_enrolled_at_to_person_event',93);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (172,'2023_05_03_223354_add_start_year_to_position_credit',94);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (173,'2023_05_04_123634_add_timezone_abbr_to_slot',94);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (174,'2023_05_04_155212_add_virutal_columns_to_slot',94);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (175,'2023_05_26_103152_create_pods',95);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (176,'2023_06_04_081908_add_deselect_on_join_to_position',96);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (177,'2023_06_10_161617_add_no_payroll_meal_adjustment_to_position',97);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (178,'2023_06_23_152037_add_info_to_pod',98);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (179,'2023_07_24_163001_add_timecard_year_round_to_role',99);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (180,'2023_07_26_145320_add_no_training_requirement_to_position',100);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (181,'2023_09_17_115650_replace_rpt_with_spt',101);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (182,'2023_09_18_091018_add_salesforce_import_permission',102);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (183,'2023_09_22_144331_add_message_management_role',103);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (184,'2023_09_23_190121_asset_cleanup',104);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (185,'2023_09_26_175056_cleanup_gender',105);
