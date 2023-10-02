@@ -315,6 +315,25 @@ class SlotController extends ApiController
     }
 
     /**
+     * Check to see if a datetime is within the slot ranges for a given year. Used to help validate timesheet date times.
+     *
+     * @return JsonResponse
+     */
+
+    public function checkDateTime(): JsonResponse
+    {
+        $params = request()->validate([
+            'position_id' => 'required|integer|exists:position,id',
+            'start' => 'required|date',
+            'finished' => 'required|date',
+        ]);
+
+        return response()->json(
+            Slot::checkDateTimeForPosition($params['position_id'], Carbon::parse($params['start']), Carbon::parse($params['finished']))
+        );
+    }
+
+    /**
      * Report on the Dirt Shifts - used for the shift Lead Report
      *
      * @return JsonResponse

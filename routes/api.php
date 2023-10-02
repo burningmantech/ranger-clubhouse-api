@@ -319,6 +319,7 @@ Route::group([
     Route::post('sms/confirm-code', 'SmsController@confirmCode');
 
     Route::patch('slot/bulkupdate', 'SlotController@bulkUpdate');
+    Route::get('slot/check-datetime', 'SlotController@checkDateTime');
     Route::post('slot/copy', 'SlotController@copy');
     Route::get('slot/dirt-shift-times', 'SlotController@dirtShiftTimes');
     Route::get('slot/flakes', 'SlotController@flakeReport');
