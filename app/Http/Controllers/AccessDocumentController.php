@@ -159,7 +159,7 @@ class AccessDocumentController extends ApiController
      * Create an access document
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -169,7 +169,7 @@ class AccessDocumentController extends ApiController
         $accessDocument = new AccessDocument;
         $this->fromRest($accessDocument);
 
-        $accessDocument->create_date = $accessDocument->modified_date = now();
+        $accessDocument->created_at = $accessDocument->updated_at = now();
         if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
         }
@@ -184,7 +184,7 @@ class AccessDocumentController extends ApiController
      *
      * @param AccessDocument $accessDocument
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(AccessDocument $accessDocument): JsonResponse
@@ -243,7 +243,7 @@ class AccessDocumentController extends ApiController
                 'person_id' => $row->changer_person_id,
                 'callsign' => $row->changer_person->callsign ?? "Deleted #{$row->changer_person_id}",
                 'operation' => $row->operation,
-                'timestamp' => (string)$row->timestamp,
+                'created_at' => (string)$row->created_at,
                 'changes' => $row->changes,
             ];
         }

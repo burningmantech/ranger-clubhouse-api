@@ -15,26 +15,24 @@ class PersonFactory extends Factory
         $salt = "0123467890123456789";
         $uuid = (string)Str::uuid();
         return [
-            'status' => 'active',
-            // combine two words, since with one word, we seem to get duplicates,
-            // probably across different faker instances.
+            'alt_phone' => '',
+            'behavioral_agreement' => true,
+            'bpguid' => $uuid,
             'callsign' => join("", $this->faker->unique()->words(2)),
             'callsign_approved' => true,
+            'city' => 'Smallville',
+            'country' => 'USA',
+            'created_at' => '2019-01-01 00:00:00',
             'email' => $uuid . '@example.com',
             'first_name' => 'Bravo',
-            'last_name' => 'Delta',
-            'street1' => '1 Main Street',
-            'city' => 'Smallville',
-            'state' => 'CA',
-            'country' => 'USA',
-            'zip' => '94501',
             'home_phone' => '415-555-1212',
-            'alt_phone' => '',
-            'password' => $salt . ":" . sha1($salt . "ineedashower!"),
-            'create_date' => '2019-01-01 00:00:00',
-            'bpguid' => $uuid,
-            'behavioral_agreement' => true,
+            'last_name' => 'Delta',
             'on_site' => false,
+            'password' => $salt . ":" . sha1($salt . "ineedashower!"),
+            'state' => 'CA',
+            'status' => 'active',
+            'street1' => '1 Main Street',
+            'zip' => '94501',
         ];
     }
 }

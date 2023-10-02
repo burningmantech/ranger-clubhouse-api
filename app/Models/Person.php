@@ -197,7 +197,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'active_next_event' => 'boolean',
         'behavioral_agreement' => 'boolean',
         'callsign_approved' => 'boolean',
-        'create_date' => 'datetime',
+        'created_at' => 'datetime',
         'date_verified' => 'date',
         'has_note_on_file' => 'boolean',
         'last_seen_at' => 'datetime',
@@ -207,7 +207,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'pi_reviewed_for_dashboard_at' => 'datetime',
         'reviewed_pi_at' => 'datetime',
         'status_date' => 'date',
-        'timestamp' => 'timestamp',
+        'updated_at' => 'datetime',
         'used_vanity_change' => 'boolean',
         'vanity_changed_at' => 'datetime',
         'vehicle_blacklisted' => 'boolean',
@@ -219,88 +219,63 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     protected $fillable = [
+        'active_next_event',
+        'alt_phone',
+        'apt',
+        'behavioral_agreement',
+        'bpguid',
         'callsign',
         'callsign_approved',
-        'formerly_known_as',
         'callsign_pronounce',
-        'used_vanity_change',
-
-        'status',
-        'status_date',
-        'timestamp',
-
-        'date_verified',
-        'create_date',
-
-
-        'vintage',
-        'behavioral_agreement',
-
-        'gender_identity',
-        'gender_custom',
-
-        'pronouns',
-        'pronouns_custom',
-
-        'message',
-
-        'email',
-        'is_bouncing',
-        'first_name',
-        'mi',
-        'last_name',
-        'street1',
-        'street2',
-        'apt',
-        'city',
-        'state',
-        'zip',
-        'country',
-
-        'home_phone',
-        'alt_phone',
-
-        'on_site',
-
-        'long_sleeve_swag_ig',
-        'tshirt_swag_id',
-        'tshirt_secondary_swag_id',
-
-        'emergency_contact',
         'camp_location',
-
-        'reviewed_pi_at',
+        'city',
+        'country',
+        'date_verified',
+        'email',
+        'emergency_contact',
+        'employee_id',
+        'first_name',
+        'formerly_known_as',
+        'gender_custom',
+        'gender_identity',
+        'has_note_on_file',
         'has_reviewed_pi',  // Pseudo field
-
-        'vehicle_blacklisted',
-
-        // various external services identifiers
-        'bpguid',
-        'sfuid',
-
+        'home_phone',
+        'is_bouncing',
+        'known_pnvs',
+        'known_rangers',
+        'languages',
+        'last_name',
         'lms_id',
         'lms_username',
-
-        'employee_id',
-
-        'active_next_event',
-        'has_note_on_file',
-
-        'known_rangers',
-        'known_pnvs',
-
-        // 'meta' objects
-        'languages',
-
-        // SMS fields
-        'sms_on_playa',
+        'long_sleeve_swag_id',
+        'message',
+        'mi',
+        'on_site',
+        'pronouns',
+        'pronouns_custom',
+        'reviewed_pi_at',
+        'sfuid',
         'sms_off_playa',
-        'sms_on_playa_verified',
-        'sms_off_playa_verified',
-        'sms_on_playa_stopped',
-        'sms_off_playa_stopped',
-        'sms_on_playa_code',
         'sms_off_playa_code',
+        'sms_off_playa_stopped',
+        'sms_off_playa_verified',
+        'sms_on_playa',
+        'sms_on_playa_code',
+        'sms_on_playa_stopped',
+        'sms_on_playa_verified',
+        'state',
+        'status',
+        'status_date',
+        'street1',
+        'street2',
+        'tshirt_secondary_swag_id',
+        'tshirt_swag_id',
+        'updated_at',
+        'used_vanity_change',
+        'vehicle_blacklisted',
+        'vintage',
+        'zip',
     ];
 
     // Various associated person tables
@@ -424,20 +399,20 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
 
     public function long_sleeve(): BelongsTo
     {
-        return $this->belongsTo(Swag::class, 'long_sleeve_swag_ig');
+        return $this->belongsTo(Swag::class, 'long_sleeve_swag_id');
     }
 
     /**
      * Setup various before save or create callback methods
      */
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 
         self::creating(function ($model) {
             // Set the create date to the current time
-            $model->create_date = now();
+            $model->created_at = now();
         });
 
         self::saving(function ($model) {
@@ -1128,7 +1103,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     }
 
     /**
-     * Obtain the create_date field.
+     * Obtain the created_at field.
      *
      * Accounts created prior to 2010 have a 0000-00-00 date. Return null if that's
      * the case.
@@ -1136,13 +1111,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return Carbon|null
      */
 
-    public function getCreateDateAttribute(): ?Carbon
+    public function getCreatedAtAttribute(): ?Carbon
     {
         if ($this->attributes == null) {
             return null;
         }
 
-        $date = $this->attributes['create_date'] ?? null;
+        $date = $this->attributes['created_at'] ?? null;
 
         if ($date == null) {
             return null;

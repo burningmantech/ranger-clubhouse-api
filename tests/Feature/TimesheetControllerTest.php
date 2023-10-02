@@ -676,7 +676,7 @@ class TimesheetControllerTest extends TestCase
         // Person should have earned enough for a short slevee
         $ssPerson = Person::factory()->create([
             'tshirt_swag_id' => $tshirt->id,
-            'long_sleeve_swag_ig' => $ls->id,
+            'long_sleeve_swag_id' => $ls->id,
         ]);
 
         Timesheet::factory()->create([

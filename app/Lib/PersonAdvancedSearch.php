@@ -106,10 +106,10 @@ class PersonAdvancedSearch
 
         if ($yearCreated) {
             if ($yearCreated == 1) {
-                // Special-case, accounts created prior to 2008 do not have a create date.
-                $sql->whereNull('create_date');
+                // Special-case, some accounts created prior to 2008 do not have a create date.
+                $sql->whereNull('created_at');
             } else {
-                $sql->whereYear('create_date', $yearCreated);
+                $sql->whereYear('created_at', $yearCreated);
             }
         }
 
@@ -298,7 +298,7 @@ class PersonAdvancedSearch
                 'status' => $person->status,
                 'email' => $person->email,
                 'bpguid' => $person->bpguid,
-                'create_date' => $person->create_date ? (string)$person->create_date : null,
+                'created_at' => $person->created_at ? (string)$person->created_at : null,
                 'status_date' => $person->status_date ? (string)$person->status_date : null,
             ];
 

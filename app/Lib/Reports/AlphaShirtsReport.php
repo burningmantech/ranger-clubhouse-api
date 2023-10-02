@@ -26,7 +26,7 @@ class AlphaShirtsReport
             'email',
             'tshirt_swag_id',
             'tshirt_secondary_swag_id',
-            'long_sleeve_swag_ig',
+            'long_sleeve_swag_id',
         )
             ->whereIn('status', [Person::ALPHA, Person::PROSPECTIVE])
             ->orderBy('callsign')

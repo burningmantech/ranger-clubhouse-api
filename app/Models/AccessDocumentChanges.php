@@ -21,7 +21,7 @@ class AccessDocumentChanges extends Model
 
     public $casts = [
         'changes' => 'array',
-        'timestamp' => 'datetime'
+        'created_at' => 'datetime'
     ];
 
     const OP_MODIFY = 'modify';
