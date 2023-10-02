@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonMessage extends ApiModel
 {
@@ -30,7 +32,6 @@ class PersonMessage extends ApiModel
     ];
 
     protected $appends = [
-        'sent_at',
         'sender_photo_url',
         'is_rbs'
     ];
@@ -40,7 +41,7 @@ class PersonMessage extends ApiModel
 
     protected $casts = [
         'delivered' => 'bool',
-        'timestamp' => 'datetime'
+        'created_at' => 'datetime'
     ];
 
     protected $createRules = [
@@ -49,26 +50,26 @@ class PersonMessage extends ApiModel
         'body' => 'required',
     ];
 
-    public function sender()
+    public function sender(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForPerson($personId)
+    public static function findForPerson(int $personId): Collection
     {
         return self::where('person_id', $personId)
             ->leftJoin('person as creator', 'creator.id', '=', 'person_message.creator_person_id')
             ->leftJoin('person as sender', 'sender.callsign', '=', 'person_message.message_from')
-            ->orderBy('person_message.timestamp', 'desc')
+            ->orderBy('person_message.created_at', 'desc')
             ->get(['person_message.*', 'creator.callsign as creator_callsign', 'sender.id as sender_person_id']);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function countUnread($personId)
+    public static function countUnread(int $personId): int
     {
         return PersonMessage::where('person_id', $personId)->where('delivered', false)->count();
     }
@@ -116,25 +117,15 @@ class PersonMessage extends ApiModel
      * Mark a message as read
      */
 
-    public function markRead()
+    public function markRead(): bool
     {
         $this->delivered = true;
         return $this->saveWithoutValidation();
     }
 
-    public function setRecipientCallsignAttribute($value)
+    public function setRecipientCallsignAttribute($value): void
     {
         $this->recipient_callsign = $value;
-    }
-
-    /*
-     * Timestamp is in UTC, need to send back back with the right
-     * format with timezone offset.
-     */
-
-    public function getSentAtAttribute()
-    {
-        return $this->timestamp ? $this->timestamp->toIso8601String() : '';
     }
 
     /**
@@ -143,14 +134,14 @@ class PersonMessage extends ApiModel
      * @return string
      */
 
-    public function getSenderPhotoUrlAttribute() : string
+    public function getSenderPhotoUrlAttribute(): string
     {
         $id = $this->sender_person_id ?? null;
         if (!$id) {
             return '';
         }
 
-       return PersonPhoto::retrieveProfileUrlForPerson($id);
+        return PersonPhoto::retrieveProfileUrlForPerson($id);
     }
 
     /**
@@ -159,7 +150,8 @@ class PersonMessage extends ApiModel
      * @return bool
      */
 
-    public function getIsRbsAttribute() : bool {
+    public function getIsRbsAttribute(): bool
+    {
         return stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
     }
 }

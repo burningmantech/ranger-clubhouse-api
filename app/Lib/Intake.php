@@ -129,7 +129,7 @@ class Intake
                 ->groupBy('person_id');
 
             foreach ($trainingSignups as $personId => $rows) {
-                self::setSpigotDate($dates, 'training_signups', $rows[0]->timestamp, $rows[0]->person);
+                self::setSpigotDate($dates, 'training_signups', $rows[0]->created_at, $rows[0]->person);
             }
 
             // Grab the passing PNVs
@@ -163,7 +163,7 @@ class Intake
                 ->groupBy('person_id');
 
             foreach ($alphaSignups as $personId => $rows) {
-                self::setSpigotDate($dates, 'alpha_signups', $rows[0]->timestamp, $rows[0]->person);
+                self::setSpigotDate($dates, 'alpha_signups', $rows[0]->created_at, $rows[0]->person);
             }
         }
 

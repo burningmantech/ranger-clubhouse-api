@@ -32,7 +32,7 @@ class PotentialEarnedShirtsReport
           person
         LEFT JOIN swag tshirt_swag ON person.tshirt_swag_id = tshirt_swag.id
         LEFT JOIN swag tshirt_secondary_swag ON person.tshirt_secondary_swag_id = tshirt_secondary_swag.id
-        LEFT JOIN swag longsleeve_swag ON person.long_sleeve_swag_ig=longsleeve_swag.id
+        LEFT JOIN swag longsleeve_swag ON person.long_sleeve_swag_id=longsleeve_swag.id
         LEFT JOIN (
           SELECT
             person_slot.person_id,

@@ -15,7 +15,7 @@ class PersonSlot extends ApiModel
     ];
 
     protected $casts = [
-        'timestamp' => 'datetime'
+        'created_at' => 'datetime'
     ];
 
     public function person(): BelongsTo
@@ -47,7 +47,7 @@ class PersonSlot extends ApiModel
      * @param int $slotId
      */
 
-    public static function deleteForSlot(int $slotId)
+    public static function deleteForSlot(int $slotId): void
     {
         $rows = self::where('slot_id', $slotId)->get();
         $user = Auth::user();

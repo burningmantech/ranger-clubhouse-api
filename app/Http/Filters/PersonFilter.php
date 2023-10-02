@@ -24,15 +24,15 @@ class PersonFilter
     ];
 
     const ACCOUNT_FIELDS = [
-        'vintage',
+        'created_at',
         'date_verified',
-        'create_date',
-        'timestamp',
-        'sfuid',
-        'logged_in_at',
-        'last_seen_at',
-        'is_bouncing',
         'employee_id',
+        'is_bouncing',
+        'last_seen_at',
+        'logged_in_at',
+        'sfuid',
+        'updated_at',
+        'vintage',
     ];
 
     const NAME_GENDER_FIELDS = [
@@ -72,7 +72,7 @@ class PersonFilter
 
         'tshirt_swag_id',
         'tshirt_secondary_swag_id',
-        'long_sleeve_swag_ig',
+        'long_sleeve_swag_id',
 
         'languages',
         'reviewed_pi_at',

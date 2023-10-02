@@ -46,7 +46,7 @@ class AccessDocument extends ApiModel
     const GIFT = 'gift_ticket';
     const LSD = 'lsd_ticket';
     const SPT = 'special_price_ticket'; // fka Reduced-Price Ticket (RPT)
-   // const RPT = 'reduced_price_ticket';
+    // const RPT = 'reduced_price_ticket';
     const STAFF_CREDENTIAL = 'staff_credential';
     const VEHICLE_PASS = 'vehicle_pass';
     const VEHICLE_PASS_GIFT = 'vehicle_pass_gift';
@@ -130,33 +130,33 @@ class AccessDocument extends ApiModel
     const DELIVERY_WILL_CALL = 'will_call';
 
     protected $fillable = [
-        'person_id',
-        'type',
-        'status',
-        'source_year',
-        'access_date',
         'access_any_time',
-        'name',
-        'comments',
-        'expiry_date',
-        'modified_date',
+        'access_date',
         'additional_comments',
+        'city',
+        'comments',
+        'country',
         'delivery_method',
+        'expiry_date',
+        'name',
+        'person_id',
+        'postal_code',
+        'source_year',
+        'state',
+        'status',
         'street1',
         'street2',
-        'city',
-        'state',
-        'postal_code',
-        'country',
+        'type',
+        'updated_at',
     ];
 
     protected $casts = [
-        'access_date' => 'datetime',
-        'expiry_date' => 'datetime:Y-m-d',
-        'create_date' => 'datetime',
-        'modified_date' => 'datetime',
-        'past_expire_date' => 'boolean',
         'access_any_time' => 'boolean',
+        'access_date' => 'datetime',
+        'created_at' => 'datetime',
+        'expiry_date' => 'datetime:Y-m-d',
+        'past_expire_date' => 'boolean',
+        'updated_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -182,8 +182,8 @@ class AccessDocument extends ApiModel
         parent::boot();
 
         self::saving(function ($model) {
-            if (empty($model->create_date)) {
-                $model->create_date = now();
+            if (empty($model->created_at)) {
+                $model->created_at = now();
             }
 
             if ($model->doesExpireThisYear()) {

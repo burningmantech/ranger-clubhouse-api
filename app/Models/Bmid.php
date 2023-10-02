@@ -114,8 +114,8 @@ class Bmid extends ApiModel
     ];
 
     protected $guarded = [
-        'create_datetime',
-        'modified_datetime'
+        'created_at',
+        'updated_at'
     ];
 
     protected $attributes = [
@@ -124,14 +124,14 @@ class Bmid extends ApiModel
     ];
 
     protected $casts = [
-        'showers' => 'bool',
-        'org_vehicle_insurance' => 'bool',
-        'create_datetime' => 'datetime',
-        'modified_datetime' => 'datetime',
-        'access_date' => 'datetime:Y-m-d',
         'access_any_time' => 'bool',
-        'earned_showers' => 'bool',
+        'access_date' => 'datetime:Y-m-d',
         'allocated_showers' => 'bool',
+        'created_at' => 'datetime',
+        'earned_showers' => 'bool',
+        'org_vehicle_insurance' => 'bool',
+        'showers' => 'bool',
+        'updated_at' => 'datetime',
     ];
 
     protected $appends = [

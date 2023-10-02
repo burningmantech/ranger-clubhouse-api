@@ -257,7 +257,7 @@ class MaintenanceController extends ApiController
         }
 
         DB::statement("CREATE TABLE $table AS SELECT * FROM person_message");
-        DB::statement("DELETE FROM person_message WHERE YEAR(timestamp) < $year");
+        DB::table('person_message')->whereYear('created_at', '<', $year)->delete();
 
         $this->log('archive-messages', "archive messages $prevYear into table $table", null);
 
