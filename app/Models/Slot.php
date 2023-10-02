@@ -380,6 +380,52 @@ class Slot extends ApiModel
     }
 
     /**
+     * See if a given position and datetime is within the scheduled slot times.
+     *
+     * @param int $positionId
+     * @param Carbon $start
+     * @param Carbon $finished
+     * @return string[]
+     */
+
+    public static function checkDateTimeForPosition(int $positionId, Carbon $start, Carbon $finished): array
+    {
+        $sql = self::where('position_id', $positionId)->where('begins_year', $start->year)->where('active', true);
+
+        if ($sql->clone()->count() == 0) {
+            // Might be an unscheduled position. e.g., Department Manager, NVO Ranger
+            return ['status' => 'no-slots'];
+        }
+
+        $first = $sql->clone()->orderBy('begins')->first();
+        $last = $sql->clone()->orderBy('ends', 'desc')->first();
+
+        if ($start->isBetween($first->begins, $last->ends)) {
+            $startStatus = 'success';
+        } else {
+            $startStatus = $start->lt($first->begins) ? 'before-begins' : 'after-ends';
+        }
+
+        if ($finished->isBetween($first->begins, $last->ends)) {
+            $finishedStatus = 'success';
+        } else {
+            $finishedStatus = $finished->lt($first->begins) ? 'before-begins' : 'after-ends';
+        }
+
+        if ($startStatus == 'success' && $finishedStatus == 'success') {
+            return ['status' => 'success'];
+        }
+
+        return [
+            'begins' => (string)$first->begins,
+            'ends' => (string)$last->ends,
+            'status' => 'out-of-range',
+            'start_status' => $startStatus,
+            'finished_status' => $finishedStatus
+        ];
+    }
+
+    /**
      * Retrieve the credits potential for the slot
      *
      * @return float
