@@ -128,7 +128,7 @@ class TrainingSession extends Slot
                 'team_short_titles' => $position_short_titles,
                 'notes' => $traineeNotesByIds[$person->id] ?? [],
                 'fkas' => $person->formerlyKnownAsArray(true),
-                'signed_up_at' => (string) $row->timestamp,
+                'signed_up_at' => (string) $row->created_at,
             ];
 
             if (in_array($person->id, $personnelIssues)) {

@@ -184,7 +184,7 @@ class PersonAdvancedSearch
 
             if ($includeTrainingStatus) {
                 $trainersById = DB::table('slot')
-                    ->select('person_slot.person_id', 'person_slot.timestamp', 'begins', 'trainer_status.status')
+                    ->select('person_slot.person_id', 'person_slot.created_at', 'begins', 'trainer_status.status')
                     ->join('person_slot', 'person_slot.slot_id', 'slot.id')
                     ->leftJoin('trainer_status', function ($j) {
                         $j->on('trainer_status.trainer_slot_id', 'slot.id');
@@ -198,7 +198,7 @@ class PersonAdvancedSearch
                     ->groupBy('person_id');
 
                 $traineesById = DB::table('slot')
-                    ->select('person_slot.person_id', 'person_slot.timestamp', 'trainee_status.passed', 'slot.begins', 'slot.timezone')
+                    ->select('person_slot.person_id', 'person_slot.created_at', 'trainee_status.passed', 'slot.begins', 'slot.timezone')
                     ->join('person_slot', 'person_slot.slot_id', 'slot.id')
                     ->leftJoin('trainee_status', function ($j) {
                         $j->on('trainee_status.slot_id', 'slot.id');
@@ -243,7 +243,7 @@ class PersonAdvancedSearch
                 if ($trainer) {
                     foreach ($trainer as $slot) {
                         $date = $slot->begins;
-                        $signup = $slot->timestamp;
+                        $signup = $slot->created_at;
                         if ($slot->status == TrainerStatus::ATTENDED) {
                             // stop at first success
                             $status = 'passed';
@@ -257,7 +257,7 @@ class PersonAdvancedSearch
                 } else if ($trainee) {
                     foreach ($trainee as $slot) {
                         $date = $slot->begins;
-                        $signup = $slot->timestamp;
+                        $signup = $slot->created_at;
                         if ($slot->passed) {
                             // stop at first success
                             $status = 'passed';
