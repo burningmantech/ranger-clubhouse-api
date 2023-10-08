@@ -8,9 +8,9 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
-class OnlineTrainingResetPasswordMail extends ClubhouseMailable
+class OnlineCourseResetPasswordMail extends ClubhouseMailable
 {
-    public ?string $otUrl;
+    public ?string $ocUrl;
 
     /**
      * Create a new message instance.
@@ -20,7 +20,7 @@ class OnlineTrainingResetPasswordMail extends ClubhouseMailable
 
     public function __construct(public Person $person, public string $password)
     {
-        $this->otUrl = setting('OnlineTrainingUrl');
+        $this->otUrl = setting('OnlineCourseSiteUrl');
         parent::__construct();
     }
 
@@ -42,7 +42,7 @@ class OnlineTrainingResetPasswordMail extends ClubhouseMailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.online-training-password-reset',
+            view: 'emails.online-course-password-reset',
         );
     }
 

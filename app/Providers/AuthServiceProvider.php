@@ -20,12 +20,13 @@ use App\Models\EventDate;
 use App\Models\HandleReservation;
 use App\Models\Help;
 use App\Models\Motd;
+use App\Models\OnlineCourse;
 use App\Models\Person;
 use App\Models\PersonAward;
 use App\Models\PersonEvent;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonPog;
 use App\Models\PersonPositionLog;
@@ -64,11 +65,12 @@ use App\Policies\EventDatePolicy;
 use App\Policies\HandleReservationPolicy;
 use App\Policies\HelpPolicy;
 use App\Policies\MotdPolicy;
+use App\Policies\OnlineCoursePolicy;
 use App\Policies\PersonAwardPolicy;
 use App\Policies\PersonEventPolicy;
 use App\Policies\PersonMentorPolicy;
 use App\Policies\PersonMessagePolicy;
-use App\Policies\PersonOnlineTrainingPolicy;
+use App\Policies\PersonOnlineCoursePolicy;
 use App\Policies\PersonPhotoPolicy;
 use App\Policies\PersonPogPolicy;
 use App\Policies\PersonPolicy;
@@ -119,12 +121,13 @@ class AuthServiceProvider extends ServiceProvider
         HandleReservation::class => HandleReservationPolicy::class,
         Help::class => HelpPolicy::class,
         Motd::class => MotdPolicy::class,
+        OnlineCourse::class => OnlineCoursePolicy::class,
         Person::class => PersonPolicy::class,
         PersonAward::class => PersonAwardPolicy::class,
         PersonEvent::class => PersonEventPolicy::class,
         PersonMentor::class => PersonMentorPolicy::class,
         PersonMessage::class => PersonMessagePolicy::class,
-        PersonOnlineTraining::class => PersonOnlineTrainingPolicy::class,
+        PersonOnlineCourse::class => PersonOnlineCoursePolicy::class,
         PersonPhoto::class => PersonPhotoPolicy::class,
         PersonPog::class => PersonPogPolicy::class,
         PersonPositionLog::class => PersonPositionLogPolicy::class,

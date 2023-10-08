@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
+use App\Models\OnlineCourse;
 use Illuminate\Console\Command;
+use Illuminate\Validation\ValidationException;
 
 class ClubhouseMoodleCompletion extends Command
 {
@@ -26,28 +28,24 @@ class ClubhouseMoodleCompletion extends Command
      * Scan the Moodle courses to see who completed.
      *
      * @return mixed
+     * @throws ValidationException
      */
 
     public function handle()
     {
-        if (!setting('OnlineTrainingEnabled')) {
+        if (!setting('OnlineCourseEnabled')) {
             $this->info("Online course is disabled. Aborting.");
             return;
         }
 
-        $courses = array_unique([ setting('MoodleHalfCourseId'), setting('MoodleFullCourseId') ]);
-
+        $courses = OnlineCourse::findForQuery([ 'year' => current_year() ]);
         $this->info('Connecting to the Moodle Server.');
         $moodle = new Moodle;
 
-        foreach ($courses as $courseId) {
-            if (empty($courseId)) {
-                continue;
-            }
-
-            $this->info("Scanning course id #{$courseId}");
+        foreach ($courses as $course) {
+            $this->info("Scanning course id #{$course->id}, lms course id {$course->course_id}");
             try {
-                $moodle->processCourseCompletion($courseId);
+                $moodle->processCourseCompletion($course);
             } catch (MoodleDownForMaintenanceException $e) {
                 $this->error("Moodle down for maintenance");
                 return;

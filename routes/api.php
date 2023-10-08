@@ -161,17 +161,20 @@ Route::group([
     Route::post('maintenance/reset-past-prospectives', 'MaintenanceController@resetPassProspectives');
     Route::post('maintenance/archive-messages', 'MaintenanceController@archiveMessages');
 
-    Route::get('online-training/config', 'OnlineTrainingController@config');
-    Route::get('online-training/courses', 'OnlineTrainingController@courses');
-    Route::get('online-training/enrollment', 'OnlineTrainingController@enrollment');
-    Route::get('online-training/progress', 'OnlineTrainingController@progressReport');
-    Route::post('online-training/set-course-type', 'OnlineTrainingController@setCourseType');
-    Route::get('online-training', 'OnlineTrainingController@index');
-    Route::post('online-training/{person}/setup', 'OnlineTrainingController@setupPerson');
-    Route::post('online-training/{person}/mark-completed', 'OnlineTrainingController@markCompleted');
-    Route::post('online-training/{person}/reset-password', 'OnlineTrainingController@resetPassword');
-    Route::get('online-training/{person}/info', 'OnlineTrainingController@getInfo');
-    Route::post('online-training/{person}/sync-info', 'OnlineTrainingController@syncInfo');
+    Route::get('online-course/courses', 'OnlineCourseController@courses');
+    Route::get('online-course/progress', 'OnlineCourseController@progressReport');
+    Route::get('online-course/{online_course}/enrollment', 'OnlineCourseController@enrollment');
+    Route::post('online-course/{online_course}/set-name', 'OnlineCourseController@setName');
+    Route::resource('online-course', 'OnlineCourseController');
+
+
+    Route::post('person-online-course/{person}/change', 'PersonOnlineCourseController@change');
+    Route::get('person-online-course/{person}/course-info', 'PersonOnlineCourseController@courseInfo');
+    Route::get('person-online-course/{person}/info', 'PersonOnlineCourseController@getInfo');
+    Route::post('person-online-course/{person}/mark-completed', 'PersonOnlineCourseController@markCompleted');
+    Route::post('person-online-course/{person}/reset-password', 'PersonOnlineCourseController@resetPassword');
+    Route::post('person-online-course/{person}/setup', 'PersonOnlineCourseController@setupPerson');
+    Route::post('person-online-course/{person}/sync-info', 'PersonOnlineCourseController@syncInfo');
 
     Route::get('mail-log/stats', 'MailLogController@stats');
     Route::get('mail-log', 'MailLogController@index');

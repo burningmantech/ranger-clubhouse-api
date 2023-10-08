@@ -4,8 +4,9 @@ namespace App\Lib;
 
 use App\Models\EventDate;
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
+use App\Models\Position;
 use App\Models\Schedule;
 use App\Models\Training;
 
@@ -16,9 +17,9 @@ class Scheduling
     // BPGUID has not been linked.
     const BPGUID_MISSING = 'bpguid-missing';
     // Online Course has not been completed
-    const OT_MISSING = 'ot-missing';
-    // Online Training is not available at the moment
-    const OT_DISABLED = 'ot-disabled';
+    const OC_MISSING = 'oc-missing';
+    // Online Course is not available at the moment
+    const OC_DISABLED = 'oc-disabled';
 
     // Callsign is unapproved
     const CALLSIGN_UNAPPROVED = 'callsign-unapproved';
@@ -50,13 +51,13 @@ class Scheduling
             ];
         }
 
-        $otEnabled = setting('OnlineTrainingEnabled');
+        $ocEnabled = setting('OnlineCourseEnabled');
 
         $isAuditor = ($status == Person::AUDITOR);
-        if ($isAuditor && setting('OnlineTrainingOnlyForAuditors')) {
+        if ($isAuditor && setting('OnlineCourseOnlyForAuditors')) {
             return [
-                'online_training_only' => true,
-                'online_training_enabled' => $otEnabled,
+                'online_course_only' => true,
+                'online_course_enabled' => $ocEnabled,
                 'needs_full_training' => true,
             ];
         }
@@ -71,14 +72,14 @@ class Scheduling
             $photoStatus = PersonPhoto::retrieveStatus($person);
         }
 
-        if (setting('OnlineTrainingDisabledAllowSignups')) {
-            // OT not required - DANGEROUS
-            $otCompleted = true;
+        if (setting('OnlineCourseDisabledAllowSignups')) {
+            // OC not required - DANGEROUS
+            $ocCompleted = true;
         } else {
-            $otCompleted = PersonOnlineTraining::didCompleteForYear($personId, current_year());
+            $ocCompleted = PersonOnlineCourse::didCompleteForYear($personId, current_year(), Position::TRAINING);
         }
 
-        $canSignUpForTraining = $isNonRanger || $otCompleted;
+        $canSignUpForTraining = $isNonRanger || $ocCompleted;
         $canSignUpForAllShifts = true;
 
         $requirements = [];
@@ -90,13 +91,13 @@ class Scheduling
                 $requirements[] = self::PI_UNREVIEWED;
             }
 
-            if (!$otCompleted) {
-                // .. and must pass Online Training before doing anything else
-                $requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+            if (!$ocCompleted) {
+                // .. and must pass Online Course before doing anything else
+                $requirements[] = $ocEnabled ? self::OC_MISSING : self::OC_DISABLED;
             }
-        } else if (!$isNonRanger && !$otCompleted) {
-            // Online training not completed. Bad Ranger, no biscuit.
-            //$requirements[] = $otEnabled ? self::OT_MISSING : self::OT_DISABLED;
+        } else if (!$isNonRanger && !$ocCompleted) {
+            // Online Course not completed. Bad Ranger, no biscuit.
+            //$requirements[] = $ocEnabled ? self::OC_MISSING : self::OC_DISABLED;
             $canSignUpForTraining = false;
         }
 
@@ -138,7 +139,7 @@ class Scheduling
         return [
             // Can the person sign up for all (except training) shifts?
             'all_signups_allowed' => $canSignUpForAllShifts,
-            'online_training_enabled' => $otEnabled,
+            'online_course_enabled' => $ocEnabled,
             // Can the person sign up for training?
             'training_signups_allowed' => $canSignUpForTraining,
             'requirements' => $requirements,

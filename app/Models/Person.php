@@ -15,7 +15,7 @@ use App\Attributes\BlankIfEmptyAttribute;
 use App\Attributes\NullIfEmptyAttribute;
 use App\Attributes\PhoneAttribute;
 use App\Helpers\SqlHelper;
-use App\Jobs\OnlineTrainingSyncPersonJob;
+use App\Jobs\OnlineCourseSyncPersonJob;
 use App\Lib\Agreements;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
@@ -296,7 +296,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'person_language',
         'person_mentor',
         'person_message',
-        'person_online_training',
+        'person_online_course',
         'person_position',
         'person_position_log',
         'person_role',
@@ -459,7 +459,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         self::updated(function ($model) {
             if (!empty($model->lms_id)
                 && $model->wasChanged(['callsign', 'email', 'first_name', 'last_name'])) {
-                OnlineTrainingSyncPersonJob::dispatch($model);
+                OnlineCourseSyncPersonJob::dispatch($model);
             }
         });
     }

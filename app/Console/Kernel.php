@@ -25,7 +25,7 @@ class Kernel extends ConsoleKernel
      * @param Schedule $schedule
      * @return void
      */
-    protected function schedule(Schedule $schedule)
+    protected function schedule(Schedule $schedule): void
     {
         if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server()) {
             // Let someone know what's been happening in the Clubhouse
@@ -37,9 +37,10 @@ class Kernel extends ConsoleKernel
             // Let the vehicle request reviewers know if vehicles are queued up.
             $schedule->command('clubhouse:vehicle-pending')->dailyAt('19:00')->onOneServer();
 
-            // Talk with Moodle to see who completed online training
-            // Runs every 30 mins April through September
-            $schedule->command('clubhouse:moodle-completion')->cron('0,10,20,30,40,50 * * 4-9 *')->onOneServer();
+            // Talk with Moodle to see who completed online course
+            // Runs every 30 mins April through mid-September
+            $schedule->command('clubhouse:moodle-completion')->cron('0,10,20,30,40,50 * * 4-8 *')->onOneServer();
+            $schedule->command('clubhouse:moodle-completion')->cron('0,10,20,30,40,50 * 1-10 9 *')->onOneServer();
 
             // Run the Rangers Who Need WAPs Report
             // At 02:30 on Mondays July through August.

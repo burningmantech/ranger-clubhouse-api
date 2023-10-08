@@ -280,10 +280,10 @@
             <td>Online Course</td>
             <td>
                 @if ($dashboardPeriod == 'after-event')
-                    {!!($settings['OnlineTrainingEnabled'] ?? false) ? 'Enabled' : 'Disabled'  !!}
+                    {!!($settings['OnlineCourseEnabled'] ?? false) ? 'Enabled' : 'Disabled'  !!}
                     (ok for After Event period)
                 @else
-                    {!! ($settings['OnlineTrainingEnabled'] ?? false) ? "Enabled (normal for pre-event/event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                    {!! ($settings['OnlineCourseEnabled'] ?? false) ? "Enabled (normal for pre-event/event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
                 @endif
             </td>
         </tr>
@@ -296,7 +296,7 @@
         <tr>
             <td>Signups without OT</td>
             <td>
-                {!! ($settings['OnlineTrainingDisabledAllowSignups'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal)' !!}
+                {!! ($settings['OnlineCourseDisabledAllowSignups'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal)' !!}
             </td>
         </tr>
         <tr>

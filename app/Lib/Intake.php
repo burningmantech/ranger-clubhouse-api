@@ -6,7 +6,7 @@ use App\Models\Person;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
 use App\Models\PersonMentor;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonSlot;
 use App\Models\PersonStatus;
@@ -104,13 +104,14 @@ class Intake
             self::setSpigotDate($dates, 'photo_approved', $photo->reviewed_at ?? $photo->uploaded_at, $photo->person);
         }
 
-        $onlineTraining = PersonOnlineTraining::whereIntegerInRaw('person_id', $pnvIds)
-            ->whereYear('completed_at', $year)
+        $onlineCourse = PersonOnlineCourse::whereIntegerInRaw('person_id', $pnvIds)
+            ->where('year', $year)
+            ->where('position_id', Position::TRAINING)
             ->with('person:id,callsign')
             ->get();
 
-        foreach ($onlineTraining as $ot) {
-            self::setSpigotDate($dates, 'online_trained', $ot->completed_at, $ot->person);
+        foreach ($onlineCourse as $poc) {
+            self::setSpigotDate($dates, 'online_trained', $poc->completed_at, $poc->person);
         }
 
         // Grab the training slots

@@ -185,42 +185,36 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING
         ],
 
-        'OnlineTrainingEnabled' => [
+        'OnlineCourseEnabled' => [
             'description' => 'Enable online course link',
             'type' => self::TYPE_BOOL
         ],
 
-        'OnlineTrainingUrl' => [
+        'OnlineCourseSiteUrl' => [
             'description' => 'Online course Url',
             'type' => self::TYPE_STRING
         ],
 
-        'OnlineTrainingDisabledAllowSignups' => [
+        'OnlineCourseDisabledAllowSignups' => [
             'description' => 'Enable shift signups even if the Online Course is disabled (VERY DANGEROUS)',
             'type' => self::TYPE_BOOL,
             'default' => false,
         ],
 
-        'OnlineTrainingOnlyForAuditors' => [
+        'OnlineCourseOnlyForAuditors' => [
             'description' => 'Auditor are only allowed to take the Online Course',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
-        'OnlineTrainingOnlyForBinaries' => [
+        'OnlineCourseOnlyForBinaries' => [
             'description' => 'Only require Online Course and not In-Person training for vets (2+ years)',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
 
-        'OnlineTrainingOnlyForVets' => [
+        'OnlineCourseOnlyForVets' => [
             'description' => 'Only require the Online Course and not In-Person training for binaries (0-1 years)',
-            'type' => self::TYPE_BOOL,
-            'default' => false
-        ],
-
-        'OnlineTrainingFullCourseForVets' => [
-            'description' => 'Require the full online course for vets',
             'type' => self::TYPE_BOOL,
             'default' => false
         ],
