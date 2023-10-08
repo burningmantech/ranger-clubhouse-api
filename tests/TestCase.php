@@ -27,10 +27,6 @@ abstract class TestCase extends BaseTestCase
 
         // Set the time to the beginning of the year
         Carbon::setTestNow(date('Y-01-01 12:34:56'));
-
-        // force garbage collection before each test
-        // Faker triggers a memory allocation bug.
-        gc_collect_cycles();
     }
 
     public function createUser(): void
