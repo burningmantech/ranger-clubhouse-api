@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BmidExport extends ApiModel
 {
@@ -26,7 +26,7 @@ class BmidExport extends ApiModel
         'filename_url'
     ];
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -64,7 +64,7 @@ class BmidExport extends ApiModel
      * Delete the export from storage
      */
 
-    public function deleteExport()
+    public function deleteExport(): void
     {
         self::storage()->delete(self::storagePath($this->filename));
     }
