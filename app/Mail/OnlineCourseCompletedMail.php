@@ -5,7 +5,7 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 
-class OnlineTrainingCompletedMail extends ClubhouseMailable
+class OnlineCourseCompletedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -28,10 +28,11 @@ class OnlineTrainingCompletedMail extends ClubhouseMailable
      *
      * @return $this
      */
-    public function build()
+
+    public function build(): static
     {
         return $this->from(setting('DoNotReplyEmail'), 'The Ranger Training Academy')
             ->subject('Ranger Online Course Completed')
-            ->view('emails.online-training-completed');
+            ->view('emails.online-course-completed');
     }
 }

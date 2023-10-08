@@ -6,7 +6,7 @@ use App\Models\Document;
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\Position;
@@ -47,15 +47,15 @@ class Milestones
         $settings = setting([
             'MotorpoolPolicyEnable',
             'OnboardAlphaShiftPrepLink',
-            'OnlineTrainingEnabled',
-            'OnlineTrainingUrl',
+            'OnlineCourseEnabled',
+            'OnlineCourseSiteUrl',
             'RadioCheckoutAgreementEnabled',
         ]);
 
         $milestones = [
-            'online_training_passed' => PersonOnlineTraining::didCompleteForYear($person->id, $year),
-            'online_training_enabled' => $settings['OnlineTrainingEnabled'],
-            'online_training_url' => $settings['OnlineTrainingUrl'],
+            'online_course_passed' => PersonOnlineCourse::didCompleteForYear($person->id, $year, Position::TRAINING),
+            'online_course_enabled' => $settings['OnlineCourseEnabled'],
+            'online_course_url' => $settings['OnlineCourseSiteUrl'],
             'needs_full_training' => $fullTraining,
             'behavioral_agreement' => $person->behavioral_agreement,
             'has_reviewed_pi' => !empty($event->pii_finished_at) && $event->pii_finished_at->year == $year,
@@ -91,14 +91,14 @@ class Milestones
         $milestones['art_trainings'] = $artTrainings;
 
         if (in_array($status, Person::ACTIVE_STATUSES)) {
-            // Only require Online Training to be passed in order to work? (2021 social distancing training)
-            $milestones['online_training_only'] = setting($isBinary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
+            // Only require Online Course to be passed in order to work? (2021 social distancing training)
+            $milestones['online_course_only'] = setting($isBinary ? 'OnlineCourseOnlyForBinaries' : 'OnlineCourseOnlyForVets');
         }
 
         switch ($status) {
             case Person::AUDITOR:
-                if (setting('OnlineTrainingOnlyForAuditors')) {
-                    $milestones['online_training_only'] = true;
+                if (setting('OnlineCourseOnlyForAuditors')) {
+                    $milestones['online_course_only'] = true;
                 }
                 break;
 
@@ -122,10 +122,6 @@ class Milestones
             case Person::ACTIVE:
                 if ($isBinary) {
                     $milestones['is_binary'] = true;
-                }
-
-                if (setting('OnlineTrainingFullCourseForVets')) {
-                    $milestones['needs_full_online_course'] = true;
                 }
                 break;
 

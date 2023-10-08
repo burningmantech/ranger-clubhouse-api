@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Person;
 use App\Models\PersonEvent;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
@@ -127,7 +127,7 @@ class TimesheetControllerTest extends TestCase
      * Create a training session, student record, and either pass or fail the person.
      */
 
-    public function createTrainingSession($passed)
+    public function createTrainingSession($passed): void
     {
         $slot = Slot::factory()->create([
             'begins' => date("Y-01-01 00:00:00"),
@@ -330,15 +330,19 @@ class TimesheetControllerTest extends TestCase
      * Sign in a person who is trained
      */
 
-    public function testSigninForOnlineTrainingOnly()
+    public function testSigninForOnlineCourseOnly()
     {
         $this->createTrainingSession(false);
         $targetPersonId = $this->targetPerson->id;
 
-        $this->setting('OnlineTrainingOnlyForBinaries', true);
+        $this->setting('OnlineCourseOnlyForBinaries', true);
 
-        PersonOnlineTraining::factory()->create([
+        PersonOnlineCourse::factory()->create([
             'person_id' => $targetPersonId,
+            'year' => current_year(),
+            'position_id' => Position::TRAINING,
+            'completed_at' => now(),
+            'type' => PersonOnlineCourse::TYPE_MOODLE,
         ]);
 
         $response = $this->json('POST', 'timesheet/signin', [
@@ -374,11 +378,11 @@ class TimesheetControllerTest extends TestCase
      * Prevent a sign in for an untrained person
      */
 
-    public function testNoSignInForNoOnlineTraining()
+    public function testNoSignInForNoOnlineCourse()
     {
         $this->createTrainingSession(false);
         $targetPersonId = $this->targetPerson->id;
-        $this->setting('OnlineTrainingOnlyForBinaries', true);
+        $this->setting('OnlineCourseOnlyForBinaries', true);
 
         $response = $this->json('POST', 'timesheet/signin', [
             'person_id' => $targetPersonId,

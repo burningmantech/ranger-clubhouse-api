@@ -32,8 +32,6 @@ class PersonEvent extends ApiModel
 
     protected $fillable = [
         'asset_authorized',
-        'lms_course_id',
-        'lms_enrolled_at',
         'may_request_stickers',
         'org_vehicle_insurance',
         'pii_finished_at',

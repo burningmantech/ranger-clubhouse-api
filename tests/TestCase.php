@@ -23,17 +23,13 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // force garbage collection before each test
-        // Faker triggers a memory allocation bug.
-        // gc_collect_cycles();
-
         Cache::flush();
 
         // Set the time to the beginning of the year
         Carbon::setTestNow(date('Y-01-01 12:34:56'));
     }
 
-    public function createUser()
+    public function createUser(): void
     {
         $this->user = Person::factory()->create();
         if (!$this->user->id) {
@@ -42,14 +38,14 @@ abstract class TestCase extends BaseTestCase
     }
 
 
-    public function signInUser()
+    public function signInUser(): void
     {
         $this->createUser();
         $this->actingAs($this->user);
     }
 
 
-    public function addRole($roles, $user = null)
+    public function addRole($roles, $user = null): void
     {
         if (!$user) {
             $user = $this->user;
@@ -59,15 +55,7 @@ abstract class TestCase extends BaseTestCase
             $roles = [$roles];
         }
 
-        $rows = [];
-        foreach ($roles as $role) {
-            $rows[] = [
-                'person_id' => $user->id,
-                'role_id' => $role,
-            ];
-        }
-
-        PersonRole::insert($rows);
+        PersonRole::addIdsToPerson($user->id, $roles, 'test case');
     }
 
 

@@ -45,8 +45,10 @@ class ClaimedTicketsWithNoSignups
             ->get()
             ->keyBy('person_id');
 
-        $otPeople = DB::table('person_online_training')
+        $ocPeople = DB::table('person_online_course')
             ->whereIntegerInRaw('person_id', $peopleIds)
+            ->where('year', $year)
+            ->where('position_id', Position::TRAINING)
             ->get()
             ->keyBy('person_id');
 
@@ -80,11 +82,11 @@ class ClaimedTicketsWithNoSignups
         foreach ($claimedRows as $claimed) {
             $person = $claimed->person;
             $personId = $person->id;
-            $otCompleted = $otPeople->has($personId);
+            $ocCompleted = $ocPeople->has($personId);
             $hasSignups = $signUps->has($personId);
             $didWork = $timesheets->has($personId);
 
-            if ($otCompleted && $didWork) {
+            if ($ocCompleted && $didWork) {
                 // Person is cool, OT was completed and did work on playa.
                 continue;
             }
@@ -122,7 +124,7 @@ class ClaimedTicketsWithNoSignups
                 'last_name' => $person->last_name,
                 'access_document_id' => $claimed->id,
                 'type' => $claimed->type,
-                'ot_completed' => $otCompleted,
+                'ot_completed' => $ocCompleted,
                 'has_signups' => $hasSignups,
                 'did_work' => $didWork,
                 'have_trained' => ($didTrain || $didTeach),

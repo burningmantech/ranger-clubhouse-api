@@ -178,9 +178,9 @@ class Training extends Position
         if ($positionId == Position::TRAINING) {
             $isBinary = Timesheet::isPersonBinary($person);
 
-            $otOnly = setting($isBinary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
-            if ($otOnly) {
-                return PersonOnlineTraining::didCompleteForYear($personId, current_year());
+            $ocOnly = setting($isBinary ? 'OnlineCourseOnlyForBinaries' : 'OnlineCourseOnlyForVets');
+            if ($ocOnly) {
+                return PersonOnlineCourse::didCompleteForYear($personId, current_year(), Position::TRAINING);
             }
         }
 
@@ -189,7 +189,7 @@ class Training extends Position
     }
 
     /**
-     * Did any of the ids pass training? Online Training is not considered.
+     * Did any of the ids pass training? Online Course is not considered.
      *
      * @param array $personIds
      * @param int $positionId
@@ -197,7 +197,7 @@ class Training extends Position
      * @return mixed
      */
 
-    public static function didIdsPassForYear(array $personIds, int $positionId, int $year)
+    public static function didIdsPassForYear(array $personIds, int $positionId, int $year): mixed
     {
         $traineePositionIds = [$positionId];
 

@@ -5,13 +5,15 @@ namespace App\Lib;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
+use App\Models\OnlineCourse;
 use App\Models\Person;
-use App\Models\PersonEvent;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use stdClass;
 
@@ -76,7 +78,28 @@ class Moodle
 
     public function retrieveAvailableCourses(): array
     {
-        return $this->requestWebService('GET', self::WS_COURSE_AVAILABLE);
+        $courses = $this->requestWebService('GET', self::WS_COURSE_AVAILABLE);
+        return array_values(array_filter($courses, fn($r) => $r->format != 'site'));
+
+    }
+
+    /**
+     * Retrieve a single course
+     *
+     * @param $courseId
+     * @return ?array
+     * @throws MoodleDownForMaintenanceException
+     */
+
+    public function retrieveCourseInfo($courseId): mixed
+    {
+        $result = $this->requestWebService('GET', self::WS_COURSE_AVAILABLE, [
+            'options' => [
+                'ids' => [$courseId]
+            ]
+        ]);
+
+        return $result[0] ?? null;
     }
 
     /**
@@ -156,7 +179,7 @@ class Moodle
 
         foreach ($students as $student) {
             if (!empty($student->idnumber)) {
-                $idNumbers[(int)$student->idnumber] = $student;
+                $idNumbers[$student->idnumber] = $student;
             }
 
             $isStudent = false;
@@ -189,12 +212,13 @@ class Moodle
             }
         }
 
-        foreach ($people as $person) {
-            $student = $idNumbers[$person->id] ?? null;
+        foreach ($people as $row) {
+            $student = $idNumbers[$row->id] ?? null;
             if (!$student) {
                 continue;
             }
 
+            $person = $row->person;
             $student->person = (object)[
                 'id' => $person->id,
                 'callsign' => $person->callsign,
@@ -234,14 +258,15 @@ class Moodle
      * Run thru an enrollment roster, try to associate Moodle users with Clubhouse accounts,
      * and mark those found as completing the course.
      *
-     * @param int $courseId the Moodle course id to scan
-     * @return void
+     * @param OnlineCourse $course
      * @throws MoodleDownForMaintenanceException
+     * @throws ValidationException
      */
 
-    public function processCourseCompletion(int $courseId): void
+    public function processCourseCompletion(OnlineCourse $course): void
     {
-        $year = current_year();
+        $courseId = $course->course_id;
+        $year = $course->year;
         $enrolled = $this->retrieveCourseEnrollment($courseId);
         $students = $this->findClubhouseUsers($enrolled);
 
@@ -252,8 +277,10 @@ class Moodle
 
         $completedAlready = [];
         if (!empty($peopleIds)) {
-            $peopleCompleted = PersonOnlineTraining::whereIntegerInRaw('person_id', $peopleIds)
-                ->whereYear('completed_at', $year)
+            $peopleCompleted = PersonOnlineCourse::whereIntegerInRaw('person_id', $peopleIds)
+                ->where('position_id', $course->position_id)
+                ->where('year', $year)
+                ->whereNotNull('completed_at')
                 ->get();
             foreach ($peopleCompleted as $person) {
                 $completedAlready[$person->person_id] = true;
@@ -263,7 +290,7 @@ class Moodle
         foreach ($students as $student) {
             $person = $student->person;
 
-            if (isset($completedAlready[$person->id]) || $person->lms_course_id != $courseId) {
+            if (isset($completedAlready[$person->id])) {
                 continue;
             }
 
@@ -295,26 +322,25 @@ class Moodle
             if ($finished) {
                 $completed = Carbon::createFromTimestamp($finished);
                 if ($completed->year != $year) {
-                    // Not completed in the current year, skip it.
+                    // Not completed in the course year.
                     continue;
                 }
             } else {
                 $completed = now();
             }
 
-            $ot = new PersonOnlineTraining([
-                'person_id' => $person->id,
-                'type' => PersonOnlineTraining::MOODLE,
-                'completed_at' => $completed,
-            ]);
-            $ot->auditReason = 'course completion';
-            $ot->save();
+            $poc = PersonOnlineCourse::firstOrNewForPersonYear($person->id, $year, $course->position_id);
+            $poc->online_course_id = $course->id;
+            $poc->completed_at = $completed;
+            $poc->auditReason = 'course completion';
+            $poc->saveWithoutValidation();
+
             /*
              * Uncomment when a better solution to preventing spamming from multiple servers (aka the on playa server
              * fired up during the off season) is found.
             if (!in_array($person->status, Person::LOCKED_STATUSES)
                 && !in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
-                mail_to_person($person, new OnlineTrainingCompletedMail($person));
+                mail_to_person($person, new OnlineCourseCompletedMail($person));
             }
             */
         }
@@ -340,20 +366,13 @@ class Moodle
             return [];
         }
 
-        $people = Person::select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id', 'person_event.lms_course_id')
-            ->leftJoin('person_event', function ($j) {
-                $j->on('person_event.person_id', 'person.id');
-                $j->where('person_event.year', current_year());
-            })
-            ->whereIntegerInRaw('person.id', $ids)
-            ->get();
+        $peopleById = DB::table('person')
+            ->select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id')
+            ->get()
+            ->keyBy('id');
 
 
         $found = [];
-        $peopleById = [];
-        foreach ($people as $person) {
-            $peopleById[(int)$person->id] = $person;
-        }
 
         foreach ($users as $row) {
             if (empty($row->idnumber)) {
@@ -483,13 +502,14 @@ class Moodle
      * Enroll a person in a Moodle course
      *
      * @param Person $person person to enroll
-     * @param int $courseId course to enroll into
+     * @param PersonOnlineCourse $poc
+     * @param OnlineCourse $course
      * @throws MoodleDownForMaintenanceException
      */
 
-    public function enrollPerson(Person $person, PersonEvent $pe, int $courseId): void
+    public function enrollPerson(Person $person, PersonOnlineCourse $poc, OnlineCourse $course): void
     {
-        if ($pe->lms_course_id == $courseId) {
+        if ($poc->online_course_id == $course->id) {
             // Person already enrolled
             return;
         }
@@ -498,16 +518,17 @@ class Moodle
             'enrolments' => [
                 [
                     'userid' => $person->lms_id,
-                    'courseid' => $courseId,
+                    'courseid' => $course->course_id,
                     'roleid' => (int)setting('MoodleStudentRoleID', true),
                 ]
             ]
         ]);
 
-        $pe->lms_course_id = $courseId;
-        $pe->saveWithoutValidation();
+        $poc->online_course_id = $course->id;
+        $poc->enrolled_at = now();
+        $poc->saveWithoutValidation();
 
-        ActionLog::record(Auth::user(), 'lms-enrollment', '', ['course_id' => $courseId], $person->id);
+        ActionLog::record(Auth::user(), 'lms-enrollment', '', ['lms_course_id' => $course->course_id, 'online_course_id' => $course->id], $person->id);
     }
 
     /**
@@ -528,9 +549,7 @@ class Moodle
         foreach ($students as $student) {
             if (!empty($student->idnumber)) {
                 $person = Person::find($student->idnumber);
-                if ($person
-                    && $person->lms_id == $student->id
-                    && $person->lms_username == $student->username) {
+                if ($person && $person->lms_id == $student->id && $person->lms_username == $student->username) {
                     // Looks good!
                     continue;
                 }
@@ -545,9 +564,7 @@ class Moodle
             $person->lms_username = $student->username;
             $person->auditReason = 'moodle user id association';
             $person->saveWithoutValidation();
-            $pe = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
-            $pe->lms_course_id = $courseId;
-            $pe->saveWithoutValidation();
+
             $clubhouseId = $person->id;
             $this->updateUser([
                 'id' => $student->id,

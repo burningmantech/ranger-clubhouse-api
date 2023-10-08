@@ -83,24 +83,25 @@ class PersonAdvancedSearch
                     $j->where('person_event.year', $year);
                 }
             );
-            $sql->leftJoin('person_online_training',
+            $sql->leftJoin('person_online_course',
                 function ($j) use ($year) {
-                    $j->on('person_online_training.person_id', 'person.id');
-                    $j->whereYear('person_online_training.completed_at', $year);
+                    $j->on('person_online_course.person_id', 'person.id');
+                    $j->where('person_online_course.year', $year);
+                    $j->where('person_online_course.position_id', Position::TRAINING);
                 }
             );
             $sql->addSelect(
-                'person_event.lms_enrolled_at as online_course_started',
-                'person_online_training.completed_at as online_course_finished',
+                'person_online_course.enrolled_at as online_course_started',
+                'person_online_course.completed_at as online_course_finished',
             );
             if ($onlineCourseStatus == 'missing') {
                 // Person may have been directly enrolled in Moodle.. i.e., no enrollment date but has a finish date.
-                $sql->whereNull('person_event.lms_enrolled_at');
-                $sql->whereNull('person_online_training.completed_at');
+                $sql->whereNull('person_online_course.enrolled_at');
+                $sql->whereNull('person_online_course.completed_at');
             } else if ($onlineCourseStatus == 'started') {
-                $sql->whereNotNull('person_event.lms_enrolled_at');
+                $sql->whereNotNull('person_online_course.enrolled_at');
             } else if ($onlineCourseStatus == 'completed') {
-                $sql->whereNotNull('person_online_training.completed_at');
+                $sql->whereNotNull('person_online_course.completed_at');
             }
         }
 

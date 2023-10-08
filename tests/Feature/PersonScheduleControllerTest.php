@@ -7,7 +7,7 @@ use App\Jobs\TrainingSignupEmailJob;
 use App\Mail\TrainingSessionFullMail;
 use App\Models\EventDate;
 use App\Models\Person;
-use App\Models\PersonOnlineTraining;
+use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
@@ -46,7 +46,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->setting('OnlineTrainingDisabledAllowSignups', false);
+        $this->setting('OnlineCourseDisabledAllowSignups', false);
         $this->signInUser();
 
         // scheduling ends up sending lots of emails..
@@ -96,7 +96,7 @@ class PersonScheduleControllerTest extends TestCase
         );
     }
 
-    private function setupTrainingSlots()
+    private function setupTrainingSlots(): void
     {
         $year = $this->year;
 
@@ -117,7 +117,7 @@ class PersonScheduleControllerTest extends TestCase
         }
     }
 
-    private function setupDirtSlots()
+    private function setupDirtSlots(): void
     {
         $year = $this->year;
         $this->dirtSlots = [];
@@ -137,7 +137,7 @@ class PersonScheduleControllerTest extends TestCase
         }
     }
 
-    private function setupGreenDotTrainingSlots()
+    private function setupGreenDotTrainingSlots(): void
     {
         $year = $this->year;
 
@@ -187,7 +187,7 @@ class PersonScheduleControllerTest extends TestCase
 
     public function setupRequirements($person): void
     {
-        $this->markOnlineTrainingPassed($person);
+        $this->markOnlineCoursePassed($person);
         $this->setupPhotoStatus(PersonPhoto::APPROVED, $person);
     }
 
@@ -206,13 +206,15 @@ class PersonScheduleControllerTest extends TestCase
         $person->saveWithoutValidation();
     }
 
-    private function markOnlineTrainingPassed($person): void
+    private function markOnlineCoursePassed($person): void
     {
-        $ot = new PersonOnlineTraining;
-        $ot->person_id = $person->id;
-        $ot->completed_at = now();
-        $ot->type = PersonOnlineTraining::MOODLE;
-        $ot->saveWithoutValidation();
+        $poc = new PersonOnlineCourse;
+        $poc->person_id = $person->id;
+        $poc->completed_at = now();
+        $poc->position_id = Position::TRAINING;
+        $poc->type = PersonOnlineCourse::TYPE_MOODLE;
+        $poc->year = now()->year;
+        $poc->saveWithoutValidation();
     }
 
 
@@ -913,13 +915,13 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
-     * Allow an active, who completed Online Training, and has a photo to sign up.
+     * Allow an active, who completed Online Course, and has a photo to sign up.
      */
 
-    public function testAllowActiveWhoCompletedOnlineTrainingAndHasPhoto()
+    public function testAllowActiveWhoCompletedOnlineCourseAndHasPhoto()
     {
         $this->setupPhotoStatus('approved');
-        $this->markOnlineTrainingPassed($this->user);
+        $this->markOnlineCoursePassed($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -934,12 +936,12 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
-     * Deny an active, who completed Online Training, and has no photo.
+     * Deny an active, who completed Online Course, and has no photo.
      */
 
     public function testDenyActiveWithNoPhoto()
     {
-        $this->markOnlineTrainingPassed($this->user);
+        $this->markOnlineCoursePassed($this->user);
 
         $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
             'year' => $this->year
@@ -955,10 +957,10 @@ class PersonScheduleControllerTest extends TestCase
     }
 
     /*
-     * Deny an active, who has photo, and did not complete Online Training
+     * Deny an active, who has photo, and did not complete the Online Course
      */
 
-    public function testDenyActiveWhoDidNotCompleteOnlineTraining()
+    public function testDenyActiveWhoDidNotCompleteOnlineCourse()
     {
         $this->setupPhotoStatus('approved');
 
@@ -982,7 +984,7 @@ class PersonScheduleControllerTest extends TestCase
         public function testDenyActiveWhoDidNotSignBehavioralAgreement()
         {
             $photoMock = $this->setupPhotoStatus('approved');
-            $mrMock = $this->markOnlineTrainingPassed(true);
+            $mrMock = $this->markOnlineCoursePassed(true);
             $this->user->update([ 'behavioral_agreement' => false ]);
             $response = $this->json('GET', "person/{$this->user->id}/schedule/permission", [
                    'year' => $this->year
@@ -1026,14 +1028,14 @@ class PersonScheduleControllerTest extends TestCase
     */
 
     /*
-     * Allow an auditor, who completed Online Training, and has no photo to sign up.
+     * Allow an auditor, who completed the Online Course, and has no photo to sign up.
      */
 
-    public function testAllowAuditorWithNoPhotoAndCompletedOnlineTraining()
+    public function testAllowAuditorWithNoPhotoAndCompletedOnlineCourse()
     {
         $person = Person::factory()->create(['status' => Person::AUDITOR, 'pi_reviewed_for_dashboard_at' => now()]);
         $this->actingAs($person);
-        $this->markOnlineTrainingPassed($person);
+        $this->markOnlineCoursePassed($person);
 
         $response = $this->json('GET', "person/{$person->id}/schedule/permission", [
             'year' => $this->year

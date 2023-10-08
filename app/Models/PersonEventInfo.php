@@ -15,19 +15,21 @@ class PersonEventInfo extends ApihouseResult
     public bool $showers = false;
     public bool $radio_info_available = false;
 
-    public bool $online_training_passed = false;
-    public ?string $online_training_date = null;
+    public bool $online_course_passed = false;
+    public ?string $online_course_date = null;
 
     public mixed $vehicles;
 
     public bool $is_binary = false;
-    public bool $online_training_only = false;
+    public bool $online_course_only = false;
 
     public bool $may_request_stickers = false;
     public bool $org_vehicle_insurance = false;
     public bool $signed_motorpool_agreement = false;
 
     public ?string $event_period = '';
+
+    public ?int $online_course_id;
 
     /*
      * Gather all information related to a given year for a person
@@ -65,9 +67,9 @@ class PersonEventInfo extends ApihouseResult
 
         if ($info->radio_info_available) {
             $radios = Provision::where('type', Provision::EVENT_RADIO)
-                        ->where('person_id', $personId)
-                        ->whereIn('status', [ Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
-                        ->get();
+                ->where('person_id', $personId)
+                ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
+                ->get();
             if ($radios->isNotEmpty()) {
                 $info->radio_eligible = true;
                 $info->radio_max = $radios->max('item_count') ?? 1;
@@ -87,25 +89,24 @@ class PersonEventInfo extends ApihouseResult
         if ($bmid) {
             $info->meals = $bmid->effectiveMeals();
             $info->showers = $bmid->showers || $bmid->earned_showers || $bmid->allocated_showers;
-         } else {
+        } else {
             $info->meals = '';
             $info->showers = false;
         }
 
         $info->event_period = EventDate::retrieveEventOpsPeriod();
 
-        $ot = PersonOnlineTraining::findForPersonYear($personId, $year);
-
         if (in_array($person->status, Person::ACTIVE_STATUSES)) {
             $info->is_binary = Timesheet::isPersonBinary($person);
-            $info->online_training_only = setting($info->is_binary ? 'OnlineTrainingOnlyForBinaries' : 'OnlineTrainingOnlyForVets');
+            $info->online_course_only = setting($info->is_binary ? 'OnlineCourseOnlyForBinaries' : 'OnlineCourseOnlyForVets');
         }
 
-        if ($ot) {
-            $info->online_training_passed = true;
-            $info->online_training_date = (string)$ot->completed_at;
+        $poc = PersonOnlineCourse::findForPersonYear($personId, $year, Position::TRAINING);
+        if ($poc && $poc->completed_at) {
+            $info->online_course_passed = true;
+            $info->online_course_date = (string)$poc->completed_at;
         } else {
-            $info->online_training_passed = false;
+            $info->online_course_passed = false;
         }
 
         $info->vehicles = Vehicle::findForPersonYear($personId, $year);
