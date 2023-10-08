@@ -21,6 +21,7 @@ class OnlineCourse extends ApiModel
     const COURSE_FOR_NEW = 'new';
 
     public $fillable = [
+        'active',
         'course_for',
         'course_id',
         'name',
