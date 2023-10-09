@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Person;
 use Illuminate\Console\Command;
+use JetBrains\PhpStorm\NoReturn;
 
 class AccountSnatchCommand extends Command
 {
@@ -26,7 +27,7 @@ class AccountSnatchCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    #[NoReturn] public function handle()
     {
         if (config('clubhouse.DeploymentEnvironment') == 'Production') {
             $this->error('This command is not available in the production environment.');
@@ -62,7 +63,7 @@ class AccountSnatchCommand extends Command
         }
 
         $person->changePassword('abcdef');
-        $this->info('Password was successfully set.');
+        $this->info('Password was successfully set. Email '.$person->email);
         exit(0);
     }
 }

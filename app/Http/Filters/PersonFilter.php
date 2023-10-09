@@ -70,14 +70,17 @@ class PersonFilter
         'home_phone',
         'alt_phone',
 
-        'tshirt_swag_id',
-        'tshirt_secondary_swag_id',
-        'long_sleeve_swag_id',
 
         'languages',
         'reviewed_pi_at',
         'pi_reviewed_for_dashboard_at',
         'has_reviewed_pi', // pseudo field
+    ];
+
+    const CLOTHING_FIELDS = [
+        'tshirt_swag_id',
+        'tshirt_secondary_swag_id',
+        'long_sleeve_swag_id',
     ];
 
     const HQ_INFO = [
@@ -148,53 +151,55 @@ class PersonFilter
     // 3: Only allowed if LoginManagementOnPlayaEnabled is turned on.
 
     const FIELDS_SERIALIZE = [
-        [ self::NAME_GENDER_FIELDS ],
-        [ self::STATUS_FIELDS ],
-        [ self::ACCOUNT_FIELDS ],
-        [ self::CALLSIGNS_FIELDS ],
-        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
-        [ self::EMAIL_FIELDS, true, [ Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC ] ],
-        [ self::PERSONAL_INFO_FIELDS, true, [ Role::VIEW_PII, Role::VC ] ],
-        [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ] ],
-        [ self::AGREEMENT_FIELDS ],
-        [ self::EVENT_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS ] ],
-        [ self::BMID_FIELDS, true, [ Role::VIEW_PII,  Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS ] ],
-        [ self::LMS_FIELDS, false, [ Role::ADMIN ]],
+        [self::NAME_GENDER_FIELDS],
+        [self::STATUS_FIELDS],
+        [self::ACCOUNT_FIELDS],
+        [self::CALLSIGNS_FIELDS],
+        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER]],
+        [self::EMAIL_FIELDS, true, [Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]],
+        [self::PERSONAL_INFO_FIELDS, true, [Role::VIEW_PII, Role::VC]],
+        [self::CLOTHING_FIELDS, true, [Role::VIEW_PII, Role::VC, Role::EDIT_CLOTHING]],
+        [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
+        [self::AGREEMENT_FIELDS],
+        [self::EVENT_FIELDS, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS]],
+        [self::BMID_FIELDS, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS]],
+        [self::LMS_FIELDS, false, [Role::ADMIN]],
         // Note: self is not allowed to see mentor notes
-        [ self::INTAKE_FIELDS, false, [ Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE ] ],
-        [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
-        [ self::SMS_ADMIN_FIELDS, true, [ Role::ADMIN ]],
-        [ self::RANGER_ADMIN_FIELDS ],
-        [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
-        [ self::EMERGENCY_CONTACT, true, [ Role::VIEW_PII, Role::VC ], true ],
+        [self::INTAKE_FIELDS, false, [Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE]],
+        [self::SMS_FIELDS, true, [Role::ADMIN]],
+        [self::SMS_ADMIN_FIELDS, true, [Role::ADMIN]],
+        [self::RANGER_ADMIN_FIELDS],
+        [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
+        [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
     ];
 
     const FIELDS_DESERIALIZE = [
-        [ self::NAME_GENDER_FIELDS, true, [ Role::VC ] ],
-        [ self::ACCOUNT_FIELDS, false, [ Role::ADMIN ] ],
-        [ self::MESSAGE_FIELDS, false, [ Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER ]],
-        [ self::STATUS_FIELDS, false, [  Role::MENTOR, Role::VC ] ],
-        [ self::CALLSIGNS_FIELDS, false, [ Role::MENTOR, Role::VC] ],
-        [ self::EMAIL_FIELDS, true, [ Role::VC ] ],
-        [ self::PERSONAL_INFO_FIELDS, true, [ Role::VC ] ],
-        [ self::HQ_INFO, true, [ Role::MANAGE, Role::VIEW_PII, Role::VC ]],
-        [ self::AGREEMENT_FIELDS, true, [ Role::ADMIN ]],
-        [ self::EVENT_FIELDS, false, [ Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR ]],
-        [ self::BMID_FIELDS, true, [  Role::EDIT_BMIDS ] ],
-        [ self::LMS_FIELDS, false, [ Role::ADMIN ]],
-        [ self::INTAKE_FIELDS, false, [ Role::INTAKE, Role::VC ] ],
-        [ self::SMS_FIELDS, true, [ Role::ADMIN ]],
-        [ self::SMS_ADMIN_FIELDS, false, [ Role::ADMIN ]],
-        [ self::PERSONNEL_FIELDS, false, [ Role::ADMIN ]],
-        [ self::RANGER_ADMIN_FIELDS, false, [ Role::ADMIN ]],
-        [ self::EMERGENCY_CONTACT, true, [ Role::VIEW_PII, Role::VC ], true],
+        [self::NAME_GENDER_FIELDS, true, [Role::VC]],
+        [self::ACCOUNT_FIELDS, false, [Role::ADMIN]],
+        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER]],
+        [self::STATUS_FIELDS, false, [Role::MENTOR, Role::VC]],
+        [self::CALLSIGNS_FIELDS, false, [Role::MENTOR, Role::VC]],
+        [self::EMAIL_FIELDS, true, [Role::VC]],
+        [self::PERSONAL_INFO_FIELDS, true, [Role::VC]],
+        [self::CLOTHING_FIELDS, true, [Role::VC, Role::EDIT_CLOTHING]],
+        [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
+        [self::AGREEMENT_FIELDS, true, [Role::ADMIN]],
+        [self::EVENT_FIELDS, false, [Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
+        [self::BMID_FIELDS, true, [Role::EDIT_BMIDS]],
+        [self::LMS_FIELDS, false, [Role::ADMIN]],
+        [self::INTAKE_FIELDS, false, [Role::INTAKE, Role::VC]],
+        [self::SMS_FIELDS, true, [Role::ADMIN]],
+        [self::SMS_ADMIN_FIELDS, false, [Role::ADMIN]],
+        [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
+        [self::RANGER_ADMIN_FIELDS, false, [Role::ADMIN]],
+        [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
     ];
 
     public function buildFields(array $fieldGroups, $authorizedUser): array
     {
         $onplaya = setting('LoginManageOnPlayaEnabled');
 
-        $fields = [ ];
+        $fields = [];
 
         if ($authorizedUser) {
             $isUser = ($this->record->id == $authorizedUser->id);
@@ -210,7 +215,7 @@ class PersonFilter
             if (count($group) == 1) {
                 $allow = true;
             } else {
-                if ($isUser && $group[1] == true) {
+                if ($isUser && $group[1]) {
                     $allow = true;
                 } else {
                     $allow = false;
