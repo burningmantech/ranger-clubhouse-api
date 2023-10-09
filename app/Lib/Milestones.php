@@ -165,6 +165,7 @@ class Milestones
             // Timesheets!
             if (setting('TimesheetCorrectionEnable') || $person->hasRole(Role::TIMECARD_YEAR_ROUND)) {
                 $didWork = $milestones['did_work'] = Timesheet::didPersonWork($person->id, $year);
+
                 if ($didWork) {
                     $milestones['timesheets_unverified'] = Timesheet::countUnverifiedForPersonYear($person->id, $year);
                     $milestones['timesheet_confirmed'] = $event->timesheet_confirmed;
