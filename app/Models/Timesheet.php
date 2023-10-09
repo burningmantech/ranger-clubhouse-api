@@ -585,7 +585,7 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Did the given person work in a given year?
+     * Did the given person work (or walked an Alpha shift) in a given year?
      *
      * @param int $personId
      * @param int $year
@@ -596,7 +596,7 @@ class Timesheet extends ApiModel
         return DB::table('timesheet')
             ->where('person_id', $personId)
             ->whereYear('on_duty', $year)
-            ->whereNotIn('position_id', [Position::TRAINING, Position::ALPHA])
+            ->where('position_id', '!=', Position::TRAINING)
             ->limit(1)
             ->exists();
     }
