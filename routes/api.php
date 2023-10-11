@@ -119,7 +119,6 @@ Route::group([
     Route::resource('document', 'DocumentController');
 
     Route::get('callsigns', 'CallsignsController@index');
-    Route::get('handles', 'HandleController@index');
 
     Route::post('certification/people', 'CertificationController@peopleReport');
     Route::resource('certification', 'CertificationController');
@@ -143,6 +142,9 @@ Route::group([
     Route::get('event-dates/year', 'EventDatesController@showYear');
     Route::resource('event-dates', 'EventDatesController');
 
+    Route::post('handle-reservation/expire', 'HandleReservationController@expire');
+    Route::get('handle-reservation/handles', 'HandleReservationController@handles');
+    Route::post('handle-reservation/upload', 'HandleReservationController@upload');
     Route::resource('handle-reservation', 'HandleReservationController');
 
     Route::get('intake', 'IntakeController@index');

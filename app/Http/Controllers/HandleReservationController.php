@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\HandleReservationUpload;
+use App\Lib\PhoneticAlphabet;
 use App\Models\HandleReservation;
+use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class HandleReservationController extends ApiController
 {
@@ -18,14 +24,20 @@ class HandleReservationController extends ApiController
     public function index(): JsonResponse
     {
         $this->authorize('viewAny', HandleReservation::class);
-        return $this->success(HandleReservation::findAll(), null, 'handle_reservation');
+        $params = request()->validate([
+            'active' => 'sometimes|boolean',
+            'reservation_type' => 'sometimes|string',
+            'twii_year'=> 'sometimes|integer'
+        ]);
+
+        return $this->success(HandleReservation::findForQuery($params), null, 'handle_reservation');
     }
 
     /**
      * Store a newly created handle reservation in the database.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
     public function store(): JsonResponse
     {
@@ -58,7 +70,7 @@ class HandleReservationController extends ApiController
      *
      * @param HandleReservation $handleReservation
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
     public function update(HandleReservation $handleReservation): JsonResponse
     {
@@ -85,4 +97,120 @@ class HandleReservationController extends ApiController
         $handleReservation->delete();
         return $this->restDeleteSuccess();
     }
+
+    /**
+     * Bulk upload handles
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException|ValidationException
+     */
+
+    public function upload(): JsonResponse
+    {
+        $this->authorize('upload', HandleReservation::class);
+
+        $params = request()->validate([
+            'handles' => 'required|string',
+            'reason' => 'sometimes|string',
+            'expires_on' => 'sometimes|date',
+            'reservation_type' => [
+                'required',
+                Rule::in(
+                    HandleReservation::TYPE_BRC_TERM,
+                    HandleReservation::TYPE_DECEASED_PERSON,
+                    HandleReservation::TYPE_DISMISSED_PERSON,
+                    HandleReservation::TYPE_RADIO_JARGON,
+                    HandleReservation::TYPE_RANGER_TERM,
+                    HandleReservation::TYPE_SLUR,
+                    HandleReservation::TYPE_TWII_PERSON,
+                    HandleReservation::TYPE_UNCATEGORIZED
+                )
+            ],
+            'twii_year' => 'sometimes|integer|required_if:reservation_type,' . HandleReservation::TYPE_TWII_PERSON,
+            'commit' => 'required|boolean',
+        ]);
+
+        return response()->json(HandleReservationUpload::execute(
+            $params['handles'],
+            $params['reservation_type'],
+            $params['expires_on'] ?? null,
+            $params['reason'] ?? '',
+            $params['twii_year'] ?? null,
+            $params['commit'],
+        ));
+    }
+
+    /**
+     * Expire handles
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function expire() : JsonResponse
+    {
+        $this->authorize('expire', HandleReservation::class);
+
+        $rows = HandleReservation::findForQuery([ 'expired' => true ]);
+        foreach ($rows as $row) {
+            $row->auditReason = 'expire handle';
+            $row->delete();
+        }
+
+        return response()->json([ 'expired' => $rows->count() ]);
+    }
+
+    const EXCLUDE_STATUSES = [Person::PAST_PROSPECTIVE, Person::AUDITOR];
+
+    /**
+     * List all handles. Used by the Handle Checker.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function handles(): JsonResponse
+    {
+        $this->authorize('handles', HandleReservation::class);
+
+        $result = [];
+        $rangerHandles = DB::table('person')
+            ->select('id', 'callsign', 'status', 'vintage')
+            ->whereNotIn('status', self::EXCLUDE_STATUSES)
+            ->orWhere('vintage', true)
+            ->orderBy('status')
+            ->orderBy('callsign')
+            ->get();
+
+        foreach ($rangerHandles as $ranger) {
+            $result[] = $this->buildHandle(
+                $ranger->callsign,
+                $ranger->status,
+                ['id' => $ranger->id, 'status' => $ranger->status, 'vintage' => $ranger->vintage]
+            );
+        }
+
+        $handleReservations = HandleReservation::findForQuery(['active' => true]);
+        foreach ($handleReservations as $reservation) {
+            $result[] = $this->buildHandle($reservation->handle, $reservation->reservation_type);
+        }
+
+        foreach (PhoneticAlphabet::WORDS as $word) {
+            $result[] = $this->buildHandle($word, HandleReservation::TYPE_PHONETIC_ALPHABET);
+        }
+
+        return response()->json(['handles' => $result]);
+    }
+
+    private function buildHandle(string $name, string $entityType, array $person = null): array
+    {
+        $result = ['name' => $name, 'entityType' => $entityType];
+        if ($person) {
+            $result['personId'] = $person['id'];
+            $result['personStatus'] = $person['status'];
+            $result['personVintage'] = $person['vintage'];
+        }
+        return $result;
+    }
+
 }
