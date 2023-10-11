@@ -118,6 +118,8 @@ class HandleReservationController extends ApiController
                     HandleReservation::TYPE_BRC_TERM,
                     HandleReservation::TYPE_DECEASED_PERSON,
                     HandleReservation::TYPE_DISMISSED_PERSON,
+                    HandleReservation::TYPE_OBSCENE,
+                    HandleReservation::TYPE_PHONETIC_ALPHABET,
                     HandleReservation::TYPE_RADIO_JARGON,
                     HandleReservation::TYPE_RANGER_TERM,
                     HandleReservation::TYPE_SLUR,
