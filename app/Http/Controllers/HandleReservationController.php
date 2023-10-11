@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Lib\HandleReservationUpload;
-use App\Lib\PhoneticAlphabet;
 use App\Models\HandleReservation;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -27,7 +26,7 @@ class HandleReservationController extends ApiController
         $params = request()->validate([
             'active' => 'sometimes|boolean',
             'reservation_type' => 'sometimes|string',
-            'twii_year'=> 'sometimes|integer'
+            'twii_year' => 'sometimes|integer'
         ]);
 
         return $this->success(HandleReservation::findForQuery($params), null, 'handle_reservation');
@@ -147,17 +146,17 @@ class HandleReservationController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function expire() : JsonResponse
+    public function expire(): JsonResponse
     {
         $this->authorize('expire', HandleReservation::class);
 
-        $rows = HandleReservation::findForQuery([ 'expired' => true ]);
+        $rows = HandleReservation::findForQuery(['expired' => true]);
         foreach ($rows as $row) {
             $row->auditReason = 'expire handle';
             $row->delete();
         }
 
-        return response()->json([ 'expired' => $rows->count() ]);
+        return response()->json(['expired' => $rows->count()]);
     }
 
     const EXCLUDE_STATUSES = [Person::PAST_PROSPECTIVE, Person::AUDITOR];
@@ -186,25 +185,25 @@ class HandleReservationController extends ApiController
             $result[] = $this->buildHandle(
                 $ranger->callsign,
                 $ranger->status,
+                null,
                 ['id' => $ranger->id, 'status' => $ranger->status, 'vintage' => $ranger->vintage]
             );
         }
 
         $handleReservations = HandleReservation::findForQuery(['active' => true]);
         foreach ($handleReservations as $reservation) {
-            $result[] = $this->buildHandle($reservation->handle, $reservation->reservation_type);
-        }
-
-        foreach (PhoneticAlphabet::WORDS as $word) {
-            $result[] = $this->buildHandle($word, HandleReservation::TYPE_PHONETIC_ALPHABET);
+            $result[] = $this->buildHandle($reservation->handle, $reservation->reservation_type, $reservation->reason);
         }
 
         return response()->json(['handles' => $result]);
     }
 
-    private function buildHandle(string $name, string $entityType, array $person = null): array
+    private function buildHandle(string $name, string $entityType, ?string $reason, array $person = null): array
     {
         $result = ['name' => $name, 'entityType' => $entityType];
+        if (!empty($reason)) {
+            $result['reason'] = $reason;
+        }
         if ($person) {
             $result['personId'] = $person['id'];
             $result['personStatus'] = $person['status'];

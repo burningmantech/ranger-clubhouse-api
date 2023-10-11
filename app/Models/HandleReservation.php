@@ -21,14 +21,13 @@ class HandleReservation extends ApiModel
     const TYPE_BRC_TERM = 'brc_term';
     const TYPE_DECEASED_PERSON = 'deceased_person';
     const TYPE_DISMISSED_PERSON = 'dismissed_person';
+    const TYPE_OBSCENE = 'obscene';
+    const TYPE_PHONETIC_ALPHABET = 'phonetic-alphabet';
     const TYPE_RADIO_JARGON = 'radio_jargon';
     const TYPE_RANGER_TERM = 'ranger_term';
     const TYPE_SLUR = 'slur';
     const TYPE_TWII_PERSON = 'twii_person';
     const TYPE_UNCATEGORIZED = 'uncategorized';
-
-    // Not a record type, used for the handle checker
-    const TYPE_PHONETIC_ALPHABET = 'phonetic-alphabet';
 
     protected $fillable = [
         'handle',

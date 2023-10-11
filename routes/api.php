@@ -119,7 +119,7 @@ Route::group([
     Route::resource('document', 'DocumentController');
 
     Route::get('callsigns', 'CallsignsController@index');
-
+ 
     Route::post('certification/people', 'CertificationController@peopleReport');
     Route::resource('certification', 'CertificationController');
 
