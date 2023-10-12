@@ -145,7 +145,6 @@ class PersonController extends ApiController
 
     /**
      * Create a person
-     *  TODO
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -153,8 +152,15 @@ class PersonController extends ApiController
 
     public function store(): JsonResponse
     {
-        $this->authorize('store');
-        return response()->json(['message' => 'not implemented'], 501);
+        $this->authorize('store', Person::class);
+        $person = new Person;
+        $this->fromRest($person);
+
+        if (!$person->save()) {
+            return $this->restError($person);
+        }
+
+        return $this->success($person);
     }
 
     /**

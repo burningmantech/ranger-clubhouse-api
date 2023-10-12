@@ -335,7 +335,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'pronouns_custom' => 'sometimes|string|nullable',
 
         'home_phone' => 'sometimes|string|max:25',
-        'alt_phone' => 'sometimes|string|nullable|max:25',
+        'alt_phone' => 'sometimes|string|max:25',
     ];
 
     const ADDRESS_VALIDATIONS = [
@@ -353,6 +353,13 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $rules = self::ALL_VALIDATIONS;
+
+    protected $attributes = [
+        'street2' => '',
+        'mi' => '',
+        'alt_phone' => '',
+        'gender_identity' => self::GENDER_NONE,
+    ];
 
     public bool $has_reviewed_pi = false;
 
@@ -1435,6 +1442,22 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     {
         return PhoneAttribute::make();
     }
+
+    public function street2(): Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
+    public function mi():Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
+    public function apt(): Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
 
     /**
      * Spell out all the numbers in a string.

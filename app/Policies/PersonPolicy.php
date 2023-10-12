@@ -71,10 +71,11 @@ class PersonPolicy
         );
     }
 
-    /*
+    /**
      * Determine whether the user can create people.
      */
-    public function create(Person $user): bool
+
+    public function store(Person $user): bool
     {
         return $user->isAdmin();
     }
