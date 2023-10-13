@@ -169,7 +169,15 @@ class TicketingController extends ApiController
     }
 
     /**
-     * Update the delivery method for all available tickets
+     * Set the delivery method for either:
+     *
+     * - ALL claimed SPT, Staff Credentials, and Vehicle passes. (tickets + vps are processed together and special
+     *   care is taken for Staff Credentials versus SPTs)
+     *     OR
+     * - Set the delivery method for a single Special Type access document (Gift or LSD)
+     *
+     * Note: As of 2022, the mailing address is no longer required. The information is
+     * collected from the user when checking out thru the main ticketing website.
      *
      * @param Person $person
      * @return JsonResponse
@@ -178,8 +186,6 @@ class TicketingController extends ApiController
 
     public function delivery(Person $person): JsonResponse
     {
-        $this->authorize('delivery', [AccessDocument::class, $person->id]);
-
         $params = request()->validate([
             'delivery_method' => 'required|string',
             'street' => 'sometimes|string|nullable',
@@ -187,9 +193,26 @@ class TicketingController extends ApiController
             'state' => 'sometimes|string|nullable',
             'postal_code' => 'sometimes|string|nullable',
             'country' => 'sometimes|string|nullable',
+            'special_document_id' => 'sometimes|integer|exists:access_document,id'
         ]);
 
-        $tickets = AccessDocument::findAllAvailableDeliverablesForPerson($person->id);
+        $specialTicketId = $params['special_ticket_id'] ?? null;
+        if ($specialTicketId) {
+            $specialTicket = AccessDocument::findOrFail($specialTicketId);
+            $this->authorize('deliverySpecialDocument', $specialTicket);
+            if ($specialTicket->isSpecialDocument()) {
+                throw new InvalidArgumentException("Access document is not a Special Type document");
+            }
+            if ($specialTicket->status != AccessDocument::QUALIFIED || $specialTicketId->status != AccessDocument::CLAIMED) {
+                throw new InvalidArgumentException("Access document is not qualified nor claimed.");
+            }
+            $tickets = [$specialTicket];
+            unset($params['special_document_id']);
+        } else {
+            $this->authorize('delivery', [AccessDocument::class, $person->id]);
+            $tickets = AccessDocument::findAllAvailableDeliverablesForPerson($person->id);
+        }
+
         foreach ($tickets as $ticket) {
             $ticket->fill($params);
             $ticket->auditReason = 'Delivery update';
