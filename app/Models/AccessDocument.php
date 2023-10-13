@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
+use App\Attributes\NullIfEmptyAttribute;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -440,7 +443,7 @@ class AccessDocument extends ApiModel
      */
 
     public static function updateWAPsForPerson(int  $personId, Carbon|string|null $accessDate,
-                                               bool $accessAnyTime, string $reason)
+                                               bool $accessAnyTime, string $reason): void
     {
         if (empty($accessDate)) {
             $accessDate = null;
@@ -551,33 +554,32 @@ class AccessDocument extends ApiModel
 
     /**
      * Setter for expiry_date. Fix the date if it's only a year.
-     *
-     * @param $date
      */
 
-    public function setExpiryDateAttribute($date)
+    public function expiryDate(): Attribute
     {
-        if (is_numeric($date)) {
-            $date = (string)$date;
-        }
+        return Attribute::make(
+            set: function (?string $date) {
+                if (is_numeric($date)) {
+                    $date = (string)$date;
+                }
 
-        if (strlen($date) == 4) {
-            $date .= "-09-15 00:00:00";
-        }
+                if (strlen($date) == 4) {
+                    $date .= "-09-15 00:00:00";
+                }
 
-        $this->attributes['expiry_date'] = $date;
+                return $date;
+            }
+        );
     }
 
     /**
-     * Setter for access_date. Fix up the date to NULL (aka unspecified entry time)
-     * if passed an empty value.
-     *
-     * @param $date
+     * Setter for access_date. Fix up the date to NULL (aka unspecified entry time) if passed an empty value.
      */
 
-    public function setAccessDateAttribute($date)
+    public function accessDate(): Attribute
     {
-        $this->attributes['access_date'] = empty($date) ? null : $date;
+        return NullIfEmptyAttribute::make();
     }
 
     /**
@@ -643,6 +645,29 @@ class AccessDocument extends ApiModel
         return in_array($this->type, self::SPECIAL_TICKET_TYPES);
     }
 
+    /**
+     * Is this a special Ticket Or VP?
+     *
+     * @return bool
+     */
+
+    public function isSpecialDocument(): bool
+    {
+        return $this->isSpecialTicket() || $this->isSpecialVP();
+    }
+
+    /**
+     * Is this a Special Vehicle Pass
+     *
+     * @return bool
+     */
+
+    public function isSpecialVP(): bool
+    {
+        return in_array($this->type, self::SPECIAL_VP_TYPES);
+    }
+
+
     public function isAvailable(): bool
     {
         return $this->status == AccessDocument::QUALIFIED
@@ -660,34 +685,34 @@ class AccessDocument extends ApiModel
         return self::SHORT_TICKET_LABELS[$this->type] ?? $this->type;
     }
 
-    public function setStreet1Attribute($value)
+    public function street1(): Attribute
     {
-        $this->attributes['street1'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setStreet2Attribute($value)
+    public function street2(): Attribute
     {
-        $this->attributes['street2'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setCityAttribute($value)
+    public function city(): Attribute
     {
-        $this->attributes['city'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setStateAttribute($value)
+    public function state(): Attribute
     {
-        $this->attributes['state'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setPostalCodeAttribute($value)
+    public function postalCode(): Attribute
     {
-        $this->attributes['postal_code'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setCountryAttribute($value)
+    public function country(): Attribute
     {
-        $this->attributes['country'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
     /**

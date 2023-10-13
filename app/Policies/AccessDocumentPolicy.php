@@ -45,7 +45,7 @@ class AccessDocumentPolicy
 
 
     /**
-     * A normal user may not create access doucments
+     * A normal user may not create access documents
      */
     public function create(Person $user): false
     {
@@ -150,27 +150,32 @@ class AccessDocumentPolicy
         return ($user->id == $personId);
     }
 
+    public function deliverySpecialDocument(Person $user, AccessDocument $accessDocument) : bool
+    {
+        return ($user->id == $accessDocument->person_id);
+    }
+
     public function unbankAccessDocuments(Person $user): false
     {
         return false;
     }
 
-    public function statistics(Person $user)
+    public function statistics(Person $user): false
     {
         return false;
     }
 
-    public function wapCandidates(Person $user)
+    public function wapCandidates(Person $user): false
     {
         return false;
     }
 
-    public function unclaimedTicketsWithSignups(Person $user)
+    public function unclaimedTicketsWithSignups(Person $user): false
     {
         return false;
     }
 
-    public function claimedTicketsWithNoSignups(Person $user)
+    public function claimedTicketsWithNoSignups(Person $user): false
     {
         return false;
     }
