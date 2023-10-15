@@ -394,11 +394,12 @@ Route::group([
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::get('timesheet/log', 'TimesheetController@showLog');
     Route::get('timesheet/on-duty-shift-lead-report', 'TimesheetController@onDutyShiftLeadReport');
-    Route::post('timesheet/signin', 'TimesheetController@signin');
     Route::get('timesheet/payroll', 'TimesheetController@payrollReport');
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
     Route::get('timesheet/potential-shirts-earned', 'TimesheetController@potentialShirtsEarnedReport');
     Route::get('timesheet/sanity-checker', 'TimesheetController@sanityChecker');
+    Route::post('timesheet/signin', 'TimesheetController@signin');
+    Route::get('timesheet/shift-drop-report', 'TimesheetController@shiftDropReport');
     Route::get('timesheet/top-hour-earners', 'TimesheetController@topHourEarnersReport');
     Route::get('timesheet/by-callsign', 'TimesheetController@timesheetByCallsign');
     Route::get('timesheet/by-position', 'TimesheetController@timesheetByPosition');

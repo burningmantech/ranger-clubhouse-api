@@ -283,4 +283,9 @@ class TimesheetPolicy
     {
         return $user->hasRole(Role::MANAGE);
     }
+
+    public function shiftDropReport(Person $user) : bool
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
 }
