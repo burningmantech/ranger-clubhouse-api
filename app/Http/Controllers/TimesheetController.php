@@ -20,6 +20,7 @@ use App\Lib\Reports\TimesheetByPositionReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
 use App\Lib\Reports\TopHourEarnersReport;
+use App\Lib\ShiftDropReport;
 use App\Lib\TimesheetManagement;
 use App\Lib\TimesheetSlotAssocRepair;
 use App\Models\Person;
@@ -933,5 +934,25 @@ class TimesheetController extends ApiController
                 $params['break_duration'],
                 $params['position_ids'])
         ]);
+    }
+
+    /**
+     * Shift Drop Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function shiftDropReport() : JsonResponse
+    {
+        $this->authorize('shiftDropReport', Timesheet::class);
+
+        $params = request()->validate([
+            'position_ids' => 'required|array',
+            'position_ids.*' => 'integer|exists:position,id',
+            'year' => 'required|integer',
+        ]);
+
+        return response()->json(ShiftDropReport::execute($params['position_ids'], $params['year']));
     }
 }
