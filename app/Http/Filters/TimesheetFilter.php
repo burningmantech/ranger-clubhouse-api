@@ -21,12 +21,13 @@ class TimesheetFilter
     ];
 
     const MANAGE_FIELDS = [
+        'additional_reviewer_notes',
+        'is_non_ranger',
         'off_duty',
         'on_duty',
         'person_id',
         'position_id',
-        'additional_reviewer_notes',
-        'is_non_ranger'
+        'suppress_duration_warning'
     ];
 
     public function deserialize(Person $user = null): array

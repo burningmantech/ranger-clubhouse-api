@@ -62,6 +62,7 @@ class Timesheet extends ApiModel
     const TOO_SHORT_LENGTH = (15 * 60);
 
     protected $fillable = [
+        'is_non_ranger',
         'off_duty',
         'on_duty',
         'person_id',
@@ -69,22 +70,23 @@ class Timesheet extends ApiModel
         'review_status',
         'reviewed_at',
         'reviewer_person_id',
-        'timesheet_confirmed_at',
-        'timesheet_confirmed',
         'slot_id',
-        'is_non_ranger',
+        'suppress_duration_warning',
+        'timesheet_confirmed',
+        'timesheet_confirmed_at',
 
         'additional_notes',  // pseudo field -- appends to notes
         'additional_reviewer_notes'  // pseudo field -- appends to reviewer_notes
 
         // no longer directly settable: notes, reviewer_notes
+
     ];
 
     protected $rules = [
         'person_id' => 'required|integer',
         'position_id' => 'required|integer',
         'on_duty' => 'required|date',
-        'off_duty' => 'nullable|sometimes|after_or_equal:on_duty'
+        'off_duty' => 'nullable|sometimes|after_or_equal:on_duty',
     ];
 
     protected $appends = [
@@ -96,8 +98,15 @@ class Timesheet extends ApiModel
         'off_duty' => 'datetime',
         'on_duty' => 'datetime',
         'reviewed_at' => 'datetime',
+        'suppress_duration_warning' => 'boolean',
         'timesheet_confirmed_at' => 'datetime',
         'verified_at' => 'datetime',
+    ];
+
+    protected $virtualColumns = [
+        'duration',
+        'credits',
+        'position_title'
     ];
 
     const RELATIONSHIPS = [
