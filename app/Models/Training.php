@@ -117,10 +117,13 @@ class Training extends Position
              */
 
             $positionId = $position->id;
-            $trainingId = match ($positionId) {
-                Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT => Position::TRAINING,
-                default => $position->training_position_id,
-            };
+            if ($position->no_training_required) {
+                $trainingId = null;
+            } else if ($position->training_position_id) {
+                $trainingId = $position->training_position_id;
+            } else if ($position->type != Position::TYPE_TRAINING) {
+                $trainingId = Position::TRAINING;
+            }
 
             // See if the person taught a training session required by the position
             $trainer = null;
