@@ -116,7 +116,7 @@ class TimesheetSanityCheckReport
             ->get();
 
         /*
-         * Look for entries that may be too long. (i.e. a person forgot to signout in a timely manner.)
+         * Look for entries that may be too long. (i.e. a person forgot to sign-out in a timely manner.)
          */
 
         $tooLongEntries = $rows->filter(function ($row) use ($minHour) {
@@ -137,6 +137,7 @@ class TimesheetSanityCheckReport
             ->whereYear('on_duty', $year)
             ->whereNotNull('timesheet.slot_id')
             ->whereRaw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) >= TIMESTAMPDIFF(SECOND, slot.begins, slot.ends)*1.5")
+            ->where('suppress_duration_warning', false)
             ->with($withBase)
             ->get();
 
@@ -146,6 +147,7 @@ class TimesheetSanityCheckReport
             ->whereYear('on_duty', $year)
             ->whereNotNull('off_duty')
             ->whereRaw("TIMESTAMPDIFF(MINUTE, on_duty, off_duty) <= 15")
+            ->where('suppress_duration_warning', false)
             ->with($withBase)
             ->orderBy('duration')
             ->get();
