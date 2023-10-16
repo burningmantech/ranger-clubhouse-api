@@ -77,7 +77,7 @@ class TimesheetManagement
             $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($canForceSignon) {
                 $signonForced = true;
-                $unqualifiedReason = Position::UNQUALIFIED_UNTRAINED;
+                $unqualifiedReason =  Position::UNQUALIFIED_UNTRAINED;
             } else {
                 $response = [
                     'status' => 'not-trained',
@@ -93,10 +93,10 @@ class TimesheetManagement
             if ($canForceSignon) {
                 $signonForced = true;
             } else {
-                $response = [
+                 $response = [
                     'status' => 'not-qualified',
                     'unqualified_reason' => $unqualifiedReason,
-                    'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason]
+                    'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason],
                 ];
                 return false;
             }
