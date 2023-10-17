@@ -953,9 +953,10 @@ class TimesheetController extends ApiController
             'position_ids' => 'required|array',
             'position_ids.*' => 'integer|exists:position,id',
             'year' => 'required|integer',
+            'hours' => 'required|numeric|between:1,24',
         ]);
 
-        return response()->json(ShiftDropReport::execute($params['position_ids'], $params['year']));
+        return response()->json(ShiftDropReport::execute($params['position_ids'], $params['year'], $params['hours']));
     }
 
     /**
