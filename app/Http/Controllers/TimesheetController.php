@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
 use App\Lib\Reports\EventStats;
+use App\Lib\Reports\ForcedSigninsReport;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
@@ -412,6 +413,7 @@ class TimesheetController extends ApiController
         $timesheet = new Timesheet($params);
         $timesheet->on_duty = now();
         $timesheet->auditReason = 'sign in';
+        $timesheet->was_signin_forced = $signonForced;
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
@@ -433,7 +435,7 @@ class TimesheetController extends ApiController
      *
      * @param Timesheet $timesheet
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function signoff(Timesheet $timesheet): JsonResponse
@@ -943,7 +945,7 @@ class TimesheetController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function shiftDropReport() : JsonResponse
+    public function shiftDropReport(): JsonResponse
     {
         $this->authorize('shiftDropReport', Timesheet::class);
 
@@ -954,5 +956,20 @@ class TimesheetController extends ApiController
         ]);
 
         return response()->json(ShiftDropReport::execute($params['position_ids'], $params['year']));
+    }
+
+    /**
+     * Forced Sign-In Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function forcedSigninsReport(): JsonResponse
+    {
+        $this->authorize('forcedSigninsReport', Timesheet::class);
+        $year = $this->getYear();
+
+        return response()->json(ForcedSigninsReport::execute($year));
     }
 }

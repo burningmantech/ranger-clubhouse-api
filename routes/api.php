@@ -390,6 +390,7 @@ Route::group([
     Route::post('timesheet/confirm', 'TimesheetController@confirm');
     Route::get('timesheet/event-stats', 'TimesheetController@eventStatsReport');
     Route::get('timesheet/freaking-years', 'TimesheetController@freakingYearsReport');
+    Route::get('timesheet/forced-signins-report', 'TimesheetController@forcedSigninsReport');
     Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::get('timesheet/log', 'TimesheetController@showLog');
