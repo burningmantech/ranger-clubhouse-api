@@ -123,6 +123,8 @@ class Training extends Position
                 $trainingId = $position->training_position_id;
             } else if ($position->type != Position::TYPE_TRAINING) {
                 $trainingId = Position::TRAINING;
+            } else {
+                $trainingId = null;
             }
 
             // See if the person taught a training session required by the position
