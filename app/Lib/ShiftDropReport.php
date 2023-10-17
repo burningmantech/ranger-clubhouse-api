@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class ShiftDropReport
 {
-    public static function execute(array $positionIds, int $year): array
+    public static function execute(array $positionIds, int $year, int $hours): array
     {
         $slots = DB::table('slot')
             ->select('slot.*', 'position.title')
@@ -25,7 +25,7 @@ class ShiftDropReport
             $begins = Carbon::parse($slot->begins);
             $dropped = ActionLog::where('event', 'person-slot-remove')
                 ->whereYear('created_at', $year)
-                ->whereRaw('created_at BETWEEN ? AND ?', [(string)$begins->subHours(24), $slot->begins])
+                ->whereRaw('created_at BETWEEN ? AND ?', [(string)$begins->subHours($hours), $slot->begins])
                 ->whereRaw("json_extract(data, '$.slot_id')={$slot->id}")
                 ->with('target_person:id,callsign')
                 ->get();
