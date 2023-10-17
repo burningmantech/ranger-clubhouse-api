@@ -101,6 +101,7 @@ class Timesheet extends ApiModel
         'suppress_duration_warning' => 'boolean',
         'timesheet_confirmed_at' => 'datetime',
         'verified_at' => 'datetime',
+        'was_signin_forced' => 'boolean',
     ];
 
     protected $virtualColumns = [
