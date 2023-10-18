@@ -96,12 +96,15 @@ class TimesheetMissingController extends ApiController
             $timesheetMissing->reviewed_at = now();
         }
 
+        if ($this->user->id != $timesheetMissing->person_id) {
+            $timesheetMissing->reviewer_person_id = $this->user->id;
+        }
+
         if ($timesheetMissing->isDirty('additional_notes') && !$timesheetMissing->isDirty('review_status')) {
             $timesheetMissing->review_status = TimesheetMissing::PENDING;
         }
 
         $createNew = ($timesheetMissing->review_status == TimesheetMissing::APPROVED && $timesheetMissing->create_entry);
-
 
         if ($createNew) {
             // Verify the person may hold the position
