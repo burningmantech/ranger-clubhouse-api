@@ -77,6 +77,7 @@ class TimesheetCorrectionsStatisticsReport
         $deletedCount = DB::table('timesheet_log')
             ->leftJoin('timesheet', 'timesheet.id', 'timesheet_log.timesheet_id')
             ->whereYear('created_at', $year)
+            ->whereNotNull('timesheet_id')
             ->whereNull('timesheet.id')
             ->distinct('timesheet_id')
             ->count('timesheet_id');
@@ -92,6 +93,7 @@ class TimesheetCorrectionsStatisticsReport
                 'timesheet_log.timesheet_id',
             )->join('timesheet', 'timesheet.id', 'timesheet_log.timesheet_id')
             ->whereYear('timesheet_log.created_at', $year)
+            ->whereNotNull('timesheet_id')
             ->whereRaw('json_extract(timesheet_log.data, "$.review_status") is not null')
             ->get();
 
