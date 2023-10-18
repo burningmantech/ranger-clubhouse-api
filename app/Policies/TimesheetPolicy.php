@@ -293,4 +293,9 @@ class TimesheetPolicy
     {
         return $user->hasRole(Role::MANAGE);
     }
+
+    public function correctionStatistics(Person $user) : false
+    {
+        return false;
+    }
 }

@@ -18,6 +18,7 @@ use App\Lib\Reports\SpecialTeamsWorkReport;
 use App\Lib\Reports\ThankYouCardsReport;
 use App\Lib\Reports\TimesheetByCallsignReport;
 use App\Lib\Reports\TimesheetByPositionReport;
+use App\Lib\Reports\TimesheetCorrectionsStatisticsReport;
 use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
 use App\Lib\Reports\TopHourEarnersReport;
@@ -973,4 +974,20 @@ class TimesheetController extends ApiController
 
         return response()->json(ForcedSigninsReport::execute($year));
     }
+
+    /**
+     * Timesheet Correction Request Statistics
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function correctionStatistics(): JsonResponse
+    {
+        $this->authorize('correctionStatistics', Timesheet::class);
+        $year = $this->getYear();
+
+        return response()->json([ 'statistics' => TimesheetCorrectionsStatisticsReport::execute($year)]);
+    }
+
 }
