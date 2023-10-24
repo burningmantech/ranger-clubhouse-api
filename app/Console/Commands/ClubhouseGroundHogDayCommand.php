@@ -24,7 +24,7 @@ class ClubhouseGroundHogDayCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Clone current database, convert into a groundhog day database, and dump into file.';
+    protected $description = 'Clone current database, convert into a groundhog day database, and dump into a file. The default is last year\'s Burn Night.';
 
     /**
      * Create a new command instance.
@@ -33,11 +33,11 @@ class ClubhouseGroundHogDayCommand extends Command
      */
     public function __construct()
     {
-
+        $date = Carbon::parse("first Monday of September ".(date('Y')-1))->subDays(2)->format('Y-m-d');
         $this->signature = 'clubhouse:groundhog-day
-                    {-d|--dumpfile= : filename to dump the groundhog day database into. Default is rangers-ghd-YYYY-MM-DD.sql}
+                    {--dumpfile= : filename to dump the groundhog day database into. Default is rangers-ghd-YYYY-MM-DD.sql}
                     {--tempdb=ranger_ghd : temporary database name}
-                    {--day=' . (date('Y') - 1) . '-08-30 18:00:00 : ground hog day date/time}
+                    {--day=' . $date . ' 18:00:00 : ground hog day date/time}
                     {--no-redact : do not react the database}
                     ';
         parent::__construct();
