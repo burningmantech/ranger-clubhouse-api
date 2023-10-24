@@ -41,7 +41,7 @@ class ResetPassword extends ClubhouseMailable
         }
 
         $host = request()->getSchemeAndHttpHost();
-        $this->resetURL = "{$host}/client/login?token={$token}";
+        $this->resetURL = "{$host}/login?token={$token}";
         parent::__construct();
     }
 
