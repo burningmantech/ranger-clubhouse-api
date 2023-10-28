@@ -176,6 +176,9 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole(Role::VC);
         });
 
+        Gate::define('isTimesheetManager', function (Person $user) {
+           return $user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
+        });
         Gate::resource('person', 'PersonPolicy');
     }
 }

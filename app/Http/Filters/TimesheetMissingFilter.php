@@ -8,11 +8,8 @@ use App\Models\TimesheetMissing;
 
 class TimesheetMissingFilter
 {
-    protected $record;
-
-    public function __construct(TimesheetMissing $record)
+    public function __construct(public TimesheetMissing $record)
     {
-        $this->record = $record;
     }
 
     const USER_FIELDS = [
@@ -25,19 +22,31 @@ class TimesheetMissingFilter
     ];
 
     const MANAGE_FIELDS = [
-        'review_status',
-        'additional_reviewer_notes',
         'create_entry',
         'new_off_duty',
         'new_on_duty',
         'new_position_id',
+        'review_status',
     ];
+
+    const WRANGLER_FIELDS = [
+        'additional_admin_notes',
+        'additional_wrangler_notes',
+    ];
+
 
     public function deserialize(Person $user = null): array
     {
-        if ($user->hasRole([ Role::ADMIN, Role::TIMESHEET_MANAGEMENT ]))
-            return array_merge(self::USER_FIELDS, self::MANAGE_FIELDS);
+        $fields = [self::USER_FIELDS];
 
-        return self::USER_FIELDS;
+        if ($user->hasRole(Role::MANAGE)) {
+            $fields[] = self::MANAGE_FIELDS;
+        }
+
+        if ($user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT])) {
+            $fields[] = self::WRANGLER_FIELDS;
+        }
+
+        return array_merge(...$fields);
     }
 }
