@@ -298,4 +298,9 @@ class TimesheetPolicy
     {
         return false;
     }
+
+    public function checkForOverlaps(Person $user, $personId) : bool
+    {
+        return $personId == $user->id;
+    }
 }

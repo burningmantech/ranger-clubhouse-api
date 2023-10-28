@@ -32,9 +32,9 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
+use App\Models\TimesheetNote;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -44,13 +44,12 @@ class TimesheetController extends ApiController
     /**
      * Retrieve a list of timesheets for a person and year.
      *
-     * @param Request $request
      * @return JsonResponse
      * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $params = $request->validate([
+        $params = request()->validate([
             'year' => 'sometimes|digits:4',
             'person_id' => 'sometimes|numeric',
             'is_on_duty' => 'sometimes|boolean',
@@ -62,9 +61,14 @@ class TimesheetController extends ApiController
             'position_ids' => 'sometimes|array',
             'position_ids.*' => 'integer|exists:position,id',
             'include_photo' => 'sometimes|boolean',
+            'include_admin_notes' => 'sometimes|boolean'
         ]);
 
         $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null]);
+
+        if ($params['include_admin_notes'] ?? false) {
+            Gate::authorize('isTimesheetManager');
+        }
 
         $rows = Timesheet::findForQuery($params);
 
@@ -96,7 +100,7 @@ class TimesheetController extends ApiController
     public function show(Timesheet $timesheet): JsonResponse
     {
         $this->authorize('index', [Timesheet::class, $timesheet->person_id]);
-        $timesheet->loadRelationships();
+        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
         return $this->success($timesheet);
     }
 
@@ -197,7 +201,7 @@ class TimesheetController extends ApiController
         $this->authorize('store', $timesheet);
 
         if ($timesheet->save()) {
-            $timesheet->loadRelationships();
+            $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
             TimesheetManagement::unconfirmTimesheet($timesheet, 'new entry');
             return $this->success($timesheet);
         }
@@ -221,15 +225,14 @@ class TimesheetController extends ApiController
 
         $markedUnconfirmed = false;
         $year = $timesheet->on_duty->year;
-        $personId = $timesheet->person_id;
         $userId = $this->user->id;
 
         // Update reviewer person if the review status or review notes changed
-        if ($timesheet->isDirty('review_status') || $timesheet->isDirty('reviewer_notes')) {
+        if ($timesheet->isDirty('review_status') || !empty($timesheet->additionalWranglerNotes)) {
             $timesheet->reviewer_person_id = $userId;
         }
 
-        if ($timesheet->isDirty('notes') && !$timesheet->isDirty('review_status')) {
+        if (!$timesheet->isDirty('review_status') && !empty($timesheet->additional_notes)) {
             $timesheet->review_status = Timesheet::STATUS_PENDING;
         }
 
@@ -256,14 +259,6 @@ class TimesheetController extends ApiController
                 }
                 $auditColumns[$column] = [$old, $new];
             }
-
-        }
-
-        if ($timesheet->additional_reviewer_notes) {
-            $auditColumns['reviewer_notes'] = $timesheet->additional_reviewer_notes;
-        }
-        if ($timesheet->additional_notes) {
-            $auditColumns['notes'] = $timesheet->additional_notes;
         }
 
         if (!$timesheet->save()) {
@@ -301,7 +296,7 @@ class TimesheetController extends ApiController
         }
 
         // Reload position title, reviewer callsigns in case of change.
-        $timesheet->loadRelationships();
+        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
 
         return $this->success($timesheet);
     }
@@ -359,6 +354,7 @@ class TimesheetController extends ApiController
     {
         $this->authorize('destroy', $timesheet);
         $timesheet->delete();
+        TimesheetNote::where('timesheet_id', $timesheet->id)->delete();
 
         $timesheet->log(TimesheetLog::DELETE, [
                 'position_id' => $timesheet->position_id,
@@ -420,7 +416,7 @@ class TimesheetController extends ApiController
         }
 
         TimesheetManagement::unconfirmTimesheet($timesheet, 'new entry - signed in');
-        $timesheet->loadRelationships();
+        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
 
         $log = [
             'position_id' => $timesheet->position_id,
@@ -450,7 +446,7 @@ class TimesheetController extends ApiController
         $timesheet->setOffDutyToNow();
         $timesheet->auditReason = 'signout';
         $timesheet->saveOrThrow();
-        $timesheet->loadRelationships();
+        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
         $timesheet->log(TimesheetLog::SIGNOFF, [
             'position_id' => $timesheet->position_id,
             'off_duty' => (string)$timesheet->off_duty,
@@ -987,7 +983,43 @@ class TimesheetController extends ApiController
         $this->authorize('correctionStatistics', Timesheet::class);
         $year = $this->getYear();
 
-        return response()->json([ 'statistics' => TimesheetCorrectionsStatisticsReport::execute($year)]);
+        return response()->json(['statistics' => TimesheetCorrectionsStatisticsReport::execute($year)]);
     }
 
+    /**
+     * Check if the given on and off duty times overlap with any existing timesheets.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function checkForOverlaps(): JsonResponse
+    {
+        $params = request()->validate([
+            'person_id' => 'required|integer|exists:person,id',
+            'timesheet_id' => 'sometimes|exists:timesheet,id',
+            'on_duty' => 'required|date',
+            'off_duty' => 'required|date'
+        ]);
+
+        $personId = $params['person_id'];
+        $this->authorize('checkForOverlaps', [ Timesheet::class, $personId]);
+
+        $overlaps = Timesheet::findAllOverlapsForPerson($personId, $params['on_duty'], $params['off_duty'], $params['timesheet_id'] ?? null);
+        if ($overlaps->isEmpty()) {
+            return response()->json(['status' => 'success']);
+        }
+
+        $results = $overlaps->map(fn($row) => [
+            'id' => $row->id,
+            'position' => [
+                'id' => $row->position_id,
+                'title' => $row->position->title,
+            ],
+            'on_duty' => (string)$row->on_duty,
+            'off_duty' => (string)$row->off_duty,
+        ])->values();
+
+        return response()->json([ 'status' => 'overlap', 'timesheets' => $results ]);
+    }
 }
