@@ -24,7 +24,7 @@ class WelcomeMail extends ClubhouseMailable
     public function __construct(public $person, public $inviteToken)
     {
         $host = request()->getSchemeAndHttpHost();
-        $this->inviteUrl = "{$host}/client/login?token={$inviteToken}&welcome=1";
+        $this->inviteUrl = "{$host}/login?token={$inviteToken}&welcome=1";
         parent::__construct();
     }
 
