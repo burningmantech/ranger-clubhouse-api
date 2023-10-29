@@ -468,6 +468,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
                 && $model->wasChanged(['callsign', 'email', 'first_name', 'last_name'])) {
                 OnlineCourseSyncPersonJob::dispatch($model);
             }
+
+            if ($model->wasChanged('status') && $model->status == self::DECEASED) {
+                HandleReservation::recordDeceased($model->callsign);
+            }
         });
     }
 
