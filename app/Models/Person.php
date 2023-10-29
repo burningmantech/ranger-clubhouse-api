@@ -44,7 +44,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     const PNV_INVITATION_EXPIRE = (3600 * 24 * 14);
 
     // How many years should a callsign be retained after the person passed on.
-    const GRIEVING_PERIOD_YEARS = 3;
+    const GRIEVING_PERIOD_YEARS = 5;
 
     // For resetting and adding roles & positions for new users
     const REMOVE_ALL = 0;
