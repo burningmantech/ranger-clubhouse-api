@@ -8,23 +8,25 @@ use App\Models\Timesheet;
 
 class TimesheetFilter
 {
-    protected $record;
-
-    public function __construct(Timesheet $record)
+    public function __construct(public Timesheet $record)
     {
-        $this->record = $record;
     }
 
     const USER_FIELDS = [
         'additional_notes',
-        'review_status',
     ];
 
     const MANAGE_FIELDS = [
-        'additional_reviewer_notes',
-        'is_non_ranger',
+        'additional_worker_notes',
+        'review_status',
         'off_duty',
         'on_duty',
+    ];
+
+    const WRANGLER_FIELDS = [
+        'additional_admin_notes',
+        'additional_wrangler_notes',
+        'is_non_ranger',
         'person_id',
         'position_id',
         'suppress_duration_warning'
@@ -32,13 +34,16 @@ class TimesheetFilter
 
     public function deserialize(Person $user = null): array
     {
-        if ($user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]))
-            return array_merge(self::USER_FIELDS, self::MANAGE_FIELDS);
+        $fields = [self::USER_FIELDS];
 
-        if ($this->record->person_id == $user->id || $user->hasRole(Role::MANAGE)) {
-            return self::USER_FIELDS;
+        if ($user->hasRole(Role::MANAGE)) {
+            $fields[] = self::MANAGE_FIELDS;
         }
 
-        return []; // Should never be hit.
+        if ($user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT])) {
+            $fields[] = self::WRANGLER_FIELDS;
+        }
+
+        return array_merge(...$fields);
     }
 }

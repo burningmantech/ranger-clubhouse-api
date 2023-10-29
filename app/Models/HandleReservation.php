@@ -7,6 +7,7 @@ use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class HandleReservation extends ApiModel
@@ -87,7 +88,7 @@ class HandleReservation extends ApiModel
 
         self::saving(function ($model) {
             if ($model->reservation_type == self::TYPE_TWII_PERSON && empty($model->expires_on)) {
-                $model->expires_on = (current_year() + 2)."-09-15";
+                $model->expires_on = (current_year() + 2) . "-09-15";
             }
         });
     }
@@ -147,5 +148,30 @@ class HandleReservation extends ApiModel
             $sql->where('twii_year', $twiiYear);
         }
         return $sql->exists();
+    }
+
+    /**
+     * Record a deceased callsign.
+     *
+     * @param string $callsign
+     * @return void
+     */
+
+    public static function recordDeceased(string $callsign): void
+    {
+        $exists = self::where('handle', $callsign)
+            ->where('reservation_type', self::TYPE_DECEASED_PERSON)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        self::insert([
+            'handle' => $callsign,
+            'reservation_type' => self::TYPE_DECEASED_PERSON,
+            'expires_on' => (string)(now()->addYears(Person::GRIEVING_PERIOD_YEARS)),
+            'reason' => 'marked deceased by ' . (Auth::user()->callsign ?? 'unknown') . ' on ' . now()->format('Y-m-d'),
+        ]);
     }
 }

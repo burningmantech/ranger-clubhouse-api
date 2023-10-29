@@ -6,8 +6,10 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * @property ?Carbon $off_duty
@@ -30,8 +32,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read ?Slot $slot
  * @property-read ?Person $reviewer_person
  * @property-read ?Person $verified_person
- * @property  ?string $additional_notes
- * @property ?string $additional_reviewer_notes
+ * @property bool $suppress_duration_warning
  */
 class Timesheet extends ApiModel
 {
@@ -75,11 +76,10 @@ class Timesheet extends ApiModel
         'timesheet_confirmed',
         'timesheet_confirmed_at',
 
-        'additional_notes',  // pseudo field -- appends to notes
-        'additional_reviewer_notes'  // pseudo field -- appends to reviewer_notes
-
-        // no longer directly settable: notes, reviewer_notes
-
+        // Pseudo fields used to create timesheet notes of various types
+        'additional_notes',
+        'additional_wrangler_notes',
+        'additional_admin_notes',
     ];
 
     protected $rules = [
@@ -105,24 +105,36 @@ class Timesheet extends ApiModel
     ];
 
     protected $virtualColumns = [
-        'duration',
+        'additional_admin_notes',
+        'additional_notes',
+        'additional_wrangler_notes',
         'credits',
-        'position_title'
+        'duration',
+        'photo_url',
+        'position_title',
     ];
 
     const RELATIONSHIPS = [
+        'notes',
+        'notes.create_person:id,callsign',
         'reviewer_person:id,callsign',
         'verified_person:id,callsign',
         'position:id,title,count_hours,paycode,no_payroll_hours_adjustment',
         'slot'
     ];
 
-    public $_additional_notes;
-    public $_additional_reviewer_notes;
+    const ADMIN_NOTES_RELATIONSHIPS = [
+        'admin_notes',
+        'admin_notes.create_person:id,callsign'
+    ];
 
-    public $photo_url;
+    public ?string $photo_url = null;
 
-    public static function boot()
+    public ?string $additionalNotes = null;
+    public ?string $additionalAdminNotes = null;
+    public ?string $additionalWranglerNotes = null;
+
+    public static function boot(): void
     {
         parent::boot();
 
@@ -170,6 +182,21 @@ class Timesheet extends ApiModel
             if ($offDuty && !$offDuty[0] && $offDuty[1]) {
                 Pod::shiftEnded($model->person_id, $model->id);
             }
+
+            $userId = Auth::id();
+            $id = $model->id;
+
+            if ($model->additionalNotes) {
+                TimesheetNote::record($id, $userId, $model->additionalNotes, ($userId == $model->person_id) ? TimesheetNote::TYPE_USER : TimesheetNote::TYPE_HQ_WORKER);
+            }
+
+            if ($model->additionalAdminNotes) {
+                TimesheetNote::record($id, $userId, $model->additionalAdminNotes, TimesheetNote::TYPE_ADMIN);
+            }
+
+            if ($model->additionalWranglerNotes) {
+                TimesheetNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetNote::TYPE_WRANGLER);
+            }
         });
     }
 
@@ -198,9 +225,22 @@ class Timesheet extends ApiModel
         return $this->belongsTo(Slot::class);
     }
 
-    public function loadRelationships(): Timesheet
+    public function notes(): HasMany
     {
-        return $this->load(self::RELATIONSHIPS);
+        return $this->hasMany(TimesheetNote::class)->where('type', '!=', TimesheetNote::TYPE_ADMIN);
+    }
+
+    public function admin_notes(): HasMany
+    {
+        return $this->hasMany(TimesheetNote::class)->where('type', TimesheetNote::TYPE_ADMIN);
+    }
+
+    public function loadRelationships($loadAdminNotes = false): void
+    {
+        $this->load(self::RELATIONSHIPS);
+        if ($loadAdminNotes) {
+            $this->load(self::ADMIN_NOTES_RELATIONSHIPS);
+        }
     }
 
     /**
@@ -224,6 +264,7 @@ class Timesheet extends ApiModel
         $positionId = $query['position_id'] ?? null;
         $positionIds = $query['position_ids'] ?? null;
         $includePhoto = $query['include_photo'] ?? false;
+        $includeAdminNotes = $query['include_admin_notes'] ?? false;
 
         if ($year) {
             $sql->whereYear('on_duty', $year);
@@ -265,7 +306,11 @@ class Timesheet extends ApiModel
 
         $sql->with(self::RELATIONSHIPS);
 
-        $rows = $sql->orderBy('on_duty', 'asc')->get();
+        if ($includeAdminNotes) {
+            $sql->with(self::ADMIN_NOTES_RELATIONSHIPS);
+        }
+
+        $rows = $sql->orderBy('on_duty')->get();
 
         if ($includePhoto) {
             foreach ($rows as $row) {
@@ -358,6 +403,35 @@ class Timesheet extends ApiModel
                 $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [$onduty]);
                 $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [$offduty]);
             })->first();
+    }
+
+    /**
+     * Find all overlapping timesheets
+     *
+     * @param int $personId
+     * @param Carbon|string $onduty
+     * @param Carbon|string $offduty
+     * @param int|null $timesheetId
+     * @return \Illuminate\Support\Collection
+     */
+
+    public static function findAllOverlapsForPerson(int $personId, Carbon|string $onduty, Carbon|string $offduty, ?int $timesheetId): \Illuminate\Support\Collection
+    {
+        $sql = self::where('person_id', $personId)
+            ->where(function ($sql) use ($onduty, $offduty) {
+                $sql->whereBetween('on_duty', [$onduty, $offduty]);
+                $sql->orWhereBetween('off_duty', [$onduty, $offduty]);
+                $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [$onduty]);
+                $sql->orWhereRaw('? BETWEEN on_duty AND off_duty', [$offduty]);
+            })
+            ->with('position:id,title')
+            ->orderBy('on_duty');
+
+        if ($timesheetId) {
+            $sql->where('id', '!=', $timesheetId);
+        }
+
+        return $sql->get();
     }
 
     /**
@@ -635,7 +709,7 @@ class Timesheet extends ApiModel
      * @param null $data
      */
 
-    public function log(string $action, $data = null)
+    public function log(string $action, $data = null): void
     {
         TimesheetLog::record($action, $this->person_id, Auth::id(), $this->id, $data, $this->on_duty->year);
     }
@@ -672,6 +746,7 @@ class Timesheet extends ApiModel
      * Return the credits earned
      *
      * @return float
+     * @throws InvalidArgumentException
      */
 
     public function getCreditsAttribute(): float
@@ -679,6 +754,10 @@ class Timesheet extends ApiModel
         // Already computed?
         if (isset($this->attributes['credits'])) {
             return $this->attributes['credits'];
+        }
+
+        if (!$this->on_duty) {
+            return 0;
         }
 
         // Go forth and get the tasty credits!
@@ -733,72 +812,6 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Append the given notes to the reviewer notes, timestamp and logged in user's callsign
-     * are added.
-     *
-     * @param string|null $notes
-     */
-
-    public function setAdditionalReviewerNotesAttribute(string|null $notes): void
-    {
-        if (empty($notes)) {
-            return;
-        }
-
-        $this->_additional_reviewer_notes = $notes;
-        $user = Auth::user();
-        $callsign = $user ? $user->callsign : '(unknown)';
-
-        $date = date('Y/m/d H:m:s');
-        $this->reviewer_notes = $this->reviewer_notes . "From $callsign on $date:\n$notes\n\n";
-    }
-
-    /**
-     * Get the newly entered reviewer notes (only used for auditing purposes)
-     *
-     * @return string|null
-     */
-
-    public function getAdditionalReviewerNotesAttribute(): string|null
-    {
-        return $this->_additional_reviewer_notes;
-    }
-
-    /**
-     * Append correction notes (aka why-does-this-entry-needs-to-be-fixed)
-     * to the existing notes. Timestamp and user's callsign is added.
-     *
-     * @param string|null $notes
-     */
-
-    public function setAdditionalNotesAttribute(string|null $notes): void
-    {
-        if (empty($notes)) {
-            return;
-        }
-
-        $this->_additional_notes = $notes;
-        $date = date('Y/m/d H:m:s');
-        $this->notes = $this->notes . "$date:\n$notes\n\n";
-    }
-
-    /**
-     * Get the newly entered correction notes (only used for auditing purposes)
-     *
-     * @return string|null
-     */
-
-    public function getAdditionalNotesAttribute(): string|null
-    {
-        return $this->_additional_notes;
-    }
-
-    public function getPhotoUrlAttribute()
-    {
-        return $this->photo_url;
-    }
-
-    /**
      * Build on duty information
      *
      * @return array
@@ -812,5 +825,32 @@ class Timesheet extends ApiModel
             'type' => $this->position->type,
             'subtype' => $this->position->subtype,
         ];
+    }
+
+    public function setAdditionalNotesAttribute(?string $value): void
+    {
+        if ($value) {
+            $value = trim($value);
+        }
+        $value = empty($value) ? null : $value;
+        $this->additionalNotes = $value;
+    }
+
+    public function setAdditionalAdminNotesAttribute(?string $value): void
+    {
+        if ($value) {
+            $value = trim($value);
+        }
+        $value = empty($value) ? null : $value;
+        $this->additionalAdminNotes = $value;
+    }
+
+    public function setAdditionalWranglerNotesAttribute(?string $value): void
+    {
+        if ($value) {
+            $value = trim($value);
+        }
+        $value = empty($value) ? null : $value;
+        $this->additionalWranglerNotes = $value;
     }
 }

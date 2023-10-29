@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\PositionCredit;
@@ -13,6 +14,8 @@ use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class TimesheetMissingController extends ApiController
@@ -29,6 +32,7 @@ class TimesheetMissingController extends ApiController
         $params = request()->validate([
             'person_id' => 'sometimes|integer',
             'year' => 'required|integer',
+            'include_admin_notes' => 'sometimes|boolean',
         ]);
 
         $personId = $params['person_id'] ?? null;
@@ -37,6 +41,10 @@ class TimesheetMissingController extends ApiController
             $this->authorize('view', [TimesheetMissing::class, $personId]);
         } else {
             $this->authorize('viewAll', TimesheetMissing::class);
+        }
+
+        if ($params['include_admin_notes'] ?? false) {
+            Gate::authorize('isTimesheetManager');
         }
 
         $rows = TimesheetMissing::findForQuery($params);
@@ -51,8 +59,7 @@ class TimesheetMissingController extends ApiController
     /**
      * Create a new timesheet missing entry
      *
-     * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -67,12 +74,9 @@ class TimesheetMissingController extends ApiController
             $timesheetMissing->review_status = TimesheetMissing::PENDING;
         }
 
-        if ($timesheetMissing->save()) {
-            $timesheetMissing->loadRelationships();
-            return $this->success($timesheetMissing);
-        }
+        $person = $this->findPerson($timesheetMissing->person_id);
 
-        return $this->restError($timesheetMissing);
+        return $this->saveAndMaybeCreateNewEntry($timesheetMissing, $person);
     }
 
     /**
@@ -92,7 +96,7 @@ class TimesheetMissingController extends ApiController
 
         $this->fromRestFiltered($timesheetMissing);
 
-        if ($timesheetMissing->isDirty('review_status') || $timesheetMissing->isDirty('reviewer_notes')) {
+        if ($timesheetMissing->isDirty('review_status')) {
             $timesheetMissing->reviewed_at = now();
         }
 
@@ -104,11 +108,28 @@ class TimesheetMissingController extends ApiController
             $timesheetMissing->review_status = TimesheetMissing::PENDING;
         }
 
+        return $this->saveAndMaybeCreateNewEntry($timesheetMissing, $person);
+    }
+
+    /**
+     * Save the timesheet missing record, and create a new timesheet entry if create_entry is true.
+     *
+     * @param TimesheetMissing $timesheetMissing
+     * @param Person $person
+     * @return JsonResponse
+     * @throws ValidationException
+     */
+
+    private function saveAndMaybeCreateNewEntry(TimesheetMissing $timesheetMissing, Person $person): JsonResponse
+    {
         $createNew = ($timesheetMissing->review_status == TimesheetMissing::APPROVED && $timesheetMissing->create_entry);
 
+        $newPositionId = null;
+        $exists = $timesheetMissing->exists;
         if ($createNew) {
             // Verify the person may hold the position
-            if (!PersonPosition::havePosition($person->id, $timesheetMissing->new_position_id)) {
+            $newPositionId = $exists ? $timesheetMissing->new_position_id : $timesheetMissing->position_id;
+            if (!PersonPosition::havePosition($person->id, $newPositionId)) {
                 $timesheetMissing->addError('new_position_id', 'Person does not hold the position.');
                 return $this->restError($timesheetMissing);
             }
@@ -122,14 +143,14 @@ class TimesheetMissingController extends ApiController
             }
 
             // Load up position title, reviewer callsigns in case of change.
-            $timesheetMissing->loadRelationships();
+            $timesheetMissing->loadRelationships(Gate::allows('isTimesheetManager'));
 
             if ($createNew) {
                 $timesheet = new Timesheet([
                     'person_id' => $person->id,
-                    'on_duty' => $timesheetMissing->new_on_duty,
-                    'off_duty' => $timesheetMissing->new_off_duty,
-                    'position_id' => $timesheetMissing->new_position_id,
+                    'on_duty' => $exists ? $timesheetMissing->new_on_duty : $timesheetMissing->on_duty,
+                    'off_duty' => $exists ? $timesheetMissing->new_off_duty : $timesheetMissing->off_duty,
+                    'position_id' => $newPositionId,
                 ]);
 
                 if (!$timesheet->slot_id && $timesheet->position_id && $timesheet->on_duty) {
@@ -171,6 +192,7 @@ class TimesheetMissingController extends ApiController
         return $this->success($timesheetMissing);
     }
 
+
     /**
      * Return a single timesheet missing record.
      *
@@ -182,7 +204,7 @@ class TimesheetMissingController extends ApiController
     public function show(TimesheetMissing $timesheetMissing): JsonResponse
     {
         $this->authorize('view', [TimesheetMissing::class, $timesheetMissing->person_id]);
-        $timesheetMissing->loadRelationships();
+        $timesheetMissing->loadRelationships(Gate::allows('isTimesheetManager'));
         return $this->success($timesheetMissing);
     }
 

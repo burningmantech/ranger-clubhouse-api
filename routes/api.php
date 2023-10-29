@@ -169,7 +169,6 @@ Route::group([
     Route::post('online-course/{online_course}/set-name', 'OnlineCourseController@setName');
     Route::resource('online-course', 'OnlineCourseController');
 
-
     Route::post('person-online-course/{person}/change', 'PersonOnlineCourseController@change');
     Route::get('person-online-course/{person}/course-info', 'PersonOnlineCourseController@courseInfo');
     Route::get('person-online-course/{person}/info', 'PersonOnlineCourseController@getInfo');
@@ -386,6 +385,7 @@ Route::group([
     Route::patch('ticketing/{person}/wapso', 'TicketingController@storeWAPSO');
 
     Route::post('timesheet/bulk-sign-in-out', 'TimesheetController@bulkSignInOut');
+    Route::get('timesheet/check-overlap', 'TimesheetController@checkForOverlaps');
     Route::get('timesheet/correction-requests', 'TimesheetController@correctionRequests');
     Route::get('timesheet/correction-statistics', 'TimesheetController@correctionStatistics');
     Route::post('timesheet/confirm', 'TimesheetController@confirm');

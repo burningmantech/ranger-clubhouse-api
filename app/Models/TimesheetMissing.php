@@ -7,11 +7,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * @property string $additional_notes
- * @property string $additional_reviewer_notes
+ * @property string $additional_wrangler_notes
  * @property Carbon $off_duty
  * @property Carbon $on_duty
  * @property ?string $partner
@@ -31,8 +33,7 @@ class TimesheetMissing extends ApiModel
     const PENDING = 'pending';
 
     protected $fillable = [
-        'additional_notes',
-        'additional_reviewer_notes',
+        'additional_wrangler_notes',
         'off_duty',
         'on_duty',
         'partner',
@@ -44,7 +45,12 @@ class TimesheetMissing extends ApiModel
         'create_entry',
         'new_on_duty',
         'new_off_duty',
-        'new_position_id'
+        'new_position_id',
+
+        // Pseudo fields used to create timesheet notes of various types
+        'additional_notes',
+        'additional_wrangler_notes',
+        'additional_admin_notes',
     ];
 
     protected $casts = [
@@ -81,9 +87,23 @@ class TimesheetMissing extends ApiModel
     public ?int $new_position_id = null;
     public bool $create_entry = false;
 
+    public ?string $additionalNotes = null;
+    public ?string $additionalAdminNotes = null;
+    public ?string $additionalWranglerNotes = null;
+
     const PARTNER_SHIFT_STARTS_WITHIN = 30;
 
-    const RELATIONSHIPS = ['position:id,title', 'reviewer_person:id,callsign'];
+    const RELATIONSHIPS = [
+        'position:id,title',
+        'reviewer_person:id,callsign',
+        'notes',
+        'notes.create_person:id,callsign'
+    ];
+
+    const ADMIN_NOTES_RELATIONSHIPS = [
+        'admin_notes',
+        'admin_notes.create_person:id,callsign'
+    ];
 
     public function position(): BelongsTo
     {
@@ -110,6 +130,38 @@ class TimesheetMissing extends ApiModel
         return $this->belongsTo(Person::class, 'partner', 'callsign');
     }
 
+    public function notes(): HasMany
+    {
+        return $this->hasMany(TimesheetMissingNote::class)->where('type', '!=', TimesheetMissingNote::TYPE_ADMIN);
+    }
+
+    public function admin_notes(): HasMany
+    {
+        return $this->hasMany(TimesheetMissingNote::class)->where('type', TimesheetMissingNote::TYPE_ADMIN);
+    }
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::saved(function ($model) {
+            $userId = Auth::id();
+            $id = $model->id;
+
+            if ($model->additionalNotes) {
+                TimesheetMissingNote::record($id, $userId, $model->additionalNotes, ($userId == $model->person_id) ? TimesheetMissingNote::TYPE_USER : TimesheetMissingNote::TYPE_HQ_WORKER);
+            }
+
+            if ($model->additionalAdminNotes) {
+                TimesheetMissingNote::record($id, $userId, $model->additionalAdminNotes, TimesheetMissingNote::TYPE_ADMIN);
+            }
+
+            if ($model->additionalWranglerNotes) {
+                TimesheetMissingNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetMissingNote::TYPE_WRANGLER);
+            }
+        });
+    }
+
     /**
      * Find timesheet missing requests based on the criteria given.
      *
@@ -121,6 +173,7 @@ class TimesheetMissing extends ApiModel
     {
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
+        $includeAdminNotes = $query['include_admin_notes'] ?? null;
 
         $sql = self::with(self::RELATIONSHIPS);
 
@@ -132,13 +185,20 @@ class TimesheetMissing extends ApiModel
             $sql->whereYear('on_duty', $year);
         }
 
+        if ($includeAdminNotes) {
+            $sql->with(self::ADMIN_NOTES_RELATIONSHIPS);
+        }
+
         return $sql->orderBy('on_duty')->get();
     }
 
 
-    public function loadRelationships(): TimesheetMissing
+    public function loadRelationships($loadAdminNotes = false): void
     {
-        return $this->load(self::RELATIONSHIPS);
+        $this->load(self::RELATIONSHIPS);
+        if ($loadAdminNotes) {
+            $this->load(self::ADMIN_NOTES_RELATIONSHIPS);
+        }
     }
 
     /**
@@ -159,6 +219,7 @@ class TimesheetMissing extends ApiModel
      * Calculate how many credits this entry might be worth.
      *
      * @return float
+     * @throws InvalidArgumentException
      */
 
     public function getCreditsAttribute(): float
@@ -172,7 +233,7 @@ class TimesheetMissing extends ApiModel
 
     /**
      * Set the partner column.
-      */
+     */
 
     public function partner(): Attribute
     {
@@ -330,40 +391,31 @@ class TimesheetMissing extends ApiModel
         $this->new_position_id = $value;
     }
 
-    /**
-     * Append reviewer notes
-     *
-     * @param string|null $note
-     * @return void
-     */
-
-    public function setAdditionalReviewerNotesAttribute(?string $note): void
+    public function setAdditionalNotesAttribute(?string $value): void
     {
-        $note = empty($note) ? null : trim($note);
-        if (empty($note)) {
-            return;
+        if ($value) {
+            $value = trim($value);
         }
-
-        $callsign = Auth::user()?->callsign ?? '(unknown)';
-        $date = date('Y/m/d H:m:s');
-        $this->reviewer_notes = $this->reviewer_notes . "From $callsign on $date:\n$note\n\n";
+        $value = empty($value) ? null : $value;
+        $this->additionalNotes = $value;
     }
 
-    /**
-     * Append to requester notes
-     *
-     * @param string|null $note
-     * @return void
-     */
-
-    public function setAdditionalNotesAttribute(?string $note): void
+    public function setAdditionalAdminNotesAttribute(?string $value): void
     {
-        $note = empty($note) ? null : trim($note);
-        if (empty($note)) {
-            return;
+        if ($value) {
+            $value = trim($value);
         }
-
-        $date = date('Y/m/d H:m:s');
-        $this->notes = $this->notes . "$date:\n$note\n\n";
+        $value = empty($value) ? null : $value;
+        $this->additionalAdminNotes = $value;
     }
+
+    public function setAdditionalWranglerNotesAttribute(?string $value): void
+    {
+        if ($value) {
+            $value = trim($value);
+        }
+        $value = empty($value) ? null : $value;
+        $this->additionalWranglerNotes = $value;
+    }
+
 }
