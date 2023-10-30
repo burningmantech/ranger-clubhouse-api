@@ -279,6 +279,12 @@ class SmsController extends ApiController
 
     public function inbound()
     {
+        $ua = request()->userAgent();
+        if (preg_match("/(bingbot|AOLBuild|Baidu|bingbot|DuckDuckBot|googlebot|yahoo|yandex)/i", $ua)) {
+            // How did bingbot get their grubby digital dirty paws on this unpublished url?
+            return response()->json([ 'error' => 'not authorized.'], 403);
+        }
+
         try {
             $incoming = SMSService::processIncoming(request());
         } catch (Exception $e) {
