@@ -167,7 +167,10 @@ class TimesheetControllerTest extends TestCase
 
     public function testIndexNoneFound()
     {
-        $response = $this->json('GET', 'timesheet', ['year' => $this->year - 1, 'person_id' => $this->targetPerson->id]);
+        $response = $this->json('GET', 'timesheet', [
+            'year' => $this->year - 1,
+            'person_id' => $this->targetPerson->id
+        ]);
         $response->assertStatus(200);
         $this->assertCount(0, $response->json()['timesheet']);
     }
@@ -579,23 +582,19 @@ class TimesheetControllerTest extends TestCase
 
     public function testCorrectionRequests()
     {
-        $timesheet = $this->timesheet;
-        $timesheet->notes = 'Would thoust correctith thine entry?';
-        $timesheet->saveWithoutValidation();
-
         $year = $this->year;
         $onDuty = date("$year-09-10 00:00:00");
         $offDuty = date("$year-09-10 13:00:00");
 
         $person = $this->targetPerson;
 
-        TimesheetMissing::factory()->create([
+        $tm = TimesheetMissing::factory()->create([
             'on_duty' => $onDuty,
             'off_duty' => $offDuty,
             'person_id' => $person->id,
             'create_person_id' => $this->user->id,
             'position_id' => Position::DIRT,
-            'notes' => 'Give me hours!',
+            'additional_notes' => 'Give me hours!',
         ]);
 
         $response = $this->json('GET', 'timesheet/correction-requests', ['year' => $year]);
@@ -611,9 +610,13 @@ class TimesheetControllerTest extends TestCase
                     'on_duty' => $onDuty,
                     'off_duty' => $offDuty,
                     'is_missing' => true,
-                    'notes' => 'Give me hours!'
                 ]
             ],
+        ]);
+
+        $this->assertDatabaseHas('timesheet_missing_note', [
+            'id' => $tm->id,
+            'note' => 'Give me hours!'
         ]);
     }
 

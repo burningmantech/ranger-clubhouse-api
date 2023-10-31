@@ -14,6 +14,9 @@ class TimesheetFilter
 
     const USER_FIELDS = [
         'additional_notes',
+        'desired_position_id',
+        'desired_on_duty',
+        'desired_off_duty'
     ];
 
     const MANAGE_FIELDS = [
