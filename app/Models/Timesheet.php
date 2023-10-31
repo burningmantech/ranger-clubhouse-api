@@ -63,6 +63,9 @@ class Timesheet extends ApiModel
     const TOO_SHORT_LENGTH = (15 * 60);
 
     protected $fillable = [
+        'desired_position_id',
+        'desired_off_duty',
+        'desired_on_duty',
         'is_non_ranger',
         'off_duty',
         'on_duty',
@@ -87,6 +90,9 @@ class Timesheet extends ApiModel
         'position_id' => 'required|integer',
         'on_duty' => 'required|date',
         'off_duty' => 'nullable|sometimes|after_or_equal:on_duty',
+        'desired_position_id' => 'sometimes|nullable|integer|exists:position,id',
+        'desired_on_duty' => 'sometimes|nullable|date',
+        'desired_off_duty' => 'sometimes|nullable|date',
     ];
 
     protected $appends = [
@@ -95,6 +101,8 @@ class Timesheet extends ApiModel
     ];
 
     protected $casts = [
+        'desired_off_duty' => 'datetime',
+        'desired_on_duty' => 'datetime',
         'off_duty' => 'datetime',
         'on_duty' => 'datetime',
         'reviewed_at' => 'datetime',
@@ -120,6 +128,7 @@ class Timesheet extends ApiModel
         'reviewer_person:id,callsign',
         'verified_person:id,callsign',
         'position:id,title,count_hours,paycode,no_payroll_hours_adjustment',
+        'desired_position:id,title',
         'slot'
     ];
 
@@ -233,6 +242,11 @@ class Timesheet extends ApiModel
     public function admin_notes(): HasMany
     {
         return $this->hasMany(TimesheetNote::class)->where('type', TimesheetNote::TYPE_ADMIN);
+    }
+
+    public function desired_position() : BelongsTo
+    {
+        return $this->belongsTo(Position::class);
     }
 
     public function loadRelationships($loadAdminNotes = false): void

@@ -232,7 +232,12 @@ class TimesheetController extends ApiController
             $timesheet->reviewer_person_id = $userId;
         }
 
-        if (!$timesheet->isDirty('review_status') && !empty($timesheet->additional_notes)) {
+        if (
+            !empty($timesheet->additional_notes)
+            || $timesheet->isDirty('desired_position_id')
+            || $timesheet->isDirty('desired_on_duty')
+            || $timesheet->isDirty('desired_off_duty')
+        ) {
             $timesheet->review_status = Timesheet::STATUS_PENDING;
         }
 
@@ -1003,7 +1008,7 @@ class TimesheetController extends ApiController
         ]);
 
         $personId = $params['person_id'];
-        $this->authorize('checkForOverlaps', [ Timesheet::class, $personId]);
+        $this->authorize('checkForOverlaps', [Timesheet::class, $personId]);
 
         $overlaps = Timesheet::findAllOverlapsForPerson($personId, $params['on_duty'], $params['off_duty'], $params['timesheet_id'] ?? null);
         if ($overlaps->isEmpty()) {
@@ -1020,6 +1025,6 @@ class TimesheetController extends ApiController
             'off_duty' => (string)$row->off_duty,
         ])->values();
 
-        return response()->json([ 'status' => 'overlap', 'timesheets' => $results ]);
+        return response()->json(['status' => 'overlap', 'timesheets' => $results]);
     }
 }
