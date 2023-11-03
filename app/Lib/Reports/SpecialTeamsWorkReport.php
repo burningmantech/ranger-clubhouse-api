@@ -17,7 +17,7 @@ class SpecialTeamsWorkReport
      * @param bool $viewEmail include email addresses
      * @return array
      */
-    public static function execute(array $positionIds, int $startYear, int $endYear, bool $includeInactive, bool $viewEmail = false)
+    public static function execute(array $positionIds, int $startYear, int $endYear, bool $includeInactive, bool $viewEmail = false): array
     {
         $sql = DB::table('person')
             ->select(
@@ -65,6 +65,9 @@ class SpecialTeamsWorkReport
             $years = [];
             $totalDuration = 0;
             for ($year = $startYear; $year <= $endYear; $year++) {
+                if ($year == 2020 || $year == 2021) {
+                    continue;
+                }
                 $duration = (int)($timeByYear->has($year) ? $timeByYear[$year]->duration : 0);
                 $years[] = $duration;
                 $totalDuration += $duration;
