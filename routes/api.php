@@ -287,6 +287,9 @@ Route::group([
 
     Route::resource('position', 'PositionController');
 
+    Route::patch('position-lineup/{position_lineup}/positions', 'PositionLineupController@updatePositions');
+    Route::resource('position-lineup', 'PositionLineupController');
+
     Route::post('provision/bank-provisions', 'ProvisionController@bankProvisions');
     Route::post('provision/bulk-comment', 'ProvisionController@bulkComment');
     Route::post('provision/clean-provisions', 'ProvisionController@cleanProvisionsFromPriorEvent');

@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -241,23 +240,61 @@ class Slot extends ApiModel
     /**
      * Find all the signed up folks for a given slot.
      *
-     * @param int $slotId
+     * @param Slot $slot
      * @param bool $includeOnDuty
      * @param bool $includePhoto
-     * @return Collection
+     * @return array
      */
 
-    public static function findSignUps(int $slotId, bool $includeOnDuty = false, bool $includePhoto = false): Collection
+    public static function retrieveSignUps(Slot $slot, bool $includeOnDuty = false, bool $includePhoto = false): array
     {
         $rows = DB::table('person_slot')
             ->select('person.id', 'person.callsign')
             ->join('person', 'person.id', '=', 'person_slot.person_id')
-            ->where('person_slot.slot_id', $slotId)
+            ->where('person_slot.slot_id', $slot->id)
             ->orderBy('person.callsign', 'asc')
             ->get();
 
-        if (!$includeOnDuty || $rows->isEmpty()) {
-            return $rows;
+        $results = ['people' => $rows];
+
+        if (!$includeOnDuty) {
+            $positions = PositionLineup::retrieveAssociatedPositions($slot->position_id);
+            if (!$positions) {
+                return $results;
+            }
+
+            $assocSignUps = [];
+            foreach ($positions as $position) {
+                $slotId = DB::table('slot')
+                    ->whereBetween('begins', [$slot->begins->clone()->subHour(), $slot->begins->clone()->addHour()])
+                    ->where('position_id', $position->id)
+                    ->where('slot.active', true)
+                    ->value('id');
+
+                if ($slotId) {
+                    $signups = DB::table('person_slot')
+                        ->select('person.id', 'person.callsign')
+                        ->join('person', 'person.id', '=', 'person_slot.person_id')
+                        ->where('person_slot.slot_id', $slotId)
+                        ->orderBy('person.callsign', 'asc')
+                        ->get();
+                } else {
+                    $signups = [];
+                }
+
+                $assocSignUps[] = [
+                    'position_id' => $position->id,
+                    'position_title' => $position->title,
+                    'people' => $signups
+                ];
+            }
+
+            $results['assoc_signups'] = $assocSignUps;
+            return $results;
+        }
+
+        if ($rows->isEmpty()) {
+            return $results;
         }
 
         $ids = $rows->pluck('id');
@@ -283,7 +320,7 @@ class Slot extends ApiModel
 
         }
 
-        return $rows;
+        return $results;
     }
 
     /**
