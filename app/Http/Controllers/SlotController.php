@@ -272,9 +272,7 @@ class SlotController extends ApiController
             'include_photo' => 'sometimes|boolean'
         ]);
 
-        return response()->json([
-            'people' => Slot::findSignUps($slot->id, $params['is_onduty'] ?? false, $params['include_photo'] ?? false)
-        ]);
+        return response()->json(Slot::retrieveSignUps($slot, $params['is_onduty'] ?? false, $params['include_photo'] ?? false));
     }
 
     /**
