@@ -292,6 +292,7 @@ class Position extends ApiModel
 
     protected $fillable = [
         'active',
+        'auto_sign_out',
         'alert_when_no_trainers',
         'alert_when_becomes_empty',
         'all_rangers',
@@ -311,6 +312,7 @@ class Position extends ApiModel
         'resource_tag',
         'role_ids',
         'short_title',
+        'sign_out_hour_cap',
         'team_category',
         'team_id',
         'title',
@@ -323,6 +325,7 @@ class Position extends ApiModel
         'alert_when_becomes_empty' => 'bool',
         'alert_when_no_trainers' => 'bool',
         'all_rangers' => 'bool',
+        'auto_sign_out' => 'bool',
         'deselect_on_team_join' => 'bool',
         'new_user_eligible' => 'bool',
         'no_training_required' => 'bool',
@@ -331,6 +334,7 @@ class Position extends ApiModel
         'on_trainer_report' => 'bool',
         'prevent_multiple_enrollments' => 'bool',
         'require_training_for_roles' => 'bool',
+        'sign_out_hour_cap' => 'float',
     ];
 
     protected $rules = [
