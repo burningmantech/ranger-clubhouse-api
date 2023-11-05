@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Jobs\SignOutTimesheetsJob;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -50,6 +51,10 @@ class Kernel extends ConsoleKernel
 
             // Cleanup the mail log
             $schedule->command('clubhouse:cleanup-maillog')->dailyAt('03:30')->onOneServer();
+
+            // Sign out timesheets
+            $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 15-31 8 *')->onOneServer();
+            $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 1-10 9 *')->onOneServer();
         }
 
         if (is_ghd_server()) {

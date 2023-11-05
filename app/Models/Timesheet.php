@@ -89,7 +89,7 @@ class Timesheet extends ApiModel
         'person_id' => 'required|integer',
         'position_id' => 'required|integer',
         'on_duty' => 'required|date',
-        'off_duty' => 'nullable|sometimes|after_or_equal:on_duty',
+        'off_duty' => 'nullable|sometimes|date|gte:on_duty',
         'desired_position_id' => 'sometimes|nullable|integer|exists:position,id',
         'desired_on_duty' => 'sometimes|nullable|date',
         'desired_off_duty' => 'sometimes|nullable|date',
@@ -255,6 +255,15 @@ class Timesheet extends ApiModel
         if ($loadAdminNotes) {
             $this->load(self::ADMIN_NOTES_RELATIONSHIPS);
         }
+    }
+
+    public function save($options = []): bool
+    {
+        if ($this->off_duty && $this->on_duty) {
+            $this->rules['off_duty'] = 'required|date_format:Y-m-d H:i:s|after_or_equal:'.$this->on_duty->format('Y-m-d H:i:s');
+        }
+
+        return parent::save($options);
     }
 
     /**

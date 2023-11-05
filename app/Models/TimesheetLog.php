@@ -87,9 +87,9 @@ class TimesheetLog extends ApiModel
         return [$timesheets, $other];
     }
 
-    public static function updateYear($timesheetId, $year)
+    public static function updateYear(int $timesheetId, int $year): void
     {
-        DB::update("UPDATE timesheet_log SET year=? WHERE timesheet_id=? ", [$timesheetId, $year]);
+        DB::table('timesheet_log')->where('timesheet_id', $timesheetId)->update(['year' => $year]);
     }
 
     /**
@@ -97,13 +97,13 @@ class TimesheetLog extends ApiModel
      *
      * @param string $action timesheet action
      * @param int $personId the timesheet owner
-     * @param int $userId user performing the action
+     * @param int|null $userId user performing the action
      * @param int|null $timesheetId timesheet id (maybe null for 'confirmed')
      * @param mixed $data required data usually includes modified columns.
      * @param int $year
      */
 
-    public static function record(string $action, int $personId, int $userId, int|null $timesheetId, mixed $data, int $year = 0)
+    public static function record(string $action, int $personId, ?int $userId, int|null $timesheetId, mixed $data, int $year = 0)
     {
         $columns = [
             'action' => $action,
