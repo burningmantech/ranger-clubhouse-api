@@ -69,6 +69,7 @@ class Slot extends ApiModel
         'credits',
         'has_started',
         'has_ended',
+        'has_day_ended',
     ];
 
     protected $rules = [
@@ -590,6 +591,21 @@ class Slot extends ApiModel
         return $this->adjustTimezone($this->ends);
     }
 
+    /**
+     * Is the slot past the day it ends on?
+     *
+     * @return bool
+     */
+
+    public function getHasDayEndedAttribute(): bool
+    {
+        $ends = $this->ends_adjusted;
+        if (!$ends || $ends->isFuture()) {
+            return false;
+        }
+
+        return !$ends->isSameDay(now()->tz($this->timezone));
+    }
 
     /**
      * Check to see if the slot begins within the pre-event period and is not a training slot
