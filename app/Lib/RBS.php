@@ -18,9 +18,11 @@ use App\Models\MailLog;
 use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use ReflectionException;
 use RuntimeException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
@@ -45,7 +47,7 @@ class RBS
     /*
      * Attributes describes each broadcast type.
      *
-     * The follow keys help define what critera a broadcast uses/requires:
+     * The follow keys help define what criteria a broadcast uses/requires:
      *
      * is_simple - only takes an sms sized message, may broadcast to SMS and/or email
      * sms_only - only broadcasts to SMS, used with is_simple
@@ -243,7 +245,7 @@ class RBS
      * @return array [ success count, failed count ]
      */
 
-    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $subject, $message)
+    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $subject, $message): array
     {
         $sandbox = setting('BroadcastMailSandbox');
 
@@ -318,16 +320,17 @@ class RBS
         return [$sent, $fails];
     }
 
-    /*
+    /**
      * Retry a broadcast with failed messages
      *
-     * @param Broadcast $broadcast the thing to retry
-     * @param array $sms list of failed SMS messages
-     * @param array $emails list of failed emails
-     * @param integer $retryPersonId person who is attempting a retry
+     * @param $broadcast
+     * @param $sms
+     * @param $emails
+     * @param int $retryPersonId
+     * @throws ReflectionException
      */
 
-    public static function retryBroadcast($broadcast, $sms, $emails, $retryPersonId)
+    public static function retryBroadcast($broadcast, $sms, $emails, int $retryPersonId): void
     {
         if (!$sms->isEmpty()) {
             $phoneNumbers = $sms->pluck('address')->toArray();
@@ -454,19 +457,20 @@ class RBS
         return $emailMessage;
     }
 
-    /*
+    /**
      * Send a Clubhouse message to people
      *
-     * @param Alert $alert the alert row
-     * @param int $broadcastId the broadcast identifier
-     * @param int $senderId person who sending
-     * @param array $people list to send to
-     * @param string $from sender's callsign
-     * @param string $subject message subject
-     * @param string $message message body
+     * @param $alert
+     * @param int $broadcastId
+     * @param int|null $senderId
+     * @param $people
+     * @param $from
+     * @param $subject
+     * @param $message
+     * @param Carbon|string|null $expiresAt
      */
 
-    public static function broadcastClubhouse($alert, $broadcastId, $senderId, $people, $from, $subject, $message)
+    public static function broadcastClubhouse($alert, int $broadcastId, ?int $senderId, $people, $from, $subject, $message, Carbon|string|null $expiresAt): void
     {
         $clubhouseSandbox = setting('BroadcastClubhouseSandbox');
 
@@ -478,7 +482,8 @@ class RBS
                     'message_from' => $from,
                     'creator_person_id' => $senderId,
                     'subject' => $subject,
-                    'body' => $message
+                    'body' => $message,
+                    'expires_at' => $expiresAt,
                 ]);
                 $pm->saveWithoutValidation();
             }
@@ -663,7 +668,7 @@ class RBS
             if (isset($attrs['has_status']) && !empty($params['statuses'])) {
                 $sql->whereIn('person.status', $params['statuses']);
             } else {
-                $sql->where('person.status', 'active');
+                $sql->where('person.status', Person::ACTIVE);
             }
         }
 
@@ -673,7 +678,11 @@ class RBS
         self::addAlertPrefJoin($sql, $alert->id);
 
         if ($attending) {
-            $sql->where('person.active_next_event', true);
+            $sql->join('person_slot as attending_signup', 'attending_signup.person_id', 'person.id');
+            $sql->join('slot as attending_slot', function ($j) use ($year) {
+                $j->on('attending_slot', 'attending_slot.id', 'attending_signup.slot_id');
+                $j->where('attending_slot.begins_year', $year);
+            });
         }
 
         if ($training == 'passed'
@@ -712,7 +721,6 @@ class RBS
             'person.sms_on_playa_verified',
             'person.sms_off_playa_verified',
             'person.on_site',
-            'person.active_next_event',
         ];
 
         if ($sendSms) {

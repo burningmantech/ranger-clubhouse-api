@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -180,10 +182,10 @@ class Slot extends ApiModel
      * Find slots based on the given criteria
      *
      * @param $query
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
 
-    public static function findForQuery($query): \Illuminate\Database\Eloquent\Collection
+    public static function findForQuery($query): Collection
     {
         $sql = self::with(self::WITH_POSITION_TRAINER);
 
@@ -226,16 +228,28 @@ class Slot extends ApiModel
      * Find all the slots with sign-ups for a given year.
      *
      * @param int $year
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @param bool $ctmOnly
+     * @return \Illuminate\Support\Collection
      */
 
-    public static function findWithSignupsForYear(int $year): \Illuminate\Database\Eloquent\Collection
+    public static function findWithSignupsForYear(int $year, bool $ctmOnly = true): \Illuminate\Support\Collection
     {
-        return self::where('begins_year', $year)
+        $sql = self::where('begins_year', $year)
+            ->select('slot.*')
             ->where('signed_up', '>', 0)
             ->with('position:id,title')
-            ->orderBy('begins')
-            ->get();
+            ->orderBy('begins');
+
+        if ($ctmOnly) {
+            $teams = TeamManager::findForPerson(Auth::id());
+            if ($teams->isEmpty()) {
+                return collect([]);
+            }
+            $sql->join('position', 'position.id', 'slot.position_id');
+            $sql->whereIn('position.team_id', $teams->pluck('team_id'));
+        }
+
+        return $sql->get();
     }
 
     /**
