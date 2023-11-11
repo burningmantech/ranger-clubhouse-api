@@ -55,8 +55,8 @@ class ErrorLogController extends ApiController
             'person_id' => 'sometimes|integer',
             'sort' => 'sometimes|string',
 
-            'starts_at' => 'sometimes|datetime',
-            'ends_at' => 'sometimes|datetime',
+            'starts_at' => 'sometimes|date',
+            'ends_at' => 'sometimes|date',
 
             'error_type' => 'sometimes|string',
 

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -536,19 +537,51 @@ class Position extends ApiModel
 
     /**
      * Find all positions with working (started) slots
-     * @return Collection
      */
 
-    public static function findAllWithInProgressSlots(): Collection
+    public static function findAllWithInProgressSlots(bool $ctmOnly = true): \Illuminate\Support\Collection
     {
         $now = (string)now();
-        return self::where('type', '!=', self::TYPE_TRAINING)
+        $sql = self::where('type', '!=', self::TYPE_TRAINING)
             ->whereRaw('EXISTS (SELECT 1 FROM slot WHERE slot.active IS TRUE
                 AND slot.position_id=position.id
                 AND ? >= DATE_SUB(slot.begins, INTERVAL 6 HOUR)
                 AND ? < slot.ends LIMIT 1)', [$now, $now])
-            ->orderBy("title")
-            ->get();
+            ->where('position.active', true)
+            ->orderBy('position.title')
+            ->with('team:id,title');
+
+        if ($ctmOnly) {
+            $teams = TeamManager::findForPerson(Auth::id());
+            if ($teams->isEmpty()) {
+                return collect([]);
+            }
+
+            $sql->whereIn('team_id', $teams->pluck('team_id'));
+        }
+
+        return $sql->get();
+    }
+
+    /**
+     * Find all active positions and optionally filtered if the person is a CTM for the team positions.
+     * @param bool $ctmOnly
+     * @return \Illuminate\Support\Collection
+     */
+
+    public static function retrieveAllActive(bool $ctmOnly = true): \Illuminate\Support\Collection
+    {
+        $sql = self::where('active', true)->with('team:id,title');
+        if ($ctmOnly) {
+            $teams = TeamManager::findForPerson(Auth::id());
+            if ($teams->isEmpty()) {
+                return collect([]);
+            }
+
+            $sql->whereIn('team_id', $teams->pluck('team_id'));
+        }
+
+        return $sql->orderBy('position.title')->get();
     }
 
     /**

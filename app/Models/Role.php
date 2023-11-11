@@ -42,6 +42,8 @@ class Role extends ApiModel
     const SALESFORCE_IMPORT = 118;      // Allowed to import new accounts from Salesforce
     const MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round regardless of LMOP Enabled setting.
     const EDIT_CLOTHING = 120;   // Can edit a clothing fields.
+    const MEGAPHONE_TEAM_ONPLAYA = 121;  // On-Playa Megaphone permission
+    const MEGAPHONE_EMERGENCY_ONPLAYA = 122;    // Allows access to the broadcast all emergency
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
 

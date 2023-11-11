@@ -49,6 +49,18 @@ class TeamManager extends ApiModel
     }
 
     /**
+     * Can the person manage this position?
+     *
+     */
+
+    public static function canManagePosition(int $personId, int $positionId) : bool {
+        return self::join('position', 'position.team_id', 'team_manager.team_id')
+            ->where('team_manager.person_id', $personId)
+            ->where('position.id', $positionId)
+            ->exists();
+
+    }
+    /**
      * Retrieve the teams a person if a manager.
      *
      * @param int $personId

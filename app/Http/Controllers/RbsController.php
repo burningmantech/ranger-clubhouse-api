@@ -10,7 +10,9 @@ use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
 use App\Models\Person;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\Slot;
+use App\Models\TeamManager;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -205,7 +207,7 @@ class RbsController extends ApiController
     {
         prevent_if_ghd_server('RBS stats');
 
-        $this->authorize('stats', Broadcast::class);
+        $this->authorize('details', Broadcast::class);
 
         $params = request()->validate([
             'type' => 'required|string'
@@ -222,52 +224,51 @@ class RbsController extends ApiController
             }
         }
 
+        $haveGeneral = $this->userHasRole(Role::MEGAPHONE);
+        $haveEmergency = $this->userHasRole(Role::MEGAPHONE_EMERGENCY_ONPLAYA);
+        $ctmOnly = !$haveEmergency && !$haveGeneral;
+
         // Return positions needing more people
         if (isset($attrs['has_muster_position'])) {
-            $info['muster_positions'] = [
-                'frequent' => Position::find(RBS::FREQUENT_MUSTER_POSITIONS)
-                    ->sortBy('title', SORT_NATURAL | SORT_FLAG_CASE)
-                    ->values()
-                    ->map(function ($row) {
-                        return ['id' => $row->id, 'title' => $row->title];
-                    }),
-
-                'in_progress' => Position::findAllWithInProgressSlots()
-                    ->map(function ($row) {
-                        return ['id' => $row->id, 'title' => $row->title];
-                    })
-            ];
+            $info['in_progress_positions'] = Position::findAllWithInProgressSlots($ctmOnly)
+                ->map(fn($row) => [
+                    'id' => $row->id,
+                    'title' => $row->title,
+                    'team_id' => $row->team_id,
+                    'team_title' => $row->team?->title,
+                ]);
         }
 
         // Return all positions
-        if (isset($attrs['has_position'])) {
-            $info['positions'] = Position::all()->map(function ($p) {
-                return ['id' => $p->id, 'title' => $p->title, 'type' => $p->type];
-            })->values();
+        if (isset($attrs['has_position']) || isset($attrs['has_muster_position'])) {
+            $info['positions'] = Position::retrieveAllActive($ctmOnly)
+                ->map(fn($p) => [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'type' => $p->type,
+                    'team_id' => $p->team_id,
+                    'team_title' => $p->team?->title,
+                ])->values();
         }
 
-        // Return all sign ups
+        // Return all sign-ups
         if (isset($attrs['has_slot'])) {
-            $groups = Slot::findWithSignupsForYear(current_year())->groupBy('position.title');
+            $groups = Slot::findWithSignupsForYear(current_year(), $ctmOnly)->groupBy('position.title');
 
             $positionSlots = [];
             foreach ($groups as $title => $slots) {
                 $positionSlots[] = [
                     'title' => $title,
-                    'slots' => $slots->map(function ($s) {
-                        return [
-                            'id' => $s->id,
-                            'description' => $s->description,
-                            'begins' => (string)$s->begins,
-                            'signed_up' => $s->signed_up
-                        ];
-                    })->values()->toArray()
+                    'slots' => $slots->map(fn($s) => [
+                        'id' => $s->id,
+                        'description' => $s->description,
+                        'begins' => (string)$s->begins,
+                        'signed_up' => $s->signed_up
+                    ])->values()->toArray()
                 ];
             }
 
-            usort($positionSlots, function ($a, $b) {
-                return strcmp($a['title'], $b['title']);
-            });
+            usort($positionSlots, fn($a, $b) => strcasecmp($a['title'], $b['title']));
             $info['slots'] = $positionSlots;
         }
 
@@ -281,15 +282,11 @@ class RbsController extends ApiController
 
         if ($alerts) {
             // Filter out alerts for non-RBS broadcasts
-            $alerts = $alerts->filter(function ($a) {
-                return $a->id != Alert::CLUBHOUSE_NOTIFY_PRE_EVENT
-                    && $a->id != Alert::CLUBHOUSE_NOTIFY_ON_PLAYA
-                    && $a->id != Alert::RANGER_CONTACT
-                    && $a->id != Alert::MENTOR_CONTACT;
-            });
-            $info['alerts'] = $alerts->map(function ($a) {
-                return ['id' => $a->id, 'title' => $a->title, 'on_playa' => $a->on_playa];
-            })->values();
+            $alerts = $alerts->filter(fn($a) => $a->id != Alert::CLUBHOUSE_NOTIFY_PRE_EVENT
+                && $a->id != Alert::CLUBHOUSE_NOTIFY_ON_PLAYA
+                && $a->id != Alert::RANGER_CONTACT
+                && $a->id != Alert::MENTOR_CONTACT);
+            $info['alerts'] = $alerts->map(fn($a) => ['id' => $a->id, 'title' => $a->title, 'on_playa' => $a->on_playa])->values();
         }
 
         switch ($type) {
@@ -416,13 +413,26 @@ class RbsController extends ApiController
             'from' => 'sometimes|string|required_if:send_email,1',
             'sms_message' => 'sometimes|string|required_if:send_sms,1',
             'message' => 'sometimes|string|required_if:send_email,1',
-            'subject' => 'sometimes|string|required_if:send_email,1|required_if:send_clubhouse,1'
+            'subject' => 'sometimes|string|required_if:send_email,1|required_if:send_clubhouse,1',
+            'expires_at' => 'sometimes|date',
         ]);
 
+        $userId = $this->user->id;
         $type = $params['type'];
         $attrs = $this->verifyType($type);
 
         $criteria = $this->grabCriteria($type);
+
+        $positionIds = $criteria['position_ids'] ?? null;
+
+        $haveGeneralOrEmergency = $this->userHasRole([Role::MEGAPHONE, Role::MEGAPHONE_EMERGENCY_ONPLAYA]);
+        if ($positionIds && !$haveGeneralOrEmergency) {
+            foreach ($positionIds as $id) {
+                if (!TeamManager::canManagePosition($userId, $id)) {
+                    return throw new InvalidArgumentException('No permission to transmit to position');
+                }
+            }
+        }
 
         $sendSMS = $params['send_sms'] ?? false;
         $sendEmail = $params['send_email'] ?? false;
@@ -435,6 +445,7 @@ class RbsController extends ApiController
         $from = $params['from'] ?? '';
 
         $alertId = $attrs['alert_id'] ?? ($criteria['alert_id'] ?? null);
+        $expiresAt = $params['expires_at'] ?? null;
 
         if (empty($alertId)) {
             throw new InvalidArgumentException("Alert id must be supplied.");
@@ -448,12 +459,11 @@ class RbsController extends ApiController
         if ($isSimple) {
             $subject = $smsMessage;
             $sendClubhouse = false;
-            $sendEmail = !isset($attrs['sms_only']);
+            $sendEmail = !($attrs['sms_only'] ?? false);
             $sendSMS = true;
             $from = setting('DoNotReplyEmail');
         }
 
-        $userId = $this->user->id;
         $broadcast = Broadcast::create([
             'sender_id' => $userId,
             'alert_id' => $alertId,
@@ -465,6 +475,7 @@ class RbsController extends ApiController
             'sent_sms' => $sendSMS,
             'sent_email' => $sendEmail,
             'sent_clubhouse' => $sendClubhouse,
+            'expires_at' => $expiresAt
         ]);
         $broadcastId = $broadcast->id;
 
@@ -480,7 +491,7 @@ class RbsController extends ApiController
         // Send the Clubhouse messages
         $clubhouseMessages = 0;
         if ($sendClubhouse) {
-            RBSTransmitClubhouseMessageJob::dispatch($alert, $broadcastId, $userId, $people, 'The Ranger Broadcasting System', $subject, $message);
+            RBSTransmitClubhouseMessageJob::dispatch($alert, $broadcastId, $userId, $people, 'The Ranger Broadcasting System', $subject, $message, $expiresAt);
             $clubhouseMessages = $people->count();
         }
 
@@ -537,12 +548,8 @@ class RbsController extends ApiController
         $broadcast = Broadcast::findWithFailedMessages($params['broadcast_id']);
 
         // Split out SMS & emails
-        $sms = $broadcast->messages->filter(function ($r) {
-            return ($r->address_type == 'sms');
-        });
-        $emails = $broadcast->messages->filter(function ($r) {
-            return ($r->address_type == 'email');
-        });
+        $sms = $broadcast->messages->filter(fn($r) => ($r->address_type == 'sms'));
+        $emails = $broadcast->messages->filter(fn($r) => ($r->address_type == 'email'));
 
         // Fire again!
         RBS::retryBroadcast($broadcast, $sms, $emails, $this->user->id);
@@ -575,9 +582,7 @@ class RbsController extends ApiController
         }
 
         $people = array_values($peopleByIds);
-        usort($people, function ($a, $b) {
-            return strcasecmp($a->callsign, $b->callsign);
-        });
+        usort($people, fn($a, $b) => strcasecmp($a->callsign, $b->callsign));
 
         // Response should match transmit()
         return response()->json([

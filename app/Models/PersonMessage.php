@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\Carbon;
 
 class PersonMessage extends ApiModel
 {
@@ -33,15 +35,17 @@ class PersonMessage extends ApiModel
 
     protected $appends = [
         'sender_photo_url',
-        'is_rbs'
+        'is_rbs',
+        'has_expired'
     ];
 
     public $recipient_callsign;
     public $sender_callsign;
 
     protected $casts = [
+        'created_at' => 'datetime',
         'delivered' => 'bool',
-        'created_at' => 'datetime'
+        'expires_at' => 'datetime',
     ];
 
     protected $createRules = [
@@ -153,5 +157,21 @@ class PersonMessage extends ApiModel
     public function getIsRbsAttribute(): bool
     {
         return stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
+    }
+
+    /**
+     * Has the message expired?
+     */
+
+    public function hasExpired(): Attribute
+    {
+        return Attribute::make(get: function (mixed $value, array $attributes) {
+            $expiresAt = $attributes['expires_at'] ?? null;
+            if (!$expiresAt) {
+                return false;
+            }
+
+            return now()->gte(Carbon::parse($expiresAt));
+        });
     }
 }
