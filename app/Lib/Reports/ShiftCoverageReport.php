@@ -133,6 +133,14 @@ class ShiftCoverageReport
         [Position::QUARTERMASTER, 'QM'],
     ];
 
+    const TROUBLESHOOTERS = [
+        [Position::TROUBLESHOOTER, 'Troubleshooter'],
+        [Position::TROUBLESHOOTER_MENTOR, 'TS Mentor'],
+        [Position::TROUBLESHOOTER_MENTEE, 'TS Mentee'],
+        [Position::TROUBLESHOOTER_LEAL, 'TS LEAL'],
+        [Position::TROUBLESHOOTER_PRE_EVENT, 'TS Pre-Event'],
+    ];
+
     /*
       * The various type which can be reported on.
       *
@@ -151,6 +159,7 @@ class ShiftCoverageReport
         'post-event' => [Position::DIRT_POST_EVENT, self::POST_EVENT],
         'pre-event' => [Position::DIRT_PRE_EVENT, self::PRE_EVENT],
         'rsci-mentor' => [Position::RSCI_MENTOR, self::RSCI_MENTOR],
+        'troubleshooter' => [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_PRE_EVENT], self::TROUBLESHOOTERS]
     ];
 
     public static function execute(int $year, string $type): array
