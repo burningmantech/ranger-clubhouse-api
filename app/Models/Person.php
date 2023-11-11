@@ -900,9 +900,11 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         $this->trueRoles = array_keys($this->rolesById);
 
         $haveManage = $this->rolesById[Role::MANAGE] ?? false;
+        $lmopEnabled = setting('LoginManageOnPlayaEnabled');
+
         if (!$haveManage
             && isset($this->rolesById[Role::MANAGE_ON_PLAYA])
-            && setting('LoginManageOnPlayaEnabled')) {
+            && $lmopEnabled) {
             $this->rolesById[Role::MANAGE] = true;
             $haveManage = true;
         }
@@ -911,6 +913,12 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             && isset($this->rolesById[Role::TRAINER_SEASONAL])
             && setting('TrainingSeasonalRoleEnabled')) {
             $this->rolesById[Role::TRAINER] = true;
+        }
+
+        foreach ([ Role::MEGAPHONE_EMERGENCY_ONPLAYA, Role::MEGAPHONE_TEAM_ONPLAYA] as $role) {
+            if (isset($this->rolesById[$role]) && !$lmopEnabled) {
+                unset($this->rolesById[$role]);
+            }
         }
 
         $this->rawRolesById = $this->rolesById;

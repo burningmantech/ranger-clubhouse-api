@@ -22,7 +22,7 @@ class BroadcastPolicy
      * Can a user view their own messages?
      */
 
-    public function messages(Person $user, $personId)
+    public function messages(Person $user, $personId): bool
     {
         return ($user->id == $personId);
     }
@@ -40,7 +40,7 @@ class BroadcastPolicy
      * Can a user see the stats
      */
 
-    public function stats(Person $user)
+    public function stats(Person $user): false
     {
         return false;
     }
@@ -49,7 +49,7 @@ class BroadcastPolicy
      * Can a user retry a broadcast
      */
 
-    public function retry(Person $user)
+    public function retry(Person $user): false
     {
         return false;
     }
@@ -58,27 +58,27 @@ class BroadcastPolicy
      * Can a user see the unknown phones
      */
 
-    public function unknownPhones(Person $user): bool
+    public function unknownPhones(Person $user): false
     {
         return false;
+    }
+
+    public function details(Person $user): bool
+    {
+        return $user->hasRole([Role::MEGAPHONE, Role::MEGAPHONE_TEAM_ONPLAYA, Role::MEGAPHONE_EMERGENCY_ONPLAYA]);
     }
 
     /*
      * Is the user allowed to interact with the broadcast type?
      */
 
-    public function typeAllowed(Person $user, $type)
+    public function typeAllowed(Person $user, $type): bool
     {
-        if ($user->hasRole(Role::MEGAPHONE)) {
-            return true;
+        if ($type == Broadcast::TYPE_EMERGENCY) {
+            return $user->hasRole(Role::MEGAPHONE_EMERGENCY_ONPLAYA);
         }
 
-        if ($user->hasRole(Role::EDIT_SLOTS)
-            && ($type == Broadcast::TYPE_SLOT || $type == Broadcast::TYPE_SLOT_EDIT)) {
-            return true;
-        }
-
-        return false;
+        return $user->hasRole([Role::MEGAPHONE, Role::MEGAPHONE_TEAM_ONPLAYA, Role::MEGAPHONE_EMERGENCY_ONPLAYA]);
     }
 
     /**
@@ -88,7 +88,8 @@ class BroadcastPolicy
      * @return bool
      */
 
-    public function transmit(Person $user) : bool {
-        return $user->hasRole(Role::MEGAPHONE);
+    public function transmit(Person $user): bool
+    {
+        return $user->hasRole([Role::MEGAPHONE, Role::MEGAPHONE_TEAM_ONPLAYA, Role::MEGAPHONE_EMERGENCY_ONPLAYA]);
     }
 }
