@@ -44,6 +44,8 @@ class Role extends ApiModel
     const EDIT_CLOTHING = 120;   // Can edit a clothing fields.
     const MEGAPHONE_TEAM_ONPLAYA = 121;  // On-Playa Megaphone permission
     const MEGAPHONE_EMERGENCY_ONPLAYA = 122;    // Allows access to the broadcast all emergency
+    const ANNOUNCEMENT_MANAGEMENT = 123;    // Allow announcements to be created and deleted.
+
     const TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
 

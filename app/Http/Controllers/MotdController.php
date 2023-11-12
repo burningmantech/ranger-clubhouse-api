@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\ApiController;
-
 use App\Models\Motd;
 use App\Models\PersonMotd;
-
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MotdController extends ApiController
 {
     /**
      * Retrieve all announcements based on the given criteria
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $this->authorize('index', Motd::class);
         $params = request()->validate([
@@ -37,11 +37,11 @@ class MotdController extends ApiController
     /**
      * Retrieve the announcements for the current user.
      *
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function bulletin()
+    public function bulletin(): JsonResponse
     {
         $this->authorize('bulletin', Motd::class);
         $params = request()->validate([
@@ -55,17 +55,29 @@ class MotdController extends ApiController
         return $this->success($result['motd'], $result['meta'], 'motd');
     }
 
-    public function show(Motd $motd)
+    /**
+     * Show a MOTD
+     *
+     * @param Motd $motd
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function show(Motd $motd): JsonResponse
     {
         $this->authorize('show', Motd::class);
         return $this->success($motd);
     }
 
-    /*
+    /**
      * Create a new MOTD
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $this->authorize('create', Motd::class);
 
@@ -80,10 +92,16 @@ class MotdController extends ApiController
         return $this->success($motd);
     }
 
-    /*
+    /**
      * Update a MOTD
+     *
+     * @param Motd $motd
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
-    public function update(Motd $motd)
+
+    public function update(Motd $motd): JsonResponse
     {
         $this->authorize('update', $motd);
 
@@ -98,9 +116,13 @@ class MotdController extends ApiController
 
     /**
      * Remove a MOTD
+     *
+     * @param Motd $motd
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function destroy(Motd $motd)
+    public function destroy(Motd $motd): JsonResponse
     {
         $this->authorize('destroy', $motd);
 
@@ -114,10 +136,10 @@ class MotdController extends ApiController
      * Mark the motd as read by the current user
      *
      * @param Motd $motd
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
-    public function markRead(Motd $motd)
+    public function markRead(Motd $motd): JsonResponse
     {
         PersonMotd::markAsRead($this->user->id, $motd->id);
         return $this->success();
