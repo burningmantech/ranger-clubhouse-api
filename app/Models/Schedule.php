@@ -10,6 +10,7 @@ use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class Schedule
 {
@@ -33,6 +34,10 @@ class Schedule
     public $slot_tz;
     public $slot_tz_abbr;
     public $slot_url;
+    public $slot_parent_signup_position;
+    public $slot_parent_signups;
+    public $slot_child_signups;
+    public $slot_child_signup_position;
     public $timezone;
     public $trainer_count;
     public $trainer_slot_id;
@@ -78,6 +83,7 @@ class Schedule
      * @param int $year
      * @param array $query
      * @return array
+     * @throws InvalidArgumentException
      */
 
     public static function findForQuery(int $personId, int $year, array $query = []): array
@@ -93,7 +99,13 @@ class Schedule
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
             ->where('slot.begins_year', $year)
             ->orderBy('slot.begins')
-            ->with('position:id,title,type,contact_email,count_hours');
+            ->with([
+                'position:id,title,type,contact_email,count_hours',
+                'parent_signup_slot',
+                'parent_signup_slot.position:id,title',
+                'child_signup_slot',
+                'child_signup_slot.position:id,title'
+            ]);
 
         if ($onlySignups) {
             $sql->join('person_slot', function ($join) use ($personId) {
@@ -151,16 +163,28 @@ class Schedule
             $entry->slot_duration = $row->duration;
 
             $entry->slot_max_potential = $row->max;
-            $entry->slot_signed_up = $row->signed_up;
             $entry->slot_tz = $row->timezone;
             $entry->slot_tz_abbr = $row->timezone_abbr;
             $entry->slot_url = $row->url;
             $entry->trainer_count = $row->trainer_count;
             $entry->trainer_slot_id = $row->trainer_slot_id;
+            $entry->year = $year;
 
             // Compute some values
-            $entry->year = $year;
             $entry->slot_max = ($entry->trainer_slot_id ? $entry->trainer_count * $entry->slot_max_potential : $entry->slot_max_potential);
+            $entry->slot_signed_up = $row->signed_up;
+            if ($row->id == 24872) {
+                error_log('SLOT '.json_encode($row));
+            }
+            if ($row->parent_signup_slot) {
+                $entry->slot_signed_up += $row->parent_signup_slot->signed_up;
+                $entry->slot_parent_signups = $row->parent_signup_slot->signed_up;
+                $entry->slot_parent_signup_position = $row->parent_signup_slot->position->title;
+            } else if ($row->child_signup_slot) {
+                $entry->slot_signed_up += $row->child_signup_slot->signed_up;
+                $entry->slot_child_signups = $row->child_signup_slot->signed_up;
+                $entry->slot_child_signup_position = $row->child_signup_slot->position->title;
+            }
         }
 
         PositionCredit::bulkComputeCredits($slots, $year, 'slot_begins_time', 'slot_ends_time');
@@ -222,24 +246,48 @@ class Schedule
             return ['status' => self::HAS_STARTED, 'signed_up' => $slot->signed_up];
         }
 
-        $max = $slot->max;
-        if ($slot->trainer_slot_id) {
-            $max = $max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
-        }
-
+        $signUps = 0;
         try {
             $isOvercapacity = false;
 
             DB::beginTransaction();
             // Re-read the slot for update.
-            $updateSlot = Slot::where('id', $slot->id)->lockForUpdate()->first();
+            $updateSlot = Slot::where('id', $slot->id)
+                ->lockForUpdate()
+                ->with(['parent_signup_slot', 'child_signup_slot'])
+                ->first();
+
             if (!$updateSlot) {
                 // shouldn't happen but ya never know...
                 throw new ScheduleSignUpException(self::NO_SLOT);
             }
 
+            /*
+             * Sign up limitations
+             *
+             * - a child slot cannot exceed its own max count in addition to
+             *   not exceeding parent's max count for the combined parent and child signups
+             * - a parent slot cannot have the combined parent and child signups exceed the parent's max count
+             */
+
+            $signUps = $updateSlot->signed_up;
+            if ($updateSlot->parent_signup_slot) {
+                if ($signUps >= $updateSlot->max && !$force) {
+                    throw new ScheduleSignUpException(self::FULL);
+                }
+                $signUps += $updateSlot->parent_signup_slot->signed_up;
+                $max = $updateSlot->parent_signup_slot->max;
+            } else if ($updateSlot->child_signup_slot) {
+                $signUps += $updateSlot->child_signup_slot->signed_up;
+                $max = $updateSlot->max;
+            } else if ($slot->trainer_slot_id) {
+                $max = $updateSlot->max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
+            } else {
+                $max = $updateSlot->max;
+            }
+
             // Cannot exceed sign up limit unless it is forced.
-            if ($updateSlot->signed_up >= $max) {
+            if ($signUps >= $max) {
                 if (!$force) {
                     throw new ScheduleSignUpException(self::FULL);
                 }
@@ -257,12 +305,12 @@ class Schedule
 
             return [
                 'status' => self::SUCCESS,
-                'signed_up' => $updateSlot->signed_up,
+                'signed_up' => $signUps + 1,
                 'overcapacity' => $isOvercapacity,
             ];
         } catch (ScheduleSignUpException $e) {
             DB::rollback();
-            return ['status' => $e->getMessage(), 'signed_up' => $updateSlot->signed_up];
+            return ['status' => $e->getMessage(), 'signed_up' => $signUps];
         }
     }
 
@@ -314,7 +362,7 @@ class Schedule
      * Remove all future signups for a person.
      */
 
-    public static function removeFutureSignUps(int $personId, string $reason)
+    public static function removeFutureSignUps(int $personId, string $reason): void
     {
         // Find all upcoming shifts and remove 'em.
         $now = now();

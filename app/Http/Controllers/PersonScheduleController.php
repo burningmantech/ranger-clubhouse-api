@@ -25,7 +25,7 @@ class PersonScheduleController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
      */
 
     public function index(Person $person): JsonResponse
@@ -183,9 +183,6 @@ class PersonScheduleController extends ApiController
 
             return response()->json($response);
         }
-
-        // Person might be active next (this) event.
-        $person->update(['active_next_event' => 1]);
 
         $forcedReasons = [];
 
