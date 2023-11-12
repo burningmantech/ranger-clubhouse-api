@@ -34,10 +34,6 @@ class Schedule
     public $slot_tz;
     public $slot_tz_abbr;
     public $slot_url;
-    public $slot_parent_signup_position;
-    public $slot_parent_signups;
-    public $slot_child_signups;
-    public $slot_child_signup_position;
     public $timezone;
     public $trainer_count;
     public $trainer_slot_id;
@@ -173,17 +169,11 @@ class Schedule
             // Compute some values
             $entry->slot_max = ($entry->trainer_slot_id ? $entry->trainer_count * $entry->slot_max_potential : $entry->slot_max_potential);
             $entry->slot_signed_up = $row->signed_up;
-            if ($row->id == 24872) {
-                error_log('SLOT '.json_encode($row));
-            }
+
             if ($row->parent_signup_slot) {
                 $entry->slot_signed_up += $row->parent_signup_slot->signed_up;
-                $entry->slot_parent_signups = $row->parent_signup_slot->signed_up;
-                $entry->slot_parent_signup_position = $row->parent_signup_slot->position->title;
             } else if ($row->child_signup_slot) {
                 $entry->slot_signed_up += $row->child_signup_slot->signed_up;
-                $entry->slot_child_signups = $row->child_signup_slot->signed_up;
-                $entry->slot_child_signup_position = $row->child_signup_slot->position->title;
             }
         }
 
