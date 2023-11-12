@@ -101,7 +101,6 @@ class PersonFilter
     ];
 
     const EVENT_FIELDS = [
-        'active_next_event',
         'on_site',
     ];
 

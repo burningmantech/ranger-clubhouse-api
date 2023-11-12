@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Psr\SimpleCache\InvalidArgumentException;
 
 /**
@@ -51,6 +53,7 @@ class Slot extends ApiModel
         'ends',
         'max',
         'min',
+        'parent_signup_slot_id',
         'position_id',
         'signed_up',
         'timezone',
@@ -81,7 +84,8 @@ class Slot extends ApiModel
         'ends' => 'required|date|after:begins',
         'max' => 'required|integer',
         'position_id' => 'required|integer',
-        'trainer_slot_id' => 'nullable|integer'
+        'trainer_slot_id' => 'nullable|integer|exists:slot,id',
+        'parent_signup_slot_id' => 'nullable|integer|exists:slot,id'
     ];
 
     protected $casts = [
@@ -119,10 +123,22 @@ class Slot extends ApiModel
         return $this->belongsTo(Position::class, 'position_id');
     }
 
+    public function parent_signup_slot(): BelongsTo
+    {
+        return $this->belongsTo(Slot::class);
+    }
+
+    public function child_signup_slot(): HasOne
+    {
+        return $this->HasOne(Slot::class, 'parent_signup_slot_id');
+    }
+
+
     public function loadRelationships(): void
     {
         $this->load(self::WITH_POSITION_TRAINER);
     }
+
 
     public static function boot(): void
     {
@@ -156,9 +172,12 @@ class Slot extends ApiModel
 
     /**
      * Attempt to save the slot. Check for infinite recursion if the trainer slot is specified.
+     *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
+
     public function save($options = []): bool
     {
         if ($this->exists) {
@@ -172,6 +191,13 @@ class Slot extends ApiModel
             if ($this->id == $this->trainer_slot_id) {
                 $this->addError('trainer_slot_id', 'The trainer multiplier slot cannot be set to itself.');
                 return false;
+            }
+
+            if ($this->isDirty('parent_signup_slot_id') && $this->parent_signup_slot_id) {
+                if (DB::table('slot')->where('id', $this->parent_signup_slot_id)->where('parent_signup_slot_id', $this->id)->exists()) {
+                    $this->addError('parent_signup_slot_id', 'This slot and the parent slot cannot point to one another. On the parent slot, the parent slot should be left blank.');
+                    return false;
+                }
             }
         }
 
@@ -273,6 +299,43 @@ class Slot extends ApiModel
         $results = ['people' => $rows];
 
         if (!$includeOnDuty) {
+            $slot->load([
+                'parent_signup_slot.position:id,title',
+                'child_signup_slot.position:id,title'
+            ]);
+
+            if ($slot->parent_signup_slot) {
+                $parentSlot = $slot->parent_signup_slot;
+                $parentPeople = DB::table('person_slot')
+                    ->select('person.id', 'person.callsign')
+                    ->join('person', 'person.id', '=', 'person_slot.person_id')
+                    ->where('person_slot.slot_id', $parentSlot->id)
+                    ->orderBy('person.callsign', 'asc')
+                    ->get();
+
+                $results['parent'] = [
+                    'slot_id' => $parentSlot->id,
+                    'position_id' => $parentSlot->position_id,
+                    'position_title' => $parentSlot->position->title,
+                    'people' => $parentPeople
+                ];
+            } else if ($slot->child_signup_slot) {
+                $childSlot = $slot->child_signup_slot;
+                $childPeople = DB::table('person_slot')
+                    ->select('person.id', 'person.callsign')
+                    ->join('person', 'person.id', '=', 'person_slot.person_id')
+                    ->where('person_slot.slot_id', $childSlot->id)
+                    ->orderBy('person.callsign', 'asc')
+                    ->get();
+
+                $results['child'] = [
+                    'slot_id' => $childSlot->id,
+                    'position_id' => $childSlot->position_id,
+                    'position_title' => $childSlot->position->title,
+                    'people' => $childPeople
+                ];
+            }
+
             $positions = PositionLineup::retrieveAssociatedPositions($slot->position_id);
             if (!$positions) {
                 return $results;

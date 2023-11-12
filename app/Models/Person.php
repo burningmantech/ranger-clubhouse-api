@@ -194,7 +194,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     protected $casts = [
-        'active_next_event' => 'boolean',
         'behavioral_agreement' => 'boolean',
         'callsign_approved' => 'boolean',
         'created_at' => 'datetime',
@@ -219,7 +218,6 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      */
 
     protected $fillable = [
-        'active_next_event',
         'alt_phone',
         'apt',
         'behavioral_agreement',
