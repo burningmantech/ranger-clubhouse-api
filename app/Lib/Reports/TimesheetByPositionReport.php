@@ -2,8 +2,10 @@
 
 namespace App\Lib\Reports;
 
+use App\Models\PositionCredit;
 use App\Models\Timesheet;
 use Illuminate\Support\Facades\DB;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class TimesheetByPositionReport
 {
@@ -13,9 +15,10 @@ class TimesheetByPositionReport
      * @param int $year
      * @param bool $includeEmail
      * @return array
+     * @throws InvalidArgumentException
      */
 
-    public static function execute(int $year, bool $includeEmail = false)
+    public static function execute(int $year, bool $includeEmail = false): array
     {
         $now = now();
         $rows = Timesheet::whereYear('on_duty', $year)
@@ -29,6 +32,10 @@ class TimesheetByPositionReport
 
         $positions = [];
         $people = [];
+
+        if ($rows->isNotEmpty()) {
+            PositionCredit::warmBulkYearCache([$year => $rows->keys() ]);
+        }
 
         foreach ($rows as $positionId => $entries) {
             $position = $entries[0]->position;
@@ -54,6 +61,7 @@ class TimesheetByPositionReport
                         'off_duty' => (string)$r->off_duty,
                         'duration' => $r->duration,
                         'person_id' => $r->person_id,
+                        'credits' => $r->credits,
                     ];
                 })
             ];
