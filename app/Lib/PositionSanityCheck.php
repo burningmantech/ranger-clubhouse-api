@@ -13,14 +13,15 @@ class PositionSanityCheck
      */
 
     const CHECKERS = [
-        'shiny_pennies' => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+        'deactivated_accounts' => 'App\Lib\PositionSanityCheck\DeactivatedAccounts',
         'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
-        'team_positions' => 'App\Lib\PositionSanityCheck\TeamPositionsCheck',
-        'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
         'deactivated_teams' => 'App\Lib\PositionSanityCheck\DeactivatedTeamsCheck',
         'lmyr' => 'App\Lib\PositionSanityCheck\LoginManagementYearRoundCheck',
-        'deactivated_accounts' => 'App\Lib\PositionSanityCheck\DeactivatedAccounts',
+        'missing_positions' => 'App\Lib\PositionSanityCheck\MissingPositionsCheck',
         'retired_accounts' => 'App\Lib\PositionSanityCheck\RetiredAccounts',
+        'shiny_pennies' => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
+        'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
+        'team_positions' => 'App\Lib\PositionSanityCheck\TeamPositionsCheck',
     ];
 
     public static function issues(): array

@@ -156,7 +156,6 @@ Route::group([
     Route::delete('intake/{person_intake_note}/delete-note', 'IntakeController@deleteNote');
     Route::post('intake/{person}/send-welcome-email', 'IntakeController@sendWelcomeEmail');
 
-    Route::post('maintenance/update-positions', 'MaintenanceController@updatePositions');
     Route::post('maintenance/mark-off-site', 'MaintenanceController@markOffSite');
     Route::post('maintenance/deauthorize-assets', 'MaintenanceController@deauthorizeAssets');
     Route::post('maintenance/reset-pnvs', 'MaintenanceController@resetPNVs');
