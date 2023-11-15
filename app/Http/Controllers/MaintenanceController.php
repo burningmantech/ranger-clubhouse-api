@@ -3,31 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Person;
+use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class MaintenanceController extends ApiController
 {
-    public function __construct()
-    {
-        parent::__construct();
-
-        if (app()->runningInConsole()) {
-            return;
-        }
-
-        $this->authorize('isAdmin');
-    }
-
     /**
      * Mark everyone who is on site as off site.
      *
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function markOffSite(): JsonResponse
     {
+        $this->authorize('isAdmin');
+
         // Grab the folks who are going to be marked as off site
         $people = Person::select('id', 'callsign')->where('on_site', true)->get();
 
@@ -49,6 +43,8 @@ class MaintenanceController extends ApiController
 
     public function resetPNVs(): JsonResponse
     {
+        Gate::allowIf(fn ($user) => $user->hasRole([Role::ADMIN, Role::VC]));
+
         $pnvs = Person::whereIn('status', [Person::ALPHA, Person::BONKED, Person::PROSPECTIVE, Person::PROSPECTIVE_WAITLIST])
             ->orderBy('callsign')
             ->get();
@@ -85,6 +81,8 @@ class MaintenanceController extends ApiController
 
     public function resetPassProspectives(): JsonResponse
     {
+        Gate::allowIf(fn ($user) => $user->hasRole([Role::ADMIN, Role::VC]));
+
         $pp = Person::where('status', Person::PAST_PROSPECTIVE)
             ->where('callsign_approved', true)
             ->orderBy('callsign')
@@ -123,6 +121,7 @@ class MaintenanceController extends ApiController
     public function archiveMessages(): JsonResponse
     {
         prevent_if_ghd_server('Message archiving');
+        $this->authorize('isAdmin');
 
         $year = current_year();
         $prevYear = $year - 1;
