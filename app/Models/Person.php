@@ -453,10 +453,10 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
              * not being changed, reset the callsign and un-approve it.
              */
 
-            if ($model->isDirty('status')
-                && $model->status == Person::PAST_PROSPECTIVE
-                && !$model->isDirty('callsign')) {
-                $model->resetCallsign();
+            if ($model->isDirty('status') && $model->status == Person::PAST_PROSPECTIVE) {
+                if (!$model->isDirty('callsign')) {
+                    $model->resetCallsign();
+                }
                 $model->callsign_approved = false;
             }
         });
@@ -913,7 +913,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
             $this->rolesById[Role::TRAINER] = true;
         }
 
-        foreach ([ Role::MEGAPHONE_EMERGENCY_ONPLAYA, Role::MEGAPHONE_TEAM_ONPLAYA] as $role) {
+        foreach ([Role::MEGAPHONE_EMERGENCY_ONPLAYA, Role::MEGAPHONE_TEAM_ONPLAYA] as $role) {
             if (isset($this->rolesById[$role]) && !$lmopEnabled) {
                 unset($this->rolesById[$role]);
             }
@@ -1458,7 +1458,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         return BlankIfEmptyAttribute::make();
     }
 
-    public function mi():Attribute
+    public function mi(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }
