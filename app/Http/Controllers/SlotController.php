@@ -247,12 +247,6 @@ class SlotController extends ApiController
     {
         $this->authorize('delete', Slot::class);
 
-        PersonSlot::deleteForSlot($slot->id);
-        TraineeStatus::deleteForSlot($slot->id);
-        TrainerStatus::deleteForSlot($slot->id);
-        TraineeNote::deleteForSlot($slot->id);
-        SurveyAnswer::deleteForSlot($slot->id);
-
         $slot->delete();
 
         return $this->restDeleteSuccess();
