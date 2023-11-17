@@ -168,6 +168,15 @@ class Slot extends ApiModel
                 $model->duration = $model->ends_time - $model->begins_time;
             }
         });
+
+        self::deleted(function ($model) {
+            PersonSlot::deleteForSlot($model->id);
+            TraineeStatus::deleteForSlot($model->id);
+            TrainerStatus::deleteForSlot($model->id);
+            TraineeNote::deleteForSlot($model->id);
+            SurveyAnswer::deleteForSlot($model->id);
+            Slot::where('parent_signup_slot_id', $model->id)->update([ 'parent_signup_slot_id' => null ]);
+        });
     }
 
     /**
