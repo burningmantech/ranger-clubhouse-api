@@ -8,6 +8,7 @@ use App\Lib\Reports\EventStats;
 use App\Lib\Reports\ForcedSigninsReport;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
+use App\Lib\Reports\NoShowReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
 use App\Lib\Reports\PayrollReport;
 use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
@@ -960,6 +961,29 @@ class TimesheetController extends ApiController
 
         return response()->json(ShiftDropReport::execute($params['position_ids'], $params['year'], $params['hours']));
     }
+
+    /**
+     * No Shows Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function noShowsReport(): JsonResponse
+    {
+        $this->authorize('noShowsReport', Timesheet::class);
+
+        $params = request()->validate([
+            'position_ids' => 'required|array',
+            'position_ids.*' => 'integer|exists:position,id',
+            'year' => 'required|integer',
+        ]);
+
+        return response()->json([
+            'positions' => NoShowReport::execute($params['position_ids'], $params['year'])
+        ]);
+    }
+
 
     /**
      * Forced Sign-In Report
