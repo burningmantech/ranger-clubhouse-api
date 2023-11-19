@@ -397,6 +397,7 @@ Route::group([
     Route::get('timesheet/hours-credits', 'TimesheetController@hoursCreditsReport');
     Route::get('timesheet/info', 'TimesheetController@info');
     Route::get('timesheet/log', 'TimesheetController@showLog');
+    Route::get('timesheet/no-shows-report', 'TimesheetController@noShowsReport');
     Route::get('timesheet/on-duty-shift-lead-report', 'TimesheetController@onDutyShiftLeadReport');
     Route::get('timesheet/payroll', 'TimesheetController@payrollReport');
     Route::get('timesheet/radio-eligibility', 'TimesheetController@radioEligibilityReport');
