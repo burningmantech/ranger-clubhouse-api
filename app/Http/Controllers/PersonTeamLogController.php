@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PersonTeamLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class PersonTeamLogController extends ApiController
 {
@@ -31,7 +32,7 @@ class PersonTeamLogController extends ApiController
      * Store a team history record
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -67,7 +68,7 @@ class PersonTeamLogController extends ApiController
      *
      * @param PersonTeamLog $personTeamLog
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PersonTeamLog $personTeamLog): JsonResponse

@@ -352,7 +352,7 @@ class PersonScheduleController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
      */
 
     public function expected(Person $person): JsonResponse

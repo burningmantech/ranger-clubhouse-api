@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Attributes\BlankIfEmptyAttribute;
+use App\Lib\ClubhouseCache;
 use App\Lib\Membership;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -366,6 +367,12 @@ class Position extends ApiModel
                 // Update Position Roles
                 Membership::updatePositionRoles($model->id, $model->role_ids, '');
             }
+        });
+
+        self::deleted(function ($model) {
+            DB::table('position_role')->where('position_id', $model->id)->delete();
+            DB::table('person_position')->where('position_id', $model->id)->delete();
+            ClubhouseCache::flush();
         });
     }
 

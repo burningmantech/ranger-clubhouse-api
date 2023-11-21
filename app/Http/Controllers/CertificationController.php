@@ -33,7 +33,7 @@ class CertificationController extends ApiController
      * Create a certification
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -63,10 +63,11 @@ class CertificationController extends ApiController
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update a certification
+     *
      * @param Certification $certification
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function update(Certification $certification): JsonResponse
@@ -93,7 +94,6 @@ class CertificationController extends ApiController
     {
         $this->authorize('delete', $certification);
         $certification->delete();
-        DB::table('person_certification')->where('certification_id', $certification->id)->delete();
         return $this->restDeleteSuccess();
     }
 

@@ -5,6 +5,8 @@ namespace App\Models;
 
 use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SurveyQuestion extends ApiModel
 {
@@ -47,14 +49,22 @@ class SurveyQuestion extends ApiModel
     const OPTIONS = 'options';
     const TEXT = 'text';
 
-    public static function findAllForSurvey(int $surveyId)
+    public static function boot(): void
+    {
+        parent::boot();
+        self::deleted(function ($model) {
+            DB::table('survey_answer')->where('survey_question_id', $model->id)->delete();
+        });
+    }
+
+    public static function findAllForSurvey(int $surveyId): Collection
     {
         return self::where('survey_id', $surveyId)
             ->orderBy('sort_index')
             ->get();
     }
 
-    public static function findAllForSurveyGroup(int $surveyGroup)
+    public static function findAllForSurveyGroup(int $surveyGroup): Collection
     {
         return self::where('survey_group_id', $surveyGroup)
             ->orderBy('sort_index')

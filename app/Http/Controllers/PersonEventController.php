@@ -8,6 +8,7 @@ use App\Models\PersonEvent;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /*
  * Person Event records are special -- a record will always be returned even if the record does not
@@ -17,7 +18,7 @@ use Illuminate\Validation\Rule;
 class PersonEventController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Retrieve a person event listing
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -55,7 +56,7 @@ class PersonEventController extends ApiController
      *
      * @param PersonEvent $personEvent
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PersonEvent $personEvent): JsonResponse

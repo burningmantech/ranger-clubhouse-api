@@ -125,10 +125,7 @@ class MotdController extends ApiController
     public function destroy(Motd $motd): JsonResponse
     {
         $this->authorize('destroy', $motd);
-
         $motd->delete();
-        DB::table('person_motd')->where('motd_id', $motd->id)->delete();
-
         return $this->restDeleteSuccess();
     }
 

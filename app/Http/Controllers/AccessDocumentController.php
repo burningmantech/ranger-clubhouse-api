@@ -219,7 +219,6 @@ class AccessDocumentController extends ApiController
         $this->authorize('destroy', $accessDocument);
 
         $accessDocument->delete();
-        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_DELETE);
 
         return $this->restDeleteSuccess();
     }

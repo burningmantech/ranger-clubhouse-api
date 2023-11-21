@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\ClubhouseCache;
 use App\Lib\Membership;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -62,6 +63,16 @@ class Team extends ApiModel
                 // Update Position Roles
                 Membership::updateTeamRoles($model->id, $model->role_ids, '');
             }
+            ClubhouseCache::flush();
+        });
+
+        self::deleted(function ($model) {
+            $teamId = $model->id;
+            Position::where('team_id', $teamId)->update(['team_id' => null]);
+            PersonTeam::where('team_id', $teamId)->delete();
+            PersonTeamLog::where('team_id', $teamId)->delete();
+            TeamRole::where('team_id', $teamId)->delete();
+            ClubhouseCache::flush();
         });
     }
 

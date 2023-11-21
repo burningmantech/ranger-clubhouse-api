@@ -24,7 +24,7 @@ class AwardController extends ApiController
      * Create an award
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -85,7 +85,6 @@ class AwardController extends ApiController
     {
         $this->authorize('delete', Award::class);
         $award->delete();
-        PersonAward::where('award_id', $award->id)->delete();
         return $this->restDeleteSuccess();
     }
 

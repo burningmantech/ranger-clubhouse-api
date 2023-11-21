@@ -62,6 +62,15 @@ class Asset extends ApiModel
         return $this->hasOne(AssetPerson::class, 'asset_id')->whereNull('checked_in');
     }
 
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function ($model) {
+            AssetPerson::where('asset_id', $model->id)->delete();
+        });
+    }
+
     /**
      * Find assets based on the given criteria
      *

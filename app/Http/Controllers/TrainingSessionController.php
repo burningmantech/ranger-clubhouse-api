@@ -37,7 +37,7 @@ class TrainingSessionController extends ApiController
     }
 
     /**
-     *  Retrieve all the training sessions for a given training (position) & year.
+     * Retrieve all the training sessions for a given training (position) & year.
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -71,7 +71,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function scoreStudent(TrainingSession $training_session): JsonResponse
@@ -139,7 +139,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function trainerStatus(TrainingSession $training_session): JsonResponse
@@ -195,7 +195,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TraineeNote $trainee_note
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function updateNote(TraineeNote $trainee_note): JsonResponse

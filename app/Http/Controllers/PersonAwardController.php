@@ -70,7 +70,7 @@ class PersonAwardController extends ApiController
      *
      * @param PersonAward $personAward
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PersonAward $personAward): JsonResponse

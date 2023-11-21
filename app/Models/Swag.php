@@ -61,6 +61,15 @@ class Swag extends ApiModel
         'description' => ''
     ];
 
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function ($model) {
+            PersonSwag::where('swag_id', $model->id)->delete();
+        });
+    }
+
     public function person_swag(): HasMany
     {
         return $this->hasMany(PersonSwag::class);
@@ -117,7 +126,7 @@ class Swag extends ApiModel
      * Set the shirt type column
      */
 
-    protected function shirtType() : Attribute
+    protected function shirtType(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }

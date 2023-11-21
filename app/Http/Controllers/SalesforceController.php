@@ -271,11 +271,6 @@ class SalesforceController extends ApiController
             $sfch->updateSalesforceVCStatus($pca, $isNew);
             $sfch->updateSalesforceClubhouseImportStatusMessage($pca, $isNew);
             $sfch->updateSalesforceClubhouseUserID($pca);
-
-            if ($pca->status != 'succeeded') {
-                return;
-            }
         }
-
     }
 }

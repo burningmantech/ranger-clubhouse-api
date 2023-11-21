@@ -13,6 +13,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use ReflectionException;
 use RuntimeException;
@@ -110,13 +111,13 @@ class PersonPhotoController extends ApiController
      *
      * @param PersonPhoto $personPhoto
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PersonPhoto $personPhoto): JsonResponse
     {
         $this->authorize('update', $personPhoto);
-        prevent_if_ghd_server('Photo updating');
+        prevent_if_ghd_server('photo update');
 
         $person = $personPhoto->person;
         if (!$personPhoto->person) {
@@ -336,8 +337,8 @@ class PersonPhotoController extends ApiController
         $personId = $person->id;
 
         list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image'], $personId, PersonPhoto::SIZE_ORIGINAL);
-        list ($imageContents, $imageWidth, $imageHeight) =  PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_BMID);
-        list ($profileContents, $profileWidth, $profileHeight) =  PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_PROFILE);
+        list ($imageContents, $imageWidth, $imageHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_BMID);
+        list ($profileContents, $profileWidth, $profileHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_PROFILE);
 
         if (!$imageContents || !$origContents) {
             return response()->json(['status' => 'conversion-fail'], 500);

@@ -10,17 +10,18 @@ use Illuminate\Support\Facades\DB;
 use App\Models\SurveyQuestion;
 
 use App\Http\Controllers\ApiController;
+use Illuminate\Validation\ValidationException;
 
 class SurveyQuestionController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Retrieve a listing of survey questions
      *
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'survey_id' => 'required|integer:exists:survey_group,id'
@@ -31,13 +32,16 @@ class SurveyQuestionController extends ApiController
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a survey question
      *
      * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
-        $this->authorize('store', [SurveyQuestion::class]);
+        $this->authorize('store', SurveyQuestion::class);
         $surveyQuestion = new SurveyQuestion;
         $this->fromRest($surveyQuestion);
 
@@ -49,26 +53,30 @@ class SurveyQuestionController extends ApiController
     }
 
     /**
-     * Display the specified resource.
+     * Show a survey question
      *
-     * SurveyQuestion $surveyQuestion
+     * @param SurveyQuestion $surveyQuestion
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(SurveyQuestion $surveyQuestion)
+    public function show(SurveyQuestion $surveyQuestion): JsonResponse
     {
-        $this->authorize('show', [SurveyQuestion::class]);
+        $this->authorize('show', SurveyQuestion::class);
 
         return $this->success($surveyQuestion);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update a survey question
      *
      * @param SurveyQuestion $surveyQuestion
      * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
-    public function update(SurveyQuestion $surveyQuestion)
+
+    public function update(SurveyQuestion $surveyQuestion): JsonResponse
     {
         $this->authorize('update', $surveyQuestion);
         $this->fromRest($surveyQuestion);
@@ -85,12 +93,13 @@ class SurveyQuestionController extends ApiController
      *
      * @param SurveyQuestion $surveyQuestion
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(SurveyQuestion $surveyQuestion)
+
+    public function destroy(SurveyQuestion $surveyQuestion): JsonResponse
     {
         $this->authorize('destroy', $surveyQuestion);
         $surveyQuestion->delete();
-        DB::table('survey_answer')->where('survey_question_id', $surveyQuestion->id)->delete();
 
         return $this->restDeleteSuccess();
     }

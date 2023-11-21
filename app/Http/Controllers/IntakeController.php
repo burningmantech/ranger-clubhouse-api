@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class IntakeController extends ApiController
 {
@@ -77,7 +78,7 @@ class IntakeController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function appendNote(Person $person): JsonResponse
@@ -125,7 +126,7 @@ class IntakeController extends ApiController
      *
      * @param PersonIntakeNote $person_intake_note
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function updateNote(PersonIntakeNote $person_intake_note): JsonResponse

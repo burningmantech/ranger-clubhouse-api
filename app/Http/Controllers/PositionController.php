@@ -10,7 +10,7 @@ use App\Lib\Reports\SandmanQualificationReport;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PositionController extends ApiController
 {
@@ -37,7 +37,7 @@ class PositionController extends ApiController
      * Create a position
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -73,7 +73,7 @@ class PositionController extends ApiController
      *
      * @param Position $position
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Position $position): JsonResponse
@@ -103,9 +103,6 @@ class PositionController extends ApiController
     {
         $this->authorize('delete', $position);
         $position->delete();
-        DB::table('position_role')->where('position_id', $position->id)->delete();
-        DB::table('person_position')->where('position_id', $position->id)->delete();
-        ClubhouseCache::flush();
         return $this->restDeleteSuccess();
     }
 

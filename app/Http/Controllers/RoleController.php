@@ -7,12 +7,13 @@ use App\Models\PersonRole;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class RoleController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Show the roles
      *
      * @return JsonResponse
      */
@@ -30,7 +31,7 @@ class RoleController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -64,7 +65,7 @@ class RoleController extends ApiController
      *
      * @param Role $role
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Role $role): JsonResponse

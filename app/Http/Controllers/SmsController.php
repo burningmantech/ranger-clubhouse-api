@@ -26,7 +26,7 @@ use Twilio\Exceptions\RestException;
 use Twilio\Exceptions\TwilioException;
 
 /*
- * Handle setting and verifing the SMS numbers for a person
+ * Handle setting and verify the SMS numbers for a person
  *
  */
 
@@ -58,7 +58,6 @@ class SmsController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      * @throws RestException
-     * @throws SMSException
      * @throws ConfigurationException
      * @throws TwilioException
      */
@@ -277,7 +276,7 @@ class SmsController extends ApiController
      * @return Application|ResponseFactory|JsonResponse|Response
      */
 
-    public function inbound()
+    public function inbound(): Response|JsonResponse|Application|ResponseFactory
     {
         $ua = request()->userAgent();
         if (preg_match("/(bingbot|AOLBuild|Baidu|bingbot|DuckDuckBot|googlebot|yahoo|yandex)/i", $ua)) {

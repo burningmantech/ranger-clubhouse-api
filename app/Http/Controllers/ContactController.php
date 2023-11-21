@@ -21,7 +21,7 @@ class ContactController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function send()
+    public function send(): JsonResponse
     {
         $params = request()->validate([
             'recipient_id' => 'required|integer',

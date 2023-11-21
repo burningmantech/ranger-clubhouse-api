@@ -42,6 +42,17 @@ class Survey extends ApiModel
         'position_id' => 'sometimes|integer|nullable',
     ];
 
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function ($model) {
+            foreach (['survey_group', 'survey_question', 'survey_answer'] as $table) {
+                DB::table($table)->where('survey_id', $model->id)->delete();
+            }
+        });
+    }
+
     public function survey_group(): HasMany
     {
         return $this->hasMany(SurveyGroup::class);

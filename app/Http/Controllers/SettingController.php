@@ -7,7 +7,7 @@ use App\Models\Role;
 use App\Models\Setting;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class SettingController extends ApiController
@@ -65,9 +65,10 @@ class SettingController extends ApiController
 
     /**
      * Update a setting
+     *
      * @param Setting $setting
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
     public function update(Setting $setting): JsonResponse
     {

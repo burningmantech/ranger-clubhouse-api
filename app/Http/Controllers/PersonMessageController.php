@@ -6,7 +6,7 @@ use App\Lib\RBS;
 use App\Models\PersonMessage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class PersonMessageController extends ApiController
 {
@@ -34,12 +34,12 @@ class PersonMessageController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', [PersonMessage::class]);
+        $this->authorize('store', PersonMessage::class);
 
         $person_message = new PersonMessage;
         $this->fromRest($person_message);
@@ -78,7 +78,7 @@ class PersonMessageController extends ApiController
      *
      * @param PersonMessage $person_message
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function markread(PersonMessage $person_message): JsonResponse

@@ -10,7 +10,6 @@ use App\Models\SurveyQuestion;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -18,7 +17,7 @@ use InvalidArgumentException;
 class SurveyController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Retrieve a list of surveys
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -42,7 +41,7 @@ class SurveyController extends ApiController
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a survey
      *
      * @return JsonResponse
      * @throws AuthorizationException|ValidationException
@@ -62,7 +61,7 @@ class SurveyController extends ApiController
     }
 
     /**
-     * Display the specified resource.
+     * Show a survey
      *
      * Survey $survey
      * @param Survey $survey
@@ -78,7 +77,7 @@ class SurveyController extends ApiController
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update a survey
      *
      * @param Survey $survey
      * @return JsonResponse
@@ -97,7 +96,7 @@ class SurveyController extends ApiController
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Delete a survey
      *
      * @param Survey $survey
      * @return JsonResponse
@@ -107,11 +106,6 @@ class SurveyController extends ApiController
     {
         $this->authorize('destroy', $survey);
         $survey->delete();
-
-        foreach (['survey_group', 'survey_question', 'survey_answer'] as $table) {
-            DB::table($table)->where('survey_id', $survey->id)->delete();
-        }
-
         return $this->restDeleteSuccess();
     }
 

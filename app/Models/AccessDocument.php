@@ -232,6 +232,10 @@ class AccessDocument extends ApiModel
                 $model->access_any_time = false;
             }
         });
+
+        self::deleted(function ($model) {
+            AccessDocumentChanges::log($model, Auth::id(), $model, AccessDocumentChanges::OP_DELETE);
+        });
     }
 
     public function person(): BelongsTo
