@@ -6,6 +6,7 @@ use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class SurveyGroup extends ApiModel
 {
@@ -47,6 +48,15 @@ class SurveyGroup extends ApiModel
         'report_title' => ''
     ];
 
+    public static function boot() : void
+    {
+        parent::boot();
+        self::deleted(function ($model) {
+            DB::table('survey_question')->where('survey_group_id', $model->id)->delete();
+            DB::table('survey_answer')->where('survey_group_id', $model->id)->delete();
+        });
+    }
+
     public function survey_questions(): HasMany
     {
         return $this->hasMany(SurveyQuestion::class);
@@ -62,12 +72,12 @@ class SurveyGroup extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    public function reportTitle()  : Attribute
+    public function reportTitle(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }
 
-    public function type() : Attribute
+    public function type(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }

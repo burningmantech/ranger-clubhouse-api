@@ -11,7 +11,6 @@ use App\Models\Clubhouse1Log;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use InvalidArgumentException;
 
 class Clubhouse1LogController extends ApiController
 {

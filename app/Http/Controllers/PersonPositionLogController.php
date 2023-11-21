@@ -31,7 +31,7 @@ class PersonPositionLogController extends ApiController
      * Store a position log  record
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -67,7 +67,7 @@ class PersonPositionLogController extends ApiController
      *
      * @param PersonPositionLog $PersonPositionLog
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function update(PersonPositionLog $PersonPositionLog): JsonResponse
@@ -91,10 +91,10 @@ class PersonPositionLogController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function destroy(PersonPositionLog $PersonPositionLog): JsonResponse
+    public function destroy(PersonPositionLog $personPositionLog): JsonResponse
     {
-        $this->authorize('delete', $PersonPositionLog);
-        $PersonPositionLog->delete();
+        $this->authorize('delete', $personPositionLog);
+        $personPositionLog->delete();
         return $this->restDeleteSuccess();
     }
 }

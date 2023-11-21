@@ -11,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class ProvisionController extends ApiController
@@ -83,7 +84,7 @@ class ProvisionController extends ApiController
      * Create a provision
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -105,7 +106,7 @@ class ProvisionController extends ApiController
      *
      * @param Provision $provision
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function update(Provision $provision): JsonResponse
@@ -315,9 +316,10 @@ class ProvisionController extends ApiController
      * @param Provision $p
      * @param $provisions
      * @param bool $includeEmail
+     * @throws ValidationException
      */
 
-    private function saveProvision(Provision $p, &$provisions, bool $includeEmail = false)
+    private function saveProvision(Provision $p, &$provisions, bool $includeEmail = false): void
     {
         $p->save();
 
@@ -345,7 +347,7 @@ class ProvisionController extends ApiController
      * Find all banked items and set the status to available.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function unbankProvisions(): JsonResponse
@@ -374,7 +376,7 @@ class ProvisionController extends ApiController
      * Expire job provisions.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function expireJobProvisions(): JsonResponse
@@ -477,7 +479,7 @@ class ProvisionController extends ApiController
      * Un-submit all submitted non-allocated provisions
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function unsubmitProvisions(): JsonResponse

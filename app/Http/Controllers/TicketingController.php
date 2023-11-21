@@ -16,6 +16,7 @@ use App\Models\AccessDocumentChanges;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class TicketingController extends ApiController
@@ -95,7 +96,7 @@ class TicketingController extends ApiController
      * Update the SO WAP list
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function storeWAPSO(Person $person): JsonResponse

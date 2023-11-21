@@ -65,7 +65,7 @@ class BulkUploadController extends ApiController
 
         return response()->json([
             'results' => BulkUploader::process($action, $commit, $reason, $recordsParam),
-            'commit' => $commit ? true : false
+            'commit' => (bool)$commit
         ]);
     }
 }

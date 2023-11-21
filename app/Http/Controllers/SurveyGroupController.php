@@ -10,17 +10,18 @@ use Illuminate\Support\Facades\DB;
 use App\Models\SurveyGroup;
 
 use App\Http\Controllers\ApiController;
+use Illuminate\Validation\ValidationException;
 
 class SurveyGroupController extends ApiController
 {
     /**
-     * Display a listing of the resource.
+     * Retrieve a survey group listing
      *
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $params = request()->validate([
             'survey_id' => 'required|integer:exists:survey,id'
@@ -31,13 +32,16 @@ class SurveyGroupController extends ApiController
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create a survey group
      *
      * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
-    public function store()
+
+    public function store(): JsonResponse
     {
-        $this->authorize('store', [SurveyGroup::class]);
+        $this->authorize('store', SurveyGroup::class);
         $surveyGroup = new SurveyGroup;
         $this->fromRest($surveyGroup);
 
@@ -49,13 +53,14 @@ class SurveyGroupController extends ApiController
     }
 
     /**
-     * Display the specified resource.
+     * Show a survey group
      *
      * SurveyGroup $surveyGroup
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function show(SurveyGroup $surveyGroup)
+    public function show(SurveyGroup $surveyGroup): JsonResponse
     {
         $this->authorize('show', [SurveyGroup::class]);
 
@@ -67,8 +72,11 @@ class SurveyGroupController extends ApiController
      *
      * @param SurveyGroup $surveyGroup
      * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
-    public function update(SurveyGroup $surveyGroup)
+
+    public function update(SurveyGroup $surveyGroup): JsonResponse
     {
         $this->authorize('update', $surveyGroup);
         $this->fromRest($surveyGroup);
@@ -85,15 +93,14 @@ class SurveyGroupController extends ApiController
      *
      * @param SurveyGroup $surveyGroup
      * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function destroy(SurveyGroup $surveyGroup)
+
+    public function destroy(SurveyGroup $surveyGroup): JsonResponse
     {
         $this->authorize('destroy', $surveyGroup);
         $surveyGroup->delete();
 
-        foreach ([ 'survey_question', 'survey_answer'] as $table) {
-            DB::table($table)->where('survey_group_id', $surveyGroup->id)->delete();
-        }
         return $this->restDeleteSuccess();
     }
 }

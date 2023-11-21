@@ -9,14 +9,9 @@ use App\Lib\Reports\ScheduleByPositionReport;
 use App\Lib\Reports\ShiftCoverageReport;
 use App\Lib\Reports\ShiftLeadReport;
 use App\Lib\Reports\ShiftSignupsReport;
-use App\Models\PersonSlot;
 use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Slot;
-use App\Models\SurveyAnswer;
-use App\Models\TraineeNote;
-use App\Models\TraineeStatus;
-use App\Models\TrainerStatus;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -63,7 +58,7 @@ class SlotController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -104,7 +99,7 @@ class SlotController extends ApiController
      *
      * @param Slot $slot
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function update(Slot $slot): JsonResponse

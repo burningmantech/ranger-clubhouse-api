@@ -62,6 +62,15 @@ class Role extends ApiModel
         'new_user_eligible'
     ];
 
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function ($model) {
+            PersonRole::where('role_id', $model->id)->delete();
+        });
+    }
+
     public function person_role(): HasMany
     {
         return $this->hasMany(PersonRole::class);

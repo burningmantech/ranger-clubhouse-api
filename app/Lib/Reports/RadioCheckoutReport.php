@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Lib\Reports;
 
 use App\Models\Asset;
 use App\Models\AssetPerson;

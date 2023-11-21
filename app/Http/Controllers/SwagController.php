@@ -30,7 +30,7 @@ class SwagController extends ApiController
      * Create a swag
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function store(): JsonResponse
@@ -64,7 +64,7 @@ class SwagController extends ApiController
      *
      * @param Swag $swag
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
      */
 
     public function update(Swag $swag): JsonResponse
@@ -91,7 +91,6 @@ class SwagController extends ApiController
     {
         $this->authorize('delete', Swag::class);
         $swag->delete();
-        PersonSwag::where('swag_id', $swag->id)->delete();
         return $this->restDeleteSuccess();
     }
 

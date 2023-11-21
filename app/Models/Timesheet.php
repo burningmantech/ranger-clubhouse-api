@@ -207,6 +207,16 @@ class Timesheet extends ApiModel
                 TimesheetNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetNote::TYPE_WRANGLER);
             }
         });
+
+        self::deleted(function ($model) {
+            TimesheetNote::where('timesheet_id', $model->id)->delete();
+            $model->log(TimesheetLog::DELETE, [
+                    'position_id' => $model->position_id,
+                    'on_duty' => (string)$model->on_duty,
+                    'off_duty' => (string)$model->off_duty
+                ]
+            );
+        });
     }
 
     public function person(): BelongsTo
@@ -244,7 +254,7 @@ class Timesheet extends ApiModel
         return $this->hasMany(TimesheetNote::class)->where('type', TimesheetNote::TYPE_ADMIN);
     }
 
-    public function desired_position() : BelongsTo
+    public function desired_position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
@@ -260,7 +270,7 @@ class Timesheet extends ApiModel
     public function save($options = []): bool
     {
         if ($this->off_duty && $this->on_duty) {
-            $this->rules['off_duty'] = 'required|date_format:Y-m-d H:i:s|after_or_equal:'.$this->on_duty->format('Y-m-d H:i:s');
+            $this->rules['off_duty'] = 'required|date_format:Y-m-d H:i:s|after_or_equal:' . $this->on_duty->format('Y-m-d H:i:s');
         }
 
         return parent::save($options);

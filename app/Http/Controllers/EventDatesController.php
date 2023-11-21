@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\EventDate;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class EventDatesController extends ApiController
 {
@@ -23,7 +24,7 @@ class EventDatesController extends ApiController
      * Store a newly created event date
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
     public function store(): JsonResponse
     {
@@ -67,7 +68,7 @@ class EventDatesController extends ApiController
      *
      * @param EventDate $event_date
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(EventDate $event_date): JsonResponse

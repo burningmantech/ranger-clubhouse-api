@@ -4,14 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Broadcast;
 use App\Models\BroadcastMessage;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class BroadcastController extends ApiController
 {
     /**
      * Retrieve the broadcast logs
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): \Illuminate\Http\JsonResponse
     {
         $params = request()->validate([
             'year' => 'required|integer',
@@ -26,8 +31,11 @@ class BroadcastController extends ApiController
     /**
      * Show messages for person & year
      *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
-    public function messages()
+
+    public function messages(): JsonResponse
     {
         $params = request()->validate([
             'person_id' => 'sometimes|integer',

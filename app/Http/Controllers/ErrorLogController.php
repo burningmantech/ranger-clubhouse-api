@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ErrorLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class ErrorLogController extends ApiController
 {
@@ -14,6 +15,7 @@ class ErrorLogController extends ApiController
      * Does not require authorization.
      *
      * @return JsonResponse
+     * @throws ValidationException
      */
 
     public function record(): JsonResponse
@@ -43,6 +45,7 @@ class ErrorLogController extends ApiController
 
     /**
      * Retrieve the error log
+     *
      * @return JsonResponse
      * @throws AuthorizationException
      */
@@ -80,7 +83,7 @@ class ErrorLogController extends ApiController
     {
         $this->authorize('purge', ErrorLog::class);
 
-        ErrorLog::truncate();
+        ErrorLog::query()->truncate();
 
         return response()->json(['status' => 'success']);
     }

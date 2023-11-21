@@ -16,7 +16,7 @@ class DocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function index()
+    public function index(): JsonResponse
     {
         $this->authorize('index', [Document::class]);
 
@@ -26,12 +26,11 @@ class DocumentController extends ApiController
     /**
      * Store a document
      *
-     * @param Request $request
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
         $this->authorize('store', [Document::class]);
         $personId = $this->user->id;
@@ -55,7 +54,7 @@ class DocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function show(Document $document)
+    public function show(Document $document): JsonResponse
     {
         $this->authorize('show', $document);
         return $this->success($document);
@@ -69,7 +68,7 @@ class DocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function update(Document $document)
+    public function update(Document $document): JsonResponse
     {
         $this->authorize('update', $document);
         $this->fromRest($document);
@@ -91,7 +90,8 @@ class DocumentController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
-    public function destroy(Document $document)
+
+    public function destroy(Document $document): JsonResponse
     {
         $this->authorize('destroy', $document);
         $document->delete();

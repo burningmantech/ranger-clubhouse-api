@@ -102,9 +102,6 @@ class AssetController extends ApiController
     {
         $this->authorize('delete', $asset);
         $asset->delete();
-
-        AssetPerson::where('asset_id', $asset->id)->delete();
-
         return $this->restDeleteSuccess();
     }
 

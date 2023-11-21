@@ -160,6 +160,10 @@ class TimesheetMissing extends ApiModel
                 TimesheetMissingNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetMissingNote::TYPE_WRANGLER);
             }
         });
+
+        self::deleted(function ($model) {
+           TimesheetMissingNote::where('timesheet_missing_id', $model->id)->delete();
+        });
     }
 
     /**

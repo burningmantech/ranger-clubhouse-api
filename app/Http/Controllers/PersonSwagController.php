@@ -6,6 +6,7 @@ use App\Lib\Reports\SwagDistributionReport;
 use App\Models\PersonSwag;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class PersonSwagController extends ApiController
 {
@@ -72,7 +73,7 @@ class PersonSwagController extends ApiController
      *
      * @param PersonSwag $personSwag
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PersonSwag $personSwag): JsonResponse
@@ -112,7 +113,7 @@ class PersonSwagController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function distribution() : JsonResponse
+    public function distribution(): JsonResponse
     {
         $this->authorize('distribution', PersonSwag::class);
 
@@ -120,6 +121,6 @@ class PersonSwagController extends ApiController
             'year' => 'sometimes|integer'
         ]);
 
-        return response()->json([ 'people' => SwagDistributionReport::execute($params['year'] ?? null)]);
+        return response()->json(['people' => SwagDistributionReport::execute($params['year'] ?? null)]);
     }
 }

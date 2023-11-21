@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\RadioCheckoutReport;
 use App\Models\AssetPerson;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class AssetPersonController extends ApiController
 {
@@ -30,7 +32,7 @@ class AssetPersonController extends ApiController
      * Create an asset person
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -67,7 +69,7 @@ class AssetPersonController extends ApiController
      *
      * @param AssetPerson $asset_person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(AssetPerson $asset_person): JsonResponse

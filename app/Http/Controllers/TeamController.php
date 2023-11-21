@@ -2,16 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Lib\ClubhouseCache;
 use App\Lib\Reports\PeopleByTeamsReport;
-use App\Models\PersonTeam;
-use App\Models\PersonTeamLog;
-use App\Models\Position;
 use App\Models\Team;
-use App\Models\TeamRole;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 
 class TeamController extends ApiController
 {
@@ -82,7 +76,6 @@ class TeamController extends ApiController
 
         if ($team->save()) {
             $team->loadRoles();
-            ClubhouseCache::flush();
             return $this->success($team);
         }
 
@@ -101,14 +94,12 @@ class TeamController extends ApiController
     {
         $this->authorize('delete', Team::class);
         $team->delete();
-        Position::where('team_id', $team->id)->update(['team_id' => null]);
-        PersonTeam::where('team_id', $team->id)->delete();
-        PersonTeamLog::where('team_id', $team->id)->delete();
-        TeamRole::where('team_id', $team->id)->delete();
-        ClubhouseCache::flush();
         return $this->restDeleteSuccess();
     }
 
+    /**
+     *
+     */
     /**
      * People By Teams Report
      *

@@ -6,6 +6,7 @@ use App\Models\PositionCredit;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PositionCreditController extends ApiController
 {
@@ -31,7 +32,7 @@ class PositionCreditController extends ApiController
      * Create a new position credit
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -69,7 +70,7 @@ class PositionCreditController extends ApiController
      *
      * @param PositionCredit $position_credit
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(PositionCredit $position_credit): JsonResponse

@@ -360,14 +360,6 @@ class TimesheetController extends ApiController
     {
         $this->authorize('destroy', $timesheet);
         $timesheet->delete();
-        TimesheetNote::where('timesheet_id', $timesheet->id)->delete();
-
-        $timesheet->log(TimesheetLog::DELETE, [
-                'position_id' => $timesheet->position_id,
-                'on_duty' => (string)$timesheet->on_duty,
-                'off_duty' => (string)$timesheet->off_duty
-            ]
-        );
 
         return $this->restDeleteSuccess();
     }

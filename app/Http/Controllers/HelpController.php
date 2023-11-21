@@ -2,33 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\ApiController;
-
 use App\Models\Help;
 use App\Models\HelpHit;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class HelpController extends ApiController
 {
     /**
      * Display a listing of the helps.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function index()
+
+    public function index(): JsonResponse
     {
         return $this->success(Help::findAll(), null, 'help');
     }
 
     /***
-     * Store a newly created help in storage.
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * Create a help record
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException|ValidationException
      */
 
-    public function store()
+    public function store(): JsonResponse
     {
-        $this->authorize('store', [ Help::class ]);
+        $this->authorize('store', [Help::class]);
         $help = new Help;
         $this->fromRest($help);
 
@@ -41,13 +44,14 @@ class HelpController extends ApiController
 
     /**
      * Display the specified help.
+     *
      * @param Help $help
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function show(Help $help)
+
+    public function show(Help $help): JsonResponse
     {
-        $personId = $this->user ? $this->user->id : null;
-        HelpHit::record($help->id, $personId);
+        HelpHit::record($help->id, Auth::id());
 
         return $this->success($help);
     }
@@ -56,10 +60,11 @@ class HelpController extends ApiController
      * Update the specified help in storage.
      *
      * @param Help $help
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException|ValidationException
      */
-    public function update(Help $help)
+
+    public function update(Help $help): JsonResponse
     {
         $this->authorize('update', $help);
         $this->fromRest($help);
@@ -73,8 +78,8 @@ class HelpController extends ApiController
 
     /**
      * @param Help $help
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function destroy(Help $help)
