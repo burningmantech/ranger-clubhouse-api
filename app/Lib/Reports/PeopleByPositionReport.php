@@ -25,13 +25,14 @@ class PeopleByPositionReport
 
     public static function execute(bool $onPlaya): array
     {
-        $positions = array();
-        $allPeople = array();
+        $positions = [];
+        $allPeople = [];
+
         // Statuses that qualify for "all rangers"
-        $rangerStatuses = array(Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::SUSPENDED);
+        $rangerStatuses = [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::SUSPENDED ];
 
         // Statuses that do not qualify for "new user eligible"
-        $nonTrainingStatuses = array(Person::DECEASED, Person::DISMISSED, Person::RESIGNED, Person::UBERBONKED);
+        $nonTrainingStatuses = [ Person::DECEASED, Person::DISMISSED, Person::RESIGNED, Person::UBERBONKED, Person::PAST_PROSPECTIVE ];
 
         $positionQuery = Position::select(
             'id',
@@ -95,7 +96,10 @@ class PeopleByPositionReport
                     $allPeople[$pid] = true;
                 }
             }
-            $positions[] = $position;
+
+            if ($position['active'] || !empty($position['personIds']) || !empty($position['missingPersonIds'])) {
+                $positions[] = $position;
+            }
         }
         $people = DB::table('person')
             ->whereIntegerInRaw('id', array_keys($allPeople))
