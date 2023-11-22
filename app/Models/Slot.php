@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -139,6 +140,12 @@ class Slot extends ApiModel
         $this->load(self::WITH_POSITION_TRAINER);
     }
 
+    public function sign_ups(): HasManyThrough
+    {
+        return $this->hasManyThrough(Person::class, PersonSlot::class, 'slot_id', 'id', 'id', 'person_id')
+            ->select('person.id', 'person.callsign', 'person.status')
+            ->orderBy('person.callsign');
+    }
 
     public static function boot(): void
     {
