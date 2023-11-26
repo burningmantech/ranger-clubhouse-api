@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\HandleReservation;
 use App\Models\Person;
 use App\Models\PersonStatus;
 
@@ -13,6 +14,11 @@ class PotentialClubhouseAccountFromSalesforce
     const STATUS_READY = "ready";
     const STATUS_IMPORTED = "imported";
     const STATUS_SUCCEEDED = "succeeded";
+    const STATUS_EXISTING_CALLSIGN = 'existing-callsign';
+    const STATUS_EXISTING_CLAIM_CALLSIGN = 'existing-claim-callsign';
+    const STATUS_RESERVED_CALLSIGN = 'reserved-callsign';
+    const STATUS_EXISTING_BAD_STATUS = 'existing-bad-status';
+    const STATUS_EXISTING = 'existing';
 
     const REQUIRED_RANGER_INFO_FIELDS = [
         'BPGUID__c' => 'Burner Profile GUID',
@@ -200,7 +206,7 @@ class PotentialClubhouseAccountFromSalesforce
         }
 
         if (empty($this->phone)) {
-            $blankFields[] = 'Phone (home, mobile, and other)';
+            $blankFields[] = 'Phone (home, mobile, or other)';
         }
 
         if (!empty($blankFields)) {
@@ -238,7 +244,7 @@ class PotentialClubhouseAccountFromSalesforce
         if ($person && $person->bpguid != $this->bpguid) {
             // See if the callsign can be reused from an existing account.
             if ($person->vintage) {
-                $this->status = 'existing-callsign';
+                $this->status = self::STATUS_EXISTING_CALLSIGN;
                 $this->message = "Account (status {$person->status}) has vintage callsign";
                 $this->existingPerson = $person;
                 return;
@@ -248,7 +254,7 @@ class PotentialClubhouseAccountFromSalesforce
                 if (!$deceased || $deceased->new_status != Person::DECEASED) {
                     // Hmm, cannot figure out when the person passed on, either no record exists,
                     // or the very last status update was NOT to deceased
-                    $this->status = 'existing-callsign';
+                    $this->status = self::STATUS_EXISTING_CALLSIGN;
                     $this->message = 'Person deceased but cannot determine if still within the grieving period';
                     $this->existingPerson = $person;
                     return;
@@ -256,31 +262,32 @@ class PotentialClubhouseAccountFromSalesforce
                     $releaseDate = $deceased->created_at->clone()->addYears(Person::GRIEVING_PERIOD_YEARS);
                     if ($releaseDate->gt($now)) {
                         // Status still within the grieving period
-                        $this->status = 'existing-callsign';
+                        $this->status = self::STATUS_EXISTING_CALLSIGN;
                         $this->message = 'Person deceased, still in grieving period (' . Person::GRIEVING_PERIOD_YEARS . ' years). Can be released on ' . $releaseDate->toDateTimeString();
                         $this->existingPerson = $person;
                         return;
                     } else {
-                        $this->status = 'existing-claim-callsign';
+                        $this->status = self::STATUS_EXISTING_CLAIM_CALLSIGN;
                         $this->existingPerson = $person;
                         // fall thru to additional checks
                     }
                 }
             } else if ($person->status != Person::RETIRED && $person->status != Person::RESIGNED) {
-                $this->status = 'existing-callsign';
-                $this->message = "Callsign already exists";
+                $this->status = self::STATUS_EXISTING_CALLSIGN;
+                $this->message = "Callsign already exists, BPGUIDs do not match, and status is not retired or resigned";
                 $this->existingPerson = $person;
                 return;
             } else {
-                $this->status = 'existing-claim-callsign';
+                $this->status = self::STATUS_EXISTING_CLAIM_CALLSIGN;
                 $this->existingPerson = $person;
                 // fall thru to additional checks
             }
         }
 
-        if ($this->callsignIsReserved()) {
-            $this->status = 'reserved-callsign';
-            $this->message = "Callsign is on the reserved list";
+        $isReservedMessage = $this->callsignIsReserved();
+        if ($isReservedMessage && (!$person || $person->bpguid != $this->bpguid)) {
+            $this->status = self::STATUS_RESERVED_CALLSIGN;
+            $this->message = $isReservedMessage;
             return;
         }
 
@@ -318,26 +325,33 @@ class PotentialClubhouseAccountFromSalesforce
         if ($status != Person::AUDITOR
             && $status != Person::PAST_PROSPECTIVE
             && $status != Person::NON_RANGER) {
-            $this->status = 'existing-bad-status';
+            $this->status = self::STATUS_EXISTING_BAD_STATUS;
             $this->message .= ' and is not an auditor, past prospective, or non-ranger';
         } else {
-            $this->status = 'existing';
+            $this->status = self::STATUS_EXISTING;
         }
         $this->existingPerson = $person;
     }
 
     /**
      * See if this callsign is on the reserved List.
-     * @return bool TRUE if so, FALSE otherwise.
+     * @return string|bool a string if on the reserved list, false otherwise
      */
 
-    public function callsignIsReserved(): bool
+    public function callsignIsReserved(): string|bool
     {
         $callsign = $this->callsign;
-        $reservedCallsigns = self::getReservedCallsigns("cooked");
-        $cookedCallsign = self::cookCallsign($callsign);
-        if (in_array($cookedCallsign, $reservedCallsigns)) {
-            return true;
+        $handles = self::getReservedCallsigns();
+        $cookedCallsign = Person::normalizeCallsign($callsign);
+        foreach ($handles as $handle) {
+            if (Person::normalizeCallsign($handle->handle) == $cookedCallsign) {
+                $message = "Is a reserved handle/word ({$handle->getTypeLabel()})";
+                if ($handle->expires_on) {
+                    $message .= ', expires on '.$handle->expires_on->format('Y-m-d');
+                }
+
+                return $message;
+            }
         }
         return false;
     }
@@ -357,49 +371,9 @@ class PotentialClubhouseAccountFromSalesforce
         return trim($s);
     }
 
-    public static function sanitizeTeeshirtSizeStyle($s): string
-    {
-        // Gag.
-        return str_replace("Tee ", "", self::fixMultibyteCrap($s));
-    }
-
-    public static function sanitizeLongsleeveshirtSizeStyle($s): string
-    {
-        return self::fixMultibyteCrap($s);
-    }
-
     public static function sanitizeField($obj, $name): string
     {
         return trim($obj->{$name} ?? '');
-    }
-
-    /**
-     * Shirt size and style from Salesforce uses multibyte strings.
-     * In particular, 0xe28099 for an apostrophe and, occasionally,
-     * 0xc2a0 for non-breaking space.  What did I do wrong such that
-     * I'm spending a sunny Saturday afternoon dealing with this crap?
-     * @param $s
-     * @return string
-     */
-
-    public static function fixMultibyteCrap($s): string
-    {
-        $x = mb_ereg_replace("’", '', $s);
-        $x = str_replace("\xc2\xa0", ' ', $x);
-        $x = str_replace("'", '', $x);
-        return $x;
-    }
-
-    /**
-     * "Cook" a callsign by converting to lower case and removing
-     * spaces and special characters.
-     * @param $callsign
-     * @return string
-     */
-
-    public static function cookCallsign($callsign): string
-    {
-        return strtolower(str_replace([' ', '-', '!', '?', '.'], '', $callsign));
     }
 
     /**
@@ -407,22 +381,11 @@ class PotentialClubhouseAccountFromSalesforce
      * If style is "raw" (default), you get what's in the file with
      * minimum processing.  If it's "cooked", spaces and dashes are
      * eliminated and everything reduced to lower case.
-     * @param string $style
-     * @return array
+     *
      */
 
-    public static function getReservedCallsigns($style = "raw"): array
+    public static function getReservedCallsigns()
     {
-        $reservedCallsigns = array_merge(
-            ReservedCallsigns::LOCATIONS,
-            ReservedCallsigns::RADIO_JARGON,
-            ReservedCallsigns::RANGER_JARGON,
-            ReservedCallsigns::twiiVips(),
-            ReservedCallsigns::RESERVED
-        );
-        if ($style == 'cooked') {
-            $reservedCallsigns = array_map(fn($callsign) => self::cookCallsign($callsign), $reservedCallsigns);
-        }
-        return $reservedCallsigns;
+        return HandleReservation::findForQuery(['active' => true]);
     }
 }

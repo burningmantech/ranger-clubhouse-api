@@ -30,6 +30,19 @@ class HandleReservation extends ApiModel
     const TYPE_TWII_PERSON = 'twii_person';
     const TYPE_UNCATEGORIZED = 'uncategorized';
 
+    const TYPE_LABELS = [
+        self::TYPE_BRC_TERM => 'BRC Term',
+        self::TYPE_DECEASED_PERSON => 'Deceased person',
+        self::TYPE_DISMISSED_PERSON => 'Dismissed person',
+        self::TYPE_OBSCENE => 'Obscene word or phrase',
+        self::TYPE_PHONETIC_ALPHABET => 'Phonetic alphabet word',
+        self::TYPE_RADIO_JARGON => 'Radio jargon',
+        self::TYPE_RANGER_TERM => 'Ranger term',
+        self::TYPE_SLUR => 'Slur',
+        self::TYPE_TWII_PERSON => 'TWII Person',
+        self::TYPE_UNCATEGORIZED => 'Uncategorized',
+    ];
+
     protected $fillable = [
         'handle',
         'reservation_type',
@@ -173,5 +186,9 @@ class HandleReservation extends ApiModel
             'expires_on' => (string)(now()->addYears(Person::GRIEVING_PERIOD_YEARS)),
             'reason' => 'marked deceased by ' . (Auth::user()->callsign ?? 'unknown') . ' on ' . now()->format('Y-m-d'),
         ]);
+    }
+
+    public function getTypeLabel() : string {
+        return self::TYPE_LABELS[$this->reservation_type] ?? $this->reservation_type;
     }
 }
