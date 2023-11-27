@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class DocumentController extends ApiController
 {
@@ -18,6 +17,18 @@ class DocumentController extends ApiController
 
     public function index(): JsonResponse
     {
+        $params = request()->validate([
+            'tag' => 'sometimes|string'
+        ]);
+
+        $tag = $params['tag'] ?? null;
+        if ($tag) {
+            // Support hack for ember-data queryRecord().
+            $document = Document::where('tag', $tag)->firstOrFail();
+            $this->authorize('show', $document);
+            return $this->success($document);
+        }
+
         $this->authorize('index', [Document::class]);
 
         return $this->success(Document::findAll(), null, 'document');
