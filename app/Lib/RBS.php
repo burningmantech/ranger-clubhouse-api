@@ -278,8 +278,9 @@ class RBS
                 $sent++;
             } else {
                 // Sender format is "Callsign (Real Name)"
+                $firstName = empty($person->preferred_name) ? $person->first_name : $person->preferred_name;
                 $emailMessage = self::createEmail($from,
-                    new Address($email, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
+                    new Address($email, $person->callsign . ' (' .$firstName . ' ' . $person->last_name . ')'),
                     $subject,
                     $body);
                 try {
@@ -358,9 +359,10 @@ class RBS
 
             foreach ($emails as $message) {
                 $person = $message->person;
+                $firstName = empty($person->preferred_name) ? $person->first_name : $person->preferred_name;
                 $emailMessage = self::createEmail(
                     $broadcast->sender_address,
-                    new Address($message->address, $person->callsign . ' (' . $person->first_name . ' ' . $person->last_name . ')'),
+                    new Address($message->address, $person->callsign . ' (' . $firstName . ' ' . $person->last_name . ')'),
                     $broadcast->subject,
                     $body);
                 try {
@@ -712,6 +714,7 @@ class RBS
             'person.callsign',
             'person.status',
             'person.first_name',
+            'person.preferred_name',
             'person.last_name',
             'person.email',
             'person.sms_on_playa',

@@ -217,8 +217,9 @@ class PersonOnlineCourseController extends ApiController
             $inSync = false;
         }
 
-        if ($user->firstname != $person->first_name) {
-            $userInfo['first_name_expected'] = $person->first_name;
+        $firstName = $person->desired_first_name();
+        if ($user->firstname != $firstName) {
+            $userInfo['first_name_expected'] = $firstName;
             $inSync = false;
         }
 

@@ -14,8 +14,7 @@ class RangerRetentionReport
         $year = current_year();
         $startYear = $year - 4;
 
-        $people = DB::table('person')
-            ->select('id', 'callsign', 'email', 'first_name', 'last_name', 'status')
+        $rows = Person::select('id', 'callsign', 'email', 'first_name', 'preferred_name', 'last_name', 'status')
             ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
             ->whereExists(function ($q) use ($startYear) {
                 $q->select(DB::raw(1))
@@ -28,11 +27,20 @@ class RangerRetentionReport
             })->orderBy('callsign')
             ->get();
 
-        foreach ($people as $person) {
+        $people = [];
+        foreach ($rows as $person) {
             $years = Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED);
-            $person->first_year = $years[0];
-            $person->last_year = last($years);
-            $person->total_years = count($years);
+            $people[] = [
+                'id' => $person->id,
+                'callsign' => $person->callsign,
+                'email' => $person->email,
+                'first_name' => $person->desired_first_name(),
+                'last_name' => $person->last_name,
+                'status' => $person->status,
+                'first_year' => $years[0],
+                'last_year' => last($years),
+                'total_years' => count($years),
+            ];
         }
 
         return [

@@ -428,7 +428,7 @@ class Moodle
     {
         $letters = 'abcdefghijk';
         $lastName = ucfirst(strtolower(Person::convertDiacritics($person->last_name)));
-        $firstName = Person::convertDiacritics($person->first_name);
+        $firstName = Person::convertDiacritics($person->desired_first_name());
         $password = ucfirst(preg_replace('/[^\w]/', '', $lastName) . ucfirst(substr($firstName, 0, 1))) . '!';
         $password .= (rand(0, 9) . rand(0, 9) . rand(0, 9));
 
@@ -480,7 +480,7 @@ class Moodle
                     'username' => $username,
                     'email' => self::normalizeEmail($person->email),
                     'password' => $password,
-                    'firstname' => $person->first_name,
+                    'firstname' => $person->desired_first_name(),
                     'lastname' => $person->last_name,
                     'idnumber' => $person->id
                 ]]
@@ -594,7 +594,7 @@ class Moodle
             'id' => $person->lms_id,
             'username' => $username,
             'email' => self::normalizeEmail($person->email),
-            'firstname' => $person->first_name,
+            'firstname' => $person->desired_first_name(),
             'lastname' => $person->last_name,
         ]);
     }

@@ -22,7 +22,7 @@ class PotentialEarnedShirtsReport
         $active_statuses = implode("','", Person::ACTIVE_STATUSES);
         $report = DB::select(
             "SELECT
-          person.id, person.callsign, person.status, person.first_name, person.mi, person.last_name,
+          person.id, person.callsign, person.status, IF(person.preferred_name != '', person.preferred_name, person.first_name) as first_name, person.mi, person.last_name,
           eh.estimated_hours,
           ah.actual_hours,
           tshirt_swag.title AS t_shirt_size, 

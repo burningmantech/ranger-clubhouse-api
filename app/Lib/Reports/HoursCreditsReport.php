@@ -29,8 +29,14 @@ class HoursCreditsReport
             ];
         }
 
-        $people = Person::whereNotIn('status', [Person::ALPHA, Person::AUDITOR, Person::BONKED, Person::PAST_PROSPECTIVE, Person::PROSPECTIVE, Person::UBERBONKED])
-            ->whereRaw('EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty)=? LIMIT 1)', [$year])
+        $people = Person::whereNotIn('status', [
+            Person::ALPHA,
+            Person::AUDITOR,
+            Person::BONKED,
+            Person::PAST_PROSPECTIVE,
+            Person::PROSPECTIVE,
+            Person::UBERBONKED
+        ])->whereRaw('EXISTS (SELECT 1 FROM timesheet WHERE timesheet.person_id=person.id AND YEAR(on_duty)=? LIMIT 1)', [$year])
             ->orderBy('callsign')
             ->get();
 
@@ -77,7 +83,7 @@ class HoursCreditsReport
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
-                'first_name' => $person->first_name,
+                'first_name' => $person->desired_first_name(),
                 'last_name' => $person->last_name,
                 'email' => $person->email,
                 'years' => $yearsByIds[$person->id] ?? 0,

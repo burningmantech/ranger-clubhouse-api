@@ -723,6 +723,7 @@ class PersonController extends ApiController
             'person.email' => 'required|email',
             'person.password' => 'required|string',
             'person.first_name' => 'required|string',
+            'person.preferred_name' => 'sometimes|string',
             'person.mi' => 'sometimes|string',
             'person.last_name' => 'required|string',
             'person.street1' => 'required|string',

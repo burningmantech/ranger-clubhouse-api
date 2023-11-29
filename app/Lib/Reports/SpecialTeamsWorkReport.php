@@ -76,7 +76,7 @@ class SpecialTeamsWorkReport
             $result = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
-                'first_name' => $person->first_name,
+                'first_name' => $person->desired_first_name(),
                 'last_name' => $person->last_name,
                 'status' => $person->status,
                 'years' => $years,

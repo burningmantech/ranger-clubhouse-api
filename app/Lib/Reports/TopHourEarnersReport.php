@@ -22,8 +22,14 @@ class TopHourEarnersReport
     {
         // Find all eligible candidates
         $people = DB::table('person')
-            ->select('id', 'callsign', 'first_name', 'last_name', 'status', 'email')
-            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
+            ->select(
+                'id',
+                'callsign',
+                DB::raw('IF(preferred_name != "", first_name, preferred_name) as first_name'),
+                'last_name',
+                'status',
+                'email'
+            )->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
             ->get();
 
         $personIds = $people->pluck('id');

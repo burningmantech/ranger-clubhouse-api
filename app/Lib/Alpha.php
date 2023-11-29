@@ -206,7 +206,7 @@ class Alpha
             'pronouns_custom' => $person->pronouns_custom,
             'known_rangers' => $person->knownRangersArray(),
             'known_pnvs' => $person->knownPnvsArray(),
-            'first_name' => $person->first_name,
+            'first_name' => $person->desired_first_name(),
             'last_name' => $person->last_name,
             'email' => $person->email,
             'status' => $person->status,
@@ -364,14 +364,26 @@ class Alpha
     {
         $year = current_year();
 
-        $people = DB::table('person')
-            ->select('person.id', 'callsign', 'person.status', 'first_name', 'last_name',
-                DB::raw("(SELECT person_mentor.status FROM person_mentor WHERE person_mentor.person_id=person.id AND mentor_year=$year GROUP BY person_mentor.status LIMIT 1) as mentor_status")
-            )
-            ->where('status', Person::ALPHA)
+        $people = Person::select(
+            'person.id',
+            'callsign',
+            'person.status',
+            'first_name',
+            'preferred_name',
+            'last_name',
+            DB::raw("(SELECT person_mentor.status FROM person_mentor WHERE person_mentor.person_id=person.id AND mentor_year=$year GROUP BY person_mentor.status LIMIT 1) as mentor_status")
+        )->where('status', Person::ALPHA)
             ->orderBy('person.callsign')
+            ->having('mentor_status', '!=', PersonMentor::PENDING)
             ->get();
 
-        return $people->filter(fn($p) => $p->mentor_status != PersonMentor::PENDING)->values();
+        return $people->map(fn(Person $p) => [
+            'id' => $p->id,
+            'callsign' => $p->callsign,
+            'status' => $p->status,
+            'first_name' => $p->desired_first_name(),
+            'last_name' => $p->last_name,
+            'mentor_status' => $p->mentor_status,
+        ])->values();
     }
 }

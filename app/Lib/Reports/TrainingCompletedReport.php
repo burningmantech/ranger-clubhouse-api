@@ -36,6 +36,7 @@ class TrainingCompletedReport
                     person.id,
                     callsign,
                     first_name,
+                    preferred_name,
                     last_name,
                     email,
                     slot.id as slot_id,
@@ -75,6 +76,7 @@ class TrainingCompletedReport
             $slotsByIds[$slotId]['people'][] = [
                 'id' => $person->id,
                 'first_name' => $person->first_name,
+                'preferred_name' => $person->preferred_name,
                 'last_name' => $person->last_name,
                 'callsign' => $person->callsign,
                 'email' => $person->email

@@ -14,7 +14,7 @@ class ClaimedTicketsWithNoSignups
     {
         $claimedRows = AccessDocument::whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
             ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-            ->with('person:id,callsign,status,first_name,last_name,email')
+            ->with('person:id,callsign,status,first_name,preferred_name,last_name,email')
             ->get();
 
         if ($claimedRows->isEmpty()) {
@@ -121,6 +121,7 @@ class ClaimedTicketsWithNoSignups
                 'status' => $person->status,
                 'email' => $person->email,
                 'first_name' => $person->first_name,
+                'preferred_name'=> $person->preferred_name,
                 'last_name' => $person->last_name,
                 'access_document_id' => $claimed->id,
                 'type' => $claimed->type,

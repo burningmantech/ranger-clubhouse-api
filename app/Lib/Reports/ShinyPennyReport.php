@@ -33,8 +33,14 @@ class ShinyPennyReport
         }
 
         return DB::table('person')
-            ->select('id', 'callsign', 'email', 'status', 'first_name', 'last_name')
-            ->whereIntegerInRaw('id', $pennyIds)
+            ->select(
+                'id',
+                'callsign',
+                'email',
+                'status',
+                DB::raw('IF(preferred_name != "", preferred_name, first_name) as first_name'),
+                'last_name'
+            )->whereIntegerInRaw('id', $pennyIds)
             ->orderBy('callsign')
             ->get()
             ->toArray();
