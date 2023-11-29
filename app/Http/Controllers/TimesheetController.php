@@ -26,6 +26,7 @@ use App\Lib\Reports\TopHourEarnersReport;
 use App\Lib\ShiftDropReport;
 use App\Lib\TimesheetManagement;
 use App\Lib\TimesheetSlotAssocRepair;
+use App\Mail\AutomaticActiveConversionMail;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Position;
@@ -33,7 +34,6 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
-use App\Models\TimesheetNote;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
@@ -452,8 +452,23 @@ class TimesheetController extends ApiController
 
         TimesheetManagement::unconfirmTimesheet($timesheet, 'signoff');
 
-        return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
+        $response = ['status' => 'success', 'timesheet' => $timesheet];
 
+        $person = $timesheet->person;
+        $status = $person->status;
+        if ($timesheet->position->type != Position::TYPE_TRAINING
+            && $timesheet->position_id != Position::CHEETAH_CUB
+            && ($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED)) {
+            $person->status = Person::ACTIVE;
+            $person->auditReason = 'automatic conversion';
+            $person->changeStatus(Person::ACTIVE, $status, 'automatic conversion');
+            $person->saveWithoutValidation();
+            $response['now_active_status'] = true;
+            mail_to(setting('VCEmail'), new AutomaticActiveConversionMail($person, $status, $timesheet->position->title, $this->user->callsign), false);
+
+        }
+
+        return response()->json($response);
     }
 
     /**
