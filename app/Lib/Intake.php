@@ -265,7 +265,7 @@ class Intake
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
-                'first_name' => $person->first_name,
+                'first_name' => $person->desired_first_name(),
                 'last_name' => $person->last_name,
                 'formerly_known_as' => $person->formerlyKnownAsArray(true),
                 'known_rangers' => $person->knownRangersArray(),

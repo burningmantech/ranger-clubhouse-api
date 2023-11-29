@@ -10,17 +10,23 @@ class PeopleByLocationReport
     /**
      * Reports on everyone's location.
      *
-     * @param $year
+     * @param int $year
+     * @param bool $includeEmail
      * @return array
      */
-    public static function execute($year, $includeEmail): array
+
+    public static function execute(int $year, bool $includeEmail): array
     {
-        $slotIds = DB::table('slot')->where('begins_year', $year)->where('position_id', '!=', Position::ALPHA)->pluck('id')->toArray();
+        $slotIds = DB::table('slot')
+            ->where('begins_year', $year)
+            ->where('position_id', '!=', Position::ALPHA)
+            ->pluck('id')
+            ->toArray();
         $sql = DB::table('person')
             ->select(
                 'id',
                 'callsign',
-                'first_name',
+                DB::raw('IF(preferred_name != "", preferred_name, first_name) as first_name'),
                 'last_name',
                 'status',
                 'city',

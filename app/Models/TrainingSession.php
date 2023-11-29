@@ -115,6 +115,7 @@ class TrainingSession extends Slot
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'first_name' => $person->first_name,
+                'preferred_name' => $person->preferred_name,
                 'last_name' => $person->last_name,
                 'status' => $status,
                 'current_status' => $person->status,
@@ -223,7 +224,7 @@ class TrainingSession extends Slot
             }
 
             // Retrieve the trainers
-            $rows = PersonSlot::with(['person:id,callsign,first_name,last_name,email'])
+            $rows = PersonSlot::with(['person:id,callsign,first_name,preferred_name,last_name,email'])
                 ->where('slot_id', $trainerSlot->id)
                 ->get();
 

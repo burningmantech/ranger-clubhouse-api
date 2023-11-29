@@ -15,7 +15,7 @@ class PeopleWithUnconfirmedTimesheetsReport
     public static function execute(int $year): array
     {
         $rows = Person::select(
-            'id', 'callsign', 'first_name', 'last_name', 'email', 'home_phone',
+            'id', 'callsign', 'first_name', 'preferred_name', 'last_name', 'email', 'home_phone',
         )->addSelect([
             'unverified_count' => function ($q) use ($year) {
                 $q->from('timesheet')
@@ -43,7 +43,7 @@ class PeopleWithUnconfirmedTimesheetsReport
             $people[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
-                'first_name' => $person->first_name,
+                'first_name' => $person->desired_first_name(),
                 'last_name' => $person->last_name,
                 'email' => $person->email,
                 'home_phone' => $person->home_phone,

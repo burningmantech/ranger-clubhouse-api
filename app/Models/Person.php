@@ -250,6 +250,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'message',
         'mi',
         'on_site',
+        'preferred_name',
         'pronouns',
         'pronouns_custom',
         'reviewed_pi_at',
@@ -313,27 +314,23 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     ];
 
     const GENERAL_VALIDATIONS = [
+        'alt_phone' => 'sometimes|string|max:25',
         'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',
-        'status' => 'required|string',
-        'formerly_known_as' => 'sometimes|string|nullable|max:200',
-
-        'first_name' => 'required|string|max:25',
-        'mi' => 'sometimes|string|nullable|max:10',
-        'last_name' => 'required|string|max:25',
-
-        'email' => 'required|string|max:50',
-
-        'has_reviewed_pi' => 'sometimes|boolean',
-
         'camp_location' => 'sometimes|string|nullable|max:200',
-        'gender_type' => 'sometimes|string',
+        'email' => 'required|string|max:50',
+        'first_name' => 'required|string|max:25',
+        'formerly_known_as' => 'sometimes|string|nullable|max:200',
         'gender_custom' => 'sometimes|string|nullable|max:32',
+        'gender_type' => 'sometimes|string',
+        'has_reviewed_pi' => 'sometimes|boolean',
+        'home_phone' => 'sometimes|string|max:25',
+        'last_name' => 'required|string|max:25',
+        'mi' => 'sometimes|string|nullable|max:10',
+        'preferred_name' => 'sometimes|string|nullable|max:30',
         'pronouns' => 'sometimes|string|nullable',
         'pronouns_custom' => 'sometimes|string|nullable',
-
-        'home_phone' => 'sometimes|string|max:25',
-        'alt_phone' => 'sometimes|string|max:25',
+        'status' => 'required|string',
     ];
 
     const ADDRESS_VALIDATIONS = [
@@ -357,6 +354,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
         'mi' => '',
         'alt_phone' => '',
         'gender_identity' => self::GENDER_NONE,
+        'preferred_name' => '',
     ];
 
     public bool $has_reviewed_pi = false;
@@ -1422,6 +1420,26 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function genderCustom(): Attribute
     {
         return BlankIfEmptyAttribute::make();
+    }
+
+    /**
+     * Set the preferred first name to blank if empty
+     */
+
+    public function preferredName(): Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
+    /**
+     * Obtain the first name to use - either the preferred name if present, or the first name.
+     *
+     * @return string
+     */
+
+    public function desired_first_name() : string
+    {
+        return empty($this->preferred_name) ? $this->first_name : $this->preferred_name;
     }
 
     /**

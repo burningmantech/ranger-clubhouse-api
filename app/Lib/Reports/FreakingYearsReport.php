@@ -6,6 +6,7 @@ namespace App\Lib\Reports;
 
 use App\Models\Person;
 use App\Models\Position;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class FreakingYearsReport
@@ -18,10 +19,10 @@ class FreakingYearsReport
      *
      * @param bool $showAll false if only report on active status rangers, otherwise everyone.
      * @param int $intendToWorkYear year the person might work in (usually the current year)
-     * @return array|\Illuminate\Support\Collection
+     * @return array|Collection
      */
 
-    public static function execute(bool $showAll, int $intendToWorkYear)
+    public static function execute(bool $showAll, int $intendToWorkYear): array
     {
         $excludePositionIds = implode(',', [Position::ALPHA, Position::HQ_RUNNER]);
         $statusCond = $showAll ? '' : 'person.status="active" AND ';
@@ -43,7 +44,7 @@ class FreakingYearsReport
         }
 
         $personIds = array_column($rows, 'person_id');
-        $people = Person::select('id', 'callsign', 'first_name', 'last_name', 'status')
+        $people = Person::select('id', 'callsign', 'first_name', 'preferred_name', 'last_name', 'status')
             ->whereIntegerInRaw('id', $personIds)
             ->get()
             ->keyBy('id');
@@ -54,7 +55,7 @@ class FreakingYearsReport
                 'id' => $row->person_id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
-                'first_name' => $person->first_name,
+                'first_name' => $person->desired_first_name(),
                 'last_name' => $person->last_name,
                 'years' => (int)$row->years,
                 'first_year' => (int)$row->first_year,
@@ -73,6 +74,6 @@ class FreakingYearsReport
 
         return collect($freaks)->groupBy('years')->map(function ($people, $year) {
             return ['years' => $year, 'people' => $people];
-        })->values();
+        })->values()->toArray();
     }
 }

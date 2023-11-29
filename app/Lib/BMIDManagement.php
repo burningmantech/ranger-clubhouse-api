@@ -22,6 +22,7 @@ class BMIDManagement
         'callsign',
         'email',
         'first_name',
+        'preferred_name',
         'last_name',
         'status'
     ];

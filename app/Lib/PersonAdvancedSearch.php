@@ -295,6 +295,7 @@ class PersonAdvancedSearch
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'first_name' => $person->first_name,
+                'preferred_name' => $person->preferred_name,
                 'last_name' => $person->last_name,
                 'status' => $person->status,
                 'email' => $person->email,

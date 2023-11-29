@@ -73,7 +73,7 @@ class PersonPhoto extends ApiModel
     const PROFILE_WIDTH = 140;
 
     const PERSON_TABLES = [
-        'person:id,callsign,status,first_name,last_name',
+        'person:id,callsign,status,first_name,preferred_name,last_name',
         'review_person:id,callsign',
         'upload_person:id,callsign',
         'edit_person:id,callsign'

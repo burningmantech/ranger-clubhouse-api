@@ -26,7 +26,14 @@ class PersonSearch
 
     const CHEETAH_CUB_STATUS = 'cheetahcub';
 
-    const BASE_COLUMNS = ['person.id', 'person.callsign', 'person.status', 'person.first_name', 'person.last_name'];
+    const BASE_COLUMNS = [
+        'person.id',
+        'person.callsign',
+        'person.status',
+        'person.first_name',
+        'person.last_name',
+        'person.preferred_name',
+    ];
 
     const STATUS_GROUPS = [
         [
@@ -233,12 +240,17 @@ class PersonSearch
         $likeName = SqlHelper::quote('%' . $name . '%');
         $sql->where(function ($q) use ($likeName, $name) {
             $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE " . $likeName);
+            $q->orWhere(function ($w) use ($likeName) {
+                $w->where('preferred_name', '!=', '');
+                $w->whereRaw("CONCAT(preferred_name, ' ', last_name) LIKE " . $likeName);
+            });
             $q->orWhere('last_name', 'like', $name . '%');
         });
 
         $likeLastName = SqlHelper::quote($name . '%');
         $orderBy = "CASE";
         $orderBy .= " WHEN CONCAT(first_name, ' ', last_name) LIKE " . $likeName . " THEN CONCAT('12', first_name, ' ', last_name)";
+        $orderBy .= " WHEN CONCAT(preferred_name, ' ', last_name) LIKE " . $likeName . " THEN CONCAT('12', preferred_name, ' ', last_name)";
         $orderBy .= " WHEN CONCAT(last_name) LIKE " . $likeLastName . " THEN CONCAT('11', 'last_name')";
         $orderBy .= "ELSE CONCAT('99', callsign) END";
         $sql->orderBy(DB::raw($orderBy));
@@ -405,6 +417,7 @@ class PersonSearch
             'callsign' => $person->callsign,
             'status' => $person->status,
             'first_name' => $person->first_name,
+            'preferred_name' => $person->preferred_name,
             'last_name' => $person->last_name,
         ];
 

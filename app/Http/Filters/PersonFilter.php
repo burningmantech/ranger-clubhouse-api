@@ -42,8 +42,9 @@ class PersonFilter
         'gender_identity',
         'gender_custom',
         'callsign_pronounce',
+        'preferred_name',
         'pronouns',
-        'pronouns_custom'
+        'pronouns_custom',
     ];
 
     const CALLSIGNS_FIELDS = [

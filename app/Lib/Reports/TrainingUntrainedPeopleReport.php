@@ -82,7 +82,7 @@ class TrainingUntrainedPeopleReport
 
         $untrainedSignedup = [];
         if (!empty($peopleSignedUp)) {
-            $rows = Person::select('id', 'callsign', 'first_name', 'last_name', 'email')
+            $rows = Person::select('id', 'callsign', 'first_name', 'preferred_name', 'last_name', 'email')
                 ->whereIntegerInRaw('id', array_keys($peopleSignedUp))->get();
             foreach ($rows as $row) {
                 $row->slots = array_map(function ($slot) {
@@ -110,6 +110,7 @@ class TrainingUntrainedPeopleReport
                     person.callsign,
                     person.email,
                     person.first_name,
+                    person.preferred_name,
                     person.last_name,
                     slot.description as training_description,
                     slot.begins as training_begins,
