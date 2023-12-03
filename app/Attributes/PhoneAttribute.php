@@ -13,7 +13,7 @@ class PhoneAttribute
     {
         return Attribute::make(
             get: function ($phone) {
-                $phone = trim($phone);
+                $phone = trim($phone ?? '');
                 if (empty($phone)) {
                     return '';
                 }
