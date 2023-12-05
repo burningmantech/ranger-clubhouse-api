@@ -9,10 +9,17 @@ use Illuminate\Support\Facades\DB;
 
 class RangerRetentionReport
 {
-    public static function execute()
+    public static function execute(): array
     {
         $year = current_year();
-        $startYear = $year - 4;
+
+        // Handle pandemic year gaps
+        $startYear = match ($year) {
+            2023 => 2017,
+            2024 => 2018,
+            2025 => 2019,
+            default => $year - 4,
+        };
 
         $rows = Person::select('id', 'callsign', 'email', 'first_name', 'preferred_name', 'last_name', 'status')
             ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
