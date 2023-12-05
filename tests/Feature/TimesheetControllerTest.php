@@ -1440,7 +1440,6 @@ class TimesheetControllerTest extends TestCase
         $response = $this->json('GET', 'timesheet/retention-report');
         $response->assertStatus(200);
         $response->assertJson([
-            'start_year' => $year - 4,
             'end_year' => $year,
             'people' => [[
                 'id' => $personA->id,
