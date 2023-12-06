@@ -28,6 +28,7 @@ use RuntimeException;
  * @method static $this whereIn(...$args)
  * @method static $this whereIntegerInRaw(...$args)
  * @method static $this whereNotIn(...$args)
+ * @method static $this whereYear(...$args)
  */
 
 #[AllowDynamicProperties]

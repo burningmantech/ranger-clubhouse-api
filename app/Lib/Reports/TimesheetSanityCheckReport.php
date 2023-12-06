@@ -143,7 +143,7 @@ class TimesheetSanityCheckReport
 
         $tooLongForShift = $rows->sortByDesc('duration')->values()->map(fn($row) => self::buildEntry($row));
 
-        $rows = Timesheet:: select('timesheet.*', DB::raw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) as duration"))
+        $rows = Timesheet::select('timesheet.*', DB::raw("TIMESTAMPDIFF(SECOND, on_duty, IFNULL(off_duty,'$now')) as duration"))
             ->whereYear('on_duty', $year)
             ->whereNotNull('off_duty')
             ->whereRaw("TIMESTAMPDIFF(MINUTE, on_duty, off_duty) <= 15")
@@ -192,6 +192,24 @@ class TimesheetSanityCheckReport
             usort($duplicateAlphas, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
         }
 
+        $noCredits = [];
+
+        Timesheet::select('timesheet.*')
+            ->whereYear('on_duty', $year)
+            ->with($withBase)
+            ->orderBy('on_duty')
+            ->chunk(500, function ($rows) use (&$noCredits) {
+                foreach ($rows as $row) {
+                    if (!$row->credits) {
+                        $noCredits[] = self::buildEntry($row);
+                    }
+                }
+            });
+
+        usort($noCredits, fn($a, $b) => strcasecmp($a['position']['title'], $b['position']['title'])
+            ?? strcasecmp($a['person']['callsign'], $b['person']['callsign'])
+        );
+
         return [
             'on_duty' => $onDutyEntries,
             'end_before_start' => $endBeforeStartEntries,
@@ -200,6 +218,7 @@ class TimesheetSanityCheckReport
             'too_long_for_shift' => $tooLongForShift,
             'too_short' => $tooShort,
             'duplicate_alphas' => $duplicateAlphas,
+            'no_credits' => $noCredits,
         ];
     }
 
