@@ -37,7 +37,12 @@ class BulkUploadController extends ApiController
             'options' => $certActions
         ];
 
-        return response()->json([ 'actions' =>  $actions ]);
+        list ($defaultSourceYear, $defaultExpiryYear) = BulkUploader::defaultYears();
+        return response()->json([
+            'actions' =>  $actions,
+            'default_source_year' => $defaultSourceYear,
+            'default_expiry_year' => $defaultExpiryYear
+        ]);
     }
 
     /**
