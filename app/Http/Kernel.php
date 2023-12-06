@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\AccountGuard;
 use App\Http\Middleware\RequestLogger;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
@@ -21,6 +22,7 @@ class Kernel extends HttpKernel
      *
      * @var array
      */
+
     protected $middleware = [
         HandleCors::class,
 //        \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
@@ -28,7 +30,8 @@ class Kernel extends HttpKernel
         TrimStrings::class,
 //        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         TrustProxies::class,
-        RequestLogger::class
+        AccountGuard::class,
+        RequestLogger::class,
     ];
 
     /**

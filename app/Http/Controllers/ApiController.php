@@ -22,40 +22,13 @@ class ApiController extends Controller
     protected ?Person $user = null;
 
     /**
-     * @throws AuthorizationException
+     * Set up the user if logged in
      */
 
     public function __construct()
     {
-        /*
-         * The JWT token has an expiry timestamp - do the authentication check
-         * before setting up the groundhog day time, otherwise the JWT token will be invalidated
-         */
-
-        $ghdTime = config('clubhouse.GroundhogDayTime');
-        if (!empty($ghdTime)) {
-            Carbon::setTestNow();
-            $check = Auth::check();
-            // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
-            Carbon::setTestNow($ghdTime);
-        } else {
-            $check = Auth::check();
-        }
-
-        if ($check) {
-            $this->user = Auth::user();
-            if (in_array($this->user->status, Person::LOCKED_STATUSES)) {
-                // A user should not be able to log in when not authorized.
-                // However, a user could be logged in when their account is disabled.
-                throw new AuthorizationException('Account is disabled.');
-            }
-
-            $this->user->retrieveRoles();
-            // Update the time the person was last seen. Avoid auditing and perform a faster-ish update
-            // then doing $user->last_seen_at = now(); $user->save();
-            DB::table('person')->where('id', $this->user->id)->update(['last_seen_at' => now()]);
-        }
-    }
+        $this->user = Auth::user();
+     }
 
     /**
      * Is the given person the current user?
