@@ -470,6 +470,7 @@ class BulkUploader
 
     public static function processTickets($records, $action, $commit, $reason): void
     {
+        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears();
         $year = current_year();
 
         $callsign = Auth::user()?->callsign ?? "unknown";
@@ -491,21 +492,12 @@ class BulkUploader
 
             $type = trim($data[$nextInd++]);
 
-            /* This assumes we're being run in January or later! */
-            $sourceYear = $year - 1;
-            $expiryYear = $year;
-
-            /*
-             * Tickets are good for three years.  If you earned a
-             * ticket in 2016 for use in the 2017 event then:
-             * 2017 is year 0
-             * 2018 is year 1
-             * 2019 is year 2
-             * 2020 is year 3 ... and it expires AFTER the 2020 event.
-             */
+            $sourceYear = $defaultSourceYear;
 
             if ($type == "CRED" || $type == "SPT" || $type == "GIFT") {
-                $expiryYear = $year + 3;
+                $expiryYear = $defaultExpiryYear;
+            } else {
+                $expiryYear = $year;
             }
 
             $accessDate = null;
@@ -731,8 +723,7 @@ class BulkUploader
 
     public static function processProvisions($records, $type, $commit, $reason): void
     {
-        $sourceYear = current_year();
-        $expiryYear = $sourceYear + 3;
+        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears();
 
         $isAllocated = str_starts_with($type, 'alloc_');
         if ($isAllocated) {
@@ -771,8 +762,8 @@ class BulkUploader
             }
 
             $record->status = self::STATUS_SUCCESS;
-            $sourceYear = current_year();
-            $expiryYear = $sourceYear + 3;
+            $sourceYear = $defaultSourceYear;
+            $expiryYear = $defaultExpiryYear;
 
             $data = $record->data;
             $fieldCount = count($data);
@@ -1045,4 +1036,28 @@ class BulkUploader
             $record->status = self::STATUS_SUCCESS;
         }
     }
+
+    /**
+     * Obtain the default source year. If we're running in September or later, default to the current year,
+     * otherwise it's assumed the source year was last year.
+     *
+     *  Tickets are good for three years.  If you earned a ticket in 2016 for use in the 2017 event then:
+     *  2017 is year 0
+     *  2018 is year 1
+     *  2019 is year 2
+     *  2020 is year 3 ... and it expires AFTER the 2020 event.
+     *
+     * @return array
+     */
+
+    public static function defaultYears(): array
+    {
+        $now = now();
+        if ($now->month >= 9) {
+            return [ $now->year, $now->year + 4];
+        } else {
+            return [ $now->year - 1, $now->year + 3];
+        }
+    }
+
 }
