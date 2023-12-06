@@ -688,7 +688,7 @@ class BulkUploadControllerTest extends TestCase
 
         $this->assertDatabaseHas('provision', [
             'person_id' => $personId,
-            'source_year' => $year,
+            'source_year' => $year - 1,
             'type' => Provision::EVENT_RADIO,
             'item_count' => 1,
         ]);
@@ -710,7 +710,7 @@ class BulkUploadControllerTest extends TestCase
 
         $this->assertDatabaseHas('provision', [
             'person_id' => $personId,
-            'source_year' => $year,
+            'source_year' => $year - 1,
             'type' => Provision::EVENT_RADIO,
             'item_count' => 2,
         ]);
