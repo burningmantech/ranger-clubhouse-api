@@ -11,11 +11,8 @@ use App\Models\Role;
 
 class PersonFilter
 {
-    protected $record;
-
-    public function __construct(Person $record)
+    public function __construct(protected Person $record)
     {
-        $this->record = $record;
     }
 
     const STATUS_FIELDS = [
@@ -176,7 +173,7 @@ class PersonFilter
     const FIELDS_DESERIALIZE = [
         [self::NAME_GENDER_FIELDS, true, [Role::VC]],
         [self::ACCOUNT_FIELDS, false, [Role::ADMIN]],
-        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER]],
+        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::VC]],
         [self::STATUS_FIELDS, false, [Role::MENTOR, Role::VC]],
         [self::CALLSIGNS_FIELDS, false, [Role::MENTOR, Role::VC]],
         [self::EMAIL_FIELDS, true, [Role::VC]],
