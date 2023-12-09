@@ -20,6 +20,7 @@ use App\Models\EventDate;
 use App\Models\HandleReservation;
 use App\Models\Help;
 use App\Models\Motd;
+use App\Models\OauthClient;
 use App\Models\OnlineCourse;
 use App\Models\Person;
 use App\Models\PersonAward;
@@ -65,6 +66,7 @@ use App\Policies\EventDatePolicy;
 use App\Policies\HandleReservationPolicy;
 use App\Policies\HelpPolicy;
 use App\Policies\MotdPolicy;
+use App\Policies\OauthClientPolicy;
 use App\Policies\OnlineCoursePolicy;
 use App\Policies\PersonAwardPolicy;
 use App\Policies\PersonEventPolicy;
@@ -121,6 +123,7 @@ class AuthServiceProvider extends ServiceProvider
         HandleReservation::class => HandleReservationPolicy::class,
         Help::class => HelpPolicy::class,
         Motd::class => MotdPolicy::class,
+        OauthClient::class => OauthClientPolicy::class,
         OnlineCourse::class => OnlineCoursePolicy::class,
         Person::class => PersonPolicy::class,
         PersonAward::class => PersonAwardPolicy::class,

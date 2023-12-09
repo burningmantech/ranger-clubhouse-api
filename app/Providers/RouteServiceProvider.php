@@ -2,16 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
-
-use App\Models\AccessDocumentDelivery;
-use App\Models\Bmid;
-use App\Models\Document;
 use App\Models\Help;
 use App\Models\PersonEvent;
-use App\Models\PersonIntakeNote;
-use App\Models\Setting;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -29,76 +23,23 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         parent::boot();
 
-        Route::bind('access-document-delivery', function($id) {
-            return AccessDocumentDelivery::findForRoute($id) ?? abort(404);
-        });
-
-        Route::bind('bmid', function($id) {
-            return Bmid::find($id) ?? abort(404);
-        });
-
         Route::bind('help', function ($id) {
             return Help::findByIdOrSlug($id) ?? abort(404);
-        });
-
-        Route::bind('setting', function ($id) {
-            return Setting::find($id) ?? abort(404);
         });
 
         Route::bind('person-event', function ($id) {
             return PersonEvent::findForRoute($id) ?? abort(404);
         });
 
-        Route::bind('document', function ($id) {
-            return Document::findIdOrTag($id) ?? abort(404);
+        $this->routes(function () {
+            Route::prefix('')
+                ->middleware('api')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/api.php'));
         });
-    }
-
-    /**
-     * Define the routes for the application.
-     *
-     * @return void
-     */
-    public function map()
-    {
-        $this->mapApiRoutes();
-
-        //$this->mapWebRoutes();
-    }
-
-    /**
-     * Define the "web" routes for the application.
-     *
-     * These routes all receive session state, CSRF protection, etc.
-     *
-     * @return void
-     */
-
-    /*
-    protected function mapWebRoutes()
-    {
-        Route::middleware('web')
-             ->namespace($this->namespace)
-             ->group(base_path('routes/web.php'));
-    }
-    */
-
-    /**
-     * Define the "api" routes for the application.
-     *
-     * These routes are typically stateless.
-     *
-     * @return void
-     */
-    protected function mapApiRoutes()
-    {
-        Route::prefix('')
-             ->middleware('api')
-             ->namespace($this->namespace)
-             ->group(base_path('routes/api.php'));
     }
 }

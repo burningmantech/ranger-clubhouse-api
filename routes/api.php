@@ -20,13 +20,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::group([
     'middleware' => 'api',
-], function ($router) {
+], function () {
     Route::get('config/dashboard-period', 'ConfigController@dashboardPeriod');
     Route::get('config', 'ConfigController@show');
 
     Route::post('auth/login', 'AuthController@login');
     Route::post('auth/reset-password', 'AuthController@resetPassword');
-
+    Route::match(['GET', 'POST'], 'auth/oauth2/token', 'Oauth2Controller@grantOAuthToken');
     Route::post('person/register', 'PersonController@register');
 
     Route::post('error-log/record', 'ErrorLogController@record');
@@ -41,6 +41,8 @@ Route::group([
         // Serve up files in exports, photos, and staging
         Route::get('{file}', 'FileController@serve')->where('file', '(exports|photos|staging)/.*');
     }
+
+    Route::get('.well-known/openid-configuration', 'OAuth2Controller@openIdDiscovery');
 });
 
 
@@ -54,6 +56,9 @@ Route::group([
 
     Route::post('auth/logout', 'AuthController@logout');
     Route::post('auth/refresh', 'AuthController@refresh');
+
+    Route::get('auth/oauth2/grant-code', 'OAuth2Controller@grantOAuthCode');
+    Route::get('auth/oauth2/userinfo', 'OAuth2Controller@oauthUserInfo');
 
     Route::post('access-document/bank-access-documents', 'AccessDocumentController@bankAccessDocuments');
     Route::post('access-document/bulk-comment', 'AccessDocumentController@bulkComment');
@@ -119,7 +124,7 @@ Route::group([
     Route::resource('document', 'DocumentController');
 
     Route::get('callsigns', 'CallsignsController@index');
- 
+
     Route::post('certification/people', 'CertificationController@peopleReport');
     Route::resource('certification', 'CertificationController');
 
@@ -197,6 +202,8 @@ Route::group([
     Route::get('motd/bulletin', 'MotdController@bulletin');
     Route::post('motd/{motd}/markread', 'MotdController@markRead');
     Route::resource('motd', 'MotdController');
+
+    Route::resource('oauth-client', 'OauthClientController');
 
     Route::get('person/alpha-shirts', 'PersonController@alphaShirts');
     Route::get('person/languages', 'PersonController@languagesReport');
