@@ -13,11 +13,22 @@ class OAuth2Controller extends ApiController
 {
     public function openIdDiscovery(): JsonResponse
     {
+        if (app()->isLocal()) {
+            // local development assumes we're also using a local moodle / ims instance.
+            $authEndpoint = "http://127.0.0.1:4200/me/oauth2-grant";
+            $tokenEndpoint = "http://docker.for.mac.localhost:8000/auth/oauth2/token";
+            $userInfoEndpoint = "http://docker.for.mac.localhost:8000/auth/oauth2/userinfo";
+        } else {
+            $authEndpoint = "https://ranger-clubhouse.burningman.org/me/oauth2-grant";
+            $tokenEndpoint = "https://ranger-clubhouse.burningman.org/api/auth/oauth2/token";
+            $userInfoEndpoint = "https://ranger-clubhouse.burningman.org/api/auth/oauth2/userinfo";
+        }
+
         return response()->json([
             "issuer" => "https://ranger-clubhouse.burningman.org",
-            "authorization_endpoint" => "http://127.0.0.1:4200/me/oauth2-grant",
-            "token_endpoint" => "http://docker.for.mac.localhost:8000/auth/oauth2/token",
-            "userinfo_endpoint" => "http://docker.for.mac.localhost:8000/auth/oauth2/userinfo",
+            "authorization_endpoint" => $authEndpoint,
+            "token_endpoint" => $tokenEndpoint,
+            "userinfo_endpoint" => $userInfoEndpoint,
             "response_types_supported" => [
                 "code",
                 "token",
