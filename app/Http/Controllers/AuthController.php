@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Mail\ResetPassword;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
+use App\Models\OauthClient;
+use App\Models\OauthCode;
 use App\Models\Person;
 use Carbon\Carbon;
 use Exception;
 use GuzzleHttp;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 use Okta\JwtVerifier\JwtVerifierBuilder;
 
 class AuthController extends Controller
@@ -113,7 +117,7 @@ class AuthController extends Controller
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
 
-        $token = $this->groundHogDayWrap(fn() => auth()->login($person));
+        $token = $this->groundHogDayWrap(fn() => Auth::login($person));
 
         return $this->respondWithToken($token);
     }
