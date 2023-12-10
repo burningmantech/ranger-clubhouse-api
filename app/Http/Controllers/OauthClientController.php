@@ -19,7 +19,7 @@ class OauthClientController extends ApiController
     public function index(): JsonResponse
     {
         $this->authorize('index', OauthClient::class);
-        return $this->success(OauthClient::findAll());
+        return $this->success(OauthClient::findAll(), null, 'oauth_client');
     }
 
     /***
