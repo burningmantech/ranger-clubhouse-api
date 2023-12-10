@@ -32,62 +32,63 @@ class OauthClientController extends ApiController
     public function store(): JsonResponse
     {
         $this->authorize('store', OauthClient::class);
-        $client = new OauthClient;
-        $this->fromRest($client);
+        $oauthClient = new OauthClient;
+        $this->fromRest($oauthClient);
 
-        if ($client->save()) {
-            return $this->success($client);
+        if ($oauthClient->save()) {
+            return $this->success($oauthClient);
         }
 
-        return $this->restError($client);
+        return $this->restError($oauthClient);
     }
 
     /**
      * Display the specified OAuth Client.
      *
-     * @param OauthClient $client
+     * @param OauthClient $oauthClient
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function show(OauthClient $client): JsonResponse
+    public function show(OauthClient $oauthClient): JsonResponse
     {
-        $this->authorize('show', $client);
-        return $this->success($client);
+        $this->authorize('show', $oauthClient);
+        return $this->success($oauthClient);
     }
 
     /**
      * Update the specified OAuth Client in storage.
      *
-     * @param OauthClient $client
+     * @param OauthClient $oauthClient
      * @return JsonResponse
      * @throws AuthorizationException|ValidationException
      */
 
-    public function update(OauthClient $client): JsonResponse
+    public function update(OauthClient $oauthClient): JsonResponse
     {
-        $this->authorize('update', $client);
-        $this->fromRest($client);
+        error_log('** MODEL '.json_encode($oauthClient));
+        $this->authorize('update', $oauthClient);
+        $this->fromRest($oauthClient);
 
-        if ($client->save()) {
-            return $this->success($client);
+        if ($oauthClient->save()) {
+            return $this->success($oauthClient);
         }
 
-        return $this->restError($client);
+        return $this->restError($oauthClient);
     }
 
     /**
      * Delete an OAuth Client record
      *
-     * @param OauthClient $client
+     * @param OauthClient $oauthClient
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function destroy(OauthClient $client): JsonResponse
+    public function destroy(OauthClient $oauthClient): JsonResponse
     {
-        $this->authorize('destroy', $client);
-        $client->delete();
+        $this->authorize('destroy', $oauthClient);
+        $oauthClient->delete();
         return $this->restDeleteSuccess();
     }
 }

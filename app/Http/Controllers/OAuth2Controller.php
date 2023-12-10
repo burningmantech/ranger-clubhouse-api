@@ -7,6 +7,7 @@ use App\Models\OauthCode;
 use App\Models\Person;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 
 class OAuth2Controller extends ApiController
 {
