@@ -231,15 +231,16 @@ Route::group([
     Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');
     Route::get('person/{person}/schedule/log', 'PersonScheduleController@scheduleLog');
     Route::get('person/{person}/onduty', 'PersonController@onDuty');
-    Route::resource('person/{person}/schedule', 'PersonScheduleController', ['only' => ['index', 'store', 'destroy']]);
 
     Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/photo', 'PersonPhotoController@photo');
     Route::post('person/{person}/photo', 'PersonPhotoController@upload');
     Route::get('person/{person}/positions', 'PersonController@positions');
     Route::post('person/{person}/positions', 'PersonController@updatePositions');
+    Route::post('person/{person}/release-callsign', 'PersonController@releaseCallsign');
     Route::get('person/{person}/roles', 'PersonController@roles');
     Route::post('person/{person}/roles', 'PersonController@updateRoles');
+    Route::resource('person/{person}/schedule', 'PersonScheduleController', ['only' => ['index', 'store', 'destroy']]);
     Route::get('person/{person}/teams', 'PersonController@teams');
     Route::post('person/{person}/teams', 'PersonController@updateTeams');
 
