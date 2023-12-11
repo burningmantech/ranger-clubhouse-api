@@ -29,7 +29,7 @@ class PersonPolicy
 
     public function index(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::VC ]);
+        return $user->hasRole([Role::ADMIN, Role::VC]);
     }
 
     /**
@@ -39,7 +39,7 @@ class PersonPolicy
      * @return bool
      */
 
-    public function search(Person $user) : bool
+    public function search(Person $user): bool
     {
         return $user->hasRole(self::AUTHORIZED_ROLES);
     }
@@ -51,9 +51,9 @@ class PersonPolicy
      * @return bool
      */
 
-    public function advancedSearch(Person $user) : bool
+    public function advancedSearch(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::VC ]);
+        return $user->hasRole([Role::ADMIN, Role::VC]);
     }
 
     /**
@@ -242,6 +242,16 @@ class PersonPolicy
 
     public function sendWelcomeEmail(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::VC]);
+        return $user->hasRole([Role::ADMIN, Role::VC]);
+    }
+
+    /**
+     * Can a user release this callsign?
+     *
+     */
+
+    public function releaseCallsign(Person $user): bool
+    {
+        return $user->hasRole([Role::ADMIN, Role::VC]);
     }
 }
