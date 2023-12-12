@@ -918,5 +918,33 @@ class PersonController extends ApiController
             'progress' => TicketsAndProvisionsProgress::compute($person)
         ]);
     }
+
+    /**
+     * Reset/release a callsign.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function releaseCallsign(Person $person) : JsonResponse
+    {
+        $this->authorize('releaseCallsign', $person);
+
+        if ($person->vintage) {
+            throw new \InvalidArgumentException("Callsign is vintage and cannot be reset");
+        }
+
+        if (!$person->resetCallsign()) {
+            throw new \InvalidArgumentException("Unable to reset the callsign");
+        }
+
+        $person->callsign_approved = false;
+        $person->auditReason = 'callsign released';
+        $person->save();
+
+
+        return response()->json([ 'callsign' => $person->callsign ]);
+    }
 }
 

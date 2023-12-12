@@ -1266,7 +1266,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
     public function resetCallsign(): bool
     {
         $lastName = self::convertDiacritics($this->last_name);
-        $firstLetter = substr(self::convertDiacritics($this->first_name), 0, 1);
+        $firstLetter = substr(self::convertDiacritics($this->desired_first_name()), 0, 1);
         $year = current_year() % 100;
         for ($tries = 0; $tries < 10; $tries++) {
             $newCallsign = $lastName;
