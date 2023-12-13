@@ -101,7 +101,7 @@ class PersonOnlineCourseController extends ApiController
             return response()->json(['status' => 'down-for-maintenance']);
         }
 
-       if (!$exists) {
+        if (!$exists) {
             mail_to_person($person, new OnlineCourseEnrollmentMail($person, $course, $password), true);
         }
 
@@ -310,7 +310,8 @@ class PersonOnlineCourseController extends ApiController
         if ($poc) {
             return response()->json(['online_course' => [
                 'id' => $poc->online_course_id,
-                'course_id' => $poc->online_course->course_id,
+                // online_course may be null if viewing a manual-review year (prior to 2020).
+                'course_id' => $poc->online_course?->course_id,
                 'enrolled_at' => (string)$poc->enrolled_at,
                 'completed_at' => (string)$poc->completed_at,
             ]]);
