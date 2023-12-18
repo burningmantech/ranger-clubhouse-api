@@ -30,11 +30,11 @@ class AccountGuard
         $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
             Carbon::setTestNow();
-            $check = Auth::check();
+            $check = $this->checkUser();
             // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
             Carbon::setTestNow($ghdTime);
         } else {
-            $check = Auth::check();
+            $check = $this->checkUser();
         }
 
         if ($check) {
@@ -53,5 +53,23 @@ class AccountGuard
         }
 
         return $next($request);
+    }
+
+    /**
+     * See which guard handles the authentication, and set that as the default.
+     *
+     * @return bool
+     */
+
+    private function checkUser(): bool
+    {
+        foreach (['api', 'jwt'] as $guard) {
+            if (Auth::guard($guard)->check()) {
+                Auth::shouldUse($guard);
+                return true;
+            }
+        }
+
+        return false;
     }
 }

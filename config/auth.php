@@ -41,15 +41,15 @@ return [
             'provider' => 'users',
         ],
 
-        'passport' => [
-            'driver' => 'passport',
+        'api' => [
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
 
-        'api' => [
+        'jwt' => [
             'driver' => 'jwt',
             'provider' => 'users',
-        ],
+        ]
     ],
 
     /*

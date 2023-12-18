@@ -29,13 +29,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Laravel\Sanctum\HasApiTokens;
 use Normalizer;
 use NumberFormatter;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class Person extends ApiModel implements JWTSubject, AuthenticatableContract, AuthorizableContract
+class Person extends ApiModel implements AuthenticatableContract, AuthorizableContract, JWTSubject
 {
-    use Authenticatable, Authorizable, Notifiable;
+    use Authenticatable, Authorizable, HasApiTokens, Notifiable;
 
     // How long is the reset password token good for? (in seconds)
     const RESET_PASSWORD_EXPIRE = (3600 * 2);
@@ -1437,7 +1438,7 @@ class Person extends ApiModel implements JWTSubject, AuthenticatableContract, Au
      * @return string
      */
 
-    public function desired_first_name() : string
+    public function desired_first_name(): string
     {
         return empty($this->preferred_name) ? $this->first_name : $this->preferred_name;
     }
