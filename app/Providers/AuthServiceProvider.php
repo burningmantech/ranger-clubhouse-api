@@ -96,6 +96,7 @@ use App\Policies\TrainingSessionPolicy;
 use App\Policies\VehiclePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Laravel\Sanctum\Sanctum;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -161,6 +162,8 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Sanctum::ignoreMigrations();
+
         $this->registerPolicies();
 
         Gate::define('isAdmin', function (Person $user) {

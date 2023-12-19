@@ -46,7 +46,6 @@ class AccountGuard
             }
 
             $user->retrieveRoles();
-
             // Update the time the person was last seen. Avoid auditing and perform a faster-ish update
             // then doing $user->last_seen_at = now(); $user->save();
             DB::table('person')->where('id', $user->id)->update(['last_seen_at' => now()]);

@@ -24,9 +24,11 @@ Route::group([
     Route::get('config/dashboard-period', 'ConfigController@dashboardPeriod');
     Route::get('config', 'ConfigController@show');
 
-    Route::post('auth/login', 'AuthController@login');
-    Route::post('auth/reset-password', 'AuthController@resetPassword');
+    Route::post('auth/login', 'AuthController@jwtLogin');
+    Route::post('auth/oauth2/temp-token', 'Oauth2Controller@tempToken');
     Route::match(['GET', 'POST'], 'auth/oauth2/token', 'Oauth2Controller@grantOAuthToken');
+    Route::post('auth/reset-password', 'AuthController@resetPassword');
+
     Route::post('person/register', 'PersonController@register');
 
     Route::post('error-log/record', 'ErrorLogController@record');
@@ -51,11 +53,9 @@ Route::group([
  */
 
 Route::group([
-    'middleware' => ['api', 'auth'],
-], function ($router) {
-
+    'middleware' => 'api',
+], function () {
     Route::post('auth/logout', 'AuthController@logout');
-    Route::post('auth/refresh', 'AuthController@refresh');
 
     Route::get('auth/oauth2/grant-code', 'OAuth2Controller@grantOAuthCode');
     Route::get('auth/oauth2/userinfo', 'OAuth2Controller@oauthUserInfo');
@@ -223,6 +223,7 @@ Route::group([
     Route::get('person/{person}/mentees', 'PersonController@mentees');
     Route::get('person/{person}/mentors', 'PersonController@mentors');
     Route::get('person/{person}/milestones', 'PersonController@milestones');
+    Route::get('person/{person}/onduty', 'PersonController@onDuty');
     Route::get('person/{person}/timesheet-summary', 'PersonController@timesheetSummary');
     Route::get('person/{person}/schedule/permission', 'PersonScheduleController@permission');
     Route::get('person/{person}/schedule/recommendations', 'PersonScheduleController@recommendations');
@@ -230,7 +231,6 @@ Route::group([
     Route::get('person/{person}/schedule/expected', 'PersonScheduleController@expected');
     Route::get('person/{person}/schedule/summary', 'PersonScheduleController@scheduleSummary');
     Route::get('person/{person}/schedule/log', 'PersonScheduleController@scheduleLog');
-    Route::get('person/{person}/onduty', 'PersonController@onDuty');
 
     Route::patch('person/{person}/password', 'PersonController@password');
     Route::get('person/{person}/photo', 'PersonPhotoController@photo');
@@ -243,6 +243,9 @@ Route::group([
     Route::resource('person/{person}/schedule', 'PersonScheduleController', ['only' => ['index', 'store', 'destroy']]);
     Route::get('person/{person}/teams', 'PersonController@teams');
     Route::post('person/{person}/teams', 'PersonController@updateTeams');
+
+    Route::get('person/{person}/tokens', 'Oauth2Controller@tokens');
+    Route::delete('person/{person}/revoke-token', 'Oauth2Controller@revokeToken');
 
     Route::get('person/{person}/status-history', 'PersonController@statusHistory');
     Route::get('person/{person}/years', 'PersonController@years');
