@@ -312,7 +312,7 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
-        'RpTicketThreshold' => [
+        'SpTicketThreshold' => [
             'description' => 'Credit threshold for a Special Price Ticket. Shown on the Schedule and Ticket announce pages',
             'type' => self::TYPE_FLOAT,
         ],
