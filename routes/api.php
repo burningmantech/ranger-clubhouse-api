@@ -25,8 +25,8 @@ Route::group([
     Route::get('config', 'ConfigController@show');
 
     Route::post('auth/login', 'AuthController@jwtLogin');
-    Route::post('auth/oauth2/temp-token', 'Oauth2Controller@tempToken');
-    Route::match(['GET', 'POST'], 'auth/oauth2/token', 'Oauth2Controller@grantOAuthToken');
+    Route::post('auth/oauth2/temp-token', 'OAuth2Controller@tempToken');
+    Route::match(['GET', 'POST'], 'auth/oauth2/token', 'OAuth2Controller@grantOAuthToken');
     Route::post('auth/reset-password', 'AuthController@resetPassword');
 
     Route::post('person/register', 'PersonController@register');
@@ -244,8 +244,8 @@ Route::group([
     Route::get('person/{person}/teams', 'PersonController@teams');
     Route::post('person/{person}/teams', 'PersonController@updateTeams');
 
-    Route::get('person/{person}/tokens', 'Oauth2Controller@tokens');
-    Route::delete('person/{person}/revoke-token', 'Oauth2Controller@revokeToken');
+    Route::get('person/{person}/tokens', 'OAuth2Controller@tokens');
+    Route::delete('person/{person}/revoke-token', 'OAuth2Controller@revokeToken');
 
     Route::get('person/{person}/status-history', 'PersonController@statusHistory');
     Route::get('person/{person}/years', 'PersonController@years');
