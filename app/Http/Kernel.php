@@ -12,7 +12,6 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Routing\Middleware\SubstituteBindings;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 class Kernel extends HttpKernel
 {
@@ -31,7 +30,6 @@ class Kernel extends HttpKernel
         TrimStrings::class,
 //        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         TrustProxies::class,
-        AccountGuard::class,
         RequestLogger::class,
     ];
 
@@ -42,7 +40,8 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'api' => [
-            EnsureFrontendRequestsAreStateful::class,
+            //  EnsureFrontendRequestsAreStateful::class,
+            AccountGuard::class,
             SubstituteBindings::class,
         ]
     ];

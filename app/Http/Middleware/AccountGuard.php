@@ -30,11 +30,11 @@ class AccountGuard
         $ghdTime = config('clubhouse.GroundhogDayTime');
         if (!empty($ghdTime)) {
             Carbon::setTestNow();
-            $check = $this->checkUser();
+            $check = Auth::check();
             // Remember the temporal prime directive - don't kill your own grandfather when traveling to the past
             Carbon::setTestNow($ghdTime);
         } else {
-            $check = $this->checkUser();
+            $check = Auth::check();
         }
 
         if ($check) {
@@ -46,30 +46,11 @@ class AccountGuard
             }
 
             $user->retrieveRoles();
-
             // Update the time the person was last seen. Avoid auditing and perform a faster-ish update
             // then doing $user->last_seen_at = now(); $user->save();
             DB::table('person')->where('id', $user->id)->update(['last_seen_at' => now()]);
         }
 
         return $next($request);
-    }
-
-    /**
-     * See which guard handles the authentication, and set that as the default.
-     *
-     * @return bool
-     */
-
-    private function checkUser(): bool
-    {
-        foreach (['api', 'jwt'] as $guard) {
-            if (Auth::guard($guard)->check()) {
-                Auth::shouldUse($guard);
-                return true;
-            }
-        }
-
-        return false;
     }
 }

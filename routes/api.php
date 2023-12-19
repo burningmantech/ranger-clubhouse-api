@@ -53,7 +53,7 @@ Route::group([
  */
 
 Route::group([
-    'middleware' => ['api', 'auth:sanctum,jwt'],
+    'middleware' => 'api',
 ], function () {
     Route::post('auth/logout', 'AuthController@logout');
 
