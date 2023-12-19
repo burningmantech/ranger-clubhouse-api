@@ -55,6 +55,9 @@ class Kernel extends ConsoleKernel
             // Cleanup oauth codes
             $schedule->command('clubhouse:expire-oauth-codes')->dailyAt('03:00')->onOneServer();
 
+            // Cleanup session tokens
+            $schedule->command('sanctum:prune-expired --hours=24')->daily()->onOneServer();
+
             // Sign out timesheets
             $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 15-31 8 *')->onOneServer();
             $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 1-10 9 *')->onOneServer();

@@ -30,7 +30,6 @@ class Kernel extends HttpKernel
         TrimStrings::class,
 //        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         TrustProxies::class,
-        AccountGuard::class,
         RequestLogger::class,
     ];
 
@@ -41,8 +40,10 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'api' => [
-            'bindings',
-        ],
+            //  EnsureFrontendRequestsAreStateful::class,
+            AccountGuard::class,
+            SubstituteBindings::class,
+        ]
     ];
 
     /**

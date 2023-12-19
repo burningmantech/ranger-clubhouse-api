@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Http\Controllers\ConfigController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Routing\Router;
+use Tests\TestCase;
+use RuntimeException;
 
 class ExceptionHandlerTest extends TestCase
 {
@@ -22,14 +23,14 @@ class ExceptionHandlerTest extends TestCase
 
     public function test_exception_handling()
     {
-        $this->mock(Router::class, function ($mock) {
+        $this->mock(ConfigController::class, function ($mock) {
             $mock->makePartial();
-            $mock->shouldReceive('dispatch')
-                ->andThrow(new \RuntimeException);
+            $mock->shouldReceive('show')
+                ->andThrow(new RuntimeException);
         });
 
         $response = $this->json('GET', 'config');
         $response->assertStatus(500);
-        $this->assertDatabaseHas('error_logs', [ 'error_type' => 'server-exception' ]);
+        $this->assertDatabaseHas('error_logs', ['error_type' => 'server-exception']);
     }
 }

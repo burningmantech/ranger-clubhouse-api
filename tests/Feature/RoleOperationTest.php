@@ -109,6 +109,7 @@ class RoleOperationTest extends TestCase
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
         Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
+
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
     }
@@ -144,12 +145,12 @@ class RoleOperationTest extends TestCase
         $user = $this->user;
 
         $position = Position::factory()->create();
-        PositionRole::factory()->create([ 'position_id' => $position->id, 'role_id' => Role::MENTOR ]);
-        PersonPosition::factory()->create([ 'person_id' => $user->id, 'position_id' => $position->id ]);
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::MENTOR]);
+        PersonPosition::factory()->create(['person_id' => $user->id, 'position_id' => $position->id]);
 
         $team = Team::factory()->create();
-        TeamRole::factory()->create([ 'role_id' => Role::EDIT_BMIDS, 'team_id' => $team->id]);
-        PersonTeam::factory()->create([ 'person_id' => $user->id, 'team_id' => $team->id]);
+        TeamRole::factory()->create(['role_id' => Role::EDIT_BMIDS, 'team_id' => $team->id]);
+        PersonTeam::factory()->create(['person_id' => $user->id, 'team_id' => $team->id]);
 
         $user->retrieveRoles();
         $this->assertContains(Role::MENTOR, $user->roles);
@@ -166,12 +167,12 @@ class RoleOperationTest extends TestCase
     {
         $user = $this->user;
 
-        $training = Position::factory()->create([ 'type' => Position::TYPE_TRAINING ]);
+        $training = Position::factory()->create(['type' => Position::TYPE_TRAINING]);
         $position = Position::factory()->create([
             'require_training_for_roles' => true, 'training_position_id' => $training->id
         ]);
-        PositionRole::factory()->create([ 'position_id' => $position->id, 'role_id' => Role::MENTOR ]);
-        PersonPosition::factory()->create([ 'person_id' => $user->id, 'position_id' => $position->id ]);
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::MENTOR]);
+        PersonPosition::factory()->create(['person_id' => $user->id, 'position_id' => $position->id]);
         $slot = Slot::factory()->create([
             'position_id' => $training->id,
             'begins' => now(),
@@ -183,8 +184,8 @@ class RoleOperationTest extends TestCase
         $user->retrieveRoles();
         $this->assertNotContains(Role::MENTOR, $user->roles);
 
-        PersonSlot::factory()->create([ 'person_id' => $user->id, 'slot_id' => $slot->id]);
-        TraineeStatus::factory()->create([ 'slot_id' => $slot->id, 'person_id' => $user->id, 'passed' => true]);
+        PersonSlot::factory()->create(['person_id' => $user->id, 'slot_id' => $slot->id]);
+        TraineeStatus::factory()->create(['slot_id' => $slot->id, 'person_id' => $user->id, 'passed' => true]);
         $user->roles = null; // Cause the roles to be reloaded
         Cache::flush();
         $user->retrieveRoles();

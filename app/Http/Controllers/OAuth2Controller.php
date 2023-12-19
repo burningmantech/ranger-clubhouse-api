@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\UserAuthentication;
+use App\Models\ActionLog;
+use App\Models\ErrorLog;
 use App\Models\OauthClient;
 use App\Models\OauthCode;
 use App\Models\Person;
+use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class OAuth2Controller extends ApiController
 {
@@ -57,8 +64,6 @@ class OAuth2Controller extends ApiController
                 "given_name",
                 "iat",
                 "iss",
-                "locale",
-                "name",
                 "sub"
             ],
             "code_challenge_methods_supported" => [
@@ -67,9 +72,7 @@ class OAuth2Controller extends ApiController
             ],
             "grant_types_supported" => [
                 "authorization_code",
-                "refresh_token",
-                "urn:ietf:params:oauth:grant-type:device_code",
-                "urn:ietf:params:oauth:grant-type:jwt-bearer"
+                "password",
             ]
         ]);
     }
@@ -118,53 +121,82 @@ class OAuth2Controller extends ApiController
     public function grantOAuthToken(): JsonResponse
     {
         $params = request()->validate([
-            'grant_type' => 'required|string',
+            'grant_type' => [
+                'required',
+                'string',
+                Rule::in(['authorization_code', 'password'])
+            ]
+        ]);
+
+        if ($params['grant_type'] == 'authorization_code') {
+            return $this->processAuthorizationCodeGrant();
+        } else {
+            return $this->processPasswordGrant();
+        }
+    }
+
+    /**
+     * Process an authorization code grant. The request should only come from registered
+     * oauth2 clients such as the Moodle Server, or IMS.
+     *
+     * @return JsonResponse
+     */
+
+    public function processAuthorizationCodeGrant(): JsonResponse
+    {
+        $params = request()->validate([
             'client_id' => 'required|string',
             'client_secret' => 'required|string',
             'code' => 'required|string',
         ]);
 
-        if ($params['grant_type'] != 'authorization_code') {
-            throw new InvalidArgumentException('Grant type not supported.');
-        }
-
         $client = OauthClient::findForClientId($params['client_id']);
         if (!$client) {
-            throw new InvalidArgumentException('Client ID not registered.');
+            ErrorLog::record('oauth2-invalid-client-id', ['client_id' => $params['client_id']]);
+            return response()->json(['error' => 'invalid_client'], 400);
         }
 
         if ($client->secret != $params['client_secret']) {
-            throw new InvalidArgumentException('Invalid client secret');
+            ErrorLog::record('oauth2-invalid-client-secret', [
+                'client_id' => $params['client_id'],
+                'secret' => $params['client_secret']
+            ]);
+            return response()->json(['error' => 'invalid_client_secret'], 401);
         }
 
         $oc = OAuthCode::findForClientCode($client, $params['code']);
         if (!$oc) {
-            throw new InvalidArgumentException('Code not found.');
+            return response()->json(['error' => 'invalid_token'], 401);
         }
 
         $person = Person::findOrFail($oc->person_id);
+        $token = $person->createToken($client->client_id);
 
-        $claims = [];
-        if (!empty($oc->scope)) {
-            foreach (explode(' ', $oc->scope) as $scope) {
-                switch ($scope) {
-                    case 'email':
-                        $claims['email'] = $person->email;
-                        break;
-                    case 'profile':
-                        $claims['given_name'] = $person->desired_first_name();
-                        $claims['family_name'] = $person->last_name;
-                        break;
-                }
-            }
-        }
+        ActionLog::record($person, 'oauth2-token-grant', 'token granted for ' . $client->client_id, [
+            'id' => $client->id,
+        ]);
 
-        $token = auth()->claims($claims)->login($person);
         return response()->json([
             'token_type' => 'Bearer',
-            'access_token' => $token,
-            'expires_in' => (string)now()->addSeconds(config('jwt.ttl'))
+            'access_token' => $token->plainTextToken,
+            'expires_in' => config('sanctum.expiration') * 60,
         ]);
+    }
+
+    /**
+     * Obtain an oauth2 token via login credentials.
+     *
+     * @return JsonResponse
+     */
+
+    public function processPasswordGrant(): JsonResponse
+    {
+        $params = request()->validate([
+            'username' => 'required|string',
+            'password' => 'required|string'
+        ]);
+
+        return UserAuthentication::attempt($params['username'], $params['password'], false);
     }
 
     /**
@@ -182,5 +214,66 @@ class OAuth2Controller extends ApiController
             'given_name' => $person->desired_first_name(),
             'family_name' => $person->last_name
         ]);
+    }
+
+    /**
+     * Attempt to obtain an oauth2 token using a temporary (password reset or first time login) token.
+     *
+     * @return JsonResponse
+     */
+
+    public function tempToken(): JsonResponse
+    {
+        $params = request()->validate([
+            'token' => 'required|string'
+        ]);
+
+        return UserAuthentication::attemptTemporaryTokenLogin($params['token'], false);
+    }
+
+    /**
+     * Return all issued tokens for a person
+     */
+
+    public function tokens(Person $person): JsonResponse
+    {
+        Gate::allowIf(fn(Person $user) => $user->hasRole(Role::TECH_NINJA));
+
+        $tokens = [];
+        $expireMinutes = config('sanctum.expiration');
+        foreach ($person->tokens()->get() as $token) {
+            $tokens[] = [
+                'id' => $token->id,
+                'token' => $token->token,
+                'last_used_at' => (string) $token->last_used_at,
+                'created_at' => (string)$token->created_at,
+                'expires_at' => (string)$token->created_at->addMinutes($expireMinutes),
+                'name' => $token->name,
+            ];
+        }
+
+        return response()->json(['tokens' => $tokens]);
+    }
+
+    /**
+     * Revoke a token
+     *
+     * @param Person $person
+     * @return JsonResponse
+     */
+
+    public function revokeToken(Person $person): JsonResponse
+    {
+        Gate::allowIf(fn(Person $user) => $user->hasRole(Role::TECH_NINJA));
+
+        $params = request()->validate([
+            'id' => 'required|integer|exists:personal_access_tokens,id'
+        ]);
+
+        $pat = PersonalAccessToken::findOrFail($params['id']);
+        $pat->delete();
+        ActionLog::record($person, 'oauth2-token-revoked', 'Token revoked', ['id' => $pat->id]);
+
+        return response()->json(['status' => 'success']);
     }
 }
