@@ -11,6 +11,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
@@ -111,6 +112,11 @@ class Handler extends ExceptionHandler
 
         // User does not have the appropriate roles.
         if ($e instanceof AuthorizationException) {
+            // Handle the situation where the token was expired.. and return a Not Authenticated response instead
+            if (!Auth::check() && request()->header('Authorization')) {
+                return response()->json(['error' => 'Not authenticated.'], 401);
+            }
+
             $message = $e->getMessage();
             if ($message == '') {
                 $message = 'Not permitted';
