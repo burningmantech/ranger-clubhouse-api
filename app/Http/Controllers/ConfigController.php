@@ -25,7 +25,7 @@ class ConfigController extends Controller
         'RangerFeedbackFormUrl',
         'RangerManualUrl',
         'RangerPoliciesUrl',
-        'RpTicketThreshold',
+        'SpTicketThreshold',
         'ScTicketThreshold',
         'TrainingAcademyEmail',
         'VCEmail',
