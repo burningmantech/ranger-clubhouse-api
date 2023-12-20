@@ -35,7 +35,7 @@ class TicketingController extends ApiController
             'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_WAPDateRange', 'TAS_DefaultAlphaWAPDate',
             'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
             'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
-            'RpTicketThreshold', 'ScTicketThreshold',
+            'SpTicketThreshold', 'ScTicketThreshold',
             'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
             'TAS_Pickup_Locations',
             'TAS_PayByDateTime', 'TAS_LSD_PayByDateTime',
@@ -59,7 +59,7 @@ class TicketingController extends ApiController
                 'ticket_vendor_name' => $settings['TicketVendorName'],
                 'ranger_ticketing_email' => $settings['TAS_Email'],
 
-                'spt_credits' => $settings['RpTicketThreshold'],
+                'spt_credits' => $settings['SpTicketThreshold'],
                 'sc_credits' => $settings['ScTicketThreshold'],
 
                 'pickup_locations' => $settings['TAS_Pickup_Locations'],
@@ -241,7 +241,7 @@ class TicketingController extends ApiController
             'AllYouCanEatEventWeekThreshold',
             'AllYouCanEatEventPeriodThreshold',
             'ScTicketThreshold',
-            'RpTicketThreshold',
+            'SpTicketThreshold',
             'ShowerAccessEntireEventThreshold',
             'ShowerAccessEventWeekThreshold',
             'ShirtLongSleeveHoursThreshold',

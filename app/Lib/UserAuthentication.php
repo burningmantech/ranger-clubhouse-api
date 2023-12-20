@@ -18,21 +18,12 @@ class UserAuthentication
         if (!$person) {
             $actionData['email'] = $email;
             ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
-            if ($isJWT) {
-                return response()->json(['status' => 'invalid-credentials'], 401);
-            } else {
-                return response()->json(['error' => 'invalidate_credentials'], 401);
-            }
+            return self::errorResponse('invalid-credentials', $isJWT);
         }
 
         if (!$person->isValidPassword($password)) {
             ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
-
-            if ($isJWT) {
-                return response()->json(['status' => 'invalid-credentials'], 401);
-            } else {
-                return response()->json(['error' => 'invalid_grant'], 401);
-            }
+            return self::errorResponse('invalid-credentials', $isJWT);
         }
 
         return self::loginUser($person, $actionData, $isJWT);
@@ -74,12 +65,12 @@ class UserAuthentication
 
         if ($status == Person::SUSPENDED) {
             ActionLog::record($person, 'auth-failed', 'Account suspended', $actionData);
-            return response()->json(['status' => 'account-suspended'], 401);
+            return self::errorResponse('account-suspended', $isJWT);
         }
 
         if (in_array($status, Person::LOCKED_STATUSES)) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
-            return response()->json(['status' => 'account-disabled'], 401);
+            return self::errorResponse('account-disabled', $isJWT);
         }
 
         $person->logged_in_at = now();
@@ -156,14 +147,19 @@ class UserAuthentication
         $person = Person::where('tpassword', $token)->first();
         if (!$person) {
             ActionLog::record(null, 'auth-failed', 'Temporary login token not found', $actionData);
-            return response()->json(['status' => 'invalid_token'], 401);
+            return self::errorResponse('invalid-token', $isJWT);
         }
 
         if ($person->tpassword_expire < now()->timestamp) {
             ActionLog::record($person, 'auth-failed', 'Temporary login token expired', $actionData);
-            return response()->json(['status' => 'token_expired'], 401);
+            return self::errorResponse('token_expired', $isJWT);
         }
 
         return UserAuthentication::loginUser($person, $actionData, $isJWT);
+    }
+
+    public static function errorResponse(string $status, bool $isJWT): JsonResponse
+    {
+        return response()->json([($isJWT ? 'status' : 'error') => $status], 401);
     }
 }

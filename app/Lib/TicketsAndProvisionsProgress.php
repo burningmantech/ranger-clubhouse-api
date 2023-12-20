@@ -46,7 +46,7 @@ class TicketsAndProvisionsProgress
             'AllYouCanEatEventWeekThreshold',
             'AllYouCanEatEventPeriodThreshold',
             'ScTicketThreshold',
-            'RpTicketThreshold',
+            'SpTicketThreshold',
             'ShowerPogThreshold',
             'ShowerAccessEntireEventThreshold',
             'ShowerAccessEventWeekThreshold',
@@ -68,7 +68,7 @@ class TicketsAndProvisionsProgress
 
         $progress->calculateItem(self::ITEM_RPT,
             $credits, $expectedCredits,
-            $thresholds['RpTicketThreshold'], self::MEASURE_CREDITS);
+            $thresholds['SpTicketThreshold'], self::MEASURE_CREDITS);
 
         $progress->calculateItem(self::ITEM_STAFF_CREDENTIAL,
             $credits, $expectedCredits,
