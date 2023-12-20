@@ -5,8 +5,10 @@ namespace App\Models;
 use Carbon\Carbon;
 use DateTime;
 use DateTimeInterface;
+use donatj\UserAgent\UserAgentParser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class ActionLog extends Model
 {
@@ -45,7 +47,7 @@ class ActionLog extends Model
     {
         $personId = $query['person_id'] ?? null;
         $page = (int)($query['page'] ?? 1);
-        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
+        $pageSize = (int)($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
         $events = $query['events'] ?? [];
         $sort = $query['sort'] ?? 'desc';
         $startTime = $query['start_time'] ?? null;
@@ -54,8 +56,10 @@ class ActionLog extends Model
         $message = $query['message'] ?? null;
 
         $sql = self::query();
+        $allRecords = true;
 
         if ($personId) {
+            $allRecords = false;
             $sql->where(function ($q) use ($personId) {
                 $q->where('person_id', $personId)
                     ->orWhere('target_person_id', $personId);
@@ -63,6 +67,7 @@ class ActionLog extends Model
         }
 
         if (!empty($events)) {
+            $allRecords = false;
             $exactEvents = [];
             $likeEvents = [];
 
@@ -88,18 +93,22 @@ class ActionLog extends Model
         }
 
         if ($startTime) {
+            $allRecords = false;
             $sql->where('created_at', '>=', $startTime);
         }
 
         if ($endTime) {
+            $allRecords = false;
             $sql->where('created_at', '<=', $endTime);
         }
 
         if ($lastDay) {
+            $allRecords = false;
             $sql->whereRaw('created_at >= ?', [now()->subHours(24)]);
         }
 
         if ($message) {
+            $allRecords = false;
             if (str_contains($message, '%')) {
                 $sql->where('message', 'like', $message);
             } else {
@@ -107,8 +116,18 @@ class ActionLog extends Model
             }
         }
 
-        // How many total for the query
-        $total = $sql->count();
+        if ($allRecords) {
+            // select count(*) can be extremely slow for millions of rows, fudge the total by looking at the first and last ids.
+            $firstId = DB::table('action_logs')->orderBy('id')->value('id');
+            $lastId = DB::table('action_logs')->orderBy('id', 'desc')->value('id');
+            if ($firstId) {
+                $total = ($lastId - $firstId) + 1;
+            } else {
+                $total = 0;
+            }
+        } else {
+            $total = $sql->count();
+        }
 
         if (!$total) {
             // Nada.. don't bother
@@ -138,6 +157,15 @@ class ActionLog extends Model
         foreach ($rows as $row) {
             $data = $row->data;
 
+            if (!empty($row->user_agent)) {
+                $ua = (new UserAgentParser())->parse($row->user_agent);
+                $row->browser = [
+                    'platform' => $ua->platform(),
+                    'browser' => $ua->browser(),
+                    'version' => $ua->browserVersion(),
+                ];
+            }
+
             if (empty($row->data)) {
                 continue;
             }
@@ -162,7 +190,7 @@ class ActionLog extends Model
                 $row->roles = Role::whereIn('id', array_values($data['role_ids']))->orderBy('title')->get(['id', 'title']);
             }
 
-            if (isset($data['role_id']) ) {
+            if (isset($data['role_id'])) {
                 $row->role = Role::select('id', 'title')->where('id', $data['role_id'])->first();
             }
 
