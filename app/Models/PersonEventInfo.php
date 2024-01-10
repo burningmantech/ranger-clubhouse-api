@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Lib\MVR;
+
 class PersonEventInfo extends ApihouseResult
 {
     public int $person_id = 0;
@@ -26,6 +28,10 @@ class PersonEventInfo extends ApihouseResult
     public bool $may_request_stickers = false;
     public bool $org_vehicle_insurance = false;
     public bool $signed_motorpool_agreement = false;
+
+    public bool $mvr_eligible = false;
+    public array $mvr_eligible_teams = [];
+    public array $mvr_eligible_positions = [];
 
     public ?string $event_period = '';
 
@@ -101,6 +107,7 @@ class PersonEventInfo extends ApihouseResult
             $info->online_course_only = setting($info->is_binary ? 'OnlineCourseOnlyForBinaries' : 'OnlineCourseOnlyForVets');
         }
 
+
         $poc = PersonOnlineCourse::findForPersonYear($personId, $year, Position::TRAINING);
         if ($poc && $poc->completed_at) {
             $info->online_course_passed = true;
@@ -121,6 +128,11 @@ class PersonEventInfo extends ApihouseResult
             $info->org_vehicle_insurance = false;
             $info->signed_motorpool_agreement = false;
         }
+
+        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::NON_RANGER) {
+            $info->mvr_eligible = MVR::isEligible($person->id, $event);
+        }
+
         return $info;
     }
 }

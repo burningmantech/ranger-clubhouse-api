@@ -180,6 +180,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'MVRRequestFormURL' => [
+          'description' => 'MVR request form URL. Shown on the Motorpool dashboard step if the person is MVR eligible.',
+          'type' => self::TYPE_URL,
+        ],
+
         'OnboardAlphaShiftPrepLink' => [
             'description' => 'Used by the Onboarding Checklist for PNVs. Link to how to prep for your Alpha Shift in the Ranger Manual',
             'type' => self::TYPE_STRING
