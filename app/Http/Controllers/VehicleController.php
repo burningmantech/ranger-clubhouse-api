@@ -143,17 +143,17 @@ class VehicleController extends ApiController
         } else {
             $info = [
                 'motorpool_agreement_available' => setting('MotorpoolPolicyEnable'),
-                'motorpool_agreement_signed' => $event->signed_motorpool_agreement,
-                'personal_vehicle_signed' => $event->signed_personal_vehicle_agreement,
-                'org_vehicle_insurance' => $event->org_vehicle_insurance,
-                'vehicle_requests_allowed' => $event->may_request_stickers,
+                'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
+                'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
+                'org_vehicle_insurance' => $event?->org_vehicle_insurance,
+                'vehicle_requests_allowed' => $event?->may_request_stickers,
             ];
 
             if ($info['motorpool_agreement_available']) {
                 $info['motorpool_agreement_tag'] = Document::MOTORPOOL_POLICY_TAG;
             }
 
-            if ($event->may_request_stickers) {
+            if ($event?->may_request_stickers) {
                 $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
                 $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
             }
