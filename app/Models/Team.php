@@ -31,6 +31,7 @@ class Team extends ApiModel
 
     protected $fillable = [
         'active',
+        'mvr_eligible',
         'title',
         'type',
         'role_ids'
@@ -38,6 +39,7 @@ class Team extends ApiModel
 
     protected $casts = [
         'active' => 'boolean',
+        'mvr_eligible' => 'boolean',
     ];
 
     protected $rules = [

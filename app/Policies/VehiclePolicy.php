@@ -117,4 +117,17 @@ class VehiclePolicy
     {
         return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
     }
+
+    /**
+     * Can the user see the person's vehicle info
+     *
+     * @param Person $user
+     * @param Person $person
+     * @return bool
+     */
+
+    public function info(Person $user, Person $person): bool
+    {
+        return $user->hasRole(Role::VEHICLE_MANAGEMENT) || $user->id == $person->id;
+    }
 }

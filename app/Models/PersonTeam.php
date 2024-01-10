@@ -53,6 +53,46 @@ class PersonTeam extends ApiModel
     }
 
     /**
+     * Find all teams with mvr eligible for the person
+     *
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrieveMVREligibleForPerson(int $personId) : array
+    {
+        return DB::table('team')
+            ->select('team.id', 'team.title')
+            ->join('person_team', 'person_team.team_id', 'team.id')
+            ->where('person_team.person_id', $personId)
+            ->where('team.active', true)
+            ->where('team.mvr_eligible', true)
+            ->orderBy('team.title')
+            ->get()
+            ->toArray();
+    }
+
+
+    /**
+     * Is the person a member of a MVR eligible team?
+     *
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function haveMVREligibleForPerson(int $personId) : bool
+    {
+        return DB::table('team')
+            ->select('team.id', 'team.title')
+            ->join('person_team', 'person_team.team_id', 'team.id')
+            ->where('person_team.person_id', $personId)
+            ->where('team.active', true)
+            ->where('team.mvr_eligible', true)
+            ->limit(1)
+            ->exists();
+    }
+
+    /**
      * Find a membership record for the person and team.
      *
      * @param int $teamId

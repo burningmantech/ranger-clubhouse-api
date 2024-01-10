@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\BulkLookup;
 use App\Lib\Membership;
 use App\Lib\Milestones;
+use App\Lib\MVR;
 use App\Lib\PersonAdvancedSearch;
 use App\Lib\PersonSearch;
 use App\Lib\Reports\AlphaShirtsReport;
@@ -583,7 +584,7 @@ class PersonController extends ApiController
             ],
             'unread_message_count' => PersonMessage::countUnread($personId),
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
-            'may_request_stickers' => $event->may_request_stickers,
+            'mvr_eligible' => MVR::isEligible($personId, $event),
             'onduty_position' => $onduty,
 
             // Years breakdown

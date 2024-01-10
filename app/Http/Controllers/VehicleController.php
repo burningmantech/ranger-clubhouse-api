@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\MVR;
 use App\Lib\Reports\VehiclePaperworkReport;
+use App\Models\Document;
+use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\Vehicle;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class VehicleController extends ApiController
 {
@@ -120,15 +125,47 @@ class VehicleController extends ApiController
     }
 
     /**
-     * Retrieve the vehicle request configuration
+     * Retrieve the vehicle request configuration for the person
      *
+     * @param Person $person
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function config() : JsonResponse
+    public function info(Person $person): JsonResponse
     {
-        return response()->json([ 'config' => [
-            'personal_vehicle_document_url' => setting('RangerPersonalVehiclePolicyUrl')
-        ]]);
+        $this->authorize('info', [ Vehicle::class, $person]);
+        $personId = $person->id;
+        $event = PersonEvent::findForPersonYear($personId, current_year());
+
+        if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV()) {
+            $info = [];
+        } else {
+            $info = [
+                'motorpool_agreement_available' => setting('MotorpoolPolicyEnable'),
+                'motorpool_agreement_signed' => $event->signed_motorpool_agreement,
+                'personal_vehicle_signed' => $event->signed_personal_vehicle_agreement,
+                'org_vehicle_insurance' => $event->org_vehicle_insurance,
+                'vehicle_requests_allowed' => $event->may_request_stickers,
+            ];
+
+            if ($info['motorpool_agreement_available']) {
+                $info['motorpool_agreement_tag'] = Document::MOTORPOOL_POLICY_TAG;
+            }
+
+            if ($event->may_request_stickers) {
+                $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
+                $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
+            }
+
+            if (MVR::isEligible($personId, $event)) {
+                $info['mvr_eligible'] = true;
+                $info['mvr_request_url'] = setting('MVRRequestFormURL');
+            } else {
+                $info['mvr_eligible'] = false;
+            }
+        }
+
+        return response()->json(['info' => $info]);
     }
 }

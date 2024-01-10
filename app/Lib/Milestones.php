@@ -184,10 +184,16 @@ class Milestones
 
                 $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
                 $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
+                $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
 
                 if ($event->may_request_stickers) {
                     $milestones['vehicle_requests_allowed'] = true;
                     $milestones['vehicle_requests'] = Vehicle::findForPersonYear($person->id, $year);
+                }
+
+                 if (MVR::isEligible($person->id, $event)) {
+                    $milestones['mvr_eligible'] = true;
+                    $milestones['mvr_request_url'] = setting('MVRRequestFormURL');
                 }
 
                 if (!$isNonRanger && PersonPosition::havePosition($person->id, Position::SANDMAN)) {

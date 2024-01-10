@@ -436,7 +436,7 @@ Route::group([
 
     Route::resource('help', 'HelpController');
 
-    Route::get('vehicle/config', 'VehicleController@config');
+    Route::get('vehicle/info/{person}', 'VehicleController@info');
     Route::get('vehicle/paperwork', 'VehicleController@paperwork');
     Route::resource('vehicle', 'VehicleController');
 });
