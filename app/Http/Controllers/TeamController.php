@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\BulkTeamGrantRevoke;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Models\Team;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -98,9 +99,6 @@ class TeamController extends ApiController
     }
 
     /**
-     *
-     */
-    /**
      * People By Teams Report
      *
      * @return JsonResponse
@@ -113,4 +111,32 @@ class TeamController extends ApiController
 
         return response()->json(['teams' => PeopleByTeamsReport::execute()]);
     }
+
+    /**
+     * Grant or revoke a team membership for a list of callsigns
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function bulkGrantRevoke(): JsonResponse
+    {
+        $this->authorize('bulkGrantRevoke', Team::class);
+        $params = request()->validate([
+            'callsigns' => 'string|required',
+            'team_id' => 'integer|required|exists:team,id',
+            'grant' => 'boolean|required',
+            'commit' => 'boolean|sometimes',
+        ]);
+
+        return response()->json([
+            'people' => BulkTeamGrantRevoke::execute(
+                $params['callsigns'],
+                $params['team_id'],
+                $params['grant'],
+                $params['commit'] ?? false
+            )
+        ]);
+    }
+
 }

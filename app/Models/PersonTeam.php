@@ -93,6 +93,19 @@ class PersonTeam extends ApiModel
     }
 
     /**
+     * Is the person a team member?
+     *
+     * @param int $teamId
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function haveTeam(int $teamId, int $personId): bool
+    {
+        return self::where('team_id', $teamId)->where('person_id', $personId)->exists();
+    }
+
+    /**
      * Find a membership record for the person and team.
      *
      * @param int $teamId
