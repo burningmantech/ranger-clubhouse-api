@@ -370,6 +370,7 @@ Route::group([
     Route::resource('swag', 'SwagController');
 
     Route::get('team/people-by-teams', 'TeamController@peopleByTeamsReport');
+    Route::post('team/bulk-grant-revoke', 'TeamController@bulkGrantRevoke');
     Route::resource('team', 'TeamController');
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');

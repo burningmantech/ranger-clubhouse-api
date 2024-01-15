@@ -82,4 +82,15 @@ class TeamPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    /**
+     * Can the user bulk revoke or grant a team membership?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function bulkGrantRevoke(Person $user) : bool
+    {
+        return $user->hasRole(Role::ADMIN);
+    }
 }

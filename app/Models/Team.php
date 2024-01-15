@@ -185,7 +185,7 @@ class Team extends ApiModel
 
         return $rows;
     }
-
+    
     /**
      * Load the roles associated with the team, and set the pseudo column role_ids
      * @return void
