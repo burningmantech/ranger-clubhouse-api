@@ -16,14 +16,14 @@ class PositionLineupPolicy
         }
     }
 
-    public function index(Person $user): false
+    public function index(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
-    public function show(Person $user, PositionLineup $positionLineup): false
+    public function show(Person $user, PositionLineup $positionLineup): bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     public function store(Person $user): false
@@ -41,8 +41,8 @@ class PositionLineupPolicy
         return false;
     }
 
-    public function positions(Person $user, PositionLineup $positionLineup): false
+    public function positions(Person $user, PositionLineup $positionLineup): bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 }
