@@ -12,16 +12,17 @@ class Bmid extends ApiModel
 {
     protected $table = 'bmid';
     protected bool $auditModel = true;
+    public $timestamps = true;
 
-    const MEALS_ALL = 'all';
-    const MEALS_EVENT = 'event';
-    const MEALS_EVENT_PLUS_POST = 'event+post';
-    const MEALS_POST = 'post';
-    const MEALS_PRE = 'pre';
-    const MEALS_PRE_PLUS_EVENT = 'pre+event';
-    const MEALS_PRE_PLUS_POST = 'pre+post';
+    const string MEALS_ALL = 'all';
+    const string MEALS_EVENT = 'event';
+    const string MEALS_EVENT_PLUS_POST = 'event+post';
+    const string MEALS_POST = 'post';
+    const string MEALS_PRE = 'pre';
+    const string MEALS_PRE_PLUS_EVENT = 'pre+event';
+    const string MEALS_PRE_PLUS_POST = 'pre+post';
 
-    const MEALS_TYPES = [
+    const array MEALS_TYPES = [
         self::MEALS_ALL,
         self::MEALS_EVENT,
         self::MEALS_EVENT_PLUS_POST,
@@ -32,31 +33,31 @@ class Bmid extends ApiModel
     ];
 
     // BMID is being prepped
-    const IN_PREP = 'in_prep';
+    const string IN_PREP = 'in_prep';
     // Ready to be sent off to be printed
-    const READY_TO_PRINT = 'ready_to_print';
+    const string READY_TO_PRINT = 'ready_to_print';
     // BMID was changed (name, photos, titles, etc.) and needs to be reprinted
-    const READY_TO_REPRINT_CHANGE = 'ready_to_reprint_changed';
+    const string READY_TO_REPRINT_CHANGE = 'ready_to_reprint_changed';
     // BMID was lost and a new one issued
-    const READY_TO_REPRINT_LOST = 'ready_to_reprint_lost';
+    const string READY_TO_REPRINT_LOST = 'ready_to_reprint_lost';
 
     // BMID has issues, do not print.
-    const ISSUES = 'issues';
+    const string ISSUES = 'issues';
 
     // Person is not rangering this year (common) or another reason.
-    const DO_NOT_PRINT = 'do_not_print';
+    const string DO_NOT_PRINT = 'do_not_print';
 
     // BMID was submitted
-    const SUBMITTED = 'submitted';
+    const string SUBMITTED = 'submitted';
 
-    const READY_TO_PRINT_STATUSES = [
+    const array READY_TO_PRINT_STATUSES = [
         self::IN_PREP,
         self::READY_TO_PRINT,
         self::READY_TO_REPRINT_CHANGE,
         self::READY_TO_REPRINT_LOST,
     ];
 
-    const ALLOWED_PERSON_STATUSES = [
+    const array ALLOWED_PERSON_STATUSES = [
         Person::ACTIVE,
         Person::ALPHA,
         Person::INACTIVE,
@@ -66,7 +67,7 @@ class Bmid extends ApiModel
         Person::RETIRED,
     ];
 
-    const BADGE_TITLES = [
+    const array BADGE_TITLES = [
         // Title 1
         Position::RSC_SHIFT_LEAD => ['title1', 'Shift Lead'],
         Position::DEPARTMENT_MANAGER => ['title1', 'Department Manager'],
@@ -94,6 +95,9 @@ class Bmid extends ApiModel
     protected bool $earned_showers = false;
 
     protected bool $has_approved_photo = false;
+
+    protected bool $has_ticket = false;
+    protected bool $training_signed_up = false;
 
     protected $fillable = [
         'person_id',
@@ -143,13 +147,15 @@ class Bmid extends ApiModel
         'earned_showers',
         'has_approved_photo',
         'has_signups',
+        'has_ticket',
         'org_vehicle_insurance',
+        'training_signed_up',
         'wap_id',
         'wap_status',
         'wap_type',
     ];
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 
@@ -263,7 +269,10 @@ class Bmid extends ApiModel
         $year = current_year();
 
         // Populate all the BMIDs with people..
-        $bmids->load(['person:id,callsign,status,first_name,last_name,email,bpguid,person_photo_id', 'person.person_photo:id,status']);
+        $bmids->load([
+            'person:id,callsign,status,first_name,last_name,email,bpguid,person_photo_id',
+            'person.person_photo:id,status'
+        ]);
 
         // Load up the org insurance flags
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
@@ -303,7 +312,34 @@ class Bmid extends ApiModel
             ->get()
             ->groupBy('person_id');
 
+        $ticketIds = DB::table('access_document')
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+            ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->get()
+            ->groupBy('person_id');
+
+        $slotIds = DB::table('slot')
+            ->where('begins_year', $year)
+            ->where('position_id', Position::TRAINING)
+            ->where('active', true)
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($slotIds)) {
+            $trainingIds = DB::table('person_slot')
+                ->whereIntegerInRaw('person_id', $personIds)
+                ->whereIntegerInRaw('slot_id', $slotIds)
+                ->get()
+                ->groupBy('person_id');
+        } else {
+            $trainingIds = collect([]);
+        }
+
         foreach ($bmids as $bmid) {
+            $bmid->training_signed_up = $trainingIds->has($bmid->person_id);
+            $bmid->has_ticket = $ticketIds->has($bmid->person_id);
+
             $items = $itemsByPersonId->get($bmid->person_id);
             if (!$items) {
                 continue;
@@ -495,6 +531,16 @@ class Bmid extends ApiModel
     public function getHasApprovedPhotoAttribute(): bool
     {
         return $this->has_approved_photo;
+    }
+
+    public function getHasTicketAttribute(): bool
+    {
+        return $this->has_ticket;
+    }
+
+    public function getTrainingSignedUpAttribute(): bool
+    {
+        return $this->training_signed_up;
     }
 
     /**

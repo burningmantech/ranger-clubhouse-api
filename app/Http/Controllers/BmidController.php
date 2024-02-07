@@ -48,7 +48,7 @@ class BmidController extends ApiController
             'filter' => [
                 'required',
                 'string',
-                Rule::in(['special', 'alpha', 'signedup', Bmid::SUBMITTED, 'nonprint', 'no-shifts', Bmid::IN_PREP, Bmid::READY_TO_PRINT])
+                Rule::in(['special', 'alpha', 'signedup', Bmid::SUBMITTED, 'qualified', 'nonprint', 'no-shifts', Bmid::IN_PREP, Bmid::READY_TO_PRINT])
             ]
         ]);
 
