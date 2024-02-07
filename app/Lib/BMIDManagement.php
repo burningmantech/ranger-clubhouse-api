@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class BMIDManagement
 {
     // Person columns to return when doing a BMID sanity check
-    const INSANE_PERSON_COLUMNS = [
+    const array INSANE_PERSON_COLUMNS = [
         'id',
         'callsign',
         'email',
@@ -297,6 +297,38 @@ class BMIDManagement
                     ->pluck('id');
                 break;
 
+            case 'qualified':
+                // Find anyone who is has claimed a ticket or signed up for In-Person Training.
+                $ticketIds = DB::table('access_document')
+                    ->join('person', 'person.id', 'access_document.person_id')
+                    ->whereIn('person.status', Person::ACTIVE_STATUSES)
+                    ->whereIn('access_document.type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+                    ->whereIn('access_document.status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                    ->groupBy('access_document.person_id')
+                    ->pluck('person_id')
+                    ->toArray();
+
+                $slotIds = DB::table('slot')
+                    ->where('begins_year', $year)
+                    ->where('position_id', Position::TRAINING)
+                    ->where('active', true)
+                    ->pluck('id')
+                    ->toArray();
+
+                if (!empty($slotIds)) {
+                    $signUpIds = DB::table('person_slot')
+                        ->join('person', 'person.id', 'person_slot.person_id')
+                        ->whereIn('person.status', Person::ACTIVE_STATUSES)
+                        ->whereIntegerInRaw('person_slot.slot_id', $slotIds)
+                        ->pluck('person_id')
+                        ->toArray();
+                } else {
+                    $signUpIds = [];
+                }
+
+                $ids = array_unique(array_merge($ticketIds, $signUpIds));
+                break;
+
             case 'signedup':
                 // Find any vets who are signed up and/or passed training
                 $slotIds = Slot::where('begins_year', $year)
@@ -314,7 +346,7 @@ class BMIDManagement
 
                 $slotIds = Slot::join('position', 'position.id', '=', 'slot.position_id')
                     ->where('begins_year', $year)
-                    ->where('position.type', Position::TYPE_TRAINING)
+                    ->where('position.id', Position::TRAINING)
                     ->get(['slot.id'])
                     ->pluck('id')
                     ->toArray();
