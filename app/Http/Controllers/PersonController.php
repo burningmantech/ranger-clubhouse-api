@@ -584,6 +584,7 @@ class PersonController extends ApiController
             ],
             'unread_message_count' => PersonMessage::countUnread($personId),
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
+            'may_request_stickers' => $event->may_request_stickers,
             'mvr_eligible' => MVR::isEligible($personId, $event),
             'onduty_position' => $onduty,
 
