@@ -85,9 +85,9 @@ class PersonMentor extends ApiModel
         );
 
         $photos = PersonPhoto::whereIntegerInRaw('person_id', $ids)
-                ->join('person', 'person.person_photo_id', 'person_photo.id')
-                ->get()
-                ->keyBy('person_id');
+            ->join('person', 'person.person_photo_id', 'person_photo.id')
+            ->get()
+            ->keyBy('person_id');
 
         $years = [];
         foreach ($rows as $row) {
@@ -167,7 +167,7 @@ class PersonMentor extends ApiModel
      * @return array
      */
 
-    public static function retrieveMentorHistory(int $personId) : array
+    public static function retrieveMentorHistory(int $personId): array
     {
         $history = PersonMentor::with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
             ->where('person_id', $personId)
@@ -195,7 +195,7 @@ class PersonMentor extends ApiModel
             ];
         }
 
-        usort($summary, fn($a, $b) => $b['year']- $a['year']);
+        usort($summary, fn($a, $b) => $b['year'] - $a['year']);
 
         return $summary;
     }
@@ -267,11 +267,26 @@ class PersonMentor extends ApiModel
     {
         $row = DB::table('person_mentor')
             ->where('person_id', $personId)
-            ->where('status', 'pass')
+            ->where('status', self::PASS)
             ->orderBy('mentor_year', 'desc')
             ->first();
 
         return $row?->mentor_year;
+    }
+
+    /**
+     * Did the person pass in a given year?
+     *
+     * @param int $personId
+     * @param int $year
+     * @return bool
+     */
+
+    public static function didPersonPass(int $personId, int $year): bool
+    {
+        return DB::table('person_mentor')
+            ->where(['person_id' => $personId, 'status' => self::PASS, 'mentor_year' => $year])
+            ->exists();
     }
 
     /**

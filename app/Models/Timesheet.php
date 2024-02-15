@@ -624,16 +624,17 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Does the given person have an Alpha entry for the current year?
+     * Does the given person have an Alpha entry for the given or current year?
      *
      * @param int $personId
+     * @param int|null $year
      * @return bool
      */
 
-    public static function hasAlphaEntry(int $personId): bool
+    public static function hasAlphaEntry(int $personId, ?int $year=null): bool
     {
         return Timesheet::where('person_id', $personId)
-            ->whereYear('on_duty', current_year())
+            ->whereYear('on_duty', $year ?? current_year())
             ->where('position_id', Position::ALPHA)
             ->exists();
     }

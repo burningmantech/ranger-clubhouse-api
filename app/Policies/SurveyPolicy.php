@@ -61,7 +61,7 @@ class SurveyPolicy
     }
 
     /**
-     * Determine if the user can see the responses
+     * Determine if the user can see all the responses
      */
 
     public function report(Person $user, Survey $survey, int $trainerId): bool
@@ -77,6 +77,14 @@ class SurveyPolicy
     {
         return ($user->id == $trainerId);
     }
+
+    /**
+     * Can the person see any survey results?
+     *
+     * @param Person $user
+     * @param int $personId
+     * @return bool
+     */
 
     public function trainerSurveys(Person $user, int $personId): bool
     {
