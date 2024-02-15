@@ -66,7 +66,7 @@ class Milestones
             'asset_authorized' => $event->asset_authorized,
             'radio_checkout_agreement_enabled' => $settings['RadioCheckoutAgreementEnabled'],
             'trainings_available' => Slot::haveActiveForPosition(Position::TRAINING),
-            'surveys' => Survey::retrieveUnansweredForPersonYear($personId, $year),
+            'surveys' => Survey::retrieveUnansweredForPersonYear($personId, $year, $status),
             'period' => $period,
             'photo' => PersonPhoto::retrieveInfo($person),
         ];
@@ -147,6 +147,7 @@ class Milestones
         if (!in_array($status, Person::ACTIVE_STATUSES) && !$isNonRanger) {
             return $milestones;
         }
+
         // Starting late 2022 - All (effective) login management roles require annual NDA signature.
         // MOAR PAPERWERKS! MOAR WINZ!
         // Don't require the NDA if the agreement does not exist.
