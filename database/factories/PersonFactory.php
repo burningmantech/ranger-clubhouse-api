@@ -10,7 +10,7 @@ class PersonFactory extends Factory
 {
     protected $model = Person::class;
 
-    public function definition()
+    public function definition(): array
     {
         $salt = "0123467890123456789";
         $uuid = (string)Str::uuid();

@@ -295,10 +295,23 @@ Route::group([
     Route::get('position/sanity-checker', 'PositionSanityCheckController@sanityChecker');
     Route::post('position/repair', 'PositionSanityCheckController@repair');
 
+    Route::get('position/{position}/grants', 'PositionController@grants');
     Route::resource('position', 'PositionController');
 
     Route::patch('position-lineup/{position_lineup}/positions', 'PositionLineupController@updatePositions');
     Route::resource('position-lineup', 'PositionLineupController');
+
+    Route::post('prospective-application/import', 'ProspectiveApplicationController@import');
+    Route::post('prospective-application/create-prospectives', 'ProspectiveApplicationController@createProspectives');
+    Route::get('prospective-application/search', 'ProspectiveApplicationController@search');
+    Route::get('prospective-application/{prospective_application}/email-logs', 'ProspectiveApplicationController@emailLogs');
+    Route::get('prospective-application/{prospective_application}/related', 'ProspectiveApplicationController@relatedApplications');
+    Route::post('prospective-application/{prospective_application}/status', 'ProspectiveApplicationController@updateStatus');
+    Route::post('prospective-application/{prospective_application}/note', 'ProspectiveApplicationController@addNote');
+    Route::patch('prospective-application/{prospective_application}/note', 'ProspectiveApplicationController@updateNote');
+    Route::delete('prospective-application/{prospective_application}/note', 'ProspectiveApplicationController@deleteNote');
+    Route::post('prospective-application/{prospective_application}/send-email', 'ProspectiveApplicationController@sendEmail');
+    Route::resource('prospective-application', 'ProspectiveApplicationController');
 
     Route::post('provision/bank-provisions', 'ProvisionController@bankProvisions');
     Route::post('provision/bulk-comment', 'ProvisionController@bulkComment');

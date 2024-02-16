@@ -66,7 +66,6 @@ class OauthClientController extends ApiController
 
     public function update(OauthClient $oauthClient): JsonResponse
     {
-        error_log('** MODEL '.json_encode($oauthClient));
         $this->authorize('update', $oauthClient);
         $this->fromRest($oauthClient);
 

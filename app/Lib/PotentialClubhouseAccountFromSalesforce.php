@@ -12,7 +12,7 @@ class PotentialClubhouseAccountFromSalesforce
     const STATUS_NOTREADY = "notready";
     const STATUS_INVALID = "invalid";
     const STATUS_READY = "ready";
-    const STATUS_IMPORTED = "imported";
+    const STATUS_CREATED = "imported";
     const STATUS_SUCCEEDED = "succeeded";
     const STATUS_EXISTING_CALLSIGN = 'existing-callsign';
     const STATUS_EXISTING_CLAIM_CALLSIGN = 'existing-claim-callsign';
@@ -167,7 +167,7 @@ class PotentialClubhouseAccountFromSalesforce
         ) {
             $this->status = self::STATUS_READY;
         } else if ($this->vc_status == "Clubhouse Record Created") {
-            $this->status = self::STATUS_IMPORTED;
+            $this->status = self::STATUS_CREATED;
         }
 
         if ($this->callsign == "") {

@@ -3,8 +3,9 @@
 namespace App\Listeners;
 
 use App\Models\MailLog;
-use App\Models\Person;
+use App\Models\ProspectiveApplication;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Support\Facades\DB;
 
 class MailSentListener
 {
@@ -27,12 +28,17 @@ class MailSentListener
         $subject = $email->getSubject();
 
         $senderId = $data['senderId'] ?? null;
+        $application = $data['application'] ?? null;
+        if (!is_a($application, ProspectiveApplication::class)) {
+            // Does not appear to related to an application
+            $application = null;
+        }
 
         foreach ($email->getTo() as $to) {
             $toEmail = $to->getAddress();
             // Don't bother looking up team/cadre mailing lists emails.
             if (!preg_match('/^rangers?-[^@]*-(list|cadre|team)@([^@]*\.)?burningman\.(com|org)$/i', $toEmail)) {
-                $personId = Person::findByEmail($toEmail)?->id;
+                $personId = DB::table('person')->where('email', $toEmail)->value('id');
             } else {
                 $personId = null;
             }
@@ -45,6 +51,7 @@ class MailSentListener
                 'subject' => $subject,
                 'body' => $body,
                 'message_id' => $event->sent->getSymfonySentMessage()->getMessageId() ?? '',
+                'prospective_application_id' => $application?->id,
             ]);
         }
     }
