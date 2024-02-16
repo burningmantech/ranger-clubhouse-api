@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,11 @@ class MailLog extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
+    public function prospective_application(): BelongsTo
+    {
+        return $this->belongsTo(ProspectiveApplication::class);
+    }
+
     /**
      * Retrieve mail log records based on the given criteria
      *
@@ -47,8 +53,8 @@ class MailLog extends ApiModel
     {
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
-        $page = (int) ($query['page'] ?? 1);
-        $pageSize = (int) ($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
+        $page = (int)($query['page'] ?? 1);
+        $pageSize = (int)($query['page_size'] ?? self::PAGE_SIZE_DEFAULT);
 
         $sql = self::query();
 
@@ -103,6 +109,21 @@ class MailLog extends ApiModel
                 'page' => $page + 1,
             ]
         ];
+    }
+
+    /**
+     * Find the logs related to a prospective application
+     *
+     * @param int $prospectiveApplicationId
+     * @return Collection
+     */
+
+    public static function findForProspectiveApplication(int $prospectiveApplicationId): Collection
+    {
+        return self::where('prospective_application_id', $prospectiveApplicationId)
+            ->orderBy('created_at')
+            ->with('sender:id,callsign')
+            ->get();
     }
 
     /**

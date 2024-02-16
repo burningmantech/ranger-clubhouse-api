@@ -62,7 +62,7 @@ class HandleReservation extends ApiModel
             max:100'
         ],
         'reservation_type' => 'required|string|max:100',
-        'expires_on' => 'sometimes|date:Y-m-d|after:start_date|nullable',
+        'expires_on' => 'sometimes|date:Y-m-d|nullable',
         'reason' => 'sometimes|string|max:255',
         'twii_year' => 'sometimes|integer|nullable|required_if:reservation_type,' . self::TYPE_TWII_PERSON,
     ];
@@ -90,12 +90,19 @@ class HandleReservation extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
+    protected function setHandleAttribute($value)
+    {
+        $value = trim($value ?: '');
+        $this->handle = $value;
+        $this->normalized_handle = Person::normalizeCallsign($value);
+    }
+
     protected function getHasExpiredAttribute(): bool
     {
         return ($this->expires_on && now()->gt($this->expires_on));
     }
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 
@@ -154,9 +161,47 @@ class HandleReservation extends ApiModel
         return $sql->orderBy('handle')->get();
     }
 
+    /**
+     * Retrieve all active entries grouped by the normalized handle.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public static function retrieveActiveByHandle(): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where(function ($q) {
+            $q->where('expires_on', '>=', now());
+            $q->orWhereNull('expires_on');
+        })->get()
+            ->groupBy('normalized_handle');
+    }
+
+    /**
+     * Retrieve all active entries for a normalized handle.
+     *
+     * @param string $normalized
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public static function retrieveAllByNormalizedHandle(string $normalized): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('normalized_handle', $normalized)
+            ->where(function ($q) {
+                $q->where('expires_on', '>=', now());
+                $q->orWhereNull('expires_on');
+            })->get();
+    }
+
     public static function handleTypeExists(string $handle, string $type, ?int $twiiYear): bool
     {
-        $sql = self::where(['handle' => $handle, 'reservation_type' => $type]);
+        $sql = self::where([
+            'normalized_handle' => Person::normalizeCallsign($handle),
+            'reservation_type' => $type
+        ])->where(function ($q) {
+            $q->where('expires_on', '>=', now());
+            $q->orWhereNull('expires_on');
+        });
+
         if ($type == self::TYPE_TWII_PERSON) {
             $sql->where('twii_year', $twiiYear);
         }
@@ -188,7 +233,8 @@ class HandleReservation extends ApiModel
         ]);
     }
 
-    public function getTypeLabel() : string {
+    public function getTypeLabel(): string
+    {
         return self::TYPE_LABELS[$this->reservation_type] ?? $this->reservation_type;
     }
 }

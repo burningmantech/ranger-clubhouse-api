@@ -58,29 +58,19 @@ class PositionLineupMember extends ApiModel
     public static function updateMembership($lineupId, $positionIds): void
     {
         $existingLineup = self::findAllForLineup($lineupId);
-        error_log("key by");
         $existingById = $existingLineup->keyBy('position_id');
 
-        error_log('adding');
         // Find the ids to add
         foreach ($positionIds as $id) {
-            error_log('Checking for '.$id);
             if (!$existingById->has($id)) {
-                error_log('Adding ');
                 self::add($lineupId, $id);
-            } else {
-                error_log(' MEMBER ALREADY PRESENT');
             }
         }
         // Find the ids to delete
-        error_log('removing');
         foreach ($existingLineup as $existing) {
-            error_log('in_array?');
             if (!in_array($existing->position_id, $positionIds)) {
-                error_log('remove');
                 self::remove($lineupId, $existing->position_id);
             }
-            error_log("checked");
         }
     }
 }

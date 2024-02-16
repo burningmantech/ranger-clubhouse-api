@@ -61,6 +61,9 @@ class Kernel extends ConsoleKernel
             // Sign out timesheets
             $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 15-31 8 *')->onOneServer();
             $schedule->job(new SignOutTimesheetsJob())->cron('0,10,20,30,40,50 * 1-10 9 *')->onOneServer();
+
+            // Let the VCs know applications are pending.
+            $schedule->command('clubhouse:pending-applications')->dailyAt('17:00')->onOneServer();
         }
 
         if (is_ghd_server()) {

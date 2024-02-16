@@ -136,4 +136,16 @@ class PositionPolicy
     {
         return $user->hasRole(Role::MANAGE);
     }
+
+    /**
+     * Can the person see who has been granted a specific position?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function grants(Person $user) : bool
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
 }
