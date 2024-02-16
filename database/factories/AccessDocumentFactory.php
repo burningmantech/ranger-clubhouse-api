@@ -13,7 +13,8 @@ class AccessDocumentFactory extends Factory
     public function definition(): array
     {
         return [
-            'created_at' => date('Y-m-d H:i:s'),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }
