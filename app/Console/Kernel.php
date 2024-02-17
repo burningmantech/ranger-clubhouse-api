@@ -64,6 +64,9 @@ class Kernel extends ConsoleKernel
 
             // Let the VCs know applications are pending.
             $schedule->command('clubhouse:pending-applications')->dailyAt('17:00')->onOneServer();
+
+            // Prune failed jobs
+            $schedule->command('queue:prune-failed --hours=48')->dailyAt('04:00')->onOneServer();
         }
 
         if (is_ghd_server()) {
