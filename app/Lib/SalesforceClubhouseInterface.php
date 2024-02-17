@@ -133,17 +133,6 @@ class SalesforceClubhouseInterface
 
     public function auth(): bool
     {
-        $d = "prd";
-        if (setting("SF" . $d . "Password") == "") {
-            $this->sf->errorMessage = "sfch->auth: no password for $d";
-            return false;
-        }
-
-        $this->sf->setClientID(setting("SF" . $d . "ClientId"));
-        $this->sf->setClientSecret(setting("SF" . $d . "ClientSecret"));
-        $this->sf->setUsername(setting("SF" . $d . "Username"));
-        $this->sf->setPassword(setting("SF" . $d . "Password"));
-        $this->sf->setAuthURL(setting("SF" . $d . "AuthUrl"));
         return $this->sf->auth();
     }
 

@@ -91,13 +91,13 @@ class SurveyGroup extends ApiModel
         }
     }
 
-    public function getReportTitleDefault()
+    public function getReportTitleDefault($surveyType)
     {
         switch ($this->type) {
             case self::TYPE_NORMAL:
                 return '';
             case self::TYPE_TRAINER:
-                return 'Trainee-On-Trainer Feedback';
+                return ($surveyType == Survey::ALPHA ) ? 'Alpha-on-Mentor Feedback' : 'Trainee-On-Trainer Feedback';
             default:
                 return $this->report_title;
         }

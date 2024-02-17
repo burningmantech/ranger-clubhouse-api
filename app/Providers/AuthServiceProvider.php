@@ -32,6 +32,7 @@ use App\Models\PersonPhoto;
 use App\Models\PersonPog;
 use App\Models\PersonPositionLog;
 use App\Models\PersonSwag;
+use App\Models\ProspectiveApplication;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Provision;
@@ -78,6 +79,7 @@ use App\Policies\PersonPogPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\PersonPositionLogPolicy;
 use App\Policies\PersonSwagPolicy;
+use App\Policies\ProspectiveApplicationPolicy;
 use App\Policies\PositionCreditPolicy;
 use App\Policies\PositionPolicy;
 use App\Policies\ProvisionPolicy;
@@ -136,6 +138,7 @@ class AuthServiceProvider extends ServiceProvider
         PersonPog::class => PersonPogPolicy::class,
         PersonPositionLog::class => PersonPositionLogPolicy::class,
         PersonSwag::class => PersonSwagPolicy::class,
+        ProspectiveApplication::class => ProspectiveApplicationPolicy::class,
         Position::class => PositionPolicy::class,
         PositionCredit::class => PositionCreditPolicy::class,
         Provision::class => ProvisionPolicy::class,

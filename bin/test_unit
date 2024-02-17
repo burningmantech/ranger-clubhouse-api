@@ -118,7 +118,7 @@ EOF
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --link="${db_container_name}"                     \
         "${image_repo}_test"                              \
-        sh -c "/usr/bin/composer require --dev phpunit/phpunit && ./vendor/bin/phpunit \"$@\"";
+        sh -c "/usr/bin/composer require --dev phpunit/phpunit && php artisan test --compact \"$@\"";
 }
 
 

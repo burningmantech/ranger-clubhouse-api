@@ -58,7 +58,6 @@ class VehiclePaperworkReport
             $mvrPositions = [];
             if ($personPositions) {
                 foreach ($personPositions as $pp) {
-                    error_log('PP '.json_encode($pp));
                     $position = $positionById->get($pp->position_id);
                     $mvrPositions[] = [
                         'id' => $position->id,

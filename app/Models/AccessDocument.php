@@ -198,6 +198,14 @@ class AccessDocument extends ApiModel
             }
 
             switch ($model->type) {
+                case self::SPT:
+                    if ($model->isDirty('status')
+                    && ($model->status == self::BANKED || $model->status == self::QUALIFIED)) {
+                        // Reset delivery method.
+                        $model->delivery_method = self::DELIVERY_NONE;
+                    }
+                    break;
+
                 case self::WAP:
                 case self::WAPSO:
                     $model->delivery_method = self::DELIVERY_EMAIL;
@@ -231,6 +239,7 @@ class AccessDocument extends ApiModel
                 $model->access_date = null;
                 $model->access_any_time = false;
             }
+
         });
 
         self::deleted(function ($model) {

@@ -85,17 +85,21 @@ class PersonIntakeNote extends ApiModel
      * @param bool $isLog true if the note is an audit note about the rank
      * @return void
      */
-    public static function record(int $personId, int $year, string $noteType, string $note, bool $isLog = false): void
+    public static function record(int    $personId,
+                                  int    $year,
+                                  string $noteType,
+                                  string $note,
+                                  bool   $isLog = false,
+                                  ?int   $userId = null
+    ): void
     {
-        $user = Auth::user();
-
         self::create([
             'person_id' => $personId,
             'year' => $year,
             'type' => $noteType,
             'note' => $note,
             'is_log' => $isLog,
-            'person_source_id' => $user ? $user->id : 0
+            'person_source_id' => $userId ?? Auth::id()
         ]);
     }
 }

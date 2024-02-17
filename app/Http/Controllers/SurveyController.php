@@ -10,6 +10,7 @@ use App\Models\SurveyQuestion;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -26,9 +27,10 @@ class SurveyController extends ApiController
     public function index(): JsonResponse
     {
         $params = request()->validate([
-            'year' => 'required|integer',
+            'year' => 'sometimes|integer',
             'position_id' => 'sometimes|integer',
             'include_slots' => 'sometimes|boolean',
+            'type' => 'sometimes|string',
         ]);
 
         /*
@@ -49,7 +51,7 @@ class SurveyController extends ApiController
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', [Survey::class]);
+        $this->authorize('store', Survey::class);
         $survey = new Survey;
         $this->fromRest($survey);
 
@@ -71,8 +73,7 @@ class SurveyController extends ApiController
 
     public function show(Survey $survey): JsonResponse
     {
-        $this->authorize('show', [Survey::class]);
-
+        $this->authorize('show', $survey);
         return $this->success($survey);
     }
 
@@ -165,14 +166,25 @@ class SurveyController extends ApiController
     public function questionnaire(): JsonResponse
     {
         $params = request()->validate([
-            'slot_id' => 'required|integer',
             'type' => [
                 'required',
                 'string',
-                Rule::in([Survey::TRAINING, Survey::TRAINER])
-            ]
+                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA])
+            ],
+            'slot_id' => [
+                'integer',
+                'required_unless:type,' . Survey::ALPHA
+            ],
+            'year' => [
+                'integer',
+                'required_if:type,' . Survey::ALPHA
+            ],
         ]);
 
+        if ($params['type'] == Survey::ALPHA) {
+            list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user->id);
+            return response()->json(['survey' => $survey, 'trainers' => $trainers]);
+        }
 
         list ($slot, $survey, $trainers) = SurveyReports::retrieveSlotSurveyTrainers($params['type'], $params['slot_id'], $this->user->id);
 
@@ -189,11 +201,18 @@ class SurveyController extends ApiController
     public function submit(): JsonResponse
     {
         $params = request()->validate([
-            'slot_id' => 'required|integer',
             'type' => [
                 'required',
                 'string',
-                Rule::in([Survey::TRAINING, Survey::TRAINER])
+                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA])
+            ],
+            'slot_id' => [
+                'integer',
+                'required_unless:type,' . Survey::ALPHA
+            ],
+            'year' => [
+                'integer',
+                'required_if:type,' . Survey::ALPHA
             ],
             'survey.*.survey_group_id' => 'required|integer',
             'survey.*.trainer_id' => 'sometimes',
@@ -202,44 +221,69 @@ class SurveyController extends ApiController
             'survey.*.answers.*.response' => 'present',
         ]);
 
-        list ($slot, $survey, $trainers) = SurveyReports::retrieveSlotSurveyTrainers($params['type'], $params['slot_id'], $this->user->id);
+        $type = $params['type'];
 
+        $slot = null;
+        $survey = null;
+        $trainers = null;
+        $year = $params['year'] ?? null;
         $personId = $this->user->id;
-        $slotId = $slot->id;
 
-        SurveyAnswer::deleteAllForPersonSlot($survey->id, $personId, $slotId);
+        if ($type == Survey::ALPHA) {
+            [$survey, $trainers] = SurveyReports::retrieveAlphaSurvey($year, $personId);
+            $slotId = null;
+        } else {
+            [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $personId);
+            $slotId = $slot->id;
+        }
+
+
+        if ($type == Survey::ALPHA) {
+            SurveyAnswer::deleteAllForSurvey($survey->id, $personId);
+        } else {
+            SurveyAnswer::deleteAllForPersonSlot($survey->id, $personId, $slotId);
+
+        }
 
         $isTrainerSurvey = ($survey->type == Survey::TRAINER);
 
-        // Loop through each survey answer group
-        foreach ($params['survey'] as $group) {
-            $surveyGroup = SurveyGroup::findOrFail($group['survey_group_id']);
-            if ($surveyGroup->survey_id != $survey->id) {
-                throw new InvalidArgumentException("Survey group [{$surveyGroup->id}] is not part of the survey");
-            }
+        try {
+            DB::beginTransaction();
+            // Loop through each survey answer group
+            foreach ($params['survey'] as $group) {
+                $surveyGroup = SurveyGroup::findOrFail($group['survey_group_id']);
+                if ($surveyGroup->survey_id != $survey->id) {
+                    throw new InvalidArgumentException("Survey group [{$surveyGroup->id}] is not part of the survey");
+                }
 
-            // A trainer survey asks if the responder's name can be shared with the trainer
-            if ($isTrainerSurvey) {
-                $canShareName = $group['can_share_name'] ?? true;
-            } else {
-                $canShareName = true;
-            }
+                // A trainer survey asks if the responder's name can be shared with the trainer
+                if ($isTrainerSurvey) {
+                    $canShareName = $group['can_share_name'] ?? true;
+                } else {
+                    $canShareName = true;
+                }
 
-            $trainerId = $group['trainer_id'] ?? null;
-            $answers = $group['answers'] ?? [];
+                $trainerId = $group['trainer_id'] ?? null;
+                $answers = $group['answers'] ?? [];
 
-            foreach ($answers as $answer) {
-                SurveyAnswer::create([
-                    'person_id' => $personId,
-                    'survey_id' => $survey->id,
-                    'survey_group_id' => $surveyGroup->id,
-                    'survey_question_id' => $answer['survey_question_id'],
-                    'slot_id' => $slotId,
-                    'trainer_id' => $trainerId,
-                    'response' => $answer['response'],
-                    'can_share_name' => $canShareName,
-                ]);
+                foreach ($answers as $answer) {
+                    $a = new SurveyAnswer([
+                        'can_share_name' => $canShareName,
+                        'person_id' => $personId,
+                        'response' => $answer['response'],
+                        'slot_id' => $slotId,
+                        'survey_group_id' => $surveyGroup->id,
+                        'survey_id' => $survey->id,
+                        'survey_question_id' => $answer['survey_question_id'],
+                        'trainer_id' => $trainerId,
+                    ]);
+                    $a->saveOrThrow();
+                }
             }
+            DB::commit();
+        } catch (Exception $e) {
+            DB::rollback();
+            throw $e;
         }
 
         return $this->success();
@@ -265,7 +309,7 @@ class SurveyController extends ApiController
     }
 
     /**
-     * Generate a trainer feedback report for a given year
+     * Generate a trainer (or mentor) feedback report for a given year
      *
      * @return JsonResponse
      * @throws AuthorizationException
@@ -275,15 +319,17 @@ class SurveyController extends ApiController
     {
         $params = request()->validate([
             'trainer_id' => 'required|integer|exists:person,id',
-            'year' => 'required|integer'
+            'year' => 'required|integer',
+            'type' => 'sometimes|string',
         ]);
 
         $trainerId = $params['trainer_id'];
-        $year = $params['year'];
 
         $this->authorize('trainerReport', [Survey::class, $trainerId]);
 
-        return response()->json(['surveys' => SurveyReports::trainerReportForYear($trainerId, $year)]);
+        return response()->json([
+            'surveys' => SurveyReports::trainerReportForYear($trainerId, $params['year'], $params['type'] ?? null)
+        ]);
     }
 
 

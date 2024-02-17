@@ -268,6 +268,10 @@
             background-color: #e9ecef;
         }
 
+        .table-auto-width {
+            width: auto !important;
+        }
+
         .table-striped > tbody > tr:nth-of-type(odd) > * {
             background-color: #eff8fd;
         }

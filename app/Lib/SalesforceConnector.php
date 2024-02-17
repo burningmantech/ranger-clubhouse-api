@@ -78,6 +78,17 @@ class SalesforceConnector
 
     public function auth(): bool
     {
+        if (empty(setting("SFprdPassword"))) {
+            $this->errorMessage = "sfch->auth: no password";
+            return false;
+        }
+
+        $this->setClientID(setting("SFprdClientId"));
+        $this->setClientSecret(setting("SFprdClientSecret"));
+        $this->setUsername(setting("SFprdUsername"));
+        $this->setPassword(setting("SFprdPassword"));
+        $this->setAuthURL(setting("SFprdAuthUrl"));
+
         $client = new Client(['base_uri' => $this->auth_url]);
         try {
             $response = $client->request('POST', 'services/oauth2/token', [
@@ -132,7 +143,7 @@ class SalesforceConnector
     public function soqlQuery(string $q) : mixed
     {
         if ($this->debug) {
-            Log::debug("soqlQuery: q = " . $url);
+            Log::debug("soqlQuery: q = " . $q);
         }
 
         $client = new Client(['base_uri' => $this->instanceurl]);
