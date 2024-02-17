@@ -76,7 +76,7 @@ class SurveyAnswer extends ApiModel
     }
 
     /**
-     * Did the person answer an Alpha survey? (there's only one to answer per year, don't need to worry about
+     * Is a response required for an Alpha survey? (there's only one to answer per year, don't need to worry about
      * multiple surveys of the same time as the Trainer surveys where multiple sessions are possible)
      *
      * @param int $personId
@@ -84,13 +84,13 @@ class SurveyAnswer extends ApiModel
      * @return bool
      */
 
-    public static function didAnswerAlphaSurvey(int $personId, int $year) : bool {
+    public static function needAlphaSurveyResponse(int $personId, int $year) : bool {
         $surveyId = DB::table('survey')->where(['year' => $year, 'type' => Survey::ALPHA])->value('id');
         if (!$surveyId) {
             return false;
         }
 
-        return DB::table('survey_answer')->where([ 'survey_id' => $surveyId, 'person_id' => $personId ])->exists();
+        return !DB::table('survey_answer')->where([ 'survey_id' => $surveyId, 'person_id' => $personId ])->exists();
     }
 
     /**
