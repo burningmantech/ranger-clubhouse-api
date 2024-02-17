@@ -79,6 +79,24 @@ class PersonPosition extends ApiModel
     }
 
     /**
+     * Find folks who are granted a specific position
+     *
+     * @param int $positionId
+     * @return array
+     */
+
+    public static function retrieveGrants(int $positionId): array
+    {
+        return DB::table('person_position')
+            ->select('person.id', 'person.callsign')
+            ->join('person', 'person_position.person_id', 'person.id')
+            ->where('person_position.position_id', $positionId)
+            ->orderBy('person.callsign')
+            ->get()
+            ->toArray();
+    }
+
+    /**
      * Find all held positions for a person
      *
      * @param int $personId

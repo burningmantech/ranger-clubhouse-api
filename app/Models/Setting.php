@@ -317,6 +317,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'RRNEmail' => [
+            'description' => 'The Ranger Regional Network team email address. Use to process Ranger applications.',
+            'type' => self::TYPE_EMAIL,
+        ],
+
         'SpTicketThreshold' => [
             'description' => 'Credit threshold for a Special Price Ticket. Shown on the Schedule and Ticket announce pages',
             'type' => self::TYPE_FLOAT,
@@ -753,7 +758,7 @@ class Setting extends ApiModel
         }
 
         if ($throwOnEmpty && self::notEmpty($value)) {
-            throw new RuntimeException("Setting '$name' is empty.");
+            throw new RuntimeException("Setting is empty.");
         }
 
         return $value;

@@ -24,6 +24,7 @@ use RuntimeException;
  * @method static $this find(array|string|integer $id)
  * @method static $this findOrFail(array|string|integer $id)
  * @method static $this select(...$args)
+ * @method static $this selectRaw(...$args)
  * @method static $this where(...$args)
  * @method static $this whereIn(...$args)
  * @method static $this whereIntegerInRaw(...$args)
@@ -127,6 +128,12 @@ abstract class ApiModel extends Model
         return $changes;
     }
 
+    public function getAuditedValues() : array {
+        $data = $this->auditChanges;
+        $this->_filterAuditExcluded($data);
+        return $data;
+    }
+
     /**
      * Record changes to the record.
      *
@@ -153,14 +160,8 @@ abstract class ApiModel extends Model
             $data = $this->auditChanges;
         }
 
-        if (!empty($this->auditExclude)) {
-            // exclude any columns
-            foreach ($this->auditExclude as $column) {
-                unset($data[$column]);
-            }
-        }
-
-        if (empty($data)) {
+        $this->_filterAuditExcluded($data);
+         if (empty($data)) {
             return; // nothing to record, punt.
         }
 
@@ -181,6 +182,16 @@ abstract class ApiModel extends Model
         }
 
         ActionLog::record(Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
+    }
+
+    public function _filterAuditExcluded(& $data): void
+    {
+        if (!empty($this->auditExclude)) {
+            // exclude any columns
+            foreach ($this->auditExclude as $column) {
+                unset($data[$column]);
+            }
+        }
     }
 
     /**

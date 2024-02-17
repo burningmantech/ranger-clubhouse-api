@@ -18,11 +18,13 @@ class Survey extends ApiModel
     public $timestamps = true;
 
     // Survey is for trainers on trainers.
-    const TRAINER = 'trainer';
+    const string TRAINER = 'trainer';
+
     // Survey is for a training session
-    const TRAINING = 'training';
-    // Survey is for a shift (not implemented currently)
-    const SLOT = 'slot';
+    const string TRAINING = 'training';
+
+    // Survey is for Alphas
+    const string ALPHA = 'alpha';
 
     protected $fillable = [
         'year',
@@ -80,18 +82,6 @@ class Survey extends ApiModel
     }
 
     /**
-     * Find all the surveys for a given year
-     *
-     * @param int $year
-     * @return Collection
-     */
-
-    public static function findAllForYear(int $year): Collection
-    {
-        return self::where('year', $year)->orderBy('type')->get();
-    }
-
-    /**
      * Find a survey of a type, position, and year.
      *
      * @param string $type
@@ -122,6 +112,7 @@ class Survey extends ApiModel
         $year = $query['year'] ?? null;
         $positionId = $query['position_id'] ?? null;
         $includeSlots = $query['include_slots'] ?? false;
+        $type = $query['type'] ?? null;
 
         $sql = self::with('position:id,title')
             ->with('survey_group')
@@ -135,13 +126,17 @@ class Survey extends ApiModel
             $sql->where('position_id', $positionId);
         }
 
-        $rows = $sql->get();
-
-        if (!$includeSlots) {
-            return $rows;
+        if ($type) {
+            $sql->where('type', $type);
         }
 
+        $rows = $sql->get();
+
         foreach ($rows as $row) {
+            if (!$includeSlots && $row->type != self::ALPHA) {
+                continue;
+            }
+
             if ($row->position_id) {
                 $row->slots = $row->retrieveSlots();
 
@@ -153,11 +148,14 @@ class Survey extends ApiModel
                 }
             }
 
-            // Build up the report types
             $reports = [
                 [
                     'id' => 'main',
-                    'title' => ($row->type == self::TRAINER) ? 'Trainer-On-Trainer Feedback' : 'Venue Feedback'
+                    'title' => match ($row->type) {
+                        self::ALPHA => 'Alpha Feedback',
+                        self::TRAINER => 'Trainer-On-Trainer Feedback',
+                        default => 'Venue Feedback',
+                    },
                 ]
             ];
 
@@ -165,7 +163,7 @@ class Survey extends ApiModel
                 if ($group->type != SurveyGroup::TYPE_NORMAL) {
                     $reports[] = [
                         'id' => $group->getReportId(),
-                        'title' => $group->getReportTitleDefault(),
+                        'title' => $group->getReportTitleDefault($row->type),
                     ];
                 }
             }
@@ -210,16 +208,14 @@ class Survey extends ApiModel
         return Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
             ->with(['position:id,title'])
             ->get()
-            ->map(function ($s) {
-                return [
-                    'id' => $s->id,
-                    'year' => $s->year,
-                    'type' => $s->type,
-                    'position_id' => $s->position_id,
-                    'position_title' => $s->position->title,
-                    'title' => $s->title,
-                ];
-            })
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'year' => $s->year,
+                'type' => $s->type,
+                'position_id' => $s->position_id,
+                'position_title' => $s->position?->title,
+                'title' => $s->title,
+            ])
             ->sortBy('year')
             ->values()
             ->groupBy('year');
@@ -230,14 +226,23 @@ class Survey extends ApiModel
      *
      * @param int $personId
      * @param int $year
+     * @param string|null $type
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public static function findAllForTrainerYear(int $personId, int $year): \Illuminate\Database\Eloquent\Collection
+
+    public static function findAllForTrainerYear(int $personId, int $year, ?string $type): \Illuminate\Database\Eloquent\Collection
     {
-        return Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
+        $sql = Survey::whereRaw('EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.survey_id=survey.id AND survey_answer.trainer_id=? LIMIT 1)', [$personId])
             ->with(['position:id,title'])
-            ->where('year', $year)
-            ->get();
+            ->where('year', $year);
+
+        if (!empty($type)) {
+            $sql->where('type', $type);
+        } else {
+            $sql->where('type', '!=', Survey::ALPHA);
+        }
+
+        return $sql->get();
     }
 
     /**
@@ -260,10 +265,11 @@ class Survey extends ApiModel
      *
      * @param int $personId
      * @param int $year
+     * @param string|null $status
      * @return array
      */
 
-    public static function retrieveUnansweredForPersonYear(int $personId, int $year): array
+    public static function retrieveUnansweredForPersonYear(int $personId, int $year, ?string $status): array
     {
         $slots = TraineeStatus::select('trainee_status.*')
             ->join('slot', 'slot.id', 'trainee_status.slot_id')
@@ -338,9 +344,18 @@ class Survey extends ApiModel
             }
         }
 
+        $alphaSurvey = false;
+        if ($status == Person::ACTIVE
+            && Timesheet::hasAlphaEntry($personId, $year)
+            && PersonMentor::didPersonPass($personId, $year)
+            && !SurveyAnswer::didAnswerAlphaSurvey($personId, $year)) {
+            $alphaSurvey = true;
+        }
+
         return [
             'sessions' => $slots,
-            'trainers' => $trainerSurveys
+            'trainers' => $trainerSurveys,
+            'alpha_survey' => $alphaSurvey
         ];
     }
 

@@ -18,24 +18,24 @@ class SurveyAnswer extends ApiModel
      */
 
     protected $fillable = [
-        'survey_id',
-        'survey_group_id',
-        'survey_question_id',
+        'can_share_name',
         'person_id',
-        'trainer_id',
-        'slot_id',
         'response',
-        'can_share_name'
+        'slot_id',
+        'survey_group_id',
+        'survey_id',
+        'survey_question_id',
+        'trainer_id',
     ];
 
     protected $rules = [
-        'person_id' => 'required|integer',
-        'survey_id' => 'required|integer',
-        'survey_group_id' => 'required|integer',
-        'survey_question_id' => 'required|integer',
-        'slot_id' => 'required|integer',
-        'response' => 'required',
         'can_share_name' => 'sometimes|boolean',
+        'person_id' => 'required|integer',
+        'response' => 'required',
+        'slot_id' => 'sometimes|integer|nullable',
+        'survey_group_id' => 'required|integer',
+        'survey_id' => 'required|integer',
+        'survey_question_id' => 'required|integer',
         'trainer_id' => 'sometimes|integer|nullable',
     ];
 
@@ -66,11 +66,46 @@ class SurveyAnswer extends ApiModel
      * @param int $slotId
      */
 
-    public static function deleteAllForPersonSlot(int $surveyId, int $personId, int $slotId)
+    public static function deleteAllForPersonSlot(int $surveyId, int $personId, int $slotId): void
     {
-        DB::table('survey_answer')->where('survey_id', $surveyId)
+        DB::table('survey_answer')
+            ->where('survey_id', $surveyId)
             ->where('person_id', $personId)
             ->where('slot_id', $slotId)
+            ->delete();
+    }
+
+    /**
+     * Did the person answer an Alpha survey? (there's only one to answer per year, don't need to worry about
+     * multiple surveys of the same time as the Trainer surveys where multiple sessions are possible)
+     *
+     * @param int $personId
+     * @param int $year
+     * @return bool
+     */
+
+    public static function didAnswerAlphaSurvey(int $personId, int $year) : bool {
+        $surveyId = DB::table('survey')->where(['year' => $year, 'type' => Survey::ALPHA])->value('id');
+        if (!$surveyId) {
+            return false;
+        }
+
+        return DB::table('survey_answer')->where([ 'survey_id' => $surveyId, 'person_id' => $personId ])->exists();
+    }
+
+    /**
+     * Delete all survey answer for a person
+     *
+     * @param int $surveyId
+     * @param int $personId
+     * @return void
+     */
+
+    public static function deleteAllForSurvey(int $surveyId, int $personId): void
+    {
+        DB::table('survey_answer')
+            ->where('survey_id', $surveyId)
+            ->where('person_id', $personId)
             ->delete();
     }
 
@@ -97,6 +132,11 @@ class SurveyAnswer extends ApiModel
     }
 
     public function trainerId(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function slotId(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

@@ -3,15 +3,17 @@
 namespace App\Lib;
 
 use App\Models\Person;
+use App\Models\PersonMentor;
+use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyGroup;
 use App\Models\SurveyQuestion;
+use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
-
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 
@@ -22,6 +24,7 @@ class SurveyReports
      *
      * @param string $type
      * @param int $slotId
+     * @param int $personId
      * @return array
      */
 
@@ -71,6 +74,39 @@ class SurveyReports
     }
 
     /**
+     * Retrieve the slot record, the survey for the type, position & year and the attending trainers
+     *
+     * @param int $year
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrieveAlphaSurvey(int $year, int $personId): array
+    {
+        if (Timesheet::hasAlphaEntry($personId, $year)) {
+            throw new \InvalidArgumentException("Person was not an alpha in the given year");
+        }
+
+        $survey = Survey::findForTypePositionYear(Survey::ALPHA, Position::ALPHA, $year);
+        $mentors = PersonMentor::where('mentor_year', $year)
+            ->where('person_id', $personId)
+            ->where('status', PersonMentor::PASS)
+            ->with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
+            ->get()
+            ->map(function ($t) {
+                $p = $t->mentor;
+                return (object)[
+                    'id' => $p->id,
+                    'callsign' => $p->callsign,
+                    'photo_url' => $p->person_photo->image_url ?? null,
+                ];
+            })->sortBy('callsign')
+            ->values();
+
+        return [$survey, $mentors];
+    }
+
+    /**
      * Build up a survey response. The response is broken up into two parts:
      * the venue/class responses (material presentation, exercise quality, etc.) and the trainer ratings and responses
      *
@@ -85,7 +121,7 @@ class SurveyReports
 
     public static function buildSurveyReports(Survey $survey, int|null $trainerId = null): array
     {
-        $includePerson = Auth::user()->hasRole(Role::SURVEY_MANAGEMENT);
+        $includePerson = Auth::user() ? Auth::user()->hasRole(Role::SURVEY_MANAGEMENT) : true;
 
         $slots = $survey->retrieveSlots();
         $surveyGroups = SurveyGroup::findAllForSurvey($survey->id);
@@ -147,10 +183,10 @@ class SurveyReports
             switch ($group->type) {
                 case SurveyGroup::TYPE_NORMAL:
                 case SurveyGroup::TYPE_SEPARATE:
-                    self::buildGroupReport($report, $slots, $questions, $answersByQuestionId, $trainerId, $includePerson);
+                    self::buildGroupReport($survey, $report, $slots, $questions, $answersByQuestionId, $trainerId, $includePerson);
                     break;
                 case SurveyGroup::TYPE_TRAINER:
-                    self::buildTrainerGroupReport($report, $trainers, $slots, $questions, $surveyAnswers, $includePerson);
+                    self::buildTrainerGroupReport($survey, $report, $trainers, $slots, $questions, $surveyAnswers, $includePerson);
                     break;
                 case SurveyGroup::TYPE_SUMMARY:
                     self::buildSummaryGroupReport($report, $questions, $answersByQuestionId, $includePerson);
@@ -204,20 +240,23 @@ class SurveyReports
      *      ]]
      *   ]]
      * ]
+     * @param Survey $survey
      * @param $report
      * @param $slots
      * @param $questions
      * @param $answersByQuestionId
      * @param $trainerId
+     * @param $includePerson
      */
 
-    public static function buildGroupReport($report, $slots, $questions, $answersByQuestionId, $trainerId, $includePerson)
+    public static function buildGroupReport(Survey $survey, $report, $slots, $questions, $answersByQuestionId, $trainerId, $includePerson): void
     {
         if (!isset($report->questions)) {
             $report->questions = [];
             $report->summarized_ratings = [];
         }
 
+        $isAlpha = ($survey->type == Survey::ALPHA);
         foreach ($questions as $question) {
             $answersForQuestion = $answersByQuestionId->get($question->id);
             if (!$answersForQuestion) {
@@ -226,52 +265,68 @@ class SurveyReports
             $slotResponses = [];
             $isRating = ($question->type == SurveyQuestion::RATING) || $question->summarize_rating;
             $overallRatings = [];
-            $answersGroupBySlot = $answersForQuestion->groupBy('slot_id');
-            foreach ($slots as $slot) {
-                $answersForSlot = $answersGroupBySlot->get($slot->id);
-                if ($trainerId && !$answersForSlot) {
-                    // Don't bother if only a single trainer is being looked up.
-                    continue;
-                }
 
-                $responses = [];
-                $ratings = [];
-                if ($answersForSlot) {
-                    foreach ($answersForSlot as $answer) {
-                        if ($isRating) {
-                            $overallRatings[] = $ratings[] = (int)$answer->response;
-                        } else if (!$question->summarize_rating) {
-                            $responses[] = self::buildAnswer($answer, $question, $includePerson);
-                        }
+            if ($isAlpha) {
+                $alphaResponses = [];
+                foreach ($answersForQuestion as $answer) {
+                    if ($isRating) {
+                        $overallRatings[] = (int)$answer->response;
+                    } else if (!$question->summarize_rating) {
+                        $alphaResponses[] = self::buildAnswer($answer, $question, $includePerson);
                     }
                 }
+            } else {
+                $answersGroupBySlot = $answersForQuestion->groupBy('slot_id');
 
-                $slotResponse = [
-                    'slot_id' => $slot->id,
-                    'slot_begins' => (string)$slot->begins,
-                    'slot_description' => $slot->description,
-                ];
+                foreach ($slots as $slot) {
+                    $answersForSlot = $answersGroupBySlot->get($slot->id);
+                    if ($trainerId && !$answersForSlot) {
+                        // Don't bother if only a single trainer is being looked up.
+                        continue;
+                    }
 
-                if ($isRating) {
-                    self::computeStatistics($ratings, $slotResponse);
-                } else {
-                    $slotResponse['responses'] = $responses;
+                    $responses = [];
+                    $ratings = [];
+                    if ($answersForSlot) {
+                        foreach ($answersForSlot as $answer) {
+                            if ($isRating) {
+                                $overallRatings[] = $ratings[] = (int)$answer->response;
+                            } else if (!$question->summarize_rating) {
+                                $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                            }
+                        }
+                    }
+
+                    $slotResponse = [
+                        'slot_id' => $slot->id,
+                        'slot_begins' => (string)$slot->begins,
+                        'slot_description' => $slot->description,
+                    ];
+
+                    if ($isRating) {
+                        self::computeStatistics($ratings, $slotResponse);
+                    } else {
+                        $slotResponse['responses'] = $responses;
+                    }
+                    $slotResponses[] = $slotResponse;
                 }
-                $slotResponses[] = $slotResponse;
             }
 
+            $responseType = $isAlpha ? 'responses' : 'slots';
             if ($question->summarize_rating) {
-                self::sortStatistics($slotResponses);
+                if (!$isAlpha) {
+                    self::sortStatistics($slotResponses);
+                }
                 $report->summarized_ratings[] = [
                     'description' => $question->description,
-                    'slots' => $slotResponses
+                    $responseType => $isAlpha ? $alphaResponses : $slotResponses,
                 ];
             } else {
                 $data = [
                     'id' => $question->id,
                     'type' => $question->type,
                     'description' => $question->description,
-                    'slots' => $slotResponses
+                    $responseType => $isAlpha ? $alphaResponses : $slotResponses,
                 ];
                 if ($isRating) {
                     self::computeStatistics($overallRatings, $data);
@@ -326,20 +381,23 @@ class SurveyReports
      *   ]]
      * ]
      *          '
+     * @param Survey $survey
      * @param $reportResults
      * @param $trainers
      * @param $slots
      * @param $questions
      * @param $surveyAnswers
+     * @param $includePerson
      */
 
-    public static function buildTrainerGroupReport($reportResults, $trainers, $slots, $questions, $surveyAnswers, $includePerson)
+    public static function buildTrainerGroupReport(Survey $survey, $reportResults, $trainers, $slots, $questions, $surveyAnswers, $includePerson): void
     {
         $trainerReports = [];
         $answersByTrainerId = $surveyAnswers->filter(fn($a) => ($a->trainer_id > 0))->groupBy('trainer_id');
 
         $questionSummaryRatings = [];
 
+        $isAlpha = $survey->type == Survey::ALPHA;
         foreach ($trainers as $trainer) {
             $report = [
                 'trainer_id' => $trainer->id,
@@ -363,43 +421,56 @@ class SurveyReports
                     continue;
                 }
 
-                $answersGroupBySlot = $answersForQuestion->groupBy('slot_id');
-                foreach ($slots as $slot) {
-                    $answersForSlot = $answersGroupBySlot->get($slot->id);
-                    if (!$answersForSlot) {
-                        continue;
-                    }
-                    $responses = [];
+                if ($isAlpha) {
+                    $alphaResponses = [];
                     $ratings = [];
-                    foreach ($answersForSlot as $answer) {
+                    foreach ($answersForQuestion as $answer) {
                         if ($isRating) {
                             $overallRatings[] = $ratings[] = (int)$answer->response;
                         } else if ($question->summarize_rating) {
                             continue;
                         }
-
-                        $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                        $alphaResponses[] = self::buildAnswer($answer, $question, $includePerson);
                     }
+                } else {
+                    $answersGroupBySlot = $answersForQuestion->groupBy('slot_id');
+                    foreach ($slots as $slot) {
+                        $answersForSlot = $answersGroupBySlot->get($slot->id);
+                        if (!$answersForSlot) {
+                            continue;
+                        }
+                        $responses = [];
+                        $ratings = [];
+                        foreach ($answersForSlot as $answer) {
+                            if ($isRating) {
+                                $overallRatings[] = $ratings[] = (int)$answer->response;
+                            } else if ($question->summarize_rating) {
+                                continue;
+                            }
 
-                    $slotResponse = [
-                        'slot_id' => $slot->id,
-                        'slot_begins' => (string)$slot->begins,
-                        'slot_description' => $slot->description,
-                    ];
+                            $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                        }
 
-                    if ($isRating) {
-                        self::computeStatistics($ratings, $slotResponse);
-                    } else {
-                        $slotResponse['responses'] = $responses;
+                        $slotResponse = [
+                            'slot_id' => $slot->id,
+                            'slot_begins' => (string)$slot->begins,
+                            'slot_description' => $slot->description,
+                        ];
+
+                        if ($isRating) {
+                            self::computeStatistics($ratings, $slotResponse);
+                        } else {
+                            $slotResponse['responses'] = $responses;
+                        }
+                        $slotResponses[] = $slotResponse;
                     }
-                    $slotResponses[] = $slotResponse;
                 }
 
                 if ($question->summarize_rating) {
                     $summary = [
                         'trainer_id' => $trainer->id,
                         'callsign' => $trainer->callsign,
-                        'ratings' => $ratings
+                        'ratings' => $overallRatings
                     ];
                     self::computeStatistics($overallRatings, $summary);
                     $questionSummaryRatings[$question->id][] = $summary;
@@ -408,8 +479,13 @@ class SurveyReports
                         'id' => $question->id,
                         'type' => $question->type,
                         'description' => $question->description,
-                        'slots' => $slotResponses
                     ];
+
+                    if ($isAlpha) {
+                        $data['responses'] = $alphaResponses;
+                    } else {
+                        $data['slots'] = $slotResponses;
+                    }
                     if ($isRating) {
                         self::computeStatistics($overallRatings, $data);
                     }
@@ -451,9 +527,10 @@ class SurveyReports
      *
      * @param $questions
      * @param $answersByQuestionId
+     * @param $includePerson
      */
 
-    public static function buildSummaryGroupReport($report, $questions, $answersByQuestionId, $includePerson)
+    public static function buildSummaryGroupReport($report, $questions, $answersByQuestionId, $includePerson): void
     {
         $questionResponses = [];
         foreach ($questions as $question) {
@@ -526,7 +603,7 @@ class SurveyReports
      * @param $stats
      */
 
-    public static function sortStatistics(&$stats)
+    public static function sortStatistics(&$stats): void
     {
         usort($stats, function ($a, $b) {
             $diff = $b['mean'] - $a['mean'];
@@ -546,9 +623,9 @@ class SurveyReports
      * In the case where person_id is 0, it means the callsign could not be associated with
      * a Clubhouse account.
      *
-     * @param $answer
-     * @param $question
-     * @param $includePerson
+     * @param SurveyAnswer $answer
+     * @param SurveyQuestion $question
+     * @param bool $includePerson
      * @return array
      */
 
@@ -581,12 +658,13 @@ class SurveyReports
      *
      * @param int $trainerId
      * @param int $year
+     * @param string|null $type
      * @return array
      */
 
-    public static function trainerReportForYear(int $trainerId, int $year)
+    public static function trainerReportForYear(int $trainerId, int $year, ?string $type): array
     {
-        $surveys = Survey::findAllForTrainerYear($trainerId, $year);
+        $surveys = Survey::findAllForTrainerYear($trainerId, $year, $type);
 
         $surveyReports = [];
         foreach ($surveys as $survey) {
@@ -611,7 +689,7 @@ class SurveyReports
      * @return array
      */
 
-    public static function allTrainersReport(Survey $survey)
+    public static function allTrainersReport(Survey $survey): array
     {
         // Find all the trainers with feedback for a given survey
         $foundTrainers = SurveyAnswer::join('person', 'survey_answer.trainer_id', 'person.id')

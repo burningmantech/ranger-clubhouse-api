@@ -7,12 +7,10 @@ use App\Http\RestApi\SerializeRecord;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\Role;
-use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class ApiController extends Controller
 {
@@ -28,7 +26,7 @@ class ApiController extends Controller
     public function __construct()
     {
         $this->user = Auth::user();
-     }
+    }
 
     /**
      * Is the given person the current user?

@@ -7,6 +7,7 @@ use App\Lib\ClubhouseCache;
 use App\Lib\Reports\PeopleByPositionReport;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\SandmanQualificationReport;
+use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -175,5 +176,18 @@ class PositionController extends ApiController
                 $params['commit'] ?? false
             )
         ]);
+    }
+
+    /**
+     * Retrieve folks granted a particular position
+     *
+     * @throws AuthorizationException
+     */
+
+    public function grants(Position $position): JsonResponse
+    {
+        $this->authorize('grants', Position::class);
+
+        return response()->json(['people' => PersonPosition::retrieveGrants($position->id)]);
     }
 }
