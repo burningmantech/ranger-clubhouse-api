@@ -348,7 +348,7 @@ class Survey extends ApiModel
         if ($status == Person::ACTIVE
             && Timesheet::hasAlphaEntry($personId, $year)
             && PersonMentor::didPersonPass($personId, $year)
-            && !SurveyAnswer::didAnswerAlphaSurvey($personId, $year)) {
+            && SurveyAnswer::needAlphaSurveyResponse($personId, $year)) {
             $alphaSurvey = true;
         }
 
