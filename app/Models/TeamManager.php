@@ -130,4 +130,19 @@ class TeamManager extends ApiModel
         $tm->auditReason = $reason;
         $tm->delete();
     }
+
+
+    /**
+     * Is the person a manager for a given team?
+     *
+     * @param int $teamId
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function isManager(int $teamId, int $personId): bool
+    {
+        return self::where(['team_id' => $teamId, 'person_id' => $personId])->exists();
+    }
+
 }

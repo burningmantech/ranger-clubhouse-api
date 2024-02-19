@@ -2,10 +2,6 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
@@ -15,6 +11,8 @@ use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class PositionControllerTest extends TestCase
 {
@@ -231,9 +229,8 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/'.Position::DIRT_GREEN_DOT.'/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
-            'position_id' => Position::DIRT_GREEN_DOT,
             'grant' => 1,
             'commit' => 0
         ]);
@@ -262,9 +259,8 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/'.Position::DIRT_GREEN_DOT.'/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
-            'position_id' => Position::DIRT_GREEN_DOT,
             'grant' => 1,
             'commit' => 1
         ]);
@@ -295,9 +291,8 @@ class PositionControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $this->createBulkPeople();
 
-        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/'.Position::HQ_WINDOW.'/bulk-grant-revoke', [
             'callsigns' => 'nosuchcallsign',
-            'position_id' => Position::HQ_WINDOW,
             'grant' => 1,
             'commit' => 0
         ]);
@@ -323,9 +318,8 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/'.Position::HQ_WINDOW.'/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
-            'position_id' => Position::HQ_WINDOW,
             'grant' => 1,
             'commit' => 0
         ]);
@@ -340,5 +334,4 @@ class PositionControllerTest extends TestCase
             ]
         ]);
     }
-
 }

@@ -59,7 +59,7 @@ class PersonTeam extends ApiModel
      * @return array
      */
 
-    public static function retrieveMVREligibleForPerson(int $personId) : array
+    public static function retrieveMVREligibleForPerson(int $personId): array
     {
         return DB::table('team')
             ->select('team.id', 'team.title')
@@ -80,7 +80,7 @@ class PersonTeam extends ApiModel
      * @return bool
      */
 
-    public static function haveMVREligibleForPerson(int $personId) : bool
+    public static function haveMVREligibleForPerson(int $personId): bool
     {
         return DB::table('team')
             ->select('team.id', 'team.title')

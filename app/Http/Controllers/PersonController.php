@@ -136,7 +136,7 @@ class PersonController extends ApiController
             'ticketing_status' => [
                 'sometimes',
                 'string',
-                Rule::in([ 'started', 'not-started', 'finished', 'not-finished', 'not-finished-claimed'])
+                Rule::in(['started', 'not-started', 'finished', 'not-finished', 'not-finished-claimed'])
             ],
             'include_ticketing_info' => 'sometimes|boolean',
         ]);
@@ -390,15 +390,21 @@ class PersonController extends ApiController
     {
         $this->authorize('updatePositions', $person);
         $params = request()->validate([
-            'position_ids' => 'present|array',
-            'position_ids.*' => 'sometimes|integer'
+            'position_ids' => 'sometimes|array',
+            'position_ids.*' => 'sometimes|integer',
+            'grant_ids' => 'sometimes|array',
+            'grant_ids.*' => 'sometimes|integer',
+            'revoke_ids' => 'sometimes|array',
+            'revoke_ids.*' => 'sometimes|integer',
         ]);
 
         $personId = $person->id;
         Membership::updatePositionsForPerson(
             $this->user->id,
             $person->id,
-            $params['position_ids'],
+            $params['position_ids'] ?? null,
+            $params['grant_ids'] ?? null,
+            $params['revoke_ids'] ?? null,
             'person update',
             $this->userHasRole(Role::ADMIN)
         );
@@ -511,17 +517,31 @@ class PersonController extends ApiController
         $this->authorize('updateTeams', $person);
 
         $params = request()->validate([
-            'team_ids' => 'present|array',
+            'team_ids' => 'sometimes|array',
             'team_ids.*' => 'sometimes|integer',
-            'manager_ids' => 'present|array',
+            'manager_ids' => 'sometimes|array',
             'manager_ids.*' => 'sometimes|integer',
+            'grant_ids' => 'sometimes|array',
+            'grant_ids.*' => 'sometimes|integer',
+            'revoke_ids' => 'sometimes|array',
+            'revoke_ids.*' => 'sometimes|integer',
         ]);
 
         $userId = $this->user->id;
         $isAdmin = $this->user->isAdmin();
 
-        Membership::updateTeamsForPerson($userId, $person->id, $params['team_ids'], 'person update', $isAdmin);
-        Membership::updateManagementForPerson($userId, $person->id, $params['manager_ids'], 'person update', $isAdmin);
+        Membership::updateTeamsForPerson($userId,
+            $person->id,
+            $params['team_ids'] ?? null,
+            $params['grant_ids'] ?? null,
+            $params['revoke_ids'] ?? null,
+            'person update',
+            $isAdmin);
+
+        $managerIds = $params['manager_ids'] ?? null;
+        if ($managerIds !== null) {
+            Membership::updateManagementForPerson($userId, $person->id, $managerIds, 'person update', $isAdmin);
+        }
 
         return $this->success();
     }
@@ -929,16 +949,16 @@ class PersonController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function releaseCallsign(Person $person) : JsonResponse
+    public function releaseCallsign(Person $person): JsonResponse
     {
         $this->authorize('releaseCallsign', $person);
 
         if ($person->vintage) {
-            throw new \InvalidArgumentException("Callsign is vintage and cannot be reset");
+            throw new InvalidArgumentException("Callsign is vintage and cannot be reset");
         }
 
         if (!$person->resetCallsign()) {
-            throw new \InvalidArgumentException("Unable to reset the callsign");
+            throw new InvalidArgumentException("Unable to reset the callsign");
         }
 
         $person->callsign_approved = false;
@@ -946,7 +966,7 @@ class PersonController extends ApiController
         $person->save();
 
 
-        return response()->json([ 'callsign' => $person->callsign ]);
+        return response()->json(['callsign' => $person->callsign]);
     }
 }
 

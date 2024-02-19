@@ -31,7 +31,7 @@ class PositionController extends ApiController
             'active' => 'sometimes|boolean',
         ]);
 
-        return $this->success(Position::findForQuery($params), null, 'position');
+        return $this->success(Position::findForQuery($params, $this->user->isAdmin()), null, 'position');
     }
 
     /**
@@ -158,12 +158,11 @@ class PositionController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function bulkGrantRevoke(): JsonResponse
+    public function bulkGrantRevoke(Position $position): JsonResponse
     {
-        $this->authorize('bulkGrantRevoke', Position::class);
+        $this->authorize('bulkGrantRevoke', $position);
         $params = request()->validate([
             'callsigns' => 'string|required',
-            'position_id' => 'integer|required|exists:position,id',
             'grant' => 'boolean|required',
             'commit' => 'boolean|sometimes',
         ]);
@@ -171,7 +170,7 @@ class PositionController extends ApiController
         return response()->json([
             'people' => BulkPositionGrantRevoke::execute(
                 $params['callsigns'],
-                $params['position_id'],
+                $position->id,
                 $params['grant'],
                 $params['commit'] ?? false
             )
