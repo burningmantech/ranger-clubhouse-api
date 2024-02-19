@@ -288,7 +288,7 @@ Route::group([
     Route::patch('pod/{pod}/person', 'PodController@updatePerson');
     Route::resource('pod', 'PodController');
 
-    Route::post('position/bulk-grant-revoke', 'PositionController@bulkGrantRevoke');
+    Route::post('position/{position}/bulk-grant-revoke', 'PositionController@bulkGrantRevoke');
     Route::get('position/people-by-position', 'PositionController@peopleByPosition');
     Route::get('position/people-by-teams', 'PositionController@peopleByTeamsReport');
     Route::get('position/sandman-qualified', 'PositionController@sandmanQualifiedReport');
@@ -383,7 +383,8 @@ Route::group([
     Route::resource('swag', 'SwagController');
 
     Route::get('team/people-by-teams', 'TeamController@peopleByTeamsReport');
-    Route::post('team/bulk-grant-revoke', 'TeamController@bulkGrantRevoke');
+    Route::post('team/{team}/bulk-grant-revoke', 'TeamController@bulkGrantRevoke');
+    Route::get('team/{team}/membership', 'TeamController@membership');
     Route::resource('team', 'TeamController');
 
     Route::get('training-session/sessions', 'TrainingSessionController@sessions');

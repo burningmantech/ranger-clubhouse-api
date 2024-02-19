@@ -5,7 +5,7 @@ namespace App\Policies;
 use App\Models\Person;
 use App\Models\Role;
 use App\Models\Team;
-
+use App\Models\TeamManager;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TeamPolicy
@@ -86,11 +86,25 @@ class TeamPolicy
      * Can the user bulk revoke or grant a team membership?
      *
      * @param Person $user
+     * @param Team $team
      * @return bool
      */
 
-    public function bulkGrantRevoke(Person $user) : bool
+    public function bulkGrantRevoke(Person $user, Team $team): bool
     {
-        return $user->hasRole(Role::ADMIN);
+        return $user->isAdmin() || TeamManager::isManager($team->id, $user->id);
+    }
+
+    /**
+     * Can the user see the membership roster
+     *
+     * @param Person $user
+     * @param Team $team
+     * @return bool
+     */
+
+    public function membership(Person $user, Team $team): bool
+    {
+        return $user->isAdmin() || TeamManager::isManager($team->id, $user->id);
     }
 }

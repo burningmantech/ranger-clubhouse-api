@@ -6,6 +6,7 @@ namespace App\Policies;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\TeamManager;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class PositionPolicy
@@ -117,14 +118,23 @@ class PositionPolicy
 
     /**
      * Determine if the person can run bulk grant or revoke positions.
+     *
      * @param Person $user
+     * @param Position $position
      * @return bool
      */
 
-    public function bulkGrantRevoke(Person $user): bool
+    public function bulkGrantRevoke(Person $user, Position $position): bool
     {
-        // Only admins are allowed to run it.
-        return $user->hasRole(Role::ADMIN);
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if (!$position->team_id) {
+            return false;
+        }
+
+        return TeamManager::isManager($position->team_id, $user->id);
     }
 
     /**

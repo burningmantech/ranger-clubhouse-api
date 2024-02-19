@@ -51,22 +51,52 @@ class Membership
      *
      * @param int $userId
      * @param int $personId
-     * @param array $positionIds
-     * @param $reason
-     * @param $isAdmin
+     * @param array|null $positionIds
+     * @param array|null $grantIds
+     * @param array|null $revokeIds
+     * @param string $reason
+     * @param bool $isAdmin
      */
 
-    public static function updatePositionsForPerson(int $userId, int $personId, array $positionIds, $reason, $isAdmin): void
+    public static function updatePositionsForPerson(int    $userId,
+                                                    int    $personId,
+                                                    ?array $positionIds,
+                                                    ?array $grantIds,
+                                                    ?array $revokeIds,
+                                                    string $reason,
+                                                    bool   $isAdmin): void
     {
         $positions = PersonPosition::findForPerson($personId);
 
-        list ($newIds, $deleteIds) = self::determineGrantRevokes($positions, $positionIds, 'id');
-
         if (!$isAdmin) {
-            // Need to check on each position to see if it's allowed
             $manageIds = TeamManager::retrieveTeamIdsForPerson($userId);
-            $newIds = self::canManagePositions($newIds, $manageIds);
-            $deleteIds = self::canManagePositions($deleteIds, $manageIds);
+        }
+
+        $newIds = [];
+        $deleteIds = [];
+
+        if ($positionIds !== null) {
+            [$newIds, $deleteIds] = self::determineGrantRevokes($positions, $positionIds, 'id');
+
+            if (!$isAdmin) {
+                // Need to check on each position to see if it's allowed
+                $newIds = self::canManagePositions($newIds, $manageIds);
+                $deleteIds = self::canManagePositions($deleteIds, $manageIds);
+            }
+        }
+
+        if ($grantIds !== null) {
+            if (!$isAdmin) {
+                $grantIds = self::canManagePositions($grantIds, $manageIds);
+            }
+            $newIds = array_merge($newIds, $grantIds);
+        }
+
+        if ($revokeIds !== null) {
+            if (!$isAdmin) {
+                $revokeIds = self::canManagePositions($revokeIds, $manageIds);
+            }
+            $deleteIds = array_merge($deleteIds, $revokeIds);
         }
 
         // Mass revoke the old positions
@@ -152,23 +182,52 @@ class Membership
      *
      * @param $userId
      * @param $personId
-     * @param $teamIds
-     * @param $reason
+     * @param array|null $teamIds
+     * @param array|null $grantIds
+     * @param array|null $revokeIds
+     * @param string $reason
      * @param bool $isAdmin
      */
 
-    public static function updateTeamsForPerson($userId, $personId, $teamIds, $reason, bool $isAdmin): void
+    public static function updateTeamsForPerson($userId,
+        $personId,
+                                                ?array $teamIds,
+                                                ?array $grantIds,
+                                                ?array $revokeIds,
+                                                string $reason,
+                                                bool $isAdmin): void
     {
         $memberships = PersonTeam::findAllTeamsForPerson($personId);
 
-        list ($newIds, $deleteIds) = self::determineGrantRevokes($memberships, $teamIds, 'id');
+        $newIds = [];
+        $deleteIds = [];
 
         if (!$isAdmin) {
             // Need to check on each position to see if it's allowed
             $manageIds = TeamManager::retrieveTeamIdsForPerson($userId);
+        }
 
-            $newIds = self::canManageTeam($newIds, $manageIds);
-            $deleteIds = self::canManageTeam($deleteIds, $manageIds);
+        if ($teamIds !== null) {
+            [$newIds, $deleteIds] = self::determineGrantRevokes($memberships, $teamIds, 'id');
+
+            if (!$isAdmin) {
+                $newIds = self::canManageTeam($newIds, $manageIds);
+                $deleteIds = self::canManageTeam($deleteIds, $manageIds);
+            }
+        }
+
+        if ($grantIds !== null) {
+            if (!$isAdmin) {
+                $grantIds = self::canManageTeam($grantIds, $manageIds);
+            }
+            $newIds = array_merge($newIds, $grantIds);
+        }
+
+        if ($revokeIds !== null) {
+            if (!$isAdmin) {
+                $revokeIds = self::canManageTeam($revokeIds, $manageIds);
+            }
+            $deleteIds = array_merge($deleteIds, $revokeIds);
         }
 
         foreach ($deleteIds as $id) {
@@ -193,7 +252,7 @@ class Membership
      * @return void
      */
 
-    public static function updateManagementForPerson(int $userId, int $personId, array $teamIds, $reason, bool $isAdmin) : void
+    public static function updateManagementForPerson(int $userId, int $personId, array $teamIds, $reason, bool $isAdmin): void
     {
         $memberships = TeamManager::findForPerson($personId);
 

@@ -438,13 +438,21 @@ class Position extends ApiModel
      * @return Collection
      */
 
-    public static function findForQuery(array $query): Collection
+    public static function findForQuery(array $query, bool $isAdmin = false): Collection
     {
         $type = $query['type'] ?? null;
         $includeRoles = $query['include_roles'] ?? false;
         $hasPaycode = $query['has_paycode'] ?? false;
+        $canManage = $query['can_manage'] ?? false;
 
-        $sql = self::orderBy('title');
+        $sql = self::select('position.*')->orderBy('title');
+
+        if ($canManage && !$isAdmin) {
+            $sql->leftJoin('team_manager', function ($j)  {
+                $j->on('team_manager.team_id', 'position.team_id');
+                $j->where('team_manager.person_id', Auth::id());
+            })->addSelect(DB::raw('IF(team_manager.team_id is null, false, true) AS can_manage'));
+        }
 
         if (!empty($type)) {
             $sql->where('type', $type);
@@ -460,6 +468,12 @@ class Position extends ApiModel
         }
 
         $rows = $sql->get();
+
+        if ($canManage && $isAdmin) {
+            foreach ($rows as $row) {
+                $row->can_manage = true;
+            }
+        }
 
         if ($includeRoles) {
             $rows->load('position_roles');
