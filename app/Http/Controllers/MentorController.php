@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Lib\Alpha;
+use App\Lib\ClubhouseCache;
+use App\Lib\GroundHogDay;
 use App\Lib\ProspectiveNewVolunteer;
 use App\Models\Person;
 use App\Models\PersonMentor;
@@ -10,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class MentorController extends ApiController
 {
@@ -65,7 +68,7 @@ class MentorController extends ApiController
                 ->whereNull('timesheet.on_duty')
                 ->orderBy('callsign')
                 ->get();
-            return response()->json([ 'alphas' => $alphas]);
+            return response()->json(['alphas' => $alphas]);
         } else {
             return response()->json(['alphas' => Alpha::retrieveAllAlphas()]);
         }
@@ -270,11 +273,11 @@ class MentorController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function eligibleAlphas() : JsonResponse
+    public function eligibleAlphas(): JsonResponse
     {
         $this->authorize('isMentor');
 
-        return response()->json([ 'prospectives' => ProspectiveNewVolunteer::retrievePotentialAlphas() ]);
+        return response()->json(['prospectives' => ProspectiveNewVolunteer::retrievePotentialAlphas()]);
     }
 
     /**
@@ -284,7 +287,7 @@ class MentorController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function convertProspectives() : JsonResponse
+    public function convertProspectives(): JsonResponse
     {
         $this->authorize('isMentor');
 
@@ -293,7 +296,32 @@ class MentorController extends ApiController
             'prospectives.*' => 'integer'
         ]);
 
-        return response()->json([ 'alphas' => ProspectiveNewVolunteer::convertProspectivesToAlphas($params['prospectives']) ]);
+        return response()->json(['alphas' => ProspectiveNewVolunteer::convertProspectivesToAlphas($params['prospectives'])]);
     }
 
+    /**
+     * Set up the database for Mentor training.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException|InvalidArgumentException
+     */
+
+    public function setupTrainingData(): JsonResponse
+    {
+        $this->authorize('isMentor');
+
+        if (!is_ghd_server()) {
+            throw new AuthorizationException("Mentor Groundhog Day Setup is only available on the Training Server.");
+        }
+
+        if (ClubhouseCache::has('mentor-training-data')) {
+            throw new AuthorizationException("Mentor Groundhog Day Setup has already been run.");
+        }
+
+        GroundHogDay::setupMentorTrainingData(config('clubhouse.GroundhogDayTime'));
+
+        ClubhouseCache::put('mentor-training-data', true);
+
+        return $this->success();
+    }
 }

@@ -12,6 +12,7 @@ use App\Models\TraineeStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class GroundHogDay
 {
@@ -134,7 +135,7 @@ class GroundHogDay
      * @param Carbon|string $dt
      * @return string
      */
-    public static function trainingDatabaseDumpName(Carbon|string $dt) : string
+    public static function trainingDatabaseDumpName(Carbon|string $dt): string
     {
         $date = Carbon::parse($dt)->format('Y-m-d');
         return "training-{$date}.sql.gz";
@@ -159,9 +160,148 @@ class GroundHogDay
             return;
         }
 
-        PersonSlot::insert([ 'slot_id' => $slot->id, 'person_id' => $person->id]);
+        PersonSlot::insert(['slot_id' => $slot->id, 'person_id' => $person->id]);
         $ts = TraineeStatus::firstOrNewForSession($person->id, $slot->id);
         $ts->passed = true;
         $ts->saveWithoutValidation();
+    }
+
+    /**
+     * Setup training data for the Mentors.
+     *
+     * - Convert the first Alpha shift to the GHD time, and delete all other shifts.
+     * - Convert any Alpha account in the GHD year back to Alpha status regardless of current status.
+     * - Sign back in any Mentor or MITTen that was on duty during the first day of Alpha shifts.
+     * - Delete all Mentor/Alpha pods for the GHD year.
+     * - Delete all Mentor assignments for the GHD year.
+     * - Delete all Alpha scheduled signups that are not the Alpha shift, or In-Person trainings.
+     *
+     * @param string $ghd
+     */
+
+    public static function setupMentorTrainingData(string $ghd): void
+    {
+        $target = new Carbon($ghd);
+        $year = $target->year;
+
+        $personStatus = DB::table('person_status')
+            ->where('new_status', Person::ALPHA)
+            ->whereYear('created_at', $year)
+            ->get();
+
+        if ($personStatus->isEmpty()) {
+            throw new RuntimeException("No Alphas found for {$year}");
+        }
+
+        $peopleIds = $personStatus->pluck('person_id')->toArray();
+
+        DB::table('person')
+            ->whereIntegerInRaw('id', $peopleIds)
+            ->update(['status' => Person::ALPHA]);
+
+        DB::table('person_position')->insertOrIgnore(
+            array_map(fn($id) => [
+                'person_id' => $id,
+                'position_id' => Position::ALPHA
+            ], $peopleIds)
+        );
+
+        DB::table('person_slot')
+            ->join('slot', 'slot.id', 'person_slot.slot_id')
+            ->where('slot.begins_year', $year)
+            ->whereIntegerInRaw('person_slot.person_id', $peopleIds)
+            ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
+            ->delete();
+
+        DB::table('person_mentor')
+            ->where('mentor_year', $year)
+            ->delete();
+
+        $slots = Slot::where('begins_year', $year)
+            ->where('position_id', Position::ALPHA)
+            ->orderBy('begins')
+            ->get();
+
+        $pods = DB::table('pod')
+            ->whereIn('slot_id', $slots->pluck('id'))
+            ->get();
+
+        if ($pods->isNotEmpty()) {
+            DB::table('person_pod')
+                ->whereIn('pod_id', $pods->pluck('id'))
+                ->delete();
+        }
+
+        $saturday = null;
+        foreach ($slots as $slot) {
+            if ($slot->begins->dayOfWeek == 6 && !$saturday) {
+                $saturday = $slot->begins->toDateString();
+                $begins = $slot->begins;
+                $begins->month = $target->month;
+                $begins->day = $target->day;
+                $begins->hour = $target->hour;
+                $begins->minute = $target->minute;
+                $slot->begins = $begins;
+                $slot->ends = $begins->clone()->addHours(10);
+                $slot->saveWithoutValidation();
+            } else {
+                $slot->delete();
+            }
+        }
+
+        Timesheet::whereRaw('DATE(on_duty) != ?', [$saturday])
+            ->whereYear('on_duty', $year)
+            ->where('position_id', Position::ALPHA)
+            ->delete();
+
+        Timesheet::where('person_id', $peopleIds)
+            ->whereNotNull('off_duty')
+            ->delete();
+
+        $rows = Timesheet::whereDate('on_duty', $saturday)
+            ->where('position_id', Position::ALPHA)
+            ->get()
+            ->groupBy('person_id');
+
+        foreach ($rows as $personId => $entries) {
+            $ts = $entries->first();
+            $onDuty = $ts->on_duty;
+            $onDuty->month = $target->month;
+            $onDuty->day = $target->day;
+            $onDuty->hour = $target->hour;
+            $onDuty->minute = $target->minute;
+            $ts->on_duty = $onDuty;
+            $ts->off_duty = null;
+            $ts->saveWithoutValidation();
+        }
+
+        $mentors = Timesheet::where('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
+            ->whereDate('on_duty', $saturday)
+            ->orderBy('on_duty')
+            ->get()
+            ->groupBy('person_id');
+
+        Timesheet::where('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
+            ->whereYear('on_duty', $year)
+            ->whereRaw('DATE(on_duty) != ?', [$saturday])
+            ->delete();
+
+        foreach ($mentors as $personId => $entries) {
+            $mentor = $entries->first();
+            // Kill any entry still on duty
+            DB::table('timesheet')
+                ->where('person_id', $mentor->person_id)
+                ->where('id', '!=', $mentor->id)
+                ->whereNull('off_duty')
+                ->delete();
+            $onDuty = $mentor->on_duty;
+            $onDuty->month = $target->month;
+            $onDuty->day = $target->day;
+            $onDuty->hour = $target->hour;
+            $onDuty->minute = $target->minute;
+            $mentor->on_duty = $onDuty;
+            $mentor->off_duty = null;
+            $mentor->saveWithoutValidation();
+        }
     }
 }
