@@ -196,7 +196,7 @@ Route::group([
     Route::post('mentor/mentor-assignment', 'MentorController@mentorAssignment');
     Route::post('mentor/convert-alphas', 'MentorController@convertAlphas');
     Route::post('mentor/convert-prospectives', 'MentorController@convertProspectives');
-
+    Route::post('mentor/setup-training-data', 'MentorController@setupTrainingData');
     Route::get('mentor/verdicts', 'MentorController@verdicts');
 
     Route::get('motd/bulletin', 'MotdController@bulletin');
