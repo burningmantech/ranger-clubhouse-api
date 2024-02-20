@@ -6,6 +6,7 @@ use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Swag extends ApiModel
 {
@@ -67,6 +68,12 @@ class Swag extends ApiModel
 
         self::deleted(function ($model) {
             PersonSwag::where('swag_id', $model->id)->delete();
+            if ($model->type == self::TYPE_DEPT_SHIRT) {
+                foreach (['tshirt_swag_id', 'tshirt_secondary_swag_id', 'long_sleeve_swag_id'] as $shirt) {
+                    // Nuke the shirt.
+                    DB::table('person')->where($shirt, $model->id)->update([$shirt => null]);
+                }
+            }
         });
     }
 
