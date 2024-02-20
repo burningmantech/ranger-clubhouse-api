@@ -610,7 +610,7 @@ class PersonController extends ApiController
             'mvr_eligible' => MVR::isEligible($personId, $event),
             'onduty_position' => $onduty,
 
-            'is_team_manager' => TeamManager::isManagerOfAny($personId),
+            'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),
 
             // Years breakdown
             'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
