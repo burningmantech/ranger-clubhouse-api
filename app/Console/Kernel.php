@@ -67,6 +67,9 @@ class Kernel extends ConsoleKernel
 
             // Prune failed jobs
             $schedule->command('queue:prune-failed --hours=48')->dailyAt('04:00')->onOneServer();
+
+            // Expire stale MOTDs
+            $schedule->command('clubhouse:expire-announcements')->dailyAt('05:00')->onOneServer();
         }
 
         if (is_ghd_server()) {
