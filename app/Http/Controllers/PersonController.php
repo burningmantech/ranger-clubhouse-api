@@ -28,10 +28,12 @@ use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
+use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\PositionRole;
 use App\Models\Role;
 use App\Models\SurveyAnswer;
+use App\Models\TeamManager;
 use App\Models\TeamRole;
 use App\Models\Timesheet;
 use App\Models\Training;
@@ -607,6 +609,8 @@ class PersonController extends ApiController
             'may_request_stickers' => $event->may_request_stickers,
             'mvr_eligible' => MVR::isEligible($personId, $event),
             'onduty_position' => $onduty,
+
+            'is_team_manager' => TeamManager::isManagerOfAny($personId),
 
             // Years breakdown
             'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
