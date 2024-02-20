@@ -145,4 +145,16 @@ class TeamManager extends ApiModel
         return self::where(['team_id' => $teamId, 'person_id' => $personId])->exists();
     }
 
+    /**
+     * Is the person a manger of any team?
+     *
+     * @param $personId
+     * @return bool
+     */
+
+    public static function isManagerOfAny($personId) : bool
+    {
+        return self::where('person_id', $personId)->exists();
+    }
+
 }
