@@ -255,7 +255,7 @@ class GroundHogDay
             ->delete();
 
         Timesheet::where('person_id', $peopleIds)
-            ->whereNotNull('off_duty')
+            ->whereNull('off_duty')
             ->delete();
 
         $rows = Timesheet::whereDate('on_duty', $saturday)
