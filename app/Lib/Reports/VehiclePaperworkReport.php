@@ -36,7 +36,7 @@ class VehiclePaperworkReport
         if ($ids->isNotEmpty()) {
             $eligibles = DB::table('person')->select('id', 'callsign', 'status')->whereIntegerInRaw('id', $ids)->get();
         } else {
-            $eligibles =[];
+            $eligibles = [];
         }
 
         $peopleById = [];
@@ -52,6 +52,7 @@ class VehiclePaperworkReport
                         'title' => $team->title,
                     ];
                 }
+                usort($mvrTeams, fn($a, $b) => strcasecmp($a['title'], $b['title']));
             }
 
             $personPositions = $peopleByPositions->get($person->id);
@@ -64,6 +65,7 @@ class VehiclePaperworkReport
                         'title' => $position->title,
                     ];
                 }
+                usort($mvrPositions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
             }
 
             $peopleById[$person->id] = [
@@ -102,15 +104,15 @@ class VehiclePaperworkReport
                     'status' => $row->status,
                 ];
             }
-                $person = &$peopleById[$row->id];
+            $person = &$peopleById[$row->id];
             $person['signed_motorpool_agreement'] = $row->signed_motorpool_agreement;
             $person['org_vehicle_insurance'] = $row->org_vehicle_insurance;
             $person['mvr_eligible'] = $row->mvr_eligible;
         }
 
         $people = array_values($peopleById);
-        usort($people, fn ($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+        usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return $people;
-     }
+    }
 }
