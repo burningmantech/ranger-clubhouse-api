@@ -3,7 +3,7 @@
         Hello Photo Reviewer,
     </p>
     <p>
-        One or more photos are <a href="https://ranger-clubhouse.burningman.org/client/vc/photo-review">queued for reviewed.</a>
+        One or more photos are <a href="https://ranger-clubhouse.burningman.org/vc/photo-review">queued for reviewed.</a>
     </p>
     <p>
     <table class="table table-sm table-striped">

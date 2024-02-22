@@ -3,6 +3,12 @@
     <p>
         * * * DO NOT REPLY TO THIS MESSAGE * * *
     </p>
+    @if ($expiresAt)
+        <p style="color:red;">
+            If you have received this message after
+            {{$expiresAt->toFormattedDayDateString()}} {{$expiresAt->toTimeString()}} (Pacific), please disregard it.
+        </p>
+    @endif
     <p>
         @hyperlinktext($rbsMessage)
     </p>

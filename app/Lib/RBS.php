@@ -232,26 +232,26 @@ class RBS
         return [$sent, $fails];
     }
 
-    /*
+    /**
      * Send an Email message to list of people
      *
      * @param array $alert the alert row
      * @param int $broadcastId the broadcast identifier
      * @param int $senderId person who sending
      * @param array $people list to send to
-     * @param string $from email address of sender (usually do-not-reply@burningman.org)
      * @param string $subject email subject
      * @param string $message email body
      * @return array [ success count, failed count ]
+     * @throws ReflectionException
      */
 
-    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $subject, $message): array
+    public static function broadcastEmail($alert, $broadcastId, $senderId, $people, $subject, $message, $expiresAt): array
     {
         $sandbox = setting('BroadcastMailSandbox');
 
         if (!$sandbox) {
             // Wrap the message in an HTML email template
-            $body = (new RBSMail($subject, $message, $alert))->render();
+            $body = (new RBSMail($subject, $message, $alert, $expiresAt))->render();
             $mailer = self::setupSMTP();
         }
 
@@ -280,7 +280,7 @@ class RBS
                 // Sender format is "Callsign (Real Name)"
                 $firstName = empty($person->preferred_name) ? $person->first_name : $person->preferred_name;
                 $emailMessage = self::createEmail($from,
-                    new Address($email, $person->callsign . ' (' .$firstName . ' ' . $person->last_name . ')'),
+                    new Address($email, $person->callsign . ' (' . $firstName . ' ' . $person->last_name . ')'),
                     $subject,
                     $body);
                 try {
@@ -353,7 +353,7 @@ class RBS
         // Retry failed emails
         if (!$emails->isEmpty()) {
             $alert = Alert::find($broadcast->alert_id);
-            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert))->render();
+            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert, $expiresAt))->render();
 
             $mailer = self::setupSMTP();
 
@@ -364,7 +364,8 @@ class RBS
                     $broadcast->sender_address,
                     new Address($message->address, $person->callsign . ' (' . $firstName . ' ' . $person->last_name . ')'),
                     $broadcast->subject,
-                    $body);
+                    $body
+                );
                 try {
                     $sentMessage = $mailer->send($emailMessage);
                     $message->update(['status' => Broadcast::STATUS_SENT]);
@@ -442,6 +443,7 @@ class RBS
      * @param string|Address $to
      * @param string $subject
      * @param string $message
+     * @param string|Carbon|null $expiresAt
      * @return Email
      */
 
@@ -454,7 +456,6 @@ class RBS
         $emailMessage->from($from);
         $emailMessage->to($to);
         $emailMessage->subject($subject);
-        // Always send out HTML emails, because people like them fancy styled emails
         $emailMessage->html($message);
         return $emailMessage;
     }
