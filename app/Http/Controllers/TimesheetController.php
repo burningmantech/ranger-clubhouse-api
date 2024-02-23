@@ -454,6 +454,7 @@ class TimesheetController extends ApiController
 
         $response = ['status' => 'success', 'timesheet' => $timesheet];
 
+        $timesheet->load('position:id,title,type');
         $person = $timesheet->person;
         $status = $person->status;
         if (($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED)
