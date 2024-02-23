@@ -208,15 +208,8 @@ class SalesforceController extends ApiController
         $person->known_rangers = $pca->known_ranger_names;
         $person->known_pnvs = $pca->known_pnv_names;
 
-        /*
-         $person->longsleeveshirt_size_style = empty($pca->longsleeveshirt_size_style) ? 'Unknown' : $pca->longsleeveshirt_size_style;
-         $person->teeshirt_size_style = empty($pca->teeshirt_size_style) ? 'Unknown' : $pca->teeshirt_size_style;
-        */
-
         if ($isNew) {
             $person->password = 'abcdef';
-        } else {
-            $oldStatus = $person->status;
         }
 
         $person->status = Person::PROSPECTIVE;
@@ -243,15 +236,12 @@ class SalesforceController extends ApiController
             return;
         }
 
-
         if ($isNew) {
             // Record the initial status for tracking through the Unified Flagging View
             PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
             // Setup the default roles & positions
             PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
             PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
-        } else {
-            $person->changeStatus(Person::PROSPECTIVE, $oldStatus, 'salesforce import');
         }
 
         if (!empty($pca->vc_comments)) {

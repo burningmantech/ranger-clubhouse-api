@@ -395,8 +395,6 @@ class ProspectiveClubhouseAccountFromApplication
             // Setup the default roles & positions
             PersonRole::resetRoles($person->id, self::APPLICATION_APPROVED_MESSAGE, Person::ADD_NEW_USER);
             PersonPosition::resetPositions($person->id, self::APPLICATION_APPROVED_MESSAGE, Person::ADD_NEW_USER);
-        } else {
-            $person->changeStatus(Person::PROSPECTIVE, $oldStatus, self::APPLICATION_APPROVED_MESSAGE);
         }
 
         $notes = $app->notes()->get();

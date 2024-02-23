@@ -53,7 +53,7 @@ class ProspectiveNewVolunteer
 
         $alphaIds = [];
         foreach ($potentialAlphas as $potentialAlpha) {
-            $potentialAlpha->changeStatus(Person::ALPHA, $potentialAlpha->status, 'Mentor bulk convert');
+            $potentialAlpha->status = Person::ALPHA;
             $potentialAlpha->auditReason = 'Mentor bulk convert';
             $potentialAlpha->saveWithoutValidation();
             $alphaIds[] = $potentialAlpha->id;

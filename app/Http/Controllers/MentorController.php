@@ -251,8 +251,7 @@ class MentorController extends ApiController
 
             $person = $people[$alphaId];
             if ($person->status != $status) {
-                $oldStatus = $person->status;
-                $person->changeStatus($status, $oldStatus, 'mentor conversion');
+                $person->status = $status;
                 $person->auditReason = 'mentor conversion';
                 $person->saveWithoutValidation();
             }

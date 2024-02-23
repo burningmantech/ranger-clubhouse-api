@@ -460,14 +460,17 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             }
         });
 
-        self::updated(function ($model) {
+        self::updated(function (Person $model) {
             if (!empty($model->lms_id)
                 && $model->wasChanged(['callsign', 'email', 'first_name', 'last_name'])) {
                 OnlineCourseSyncPersonJob::dispatch($model);
             }
 
-            if ($model->wasChanged('status') && $model->status == self::DECEASED) {
-                HandleReservation::recordDeceased($model->callsign);
+            if ($model->wasChanged('status')) {
+                $changed = $model->getAuditedValues()['status'] ?? null;
+                if ($changed) {
+                    $model->changeStatus($changed[0], $model->auditReason);
+                }
             }
         });
     }
@@ -1148,17 +1151,25 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Change the account status and adjust the positions & roles if need be.
+     * Change the account status and adjust the positions & roles if need be. Mostly copied from Clubhouse 1.
+     * Invoked  from the updated model callback -- avoid calling this method directly.
      *
-     * TODO figure out a better way to do this. Mostly copied from Clubhouse 1.
+     * Depending on the new status, the following actions may be taken:
+     * - Grant or revocation of positions and teams.
+     * - Addition or removal of permissions
+     * - Removal of upcoming shift sign-ups.
+     * - The approved, non-vintage callsign will be added to the handle reservation list for deceased individuals.
+     * - Clear the asset authorization flag for "locked" account statuses.
      *
-     * @param string $newStatus
+     * TODO figure out a better way to do this.
+     *
      * @param string $oldStatus
      * @param string $reason
      */
 
-    public function changeStatus(string $newStatus, string $oldStatus, string $reason)
+    public function changeStatus(string $oldStatus, string $reason): void
     {
+        $newStatus = $this->status;
         if ($newStatus == $oldStatus) {
             return;
         }
@@ -1233,6 +1244,10 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 PersonTeam::removeAllFromPerson($personId, $changeReason);
                 Schedule::removeFutureSignUps($personId, 'conversion to past prospective');
                 break;
+        }
+
+        if ($newStatus === Person::DECEASED && $this->callsign_approved && !$this->vintage) {
+            HandleReservation::recordDeceased($this->callsign);
         }
 
         if ($oldStatus == Person::ALPHA) {
