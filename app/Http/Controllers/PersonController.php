@@ -199,13 +199,6 @@ class PersonController extends ApiController
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
 
-        $statusChanged = false;
-        if ($person->isDirty('status')) {
-            $statusChanged = true;
-            $newStatus = $person->status;
-            $oldStatus = $person->getOriginal('status');
-        }
-
         $emailChanged = false;
         if ($person->isDirty('email')) {
             $emailChanged = true;
@@ -235,11 +228,6 @@ class PersonController extends ApiController
             if ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA) {
                 mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
             }
-        }
-
-        if ($statusChanged) {
-            $person->changeStatus($newStatus, $oldStatus, 'person update');
-            $person->saveWithoutValidation();
         }
 
         $person->languages = PersonLanguage::retrieveForPerson($person->id);

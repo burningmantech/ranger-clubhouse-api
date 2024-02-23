@@ -363,14 +363,13 @@ class BulkUploader
             }
 
             $oldValue = $person->status;
-            $newValue = $person->status = $action;
-            $person->auditReason = $reason;
-
-            $record->status = self::STATUS_SUCCESS;
+            $newValue = $action;
             if ($commit) {
-                $person->changeStatus($newValue, $oldValue, $reason);
+                $person->status = $action;
+                $person->auditReason = $reason;
                 self::saveModel($person, $record);
             }
+            $record->status = self::STATUS_SUCCESS;
             $record->changes = [$oldValue, $newValue];
         }
     }

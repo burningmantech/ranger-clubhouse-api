@@ -456,16 +456,14 @@ class TimesheetController extends ApiController
 
         $person = $timesheet->person;
         $status = $person->status;
-        if ($timesheet->position->type != Position::TYPE_TRAINING
-            && $timesheet->position_id != Position::CHEETAH_CUB
-            && ($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED)) {
+        if (($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION || $status == Person::RETIRED)
+            && $timesheet->position->type != Position::TYPE_TRAINING
+            && $timesheet->position_id != Position::CHEETAH_CUB) {
             $person->status = Person::ACTIVE;
-            $person->auditReason = 'automatic conversion';
-            $person->changeStatus(Person::ACTIVE, $status, 'automatic conversion');
+            $person->auditReason = 'automatic status conversion';
             $person->saveWithoutValidation();
             $response['now_active_status'] = true;
             mail_to(setting('VCEmail'), new AutomaticActiveConversionMail($person, $status, $timesheet->position->title, $this->user->callsign), false);
-
         }
 
         return response()->json($response);

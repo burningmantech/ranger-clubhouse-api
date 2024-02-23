@@ -59,11 +59,9 @@ class MaintenanceController extends ApiController
 
             if ($person->resetCallsign()) {
                 $person->callsign_approved = false;
-                $oldStatus = $person->status;
                 $person->status = Person::PAST_PROSPECTIVE;
                 $person->auditReason = 'maintenance - pnv reset';
                 $person->saveWithoutValidation();
-                $person->changeStatus(Person::PAST_PROSPECTIVE, $oldStatus, 'maintenance - pnv reset');
                 $result['callsign_reset'] = $person->callsign;
             } else {
                 $result['error'] = 'Cannot reset callsign';
