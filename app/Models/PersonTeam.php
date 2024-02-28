@@ -93,6 +93,25 @@ class PersonTeam extends ApiModel
     }
 
     /**
+     * Is the person a member of a PVR eligible team?
+     *
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function havePVREligibleTeam(int $personId): bool
+    {
+        return DB::table('team')
+            ->select('team.id', 'team.title')
+            ->join('person_team', 'person_team.team_id', 'team.id')
+            ->where('person_team.person_id', $personId)
+            ->where('team.active', true)
+            ->where('team.pvr_eligible', true)
+            ->limit(1)
+            ->exists();
+    }
+
+    /**
      * Is the person a team member?
      *
      * @param int $teamId

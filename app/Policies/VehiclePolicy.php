@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Lib\PVR;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Role;
@@ -12,11 +13,13 @@ class VehiclePolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user): ?true
     {
         if ($user->hasRole(Role::ADMIN)) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -54,7 +57,7 @@ class VehiclePolicy
 
     public function show(Person $user, Vehicle $vehicle): bool
     {
-        return $vehicle->person_id == $user->id || $user->hasRole([ Role::MANAGE, Role::VIEW_PII]);
+        return $vehicle->person_id == $user->id || $user->hasRole([Role::MANAGE, Role::VIEW_PII]);
     }
 
     /**
@@ -66,7 +69,7 @@ class VehiclePolicy
 
     public function store(Person $user): bool
     {
-        return PersonEvent::isSet($user->id, 'may_request_stickers');
+        return $this->isEligible($user);
     }
 
     /**
@@ -79,7 +82,7 @@ class VehiclePolicy
 
     public function storeForPerson(Person $user, Vehicle $vehicle): bool
     {
-        return PersonEvent::isSet($user->id, 'may_request_stickers') && $vehicle->person_id == $user->id;
+        return $this->isEligible($user) && $vehicle->person_id == $user->id;
     }
 
     /**
@@ -115,7 +118,7 @@ class VehiclePolicy
 
     public function paperwork(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE ]);
+        return $user->hasRole([Role::ADMIN, Role::MANAGE]);
     }
 
     /**
@@ -129,5 +132,18 @@ class VehiclePolicy
     public function info(Person $user, Person $person): bool
     {
         return $user->hasRole(Role::VEHICLE_MANAGEMENT) || $user->id == $person->id;
+    }
+
+    /**
+     * Is the person PVR eligible?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    private function isEligible(Person $user): bool
+    {
+        $year = current_year();
+        return PVR::isEligible($user->id, PersonEvent::findForPersonYear($user->id, $year), $year);
     }
 }

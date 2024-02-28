@@ -138,45 +138,6 @@ class PersonPosition extends ApiModel
     }
 
     /**
-     * Retrieve all active positions with mvr eligible for person
-     *
-     * @param int $personId
-     * @return array
-     */
-    public static function retrieveMVREligibleForPerson(int $personId): array
-    {
-        return DB::table('position')
-            ->select('position.id', 'position.title')
-            ->join('person_position', 'person_position.position_id', 'position.id')
-            ->where('person_position.person_id', $personId)
-            ->where('position.active', true)
-            ->where('position.mvr_eligible', true)
-            ->orderBy('position.title')
-            ->get()
-            ->toArray();
-    }
-
-    /**
-     * Does the person have a MVR eligible position?
-     *
-     * @param int $personId
-     * @return bool
-     */
-
-    public static function haveMVREligibleForPerson(int $personId): bool
-    {
-        return DB::table('position')
-            ->select('position.id', 'position.title')
-            ->join('person_position', 'person_position.position_id', 'position.id')
-            ->where('person_position.person_id', $personId)
-            ->where('position.active', true)
-            ->where('position.mvr_eligible', true)
-            ->limit(1)
-            ->exists();
-    }
-
-
-    /**
      * Remove all positions from a person in response to status change, add back
      * the default roles if requested.
      *
@@ -185,7 +146,7 @@ class PersonPosition extends ApiModel
      * @param string $action
      */
 
-    public static function resetPositions($personId, $reason, $action)
+    public static function resetPositions(int $personId, string $reason, string $action)
     {
         $removeIds = self::where('person_id', $personId)->pluck('position_id')->toArray();
 

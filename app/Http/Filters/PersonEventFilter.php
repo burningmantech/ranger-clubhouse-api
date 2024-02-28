@@ -12,12 +12,12 @@ use App\Models\Role;
 
 class PersonEventFilter
 {
-    const KEY_FIELDS = [
+    const array KEY_FIELDS = [
         'person_id',
         'year'
     ];
 
-    const ADMIN_FIELDS = [
+    const array ADMIN_FIELDS = [
         'lms_course_id',
         'may_request_stickers',
         'org_vehicle_insurance',
@@ -26,16 +26,17 @@ class PersonEventFilter
         'signed_personal_vehicle_agreement',
     ];
 
-    const TIMESHEET_FIELDS = [
+    const array TIMESHEET_FIELDS = [
         'timesheet_confirmed',
     ];
 
-    const READONLY_FIELDS = [
+    const array READONLY_FIELDS = [
         'timesheet_confirmed_at'
     ];
 
-    const HQ_FIELDS = [
+    const array HQ_FIELDS = [
         'asset_authorized',
+        'ignore_mvr',
     ];
 
     //
@@ -45,25 +46,22 @@ class PersonEventFilter
     // 2: which roles are allowed the field (if null, allow any)
     //
 
-    const FIELDS_SERIALIZE = [
+    const array FIELDS_SERIALIZE = [
         [self::KEY_FIELDS],
         [self::ADMIN_FIELDS],
         [self::READONLY_FIELDS],
         [self::HQ_FIELDS],
         [self::TIMESHEET_FIELDS],
     ];
-    const FIELDS_DESERIALIZE = [
+    const array FIELDS_DESERIALIZE = [
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::READONLY_FIELDS, false, [Role::ADMIN]],
         [self::HQ_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
         [self::TIMESHEET_FIELDS, true, [Role::ADMIN, Role::TIMESHEET_MANAGEMENT]]
     ];
 
-    protected PersonEvent $record;
-
-    public function __construct(PersonEvent $record)
+    public function __construct(protected PersonEvent $record)
     {
-        $this->record = $record;
     }
 
     public function serialize(Person $authorizedUser = null): array

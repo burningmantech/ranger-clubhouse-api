@@ -119,6 +119,7 @@ class BulkUploader
             'options' => [
                 ['id' => 'signed_motorpool_agreement', 'label' => 'Signed Motorpool Agreement (gators/golf carts)', 'help' => self::HELP_CALLSIGN],
                 ['id' => 'org_vehicle_insurance', 'label' => 'Has Org Vehicle Insurance (MVR)', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'mvr_eligible', 'label' => 'May Submit a MVR Request', 'help' => self::HELP_CALLSIGN],
                 ['id' => 'may_request_stickers', 'label' => 'May Request Vehicle Use Items', 'help' => self::HELP_CALLSIGN],
             ]
         ],

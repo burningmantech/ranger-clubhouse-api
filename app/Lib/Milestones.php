@@ -11,6 +11,7 @@ use App\Models\PersonEvent;
 use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
+use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Schedule;
@@ -178,65 +179,69 @@ class Milestones
             }
         }
 
-        if ($period != EventDate::AFTER_EVENT) {
-            if (!$isNonRanger) {
-                $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
-            }
-            $milestones['shift_signups'] = Schedule::summarizeShiftSignups($person);
-            // Person is *not* signed up - figure out if weekend shirts are available
-            $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
-            // Burn weekend!
-            $milestones['burn_weekend_signup'] = Schedule::haveBurnWeekendSignup($person);
-
-            $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
-            $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
-            $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
-
-            if ($event->may_request_stickers) {
-                $milestones['vehicle_requests_allowed'] = true;
-                $milestones['vehicle_requests'] = Vehicle::findForPersonYear($personId, $year);
-            }
-
-            if (MVR::isEligible($personId, $event)) {
-                $milestones['mvr_eligible'] = true;
-                $milestones['mvr_request_url'] = setting('MVRRequestFormURL');
-            }
-
-            if (!$isNonRanger && PersonPosition::havePosition($personId, Position::SANDMAN)) {
-                if ($event->sandman_affidavit) {
-                    $milestones['sandman_affidavit_signed'] = true;
-                } else if (TraineeStatus::didPersonPassForYear($personId, Position::SANDMAN_TRAINING, $year)
-                    || TrainerStatus::didPersonTeachForYear($personId, Position::SANDMAN_TRAINING, $year)) {
-                    // Sandpeople! Put the affidavit in your walk, head-to-toe let your whole body talk.
-                    $milestones['sandman_affidavit_unsigned'] = true;
-                }
-            }
-
-            // BMID inspection
-            $haveSignup = DB::table('slot')
-                ->join('person_slot', function ($j) use ($personId) {
-                    $j->on('person_slot.slot_id', 'slot.id')
-                        ->where('person_slot.person_id', $personId);
-                })
-                ->where('slot.begins_year', $year)
-                ->where('slot.position_id', Position::TRAINING)
-                ->where('slot.active', true)
-                ->exists();
-
-            $haveTicket = DB::table('access_document')
-                ->where('person_id', $personId)
-                ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
-                ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-                ->exists();
-
-            $haveBmid = DB::table('bmid')
-                ->where('year', $year)
-                ->where('person_id', $personId)
-                ->whereIn('status', [Bmid::IN_PREP, Bmid::READY_TO_PRINT, Bmid::SUBMITTED])
-                ->exists();
-
-            $milestones['bmid_qualified'] = ($haveSignup || $haveTicket || $haveBmid);
+        if ($period == EventDate::AFTER_EVENT) {
+            return $milestones;
         }
+
+        if (!$isNonRanger) {
+            $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
+        }
+
+        $milestones['shift_signups'] = Schedule::summarizeShiftSignups($person);
+        // Person is *not* signed up - figure out if weekend shirts are available
+        $milestones ['burn_weekend_available'] = Schedule::haveAvailableBurnWeekendShiftsForPerson($person);
+        // Burn weekend!
+        $milestones['burn_weekend_signup'] = Schedule::haveBurnWeekendSignup($person);
+
+        $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
+        $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
+        $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
+
+        if (PVR::isEligible($personId, $event, $year)) {
+            $milestones['vehicle_requests_allowed'] = true;
+            $milestones['vehicle_requests'] = Vehicle::findForPersonYear($personId, $year);
+        }
+
+        if (MVR::isEligible($personId, $event, $year)) {
+            $milestones['mvr_eligible'] = true;
+            $milestones['mvr_request_url'] = setting('MVRRequestFormURL');
+            $milestones['ignore_mvr'] = $event->ignore_mvr;
+        }
+
+        if (!$isNonRanger && PersonPosition::havePosition($personId, Position::SANDMAN)) {
+            if ($event->sandman_affidavit) {
+                $milestones['sandman_affidavit_signed'] = true;
+            } else if (TraineeStatus::didPersonPassForYear($personId, Position::SANDMAN_TRAINING, $year)
+                || TrainerStatus::didPersonTeachForYear($personId, Position::SANDMAN_TRAINING, $year)) {
+                // Sandpeople! Put the affidavit in your walk, head-to-toe let your whole body talk.
+                $milestones['sandman_affidavit_unsigned'] = true;
+            }
+        }
+
+        // BMID inspection
+        $haveSignup = DB::table('slot')
+            ->join('person_slot', function ($j) use ($personId) {
+                $j->on('person_slot.slot_id', 'slot.id')
+                    ->where('person_slot.person_id', $personId);
+            })
+            ->where('slot.begins_year', $year)
+            ->where('slot.position_id', Position::TRAINING)
+            ->where('slot.active', true)
+            ->exists();
+
+        $haveTicket = DB::table('access_document')
+            ->where('person_id', $personId)
+            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+            ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->exists();
+
+        $haveBmid = DB::table('bmid')
+            ->where('year', $year)
+            ->where('person_id', $personId)
+            ->whereIn('status', [Bmid::IN_PREP, Bmid::READY_TO_PRINT, Bmid::SUBMITTED])
+            ->exists();
+
+        $milestones['bmid_qualified'] = ($haveSignup || $haveTicket || $haveBmid);
 
         return $milestones;
     }
