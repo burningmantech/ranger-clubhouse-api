@@ -52,7 +52,6 @@ class Agreements
 
         'personal-vehicle-agreement' => [
             'term' => self::TERM_ANNUAL,
-            'person_event' => 'may_request_stickers',
             'column' => 'signed_personal_vehicle_agreement',
         ],
 

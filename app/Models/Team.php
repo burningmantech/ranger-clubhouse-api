@@ -25,13 +25,14 @@ class Team extends ApiModel
     public $timestamps = true;
     public bool $auditModel = true;
 
-    const TYPE_TEAM = 'team';
-    const TYPE_CADRE = 'cadre';
-    const TYPE_DELEGATION = 'delegation';
+    const string TYPE_TEAM = 'team';
+    const string TYPE_CADRE = 'cadre';
+    const string TYPE_DELEGATION = 'delegation';
 
     protected $fillable = [
         'active',
         'mvr_eligible',
+        'pvr_eligible',
         'title',
         'type',
         'role_ids'
@@ -55,7 +56,7 @@ class Team extends ApiModel
 
     public array|null $role_ids = null;
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 
@@ -63,7 +64,7 @@ class Team extends ApiModel
             // Don't use empty() because the array might be empty indicating no roles are to be assigned
             if (is_array($model->role_ids)) {
                 // Update Position Roles
-                Membership::updateTeamRoles($model->id, $model->role_ids, '');
+                Membership::updateTeamRoles($model->id, $model->role_ids, $model->auditReason ?? '');
             }
             ClubhouseCache::flush();
         });

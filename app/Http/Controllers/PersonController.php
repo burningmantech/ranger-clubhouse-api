@@ -8,6 +8,7 @@ use App\Lib\Milestones;
 use App\Lib\MVR;
 use App\Lib\PersonAdvancedSearch;
 use App\Lib\PersonSearch;
+use App\Lib\PVR;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
 use App\Lib\Reports\PeopleByLocationReport;
@@ -563,11 +564,12 @@ class PersonController extends ApiController
     public function userInfo(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
+        $year = current_year();
 
         $personId = $person->id;
         $person->retrieveRoles();
         $isArtTrainer = $person->hasRole(Role::ART_TRAINER);
-        $event = PersonEvent::firstOrNewForPersonYear($personId, current_year());
+        $event = PersonEvent::firstOrNewForPersonYear($personId, $year);
 
         $timesheet = Timesheet::findPersonOnDuty($personId);
         if ($timesheet) {
@@ -594,8 +596,8 @@ class PersonController extends ApiController
             ],
             'unread_message_count' => PersonMessage::countUnread($personId),
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
-            'may_request_stickers' => $event->may_request_stickers,
-            'mvr_eligible' => MVR::isEligible($personId, $event),
+            'may_request_stickers' => PVR::isEligible($personId, $event, $year),
+            'mvr_eligible' => MVR::isEligible($personId, $event, $year),
             'onduty_position' => $onduty,
 
             'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),

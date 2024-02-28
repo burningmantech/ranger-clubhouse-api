@@ -15,9 +15,9 @@ class Document extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
-    const MOTORPOOL_POLICY_TAG = 'motorpool-policy';
-    const PERSONAL_VEHICLE_AGREEMENT_TAG = 'personal-vehicle-agreement';
-    const DEPT_NDA_TAG = 'dept-nda';
+    const string MOTORPOOL_POLICY_TAG = 'motorpool-policy';
+    const string PERSONAL_VEHICLE_AGREEMENT_TAG = 'personal-vehicle-agreement';
+    const string DEPT_NDA_TAG = 'dept-nda';
 
     protected $fillable = [
         'tag',

@@ -6,10 +6,10 @@ use App\Models\PersonEvent;
 use App\Models\PersonSlot;
 use App\Models\PersonTeam;
 
-class MVR
+class PVR
 {
     /**
-     * Is the person MVR eligible?
+     * Is the person Personal Vehicle eligible?
      *
      * @param int $personId
      * @param PersonEvent|null $event
@@ -19,10 +19,10 @@ class MVR
 
     public static function isEligible(int $personId, ?PersonEvent $event, int $year): bool
     {
-        if ($event?->mvr_eligible) {
+        if ($event?->may_request_stickers) {
             return true;
         }
 
-        return PersonTeam::haveMvrEligibleForPerson($personId) || PersonSlot::hasMVREligibleSignups($personId, $year);
+        return PersonTeam::havePVREligibleTeam($personId) || PersonSlot::hasPVREligibleSignups($personId, $year);
     }
 }

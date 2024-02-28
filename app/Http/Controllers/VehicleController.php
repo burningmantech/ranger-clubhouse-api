@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\MVR;
+use App\Lib\PVR;
 use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Document;
 use App\Models\Person;
@@ -10,7 +11,6 @@ use App\Models\PersonEvent;
 use App\Models\Vehicle;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 
 class VehicleController extends ApiController
 {
@@ -134,9 +134,11 @@ class VehicleController extends ApiController
 
     public function info(Person $person): JsonResponse
     {
-        $this->authorize('info', [ Vehicle::class, $person]);
+        $this->authorize('info', [Vehicle::class, $person]);
         $personId = $person->id;
-        $event = PersonEvent::findForPersonYear($personId, current_year());
+        $year = current_year();
+
+        $event = PersonEvent::findForPersonYear($personId, $year);
 
         if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV()) {
             $info = [];
@@ -146,19 +148,19 @@ class VehicleController extends ApiController
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
                 'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
                 'org_vehicle_insurance' => $event?->org_vehicle_insurance,
-                'vehicle_requests_allowed' => $event?->may_request_stickers,
+                'vehicle_requests_allowed' => PVR::isEligible($personId, $event, $year),
             ];
 
             if ($info['motorpool_agreement_available']) {
                 $info['motorpool_agreement_tag'] = Document::MOTORPOOL_POLICY_TAG;
             }
 
-            if ($event?->may_request_stickers) {
+            if (PVR::isEligible($personId, $event, $year)) {
                 $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
                 $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
             }
 
-            if (MVR::isEligible($personId, $event)) {
+            if (MVR::isEligible($personId, $event, current_year())) {
                 $info['mvr_eligible'] = true;
                 $info['mvr_request_url'] = setting('MVRRequestFormURL');
             } else {
