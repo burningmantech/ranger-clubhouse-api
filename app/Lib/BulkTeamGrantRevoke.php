@@ -60,7 +60,7 @@ class BulkTeamGrantRevoke
                 continue;
             }
 
-            $exists = PersonTeam::haveTeam($person->id, $teamId);
+            $exists = PersonTeam::haveTeam($teamId, $person->id);
 
             if ($grant) {
                 if ($exists) {
