@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class Intake
 {
-    const ABOVE_AVERAGE = 1;
-    const AVERAGE = 2;
-    const BELOW_AVERAGE = 3;
-    const FLAG = 4;
+    const int ABOVE_AVERAGE = 1;
+    const int AVERAGE = 2;
+    const int BELOW_AVERAGE = 3;
+    const int FLAG = 4;
 
     /**
      * Retrieve all PNVs in a given year.
@@ -194,7 +194,7 @@ class Intake
         return $days;
     }
 
-    private static function setSpigotDate(&$dates, string $type, $date, $person)
+    private static function setSpigotDate(&$dates, string $type, $date, $person): void
     {
         if (is_numeric($date)) {
             $date = new Carbon($date);
@@ -217,7 +217,7 @@ class Intake
      * @param array $pnvIds PNV ids to find
      * @param int $year
      * @param bool $onlyFlagged
-     * @param int|null $intakeId
+     * @param int|null $rrnId
      * @return array
      */
 
@@ -242,7 +242,7 @@ class Intake
             ->get()
             ->groupBy('person_id');
 
-        $peopleIntakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year, $rrnId);
+        $peopleIntakeNotes = PersonIntakeNote::retrieveHistoryForPersonIds($pnvIds, $year);
         $mentors = PersonMentor::retrieveAllMentorsForIds($pnvIds, $year);
 
         if (!$rrnId) {
@@ -444,7 +444,7 @@ class Intake
         return ($possible && $possible->new_status == Person::AUDITOR);
     }
 
-    public static function buildIntakeTeam($type, $rankings, $notes, &$haveFlag)
+    public static function buildIntakeTeam($type, $rankings, $notes, &$haveFlag): array
     {
         $teamYears = [];
         $rankName = $type . '_rank';
