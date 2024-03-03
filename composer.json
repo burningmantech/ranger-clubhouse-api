@@ -28,7 +28,7 @@
     "donatj/phpuseragentparser": "^1.8",
     "giggsey/libphonenumber-for-php": "^8.13",
     "guzzlehttp/guzzle": "^7.5.0",
-    "intervention/image": "^2.7.2",
+    "intervention/image": "^3.4.0",
     "laravel/framework": "^10.0",
     "laravel/octane": "^2.0.1",
     "laravel/sanctum": "^3.3",
