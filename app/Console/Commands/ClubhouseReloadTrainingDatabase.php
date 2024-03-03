@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Lib\ClubhouseCache;
 use App\Lib\GroundHogDay;
-use App\Models\Setting;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 
 class ClubhouseReloadTrainingDatabase extends Command
 {
@@ -55,6 +54,7 @@ class ClubhouseReloadTrainingDatabase extends Command
             return 1;
         }
 
+        ClubhouseCache::flush();
         $this->info("Training database has been successfully reloaded. The cycle of time begins again.");
         return 0;
     }
