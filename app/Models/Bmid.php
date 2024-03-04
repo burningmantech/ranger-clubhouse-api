@@ -74,7 +74,7 @@ class Bmid extends ApiModel
         Position::OPERATIONS_MANAGER => ['title1', 'Operations Manager'],
         Position::OOD => ['title1', 'Officer of the Day'],
         // Title 2
-        Position::LEAL => ['title2', 'LEAL'],
+        Position::TROUBLESHOOTER_LEAL => ['title2', 'LEAL'],
         // Title 3
         Position::DOUBLE_OH_7 => ['title3', '007']
     ];
@@ -291,7 +291,6 @@ class Bmid extends ApiModel
             $bmidsByPerson[$personId]->setWap($wap);
         }
 
-        // Figure out who has signed up for the year.
         $ids = DB::table('person')
             ->select('id')
             ->whereIntegerInRaw('id', $personIds)
@@ -302,6 +301,8 @@ class Bmid extends ApiModel
         foreach ($ids as $id) {
             $bmidsByPerson[$id]->has_signups = true;
         }
+
+
 
         // The provisions are special - by default, the items are opt-out so treat an item qualified as
         // the same as claimed.

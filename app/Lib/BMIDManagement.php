@@ -302,7 +302,7 @@ class BMIDManagement
                 $ticketIds = DB::table('access_document')
                     ->join('person', 'person.id', 'access_document.person_id')
                     ->whereIn('person.status', Person::ACTIVE_STATUSES)
-                    ->whereIn('access_document.type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+                    ->whereIn('access_document.type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL, AccessDocument::WAP])
                     ->whereIn('access_document.status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
                     ->groupBy('access_document.person_id')
                     ->pluck('person_id')
@@ -470,8 +470,15 @@ class BMIDManagement
             $people = PersonPosition::where('position_id', $positionId)->pluck('person_id');
 
             foreach ($people as $personId) {
+                if (!AccessDocument::claimedTicketOrWAP($personId)
+                    && !Slot::haveInPersonTrainingSignUp($personId, $year)) {
+                    // 2024 Council ruling, don't print a BMID if no ticket/wap was claimed,
+                    // or did not sign up an In-Person Training.
+                    continue;
+                }
+
                 $bmid = $bmids[$personId] ?? null;
-                if ($bmid == null) {
+                if (!$bmid) {
                     $bmid = Bmid::findForPersonManage($personId, $year);
                     // cache the BMID record - multiple titles might be set
                     $bmids[$personId] = $bmid;

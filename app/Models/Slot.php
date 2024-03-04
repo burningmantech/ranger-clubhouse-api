@@ -511,6 +511,23 @@ class Slot extends ApiModel
     }
 
     /**
+     * Did the person sign up for an InPerson Training?
+     */
+
+    public static function haveInPersonTrainingSignUp(int $personId, int $year) : bool
+    {
+        return DB::table('slot')
+            ->join('person_slot', function ($j) use ($personId) {
+                $j->on('person_slot.slot_id', 'slot.id');
+                $j->where('person_slot.person_id', $personId);
+            })
+            ->where('slot.active', true)
+            ->where('slot.begins_year', $year)
+            ->where('slot.position_id', Position::TRAINING)
+            ->exists();
+    }
+
+    /**
      * See if a given position and datetime is within the scheduled slot times.
      *
      * @param int $positionId
