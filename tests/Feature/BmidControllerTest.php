@@ -16,6 +16,7 @@ use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
 
 class BmidControllerTest extends TestCase
@@ -396,14 +397,21 @@ class BmidControllerTest extends TestCase
      * Test setting BMID titles for people who have special positions
      */
 
-    public function testSetBMIDTitles()
+    public function testSetBMIDTitlesWithClaimedTicket()
     {
         // No BMID should be created for a person who does not hold any special positions.
         $simple = Person::factory()->create();
 
-        // BMID should be created and one title set.
-        $special = Person::factory()->create();
-        PersonPosition::factory()->create(['person_id' => $special->id, 'position_id' => Position::OOD]);
+        // BMID should be created and one title set with a person who meets the ticket claim criteria
+        $ood = Person::factory()->create();
+        PersonPosition::factory()->create(['person_id' => $ood->id, 'position_id' => Position::OOD]);
+        // Ticket criteria is met.
+        AccessDocument::factory()->create([
+            'person_id' => $ood->id,
+            'type' => AccessDocument::SPT,
+            'source_year' => current_year(),
+            'status' => AccessDocument::CLAIMED,
+        ]);
 
         $response = $this->json('POST', 'bmid/set-bmid-titles');
         $response->assertStatus(200);
@@ -411,15 +419,65 @@ class BmidControllerTest extends TestCase
         $response->assertJson([
             'bmids' => [
                 [
-                    'id' => $special->id,
-                    'callsign' => $special->callsign,
+                    'id' => $ood->id,
+                    'callsign' => $ood->callsign,
                     'title1' => 'Officer of the Day'
                 ]
             ]
         ]);
 
-        $this->assertDatabaseHas('bmid', ['person_id' => $special->id, 'title1' => 'Officer of the Day']);
+        $this->assertDatabaseHas('bmid', ['person_id' => $ood->id, 'title1' => 'Officer of the Day']);
         $this->assertDatabaseMissing('bmid', ['person_id' => $simple->id]);
+    }
+
+    public function testSetBMIDTitlesWithTrainingSignUp() {
+        // Test for someone who meets the In-Person training criteria
+        $shiftLead = Person::factory()->create();
+        PersonPosition::factory()->create(['person_id' => $shiftLead->id, 'position_id' => Position::RSC_SHIFT_LEAD]);
+        // Ticket criteria is met.
+        $slot = Slot::factory()->create([
+            'begins' => "{$this->year}-01-01 12:00:00",
+            'ends' => "{$this->year}-01-01 12:01:00",
+            'position_id' => Position::TRAINING,
+        ]);
+
+        PersonSlot::factory()->create([
+            'person_id' => $shiftLead->id,
+            'slot_id' => $slot->id,
+        ]);
+
+        $response = $this->json('POST', 'bmid/set-bmid-titles');
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'bmids.*.id');
+        $response->assertJson([
+            'bmids' => [
+                [
+                    'id' => $shiftLead->id,
+                    'callsign' => $shiftLead->callsign,
+                    'title1' => 'Shift Lead'
+                ]
+            ]
+        ]);
+
+        $this->assertDatabaseHas('bmid', ['person_id' => $shiftLead->id, 'title1' =>  'Shift Lead']);
+    }
+
+    /**
+     * Test no one is given a BMID who has a special position and does not meet the printing criteria
+     *
+     * @return void
+     */
+
+    public function testSetBMIDsTitleNoCriteriaMet() {
+        // Test for someone who meets the In-Person training criteria
+        $shiftLead = Person::factory()->create();
+        PersonPosition::factory()->create(['person_id' => $shiftLead->id, 'position_id' => Position::RSC_SHIFT_LEAD]);
+
+        $response = $this->json('POST', 'bmid/set-bmid-titles');
+        $response->assertStatus(200);
+        $response->assertJsonCount(0, 'bmids.*.id');
+
+        $this->assertDatabaseMissing('bmid', ['person_id' => $shiftLead->id]);
     }
 
     /**
