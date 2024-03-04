@@ -59,6 +59,11 @@ class Kernel extends ConsoleKernel
 
             // Expire stale MOTDs
             $schedule->command('clubhouse:expire-announcements')->dailyAt('05:00')->onOneServer();
+
+            if (config('telescope.enabled')) {
+                // Purge Laravel Telescope logs
+                $schedule->command('telescope:prune --hours=72')->dailyAt('05:30')->onOneServer();
+            }
         }
 
         if (is_ghd_server()) {
