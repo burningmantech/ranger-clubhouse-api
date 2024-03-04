@@ -200,7 +200,7 @@ class AccessDocument extends ApiModel
             switch ($model->type) {
                 case self::SPT:
                     if ($model->isDirty('status')
-                    && ($model->status == self::BANKED || $model->status == self::QUALIFIED)) {
+                        && ($model->status == self::BANKED || $model->status == self::QUALIFIED)) {
                         // Reset delivery method.
                         $model->delivery_method = self::DELIVERY_NONE;
                     }
@@ -321,6 +321,18 @@ class AccessDocument extends ApiModel
             ->whereIn('type', self::REGULAR_TICKET_TYPES)
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED])
             ->doesntExist();
+    }
+
+    /**
+     * Did the person claim a ticket or a WAP?
+     */
+
+    public static function claimedTicketOrWAP(int $personId): bool
+    {
+        return self::where('person_id', $personId)
+            ->whereIn('type', [...self::REGULAR_TICKET_TYPES, self::WAP])
+            ->whereIn('status', [self::CLAIMED, self::SUBMITTED])
+            ->exists();
     }
 
     /**
