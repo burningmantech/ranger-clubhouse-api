@@ -598,6 +598,7 @@ class PersonController extends ApiController
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
             'may_request_stickers' => PVR::isEligible($personId, $event, $year),
             'mvr_eligible' => MVR::isEligible($personId, $event, $year),
+            'motorpool_policy_enabled' => setting('MotorpoolPolicyEnable'),
             'onduty_position' => $onduty,
 
             'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),
