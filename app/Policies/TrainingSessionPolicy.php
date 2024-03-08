@@ -56,6 +56,12 @@ class TrainingSessionPolicy
         return $this->checkForArt($user, $training_session);
     }
 
+    public function trainers(Person $user, TrainingSession $training_session): bool
+    {
+        return $this->checkForArt($user, $training_session);
+    }
+
+
     public function graduationCandidates(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
