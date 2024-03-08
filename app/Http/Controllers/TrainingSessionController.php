@@ -169,25 +169,13 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function trainers(TrainingSession $training_session): JsonResponse
     {
-        $trainerGroups = $training_session->retrieveTrainers();
-
-        $trainers = [];
-        foreach ($trainerGroups as $group) {
-            foreach ($group['trainers'] as $trainer) {
-                $trainers[] = [
-                    'id' => $trainer['id'],
-                    'callsign' => $trainer['callsign']
-                ];
-            }
-        }
-
-        usort($trainers, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-
-        return response()->json(['trainers' => $trainers]);
+        $this->authorize('trainers', $training_session);
+        return response()->json(['trainers' => $training_session->retrieveTrainers()]);
     }
 
     /**
