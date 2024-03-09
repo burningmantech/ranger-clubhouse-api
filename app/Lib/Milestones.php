@@ -11,7 +11,6 @@ use App\Models\PersonEvent;
 use App\Models\PersonOnlineCourse;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
-use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Schedule;
@@ -198,15 +197,20 @@ class Milestones
         $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
 
         if (PVR::isEligible($personId, $event, $year)) {
-            $milestones['vehicle_requests_allowed'] = true;
+            $milestones['pvr_eligible'] = true;
             $milestones['vehicle_requests'] = Vehicle::findForPersonYear($personId, $year);
+            $milestones['ignore_pvr'] = $event->ignore_pvr;
         }
+        // Person might not be eligible until an PVR eligible position is signed up for.
+        $milestones['pvr_potential'] = Position::haveVehiclePotential('pvr', $personId);
 
         if (MVR::isEligible($personId, $event, $year)) {
             $milestones['mvr_eligible'] = true;
             $milestones['mvr_request_url'] = setting('MVRRequestFormURL');
             $milestones['ignore_mvr'] = $event->ignore_mvr;
         }
+        // Person might not be eligible until an MVR eligible position is signed up for.
+        $milestones['mvr_potential'] = Position::haveVehiclePotential('mvr', $personId);
 
         if (!$isNonRanger && PersonPosition::havePosition($personId, Position::SANDMAN)) {
             if ($event->sandman_affidavit) {

@@ -16,6 +16,7 @@ use App\Lib\Reports\PeopleByStatusReport;
 use App\Lib\Reports\RecommendStatusChangeReport;
 use App\Lib\Reports\TimesheetWorkSummaryReport;
 use App\Lib\TicketsAndProvisionsProgress;
+use App\Lib\UserInfo;
 use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\EmailHistory;
@@ -29,7 +30,6 @@ use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
-use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\PositionRole;
 use App\Models\Role;
@@ -564,62 +564,8 @@ class PersonController extends ApiController
     public function userInfo(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
-        $year = current_year();
 
-        $personId = $person->id;
-        $person->retrieveRoles();
-        $isArtTrainer = $person->hasRole(Role::ART_TRAINER);
-        $event = PersonEvent::firstOrNewForPersonYear($personId, $year);
-
-        $timesheet = Timesheet::findPersonOnDuty($personId);
-        if ($timesheet) {
-            $onduty = $timesheet->buildOnDutyInfo();
-        } else {
-            $onduty = null;
-        }
-
-        $data = [
-            'id' => $personId,
-            'callsign' => $person->callsign,
-            'callsign_approved' => $person->callsign_approved,
-            'status' => $person->status,
-            'bpguid' => $person->bpguid,
-            'employee_id' => $person->employee_id,
-            'roles' => $person->roles,
-            'true_roles' => $person->trueRoles,
-            'teacher' => [
-                'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
-                'is_art_trainer' => $isArtTrainer,
-                'is_mentor' => $person->hasRole([Role::ADMIN, Role::MENTOR]),
-                'have_mentored' => PersonMentor::haveMentees($personId),
-                'have_feedback' => SurveyAnswer::haveTrainerFeedback($personId),
-            ],
-            'unread_message_count' => PersonMessage::countUnread($personId),
-            'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
-            'may_request_stickers' => PVR::isEligible($personId, $event, $year),
-            'mvr_eligible' => MVR::isEligible($personId, $event, $year),
-            'motorpool_policy_enabled' => setting('MotorpoolPolicyEnable'),
-            'onduty_position' => $onduty,
-
-            'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),
-
-            // Years breakdown
-            'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
-            'all_years' => Timesheet::findYears($personId, Timesheet::YEARS_ALL),
-            'rangered_years' => Timesheet::findYears($personId, Timesheet::YEARS_RANGERED),
-            'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
-        ];
-
-        /*
-         * In the future the ART training positions might be limited to
-         * a specific set instead of everything for all ART_TRAINERs.
-         */
-
-        if ($isArtTrainer) {
-            $data['teacher']['arts'] = Position::findAllTrainings(true);
-        }
-
-        return response()->json(['user_info' => $data]);
+        return response()->json(['user_info' => UserInfo::build($person)]);
     }
 
     /**

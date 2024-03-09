@@ -33,6 +33,7 @@ class PersonEvent extends ApiModel
     protected $fillable = [
         'asset_authorized',
         'ignore_mvr',
+        'ignore_pvr',
         'may_request_stickers',
         'mvr_eligible',
         'org_vehicle_insurance',
@@ -52,6 +53,7 @@ class PersonEvent extends ApiModel
     protected $attributes = [
         'asset_authorized' => false,
         'ignore_mvr' => false,
+        'ignore_pvr' => false,
         'may_request_stickers' => false,
         'mvr_eligible' => false,
         'org_vehicle_insurance' => false,
@@ -68,6 +70,7 @@ class PersonEvent extends ApiModel
 
     protected $casts = [
         'ignore_mvr' => 'boolean',
+        'ignore_pvr' => 'boolean',
         'lms_enrolled_at' => 'datetime',
         'mvr_eligible' => 'boolean',
         'pii_finished_at' => 'datetime',

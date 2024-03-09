@@ -451,7 +451,7 @@ class Position extends ApiModel
         $sql = self::select('position.*')->orderBy('title');
 
         if ($canManage && !$isAdmin) {
-            $sql->leftJoin('team_manager', function ($j)  {
+            $sql->leftJoin('team_manager', function ($j) {
                 $j->on('team_manager.team_id', 'position.team_id');
                 $j->where('team_manager.person_id', Auth::id());
             })->addSelect(DB::raw('IF(team_manager.team_id is null, false, true) AS can_manage'));
@@ -637,6 +637,51 @@ class Position extends ApiModel
 
         return true;
     }
+
+    /**
+     * Find all positions the person is granted that are of a particular vehicle eligible type
+     * (mvr = Moto Vehicle Record or pvr = Personal Vehicle Request)
+     *
+     * @param string $type
+     * @param int $personId
+     * @return \Illuminate\Support\Collection
+     */
+
+    public static function vehicleEligibleForPerson(string $type, int $personId): \Illuminate\Support\Collection
+    {
+        return DB::table('position')
+            ->join('person_position', function ($j) use ($personId) {
+                $j->on('person_position.position_id', 'position.id');
+                $j->where('person_position.person_id', $personId);
+            })
+            ->select('position.id', 'position.title')
+            ->where('active', true)
+            ->where("{$type}_eligible", true)
+            ->orderBy('title')
+            ->get();
+    }
+
+    /**
+     * Find all positions the person is granted that are of a particular vehicle eligible type
+     * (mvr = Moto Vehicle Record or pvr = Personal Vehicle Request)
+     *
+     * @param string $type
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function haveVehiclePotential(string $type, int $personId): bool
+    {
+        return DB::table('position')
+            ->join('person_position', function ($j) use ($personId) {
+                $j->on('person_position.position_id', 'position.id');
+                $j->where('person_position.person_id', $personId);
+            })
+            ->where('active', true)
+            ->where("{$type}_eligible", true)
+            ->exists();
+    }
+
 
     /**
      * Return the "sub type" of the position - i.e. return an additional types

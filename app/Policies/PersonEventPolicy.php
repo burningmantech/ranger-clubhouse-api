@@ -11,17 +11,19 @@ class PersonEventPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?true
     {
         if ($user->hasRole(Role::ADMIN)) {
             return true;
         }
+
+        return null;
     }
 
     /**
      * Determine whether the user see all the person event records
      */
-    public function index(Person $user)
+    public function index(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -29,7 +31,7 @@ class PersonEventPolicy
     /**
      * Determine whether the user can view the record.
      */
-    public function show(Person $user, PersonEvent $personEvent)
+    public function show(Person $user, PersonEvent $personEvent): bool
     {
         return ($user->id == $personEvent->person_id) || $user->hasRole(Role::MANAGE);
     }
@@ -38,7 +40,8 @@ class PersonEventPolicy
      * Determine whether the user can create the person event record.
      *
      */
-    public function store(Person $user, $personId)
+
+    public function store(Person $user, $personId): bool
     {
         return ($user->id == $personId) || $user->hasRole(Role::MANAGE);
     }
@@ -46,7 +49,7 @@ class PersonEventPolicy
     /**
      * Determine whether the user can update the asset.
      */
-    public function update(Person $user, PersonEvent $personEvent)
+    public function update(Person $user, PersonEvent $personEvent): bool
     {
         return ($user->id == $personEvent->person_id) || $user->hasRole(Role::MANAGE);
     }
@@ -55,7 +58,8 @@ class PersonEventPolicy
      * Determine whether the user can delete the record.
      *
      */
-    public function destroy(Person $user, PersonEvent $personEvent)
+
+    public function destroy(Person $user, PersonEvent $personEvent): false
     {
         return false;
     }

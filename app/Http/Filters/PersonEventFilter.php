@@ -26,6 +26,11 @@ class PersonEventFilter
         'signed_personal_vehicle_agreement',
     ];
 
+    const array USER_FIELDS = [
+        'ignore_mvr',
+        'ignore_pvr',
+    ];
+
     const array TIMESHEET_FIELDS = [
         'timesheet_confirmed',
     ];
@@ -36,7 +41,6 @@ class PersonEventFilter
 
     const array HQ_FIELDS = [
         'asset_authorized',
-        'ignore_mvr',
     ];
 
     //
@@ -48,12 +52,14 @@ class PersonEventFilter
 
     const array FIELDS_SERIALIZE = [
         [self::KEY_FIELDS],
+        [self::USER_FIELDS],
         [self::ADMIN_FIELDS],
         [self::READONLY_FIELDS],
         [self::HQ_FIELDS],
         [self::TIMESHEET_FIELDS],
     ];
     const array FIELDS_DESERIALIZE = [
+        [self::USER_FIELDS, true, [Role::ADMIN]],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::READONLY_FIELDS, false, [Role::ADMIN]],
         [self::HQ_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
