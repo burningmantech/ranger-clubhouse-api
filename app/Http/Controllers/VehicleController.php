@@ -8,6 +8,7 @@ use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\Position;
 use App\Models\Vehicle;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -146,9 +147,14 @@ class VehicleController extends ApiController
             $info = [
                 'motorpool_agreement_available' => setting('MotorpoolPolicyEnable'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
-                'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
+
+                'mvr_positions' => Position::vehicleEligibleForPerson('mvr', $personId),
+                'ignore_mvr' => $event?->ignore_mvr ?? false,
                 'org_vehicle_insurance' => $event?->org_vehicle_insurance,
-                'vehicle_requests_allowed' => PVR::isEligible($personId, $event, $year),
+
+                'ignore_pvr' => $event?->ignore_pvr ?? false,
+                'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
+                'pvr_positions' => Position::vehicleEligibleForPerson('pvr', $personId),
             ];
 
             if ($info['motorpool_agreement_available']) {
@@ -156,8 +162,11 @@ class VehicleController extends ApiController
             }
 
             if (PVR::isEligible($personId, $event, $year)) {
+                $info['pvr_eligible'] = true;
                 $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
                 $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
+            } else {
+                $info['pvr_eligible'] = false;
             }
 
             if (MVR::isEligible($personId, $event, current_year())) {
