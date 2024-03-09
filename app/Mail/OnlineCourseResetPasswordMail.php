@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 
 class OnlineCourseResetPasswordMail extends ClubhouseMailable
 {
-    public ?string $ocUrl;
+    public ?string $otUrl;
 
     /**
      * Create a new message instance.
@@ -20,8 +20,8 @@ class OnlineCourseResetPasswordMail extends ClubhouseMailable
 
     public function __construct(public Person $person, public string $password)
     {
-        $this->otUrl = setting('OnlineCourseSiteUrl');
         parent::__construct();
+        $this->otUrl = setting('OnlineCourseSiteUrl');
     }
 
     /**
