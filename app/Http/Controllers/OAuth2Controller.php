@@ -209,13 +209,18 @@ class OAuth2Controller extends ApiController
     {
         $person = Auth::user();
 
+        $status = $person->status;
+        if (in_array($status, Person::ACTIVE_STATUSES)) {
+            $first = "Ranger";
+        } else {
+            $first = ucfirst($status);
+        }
+
         return response()->json([
             'chid' => $person->id,
-            'callsign' => $person->callsign,
-            'username' => preg_replace('/[^\w\-]/', '', Person::convertDiacritics(str_replace(" ", "-", str_replace("&", " and ",$person->callsign)))),
             'email' => $person->email,
-            'given_name' => $person->desired_first_name(),
-            'family_name' => $person->last_name
+            'given_name' => $first,
+            'family_name' => $person->callsign,
         ]);
     }
 
@@ -248,7 +253,7 @@ class OAuth2Controller extends ApiController
             $tokens[] = [
                 'id' => $token->id,
                 'token' => $token->token,
-                'last_used_at' => (string) $token->last_used_at,
+                'last_used_at' => (string)$token->last_used_at,
                 'created_at' => (string)$token->created_at,
                 'expires_at' => (string)$token->created_at->addMinutes($expireMinutes),
                 'name' => $token->name,
