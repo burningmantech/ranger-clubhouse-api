@@ -218,6 +218,7 @@ class OAuth2Controller extends ApiController
 
         return response()->json([
             'chid' => $person->id,
+            'username' => 'ch-' . $person->id,
             'email' => $person->email,
             'given_name' => $first,
             'family_name' => $person->callsign,
