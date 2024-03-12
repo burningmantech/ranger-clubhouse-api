@@ -212,7 +212,7 @@ class OAuth2Controller extends ApiController
         return response()->json([
             'chid' => $person->id,
             'callsign' => $person->callsign,
-            'callsign_normalized' => preg_replace('/[^\w\-]/', '', Person::convertDiacritics(str_replace(" ", "-", str_replace("&", " and ",$person->callsign)))),
+            'username' => preg_replace('/[^\w\-]/', '', Person::convertDiacritics(str_replace(" ", "-", str_replace("&", " and ",$person->callsign)))),
             'email' => $person->email,
             'given_name' => $person->desired_first_name(),
             'family_name' => $person->last_name
