@@ -210,6 +210,8 @@ class OAuth2Controller extends ApiController
         $person = Auth::user();
 
         return response()->json([
+            'chid' => 'ch' . $person->id,
+            'callsign' => $person->callsign,
             'email' => $person->email,
             'given_name' => $person->desired_first_name(),
             'family_name' => $person->last_name

@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class OauthCode extends ApiModel
 {
-    const EXPIRE_IN_SECONDS = 120;
+    const int EXPIRE_IN_SECONDS = 120;
 
     protected $table = 'oauth_code';
     protected bool $auditModel = true;
