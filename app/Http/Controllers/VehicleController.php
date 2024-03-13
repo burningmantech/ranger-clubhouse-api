@@ -10,6 +10,7 @@ use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Position;
 use App\Models\Vehicle;
+use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -144,6 +145,7 @@ class VehicleController extends ApiController
         if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV()) {
             $info = [];
         } else {
+            $deadline = "{$year}-".setting('MVRDeadline')." 23:59:59";
             $info = [
                 'motorpool_agreement_available' => setting('MotorpoolPolicyEnable'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
@@ -155,6 +157,8 @@ class VehicleController extends ApiController
                 'ignore_pvr' => $event?->ignore_pvr ?? false,
                 'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
                 'pvr_positions' => Position::vehicleEligibleForPerson('pvr', $personId),
+                'mvr_deadline' => $deadline,
+                'mvr_past_deadline' => now()->gt(Carbon::parse($deadline)),
             ];
 
             if ($info['motorpool_agreement_available']) {

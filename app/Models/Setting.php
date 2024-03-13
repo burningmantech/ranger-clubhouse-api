@@ -160,9 +160,9 @@ class Setting extends ApiModel
         ],
 
         'MealHalfPogEnabled' => [
-          'description' => 'Enable or disable issuing of half meal pogs',
-          'type' => self::TYPE_BOOL,
-          'default' => true,
+            'description' => 'Enable or disable issuing of half meal pogs',
+            'type' => self::TYPE_BOOL,
+            'default' => true,
         ],
 
         'MealInfoAvailable' => [
@@ -180,9 +180,14 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'MVRDeadline' => [
+            'description' => 'The Clubhouse will show the MVR request form link, if eligible, up until the month and day (not year) at 23:59. Format is MM-DD',
+            'type' => self::TYPE_STRING,
+        ],
+
         'MVRRequestFormURL' => [
-          'description' => 'MVR request form URL. Shown on the Motorpool dashboard step if the person is MVR eligible.',
-          'type' => self::TYPE_URL,
+            'description' => 'MVR request form URL. Shown on the Motorpool dashboard step if the person is MVR eligible.',
+            'type' => self::TYPE_URL,
         ],
 
         'OnboardAlphaShiftPrepLink' => [
@@ -472,7 +477,7 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
-         'TAS_VP_FAQ' => [
+        'TAS_VP_FAQ' => [
             'description' => 'Vehicle Pass FAQ Link',
             'type' => self::TYPE_STRING,
         ],
