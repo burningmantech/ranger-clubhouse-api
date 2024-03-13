@@ -72,7 +72,7 @@ class AgreementsController extends ApiController
 
         Agreements::signAgreement($person, $document->tag, $params['signature']);
 
-        if ($document->tag == Agreements::DEPT_NDA) {
+        if ($document->tag == Document::DEPT_NDA_TAG) {
             PersonRole::clearCache($person->id);
         }
 

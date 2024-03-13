@@ -90,7 +90,7 @@ class RoleOperationTest extends TestCase
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
-        Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
+        Document::factory()->create(['tag' => Document::DEPT_NDA_TAG, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(403);
     }
@@ -108,7 +108,7 @@ class RoleOperationTest extends TestCase
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
-        Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
+        Document::factory()->create(['tag' => Document::DEPT_NDA_TAG, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
 
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
@@ -126,9 +126,9 @@ class RoleOperationTest extends TestCase
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
-        Document::factory()->create(['tag' => Agreements::DEPT_NDA, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
+        Document::factory()->create(['tag' => Document::DEPT_NDA_TAG, 'description' => 'Dept NDA', 'body' => 'Do no evil']);
         // Sign the NDA
-        Agreements::signAgreement($this->user, Agreements::DEPT_NDA, 1);
+        Agreements::signAgreement($this->user, Document::DEPT_NDA_TAG, 1);
 
         $response = $this->json('GET', "person/{$person->id}");
         $response->assertStatus(200);
