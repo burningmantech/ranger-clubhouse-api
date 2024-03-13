@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class Document extends ApiModel
 {
@@ -15,9 +16,14 @@ class Document extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
+    // Known documents
+
+    const string BEHAVIORAL_STANDARDS_AGREEMENT_TAG = 'behavioral-standards-agreement';
+    const string DEPT_NDA_TAG = 'dept-nda';
     const string MOTORPOOL_POLICY_TAG = 'motorpool-policy';
     const string PERSONAL_VEHICLE_AGREEMENT_TAG = 'personal-vehicle-agreement';
-    const string DEPT_NDA_TAG = 'dept-nda';
+    const string RADIO_CHECKOUT_AGREEMENT_TAG = 'radio-checkout-agreement';
+    const string SANDMAN_AFFIDAVIT_TAG = 'sandman-affidavit';
 
     protected $fillable = [
         'tag',
@@ -46,6 +52,7 @@ class Document extends ApiModel
      *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
 
     public function save($options = []): bool

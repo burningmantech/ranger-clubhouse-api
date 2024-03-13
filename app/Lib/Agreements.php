@@ -19,12 +19,9 @@ use InvalidArgumentException;
 
 class Agreements
 {
-    const TERM_LIFETIME = 'lifetime';   // column stored in person
-    const TERM_ANNUAL = 'annual';       // column stored in person_event
+    const string TERM_LIFETIME = 'lifetime';   // column stored in person
+    const string TERM_ANNUAL = 'annual';       // column stored in person_event
 
-    const SANDMAN_AFFIDAVIT = 'sandman-affidavit';
-
-    const DEPT_NDA = 'dept-nda';
 
     /**
      * A document list available to most Rangers and Applicants.
@@ -38,35 +35,35 @@ class Agreements
      *
      */
 
-    const DOCUMENTS = [
-        'behavioral-standards-agreement' => [
+    const array DOCUMENTS = [
+        Document::BEHAVIORAL_STANDARDS_AGREEMENT_TAG => [
             'term' => self::TERM_LIFETIME,
             'column' => 'behavioral_agreement',
         ],
 
-        'motorpool-policy' => [
+        Document::MOTORPOOL_POLICY_TAG => [
             'term' => self::TERM_ANNUAL,
             'setting' => 'MotorpoolPolicyEnable',
             'column' => 'signed_motorpool_agreement',
         ],
 
-        'personal-vehicle-agreement' => [
+        Document::PERSONAL_VEHICLE_AGREEMENT_TAG => [
             'term' => self::TERM_ANNUAL,
             'column' => 'signed_personal_vehicle_agreement',
         ],
 
-        'radio-checkout-agreement' => [
+        Document::RADIO_CHECKOUT_AGREEMENT_TAG => [
             'setting' => 'RadioCheckoutAgreementEnabled',
             'term' => self::TERM_ANNUAL,
             'column' => 'asset_authorized',
         ],
 
-        self::SANDMAN_AFFIDAVIT => [
+        Document::SANDMAN_AFFIDAVIT_TAG => [
             'term' => self::TERM_ANNUAL,
             'column' => 'sandman_affidavit',
         ],
 
-        self::DEPT_NDA => [
+        Document::DEPT_NDA_TAG => [
             'term' => self::TERM_ANNUAL,
             'column' => 'signed_nda',
             'role' => Role::MANAGE,     // Only show if the effective role has been granted
@@ -211,15 +208,16 @@ class Agreements
     /**
      * Is the document visible? (however, it may not be ready to be signed)
      *
-     * @param $tag
+     * @param string $tag
      * @param $doc
-     * @param $personEvent
+     * @param PersonEvent $personEvent
+     * @param Person $person
      * @return bool
      */
 
-    public static function isDocumentVisible($tag, $doc, $personEvent): bool
+    public static function isDocumentVisible(string $tag, $doc, PersonEvent $personEvent,Person $person): bool
     {
-        if ($tag == self::SANDMAN_AFFIDAVIT) {
+        if ($tag == Document::SANDMAN_AFFIDAVIT_TAG) {
             // Special case, only available after sandman training has happened.
             $year = current_year();
             if (TraineeStatus::didPersonPassForYear($personEvent->person_id, Position::SANDMAN_TRAINING, $year)) {
@@ -231,6 +229,8 @@ class Agreements
             }
 
             return false;
+        } else if ($tag == Document::PERSONAL_VEHICLE_AGREEMENT_TAG) {
+            return PVR::isEligible($person->id, $personEvent, current_year()) && $personEvent->org_vehicle_insurance;
         }
 
         $peColumn = $doc['person_event'] ?? null;

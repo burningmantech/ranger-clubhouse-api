@@ -153,7 +153,7 @@ class Milestones
         // Don't require the NDA if the agreement does not exist.
         if ($person->hasRawRole(Role::MANAGE)
             && !$event->signed_nda
-            && Document::haveTag(Agreements::DEPT_NDA)
+            && Document::haveTag(Document::DEPT_NDA_TAG)
         ) {
             $milestones['nda_required'] = true;
         }
