@@ -20,7 +20,6 @@ class PayrollReport
                 'person:id,callsign,first_name,last_name,email,employee_id',
                 'position:id,title,paycode,no_payroll_hours_adjustment'
             ])
-            ->whereNotNull('person.employee_id')
             ->whereIn('timesheet.position_id', $positionIds)
             ->where(function ($w) use ($startTime, $endTime) {
                 $w->where(function ($q) use ($startTime, $endTime) {
@@ -47,6 +46,7 @@ class PayrollReport
         $endTime = Carbon::parse($endTime);
 
         $people = [];
+        $peopleWithoutIds = [];
         foreach ($entriesByPerson as $personId => $entries) {
             $shifts = [];
             foreach ($entries as $entry) {
@@ -102,7 +102,7 @@ class PayrollReport
             }
 
             $person = $entries[0]->person;
-            $people[] = [
+            $info = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'first_name' => $person->first_name,
@@ -111,10 +111,21 @@ class PayrollReport
                 'employee_id' => $person->employee_id,
                 'shifts' => $shifts,
             ];
+
+            if ($person->employee_id) {
+                $people[] = $info;
+            } else {
+                $peopleWithoutIds[] = $info;
+            }
         }
 
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-        return $people;
+        usort($peopleWithoutIds, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+
+        return [
+            'people' => $people,
+            'people_without_ids' => $peopleWithoutIds
+        ];
     }
 
     public static function computeMealBreak(Carbon $onDuty,

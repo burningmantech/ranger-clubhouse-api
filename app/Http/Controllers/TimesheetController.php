@@ -937,14 +937,14 @@ class TimesheetController extends ApiController
             'position_ids.*' => 'integer|exists:position,id'
         ]);
 
-        return response()->json([
-            'people' => PayrollReport::execute(
+        return response()->json(
+            PayrollReport::execute(
                 $params['start_time'],
                 $params['end_time'],
                 $params['break_after'] ?? 0,
                 $params['break_duration'],
                 $params['position_ids'])
-        ]);
+        );
     }
 
     /**
