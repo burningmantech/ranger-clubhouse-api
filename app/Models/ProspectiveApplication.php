@@ -86,14 +86,17 @@ class ProspectiveApplication extends ApiModel
         'review_person:id,callsign'
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'is_over_18' => 'boolean',
-        'rejected_handles' => 'array',
-        'reviewed_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'updated_by_person_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'is_over_18' => 'boolean',
+            'rejected_handles' => 'array',
+            'reviewed_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'updated_by_person_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'screened_handles'
@@ -465,7 +468,7 @@ class ProspectiveApplication extends ApiModel
                     ->select('id', 'callsign', 'status')
                     ->where('callsign_normalized', $normalized)
                     ->where(function ($sql) {
-                        $sql->whereIn('status', [ Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION ]);
+                        $sql->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION]);
                         $sql->orWhere('vintage', true);
                     })
                     ->first()

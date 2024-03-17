@@ -28,9 +28,9 @@ class TimesheetMissing extends ApiModel
     protected $table = "timesheet_missing";
     protected bool $auditModel = true;
 
-    const APPROVED = 'approved';
-    const REJECTED = 'rejected';
-    const PENDING = 'pending';
+    const string APPROVED = 'approved';
+    const string REJECTED = 'rejected';
+    const string PENDING = 'pending';
 
     protected $fillable = [
         'additional_wrangler_notes',
@@ -53,15 +53,18 @@ class TimesheetMissing extends ApiModel
         'additional_admin_notes',
     ];
 
-    protected $casts = [
-        'create_entry' => 'boolean',
-        'created_at' => 'datetime',
-        'new_off_duty' => 'datetime',
-        'new_on_duty' => 'datetime',
-        'off_duty' => 'datetime',
-        'on_duty' => 'datetime',
-        'reviewed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'create_entry' => 'boolean',
+            'created_at' => 'datetime',
+            'new_off_duty' => 'datetime',
+            'new_on_duty' => 'datetime',
+            'off_duty' => 'datetime',
+            'on_duty' => 'datetime',
+            'reviewed_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'duration',
@@ -91,16 +94,16 @@ class TimesheetMissing extends ApiModel
     public ?string $additionalAdminNotes = null;
     public ?string $additionalWranglerNotes = null;
 
-    const PARTNER_SHIFT_STARTS_WITHIN = 30;
+    const int PARTNER_SHIFT_STARTS_WITHIN = 30;
 
-    const RELATIONSHIPS = [
+    const array RELATIONSHIPS = [
         'position:id,title',
         'reviewer_person:id,callsign',
         'notes',
         'notes.create_person:id,callsign'
     ];
 
-    const ADMIN_NOTES_RELATIONSHIPS = [
+    const array ADMIN_NOTES_RELATIONSHIPS = [
         'admin_notes',
         'admin_notes.create_person:id,callsign'
     ];
@@ -162,7 +165,7 @@ class TimesheetMissing extends ApiModel
         });
 
         self::deleted(function ($model) {
-           TimesheetMissingNote::where('timesheet_missing_id', $model->id)->delete();
+            TimesheetMissingNote::where('timesheet_missing_id', $model->id)->delete();
         });
     }
 
@@ -269,7 +272,7 @@ class TimesheetMissing extends ApiModel
             return null;
         }
 
-        $people = preg_split("/(\band\b|\s*[&\+\|]\s*)/i", $this->partner);
+        $people = preg_split("/(\band\b|\s*[&+|]\s*)/i", $this->partner);
 
         $partners = [];
 

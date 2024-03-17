@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\JpegEncoder;
+use Intervention\Image\ImageManager;
 use RuntimeException;
 
 /*
@@ -39,11 +39,14 @@ class PersonPhoto extends ApiModel
         'review_person_id'
     ];
 
-    protected $casts = [
-        'edited_at' => 'datetime',
-        'reviewed_at' => 'datetime',
-        'uploaded_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'edited_at' => 'datetime',
+            'reviewed_at' => 'datetime',
+            'uploaded_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'image_url',
@@ -342,12 +345,12 @@ class PersonPhoto extends ApiModel
 
             // correct image orientation
             //$image->orientate();
-            $image->cover($width, $height);
+            $image->scaleDown($width, $height);
             $width = $image->width();
             $height = $image->height();
             $fp = $image->encode(new JpegEncoder(quality: 75))->toFilePointer();
             $contents = stream_get_contents($fp);
-             gc_collect_cycles();     // Images can be huge, garbage collect.
+            gc_collect_cycles();     // Images can be huge, garbage collect.
 
             return [$contents, $width, $height];
         } catch (Exception $e) {

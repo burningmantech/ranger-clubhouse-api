@@ -4,17 +4,13 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-use App\Models\PersonMentor;
-
-
 class PersonMentorFactory extends Factory
 {
-    protected $model = PersonMentor::class;
 
-    public function definition()
+    public function definition(): array
     {
-return [
-        'status' => 'pending',
-    ];
-}
+        return [
+            'status' => 'pending',
+        ];
+    }
 }

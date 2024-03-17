@@ -32,25 +32,26 @@ return [
     */
 
     'stores' => [
-
         'apc' => [
             'driver' => 'apc',
         ],
 
         'array' => [
             'driver' => 'array',
+            'serialize' => false,
         ],
 
         'database' => [
             'driver' => 'database',
-            'table' => 'cache',
-            'connection' => null,
-            'prefix' => ''
+            'table' => env('DB_CACHE_TABLE', 'cache'),
+            'connection' => env('DB_CACHE_CONNECTION', null),
+            'lock_connection' => env('DB_CACHE_LOCK_CONNECTION', null),
         ],
 
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
+            'lock_path' => storage_path('framework/cache/data'),
         ],
 
         'memcached' => [
@@ -61,7 +62,7 @@ return [
                 env('MEMCACHED_PASSWORD'),
             ],
             'options' => [
-                // Memcached::OPT_CONNECT_TIMEOUT  => 2000,
+                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
             ],
             'servers' => [
                 [
@@ -72,14 +73,23 @@ return [
             ],
         ],
 
-        'octane' => [
-            'driver' => 'octane'
-        ],
-
         'redis' => [
             'driver' => 'redis',
-            'connection' => 'cache_connection',
-            'lock_connection' => 'lock_connection',
+            'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
+        ],
+
+        'dynamodb' => [
+            'driver' => 'dynamodb',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'table' => env('DYNAMODB_CACHE_TABLE', 'cache'),
+            'endpoint' => env('DYNAMODB_ENDPOINT'),
+        ],
+
+        'octane' => [
+            'driver' => 'octane',
         ],
     ],
 
@@ -94,9 +104,5 @@ return [
     |
     */
 
-    'prefix' => env(
-        'CACHE_PREFIX',
-        Str::slug(env('APP_NAME', 'laravel'), '_').'_cache'
-    ),
-
+    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_cache_'),
 ];

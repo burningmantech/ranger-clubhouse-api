@@ -34,10 +34,13 @@ class SurveyQuestion extends ApiModel
         'is_required' => 'sometimes|boolean',
     ];
 
-    protected $casts = [
-        'is_required' => 'boolean',
-        'summarize_rating' => 'boolean'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_required' => 'boolean',
+            'summarize_rating' => 'boolean',
+        ];
+    }
 
     protected $attributes = [
         'options' => ''
@@ -45,9 +48,9 @@ class SurveyQuestion extends ApiModel
 
     private $_optionLabels;
 
-    const RATING = 'rating';
-    const OPTIONS = 'options';
-    const TEXT = 'text';
+    const string RATING = 'rating';
+    const string OPTIONS = 'options';
+    const string TEXT = 'text';
 
     public static function boot(): void
     {

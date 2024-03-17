@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 class Broadcast extends ApiModel
 {
     protected $table = "broadcast";
@@ -13,46 +16,46 @@ class Broadcast extends ApiModel
      * Broadcast Types
      */
 
-    const TYPE_GENERAL = 'general';    // General non-emergency announcement, like the allcom mailing list.
-    const TYPE_SLOT_EDIT = 'slot-edit';  // Slot time change or deletion cancellation (comes from Edit Slots page)
-    const TYPE_POSITION = 'position';   // People who hold a position
-    const TYPE_SLOT = 'slot';       // People who are signed up for a shift
+    const string TYPE_GENERAL = 'general';    // General non-emergency announcement, like the allcom mailing list.
+    const string TYPE_SLOT_EDIT = 'slot-edit';  // Slot time change or deletion cancellation (comes from Edit Slots page)
+    const string TYPE_POSITION = 'position';   // People who hold a position
+    const string TYPE_SLOT = 'slot';       // People who are signed up for a shift
 
-    const TYPE_ONSHIFT = 'onshift';    // Send to people on shift (radio repeater down, city split happening)
-    const TYPE_RECRUIT_DIRT = 'recruit-dirt'; // Request for more people for a shift, dirt
-    const TYPE_RECRUIT_POSITION = 'recruit-position'; // Request for more people based on position
-    const TYPE_EMERGENCY = 'emergency'; // All hands on deck - limited to playa.
+    const string TYPE_ONSHIFT = 'onshift';    // Send to people on shift (radio repeater down, city split happening)
+    const string TYPE_RECRUIT_DIRT = 'recruit-dirt'; // Request for more people for a shift, dirt
+    const string TYPE_RECRUIT_POSITION = 'recruit-position'; // Request for more people based on position
+    const string TYPE_EMERGENCY = 'emergency'; // All hands on deck - limited to playa.
 
 
     // Message was handed off to the SMTP server,
     // or sms vendor. 'sent' does not indicate delivery.
-    const STATUS_SENT = 'sent';
+    const string STATUS_SENT = 'sent';
     // SMTP server or SMS service could not be contacted.
-    const STATUS_SERVICE_FAIL = 'service-fail';
+    const string STATUS_SERVICE_FAIL = 'service-fail';
     // Verify code sent to target phone
-    const STATUS_VERIFY = 'verify';
+    const string STATUS_VERIFY = 'verify';
     // Stop request  received
-    const STATUS_STOP = 'stop';
+    const string STATUS_STOP = 'stop';
     // Start request received
-    const STATUS_START = 'start';
+    const string STATUS_START = 'start';
     // Help request was received from phone
-    const STATUS_HELP = 'help';
+    const string STATUS_HELP = 'help';
     // Administration command - reply with a 24 hour activity summary
-    const STATUS_STATS = 'stats';
+    const string STATUS_STATS = 'stats';
     // Next shift request
-    const STATUS_NEXT = 'next';
+    const string STATUS_NEXT = 'next';
     // Unknown command / message was received from phone
-    const STATUS_UNKNOWN_COMMAND = 'unknown-command';
+    const string STATUS_UNKNOWN_COMMAND = 'unknown-command';
     // Message received from an unknown phone number
-    const STATUS_UNKNOWN_PHONE = 'unknown-phone';
+    const string STATUS_UNKNOWN_PHONE = 'unknown-phone';
 
     // Reply sent in response to an inbound message
-    const STATUS_REPLY = 'reply';
+    const string STATUS_REPLY = 'reply';
 
     // Email or SMS message was bounced (not used currently, requires status callback)
-    const STATUS_BOUNCED = 'bounced';
+    const string STATUS_BOUNCED = 'bounced';
     // SMS message was blocked (not used currently, requires status callback)
-    const STATUS_BLOCKED = 'blocked';
+    const string STATUS_BLOCKED = 'blocked';
 
     public $appends = [
         'people'
@@ -60,27 +63,27 @@ class Broadcast extends ApiModel
 
     public $people;
 
-    public function sender()
+    public function sender(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function retry_person()
+    public function retry_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function alert()
+    public function alert(): BelongsTo
     {
         return $this->belongsTo(Alert::class);
     }
 
-    public function messages()
+    public function messages(): HasMany
     {
         return $this->hasMany(BroadcastMessage::class);
     }
 
-    public function failed_messages()
+    public function failed_messages(): HasMany
     {
         return $this->hasMany(BroadcastMessage::class)->where('status', Broadcast::STATUS_SERVICE_FAIL);
     }

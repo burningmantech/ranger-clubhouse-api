@@ -2,15 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\PersonEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
-
 
 class PersonEventFactory extends Factory
 {
-    protected $model = PersonEvent::class;
-
-    public function definition()
+    public function definition(): array
     {
         return [
             'year' => current_year(),

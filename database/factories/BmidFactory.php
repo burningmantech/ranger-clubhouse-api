@@ -4,19 +4,14 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-use App\Models\Bmid;
-
-
 class BmidFactory extends Factory
 {
-    protected $model = Bmid::class;
-
-    public function definition()
+    public function definition(): array
     {
-return [
-        'status'    => 'in_prep',
-        'showers'   => false,
-        'meals'     => null,
-    ];
-}
+        return [
+            'status' => 'in_prep',
+            'showers' => false,
+            'meals' => null,
+        ];
+    }
 }

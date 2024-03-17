@@ -21,11 +21,14 @@ class PositionCredit extends ApiModel
         'start_time',
     ];
 
-    protected $casts = [
-        'credits_per_hour' => 'float',
-        'end_time' => 'datetime',
-        'start_time' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'credits_per_hour' => 'float',
+            'end_time' => 'datetime',
+            'start_time' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'start_time' => 'required|date',
@@ -40,7 +43,7 @@ class PositionCredit extends ApiModel
         'end_year'
     ];
 
-    const RELATIONS = ['position:id,title'];
+    const array RELATIONS = ['position:id,title'];
 
     public int $start_timestamp;
     public int $end_timestamp;

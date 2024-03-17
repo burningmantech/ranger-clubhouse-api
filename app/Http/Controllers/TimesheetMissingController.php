@@ -16,7 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TimesheetMissingController extends ApiController
 {
@@ -160,7 +160,7 @@ class TimesheetMissingController extends ApiController
 
                 if (!$timesheet->save()) {
                     DB::rollback();
-                    throw new InvalidArgumentException('Failed to create new entry.');
+                    throw new UnacceptableConditionException('Failed to create new entry.');
                 }
 
                 $timesheet->log(TimesheetLog::CREATED,

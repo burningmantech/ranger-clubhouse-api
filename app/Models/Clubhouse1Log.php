@@ -10,11 +10,14 @@ class Clubhouse1Log extends Model
 {
     protected $table = 'log';
 
-    const PAGE_SIZE_DEFAULT = 50;
+    const int PAGE_SIZE_DEFAULT = 50;
 
-    protected $casts = [
-        'occurred' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'occurred' => 'datetime'
+        ];
+    }
 
     public function user_person(): BelongsTo
     {

@@ -25,9 +25,12 @@ class ProspectiveApplicationLog extends ApiModel
     const string ACTION_IMPORTED = 'imported';
     const string ACTION_UPDATED = 'updated';
 
-    protected $casts = [
-        'data' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'data' => 'array'
+        ];
+    }
 
     protected $appends = [
         'meta'

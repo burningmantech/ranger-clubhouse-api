@@ -13,14 +13,17 @@ class MailLog extends ApiModel
 
     protected $table = 'mail_log';
     public $timestamps = true;
+    const int PAGE_SIZE_DEFAULT = 50;
 
     protected $guarded = [];    // Records are not directly created by users.
 
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime'
+        ];
+    }
 
-    const PAGE_SIZE_DEFAULT = 50;
 
     public function broadcast(): BelongsTo
     {

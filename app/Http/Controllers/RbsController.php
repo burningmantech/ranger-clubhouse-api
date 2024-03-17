@@ -16,7 +16,7 @@ use App\Models\TeamManager;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class RbsController extends ApiController
 {
@@ -139,7 +139,7 @@ class RbsController extends ApiController
 
         $attrs = RBS::ATTRIBUTES[$type] ?? null;
         if (!$attrs) {
-            throw new InvalidArgumentException("Unknown broadcast type");
+            throw new UnacceptableConditionException("Unknown broadcast type");
         }
 
         $this->authorize('typeAllowed', [Broadcast::class, $type]);
@@ -429,7 +429,7 @@ class RbsController extends ApiController
         if ($positionIds && !$haveGeneralOrEmergency) {
             foreach ($positionIds as $id) {
                 if (!TeamManager::canManagePosition($userId, $id)) {
-                    return throw new InvalidArgumentException('No permission to transmit to position');
+                    return throw new UnacceptableConditionException('No permission to transmit to position');
                 }
             }
         }
@@ -448,7 +448,7 @@ class RbsController extends ApiController
         $expiresAt = $params['expires_at'] ?? null;
 
         if (empty($alertId)) {
-            throw new InvalidArgumentException("Alert id must be supplied.");
+            throw new UnacceptableConditionException("Alert id must be supplied.");
         }
 
         $alert = Alert::findOrFail($alertId);

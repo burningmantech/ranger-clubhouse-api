@@ -2,19 +2,16 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-
 use App\Models\TrainerStatus;
-
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TrainerStatusFactory extends Factory
 {
-    protected $model = TrainerStatus::class;
 
-    public function definition()
+    public function definition(): array
     {
-return [
-        'status'   => TrainerStatus::ATTENDED
-    ];
-}
+        return [
+            'status' => TrainerStatus::ATTENDED
+        ];
+    }
 }

@@ -12,7 +12,7 @@ use App\Models\Training;
 use App\Models\TrainingSession;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TrainingSessionController extends ApiController
 {
@@ -250,7 +250,7 @@ class TrainingSessionController extends ApiController
 
         $candidates = $training_session->graduationCandidates();
         if (!$candidates) {
-            throw new InvalidArgumentException('ART has no positions to graduate to.');
+            throw new UnacceptableConditionException('ART has no positions to graduate to.');
         }
 
         $params = request()->validate([

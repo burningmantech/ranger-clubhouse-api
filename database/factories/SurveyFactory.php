@@ -2,21 +2,19 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Survey;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SurveyFactory extends Factory
 {
-    protected $model = Survey::class;
-
-    public function definition()
+    public function definition(): array
     {
-       return [
+        return [
             'title' => $this->faker->text(20),
             'type' => Survey::TRAINING,
             'year' => date('Y'),
-            'prologue' => $this->faker->text,
-            'epilogue' => $this->faker->text,
+            'prologue' => $this->faker->text(),
+            'epilogue' => $this->faker->text(),
         ];
     }
 }

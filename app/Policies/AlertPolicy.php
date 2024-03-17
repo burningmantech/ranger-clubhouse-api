@@ -11,17 +11,19 @@ class AlertPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?bool
     {
         if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
+
+        return null;
     }
 
     /**
      * Determine whether the user can create positions.
      */
-    public function store(Person $user)
+    public function store(Person $user): false
     {
         return false;
     }
@@ -29,7 +31,7 @@ class AlertPolicy
     /**
      * Determine whether the user can update the position.
      */
-    public function update(Person $user, Alert $alert)
+    public function update(Person $user, Alert $alert): false
     {
         return false;
     }
@@ -37,7 +39,7 @@ class AlertPolicy
     /**
      * Determine whether the user can delete the position.
      */
-    public function delete(Person $user, Alert $alert)
+    public function delete(Person $user, Alert $alert): false
     {
         return false;
     }

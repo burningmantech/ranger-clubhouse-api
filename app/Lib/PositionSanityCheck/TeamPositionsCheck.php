@@ -7,7 +7,7 @@ use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TeamPositionsCheck extends SanityCheck
 {
@@ -43,6 +43,7 @@ class TeamPositionsCheck extends SanityCheck
      * @param $peopleIds
      * @param ...$options
      * @return array
+     * @throws UnacceptableConditionException
      */
 
     public static function repair($peopleIds, ...$options): array
@@ -52,7 +53,7 @@ class TeamPositionsCheck extends SanityCheck
         foreach ($peopleIds as $personId) {
             $positionIds = $positions[$personId] ?? null;
             if (!$positionIds) {
-                throw new InvalidArgumentException("Person #{$personId} was not found in the options");
+                throw new UnacceptableConditionException("Person #{$personId} was not found in the options");
             }
             PersonPosition::addIdsToPerson($personId, $positionIds, 'position sanity checker repair - missing team positions');
             foreach ($positionIds as $pid) {

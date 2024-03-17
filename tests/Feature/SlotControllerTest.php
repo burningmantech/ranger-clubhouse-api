@@ -358,7 +358,7 @@ class SlotControllerTest extends TestCase
             // Add some sign ups
             $people = ($i + 1) * 4;
 
-            $dirt = Slot::factory()->create(
+            Slot::factory()->create(
                 [
                     'begins' => $begins,
                     'ends' => $ends,
@@ -369,14 +369,6 @@ class SlotControllerTest extends TestCase
                     'min' => 1
                 ]
             );
-
-            $visits[] = [
-                'period' => $begins,
-                'checkin' => $people,
-                'windows' => ($i ? 1 : 0),
-                'shorts' => ($i != 1 ? 1 : 0),
-                'leads' => ($i != 2 ? 1 : 0),
-            ];
         }
 
         $response = $this->json('GET', 'slot/hq-forecast-report', ['year' => $year, 'interval' => 60]);

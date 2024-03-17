@@ -18,7 +18,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberUtil;
 use Twilio\Exceptions\ConfigurationException;
@@ -115,13 +115,13 @@ class SmsController extends ApiController
         // Check to see either number is a text capable device.
         if ($onPlayaChanged && $onPlaya != '' && !$person->sms_on_playa_verified) {
             if (!SMSService::isSMSCapable($onPlaya)) {
-                throw new InvalidArgumentException("Sorry, $onPlaya does not appear to be a cellphone.");
+                throw new UnacceptableConditionException("Sorry, $onPlaya does not appear to be a cellphone.");
             }
         }
 
         if ($offPlayaChanged && $offPlaya != '' && $onPlaya != $offPlaya && !$person->sms_off_playa_verified) {
             if (!SMSService::isSMSCapable($offPlaya)) {
-                throw new InvalidArgumentException("Sorry, $offPlaya does not appear to be a cellphone.");
+                throw new UnacceptableConditionException("Sorry, $offPlaya does not appear to be a cellphone.");
             }
         }
 
@@ -279,7 +279,7 @@ class SmsController extends ApiController
     public function inbound(): Response|JsonResponse|Application|ResponseFactory
     {
         $ua = request()->userAgent();
-        if (preg_match("/(bingbot|AOLBuild|Baidu|bingbot|DuckDuckBot|googlebot|yahoo|yandex)/i", $ua)) {
+        if (preg_match("/(AOLBuild|Baidu|bingbot|DuckDuckBot|googlebot|yahoo|yandex)/i", $ua)) {
             // How did bingbot get their grubby digital dirty paws on this unpublished url?
             return response()->json([ 'error' => 'not authorized.'], 403);
         }
@@ -452,7 +452,7 @@ class SmsController extends ApiController
     private static function validatePhoneNumber($person, $phone): string
     {
         // Eliminate every char except 0-9 and +
-        $phone = preg_replace("/[^0-9\+]/", '', $phone);
+        $phone = preg_replace("/[^0-9+]/", '', $phone);
 
         // nothing there
         if (empty($phone)) {
@@ -477,12 +477,12 @@ class SmsController extends ApiController
 
         // Number has to be at least the area code and number.
         if (strlen($phone) < 10) {
-            throw new InvalidArgumentException("Number is too short");
+            throw new UnacceptableConditionException("Number is too short");
         }
 
         // Normalization should have added a + for US/Canada.
         if (!str_starts_with($phone, '+')) {
-            throw new InvalidArgumentException("SMS number should begin with a '+' for International numbers.");
+            throw new UnacceptableConditionException("SMS number should begin with a '+' for International numbers.");
         }
 
         /**
@@ -494,7 +494,7 @@ class SmsController extends ApiController
         try {
             $parsedPhone = $util->parse($phone, 'US');
             if ($util->getRegionCodeForNumber($parsedPhone) == 'GB' || str_starts_with($phone, '+44')) {
-                throw new InvalidArgumentException("Sorry, United Kingdom phone numbers cannot be used.");
+                throw new UnacceptableConditionException("Sorry, United Kingdom phone numbers cannot be used.");
             }
         } catch (NumberParseException $e) {
             // ignore
@@ -510,7 +510,7 @@ class SmsController extends ApiController
         })->exists();
 
         if ($exists) {
-            throw new InvalidArgumentException("Phone number is used by another account");
+            throw new UnacceptableConditionException("Phone number is used by another account");
         }
 
         return $phone;

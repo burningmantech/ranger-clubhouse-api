@@ -14,7 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use ReflectionException;
 use RuntimeException;
 
@@ -121,7 +121,7 @@ class PersonPhotoController extends ApiController
 
         $person = $personPhoto->person;
         if (!$personPhoto->person) {
-            throw new InvalidArgumentException('Record is not linked to a person.');
+            throw new UnacceptableConditionException('Record is not linked to a person.');
         }
 
         $this->fromRest($personPhoto);
@@ -326,7 +326,7 @@ class PersonPhotoController extends ApiController
 
         if (!setting('PhotoUploadEnable')
             && !$this->userHasRole([Role::ADMIN, Role:: VC])) {
-            throw new InvalidArgumentException('Photo upload is currently disabled.');
+            throw new UnacceptableConditionException('Photo upload is currently disabled.');
         }
 
         $params = request()->validate([

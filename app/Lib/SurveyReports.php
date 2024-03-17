@@ -15,7 +15,7 @@ use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\Auth;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class SurveyReports
 {
@@ -53,21 +53,21 @@ class SurveyReports
         switch ($type) {
             case Survey::TRAINING:
                 if (!TraineeStatus::didPersonPassSession($personId, $slotId)) {
-                    throw new InvalidArgumentException('You are not marked as having attended the training session.');
+                    throw new UnacceptableConditionException('You are not marked as having attended the training session.');
                 }
                 break;
 
             case Survey::TRAINER:
                 $me = $trainers->firstWhere('id', $personId);
                 if (!$me) {
-                    throw new InvalidArgumentException('You are not marked as having taught the training session.');
+                    throw new UnacceptableConditionException('You are not marked as having taught the training session.');
                 }
                 // Exclude the person's answers.
                 $trainers = $trainers->filter(fn($t) => ($t->id != $personId));
                 break;
 
             default:
-                throw new InvalidArgumentException("Unknown survey type [$type]");
+                throw new UnacceptableConditionException("Unknown survey type [$type]");
         }
 
         return [$slot, $survey, $trainers->values()];

@@ -37,14 +37,17 @@ class EventDate extends ApiModel
         'pre_event_start'
     ];
 
-    protected $casts = [
-        'event_end' => 'datetime',
-        'event_start' => 'datetime',
-        'post_event_end' => 'datetime',
-        'pre_event_slot_end' => 'datetime',
-        'pre_event_slot_start' => 'datetime',
-        'pre_event_start' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'event_end' => 'datetime',
+            'event_start' => 'datetime',
+            'post_event_end' => 'datetime',
+            'pre_event_slot_end' => 'datetime',
+            'pre_event_slot_start' => 'datetime',
+            'pre_event_start' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'event_end' => 'required|date',
@@ -128,7 +131,7 @@ class EventDate extends ApiModel
      * @return string
      */
 
-    public static function retrieveEventOpsPeriod() : string
+    public static function retrieveEventOpsPeriod(): string
     {
         $year = current_year();
         $eventDates = EventDate::findForYear($year);
@@ -151,7 +154,7 @@ class EventDate extends ApiModel
         }
 
         $gateOpen = $laborDay->subDays(8);
-        if ($gateOpen->gt($now)){
+        if ($gateOpen->gt($now)) {
             return self::PRE_EVENT_OPS;
         }
 

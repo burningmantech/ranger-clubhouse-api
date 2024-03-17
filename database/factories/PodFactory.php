@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PodFactory extends Factory
 {
-    protected $model = Pod::class;
-
     public function definition(): array
     {
         return [

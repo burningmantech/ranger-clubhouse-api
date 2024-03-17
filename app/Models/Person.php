@@ -16,7 +16,7 @@ use App\Attributes\NullIfEmptyAttribute;
 use App\Attributes\PhoneAttribute;
 use App\Helpers\SqlHelper;
 use App\Jobs\OnlineCourseSyncPersonJob;
-use App\Lib\Agreements;
+use App\Validators\StateForCountry;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
@@ -28,7 +28,7 @@ use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use Laravel\Sanctum\HasApiTokens;
 use Normalizer;
 use NumberFormatter;
@@ -39,37 +39,37 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     use Authenticatable, Authorizable, HasApiTokens, Notifiable;
 
     // How long is the reset password token good for? (in seconds)
-    const RESET_PASSWORD_EXPIRE = (3600 * 2);
+    const int RESET_PASSWORD_EXPIRE = (3600 * 2);
 
     // How long is the pnv invite token sent in the welcome email good for? (in seconds)
-    const PNV_INVITATION_EXPIRE = (3600 * 24 * 14);
+    const int PNV_INVITATION_EXPIRE = (3600 * 24 * 14);
 
     // How many years should a callsign be retained after the person passed on.
-    const GRIEVING_PERIOD_YEARS = 5;
+    const int GRIEVING_PERIOD_YEARS = 5;
 
     // For resetting and adding roles & positions for new users
-    const REMOVE_ALL = 0;
-    const ADD_NEW_USER = 1;
+    const int REMOVE_ALL = 0;
+    const int ADD_NEW_USER = 1;
 
-    const ACTIVE = 'active';
-    const ALPHA = 'alpha';
-    const AUDITOR = 'auditor';
-    const BONKED = 'bonked';
-    const DECEASED = 'deceased';
-    const DISMISSED = 'dismissed';
-    const INACTIVE = 'inactive';
-    const INACTIVE_EXTENSION = 'inactive extension';
-    const NON_RANGER = 'non ranger';
-    const PAST_PROSPECTIVE = 'past prospective';
-    const PROSPECTIVE = 'prospective';
-    const RESIGNED = 'resigned';
-    const RETIRED = 'retired';
-    const SUSPENDED = 'suspended';
-    const UBERBONKED = 'uberbonked';
+    const string ACTIVE = 'active';
+    const string ALPHA = 'alpha';
+    const string AUDITOR = 'auditor';
+    const string BONKED = 'bonked';
+    const string DECEASED = 'deceased';
+    const string DISMISSED = 'dismissed';
+    const string INACTIVE = 'inactive';
+    const string INACTIVE_EXTENSION = 'inactive extension';
+    const string NON_RANGER = 'non ranger';
+    const string PAST_PROSPECTIVE = 'past prospective';
+    const string PROSPECTIVE = 'prospective';
+    const string RESIGNED = 'resigned';
+    const string RETIRED = 'retired';
+    const string SUSPENDED = 'suspended';
+    const string UBERBONKED = 'uberbonked';
 
     // Deprecated statuses - no longer used, retained for historical purposes
-    const PROSPECTIVE_WAITLIST = 'prospective waitlist';
-    const VINTAGE = 'vintage';
+    const string PROSPECTIVE_WAITLIST = 'prospective waitlist';
+    const string VINTAGE = 'vintage';
 
     /*
      * Statuses consider 'live' or still active account allowed
@@ -77,7 +77,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * Used by App\Validator\StateForCountry & BroadcastController
      */
 
-    const LIVE_STATUSES = [
+    const array LIVE_STATUSES = [
         Person::ACTIVE,
         Person::ALPHA,
         Person::INACTIVE,
@@ -88,7 +88,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         Person::RETIRED,
     ];
 
-    const ACTIVE_STATUSES = [
+    const array ACTIVE_STATUSES = [
         Person::ACTIVE,
         Person::INACTIVE,
         Person::INACTIVE_EXTENSION,
@@ -101,7 +101,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * should not receive messages.
      */
 
-    const LOCKED_STATUSES = [
+    const array LOCKED_STATUSES = [
         Person::DECEASED,
         Person::DISMISSED,
         Person::RESIGNED,
@@ -114,7 +114,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * either Clubhouse Messages or from the RBS
      */
 
-    const NO_MESSAGES_STATUSES = [
+    const array NO_MESSAGES_STATUSES = [
         Person::BONKED,
         Person::DECEASED,
         Person::DISMISSED,
@@ -128,14 +128,14 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * No street address required statuses. To deal with legacy accounts.
      */
 
-    const ONLY_BASIC_PII_REQUIRED_STATUSES = [
+    const array ONLY_BASIC_PII_REQUIRED_STATUSES = [
         self::DECEASED,
         self::DISMISSED,
         self::RESIGNED,
         self::RETIRED,
     ];
 
-    const DEACTIVATED_STATUSES = [
+    const array DEACTIVATED_STATUSES = [
         Person::BONKED,
         Person::DECEASED,
         Person::DISMISSED,
@@ -148,18 +148,18 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * Gender identities.
      */
 
-    const GENDER_CIS_FEMALE = 'cis-female';
-    const GENDER_CIS_MALE = 'cis-male';
-    const GENDER_CUSTOM = 'custom';     // Used when the person wants to state a gender not listed. gender_custom is used.
-    const GENDER_FEMALE = 'female';
-    const GENDER_FLUID = 'fluid';
-    const GENDER_MALE = 'male';
-    const GENDER_NONE = ''; // Not stated
-    const GENDER_NON_BINARY = 'non-binary';
-    const GENDER_QUEER = 'queer';
-    const GENDER_TRANS_FEMALE = 'trans-female';
-    const GENDER_TRANS_MALE = 'trans-male';
-    const GENDER_TWO_SPIRIT = 'two-spirit';
+    const string GENDER_CIS_FEMALE = 'cis-female';
+    const string GENDER_CIS_MALE = 'cis-male';
+    const string GENDER_CUSTOM = 'custom';     // Used when the person wants to state a gender not listed. gender_custom is used.
+    const string GENDER_FEMALE = 'female';
+    const string GENDER_FLUID = 'fluid';
+    const string GENDER_MALE = 'male';
+    const string GENDER_NONE = ''; // Not stated
+    const string GENDER_NON_BINARY = 'non-binary';
+    const string GENDER_QUEER = 'queer';
+    const string GENDER_TRANS_FEMALE = 'trans-female';
+    const string GENDER_TRANS_MALE = 'trans-male';
+    const string GENDER_TWO_SPIRIT = 'two-spirit';
 
     /**
      * The database table name.
@@ -185,34 +185,37 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * @var array
      */
     protected $hidden = [
+        'callsign_normalized',
+        'callsign_soundex',
         'password',
         'tpassword',
         'tpassword_expire',
-        'callsign_normalized',
-        'callsign_soundex',
 
         'pivot' // Exclude pivot table references when building JSON response
     ];
 
-    protected $casts = [
-        'behavioral_agreement' => 'boolean',
-        'callsign_approved' => 'boolean',
-        'created_at' => 'datetime',
-        'date_verified' => 'date',
-        'has_note_on_file' => 'boolean',
-        'last_seen_at' => 'datetime',
-        'logged_in_at' => 'datetime',
-        'message_updated_at' => 'datetime',
-        'on_site' => 'boolean',
-        'pi_reviewed_for_dashboard_at' => 'datetime',
-        'reviewed_pi_at' => 'datetime',
-        'status_date' => 'date',
-        'updated_at' => 'datetime',
-        'used_vanity_change' => 'boolean',
-        'vanity_changed_at' => 'datetime',
-        'vehicle_blacklisted' => 'boolean',
-        'vintage' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'behavioral_agreement' => 'boolean',
+            'callsign_approved' => 'boolean',
+            'created_at' => 'datetime',
+            'date_verified' => 'date',
+            'has_note_on_file' => 'boolean',
+            'last_seen_at' => 'datetime',
+            'logged_in_at' => 'datetime',
+            'message_updated_at' => 'datetime',
+            'on_site' => 'boolean',
+            'pi_reviewed_for_dashboard_at' => 'datetime',
+            'reviewed_pi_at' => 'datetime',
+            'status_date' => 'date',
+            'updated_at' => 'datetime',
+            'used_vanity_change' => 'boolean',
+            'vanity_changed_at' => 'datetime',
+            'vehicle_blacklisted' => 'boolean',
+            'vintage' => 'boolean',
+        ];
+    }
 
     /*
      * Do not forget to add the column name to PersonFilter as well.
@@ -279,7 +282,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     ];
 
     // Various associated person tables
-    const ASSOC_TABLES = [
+    const array ASSOC_TABLES = [
         'access_document',
         'action_logs',
         'alert_person',
@@ -314,7 +317,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'trainer_status'
     ];
 
-    const GENERAL_VALIDATIONS = [
+    const array GENERAL_VALIDATIONS = [
         'alt_phone' => 'sometimes|string|max:25',
         'callsign' => 'required|string|max:64',
         'callsign_pronounce' => 'sometimes|string|nullable|max:200',
@@ -334,16 +337,16 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'status' => 'required|string',
     ];
 
-    const ADDRESS_VALIDATIONS = [
+    const array ADDRESS_VALIDATIONS = [
         'street1' => 'required|string|nullable|max:128',
         'street2' => 'sometimes|string|nullable|max:128',
         'apt' => 'sometimes|string|nullable|max:10',
         'city' => 'required|string|max:50',
-        'state' => 'state_for_country:live_only',
         'country' => 'required|string|max:25',
+        # state validation is handled in addStateValidation()
     ];
 
-    const ALL_VALIDATIONS = [
+    const array ALL_VALIDATIONS = [
         ...self::GENERAL_VALIDATIONS,
         ...self::ADDRESS_VALIDATIONS
     ];
@@ -584,12 +587,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             // Creating record = require callsign & email
             $this->rules['callsign'] = 'required|string|unique:person,callsign';
             $this->rules['email'] = 'required|string|unique:person,email';
+            $this->addStateValidation();
         } else {
             // Allow the Admins and VCs to bypass personal info validations to deal with
             // moldy defunct accounts with little PII
             if (in_array($this->status, self::ONLY_BASIC_PII_REQUIRED_STATUSES)
                 && (!Auth::id() || Auth::user()?->hasRole([Role::ADMIN, Role::VC]))) {
                 $this->rules = self::GENERAL_VALIDATIONS;
+            } else {
+                $this->addStateValidation();
             }
 
             if ($this->isDirty('callsign')) {
@@ -608,6 +614,11 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $this->rules = self::ALL_VALIDATIONS;
 
         return $result;
+    }
+
+    private function addStateValidation(): void
+    {
+        $this->rules['state'] = [ new StateForCountry ];
     }
 
     /**
@@ -762,7 +773,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 return $sql->get(['id', 'callsign']);
         }
 
-        throw new InvalidArgumentException("Unknown type [$type]");
+        throw new UnacceptableConditionException("Unknown type [$type]");
     }
 
     /**

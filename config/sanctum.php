@@ -34,7 +34,7 @@ return [
     | TODO: Delete jwt when the last of the older Clubhouse clients are updated.
     */
 
-    'guard' => ['jwt'],
+    'guard' => [],
 
     /*
     |--------------------------------------------------------------------------
@@ -77,8 +77,8 @@ return [
 
     'middleware' => [
         'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
-        'encrypt_cookies' => App\Http\Middleware\EncryptCookies::class,
-        'verify_csrf_token' => App\Http\Middleware\VerifyCsrfToken::class,
+#        'encrypt_cookies' => App\Http\Middleware\EncryptCookies::class,
+#        'verify_csrf_token' => App\Http\Middleware\VerifyCsrfToken::class,
     ],
 
 ];

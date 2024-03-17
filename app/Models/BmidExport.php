@@ -5,9 +5,8 @@ namespace App\Models;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Storage;
-
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class BmidExport extends ApiModel
 {
@@ -15,12 +14,15 @@ class BmidExport extends ApiModel
 
     protected $table = 'bmid_export';
 
-    const STORAGE_DIR = 'exports/';
+    const string STORAGE_DIR = 'exports/';
 
-    protected $casts = [
-        'person_ids' => 'array',
-        'created_at' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'person_ids' => 'array',
+            'created_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'filename_url'

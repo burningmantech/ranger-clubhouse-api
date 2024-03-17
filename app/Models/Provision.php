@@ -15,47 +15,47 @@ class Provision extends ApiModel
     public bool $auditModel = true;
 
     // Statuses
-    const AVAILABLE = 'available';
-    const CLAIMED = 'claimed';
-    const BANKED = 'banked';
-    const USED = 'used';
-    const CANCELLED = 'cancelled';
-    const EXPIRED = 'expired';
-    const SUBMITTED = 'submitted';
+    const string AVAILABLE = 'available';
+    const string CLAIMED = 'claimed';
+    const string BANKED = 'banked';
+    const string USED = 'used';
+    const string CANCELLED = 'cancelled';
+    const string EXPIRED = 'expired';
+    const string SUBMITTED = 'submitted';
 
     // Meal pass combination
-    const ALL_EAT_PASS = 'all_eat_pass';
-    const EVENT_EAT_PASS = 'event_eat_pass';
-    const PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
-    const POST_EVENT_EAT_PASS = 'post_event_eat_pass';
-    const PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
-    const PRE_POST_EAT_PASS = 'pre_post_eat_pass';
-    const EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
+    const string ALL_EAT_PASS = 'all_eat_pass';
+    const string EVENT_EAT_PASS = 'event_eat_pass';
+    const string PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
+    const string POST_EVENT_EAT_PASS = 'post_event_eat_pass';
+    const string PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
+    const string PRE_POST_EAT_PASS = 'pre_post_eat_pass';
+    const string EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
 
-    const EVENT_RADIO = 'event_radio';
+    const string EVENT_RADIO = 'event_radio';
 
-    const WET_SPOT = 'wet_spot';
+    const string WET_SPOT = 'wet_spot';
 
-    const ACTIVE_STATUSES = [
+    const array ACTIVE_STATUSES = [
         self::AVAILABLE,
         self::CLAIMED,
         self::BANKED
     ];
 
-    const CURRENT_STATUSES = [
+    const array CURRENT_STATUSES = [
         self::AVAILABLE,
         self::CLAIMED,
         self::BANKED,
         self::SUBMITTED
     ];
 
-    const INVALID_STATUSES = [
+    const array INVALID_STATUSES = [
         self::USED,
         self::CANCELLED,
         self::EXPIRED
     ];
 
-    const MEAL_TYPES = [
+    const array MEAL_TYPES = [
         self::ALL_EAT_PASS,
         self::EVENT_EAT_PASS,
         self::PRE_EVENT_EAT_PASS,
@@ -66,7 +66,7 @@ class Provision extends ApiModel
 
     ];
 
-    const MEAL_MATRIX = [
+    const array MEAL_MATRIX = [
         self::ALL_EAT_PASS => 'pre+event+post',
         self::EVENT_EAT_PASS => 'event',
         self::PRE_EVENT_EAT_PASS => 'pre',
@@ -76,7 +76,7 @@ class Provision extends ApiModel
         self::PRE_POST_EAT_PASS => 'pre+post'
     ];
 
-    const TYPE_LABELS = [
+    const array TYPE_LABELS = [
         self::ALL_EAT_PASS => 'All Eat Pass',
         self::EVENT_EAT_PASS => 'Event Week Eat Pass',
 
@@ -89,7 +89,7 @@ class Provision extends ApiModel
         self::WET_SPOT => 'Wet Spot Access',
     ];
 
-    const ALL_TYPES = [
+    const array ALL_TYPES = [
         ...self::MEAL_TYPES,
         self::EVENT_RADIO,
         self::WET_SPOT,
@@ -107,13 +107,16 @@ class Provision extends ApiModel
         'additional_comments',
     ];
 
-    protected $casts = [
-        'expires_on' => 'datetime:Y-m-d',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'past_expire_date' => 'boolean',
-        'is_allocated' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'expires_on' => 'datetime:Y-m-d',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'past_expire_date' => 'boolean',
+            'is_allocated' => 'boolean',
+        ];
+    }
 
     protected $hidden = [
         'additional_comments',   // pseudo-column, write-only. used to append to comments.

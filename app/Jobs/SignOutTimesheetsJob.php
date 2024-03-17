@@ -60,6 +60,10 @@ class SignOutTimesheetsJob implements ShouldQueue
         }
 
         foreach ($positionIds as $positionId => $position) {
+            $email = $position['contact_email'] ?? null;
+            if (empty($email)) {
+                continue;
+            }
             mail_to($position['contact_email'], new AutomaticSignOutMail($position['contact_email'], $position['title'], $position['hour_cap'], $position['entries']), false);
         }
     }

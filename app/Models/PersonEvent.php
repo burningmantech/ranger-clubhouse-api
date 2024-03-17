@@ -68,17 +68,20 @@ class PersonEvent extends ApiModel
         'id'        // Not real.
     ];
 
-    protected $casts = [
-        'ignore_mvr' => 'boolean',
-        'ignore_pvr' => 'boolean',
-        'lms_enrolled_at' => 'datetime',
-        'mvr_eligible' => 'boolean',
-        'pii_finished_at' => 'datetime',
-        'pii_started_at' => 'datetime',
-        'ticketing_finished_at' => 'datetime',
-        'ticketing_last_visited_at' => 'datetime',
-        'ticketing_started_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'ignore_mvr' => 'boolean',
+            'ignore_pvr' => 'boolean',
+            'lms_enrolled_at' => 'datetime',
+            'mvr_eligible' => 'boolean',
+            'pii_finished_at' => 'datetime',
+            'pii_started_at' => 'datetime',
+            'ticketing_finished_at' => 'datetime',
+            'ticketing_last_visited_at' => 'datetime',
+            'ticketing_started_at' => 'datetime',
+        ];
+    }
 
     protected $createRules = [
         'person_id' => 'required|integer|exists:person,id',

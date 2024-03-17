@@ -324,24 +324,27 @@ class Position extends ApiModel
         'type',
     ];
 
-    protected $casts = [
-        'active' => 'bool',
-        'alert_when_becomes_empty' => 'bool',
-        'alert_when_no_trainers' => 'bool',
-        'all_rangers' => 'bool',
-        'auto_sign_out' => 'bool',
-        'deselect_on_team_join' => 'bool',
-        'mvr_eligible' => 'bool',
-        'new_user_eligible' => 'bool',
-        'no_payroll_hours_adjustment' => 'bool',
-        'no_training_required' => 'bool',
-        'on_sl_report' => 'bool',
-        'on_trainer_report' => 'bool',
-        'prevent_multiple_enrollments' => 'bool',
-        'pvr_eligible' => 'bool',
-        'require_training_for_roles' => 'bool',
-        'sign_out_hour_cap' => 'float',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'bool',
+            'alert_when_becomes_empty' => 'bool',
+            'alert_when_no_trainers' => 'bool',
+            'all_rangers' => 'bool',
+            'auto_sign_out' => 'bool',
+            'deselect_on_team_join' => 'bool',
+            'mvr_eligible' => 'bool',
+            'new_user_eligible' => 'bool',
+            'no_payroll_hours_adjustment' => 'bool',
+            'no_training_required' => 'bool',
+            'on_sl_report' => 'bool',
+            'on_trainer_report' => 'bool',
+            'prevent_multiple_enrollments' => 'bool',
+            'pvr_eligible' => 'bool',
+            'require_training_for_roles' => 'bool',
+            'sign_out_hour_cap' => 'float',
+        ];
+    }
 
     protected $rules = [
         'title' => 'required|string|max:40',

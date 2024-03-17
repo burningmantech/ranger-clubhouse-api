@@ -2,28 +2,26 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-
 class Alert extends ApiModel
 {
     protected $table = 'alert';
     protected bool $auditModel = true;
 
-    const SHIFT_CHANGE               = 1;
-    const SHIFT_MUSTER               = 2;
-    const EMEREGENCY_BROADCAST       = 3;
-    const RANGER_SOCIALS             = 4;
-    const TICKETING                  = 5;
-    const ON_SHIFT                   = 6;
-    const TRAINING                   = 7;
-    const CLUBHOUSE_NOTIFY_ON_PLAYA  = 8;
-    const CLUBHOUSE_NOTIFY_PRE_EVENT = 9;
-    const SHIFT_CHANGE_PRE_EVENT     = 10;
-    const SHIFT_MUSTER_PRE_EVENT     = 11;
+    const int SHIFT_CHANGE = 1;
+    const int SHIFT_MUSTER = 2;
+    const int EMEREGENCY_BROADCAST = 3;
+    const int RANGER_SOCIALS = 4;
+    const int TICKETING = 5;
+    const int ON_SHIFT = 6;
+    const int TRAINING = 7;
+    const int CLUBHOUSE_NOTIFY_ON_PLAYA = 8;
+    const int CLUBHOUSE_NOTIFY_PRE_EVENT = 9;
+    const int SHIFT_CHANGE_PRE_EVENT = 10;
+    const int SHIFT_MUSTER_PRE_EVENT = 11;
 
     // The following are not part of the RBS and are email only
-    const RANGER_CONTACT             = 12;
-    const MENTOR_CONTACT             = 13;
+    const int RANGER_CONTACT = 12;
+    const int MENTOR_CONTACT = 13;
 
     protected $fillable = [
         'title',
@@ -31,16 +29,19 @@ class Alert extends ApiModel
         'on_playa',
     ];
 
-    protected $casts = [
-        'on_playa'      => 'boolean',
-        'created_at'    => 'datetime',
-        'updated_at'    => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'on_playa' => 'boolean',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'title' => 'required|string',
         'description' => 'required|string',
-        'on_playa'  => 'boolean'
+        'on_playa' => 'boolean'
     ];
 
     protected $appends = [
@@ -63,15 +64,18 @@ class Alert extends ApiModel
         return self::orderBy('on_playa', 'desc', 'title', 'asc')->get();
     }
 
-    public function getSmsOnlyAttribute() {
+    public function getSmsOnlyAttribute()
+    {
         return ($this->id == Alert::ON_SHIFT);
     }
 
-    public function getEmailOnlyAttribute() {
+    public function getEmailOnlyAttribute()
+    {
         return ($this->id == Alert::RANGER_CONTACT || $this->id == Alert::MENTOR_CONTACT);
     }
 
-    public function getNoOptOutAttribute() {
+    public function getNoOptOutAttribute()
+    {
         return ($this->id == Alert::EMEREGENCY_BROADCAST);
     }
 }

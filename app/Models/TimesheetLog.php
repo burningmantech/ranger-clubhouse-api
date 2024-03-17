@@ -12,26 +12,29 @@ class TimesheetLog extends ApiModel
     // allow mass assignment - all records are created behind the scenes
     protected $guarded = [];
 
-    const UNCONFIRMED = 'unconfirmed';  // Entire timesheet marked unconfirmed (usually an entry was updated/created)
-    const CONFIRMED = 'confirmed';      // Entire timesheet marked confirmed
+    const string UNCONFIRMED = 'unconfirmed';  // Entire timesheet marked unconfirmed (usually an entry was updated/created)
+    const string CONFIRMED = 'confirmed';      // Entire timesheet marked confirmed
 
-    const SIGNON = 'signon';    // Timesheet entry created via shift start
-    const SIGNOFF = 'signoff';  // Shift was ended
-    const UPDATE = 'update';    // Timesheet entry updated
-    const DELETE = 'delete';    // Timesheet entry deleted
-    const DELETE_MISTAKE = 'delete-mistake';    // Timesheet entry deleted due to accidental creation
+    const string SIGNON = 'signon';    // Timesheet entry created via shift start
+    const string SIGNOFF = 'signoff';  // Shift was ended
+    const string UPDATE = 'update';    // Timesheet entry updated
+    const string DELETE = 'delete';    // Timesheet entry deleted
+    const string DELETE_MISTAKE = 'delete-mistake';    // Timesheet entry deleted due to accidental creation
 
-    const UNVERIFIED = 'unverified'; // Entry was marked unverified
-    const VERIFY = 'verify';    // Entry marked verified (aka correct)
+    const string UNVERIFIED = 'unverified'; // Entry was marked unverified
+    const string VERIFY = 'verify';    // Entry marked verified (aka correct)
 
-    const CREATED = 'created';  // created via bulk update or missing timesheet request
+    const string CREATED = 'created';  // created via bulk update or missing timesheet request
 
-    const VIA_BULK_UPLOAD = 'bulk-upload';  // Entry created via Bulk Uploader
-    const VIA_MISSING_ENTRY = 'missing-entry';  // Entry created via Missing Timesheet Request
+    const string VIA_BULK_UPLOAD = 'bulk-upload';  // Entry created via Bulk Uploader
+    const string VIA_MISSING_ENTRY = 'missing-entry';  // Entry created via Missing Timesheet Request
 
-    protected $casts = [
-        'created_at' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime'
+        ];
+    }
 
     public function person(): BelongsTo
     {

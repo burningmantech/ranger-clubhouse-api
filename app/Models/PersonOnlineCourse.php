@@ -11,16 +11,19 @@ class PersonOnlineCourse extends ApiModel
 
     protected bool $auditModel = true;
 
-    protected $casts = [
-        'completed_at' => 'datetime',
-        'enrolled_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'completed_at' => 'datetime',
+            'enrolled_at' => 'datetime',
+        ];
+    }
 
     // Table is not directly accessible
     protected $guarded = [];
 
-    const TYPE_MOODLE = 'moodle';
-    const TYPE_MANUAL_REVIEW = 'manual-review'; // prior to 2020
+    const string TYPE_MOODLE = 'moodle';
+    const string TYPE_MANUAL_REVIEW = 'manual-review'; // prior to 2020
 
     protected $attributes = [
         'type' => self::TYPE_MOODLE,

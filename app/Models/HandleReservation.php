@@ -51,9 +51,12 @@ class HandleReservation extends ApiModel
         'twii_year',
     ];
 
-    protected $casts = [
-        'expires_on' => 'datetime:Y-m-d',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'expires_on' => 'datetime:Y-m-d'
+        ];
+    }
 
     protected $rules = [
         'handle' => [

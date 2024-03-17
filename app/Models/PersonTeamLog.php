@@ -22,10 +22,13 @@ class PersonTeamLog extends ApiModel
         'updated_at'
     ];
 
-    protected $casts = [
-        'joined_on' => 'date:Y-m-d',
-        'left_on' => 'date:Y-m-d',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'joined_on' => 'date:Y-m-d',
+            'left_on' => 'date:Y-m-d',
+        ];
+    }
 
     protected $rules = [
         'person_id' => 'required|exists:person,id',

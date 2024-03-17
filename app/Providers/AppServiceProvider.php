@@ -2,10 +2,18 @@
 
 namespace App\Providers;
 
+use App\Models\Bmid;
+use App\Models\Document;
+use App\Models\Help;
+use App\Models\Person;
+use App\Models\PersonEvent;
+use App\Models\Role;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -15,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         // Allow modern sized photos to be uploaded
         ini_set('upload_max_filesize', '32M');
@@ -46,7 +54,8 @@ class AppServiceProvider extends ServiceProvider
             return '<?php echo \App\Helpers\HyperLinkHelper::text(' . $text . '); ?>';
         });
 
-        Validator::extendImplicit('state_for_country', '\App\Validators\StateForCountry@validate', 'A state/province is required');
+        $this->bootAuth();
+        $this->bootRoute();
     }
 
     /**
@@ -60,5 +69,52 @@ class AppServiceProvider extends ServiceProvider
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);
         }
+    }
+
+    public function bootAuth(): void
+    {
+        Gate::define('isAdmin', function (Person $user) {
+            return $user->isAdmin();
+        });
+
+        Gate::define('isMentor', function (Person $user) {
+            return $user->hasRole([Role::ADMIN, Role::MENTOR]);
+        });
+
+        Gate::define('isIntake', function (Person $user) {
+            return $user->hasRole(Role::INTAKE);
+        });
+
+        Gate::define('isVC', function (Person $user) {
+            return $user->hasRole(Role::VC);
+        });
+
+        Gate::define('isTimesheetManager', function (Person $user) {
+            return $user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
+        });
+        Gate::resource('person', 'PersonPolicy');
+    }
+
+    public function bootRoute(): void
+    {
+        Route::bind('bmid', function ($id) {
+            return Bmid::findOrFail($id);
+        });
+
+        Route::bind('document', function ($id) {
+            return Document::findIdOrTagOrFail($id);
+        });
+
+        Route::bind('help', function ($id) {
+            return Help::findByIdOrSlugOrFail($id);
+        });
+
+        Route::bind('person-event', function ($id) {
+            return PersonEvent::findForRoute($id);
+        });
+
+        Route::bind('setting', function ($id) {
+            return Setting::findOrFail($id);
+        });
     }
 }

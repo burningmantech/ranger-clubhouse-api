@@ -20,9 +20,12 @@ class TraineeStatus extends ApiModel
         'passed',
     ];
 
-    protected $casts = [
-        'passed' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'passed' => 'boolean'
+        ];
+    }
 
     public function person(): BelongsTo
     {
@@ -127,7 +130,7 @@ class TraineeStatus extends ApiModel
     }
 
 
-    public function rank() : Attribute
+    public function rank(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

@@ -16,9 +16,12 @@ class OauthClient extends ApiModel
     // Not directly accessible, allow all fields to be fillable
     protected $guarded = [];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime'
+        ];
+    }
 
     protected $fillable = [
         'client_id',

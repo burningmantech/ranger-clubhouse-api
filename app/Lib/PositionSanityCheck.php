@@ -2,7 +2,8 @@
 
 namespace App\Lib;
 
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
+use App\Lib\PositionSanityCheck\DeactivatedPositionCheck;
 
 class PositionSanityCheck
 {
@@ -12,16 +13,16 @@ class PositionSanityCheck
      * "STOP THE INSANITY" -- Susan Powders, 1990s self-proclaimed exercise "guru" & peroxide enthusiast.
      */
 
-    const CHECKERS = [
-        'deactivated_accounts' => 'App\Lib\PositionSanityCheck\DeactivatedAccounts',
-        'deactivated_positions' => 'App\Lib\PositionSanityCheck\DeactivatedPositionCheck',
-        'deactivated_teams' => 'App\Lib\PositionSanityCheck\DeactivatedTeamsCheck',
-        'lmyr' => 'App\Lib\PositionSanityCheck\LoginManagementYearRoundCheck',
-        'missing_positions' => 'App\Lib\PositionSanityCheck\MissingPositionsCheck',
-        'retired_accounts' => 'App\Lib\PositionSanityCheck\RetiredAccounts',
-        'shiny_pennies' => 'App\Lib\PositionSanityCheck\ShinnyPenniesCheck',
-        'team_membership' => 'App\Lib\PositionSanityCheck\TeamMembershipCheck',
-        'team_positions' => 'App\Lib\PositionSanityCheck\TeamPositionsCheck',
+    const array CHECKERS = [
+        'deactivated_accounts' => PositionSanityCheck\DeactivatedAccounts::class,
+        'deactivated_positions' => DeactivatedPositionCheck::class,
+        'deactivated_teams' => PositionSanityCheck\DeactivatedTeamsCheck::class,
+        'lmyr' => PositionSanityCheck\LoginManagementYearRoundCheck::class,
+        'missing_positions' => PositionSanityCheck\MissingPositionsCheck::class,
+        'retired_accounts' => PositionSanityCheck\RetiredAccounts::class,
+        'shiny_pennies' => PositionSanityCheck\ShinnyPenniesCheck::class,
+        'team_membership' => PositionSanityCheck\TeamMembershipCheck::class,
+        'team_positions' => PositionSanityCheck\TeamPositionsCheck::class,
     ];
 
     public static function issues(): array
@@ -47,7 +48,7 @@ class PositionSanityCheck
     public static function repair(string $repair, array $peopleIds, array $options): array
     {
         if (!array_key_exists($repair, self::CHECKERS)) {
-            throw new InvalidArgumentException("Unknown repair action [$repair]");
+            throw new UnacceptableConditionException("Unknown repair action [$repair]");
         }
 
         $class = self::CHECKERS[$repair];

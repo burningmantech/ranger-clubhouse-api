@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Support\Facades\DB;
-use App\Models\ApiModel;
-
 /*
  * Manual Review (aka that Google Form) -- retained for archival purposes.
  */
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class ManualReview extends ApiModel
 {
     protected $table = 'manual_review';
@@ -17,11 +17,14 @@ class ManualReview extends ApiModel
         'passdate',
     ];
 
-    protected $casts = [
-        'passdate' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'passdate' => 'datetime'
+        ];
+    }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -29,7 +32,7 @@ class ManualReview extends ApiModel
     public static function findForQuery($query)
     {
         $sql = self::select('manual_review.*')
-            ->with([ 'person:id,callsign,status' ])
+            ->with(['person:id,callsign,status'])
             ->join('person', 'person.id', 'manual_review.person_id');
 
         if (isset($query['year'])) {
@@ -40,7 +43,7 @@ class ManualReview extends ApiModel
             $sql->where('person_id', $query['person_id']);
         }
 
-        return $sql->get()->sortBy('person.callsign', SORT_NATURAL|SORT_FLAG_CASE)->values();
+        return $sql->get()->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
 
     public static function findForPersonYear($personId, $year)

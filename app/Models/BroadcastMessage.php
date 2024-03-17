@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BroadcastMessage extends ApiModel
 {
@@ -11,9 +12,9 @@ class BroadcastMessage extends ApiModel
     // Allow mass assignment - the table is not exposed directly through an API
     protected $guarded = [];
 
-    const DEFAULT_PAGE_SIZE = 50;
+    const int DEFAULT_PAGE_SIZE = 50;
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -32,8 +33,8 @@ class BroadcastMessage extends ApiModel
 
     public static function findForQuery($query)
     {
-        $page = (int) ($query['page'] ?? 1);
-        $pageSize = (int) ($query['page_size'] ?? self::DEFAULT_PAGE_SIZE);
+        $page = (int)($query['page'] ?? 1);
+        $pageSize = (int)($query['page_size'] ?? self::DEFAULT_PAGE_SIZE);
         $status = $query['status'] ?? null;
         $year = $query['year'] ?? null;
         $personId = $query['person_id'] ?? null;
@@ -58,7 +59,7 @@ class BroadcastMessage extends ApiModel
             $sql->where('direction', $direction);
         }
 
-        if ($status){
+        if ($status) {
             $sql->where('status', $status);
         }
 

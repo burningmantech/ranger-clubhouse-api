@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 /*
  * Training is an inherited Position object with more things!
@@ -241,7 +241,7 @@ class Training extends Position
      *
      * @param mixed $id position to find by integer or slug.
      * @return Training
-     * @throws InvalidArgumentException if record is not a training position.
+     * @throws UnacceptableConditionException
      */
 
     public static function find($id)
@@ -256,7 +256,7 @@ class Training extends Position
         }
 
         if ($position->type != "Training" || stripos($position->title, "trainer") !== false) {
-            throw new InvalidArgumentException("Position is not a training position");
+            throw new UnacceptableConditionException("Position is not a training position");
         }
 
         return $position;

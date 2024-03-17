@@ -32,12 +32,15 @@ class PersonCertification extends ApiModel
         'trained_on' => 'sometimes|date:Y-m-d|nullable',
     ];
 
-    protected $casts = [
-        'issued_on' => 'date:Y-m-d',
-        'trained_on' => 'date:Y-m-d',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'issued_on' => 'date:Y-m-d',
+            'trained_on' => 'date:Y-m-d',
+        ];
+    }
 
-    const RELATIONSHIPS = [
+    const array RELATIONSHIPS = [
         'certification:id,title',
         'person:id,callsign',
         'recorder:id,callsign'
@@ -66,7 +69,7 @@ class PersonCertification extends ApiModel
      * @return PersonCertification|null
      */
 
-    public static function findCertificationForPerson(int $certificationId, int $personId) : ?PersonCertification
+    public static function findCertificationForPerson(int $certificationId, int $personId): ?PersonCertification
     {
         return self::where('person_id', $personId)->where('certification_id', $certificationId)->first();
     }
@@ -100,12 +103,12 @@ class PersonCertification extends ApiModel
         $this->load(self::RELATIONSHIPS);
     }
 
-    public function issuedOn() : Attribute
+    public function issuedOn(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
 
-    public function trainedOn() : Attribute
+    public function trainedOn(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

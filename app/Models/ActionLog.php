@@ -16,15 +16,18 @@ class ActionLog extends Model
 
     protected $guarded = [];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'data' => 'array'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'data' => 'array',
+        ];
+    }
 
     // created_at is handled by the database itself
     public $timestamps = false;
 
-    const PAGE_SIZE_DEFAULT = 50;
+    const int PAGE_SIZE_DEFAULT = 50;
 
     public function person(): BelongsTo
     {

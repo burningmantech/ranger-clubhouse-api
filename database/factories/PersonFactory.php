@@ -2,14 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\Person;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 class PersonFactory extends Factory
 {
-    protected $model = Person::class;
-
     public function definition(): array
     {
         $salt = "0123467890123456789";

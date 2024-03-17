@@ -17,7 +17,7 @@ use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TicketingController extends ApiController
 {
@@ -122,12 +122,12 @@ class TicketingController extends ApiController
             if ($soId == 'new') {
                 // New SO pass is being asked for
                 if (empty($soName)) {
-                    throw new InvalidArgumentException('New SO WAP pass requested but no name given.');
+                    throw new UnacceptableConditionException('New SO WAP pass requested but no name given.');
                 }
 
                 // Make sure the max. has not been hit already
                 if (AccessDocument::SOWAPCount($personId) >= $maxSO) {
-                    throw new InvalidArgumentException('New pass would exceed the limit of ' . $maxSO . ' allowed SO WAP passes.');
+                    throw new UnacceptableConditionException('New pass would exceed the limit of ' . $maxSO . ' allowed SO WAP passes.');
                 }
 
                 // Looks good, create it
@@ -202,10 +202,10 @@ class TicketingController extends ApiController
             $specialTicket = AccessDocument::findOrFail($specialTicketId);
             $this->authorize('deliverySpecialDocument', $specialTicket);
             if ($specialTicket->isSpecialDocument()) {
-                throw new InvalidArgumentException("Access document is not a Special Type document");
+                throw new UnacceptableConditionException("Access document is not a Special Type document");
             }
             if ($specialTicket->status != AccessDocument::QUALIFIED || $specialTicketId->status != AccessDocument::CLAIMED) {
-                throw new InvalidArgumentException("Access document is not qualified nor claimed.");
+                throw new UnacceptableConditionException("Access document is not qualified nor claimed.");
             }
             $tickets = [$specialTicket];
             unset($params['special_document_id']);

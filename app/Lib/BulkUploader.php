@@ -18,7 +18,7 @@ use Carbon\Exceptions\InvalidFormatException;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 
 class BulkUploader
@@ -247,7 +247,7 @@ class BulkUploader
         } else {
             $processAction = self::ACTIONS[$action] ?? null;
             if (!$processAction) {
-                throw new InvalidArgumentException('Unknown action');
+                throw new UnacceptableConditionException('Unknown action');
             }
         }
 
@@ -355,7 +355,7 @@ class BulkUploader
         }
     }
 
-    public static function changePersonStatus($records, $action, $commit, $reason)
+    public static function changePersonStatus($records, $action, $commit, $reason): void
     {
         foreach ($records as $record) {
             $person = $record->person;
@@ -375,7 +375,7 @@ class BulkUploader
         }
     }
 
-    public static function processBmid($records, $action, $commit, $reason)
+    public static function processBmid($records, $action, $commit, $reason): void
     {
         $year = current_year();
 
@@ -444,8 +444,7 @@ class BulkUploader
                     break;
 
                 default:
-                    throw new InvalidArgumentException('Unknown action');
-                    break;
+                    throw new UnacceptableConditionException('Unknown action');
             }
 
             $record->status = self::STATUS_SUCCESS;
@@ -732,7 +731,7 @@ class BulkUploader
         }
 
         if (!in_array($type, Provision::ALL_TYPES)) {
-            throw new InvalidArgumentException('Unknown provision type');
+            throw new UnacceptableConditionException('Unknown provision type');
         }
 
         $isEventRadio = ($type == Provision::EVENT_RADIO);

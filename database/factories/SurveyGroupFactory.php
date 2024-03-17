@@ -2,14 +2,12 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\SurveyGroup;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SurveyGroupFactory extends Factory
 {
-    protected $model = SurveyGroup::class;
-
-    public function definition()
+    public function definition(): array
     {
         return [
             'survey_id' => 1,
