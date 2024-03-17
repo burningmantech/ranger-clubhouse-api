@@ -32,6 +32,7 @@ class RBSTransmitEmailJob implements ShouldQueue
      * Execute the job.
      *
      * @return void
+     * @throws \ReflectionException
      */
 
     public function handle(): void
