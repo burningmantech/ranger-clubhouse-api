@@ -5,13 +5,8 @@ namespace Database\Factories;
 use App\Models\ProspectiveApplication;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<ProspectiveApplication>
- */
 class ProspectiveApplicationFactory extends Factory
 {
-    protected $model = ProspectiveApplication::class;
-
     /**
      * Define the model's default state.
      *

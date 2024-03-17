@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class PersonMessage extends ApiModel
 {
@@ -42,11 +42,14 @@ class PersonMessage extends ApiModel
     public $recipient_callsign;
     public $sender_callsign;
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'delivered' => 'bool',
-        'expires_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'delivered' => 'bool',
+            'expires_at' => 'datetime',
+        ];
+    }
 
     protected $createRules = [
         'message_from' => 'required',

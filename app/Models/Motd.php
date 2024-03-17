@@ -6,7 +6,7 @@ use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class Motd extends ApiModel
 {
@@ -26,11 +26,14 @@ class Motd extends ApiModel
         'expires_at' => 'required|date',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'expires_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'has_expired',
@@ -71,7 +74,7 @@ class Motd extends ApiModel
             case 'all':
                 break;
             default:
-                throw new InvalidArgumentException("Unknown audience value");
+                throw new UnacceptableConditionException("Unknown audience value");
         }
 
         switch ($type) {

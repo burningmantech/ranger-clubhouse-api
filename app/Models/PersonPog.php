@@ -14,15 +14,18 @@ class PersonPog extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
-    const POG_SHOWER = 'shower';
-    const POG_MEAL = 'meal';
-    const POG_HALF_MEAL = 'half-meal';
+    const string POG_SHOWER = 'shower';
+    const string POG_MEAL = 'meal';
+    const string POG_HALF_MEAL = 'half-meal';
 
-    const STATUS_ISSUED = 'issued';
-    const STATUS_CANCELLED = 'cancelled';
-    const STATUS_REDEEMED = 'redeemed';
+    const string STATUS_ISSUED = 'issued';
+    const string STATUS_CANCELLED = 'cancelled';
+    const string STATUS_REDEEMED = 'redeemed';
 
-    const RELATIONSHIPS = ['issued_by:id,callsign', 'timesheet:id,position_id,on_duty,off_duty'];
+    const array RELATIONSHIPS = [
+        'issued_by:id,callsign',
+        'timesheet:id,position_id,on_duty,off_duty'
+    ];
 
     protected $fillable = [
         'issued_at',
@@ -38,11 +41,14 @@ class PersonPog extends ApiModel
         'status' => self::STATUS_ISSUED,
     ];
 
-     protected $casts = [
-         'created_at' => 'datetime',
-         'issued_at' => 'datetime',
-         'updated_at' => 'datetime'
-     ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'issued_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public function person(): BelongsTo
     {
@@ -64,9 +70,9 @@ class PersonPog extends ApiModel
         parent::boot();
 
         self::creating(function ($model) {
-           if (empty($model->issued_at)) {
-               $model->issued_at = now();
-           }
+            if (empty($model->issued_at)) {
+                $model->issued_at = now();
+            }
         });
     }
 
@@ -129,7 +135,7 @@ class PersonPog extends ApiModel
      * Set the notes
      */
 
-    public function notes() : Attribute
+    public function notes(): Attribute
     {
         return BlankIfEmptyAttribute::make();
     }

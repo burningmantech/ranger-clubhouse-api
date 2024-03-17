@@ -4,17 +4,12 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-use App\Models\TraineeStatus;
-
-
 class TraineeStatusFactory extends Factory
 {
-    protected $model = TraineeStatus::class;
-
-    public function definition()
+    public function definition(): array
     {
-return [
-        'passed'   => false,
-    ];
-}
+        return [
+            'passed' => false,
+        ];
+    }
 }

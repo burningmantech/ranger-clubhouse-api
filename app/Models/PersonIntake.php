@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Attributes\NullIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonIntake extends ApiModel
 {
@@ -16,12 +17,15 @@ class PersonIntake extends ApiModel
         'updated_at',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
-    public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -49,7 +53,7 @@ class PersonIntake extends ApiModel
             ->toArray();
     }
 
-    public function rrnRank() : Attribute
+    public function rrnRank(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
@@ -59,12 +63,12 @@ class PersonIntake extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function vcRank() : Attribute
+    public function vcRank(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
 
-    public function personnelRank() : Attribute
+    public function personnelRank(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

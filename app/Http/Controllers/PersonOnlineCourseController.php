@@ -15,7 +15,7 @@ use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class PersonOnlineCourseController extends ApiController
 {
@@ -57,7 +57,7 @@ class PersonOnlineCourseController extends ApiController
         }
 
         if (!$course) {
-            throw new InvalidArgumentException('Cannot find an appropriate course');
+            throw new UnacceptableConditionException('Cannot find an appropriate course');
         }
 
         $password = null;
@@ -162,7 +162,7 @@ class PersonOnlineCourseController extends ApiController
         $year = $params['year'];
 
         if (PersonOnlineCourse::didCompleteForYear($personId, $year, $positionId)) {
-            return throw new InvalidArgumentException("Person has already completed online course for $year");
+            return throw new UnacceptableConditionException("Person has already completed online course for $year");
         }
 
         $poc = PersonOnlineCourse::firstOrNewForPersonYear($person->id, $year, $positionId);
@@ -281,7 +281,7 @@ class PersonOnlineCourseController extends ApiController
         $this->authorize('change', [PersonOnlineCourse::class, $person, $onlineCourse]);
 
         if ($onlineCourse->position_id != $positionId) {
-            throw new InvalidArgumentException('Online Course and position do not match');
+            throw new UnacceptableConditionException('Online Course and position do not match');
         }
 
         $poc = PersonOnlineCourse::firstOrNewForPersonYear($person->id, $year, $positionId);

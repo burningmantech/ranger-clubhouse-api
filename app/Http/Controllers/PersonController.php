@@ -42,7 +42,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class PersonController extends ApiController
 {
@@ -678,7 +678,7 @@ class PersonController extends ApiController
         prevent_if_ghd_server('Account registration');
 
         if (setting('AuditorRegistrationDisabled')) {
-            throw new InvalidArgumentException("Auditor registration is disabled at this time.");
+            throw new UnacceptableConditionException("Auditor registration is disabled at this time.");
         }
 
         $params = request()->validate([
@@ -709,7 +709,7 @@ class PersonController extends ApiController
         $person->fill($params['person']);
 
         if ($person->status != Person::AUDITOR) {
-            throw new InvalidArgumentException('Only the auditor status is allowed currently for registration.');
+            throw new UnacceptableConditionException('Only the auditor status is allowed currently for registration.');
         }
 
         // make the callsign for an auditor.
@@ -874,7 +874,7 @@ class PersonController extends ApiController
     public function ticketsProvisionsProgress(Person $person): JsonResponse
     {
         if (!in_array($person->status, Person::LIVE_STATUSES)) {
-            throw new InvalidArgumentException('Person may not earn tickets and provisions.');
+            throw new UnacceptableConditionException('Person may not earn tickets and provisions.');
         }
         $this->authorize('ticketsProvisionsProgress', $person);
         return response()->json([
@@ -895,11 +895,11 @@ class PersonController extends ApiController
         $this->authorize('releaseCallsign', $person);
 
         if ($person->vintage) {
-            throw new InvalidArgumentException("Callsign is vintage and cannot be reset");
+            throw new UnacceptableConditionException("Callsign is vintage and cannot be reset");
         }
 
         if (!$person->resetCallsign()) {
-            throw new InvalidArgumentException("Unable to reset the callsign");
+            throw new UnacceptableConditionException("Unable to reset the callsign");
         }
 
         $person->callsign_approved = false;

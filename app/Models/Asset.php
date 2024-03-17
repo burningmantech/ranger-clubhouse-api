@@ -15,14 +15,14 @@ class Asset extends ApiModel
 
     protected bool $auditModel = true;
 
-    const TYPE_GEAR = 'gear';
-    const TYPE_RADIO = 'radio';
-    const TYPE_TEMP_ID = 'temp-id';
+    const string TYPE_GEAR = 'gear';
+    const string TYPE_RADIO = 'radio';
+    const string TYPE_TEMP_ID = 'temp-id';
 
     // Only used
-    const TYPE_AMBER = 'amber';     // Only used in 2013
-    const TYPE_KEY = 'key';         // Only used in 2013 & 2014
-    const TYPE_VEHICLE = 'vehicle'; // Only used from 2013 to 2015
+    const string TYPE_AMBER = 'amber';     // Only used in 2013
+    const string TYPE_KEY = 'key';         // Only used in 2013 & 2014
+    const string TYPE_VEHICLE = 'vehicle'; // Only used from 2013 to 2015
 
     protected $fillable = [
         'barcode',
@@ -34,10 +34,13 @@ class Asset extends ApiModel
         'year',
     ];
 
-    protected $casts = [
-        'perm_assign' => 'boolean',
-        'created_at' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'perm_assign' => 'boolean',
+            'created_at' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'barcode' => 'required|string|max:25',

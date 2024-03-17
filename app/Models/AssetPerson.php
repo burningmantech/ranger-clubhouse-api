@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Attributes\NullIfEmptyAttribute;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -24,10 +23,13 @@ class AssetPerson extends ApiModel
         'attachment_id'
     ];
 
-    protected $casts = [
-        'checked_out' => 'datetime',
-        'checked_in' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'checked_out' => 'datetime',
+            'checked_in' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'person_id' => 'required|integer',

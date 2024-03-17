@@ -10,7 +10,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class BmidController extends ApiController
 {
@@ -95,14 +95,14 @@ class BmidController extends ApiController
         $bmids = Bmid::findForPersonIds($params['year'], $params['person_ids']);
 
         if ($bmids->isEmpty()) {
-            throw new InvalidArgumentException('No BMIDs were found');
+            throw new UnacceptableConditionException('No BMIDs were found');
         }
 
         // Filter out the IDS.
         $filterBmids = $bmids->filter(fn($bmid) => $bmid->isPrintable());
 
         if ($filterBmids->isEmpty()) {
-            throw new InvalidArgumentException("No prep or ready-to-print status BMIDs found. Previously submitted BMIDs are ignored.");
+            throw new UnacceptableConditionException("No prep or ready-to-print status BMIDs found. Previously submitted BMIDs are ignored.");
         }
 
         $batchInfo = $params['batch_info'] ?? '';

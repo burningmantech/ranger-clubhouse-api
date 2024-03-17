@@ -153,14 +153,17 @@ class AccessDocument extends ApiModel
         'updated_at',
     ];
 
-    protected $casts = [
-        'access_any_time' => 'boolean',
-        'access_date' => 'datetime',
-        'created_at' => 'datetime',
-        'expiry_date' => 'datetime:Y-m-d',
-        'past_expire_date' => 'boolean',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'access_any_time' => 'boolean',
+            'access_date' => 'datetime',
+            'created_at' => 'datetime',
+            'expiry_date' => 'datetime:Y-m-d',
+            'past_expire_date' => 'boolean',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $hidden = [
         'additional_comments',   // pseudo-column, write-only. used to append to comments.

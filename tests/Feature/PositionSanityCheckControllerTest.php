@@ -265,6 +265,7 @@ class PositionSanityCheckControllerTest extends TestCase
 
     public function testDeactivatedRepairInvalidPosition()
     {
+      //  $this->withoutExceptionHandling();
         $this->addRole(Role::ADMIN);
         $person = $this->person;
 

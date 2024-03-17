@@ -8,7 +8,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 
 class Setting extends ApiModel
@@ -690,7 +690,7 @@ class Setting extends ApiModel
         foreach ($names as $name) {
             $desc = self::DESCRIPTIONS[$name] ?? null;
             if (!$desc) {
-                throw new InvalidArgumentException("'$name' is an unknown setting.");
+                throw new UnacceptableConditionException("'$name' is an unknown setting.");
             }
 
             if (self::getCached($name, $value, $desc['type'])) {

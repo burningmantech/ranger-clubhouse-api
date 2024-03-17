@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class SurveyController extends ApiController
 {
@@ -195,7 +195,8 @@ class SurveyController extends ApiController
      * Submit a survey response
      *
      * @return JsonResponse
-     * @throws InvalidArgumentException
+     * @throws UnacceptableConditionException
+     * @throws ValidationException
      */
 
     public function submit(): JsonResponse
@@ -253,7 +254,7 @@ class SurveyController extends ApiController
             foreach ($params['survey'] as $group) {
                 $surveyGroup = SurveyGroup::findOrFail($group['survey_group_id']);
                 if ($surveyGroup->survey_id != $survey->id) {
-                    throw new InvalidArgumentException("Survey group [{$surveyGroup->id}] is not part of the survey");
+                    throw new UnacceptableConditionException("Survey group [{$surveyGroup->id}] is not part of the survey");
                 }
 
                 // A trainer survey asks if the responder's name can be shared with the trainer
@@ -346,7 +347,7 @@ class SurveyController extends ApiController
         $this->authorize('allTrainersReport', $survey);
 
         if ($survey->type != Survey::TRAINER) {
-            throw new InvalidArgumentException("Survey is not a trainer-for-trainer survey");
+            throw new UnacceptableConditionException("Survey is not a trainer-for-trainer survey");
         }
 
         return response()->json(['trainers' => SurveyReports::allTrainersReport($survey)]);

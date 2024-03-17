@@ -16,8 +16,6 @@ use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication;
-
     public $user;
 
     const TEST_DATE = 'Y-01-01 12:34:56';

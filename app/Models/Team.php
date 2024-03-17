@@ -38,10 +38,13 @@ class Team extends ApiModel
         'role_ids'
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-        'mvr_eligible' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+            'mvr_eligible' => 'boolean',
+        ];
+    }
 
     protected $rules = [
         'title' => 'required|string|max:100',
@@ -186,7 +189,7 @@ class Team extends ApiModel
 
         return $rows;
     }
-    
+
     /**
      * Load the roles associated with the team, and set the pseudo column role_ids
      * @return void

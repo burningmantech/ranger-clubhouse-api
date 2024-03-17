@@ -6,7 +6,7 @@ use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class DeactivatedPositionCheck
 {
@@ -58,7 +58,7 @@ class DeactivatedPositionCheck
         // Validate position exists and is inactive
         $position = Position::where('id', $positionId)->where('active', 0)->get();
         if ($position->count() == 0) {
-            throw new InvalidArgumentException("Invalid position!");
+            throw new UnacceptableConditionException("Invalid position!");
         }
 
         foreach ($peopleIds as $personId) {

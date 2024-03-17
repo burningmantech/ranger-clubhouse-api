@@ -11,7 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class PodController extends ApiController
 {
@@ -188,7 +188,7 @@ class PodController extends ApiController
         $personId = $person->id;
         $personPod = PersonPod::findCurrentPersonPod($person->id, $pod->id);
         if ($personPod) {
-            throw new InvalidArgumentException("Person is already in the pod");
+            throw new UnacceptableConditionException("Person is already in the pod");
         }
 
         $timesheet = Timesheet::findPersonOnDuty($personId);
@@ -235,7 +235,7 @@ class PodController extends ApiController
         $person = Person::findOrFail($params['person_id']);
         $personPod = PersonPod::findCurrentPersonPod($person->id, $pod->id);
         if (!$personPod) {
-            throw new InvalidArgumentException("Person is not in the pod");
+            throw new UnacceptableConditionException("Person is not in the pod");
         }
 
         if (isset($params['is_lead'])) {
@@ -273,7 +273,7 @@ class PodController extends ApiController
         $personPod = PersonPod::findCurrentPersonPod($person->id, $pod->id);
 
         if (!$personPod) {
-            throw new InvalidArgumentException("Person is not in the pod");
+            throw new UnacceptableConditionException("Person is not in the pod");
         }
 
         $personPod->removed_at = now();

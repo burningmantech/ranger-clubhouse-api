@@ -7,7 +7,7 @@ use App\Models\PersonPosition;
 use App\Models\PersonTeam;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class DeactivatedTeamsCheck
 {
@@ -45,11 +45,11 @@ class DeactivatedTeamsCheck
         // Validate team exists and is inactive
         $team = Team::find($teamId);
         if (!$team) {
-            throw new InvalidArgumentException("Invalid team id [$teamId]!");
+            throw new UnacceptableConditionException("Invalid team id [$teamId]!");
         }
 
         if ($team->active) {
-            throw new InvalidArgumentException("Team id=[$teamId] title=[{$team->title}] is active");
+            throw new UnacceptableConditionException("Team id=[$teamId] title=[{$team->title}] is active");
         }
 
         $positionIds = DB::table('position')->where('team_id', $team->id)->get()->pluck('id')->toArray();

@@ -39,10 +39,13 @@ class SurveyAnswer extends ApiModel
         'trainer_id' => 'sometimes|integer|nullable',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $attributes = [
         'can_share_name' => false,
@@ -84,13 +87,14 @@ class SurveyAnswer extends ApiModel
      * @return bool
      */
 
-    public static function needAlphaSurveyResponse(int $personId, int $year) : bool {
+    public static function needAlphaSurveyResponse(int $personId, int $year): bool
+    {
         $surveyId = DB::table('survey')->where(['year' => $year, 'type' => Survey::ALPHA])->value('id');
         if (!$surveyId) {
             return false;
         }
 
-        return !DB::table('survey_answer')->where([ 'survey_id' => $surveyId, 'person_id' => $personId ])->exists();
+        return !DB::table('survey_answer')->where(['survey_id' => $surveyId, 'person_id' => $personId])->exists();
     }
 
     /**

@@ -127,16 +127,19 @@ class Bmid extends ApiModel
         'meals' => null,
     ];
 
-    protected $casts = [
-        'access_any_time' => 'bool',
-        'access_date' => 'datetime:Y-m-d',
-        'allocated_showers' => 'bool',
-        'created_at' => 'datetime',
-        'earned_showers' => 'bool',
-        'org_vehicle_insurance' => 'bool',
-        'showers' => 'bool',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'access_any_time' => 'bool',
+            'access_date' => 'datetime:Y-m-d',
+            'allocated_showers' => 'bool',
+            'created_at' => 'datetime',
+            'earned_showers' => 'bool',
+            'org_vehicle_insurance' => 'bool',
+            'showers' => 'bool',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $appends = [
         'access_any_time',
@@ -301,7 +304,6 @@ class Bmid extends ApiModel
         foreach ($ids as $id) {
             $bmidsByPerson[$id]->has_signups = true;
         }
-
 
 
         // The provisions are special - by default, the items are opt-out so treat an item qualified as

@@ -33,7 +33,7 @@ class IntakeControllerTest extends TestCase
         parent::setUp();
 
         $this->signInUser();
-        $year = $this->year = (int)date('Y');
+        $this->year = (int)date('Y');
     }
 
     /*

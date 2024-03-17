@@ -34,16 +34,17 @@ use Psr\SimpleCache\InvalidArgumentException;
  */
 class Slot extends ApiModel
 {
+    protected $table = 'slot';
+
+    protected bool $auditModel = true;
+
     // related tables to be loaded with row
-    const WITH_POSITION_TRAINER = [
+    const array WITH_POSITION_TRAINER = [
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers',
         'trainer_slot',
         'trainer_slot.position:id,title'
     ];
 
-    protected $table = 'slot';
-
-    protected bool $auditModel = true;
 
     protected $with = self::WITH_POSITION_TRAINER;
 
@@ -89,10 +90,13 @@ class Slot extends ApiModel
         'parent_signup_slot_id' => 'nullable|integer|exists:slot,id'
     ];
 
-    protected $casts = [
-        'ends' => 'datetime',
-        'begins' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'ends' => 'datetime',
+            'begins' => 'datetime',
+        ];
+    }
 
     // Don't track changes to the signed up count.
     public array $auditExclude = [
@@ -182,7 +186,7 @@ class Slot extends ApiModel
             TrainerStatus::deleteForSlot($model->id);
             TraineeNote::deleteForSlot($model->id);
             SurveyAnswer::deleteForSlot($model->id);
-            Slot::where('parent_signup_slot_id', $model->id)->update([ 'parent_signup_slot_id' => null ]);
+            Slot::where('parent_signup_slot_id', $model->id)->update(['parent_signup_slot_id' => null]);
         });
     }
 
@@ -514,7 +518,7 @@ class Slot extends ApiModel
      * Did the person sign up for an InPerson Training?
      */
 
-    public static function haveInPersonTrainingSignUp(int $personId, int $year) : bool
+    public static function haveInPersonTrainingSignUp(int $personId, int $year): bool
     {
         return DB::table('slot')
             ->join('person_slot', function ($j) use ($personId) {

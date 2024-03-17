@@ -8,7 +8,7 @@ use App\Models\Setting;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class SettingController extends ApiController
 {
@@ -60,7 +60,7 @@ class SettingController extends ApiController
 
     public function store()
     {
-        throw new InvalidArgumentException('Settings cannot be dynamically created');
+        throw new UnacceptableConditionException('Settings cannot be dynamically created');
     }
 
     /**
@@ -93,12 +93,13 @@ class SettingController extends ApiController
 
     /**
      * Remove a setting
+     *
      * @param Setting $setting
-     * @throws InvalidArgumentException
+     * @throws UnacceptableConditionException
      */
 
     public function destroy(Setting $setting)
     {
-        throw new InvalidArgumentException('Settings cannot be destroyed');
+        throw new UnacceptableConditionException('Settings cannot be destroyed');
     }
 }

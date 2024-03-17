@@ -15,9 +15,12 @@ class PersonSlot extends ApiModel
         'slot_id'
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime'
+        ];
+    }
 
     public function person(): BelongsTo
     {
@@ -100,7 +103,7 @@ class PersonSlot extends ApiModel
             ->join('slot', 'slot.position_id', 'position.id')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->where('position.active', true)
-            ->where('position.'.$column, true)
+            ->where('position.' . $column, true)
             ->where('slot.active', true)
             ->where('slot.begins_year', $year)
             ->where('person_slot.person_id', $personId)

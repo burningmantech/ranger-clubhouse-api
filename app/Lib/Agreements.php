@@ -10,7 +10,7 @@ use App\Models\Position;
 use App\Models\Role;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 /*
  * TODO: Move to a flag/certificate/agreement tracking system to layer on top of. This is intended to be a
@@ -121,13 +121,13 @@ class Agreements
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
-            throw new InvalidArgumentException('Document tag not found');
+            throw new UnacceptableConditionException('Document tag not found');
         }
 
         $personEvent = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
 
         if (!self::canSignDocument($person, $tag, $personEvent)) {
-            throw new InvalidArgumentException('Document not available to sign');
+            throw new UnacceptableConditionException('Document not available to sign');
         }
 
         $col = $paper['column'];
@@ -158,7 +158,7 @@ class Agreements
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
-            throw new InvalidArgumentException('Document tag not found');
+            throw new UnacceptableConditionException('Document tag not found');
         }
 
         $col = $paper['column'];
@@ -184,7 +184,7 @@ class Agreements
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
-            throw new InvalidArgumentException('Document tag not found');
+            throw new UnacceptableConditionException('Document tag not found');
         }
 
         $setting = $paper['setting'] ?? null;

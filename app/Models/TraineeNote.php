@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\ApiModel;
-use App\Models\Person;
-use App\Models\Slot;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TraineeNote extends ApiModel
 {
@@ -17,17 +15,17 @@ class TraineeNote extends ApiModel
     // Trainee Notes are not directly accessed
     protected $guarded = [];
 
-    public function person_source()
+    public function person_source(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function person()
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function slot()
+    public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
     }
@@ -56,7 +54,7 @@ class TraineeNote extends ApiModel
      * @return void
      */
 
-    public static function deleteForSlot($slotId) : void
+    public static function deleteForSlot($slotId): void
     {
         self::where('slot_id', $slotId)->delete();
     }

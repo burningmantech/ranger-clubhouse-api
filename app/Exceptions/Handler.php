@@ -8,7 +8,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,25 +16,27 @@ use InvalidArgumentException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
 use Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Throwable;
 
 
-class Handler extends ExceptionHandler
+class Handler
 {
     /**
      * A list of the exception types that are not reported.
      *
      * @var array
      */
-    protected $dontReport = [
-        AuthorizationException::class,
+    const array NO_REPORTING = [
         AuthenticationException::class,
-        ModelNotFoundException::class,
-        ValidationException::class,
-        InvalidArgumentException::class,
-        TokenExpiredException::class,
+        AuthorizationException::class,
         CommandRuntimeException::class,
+        InvalidArgumentException::class,
+        ModelNotFoundException::class,
+        TokenExpiredException::class,
+        UnacceptableConditionException::class,
+        ValidationException::class,
     ];
 
     /**
@@ -43,31 +44,27 @@ class Handler extends ExceptionHandler
      *
      * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
      *
-     * @param Throwable $exception
-     * @return void
+     * @param Throwable $e
+     * @return bool
      * @throws Throwable
      */
 
-    public function report(Throwable $exception): void
+    public static function report(Throwable $e): bool
     {
-        if ($this->shouldntReport($exception)) {
-            return;
-        }
-
-        if ($exception instanceof ProcessSignaledException) {
+        if ($e instanceof ProcessSignaledException) {
             // May see this when an ECS instance is being shutdown -- don't report it.
-            if ($exception->getSignal() == 9) {
-                return;
+            if ($e->getSignal() == 9) {
+                return false;
             }
         }
 
         // Report the exception on the console if running in development
         if (app()->isLocal()) {
-            parent::report($exception);
-            return;
+            return true;
         }
 
-        ErrorLog::recordException($exception, 'server-exception');
+        ErrorLog::recordException($e, 'server-exception');
+        return false;
     }
 
     /**
@@ -77,7 +74,7 @@ class Handler extends ExceptionHandler
      * @param Throwable $e
      * @return JsonResponse
      */
-    public function render($request, Throwable $e): JsonResponse
+    public static function render(Throwable $e, $request): JsonResponse
     {
         /*
          * Handle JWT exceptions.
@@ -100,8 +97,8 @@ class Handler extends ExceptionHandler
             return RestApi::error(response(), 422, $e->validator->getMessageBag());
         }
 
-        // Parameters given to a method are not valid.
-        if ($e instanceof InvalidArgumentException) {
+        // Some inappropriate condition / state occurred
+        if ($e instanceof UnacceptableConditionException) {
             return RestApi::error(response(), 422, $e->getMessage());
         }
 
@@ -130,7 +127,7 @@ class Handler extends ExceptionHandler
          * - The wrong HTTP verb was used (status 405)
          * - Something, something, something, bad.
          */
-        if ($this->isHttpException($e)) {
+        if ($e instanceof HttpExceptionInterface) {
             $statusCode = (int)$e->getStatusCode();
 
             switch ($statusCode) {

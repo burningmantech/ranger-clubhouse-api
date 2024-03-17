@@ -8,7 +8,7 @@ use App\Models\Provision;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 use ZipArchive;
 
@@ -36,7 +36,7 @@ class MarcatoExport
     public string|null $exportFile = null;
     public string|null $photoZip = null;
     public string|null $csvFile = null;
-
+    public string|null $datestamp = null;
 
     /**
      * Export BMIDs for upload into Marcato.
@@ -63,11 +63,11 @@ class MarcatoExport
         foreach ($marcato->bmids as $bmid) {
             $bmid->load('person.person_photo');
             if (!$bmid->person->person_photo) {
-                throw new InvalidArgumentException("{$bmid->person->callsign} does not have a photo record");
+                throw new UnacceptableConditionException("{$bmid->person->callsign} does not have a photo record");
             }
 
             if (!$bmid->person->person_photo->imageExists()) {
-                throw new InvalidArgumentException("{$bmid->person->callsign} has photo record but image file is missing.");
+                throw new UnacceptableConditionException("{$bmid->person->callsign} has photo record but image file is missing.");
             }
         }
 

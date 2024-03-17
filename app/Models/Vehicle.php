@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class Vehicle extends ApiModel
@@ -13,34 +14,34 @@ class Vehicle extends ApiModel
     protected bool $auditModel = true;
 
     // Request status
-    const PENDING = 'pending';
-    const APPROVED = 'approved';
-    const REJECTED = 'rejected';
+    const string PENDING = 'pending';
+    const string APPROVED = 'approved';
+    const string REJECTED = 'rejected';
 
     // Driving stickers
-    const DRIVING_STICKER_NONE = 'none';
-    const DRIVING_STICKER_PREPOST = 'prepost';
-    const DRIVING_STICKER_STAFF = 'staff';
+    const string DRIVING_STICKER_NONE = 'none';
+    const string DRIVING_STICKER_PREPOST = 'prepost';
+    const string DRIVING_STICKER_STAFF = 'staff';
 
     // Fuel chit - gimme some gas man!
-    const FUEL_CHIT_EVENT = 'event';
-    const FUEL_CHIT_SINGLE_USE = 'single-use';
-    const FUEL_CHIT_NONE = 'none';
+    const string FUEL_CHIT_EVENT = 'event';
+    const string FUEL_CHIT_SINGLE_USE = 'single-use';
+    const string FUEL_CHIT_NONE = 'none';
 
     // Ranger logo decals
-    const LOGO_PERMANENT_NEW = 'permanent-new';
-    const LOGO_PERMANENT_EXISTING = 'permanent-existing';
-    const LOGO_EVENT = 'event';
-    const LOGO_NONE = 'none';
+    const string LOGO_PERMANENT_NEW = 'permanent-new';
+    const string LOGO_PERMANENT_EXISTING = 'permanent-existing';
+    const string LOGO_EVENT = 'event';
+    const string LOGO_NONE = 'none';
 
     // Ranger wants blinky lights
-    const AMBER_LIGHT_NONE = 'none';
-    const AMBER_LIGHT_DEPARTMENT = 'department';
-    const AMBER_LIGHT_ALREADY_HAS = 'already-has';
+    const string AMBER_LIGHT_NONE = 'none';
+    const string AMBER_LIGHT_DEPARTMENT = 'department';
+    const string AMBER_LIGHT_ALREADY_HAS = 'already-has';
 
     // Vehicle type
-    const FLEET = 'fleet';
-    const PERSONAL = 'personal';
+    const string FLEET = 'fleet';
+    const string PERSONAL = 'personal';
 
     protected $fillable = [
         'type',
@@ -104,7 +105,13 @@ class Vehicle extends ApiModel
 
     public $callsign;
 
-    public static function boot()
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+
+    public static function boot(): void
     {
         parent::boot();
 
@@ -120,7 +127,6 @@ class Vehicle extends ApiModel
      * Find all vehicles for the given criteria
      *
      * @param array $query
-     * @return Collection|Vehicle[]
      */
 
     public static function findForQuery(array $query)
@@ -210,11 +216,6 @@ class Vehicle extends ApiModel
             ->get()
             ->sortBy('person.callsign')
             ->values();
-    }
-
-    public function person()
-    {
-        return $this->belongsTo(Person::class);
     }
 
     public function loadRelationships()

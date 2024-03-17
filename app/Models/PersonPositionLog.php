@@ -22,12 +22,15 @@ class PersonPositionLog extends ApiModel
         'updated_at'
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'joined_on' => 'date:Y-m-d',
-        'left_on' => 'date:Y-m-d',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'joined_on' => 'date:Y-m-d',
+            'left_on' => 'date:Y-m-d',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'person_id' => 'required|exists:person,id',

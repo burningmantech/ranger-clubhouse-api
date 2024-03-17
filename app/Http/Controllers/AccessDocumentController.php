@@ -14,7 +14,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class AccessDocumentController extends ApiController
 {
@@ -276,7 +276,7 @@ class AccessDocumentController extends ApiController
             // Verify person can update all the documents.
             $this->authorize('update', $row);
             if ($personId != $row->person_id) {
-                throw new InvalidArgumentException("All records must be for the same person");
+                throw new UnacceptableConditionException("All records must be for the same person");
             }
         }
 
@@ -293,13 +293,13 @@ class AccessDocumentController extends ApiController
                 case AccessDocument::BANKED:
                     if (!in_array($adType, AccessDocument::REGULAR_TICKET_TYPES)
                         || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
-                        throw new InvalidArgumentException('Illegal type and status combination');
+                        throw new UnacceptableConditionException('Illegal type and status combination');
                     }
                     break;
 
                 case AccessDocument::CLAIMED:
                     if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
-                        throw new InvalidArgumentException('Document is not banked or qualified');
+                        throw new UnacceptableConditionException('Document is not banked or qualified');
                     }
                     break;
 
@@ -307,16 +307,16 @@ class AccessDocumentController extends ApiController
                     if ($adType != AccessDocument::WAP
                         && $adType != AccessDocument::VEHICLE_PASS
                         && $adType != AccessDocument::GIFT) {
-                        throw new InvalidArgumentException('Document is not a WAP, Vehicle Pass or Gift Ticket.');
+                        throw new UnacceptableConditionException('Document is not a WAP, Vehicle Pass or Gift Ticket.');
                     }
 
                     if ($adStatus != AccessDocument::CLAIMED) {
-                        throw new InvalidArgumentException('Document is not claimed.');
+                        throw new UnacceptableConditionException('Document is not claimed.');
                     }
                     break;
 
                 default:
-                    throw new InvalidArgumentException('Unknown status action');
+                    throw new UnacceptableConditionException('Unknown status action');
             }
 
             $ad->status = $status;
@@ -377,14 +377,14 @@ class AccessDocumentController extends ApiController
         ]);
 
         if (!$accessDocument->isSpecialTicket()) {
-            throw new InvalidArgumentException("Record is not a Gift or LSD ticket");
+            throw new UnacceptableConditionException("Record is not a Gift or LSD ticket");
         }
 
         $status = $accessDocument->status;
         if ($status != AccessDocument::QUALIFIED
             && $status != AccessDocument::CLAIMED
             && $status != AccessDocument::TURNED_DOWN) {
-            throw new InvalidArgumentException('Existing status is not qualified, claimed, or turned down.');
+            throw new UnacceptableConditionException('Existing status is not qualified, claimed, or turned down.');
         }
 
         $accessDocument->status = $params['status'];

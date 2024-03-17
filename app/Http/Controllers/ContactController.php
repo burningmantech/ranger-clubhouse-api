@@ -11,7 +11,7 @@ use App\Models\Person;
 use App\Models\PersonTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class ContactController extends ApiController
 {
@@ -82,7 +82,7 @@ class ContactController extends ApiController
         $this->authorize('updateMailingLists', $person);
 
         if (!in_array($person->status, Person::ACTIVE_STATUSES)) {
-            throw new InvalidArgumentException('Person does not have an active/current status');
+            throw new UnacceptableConditionException('Person does not have an active/current status');
         }
 
         $params = request()->validate([

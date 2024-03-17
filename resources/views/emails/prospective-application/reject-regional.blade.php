@@ -1,4 +1,3 @@
-@php use App\Models\ProspectiveApplication; @endphp
 <x-html-email>
     Hey {{$application->first_name}} {{$application->last_name}},
 

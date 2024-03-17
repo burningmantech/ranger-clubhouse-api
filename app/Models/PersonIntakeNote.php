@@ -15,10 +15,13 @@ class PersonIntakeNote extends ApiModel
 
     protected $guarded = [];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     protected $rules = [
         'note' => 'sometimes|string|nullable|max:64000'

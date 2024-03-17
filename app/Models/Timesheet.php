@@ -43,24 +43,24 @@ class Timesheet extends ApiModel
         'duration'
     ];
 
-    const STATUS_PENDING = 'pending';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_REJECTED = 'rejected';
-    const STATUS_VERIFIED = 'verified';
-    const STATUS_UNVERIFIED = 'unverified';
+    const string STATUS_PENDING = 'pending';
+    const string STATUS_APPROVED = 'approved';
+    const string STATUS_REJECTED = 'rejected';
+    const string STATUS_VERIFIED = 'verified';
+    const string STATUS_UNVERIFIED = 'unverified';
 
     // type for findYears()
-    const YEARS_ALL = 'all';
-    const YEARS_WORKED = 'worked';
-    const YEARS_RANGERED = 'rangered';
-    const YEARS_NON_RANGERED = 'non-rangered';
+    const string YEARS_ALL = 'all';
+    const string YEARS_WORKED = 'worked';
+    const string YEARS_RANGERED = 'rangered';
+    const string YEARS_NON_RANGERED = 'non-rangered';
 
-    const EXCLUDE_POSITIONS_FOR_YEARS = [
+    const array EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
         Position::TRAINING,
     ];
 
-    const TOO_SHORT_LENGTH = (15 * 60);
+    const int TOO_SHORT_LENGTH = (15 * 60);
 
     protected $fillable = [
         'desired_position_id',
@@ -100,17 +100,20 @@ class Timesheet extends ApiModel
         'credits',
     ];
 
-    protected $casts = [
-        'desired_off_duty' => 'datetime',
-        'desired_on_duty' => 'datetime',
-        'off_duty' => 'datetime',
-        'on_duty' => 'datetime',
-        'reviewed_at' => 'datetime',
-        'suppress_duration_warning' => 'boolean',
-        'timesheet_confirmed_at' => 'datetime',
-        'verified_at' => 'datetime',
-        'was_signin_forced' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'desired_off_duty' => 'datetime',
+            'desired_on_duty' => 'datetime',
+            'off_duty' => 'datetime',
+            'on_duty' => 'datetime',
+            'reviewed_at' => 'datetime',
+            'suppress_duration_warning' => 'boolean',
+            'timesheet_confirmed_at' => 'datetime',
+            'verified_at' => 'datetime',
+            'was_signin_forced' => 'boolean',
+        ];
+    }
 
     protected $virtualColumns = [
         'additional_admin_notes',
@@ -631,7 +634,7 @@ class Timesheet extends ApiModel
      * @return bool
      */
 
-    public static function hasAlphaEntry(int $personId, ?int $year=null): bool
+    public static function hasAlphaEntry(int $personId, ?int $year = null): bool
     {
         return Timesheet::where('person_id', $personId)
             ->whereYear('on_duty', $year ?? current_year())

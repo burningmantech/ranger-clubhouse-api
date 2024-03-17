@@ -7,7 +7,7 @@ use App\Models\AssetPerson;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class AssetController extends ApiController
 {
@@ -184,7 +184,7 @@ class AssetController extends ApiController
         $this->authorize('checkin', [Asset::class]);
         $asset_person = AssetPerson::findCheckedOutPerson($asset->id);
         if (!$asset_person) {
-            throw new InvalidArgumentException("Asset is not checked out");
+            throw new UnacceptableConditionException("Asset is not checked out");
         }
 
         $asset_person->checked_in = now();

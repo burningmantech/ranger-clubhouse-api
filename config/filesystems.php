@@ -49,6 +49,7 @@ return [
             'root' => storage_path(''),
             'url' => env('APP_URL'),
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         'public' => [
@@ -56,6 +57,7 @@ return [
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         'photos-local' => [
@@ -63,6 +65,7 @@ return [
             'root' => storage_path(''),
             'url' => env('APP_URL').'/',
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         'photos-s3' => [
@@ -73,6 +76,7 @@ return [
             'bucket' => env('RANGER_CLUBHOUSE_S3_BUCKET', 'ranger-photos'),
             'url' => env('RANGER_CLUBHOUSE_S3_URL', 'https://ranger-photos.s3-us-west-2.amazonaws.com'),
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         'bmid-export-local' => [
@@ -80,6 +84,7 @@ return [
             'root' => storage_path(''),
             'url' => env('APP_URL').'/',
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         'bmid-export-s3' => [
@@ -90,6 +95,7 @@ return [
             'bucket' => env('RANGER_CLUBHOUSE_S3_BMID_BUCKET', 'ranger-photos'),
             'url' => env('RANGER_CLUBHOUSE_S3_BMID_URL', 'https://ranger-photos.s3-us-west-2.amazonaws.com'),
             'visibility' => 'public',
+            'throw' => false,
         ],
 
         's3' => [
@@ -100,8 +106,7 @@ return [
             'bucket' => env('RANGER_CLUBHOUSE_S3_BUCKET', 'ranger-photos'),
             'url' => env('RANGER_CLUBHOUSE_S3_URL', 'https://ranger-photos.s3-us-west-2.amazonaws.com'),
             'visibility' => 'public',
+            'throw' => false,
         ],
-
     ],
-
 ];

@@ -38,7 +38,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TimesheetController extends ApiController
 {
@@ -321,7 +321,7 @@ class TimesheetController extends ApiController
         $params = request()->validate(['position_id' => 'required|integer|exists:position,id']);
 
         if ($timesheet->off_duty) {
-            throw new InvalidArgumentException('Timesheet entry is not off duty.');
+            throw new UnacceptableConditionException('Timesheet entry is not off duty.');
         }
 
         $positionId = $params['position_id'];
@@ -483,7 +483,7 @@ class TimesheetController extends ApiController
         $this->authorize('deleteMistake', $timesheet);
 
         if ($timesheet->off_duty) {
-            throw new InvalidArgumentException('Delete-for-mistake request can only happen on still on duty entries.');
+            throw new UnacceptableConditionException('Delete-for-mistake request can only happen on still on duty entries.');
         }
 
         $timesheet->auditReason = 'accidental creation';

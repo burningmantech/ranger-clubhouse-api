@@ -3,13 +3,10 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\PersonPhoto;
 
 class PersonPhotoFactory extends Factory
 {
-    protected $model = PersonPhoto::class;
-
-    public function definition()
+    public function definition(): array
     {
         return [
             'image_filename' => 'http://localhost/photo.png',

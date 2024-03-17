@@ -6,7 +6,7 @@ use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class CallsignsController extends ApiController
 {

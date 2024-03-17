@@ -3,13 +3,10 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\SurveyQuestion;
 
 class SurveyQuestionFactory extends Factory
 {
-    protected $model = SurveyQuestion::class;
-
-    public function definition()
+    public function definition(): array
     {
         return [
             'survey_id' => 1,

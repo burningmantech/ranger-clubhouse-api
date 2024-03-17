@@ -3,18 +3,16 @@
 namespace App\Models;
 
 use Exception;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class PersonLanguage extends ApiModel
 {
-    const OFF_DUTY = 1;
-    const ON_DUTY = 2;
-    const HAS_RADIO = 3;
-
-    const LANGUAGE_NAME_LENGTH = 32;
 
     protected $table = 'person_language';
+
+    public $timestamps = false;
 
     /*
      * All fields are mass-assignable
@@ -22,13 +20,13 @@ class PersonLanguage extends ApiModel
       */
     protected $guarded = [];
 
-    /**
-     * Don't use created_at/updated_at.
-     * @var bool
-     */
-    public $timestamps = false;
+    const int OFF_DUTY = 1;
+    const int ON_DUTY = 2;
+    const int HAS_RADIO = 3;
 
-    public function person()
+    const int LANGUAGE_NAME_LENGTH = 32;
+
+    public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
@@ -56,7 +54,7 @@ class PersonLanguage extends ApiModel
     {
         self::where('person_id', $person_id)->delete();
 
-        $languages = preg_split('/([,\.;&]|\band\b)/', $language);
+        $languages = preg_split('/([,.;&]|\band\b)/', $language);
 
         foreach ($languages as $name) {
             $tongue = trim($name);
@@ -116,7 +114,7 @@ class PersonLanguage extends ApiModel
                 break;
 
             default:
-                throw new InvalidArgumentException("Unknown status [$status]");
+                throw new UnacceptableConditionException("Unknown status [$status]");
         }
 
         return $sql->get();

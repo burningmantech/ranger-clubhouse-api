@@ -7,28 +7,36 @@
 
 namespace App\Validators;
 
-use App\Models\Person;
+use Closure;
+use Illuminate\Contracts\Validation\ValidationRule;
 
-class StateForCountry {
-    public function validate($attribute, $value, $parameters, $validator) {
-        $param = $parameters[0] ?? '';
-        $data = $validator->getData();
+class StateForCountry implements ValidationRule
+{
+    /**
+     * All of the data under validation.
+     *
+     * @var array<string, mixed>
+     */
+    protected $data = [];
 
-        // Allow state to be blanked out if the account is not consider 'live'
-        if ($param == 'live_only') {
-            $status = $data['status'] ?? 'none';
-
-            if (!in_array($status, Person::LIVE_STATUSES)) {
-                return true;
-            }
-        }
-
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
         $country = $data['country'] ?? null;
-        if (in_array($country, [ 'US', 'CA', 'AU'])) {
+        if (in_array($country, ['US', 'CA', 'AU']) && empty($value)) {
             // State required.
-            return !empty($value);
+            $fail("The :attribute is required for the given country.");
         }
+    }
 
-        return true;
+    /**
+     * Set the data under validation.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function setData(array $data): static
+    {
+        $this->data = $data;
+
+        return $this;
     }
 }

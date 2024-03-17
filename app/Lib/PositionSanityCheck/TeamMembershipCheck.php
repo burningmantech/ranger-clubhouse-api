@@ -8,7 +8,7 @@ use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class TeamMembershipCheck extends SanityCheck
 {
@@ -40,7 +40,7 @@ class TeamMembershipCheck extends SanityCheck
             $personId = $person->id;
             $teamIds = $teams[$personId] ?? null;
             if (!$teamIds) {
-                throw new InvalidArgumentException("Person #{$personId} was not found in the options");
+                throw new UnacceptableConditionException("Person #{$personId} was not found in the options");
             }
             foreach ($teamIds as $tid) {
                 PersonTeam::addPerson($tid, $personId, 'position sanity checker repair - add missing team');

@@ -12,7 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class ProvisionController extends ApiController
 {
@@ -440,14 +440,14 @@ class ProvisionController extends ApiController
 
         $personId = $person->id;
         if (Provision::haveAllocated($personId)) {
-            throw new InvalidArgumentException("Person has allocated provisions. Earn provisions cannot be adjusted.");
+            throw new UnacceptableConditionException("Person has allocated provisions. Earn provisions cannot be adjusted.");
         }
 
         $status = $params['status'];
         $rows = Provision::retrieveEarned($personId);
 
         if ($rows->isEmpty()) {
-            throw new InvalidArgumentException("Person has no earned provisions.");
+            throw new UnacceptableConditionException("Person has no earned provisions.");
         }
 
         foreach ($rows as $row) {

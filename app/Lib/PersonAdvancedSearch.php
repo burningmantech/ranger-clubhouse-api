@@ -10,7 +10,7 @@ use App\Models\Timesheet;
 use App\Models\TrainerStatus;
 use App\Models\Training;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class PersonAdvancedSearch
 {
@@ -58,7 +58,7 @@ class PersonAdvancedSearch
 
         if ($statusYear) {
             if (empty($statuses)) {
-                throw new InvalidArgumentException("status_year set yet not statuses given");
+                throw new UnacceptableConditionException("status_year set yet not statuses given");
             }
 
             $personStatus = DB::table('person_status')

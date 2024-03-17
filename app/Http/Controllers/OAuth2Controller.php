@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class OAuth2Controller extends ApiController
@@ -95,7 +95,7 @@ class OAuth2Controller extends ApiController
 
 
         if ($params['response_type'] != 'code') {
-            throw new InvalidArgumentException('Unsupported response type');
+            throw new UnacceptableConditionException('Unsupported response type');
         }
 
         $client = OauthClient::findForClientId($params['client_id']);

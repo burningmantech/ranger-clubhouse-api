@@ -21,7 +21,7 @@ use App\Models\Position;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 use ReflectionException;
 use RuntimeException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -235,7 +235,7 @@ class RBS
     /**
      * Send an Email message to list of people
      *
-     * @param array $alert the alert row
+     * @param $alert
      * @param int $broadcastId the broadcast identifier
      * @param int $senderId person who sending
      * @param array $people list to send to
@@ -353,7 +353,7 @@ class RBS
         // Retry failed emails
         if (!$emails->isEmpty()) {
             $alert = Alert::find($broadcast->alert_id);
-            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert, $expiresAt))->render();
+            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert, $broadcast->expiresAt))->render();
 
             $mailer = self::setupSMTP();
 
@@ -584,7 +584,7 @@ class RBS
             case Broadcast::TYPE_SLOT_EDIT:
                 $personIds = $params['person_ids'] ?? null;
                 if (empty($personIds)) {
-                    throw new InvalidArgumentException("Person ids cannot be missing or empty");
+                    throw new UnacceptableConditionException("Person ids cannot be missing or empty");
                 }
                 $sql = DB::table('person')->whereIntegerInRaw('id', $personIds);
                 self::addAlertPrefJoin($sql, $alertId);
@@ -634,7 +634,7 @@ class RBS
                 break;
 
             default:
-                throw new InvalidArgumentException("Unknown type [$broadcastType]");
+                throw new UnacceptableConditionException("Unknown type [$broadcastType]");
         }
 
         $isSimple = $attrs['is_simple'] ?? false;

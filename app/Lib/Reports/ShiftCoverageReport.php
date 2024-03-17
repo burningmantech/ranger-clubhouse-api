@@ -7,7 +7,7 @@ use App\Models\Slot;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
+use App\Exceptions\UnacceptableConditionException;
 
 class ShiftCoverageReport
 {
@@ -165,7 +165,7 @@ class ShiftCoverageReport
     public static function execute(int $year, string $type): array
     {
         if (!isset(self::COVERAGE_TYPES[$type])) {
-            throw new InvalidArgumentException("Unknown type $type");
+            throw new UnacceptableConditionException("Unknown type $type");
         }
 
         list($basePositionId, $coverage) = self::COVERAGE_TYPES[$type];

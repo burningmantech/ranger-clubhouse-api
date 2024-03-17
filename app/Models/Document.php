@@ -80,6 +80,11 @@ class Document extends ApiModel
         return self::where('id', $idOrTag)->orWhere('tag', $idOrTag)->first();
     }
 
+    public static function findIdOrTagOrFail($idOrTag): ?Document
+    {
+        return self::where('id', $idOrTag)->orWhere('tag', $idOrTag)->firstOrFail();
+    }
+
     /**
      * Find all the documents
      *

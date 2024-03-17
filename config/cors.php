@@ -12,14 +12,20 @@ return [
     |
     */
 
-    'paths' => [ '/*' ],
+    'paths' => ['/*'],
+
+
+    'allowed_methods' => ['*'],
+
+    'allowed_origins' => ['*'],
+
+    'allowed_origins_patterns' => [],
+
+    'allowed_headers' => ['*'],
+
+    'exposed_headers' => [],
+
+    'max_age' => 0,
 
     'supports_credentials' => false,
-    'allowed_origins' => ['*'],
-    //'allowedOriginsPatterns' => [ 'Content-Type', 'X-Requested-With' ],
-    'allowed_origins_patterns' => [ '*' ],
-    'allowed_headers' => ['*'],
-    'allowed_methods' => ['GET', 'POST', 'OPTIONS', 'PATCH', 'DELETE', 'PUT' ],
-    'exposed_headers' => [],
-    'max_age' => 3600,
 ];
