@@ -41,30 +41,31 @@ class Schedule
 
     private $position;
 
-    const LOCATE_SHIFT_START_WITHIN = 60; // Find a shift starting within +/- X minutes
+    const int LOCATE_SHIFT_START_WITHIN = 60; // Find a shift starting within +/- X minutes
 
-    const MAY_START_SHIFT_WITHIN = 25; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
+    const int MAY_START_SHIFT_WITHIN = 25; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
 
     /*
      * Sign up statuses
      */
 
-    const SUCCESS = 'success'; // person was successfully signed up for a slot
-    const FULL = 'full'; // slot is at capacity
-    const MULTIPLE_ENROLLMENT = 'multiple-enrollment'; // person is already enrolled in another slot with same position (i.e. training)
-    const NOT_ACTIVE = 'not-active'; // slot has not been activated
-    const NO_POSITION = 'no-position'; // person does not hold the position the slot is associated with
-    const NO_SLOT = 'no-slot'; // slot does not exist
-    const HAS_STARTED = 'has-started'; // slot has already started
-    const EXISTS = 'exists'; // person is already signed up for the slot.
-    const MISSING_REQUIREMENTS = 'missing-requirements'; // person has not met all the requirements to sign up
+    const string SUCCESS = 'success'; // person was successfully signed up for a slot
+    const string FULL = 'full'; // slot is at capacity
+    const string MULTIPLE_ENROLLMENT = 'multiple-enrollment'; // person is already enrolled in another slot with same position (i.e. training)
+    const string NOT_ACTIVE = 'not-active'; // slot has not been activated
+    const string NO_POSITION = 'no-position'; // person does not hold the position the slot is associated with
+    const string NO_SLOT = 'no-slot'; // slot does not exist
+    const string HAS_STARTED = 'has-started'; // slot has already started
+    const string EXISTS = 'exists'; // person is already signed up for the slot.
+    const string MISSING_REQUIREMENTS = 'missing-requirements'; // person has not met all the requirements to sign up
+    const string NO_EMPLOYEE_ID = 'no-employee-id'; // person attempt to signed up for a paid shift, and no employee id is on file.
 
     /*
      * Failed sign up statuses that are allowed to be forced if the user has the appropriate
      * privileges/positions/rolls
      */
 
-    const MAY_FORCE_STATUSES = [
+    const array MAY_FORCE_STATUSES = [
         self::FULL, self::HAS_STARTED, self::MULTIPLE_ENROLLMENT
     ];
 

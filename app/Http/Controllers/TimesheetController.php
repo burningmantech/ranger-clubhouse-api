@@ -312,7 +312,7 @@ class TimesheetController extends ApiController
      *
      * @param Timesheet $timesheet
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException|ValidationException|UnacceptableConditionException
      */
 
     public function updatePosition(Timesheet $timesheet): JsonResponse
