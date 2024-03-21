@@ -6,6 +6,8 @@ use App\Models\AccessDocument;
 use App\Models\Person;
 use App\Models\Provision;
 use App\Models\Setting;
+use Carbon\Carbon;
+use DateTime;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -137,6 +139,7 @@ class RedactDatabase
             'AuditorRegistrationDisabled' => 'true',
             'BroadcastClubhouseNotify' => 'false',
             'BroadcastClubhouseSandbox' => 'true',
+            'DatabaseCreatedOn' => (string) new Carbon(new DateTime),
             'HQWindowInterfaceEnabled' => 'true',
             'MealInfoAvailable' => 'true',
             'OnlineCourseDisabledAllowSignups' => 'true',

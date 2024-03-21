@@ -48,6 +48,7 @@ class ConfigController extends Controller
 
         if (config('clubhouse.GroundhogDayTime')) {
             $configs['GroundhogDayTime'] = (string)now();
+            $configs['DatabaseCreatedOn'] = setting('DatabaseCreatedOn');
         }
 
         $configs['DeploymentEnvironment'] = config('clubhouse.DeploymentEnvironment');

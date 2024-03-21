@@ -232,7 +232,7 @@ class ActionLog extends Model
     {
         $log = new ActionLog;
         $log->event = $event;
-        $log->person_id = $user?->id;
+        $log->person_id = is_numeric($user) ? $user : $user?->id;
         $log->message = $message ?? '';
         $log->target_person_id = $targetPersonId;
 

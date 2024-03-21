@@ -16,7 +16,7 @@ use RuntimeException;
 
 class GroundHogDay
 {
-    const ENVIRONMENT_VAR = 'RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME';
+    const string ENVIRONMENT_VAR = 'RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME';
 
     /**
      * Convert the current database into a Ground Hog Day database
@@ -67,7 +67,10 @@ class GroundHogDay
 
         // Mark some assets as being checked out
         DB::table('asset_person')->where('checked_out', '>', $groundHogDay)->delete();
-        DB::table('asset_person')->where('checked_in', '>=', $groundHogDay)->update(['checked_in' => null]);
+        DB::table('asset_person')->where('checked_in', '>=', $groundHogDay)->update([
+            'checked_in' => null,
+            'check_in_person_id' => null
+        ]);
 
         DB::table('person')->whereIntegerInRaw('id', $peopleIds)
             ->update([

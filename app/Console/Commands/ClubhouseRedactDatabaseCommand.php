@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class ClubhouseRedactDatabaseCommand extends Command
 {
-    const TEMP_DATABASE = "rangers_redacted_temp";
+    const string TEMP_DATABASE = "rangers_redacted_temp";
 
     /**
      * The name and signature of the console command.
@@ -42,7 +42,7 @@ class ClubhouseRedactDatabaseCommand extends Command
      *
      * @return mixed
      */
-    public function handle()
+    public function handle(): mixed
     {
         $redactedName = $this->option('tempdb') ?? self::TEMP_DATABASE;
 

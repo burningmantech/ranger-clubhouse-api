@@ -127,6 +127,12 @@ class Setting extends ApiModel
             ]
         ],
 
+        'DatabaseCreatedOn' => [
+            'description' => 'For the Staging & Training servers, the date database was created on. (automatically set)',
+            'type' => self::TYPE_DATETIME,
+            'default' => '',
+        ],
+
         'DoNotReplyEmail' => [
             'description' => 'Most generated Clubhouse emails have a reply to of do-not-reply@XXX.org',
             'type' => self::TYPE_EMAIL,
