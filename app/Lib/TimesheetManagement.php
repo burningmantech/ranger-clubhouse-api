@@ -88,6 +88,19 @@ class TimesheetManagement
             }
         }
 
+        /**
+         * A person must have an employee id if working a paid position. For international volunteers who may worked
+         * but not get paid, a dummy code of "0" is fine.
+         */
+
+        // can't use empty() because "0" is treated as empty. feh.
+        if ($position->paycode && is_null($person->employee_id)) {
+            $response = [
+                'status' => 'no-employee-id',
+            ];
+            return false;
+        }
+
         // Sandman blocker - must be qualified
         if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
             if ($canForceSignon) {

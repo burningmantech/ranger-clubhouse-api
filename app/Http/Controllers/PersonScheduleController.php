@@ -17,6 +17,7 @@ use App\Models\Slot;
 use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class PersonScheduleController extends ApiController
 {
@@ -25,7 +26,7 @@ class PersonScheduleController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
+     * @throws AuthorizationException|InvalidArgumentException
      */
 
     public function index(Person $person): JsonResponse
@@ -51,11 +52,11 @@ class PersonScheduleController extends ApiController
 
         // Try to reduce the round trips to the backend by including common associated scheduling info
         if ($query['credits_earned'] ?? false) {
-           $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
+            $results['credits_earned'] = Timesheet::earnedCreditsForYear($person->id, $year);
         }
 
         if ($query['schedule_summary'] ?? false) {
-           $results['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
+            $results['schedule_summary'] = Schedule::scheduleSummaryForPersonYear($person->id, $year);
         }
 
         if ($query['signup_permission'] ?? false) {
@@ -168,6 +169,12 @@ class PersonScheduleController extends ApiController
             return response()->json($result);
         }
 
+        if ($slot->position->paycode && is_null($person->employee_id)) {
+            return response()->json([
+                'status' => Schedule::NO_EMPLOYEE_ID,
+                'signed_up' => $slot->signed_up,
+            ]);
+        }
 
         // Go try to add the person to the slot/session
         $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
@@ -352,7 +359,7 @@ class PersonScheduleController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
+     * @throws AuthorizationException|InvalidArgumentException
      */
 
     public function expected(Person $person): JsonResponse

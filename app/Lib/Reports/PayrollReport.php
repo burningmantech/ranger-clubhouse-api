@@ -49,6 +49,12 @@ class PayrollReport
         $peopleWithoutIds = [];
         foreach ($entriesByPerson as $personId => $entries) {
             $shifts = [];
+            $person = $entries[0]->person;
+            if ($person->employee_id == "0") {
+                // allowed to work yet uncompensated.
+                continue;
+            }
+
             foreach ($entries as $entry) {
                 $notes = [];
                 $onDuty = $entry->on_duty;
@@ -101,7 +107,6 @@ class PayrollReport
                 $shifts[] = $shift;
             }
 
-            $person = $entries[0]->person;
             $info = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,

@@ -9,10 +9,14 @@ class BlankIfEmptyAttribute
     public static function make(): Attribute
     {
         return Attribute::make(set: function ($value) {
-            if (!empty($value)) {
+            if (is_string($value)) {
                 $value = trim($value);
+                return strlen($value) ? $value : '';
+            } else if (is_numeric($value)) {
+                return $value;
+            } else {
+                return empty($value) ? $value : '';
             }
-            return empty($value) ? '' : $value;
         });
     }
 }

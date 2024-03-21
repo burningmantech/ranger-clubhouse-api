@@ -144,6 +144,9 @@ class Milestones
                 break;
         }
 
+        $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
+        $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
+
         if (!in_array($status, Person::ACTIVE_STATUSES) && !$isNonRanger) {
             return $milestones;
         }
@@ -192,8 +195,6 @@ class Milestones
         // Burn weekend!
         $milestones['burn_weekend_signup'] = Schedule::haveBurnWeekendSignup($person);
 
-        $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
-        $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
         $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
 
         if (PVR::isEligible($personId, $event, $year)) {
