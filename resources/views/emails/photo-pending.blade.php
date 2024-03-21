@@ -5,8 +5,7 @@
     <p>
         One or more photos are <a href="https://ranger-clubhouse.burningman.org/vc/photo-review">queued for reviewed.</a>
     </p>
-    <p>
-    <table class="table table-sm table-striped">
+    <table class="table table-sm table-striped" style="margin-bottom: 20px">
         <thead>
         <tr>
             <th>Callsign</th>
@@ -19,12 +18,11 @@
             <tr>
                 <td>{{$photo->person->callsign}}</td>
                 <td>{{$photo->person->status}}</td>
-                <td>{{$photo->created_at}}</td>
+                <td>{{$photo->created_at->diffForHumans(['options' => 0 ])}}</td>
             </tr>
         @endforeach
         </tbody>
     </table>
-    </p>
     <p>
         Forever your humble digital servant,<br>
         The Clubhouse Bot

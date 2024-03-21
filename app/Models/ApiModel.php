@@ -48,6 +48,13 @@ abstract class ApiModel extends Model
     public array $auditExclude = [];
 
     /**
+     * The user who is doing the thing - intended for background tasks where there's no logged-in user.
+     *
+     * @var int|null
+     */
+    public ?int $auditUserId = null;
+
+    /**
      * The reason the record is being created or updated. Works with $auditModel
      * @var ?string
      */
@@ -181,7 +188,7 @@ abstract class ApiModel extends Model
             $personId = ($this->getAttribute('person_id') ?? null);
         }
 
-        ActionLog::record(Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
+        ActionLog::record($this->auditUserId ?? Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
     }
 
     public function _filterAuditExcluded(& $data): void
