@@ -136,15 +136,16 @@ class Alpha
         $potentials = [];
         foreach ($people as $row) {
             $person = self::buildPerson($row, $year, $intakeHistory, $intakeNotes, $trainings, $signedIn);
-            $slot = $alphaSlots[$row->id] ?? null;
-            if ($slot) {
-                // Only grab the first slot
-                $slot = $slot[0];
-                $person->alpha_slot = [
-                    'slot_id' => $slot->slot_id,
-                    'begins' => $slot->begins,
-                    'description' => $slot->description,
-                ];
+            $slots = $alphaSlots[$row->id] ?? null;
+            if ($slots) {
+                $person->alpha_slots = [];
+                foreach ($slots as $slot) {
+                    $person->alpha_slots[] = [
+                        'slot_id' => $slot->slot_id,
+                        'begins' => $slot->begins,
+                        'description' => $slot->description,
+                    ];
+                }
             }
             $potentials[] = $person;
         }
@@ -223,7 +224,7 @@ class Alpha
             'longsleeveshirt_size_style' => $person->long_sleeve->title ?? 'Unknown',
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
-            'on_alpha_shift' => !empty($signedIn[$personId])
+            'on_alpha_shift' => $signedIn->get($personId),
         ];
 
         if ($photoApproved) {
