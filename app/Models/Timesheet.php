@@ -402,23 +402,18 @@ class Timesheet extends ApiModel
      * Find everyone who is signed in to a given position
      *
      * @param int $positionId
-     * @return array
+     * @return mixed
      */
 
-    public static function retrieveSignedInPeople(int $positionId): array
+    public static function retrieveSignedInPeople(int $positionId): mixed
     {
-        $rows = DB::table('timesheet')
-            ->select('person_id')
-            ->where('position_id', $positionId)
+        return DB::table('timesheet')
+            ->select('timesheet.person_id', 'timesheet.on_duty', 'slot.begins', 'timesheet.slot_id')
+            ->leftJoin('slot', 'slot.id', 'timesheet.slot_id')
+            ->where('timesheet.position_id', $positionId)
             ->whereNull('off_duty')
-            ->get();
-
-        $people = [];
-        foreach ($rows as $row) {
-            $people[$row->person_id] = true;
-        }
-
-        return $people;
+            ->get()
+            ->keyBy('person_id');
     }
 
     /**
