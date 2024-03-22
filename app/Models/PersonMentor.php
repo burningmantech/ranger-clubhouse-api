@@ -175,7 +175,7 @@ class PersonMentor extends ApiModel
             return [];
         }
 
-        $history = $history->groupBy('year');
+        $history = $history->groupBy('mentor_year');
 
         $summary = [];
         foreach ($history as $year => $mentors) {
