@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BulkLookup;
 use App\Lib\Membership;
 use App\Lib\Milestones;
-use App\Lib\MVR;
 use App\Lib\PersonAdvancedSearch;
 use App\Lib\PersonSearch;
-use App\Lib\PVR;
 use App\Lib\Reports\AlphaShirtsReport;
 use App\Lib\Reports\LanguagesSpokenOnSiteReport;
 use App\Lib\Reports\PeopleByLocationReport;
@@ -21,7 +20,6 @@ use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\EmailHistory;
 use App\Models\Person;
-use App\Models\PersonEvent;
 use App\Models\PersonEventInfo;
 use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
@@ -30,11 +28,8 @@ use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
-use App\Models\Position;
 use App\Models\PositionRole;
 use App\Models\Role;
-use App\Models\SurveyAnswer;
-use App\Models\TeamManager;
 use App\Models\TeamRole;
 use App\Models\Timesheet;
 use App\Models\Training;
@@ -42,7 +37,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use App\Exceptions\UnacceptableConditionException;
 
 class PersonController extends ApiController
 {
@@ -664,7 +658,7 @@ class PersonController extends ApiController
     {
         $this->authorize('mentors', $person);
 
-        return response()->json(['mentors' => PersonMentor::retrieveMentorHistory($person->id)]);
+        return response()->json(['mentors' => PersonMentor::retrieveMentorHistory($person->id, PersonMentor::retrieveBulkMentorHistory([$person->id]))]);
     }
 
     /**

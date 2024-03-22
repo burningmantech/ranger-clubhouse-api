@@ -164,17 +164,18 @@ class PersonMentor extends ApiModel
      * Find the mentors for a person
      *
      * @param int $personId
+     * @param $allHistories
      * @return array
      */
 
-    public static function retrieveMentorHistory(int $personId): array
+    public static function retrieveMentorHistory(int $personId, $allHistories): array
     {
-        $history = PersonMentor::with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
-            ->where('person_id', $personId)
-            ->get()
-            ->sortBy('mentor.callsign', SORT_NATURAL | SORT_FLAG_CASE)
-            ->groupBy('mentor_year');
+        $history = $allHistories->get($personId);
+        if (!$history) {
+            return [];
+        }
 
+        $history = $history->groupBy('year');
 
         $summary = [];
         foreach ($history as $year => $mentors) {
@@ -198,6 +199,15 @@ class PersonMentor extends ApiModel
         usort($summary, fn($a, $b) => $b['year'] - $a['year']);
 
         return $summary;
+    }
+
+    public static function retrieveBulkMentorHistory($peopleIds)
+    {
+        return PersonMentor::with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
+            ->whereIn('person_id', $peopleIds)
+            ->get()
+            ->sortBy('mentor.callsign', SORT_NATURAL | SORT_FLAG_CASE)
+            ->groupBy('person_id');
     }
 
     /**

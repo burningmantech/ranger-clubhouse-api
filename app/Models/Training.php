@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Exceptions\UnacceptableConditionException;
 
 /*
  * Training is an inherited Position object with more things!
@@ -540,10 +540,26 @@ class Training extends Position
             ->orderBy('slot.begins')
             ->get();
 
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        $personStatuses = PersonStatus::whereIn('person_id', $peopleIds)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('person_id');
+
+        $slotIds = $rows->pluck('id')->unique();
+        $trainingNotes =  TraineeNote::whereIn('person_id', $peopleIds)
+            ->whereIn('slot_id', $slotIds)
+            ->orderBy('created_at')
+            ->with('person_source:id,callsign')
+            ->get()
+            ->groupBy([ 'slot_id', 'person_id']);
 
         $trainings = [];
         foreach ($rows as $row) {
-            $ps = PersonStatus::findForTime($row->person_id, $row->begins);
+            $ps = $personStatuses->get($row->person_id)?->first();
             if ($ps) {
                 $status = ($ps->new_status == Person::VINTAGE) ? Person::ACTIVE : $ps->new_status;
             } else {
@@ -552,7 +568,7 @@ class Training extends Position
 
             $trainings[] = (object)[
                 'person_id' => $row->person_id,
-                'training_notes' => TraineeNote::findAllForPersonSlot($row->person_id, $row->id),
+                'training_notes' => $trainingNotes->get($row->id)?->get($row->person_id),
                 'person_status' => $status,
                 'slot_id' => $row->id,
                 'slot_description' => $row->description,
