@@ -123,9 +123,10 @@ class Timesheet extends ApiModel
         'duration',
         'photo_url',
         'position_title',
+        'time_warnings',
     ];
 
-    const RELATIONSHIPS = [
+    const array RELATIONSHIPS = [
         'notes',
         'notes.create_person:id,callsign',
         'reviewer_person:id,callsign',
@@ -135,12 +136,13 @@ class Timesheet extends ApiModel
         'slot'
     ];
 
-    const ADMIN_NOTES_RELATIONSHIPS = [
+    const array ADMIN_NOTES_RELATIONSHIPS = [
         'admin_notes',
         'admin_notes.create_person:id,callsign'
     ];
 
     public ?string $photo_url = null;
+    public ?array $time_warnings = null;
 
     public ?string $additionalNotes = null;
     public ?string $additionalAdminNotes = null;
@@ -301,6 +303,7 @@ class Timesheet extends ApiModel
         $positionIds = $query['position_ids'] ?? null;
         $includePhoto = $query['include_photo'] ?? false;
         $includeAdminNotes = $query['include_admin_notes'] ?? false;
+        $checkTimes = $query['check_times'] ?? false;
 
         if ($year) {
             $sql->whereYear('on_duty', $year);
@@ -352,6 +355,12 @@ class Timesheet extends ApiModel
             foreach ($rows as $row) {
                 $row->photo_url = PersonPhoto::retrieveProfileUrlForPerson($row->person_id);
                 $row->appends[] = 'photo_url';
+            }
+        }
+
+        if ($checkTimes) {
+            foreach ($rows as $row) {
+                $row->checkTimes();
             }
         }
 
@@ -735,6 +744,22 @@ class Timesheet extends ApiModel
     }
 
     /**
+     * Run a check on the on & off duty times.
+     *
+     * @return void
+     */
+
+    public function checkTimes(): void
+    {
+        if (!$this->off_duty) {
+            // Still on duty, can't do anything at moment
+            return;
+        }
+        $this->time_warnings = Slot::checkDateTimeForPosition($this->position_id, $this->on_duty, $this->off_duty);
+        $this->appends[] = 'time_warnings';
+    }
+
+    /**
      * Create a Timesheet audit log for the entry
      *
      * @param string $action See TimesheetLog for actions
@@ -884,5 +909,15 @@ class Timesheet extends ApiModel
         }
         $value = empty($value) ? null : $value;
         $this->additionalWranglerNotes = $value;
+    }
+
+    public function getPhotoUrlAttribute() : ?string
+    {
+        return $this->photo_url;
+    }
+
+    public function getTimeWarningsAttribute() : ?array
+    {
+        return $this->time_warnings;
     }
 }
