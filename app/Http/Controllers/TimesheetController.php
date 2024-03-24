@@ -62,7 +62,8 @@ class TimesheetController extends ApiController
             'position_ids' => 'sometimes|array',
             'position_ids.*' => 'integer|exists:position,id',
             'include_photo' => 'sometimes|boolean',
-            'include_admin_notes' => 'sometimes|boolean'
+            'include_admin_notes' => 'sometimes|boolean',
+            'check_times' => 'sometimes|boolean',
         ]);
 
         $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null]);
@@ -102,6 +103,7 @@ class TimesheetController extends ApiController
     {
         $this->authorize('index', [Timesheet::class, $timesheet->person_id]);
         $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
+        $timesheet->checkTimes();
         return $this->success($timesheet);
     }
 
@@ -203,6 +205,7 @@ class TimesheetController extends ApiController
 
         if ($timesheet->save()) {
             $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
+            $timesheet->checkTimes();
             TimesheetManagement::unconfirmTimesheet($timesheet, 'new entry');
             return $this->success($timesheet);
         }
@@ -303,6 +306,7 @@ class TimesheetController extends ApiController
 
         // Reload position title, reviewer callsigns in case of change.
         $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
+        $timesheet->checkTimes();
 
         return $this->success($timesheet);
     }
@@ -476,6 +480,7 @@ class TimesheetController extends ApiController
      * @param Timesheet $timesheet
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws UnacceptableConditionException
      */
 
     public function deleteMistake(Timesheet $timesheet): JsonResponse
