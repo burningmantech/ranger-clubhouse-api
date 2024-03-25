@@ -727,6 +727,25 @@ class Timesheet extends ApiModel
     }
 
     /**
+     * Did the given person work (or walked an Alpha shift) in a given year?
+     *
+     * @param int $personId
+     * @param int $positionId
+     * @param int $year
+     * @return bool
+     */
+
+    public static function didWorkPositionInYear(int $personId, int $positionId, int $year): bool
+    {
+        return DB::table('timesheet')
+            ->where('person_id', $personId)
+            ->whereYear('on_duty', $year)
+            ->where('position_id', $positionId)
+            ->limit(1)
+            ->exists();
+    }
+
+    /**
      * Calculate how many credits earned for a year
      * @param int $personId
      * @param int $year

@@ -151,6 +151,12 @@ class Milestones
             return $milestones;
         }
 
+        if ($period == 'event'
+            && Timesheet::didWorkPositionInYear($personId, Position::TROUBLESHOOTER_MENTOR, $year)) {
+            $milestones['ts_mentor_worked'] = true;
+            $milestones['ts_mentor_survey_url'] = setting('TroubleshooterMentorSurveyURL');
+        }
+
         // Starting late 2022 - All (effective) login management roles require annual NDA signature.
         // MOAR PAPERWERKS! MOAR WINZ!
         // Don't require the NDA if the agreement does not exist.
@@ -202,6 +208,7 @@ class Milestones
             $milestones['vehicle_requests'] = Vehicle::findForPersonYear($personId, $year);
             $milestones['ignore_pvr'] = $event->ignore_pvr;
         }
+
         // Person might not be eligible until an PVR eligible position is signed up for.
         $milestones['pvr_potential'] = Position::haveVehiclePotential('pvr', $personId);
 

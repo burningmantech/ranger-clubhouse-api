@@ -120,10 +120,9 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
             'default' => 'auto',
             'options' => [
-                ['auto', 'Period automatically determined'],
-                ['after-event', 'After Event (Sept thru March)'],
-                ['before-event', 'Before Event (March thru mid-to-late August)'],
-                ['event', 'Event Period (mid Aug til 1st Sat after Labor Day)'],
+                ['after-event', 'After Event (October thru March)'],
+                ['before-event', 'Before Event (November thru mid-to-late August)'],
+                ['event', 'Event Period (Early Man through October)'],
             ]
         ],
 
@@ -560,6 +559,11 @@ class Setting extends ApiModel
         'TrainingSignupFromEmail' => [
             'description' => 'From email address for training sign up messages',
             'type' => self::TYPE_EMAIL,
+        ],
+
+        'TroubleshooterMentorSurveyURL' => [
+            'description' => 'If a person worked a TS Mentor shift, present this url on the dashboard',
+            'type' => self::TYPE_URL,
         ],
 
         'TwilioAccountSID' => [
