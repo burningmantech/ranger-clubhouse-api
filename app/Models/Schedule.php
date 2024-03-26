@@ -516,7 +516,7 @@ class Schedule
             ];
 
             if (!$withinStart) {
-                $shift['can_start_in'] = $now->diffInMinutes($start);
+                $shift['can_start_in'] = $start->diffInMinutes($now);
             }
 
             if ($slot->begins->clone()->subMinutes(self::LOCATE_SHIFT_START_WITHIN)->gte($now)) {

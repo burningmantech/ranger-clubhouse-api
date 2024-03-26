@@ -14,7 +14,7 @@ class SlotFactory extends Factory
             'max' => 10,
             'description' => 'slot',
             'signed_up' => 0,
-            'timezone' => 'America/Los_Angeles',
+            'timezone' => 'America/Phoenix',     // Phoenix is always UTC-7, aka Playa Time.
             'timezone_abbr' => 'PST',
         ];
     }

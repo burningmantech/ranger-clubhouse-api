@@ -681,7 +681,7 @@ class Slot extends ApiModel
 
     public function adjustTimezone(?Carbon $time): ?Carbon
     {
-        return $time?->clone()->shiftTimezone($this->timezone);
+        return empty($this->timezone) ? $time->clone() : $time?->clone()->shiftTimezone($this->timezone);
     }
 
     /**

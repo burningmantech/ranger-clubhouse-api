@@ -465,8 +465,11 @@ class Training extends Position
 
     public static function isTimeWithinGracePeriod(Carbon|string $time, $now, string $timezone): bool
     {
-        $time = is_string($time) ? Carbon::parse($time) : $time->clone();
-        $time->shiftTimezone($timezone);
+        if (is_string($time)) {
+            $time = Carbon::parse($time)->shiftTimezone($timezone);
+        } else {
+            $time = $time->clone()->shiftTimezone($timezone);
+        }
 
         return $time->addHours(self::GRACE_PERIOD_HOURS)->gt($now);
     }
