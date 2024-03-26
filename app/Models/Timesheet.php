@@ -801,8 +801,8 @@ class Timesheet extends ApiModel
             return $this->attributes['duration'];
         }
 
-        $offDuty = $this->off_duty ?? now();
-        $duration = $offDuty->diffInSeconds($this->on_duty);
+        $offDuty = $this->off_duty ?: now();
+        $duration = $this->on_duty->diffInSeconds($offDuty);
         $this->attributes['duration'] = $duration;
         return $duration;
     }

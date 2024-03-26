@@ -68,7 +68,7 @@ class PayrollReport
                     'verified' => $entry->review_status == Timesheet::STATUS_VERIFIED || $entry->review_status == Timesheet::STATUS_APPROVED,
                     'orig_on_duty' => (string)$onDuty,
                     'orig_off_duty' => (string)$offDuty,
-                    'orig_duration' => $offDuty->diffInSeconds($onDuty),
+                    'orig_duration' => $onDuty->diffInSeconds($offDuty),
                 ];
 
                 if (!$entry->off_duty) {
@@ -89,7 +89,7 @@ class PayrollReport
                     $offDuty = $endTime;
                 }
 
-                $durationSeconds = $offDuty->diffInSeconds($onDuty);
+                $durationSeconds = $onDuty->diffInSeconds($offDuty);
                 $shift['duration'] = $durationSeconds;
                 $shift['on_duty'] = self::formatDt($onDuty);
                 $shift['off_duty'] = self::formatDt($offDuty);
