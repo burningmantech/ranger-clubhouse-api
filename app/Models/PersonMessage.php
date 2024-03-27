@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class PersonMessage extends ApiModel
 {
@@ -31,6 +32,7 @@ class PersonMessage extends ApiModel
         'message_from',
         'subject',
         'body',
+        'reply_to_id'
     ];
 
     protected $appends = [
@@ -52,43 +54,86 @@ class PersonMessage extends ApiModel
     }
 
     protected $createRules = [
-        'message_from' => 'required',
-        'subject' => 'required',
-        'body' => 'required',
+        'message_from' => 'required|string|max:255',
+        'subject' => 'required|string|max:255',
+        'body' => 'required|string|max:4000',
     ];
+
+    /**
+     * The sender of the message
+     *
+     * @return BelongsTo
+     */
 
     public function sender(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public static function findForPerson(int $personId): Collection
+    /**
+     * The broadcast if message was generated thru the RBS.
+     *
+     * @return BelongsTo
+     */
+
+    public function broadcast(): BelongsTo
     {
-        return self::where('person_id', $personId)
-            ->leftJoin('person as creator', 'creator.id', '=', 'person_message.creator_person_id')
-            ->leftJoin('person as sender', 'sender.callsign', '=', 'person_message.message_from')
-            ->orderBy('person_message.created_at', 'desc')
-            ->get(['person_message.*', 'creator.callsign as creator_callsign', 'sender.id as sender_person_id']);
+        return $this->belongsTo(Broadcast::class);
     }
+
+    /**
+     * The person the message belongs to
+     *
+     * @return BelongsTo
+     */
 
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
+    /**
+     * Find all messages for a person
+     *
+     * @param int $personId
+     * @return Collection
+     */
+
+    public static function findForPerson(int $personId): Collection
+    {
+        return self::where('person_id', $personId)
+            ->leftJoin('person as creator', 'creator.id', 'person_message.creator_person_id')
+            ->leftJoin('person as sender', 'sender.callsign', 'person_message.message_from')
+            ->orderBy('person_message.created_at', 'desc')
+            ->get([
+                'person_message.*',
+                'creator.callsign as creator_callsign',
+                'sender.id as sender_person_id',
+                'sender.callsign as sender_callsign',
+            ]);
+    }
+
+    /**
+     * How many unread messages does the person have?
+     *
+     * @param int $personId
+     * @return int
+     */
+
     public static function countUnread(int $personId): int
     {
         return PersonMessage::where('person_id', $personId)->where('delivered', false)->count();
     }
 
-    /*
+    /**
      * validate does triple duty here.
      * - validate the required columns are present
      * - make sure the recipient & sender callsigns are present
      * - setup appropriate fields based on the callsigns
      *
      * @param array $rules array to override class $rules
-     * @param return bool true if model is valid
+     * @return bool  true if model is valid
+     * @throws ValidationException
      */
 
     public function validate($rules = null, $throwOnFailure = false): bool
@@ -120,8 +165,10 @@ class PersonMessage extends ApiModel
         return true;
     }
 
-    /*
-     * Mark a message as read
+    /**
+     * Mark a message as read, and save the model.
+     *
+     * @return bool
      */
 
     public function markRead(): bool
@@ -130,7 +177,7 @@ class PersonMessage extends ApiModel
         return $this->saveWithoutValidation();
     }
 
-    public function setRecipientCallsignAttribute($value): void
+    public function setRecipientCallsignAttribute(?string $value): void
     {
         $this->recipient_callsign = $value;
     }
@@ -159,11 +206,13 @@ class PersonMessage extends ApiModel
 
     public function getIsRbsAttribute(): bool
     {
-        return stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
+        return $this->broadcast_id || stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
     }
 
     /**
      * Has the message expired?
+     *
+     * @return Attribute
      */
 
     public function hasExpired(): Attribute

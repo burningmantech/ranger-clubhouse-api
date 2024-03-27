@@ -44,8 +44,17 @@ class PersonMessageController extends ApiController
         $person_message = new PersonMessage;
         $this->fromRest($person_message);
 
+        $personId = $this->user->id;
+        if ($person_message->reply_to_id) {
+            $replyTo = PersonMessage::find($person_message->reply_to_id);
+            if (!$replyTo || $replyTo->person_id != $personId) {
+                $person_message->addError('reply_to_id', 'Invalid person message id');
+                return $this->restError($person_message);
+            }
+        }
+
         // Message created by logged in user
-        $person_message->creator_person_id = $this->user->id;
+        $person_message->creator_person_id = $personId;
 
         if ($person_message->save()) {
             $person = $person_message->person;

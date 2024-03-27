@@ -487,6 +487,7 @@ class RBS
                     'subject' => $subject,
                     'body' => $message,
                     'expires_at' => $expiresAt,
+                    'broadcast_id' => $broadcastId,
                 ]);
                 $pm->saveWithoutValidation();
             }
