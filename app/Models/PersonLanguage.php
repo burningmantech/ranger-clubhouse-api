@@ -2,81 +2,140 @@
 
 namespace App\Models;
 
-use Exception;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\DB;
+use App\Attributes\NullIfEmptyAttribute;
 use App\Exceptions\UnacceptableConditionException;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class PersonLanguage extends ApiModel
 {
+    /*
+     * language_name represents the common languages encountered on playa.
+     * language_custom represents the lesser known languages.
+     *
+     * By splitting up the language classification, this helps to reduce the "noise" in the reports, and help
+     * guide the user to a desired answer. In the past, people have entered "love", "snark", "dpw", "hippy" as
+     * a language known. Not helpful!
+     */
 
     protected $table = 'person_language';
 
     public $timestamps = false;
 
-    /*
-     * All fields are mass-assignable
-      * @var string
-      */
     protected $guarded = [];
 
     const int OFF_DUTY = 1;
     const int ON_DUTY = 2;
     const int HAS_RADIO = 3;
 
-    const int LANGUAGE_NAME_LENGTH = 32;
+    const string PROFICIENCY_UNKNOWN = 'unknown';
+    const string PROFICIENCY_BASIC = 'basic';
+    const string PROFICIENCY_INTERMEDIATE = 'intermediate';
+    const string PROFICIENCY_FLUENT = 'fluent';
+
+    const string LANGUAGE_NAME_CUSTOM = 'custom';
+
+    /*
+     * The common most known languages on playa. The list is used for options. If a
+     * new language is added, or deleted, some database mucking about has to be done.
+     */
+
+    const array COMMON_PLAYA_LANGUAGES = [
+        'American Sign Language',
+        'Arabic',
+        'Chinese (Mandarin)',
+        'Cantonese',
+        'Danish',
+        'Dutch',
+        'English',
+        'Farsi',
+        'French',
+        'German',
+        'Hebrew',
+        'Hindi',
+        'Italian',
+        'Japanese',
+        'Norwegian',
+        'Polish',
+        'Portuguese',
+        'Punjabi',
+        'Romanian',
+        'Russian',
+        'Spanish',
+        'Swedish',
+        'Tagalog',
+        'Urdu',
+    ];
+
+    public $rules = [
+        'language_name' => 'required|string|max:32',
+        'language_custom' => 'required_if:language_name,custom|string|max:32|nullable',
+        'proficiency' => 'required|string'
+    ];
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::saving(function ($model) {
+            if ($model->language_name !== self::LANGUAGE_NAME_CUSTOM && !empty($model->language_custom)) {
+                $model->language_custom = null;
+            }
+        });
+    }
 
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    /*
-     * Retrieve a comma-separated list of language spoken by a person
-     * @var integer $person_id Person to lookup
-     * @return string a command list of languages
+    /**
+     * Retrieve records based on the given query
+     *
+     * @param array $query
+     * @return Collection
      */
 
-    public static function retrieveForPerson($person_id): string
+    public static function findForQuery(array $query): Collection
     {
-        $languages = self::where('person_id', $person_id)->pluck('language_name')->toArray();
+        $personId = $query['person_id'] ?? null;
 
-        return join(', ', $languages);
+        $sql = self::query();
+        if ($personId) {
+            $sql->where('person_id', $personId);
+        }
+
+        $rows = $sql->get();
+        return $rows->sort(function ($a, $b) {
+            if ($a->person_id == $b->person_id) {
+                return strcasecmp($a->actualName(), $b->actualName());
+            } else {
+                return $a->person_id - $b->person_id;
+            }
+        })->values();
     }
 
     /**
-     *  Update the languages spoken by a person
-     * @param $person_id
-     * @param $language
-     * @throws Exception
+     * Find the speakers of the given language.
+     *
+     * @param string $language
+     * @param bool $includeOffSite
+     * @param int $status
+     * @return Collection
+     * @throws UnacceptableConditionException
      */
-    public static function updateForPerson($person_id, $language)
+
+    public static function findSpeakers(string $language, bool $includeOffSite, int $status): Collection
     {
-        self::where('person_id', $person_id)->delete();
-
-        $languages = preg_split('/([,.;&]|\band\b)/', $language);
-
-        foreach ($languages as $name) {
-            $tongue = trim($name);
-
-            if (empty($tongue)) {
-                continue;
-            }
-
-            $tongue = substr($tongue, 0, self::LANGUAGE_NAME_LENGTH);
-            self::create(['person_id' => $person_id, 'language_name' => $tongue]);
-        }
-    }
-
-    public static function findSpeakers($language, $includeOffSite, $status)
-    {
-        $sql = self::select('language_name', 'person.id as person_id', 'callsign')
-            ->where('language_name', 'like', '%' . $language . '%')
+        $sql = self::select('language_name', 'language_custom', 'proficiency', 'person.id as person_id', 'callsign')
             ->join('person', 'person.id', '=', 'person_language.person_id')
+            ->whereAny(['language_name', 'language_custom'], 'like', '%' . $language . '%')
             ->whereIn('person.status', Person::ACTIVE_STATUSES)
             ->orderBy('callsign');
 
-        if (!$includeOffSite) {
+        if (!$includeOffSite && $status != PersonLanguage::ON_DUTY) {
             $sql->where('person.on_site', 1);
         }
 
@@ -95,9 +154,11 @@ class PersonLanguage extends ApiModel
                 break;
 
             case PersonLanguage::ON_DUTY:
-                $sql->join('timesheet', 'person.id', '=', 'timesheet.person_id')
+                $sql->join('timesheet', 'person.id', 'timesheet.person_id')
+                    ->join('position', 'position.id', 'timesheet.position_id')
                     ->whereYear('timesheet.on_duty', $year)
-                    ->whereNull('timesheet.off_duty');
+                    ->whereNull('timesheet.off_duty')
+                    ->addSelect('position.title as position_title');
                 break;
 
             case PersonLanguage::HAS_RADIO:
@@ -105,7 +166,7 @@ class PersonLanguage extends ApiModel
                     $q->from('asset_person')
                         ->select(DB::raw(1))
                         ->join('asset', 'asset_person.asset_id', 'asset.id')
-                        ->where('asset.description', 'Radio')
+                        ->where('asset.description', ASSET::TYPE_RADIO)
                         ->whereColumn('asset_person.person_id', 'person_language.person_id')
                         ->whereYear('asset_person.checked_out', $year)
                         ->whereNull('asset_person.checked_in')
@@ -118,5 +179,15 @@ class PersonLanguage extends ApiModel
         }
 
         return $sql->get();
+    }
+
+    public function languageCustom(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function actualName(): string
+    {
+        return $this->language_name == self::LANGUAGE_NAME_CUSTOM ? $this->language_custom : $this->language_name;
     }
 }

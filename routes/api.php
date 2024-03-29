@@ -38,7 +38,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\HandleReservationController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IntakeController;
-use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\PersonLanguageController;
 use App\Http\Controllers\MailLogController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MentorController;
@@ -201,8 +201,10 @@ Route::middleware('api')->group(function () {
     Route::get('debug/phpinfo', [DebugController::class, 'phpInfo']);
     Route::get('debug/cpuinfo', [DebugController::class, 'cpuInfo']);
 
-    Route::get('language/speakers', [LanguageController::class, 'speakers']);
-    Route::resource('language', LanguageController::class);
+    Route::get('person-language/common-languages', [PersonLanguageController::class, 'commonLanguages']);
+    Route::get('person-language/search', [PersonLanguageController::class, 'search']);
+    Route::get('person-language/on-site-report', [PersonLanguageController::class, 'onSiteReport']);
+    Route::resource('person-language', PersonLanguageController::class);
 
     Route::get('email-history', [EmailHistoryController::class, 'index']);
     Route::delete('error-log/purge', [ErrorLogController::class, 'purge']);
@@ -271,7 +273,6 @@ Route::middleware('api')->group(function () {
     Route::resource('oauth-client', OauthClientController::class);
 
     Route::get('person/alpha-shirts', [PersonController::class, 'alphaShirts']);
-    Route::get('person/languages', [PersonController::class, 'languagesReport']);
     Route::get('person/by-location', [PersonController::class, 'peopleByLocation']);
     Route::get('person/by-status', [PersonController::class, 'peopleByStatus']);
     Route::get('person/by-status-change', [PersonController::class, 'peopleByStatusChange']);
