@@ -69,7 +69,6 @@ class PersonFilter
         'alt_phone',
 
 
-        'languages',
         'reviewed_pi_at',
         'pi_reviewed_for_dashboard_at',
         'has_reviewed_pi', // pseudo field

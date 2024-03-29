@@ -173,8 +173,6 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
         $personId = $person->id;
-        $person->languages = PersonLanguage::retrieveForPerson($personId);
-        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
@@ -213,10 +211,6 @@ class PersonController extends ApiController
             return $this->restError($person);
         }
 
-        if ($person->languages !== null) {
-            PersonLanguage::updateForPerson($person->id, $person->languages);
-        }
-
         if ($emailChanged) {
             EmailHistory::record($person->id, $oldEmail, $this->user->id);
             // Alert VCs when the email address changes for a prospective.
@@ -224,9 +218,6 @@ class PersonController extends ApiController
                 mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
             }
         }
-
-        $person->languages = PersonLanguage::retrieveForPerson($person->id);
-        $person->append('languages');
 
         return $this->toRestFiltered($person);
     }
@@ -782,20 +773,6 @@ class PersonController extends ApiController
         $this->authorize('peopleByStatus', [Person::class]);
 
         return response()->json(['statuses' => PeopleByStatusReport::execute()]);
-    }
-
-    /**
-     * Languages Spoken On Site Report
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function languagesReport(): JsonResponse
-    {
-        $this->authorize('peopleByStatus', [Person::class]);
-
-        return response()->json(['languages' => LanguagesSpokenOnSiteReport::execute()]);
     }
 
     /**

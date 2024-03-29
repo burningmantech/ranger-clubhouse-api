@@ -167,33 +167,6 @@ class PersonControllerTest extends TestCase
 
 
     /**
-     * Test updating the person language fields
-     */
-
-    public function testUpdatePersonLanguage()
-    {
-        $personId = $this->user->id;
-        $response = $this->putPerson($this->user, ['languages' => 'sumarian,19th century victorian burner']);
-
-        $response->assertStatus(200);
-        $this->assertDatabaseHas(
-            'person_language',
-            [
-                'person_id' => $personId,
-                'language_name' => 'sumarian',
-            ]
-        );
-        $this->assertDatabaseHas(
-            'person_language',
-            [
-                'person_id' => $personId,
-                'language_name' => '19th century victorian burner',
-            ]
-        );
-    }
-
-
-    /**
      * Test fail for trying to update the status field.
      */
 
@@ -1439,55 +1412,7 @@ class PersonControllerTest extends TestCase
         ]);
     }
 
-    /*
-     * Test Languages Report
-     */
-
-    public function testLanguagesReport()
-    {
-        $this->addRole(Role::MANAGE);
-
-        $personEnglish = Person::factory()->create(['on_site' => 1]);
-        PersonLanguage::factory()->create([
-            'person_id' => $personEnglish->id,
-            'language_name' => 'English'
-        ]);
-
-        $personFrench = Person::factory()->create(['on_site' => 1]);
-        PersonLanguage::factory()->create([
-            'person_id' => $personFrench->id,
-            'language_name' => 'French'
-        ]);
-
-        $response = $this->json('GET', 'person/languages');
-        $response->assertStatus(200);
-
-        $response->assertJson([
-            'languages' => [
-                [
-                    'language' => 'English',
-                    'people' => [
-                        [
-                            'id' => $personEnglish->id,
-                            'callsign' => $personEnglish->callsign
-                        ]
-                    ]
-                ],
-
-                [
-                    'language' => 'French',
-                    'people' => [
-                        [
-                            'id' => $personFrench->id,
-                            'callsign' => $personFrench->callsign
-                        ]
-                    ]
-                ]
-            ]
-        ]);
-    }
-
-    /*
+     /*
      * People By Status Change Report
      */
 

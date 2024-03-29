@@ -246,7 +246,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'is_bouncing',
         'known_pnvs',
         'known_rangers',
-        'languages',
         'last_name',
         'lms_id',
         'lms_username',
@@ -386,13 +385,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      */
 
     public ?array $rawRolesById = [];
-
-    /*
-     * The languages the person speaks. (handled thru class PersonLanguage)
-     * @var string
-     */
-
-    public $languages;
 
     public function tshirt(): BelongsTo
     {
@@ -1095,29 +1087,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         }
 
         return $token;
-    }
-
-    /**
-     * Obtain the pseudo-field languages
-     *
-     * @return mixed
-     */
-
-    public function getLanguagesAttribute(): mixed
-    {
-        return $this->languages;
-    }
-
-    /**
-     * Set the pseudo-field languages
-     *
-     * @param $value
-     * @return void
-     */
-
-    public function setLanguagesAttribute($value): void
-    {
-        $this->languages = $value;
     }
 
     /**
