@@ -280,19 +280,26 @@ class PersonSearch
 
     public function searchFka(): void
     {
-        $fka = $this->query;
+        $normalized = Person::normalizeCallsign($this->query);
+        $metaphone = metaphone(Person::spellOutNumbers($this->query));
         $sql = $this->baseSql();
 
-        $sql->addSelect('formerly_known_as', 'callsign_normalized');
-        $sql->where('formerly_known_as', 'like', '%' . $fka . '%');
+        $sql->addSelect('person_fka.fka', 'person_fka.fka_normalized', 'person_fka.fka_soundex', 'callsign_normalized');
+        $sql->join('person_fka', 'person_fka.person_id', 'person.id');
+        $sql->where('person_fka.is_irrelevant', false);
         $sql->orderBy('callsign');
 
-        $result = $this->runSql($sql, self::FIELD_FKA, function ($person, &$result) use ($fka) {
-            foreach (Person::splitCommas($person->formerly_known_as) as $word) {
-                if (stripos($word, $fka) !== false) {
-                    $result['fka_match'] = $word;
-                    break;
-                }
+        $sql->where(function ($q) use ($normalized, $metaphone) {
+            $q->orWhere('person_fka.fka_normalized', $normalized);
+            $q->orWhere('person_fka.fka_normalized', 'like', '%' . $normalized . '%');
+            $q->orWhere('person_fka.fka_soundex', $metaphone);
+            $q->orWhere('person_fka.fka_soundex', 'like', $metaphone . '%');
+        });
+
+        $result = $this->runSql($sql, self::FIELD_FKA, function ($person, &$result) use ($normalized, $metaphone) {
+            if (stripos($person->fka_normalized, $normalized) !== false
+            || stripos($person->fka_soundex, $metaphone) !== false) {
+                $result['fka_match'] = $person->fka;
             }
         });
 

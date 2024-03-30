@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use APp\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\Person;
-use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
 use App\Models\PersonPosition;
@@ -274,19 +273,19 @@ class PersonControllerTest extends TestCase
 
         $newCallsign = $person->last_name . substr($person->first_name, 0, 1) . (current_year() % 100);
         $response->assertStatus(200);
-        $this->assertDatabaseHas(
-            'person',
-            [
-                'id' => $personId,
-                'callsign_approved' => false,
-                'callsign' => $newCallsign,
-                'formerly_known_as' => $oldCallsign
-            ]
-        );
+        $this->assertDatabaseHas('person', [
+            'id' => $personId,
+            'callsign_approved' => false,
+            'callsign' => $newCallsign,
+        ]);
+        $this->assertDatabaseHas('person_fka', [
+            'person_id' => $personId,
+            'fka' => $oldCallsign
+        ]);
     }
 
     /**
-     * Test updating formerly_known_as when callsign is changed
+     * Test updating the person_fka table when the callsign is changed
      */
 
     public function testUpdateFormerlyKnownAsWhenCallsignChanges()
@@ -297,14 +296,7 @@ class PersonControllerTest extends TestCase
         $oldCallsign = $person->callsign;
         $response = $this->putPerson($person, ['callsign' => 'Irregular Apocalypse']);
         $response->assertStatus(200);
-        $person->refresh();
-        $this->assertEquals($oldCallsign, $person->formerly_known_as);
-
-        // change one more time to verify a comma was added..
-        $response = $this->putPerson($person, ['callsign' => 'Zero Gravitas']);
-        $response->assertStatus(200);
-        $person->refresh();
-        $this->assertEquals("$oldCallsign,Irregular Apocalypse", $person->formerly_known_as);
+        $this->assertDatabaseHas('person_fka', ['person_id' => $person->id, 'fka' => $oldCallsign]);
     }
 
 
@@ -1303,8 +1295,8 @@ class PersonControllerTest extends TestCase
 
         $response->assertJsonMissing([
             'people' => [
-                [ 'email' => $personCA->email ],
-                [ 'email' => $personUS->email ]
+                ['email' => $personCA->email],
+                ['email' => $personUS->email]
             ]
         ]);
     }
@@ -1412,9 +1404,9 @@ class PersonControllerTest extends TestCase
         ]);
     }
 
-     /*
-     * People By Status Change Report
-     */
+    /*
+    * People By Status Change Report
+    */
 
     public function testPeopleByStatusChangeReport()
     {

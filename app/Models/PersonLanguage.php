@@ -23,6 +23,7 @@ class PersonLanguage extends ApiModel
     protected $table = 'person_language';
 
     public $timestamps = false;
+    public bool $auditModel = true;
 
     protected $guarded = [];
 

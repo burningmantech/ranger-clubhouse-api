@@ -60,7 +60,6 @@ class PersonMentor extends ApiModel
             person_mentor.person_id,
             person.callsign,
             person.status,
-            person.formerly_known_as,
             mentor.callsign as mentor_callsign,
             person_mentor.mentor_id,
             person_mentor.status as mentor_status,
@@ -83,6 +82,12 @@ class PersonMentor extends ApiModel
                 'type' => 'mentee-contact',
             ]
         );
+
+        $fkas = PersonFka::whereIntegerInRaw('person_id', $ids)
+            ->orderBy('person_id')
+            ->orderBy('fka_normalized')
+            ->get()
+            ->groupBy('person_id');
 
         $photos = PersonPhoto::whereIntegerInRaw('person_id', $ids)
             ->join('person', 'person.person_photo_id', 'person_photo.id')
@@ -116,7 +121,7 @@ class PersonMentor extends ApiModel
                     'person_id' => $personId,
                     'callsign' => $row->callsign,
                     'status' => $status,
-                    'formerly_known_as' => $row->formerly_known_as,
+                    'formerly_known_as' => implode(', ', PersonFka::filterOutIrrelevant($fkas->get($personId)?->pluck('fka')->toArray())),
                     'contact_status' => $canContact,
                     'mentor_status' => $row->mentor_status,
                     'profile_url' => $photos->get($personId)?->profile_url,
