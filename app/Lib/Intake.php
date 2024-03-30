@@ -254,7 +254,10 @@ class Intake
         $alphaEntries = Timesheet::retrieveAllForPositionIds($pnvIds, Position::ALPHA);
 
         // Find the people
-        $people = Person::whereIntegerInRaw('id', $pnvIds)->orderBy('callsign')->get();
+        $people = Person::whereIntegerInRaw('id', $pnvIds)
+            ->orderBy('callsign')
+            ->with('person_fka')
+            ->get();
 
         $pnvs = [];
         foreach ($people as $person) {

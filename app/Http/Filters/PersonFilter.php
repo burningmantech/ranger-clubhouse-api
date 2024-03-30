@@ -15,12 +15,12 @@ class PersonFilter
     {
     }
 
-    const STATUS_FIELDS = [
+    const array STATUS_FIELDS = [
         'status',
         'status_date',
     ];
 
-    const ACCOUNT_FIELDS = [
+    const array ACCOUNT_FIELDS = [
         'created_at',
         'date_verified',
         'employee_id',
@@ -32,7 +32,7 @@ class PersonFilter
         'vintage',
     ];
 
-    const NAME_GENDER_FIELDS = [
+    const array NAME_GENDER_FIELDS = [
         'first_name',
         'mi',
         'last_name',
@@ -44,19 +44,18 @@ class PersonFilter
         'pronouns_custom',
     ];
 
-    const CALLSIGNS_FIELDS = [
+    const array CALLSIGNS_FIELDS = [
         'callsign',
         'callsign_approved',
-        'formerly_known_as',
         'used_vanity_change',
         'vanity_changed_at'
     ];
 
-    const EMAIL_FIELDS = [
+    const array EMAIL_FIELDS = [
         'email',
     ];
 
-    const PERSONAL_INFO_FIELDS = [
+    const array PERSONAL_INFO_FIELDS = [
         'street1',
         'street2',
         'apt',
@@ -74,54 +73,54 @@ class PersonFilter
         'has_reviewed_pi', // pseudo field
     ];
 
-    const CLOTHING_FIELDS = [
+    const array CLOTHING_FIELDS = [
         'tshirt_swag_id',
         'tshirt_secondary_swag_id',
         'long_sleeve_swag_id',
     ];
 
-    const HQ_INFO = [
+    const array HQ_INFO = [
         'on_site',
         'camp_location',
     ];
 
-    const EMERGENCY_CONTACT = [
+    const array EMERGENCY_CONTACT = [
         'emergency_contact'
     ];
 
-    const AGREEMENT_FIELDS = [
+    const array AGREEMENT_FIELDS = [
         'behavioral_agreement',
     ];
 
-    const RANGER_ADMIN_FIELDS = [
+    const array RANGER_ADMIN_FIELDS = [
         'vehicle_blacklisted',
     ];
 
-    const EVENT_FIELDS = [
+    const array EVENT_FIELDS = [
         'on_site',
     ];
 
-    const BMID_FIELDS = [
+    const array BMID_FIELDS = [
         'bpguid',
     ];
 
     // Learning Management System fields
-    const LMS_FIELDS = [
+    const array LMS_FIELDS = [
         'lms_id',
         'lms_username'
     ];
 
-    const INTAKE_FIELDS = [
+    const array INTAKE_FIELDS = [
         'known_rangers',
         'known_pnvs'
     ];
 
-    const SMS_FIELDS = [
+    const array SMS_FIELDS = [
         'sms_on_playa',
         'sms_off_playa',
     ];
 
-    const SMS_ADMIN_FIELDS = [
+    const array SMS_ADMIN_FIELDS = [
         'sms_on_playa_verified',
         'sms_off_playa_verified',
         'sms_on_playa_stopped',
@@ -130,12 +129,12 @@ class PersonFilter
         'sms_off_playa_code',
     ];
 
-    const MESSAGE_FIELDS = [
+    const array MESSAGE_FIELDS = [
         'message',
         'message_updated_at'
     ];
 
-    const PERSONNEL_FIELDS = [
+    const array PERSONNEL_FIELDS = [
         'has_note_on_file',
     ];
 
@@ -146,7 +145,7 @@ class PersonFilter
     // 2: which roles are allowed the field (if null, allow any)
     // 3: Only allowed if LoginManagementOnPlayaEnabled is turned on.
 
-    const FIELDS_SERIALIZE = [
+    const array FIELDS_SERIALIZE = [
         [self::NAME_GENDER_FIELDS],
         [self::STATUS_FIELDS],
         [self::ACCOUNT_FIELDS],
@@ -169,7 +168,7 @@ class PersonFilter
         [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
     ];
 
-    const FIELDS_DESERIALIZE = [
+    const array FIELDS_DESERIALIZE = [
         [self::NAME_GENDER_FIELDS, true, [Role::VC]],
         [self::ACCOUNT_FIELDS, false, [Role::ADMIN]],
         [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::VC]],

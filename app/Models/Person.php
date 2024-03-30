@@ -14,6 +14,7 @@ namespace App\Models;
 use App\Attributes\BlankIfEmptyAttribute;
 use App\Attributes\NullIfEmptyAttribute;
 use App\Attributes\PhoneAttribute;
+use App\Exceptions\UnacceptableConditionException;
 use App\Helpers\SqlHelper;
 use App\Jobs\OnlineCourseSyncPersonJob;
 use App\Validators\StateForCountry;
@@ -28,7 +29,6 @@ use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Exceptions\UnacceptableConditionException;
 use Laravel\Sanctum\HasApiTokens;
 use Normalizer;
 use NumberFormatter;
@@ -237,7 +237,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'emergency_contact',
         'employee_id',
         'first_name',
-        'formerly_known_as',
         'gender_custom',
         'gender_identity',
         'has_note_on_file',
@@ -293,6 +292,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'mentee_status',
         'person_certification',
         'person_event',
+        'person_fka',
         'person_intake',
         'person_intake_note',
         'person_language',
@@ -323,7 +323,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'camp_location' => 'sometimes|string|nullable|max:200',
         'email' => 'required|string|max:50',
         'first_name' => 'required|string|max:25',
-        'formerly_known_as' => 'sometimes|string|nullable|max:200',
         'gender_custom' => 'sometimes|string|nullable|max:32',
         'gender_type' => 'sometimes|string',
         'has_reviewed_pi' => 'sometimes|boolean',
@@ -468,6 +467,14 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 }
             }
         });
+
+        self::saved(function (Person $model) {
+            // Update the callsign FKA if the callsign did actually change.
+            $callsign = $model->getChangedValues()['callsign'] ?? null;
+            if ($callsign) {
+                PersonFka::addFkaToPerson($model->id, $callsign[0]);
+            }
+        });
     }
 
     /**
@@ -510,6 +517,11 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     public function email_history(): HasMany
     {
         return $this->hasMany(EmailHistory::class);
+    }
+
+    public function person_fka(): HasMany
+    {
+        return $this->hasMany(PersonFka::class)->orderBy('fka_normalized');
     }
 
     /**
@@ -610,7 +622,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     private function addStateValidation(): void
     {
-        $this->rules['state'] = [ new StateForCountry ];
+        $this->rules['state'] = [new StateForCountry];
     }
 
     /**
@@ -1291,25 +1303,12 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * @param string $value
      */
 
-    public function setCallsignAttribute(string $value)
+    public function setCallsignAttribute(string $value): void
     {
         $value = trim($value);
         $this->attributes['callsign'] = $value;
         $this->attributes['callsign_normalized'] = self::normalizeCallsign($value ?? ' ');
         $this->attributes['callsign_soundex'] = metaphone(self::spellOutNumbers($this->attributes['callsign_normalized']));
-
-        // Update the callsign FKA if the callsign did actually change.
-        if ($this->isDirty('callsign')) {
-            $oldCallsign = $this->getOriginal('callsign');
-            if (!empty($oldCallsign)) {
-                $fka = $this->formerly_known_as;
-                if (empty($fka)) {
-                    $this->formerly_known_as = $oldCallsign;
-                } elseif (stripos($fka, $oldCallsign) === false) {
-                    $this->formerly_known_as = $fka . ',' . $oldCallsign;
-                }
-            }
-        }
     }
 
     /**
@@ -1324,7 +1323,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Split the FKA into an array
+     * Build the FKA names into an array and optionally filter out irrelevant callsigns
      *
      * @param bool $filter
      * @return array
@@ -1332,7 +1331,11 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function formerlyKnownAsArray(bool $filter = false): array
     {
-        return self::splitCommas($this->formerly_known_as, $filter);
+        $names = $this->person_fka->pluck('fka')->toArray();
+        if (!$filter) {
+            return $names;
+        }
+        return PersonFka::filterOutIrrelevant($names);
     }
 
     /**
@@ -1369,27 +1372,21 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Split a string into an array and filter out callsign indicators
-     * (i.e., remove year, bonk indicator, and non-ranger suffixes)
+     * Split a string into an array
      *
-     * @param ?string $str
-     * @param bool $filter
+     * @param string|null $str
      * @return array
      */
 
-    public static function splitCommas(?string $str, bool $filter = false): array
+    public static function splitCommas(?string $str): array
     {
-        if (empty($str)) {
+        if (is_null($str) || strlen($str) == 0) {
             return [];
         }
 
-        $names = preg_split('/\s*,\s*/', trim($str));
-        if (!$filter) {
-            return $names;
-        }
-
-        return array_values(array_filter($names, fn($name) => !preg_match('/\d{2,4}[B]?(\(NR\))?$/', $name)));
+        return preg_split('/\s*,\s*/', trim($str));
     }
+
 
     /**
      * Set pronouns_custom field to a string value or empty string

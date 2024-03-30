@@ -38,7 +38,6 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\HandleReservationController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IntakeController;
-use App\Http\Controllers\PersonLanguageController;
 use App\Http\Controllers\MailLogController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MentorController;
@@ -50,6 +49,8 @@ use App\Http\Controllers\PersonAwardController;
 use App\Http\Controllers\PersonCertificationController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\PersonEventController;
+use App\Http\Controllers\PersonFkaController;
+use App\Http\Controllers\PersonLanguageController;
 use App\Http\Controllers\PersonMessageController;
 use App\Http\Controllers\PersonOnlineCourseController;
 use App\Http\Controllers\PersonPhotoController;
@@ -200,6 +201,8 @@ Route::middleware('api')->group(function () {
     Route::get('debug/db-test', [DebugController::class, 'dbTest']);
     Route::get('debug/phpinfo', [DebugController::class, 'phpInfo']);
     Route::get('debug/cpuinfo', [DebugController::class, 'cpuInfo']);
+
+    Route::resource('person-fka', PersonFkaController::class);
 
     Route::get('person-language/common-languages', [PersonLanguageController::class, 'commonLanguages']);
     Route::get('person-language/search', [PersonLanguageController::class, 'search']);
