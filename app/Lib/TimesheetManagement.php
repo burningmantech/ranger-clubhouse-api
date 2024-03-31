@@ -141,6 +141,8 @@ class TimesheetManagement
             'status' => 'success',
             'timesheet_id' => $timesheet->id,
             'on_duty' => (string)$timesheet->on_duty,
+            'slot_url' => $timesheet->slot?->url,
+            'position_title'=> $timesheet->position->title,
         ];
 
         if ($signonForced) {
