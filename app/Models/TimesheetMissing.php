@@ -53,6 +53,10 @@ class TimesheetMissing extends ApiModel
         'additional_admin_notes',
     ];
 
+    protected $virtualColumns = [
+        'time_warnings'
+    ];
+
     protected function casts(): array
     {
         return [
@@ -93,6 +97,8 @@ class TimesheetMissing extends ApiModel
     public ?string $additionalNotes = null;
     public ?string $additionalAdminNotes = null;
     public ?string $additionalWranglerNotes = null;
+
+    public ?array $time_warnings = null;
 
     const int PARTNER_SHIFT_STARTS_WITHIN = 30;
 
@@ -181,6 +187,7 @@ class TimesheetMissing extends ApiModel
         $personId = $query['person_id'] ?? null;
         $year = $query['year'] ?? null;
         $includeAdminNotes = $query['include_admin_notes'] ?? null;
+        $checkTimes = $query['check_times'] ?? false;
 
         $sql = self::with(self::RELATIONSHIPS);
 
@@ -192,11 +199,20 @@ class TimesheetMissing extends ApiModel
             $sql->whereYear('on_duty', $year);
         }
 
+
         if ($includeAdminNotes) {
             $sql->with(self::ADMIN_NOTES_RELATIONSHIPS);
         }
 
-        return $sql->orderBy('on_duty')->get();
+        $rows = $sql->orderBy('on_duty')->get();
+
+        if ($checkTimes) {
+            foreach ($rows as $row) {
+                $row->checkTimes();
+            }
+        }
+
+        return $rows;
     }
 
 
@@ -206,6 +222,23 @@ class TimesheetMissing extends ApiModel
         if ($loadAdminNotes) {
             $this->load(self::ADMIN_NOTES_RELATIONSHIPS);
         }
+    }
+
+    /**
+     * Check on the times to see if everything makes sense.
+     *
+     * @return void
+     */
+
+    public function checkTimes(): void
+    {
+        if (!$this->on_duty || !$this->off_duty) {
+            // Sanity check, shouldn't be possible.
+            return;
+        }
+
+        $this->time_warnings = Slot::checkDateTimeForPosition($this->position_id, $this->on_duty, $this->off_duty);
+        $this->appends[] = 'time_warnings';
     }
 
     /**
@@ -423,6 +456,11 @@ class TimesheetMissing extends ApiModel
         }
         $value = empty($value) ? null : $value;
         $this->additionalWranglerNotes = $value;
+    }
+
+    public function getTimeWarningsAttribute(): ?array
+    {
+        return $this->time_warnings;
     }
 
 }

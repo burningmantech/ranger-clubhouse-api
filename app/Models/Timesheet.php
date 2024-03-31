@@ -124,6 +124,7 @@ class Timesheet extends ApiModel
         'photo_url',
         'position_title',
         'time_warnings',
+        'desired_warnings',
     ];
 
     const array RELATIONSHIPS = [
@@ -143,6 +144,7 @@ class Timesheet extends ApiModel
 
     public ?string $photo_url = null;
     public ?array $time_warnings = null;
+    public ?array $desired_warnings = null;
 
     public ?string $additionalNotes = null;
     public ?string $additionalAdminNotes = null;
@@ -186,6 +188,25 @@ class Timesheet extends ApiModel
                         ->first();
                     $model->slot_id = $slot?->id;
                 }
+
+            }
+
+            if ($model->isDirty('desired_position_id') && $model->desired_position_id == $model->position_id) {
+                $model->desired_position_id = null;
+            }
+
+            if ($model->isDirty('desired_on_duty')
+                && is_a($model->on_duty, Carbon::class)
+                && $model->desired_on_duty
+                && $model->on_duty->eq($model->desired_on_duty)) {
+                $model->desired_on_duty = null;
+            }
+
+            if ($model->isDirty('desired_off_duty')
+                && is_a($model->off_duty, Carbon::class)
+                && $model->desired_off_duty
+                && $model->off_duty->eq($model->desired_off_duty)) {
+                $model->desired_off_duty = null;
             }
         });
 
@@ -774,9 +795,24 @@ class Timesheet extends ApiModel
             // Still on duty, can't do anything at moment
             return;
         }
+
         $this->time_warnings = Slot::checkDateTimeForPosition($this->position_id, $this->on_duty, $this->off_duty);
         $this->appends[] = 'time_warnings';
+
+        if (!$this->desired_position_id && !$this->desired_on_duty && !$this->desired_off_duty) {
+            // Still on duty, or no desired changes recorded.
+            return;
+        }
+
+        $this->desired_warnings = Slot::checkDateTimeForPosition(
+            $this->desired_position_id ?? $this->position_id,
+            $this->desired_on_duty ?? $this->on_duty,
+            $this->desired_off_duty ?? $this->off_duty,
+        );
+
+        $this->appends[] = 'desired_warnings';
     }
+
 
     /**
      * Create a Timesheet audit log for the entry
@@ -930,13 +966,19 @@ class Timesheet extends ApiModel
         $this->additionalWranglerNotes = $value;
     }
 
-    public function getPhotoUrlAttribute() : ?string
+    public function getPhotoUrlAttribute(): ?string
     {
         return $this->photo_url;
     }
 
-    public function getTimeWarningsAttribute() : ?array
+    public function getTimeWarningsAttribute(): ?array
     {
         return $this->time_warnings;
     }
+
+    public function getDesiredWarningsAttribute(): ?array
+    {
+        return $this->desired_warnings;
+    }
+
 }

@@ -512,6 +512,7 @@ class Schedule
                 'position_title' => $slot->position->title,
                 'slot_begins' => (string)$slot->begins,
                 'slot_ends' => (string)$slot->ends,
+                'slot_url' => $slot->url,
                 'is_within_start_time' => $withinStart,
             ];
 

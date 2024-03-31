@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
 use App\Lib\Reports\EventStats;
@@ -38,7 +39,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class TimesheetController extends ApiController
 {
@@ -46,7 +47,7 @@ class TimesheetController extends ApiController
      * Retrieve a list of timesheets for a person and year.
      *
      * @return JsonResponse
-     * @throws AuthorizationException|\Psr\SimpleCache\InvalidArgumentException
+     * @throws AuthorizationException|InvalidArgumentException
      */
     public function index(): JsonResponse
     {
@@ -231,13 +232,22 @@ class TimesheetController extends ApiController
         $year = $timesheet->on_duty->year;
         $userId = $this->user->id;
 
+        if (!Gate::allows('isTimesheetManager')
+            && $timesheet->isDirty('review_status')) {
+            $status = $timesheet->review_status;
+            if ($status != Timesheet::STATUS_UNVERIFIED && $status != Timesheet::STATUS_VERIFIED) {
+                $timesheet->addError('review_status', 'Unauthorized status.');
+                return $this->restError($timesheet);
+            }
+        }
+
         // Update reviewer person if the review status or review notes changed
         if ($timesheet->isDirty('review_status') || !empty($timesheet->additionalWranglerNotes)) {
             $timesheet->reviewer_person_id = $userId;
         }
 
         if (
-            !empty($timesheet->additional_notes)
+            !empty($timesheet->additionalNotes)
             || $timesheet->isDirty('desired_position_id')
             || $timesheet->isDirty('desired_on_duty')
             || $timesheet->isDirty('desired_off_duty')

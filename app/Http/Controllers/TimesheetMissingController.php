@@ -33,6 +33,7 @@ class TimesheetMissingController extends ApiController
             'person_id' => 'sometimes|integer',
             'year' => 'required|integer',
             'include_admin_notes' => 'sometimes|boolean',
+            'check_times' => 'sometimes|boolean',
         ]);
 
         $personId = $params['person_id'] ?? null;
@@ -117,6 +118,7 @@ class TimesheetMissingController extends ApiController
      * @param TimesheetMissing $timesheetMissing
      * @param Person $person
      * @return JsonResponse
+     * @throws UnacceptableConditionException
      * @throws ValidationException
      */
 
@@ -189,6 +191,8 @@ class TimesheetMissingController extends ApiController
             throw $e;
         }
 
+        $timesheetMissing->checkTimes();
+
         return $this->success($timesheetMissing);
     }
 
@@ -205,6 +209,7 @@ class TimesheetMissingController extends ApiController
     {
         $this->authorize('view', [TimesheetMissing::class, $timesheetMissing->person_id]);
         $timesheetMissing->loadRelationships(Gate::allows('isTimesheetManager'));
+        $timesheetMissing->checkTimes();
         return $this->success($timesheetMissing);
     }
 
