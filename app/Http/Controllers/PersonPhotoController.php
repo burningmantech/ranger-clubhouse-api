@@ -415,10 +415,10 @@ class PersonPhotoController extends ApiController
 
         $params = request()->validate([
             'reject_reasons' => 'sometimes|array',
-            'reject_message' => 'sometimes|string'
+            'reject_message' => 'sometimes|string|nullable'
         ]);
 
-        $mail = new PhotoRejectedMail($personPhoto->person, $params['reject_reasons'] ?? [], $params['reject_message' ?? '']);
+        $mail = new PhotoRejectedMail($personPhoto->person, $params['reject_reasons'] ?? [], $params['reject_message'] ?? '');
         return response()->json(['mail' => $mail->render()]);
     }
 
