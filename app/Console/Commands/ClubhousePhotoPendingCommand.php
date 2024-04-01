@@ -25,9 +25,9 @@ class ClubhousePhotoPendingCommand extends Command
      /**
      * Execute the console command.
      *
-     * @return mixed
-     */
-    public function handle()
+     * @return void
+      */
+    public function handle(): void
     {
         $pendingPhotos = PersonPhoto::findAllPending();
 

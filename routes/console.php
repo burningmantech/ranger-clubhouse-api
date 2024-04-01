@@ -64,6 +64,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server
     // Expire stale MOTDs
     Schedule::command('clubhouse:expire-announcements')->dailyAt('05:00')->onOneServer();
 
+    // Expire archived photos after 6 months
+    Schedule::command('clubhouse:expire-photos')->weeklyOn(1, '04:30')->onOneServer();
+
     if (config('telescope.enabled')) {
         // Purge Laravel Telescope logs
         Schedule::command('telescope:prune --hours=72')->dailyAt('05:30')->onOneServer();

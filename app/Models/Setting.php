@@ -37,14 +37,14 @@ class Setting extends ApiModel
     ];
 
 
-    const TYPE_BOOL = 'bool';
-    const TYPE_DATE = 'date';
-    const TYPE_DATETIME = 'datetime';
-    const TYPE_EMAIL = 'email';
-    const TYPE_FLOAT = 'float';
-    const TYPE_INTEGER = 'integer';
-    const TYPE_STRING = 'string';
-    const TYPE_URL = 'url';
+    const string TYPE_BOOL = 'bool';
+    const string TYPE_DATE = 'date';
+    const string TYPE_DATETIME = 'datetime';
+    const string TYPE_EMAIL = 'email';
+    const string TYPE_FLOAT = 'float';
+    const string TYPE_INTEGER = 'integer';
+    const string TYPE_STRING = 'string';
+    const string TYPE_URL = 'url';
 
     /*
      * Each setting must be described in the table below.
@@ -57,7 +57,7 @@ class Setting extends ApiModel
      * options: array of possible options format is [ 'option', 'description' ]
      */
 
-    const DESCRIPTIONS = [
+    const array DESCRIPTIONS = [
         'AccountCreationEmail' => [
             'description' => 'Alert email address when accounts register',
             'type' => self::TYPE_EMAIL,
@@ -273,6 +273,11 @@ class Setting extends ApiModel
         'PhotoAnalysisEnabled' => [
             'description' => 'Run all uploaded photos through AWS Rekognition face detection',
             'type' => self::TYPE_BOOL,
+        ],
+
+        'PhotosExpiredEmail' => [
+            'description' => 'Weekly email send when archived photos older than 6 months have been deleted',
+            'type' => self::TYPE_EMAIL,
         ],
 
         'PhotoRekognitionAccessKey' => [

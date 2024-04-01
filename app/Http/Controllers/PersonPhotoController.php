@@ -269,31 +269,8 @@ class PersonPhotoController extends ApiController
 
         prevent_if_ghd_server('Photo deletion');
 
-        try {
-            // Remove the files.
-            $personPhoto->deleteImage();
-            $personPhoto->deleteOrigImage();
-            $personPhoto->deleteProfileImage();
-        } catch (Exception $e) {
-            ErrorLog::record('person-photo-delete-exception', [
-                'person_id' => $this->user->id,
-                'target_person_id' => $personPhoto->person_id,
-                'person_photo_id' => $personPhoto->id,
-                'image_filename' => $personPhoto->image_filename,
-                'orig_filename' => $personPhoto->orig_filename
-            ]);
-        }
-
         $personPhoto->delete();
-
-        $person = $personPhoto->person;
-        if ($person && $personPhoto->id == $person->person_photo_id) {
-            // Is this record the person's current photo? kill it!
-            $person->person_photo_id = null;
-            $person->saveWithoutValidation();
-        }
-
-        return $this->restDeleteSuccess();
+       return $this->restDeleteSuccess();
     }
 
     /**
@@ -414,18 +391,6 @@ class PersonPhotoController extends ApiController
             ->get();
 
         foreach ($prevSubmitted as $submitted) {
-            try {
-                $submitted->deleteAllVersions();
-            } catch (Exception $e) {
-                ErrorLog::recordException($e, 'person-photo-delete-exception', [
-                    'target_person_id' => $personId,
-                    'person_photo_id' => $submitted->id,
-                    'image_filename' => $submitted->image_filename,
-                    'orig_filename' => $submitted->orig_filename,
-                    'profile_filename' => $submitted->profile_filename,
-                ]);
-            }
-
             $submitted->auditReason = 'upload replacement';
             $submitted->delete();
         }

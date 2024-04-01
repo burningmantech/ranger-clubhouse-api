@@ -29,8 +29,8 @@ class PersonPhoto extends ApiModel
     public $timestamps = true;
     protected bool $auditModel = true;
 
-    const STORAGE_DIR = 'photos/';
-    const STORAGE_STAGING_DIR = 'staging/';
+    const string STORAGE_DIR = 'photos/';
+    const string STORAGE_STAGING_DIR = 'staging/';
 
     protected $guarded = [
         'person_id',
@@ -56,28 +56,31 @@ class PersonPhoto extends ApiModel
         'analysis_details'
     ];
 
-    const APPROVED = 'approved';
-    const REJECTED = 'rejected';
-    const SUBMITTED = 'submitted';
-    const MISSING = 'missing';
+    // How many months should an archived photo be expired?
+    const int EXPIRE_ARCHIVED_AFTER = 6;
 
-    const NOT_REQUIRED = 'not-required'; // Not stored within the database, used by scheduling gate keeping logic
+    const string APPROVED = 'approved';
+    const string REJECTED = 'rejected';
+    const string SUBMITTED = 'submitted';
+    const string MISSING = 'missing';
 
-    const SIZE_BMID = 'bmid';
-    const SIZE_PROFILE = 'profile';
-    const SIZE_ORIGINAL = 'original';
+    const string NOT_REQUIRED = 'not-required'; // Not stored within the database, used by scheduling gate keeping logic
+
+    const string SIZE_BMID = 'bmid';
+    const string SIZE_PROFILE = 'profile';
+    const string SIZE_ORIGINAL = 'original';
 
     // Image ratio is 7 by 9 for 350px by 450px
-    const BMID_WIDTH = 350;
-    const BMID_HEIGHT = 450;
+    const int BMID_WIDTH = 350;
+    const int BMID_HEIGHT = 450;
 
-    const ORIG_MAX_WIDTH = 1050;
+    const int ORIG_MAX_WIDTH = 1050;
     const ORIG_MAX_HEIGHT = 1350;
 
-    const PROFILE_HEIGHT = 180;
-    const PROFILE_WIDTH = 140;
+    const int PROFILE_HEIGHT = 180;
+    const int PROFILE_WIDTH = 140;
 
-    const PERSON_TABLES = [
+    const array PERSON_TABLES = [
         'person:id,callsign,status,first_name,preferred_name,last_name',
         'review_person:id,callsign',
         'upload_person:id,callsign',
@@ -88,7 +91,7 @@ class PersonPhoto extends ApiModel
         'status' => 'required|string',
     ];
 
-    const REJECTIONS = [
+    const array REJECTIONS = [
         'underexposed' => [
             'label' => 'Underexposed',
             'message' => 'The photo is not bright enough. Your face should be evenly lit and clearly visible. Try taking the photo outside, or turning on more lights within the room'
@@ -221,6 +224,35 @@ class PersonPhoto extends ApiModel
     public function edit_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function (PersonPhoto $model) {
+            $person = $model->person;
+            if ($model->id == $person?->person_photo_id) {
+                // Is this record the person's current photo? kill it!
+                $person->person_photo_id = null;
+                $person->auditReason = 'current photo deletion';
+                $person->saveWithoutValidation();
+            }
+
+            try {
+                // Remove the files.
+                $model->deleteAllVersions();
+            } catch (Exception $e) {
+                ErrorLog::record('person-photo-delete-exception', [
+                    'person_id' => Auth::id(),
+                    'target_person_id' => $model->person_id,
+                    'person_photo_id' => $model->id,
+                    'image_filename' => $model->image_filename,
+                    'orig_filename' => $model->orig_filename
+                ]);
+            }
+        });
     }
 
     public static function findForQuery($params): array
@@ -399,32 +431,44 @@ class PersonPhoto extends ApiModel
     }
 
     /**
+     * Find all expired archived photos for folks who have an approved current photo,
+     * or whose account status is deactivated (past prospectives, resigned, bonked, dismissed, etc.)
+     * We don't touch any "current" accounts with a rejected photo in case the previous photo is to be reactivated.
+     *
+     * @return Collection
+     */
+
+    public static function retrieveExpiredPhotos(): Collection
+    {
+        return PersonPhoto::select('person_photo.*')
+            ->join('person', 'person.id', 'person_photo.person_id')
+            ->whereColumn('person.person_photo_id', '!=', 'person_photo.id')
+            ->where(function ($w) {
+                $w->whereIn('person.status', Person::DEACTIVATED_STATUSES)
+                    ->orWhereExists(function ($sub) {
+                        $sub->from('person_photo as current')
+                            ->selectRaw(1)
+                            ->whereColumn('current.id', 'person.person_photo_id')
+                            ->where('current.status', self::APPROVED)
+                            ->limit(1);
+                    });
+            })
+            ->where('person_photo.created_at', '<', now()->subMonths(self::EXPIRE_ARCHIVED_AFTER))
+            ->with('person:id,callsign,status,person_photo_id')
+            ->get();
+    }
+
+    /**
      * Delete all the photos on file for the given person
      *
      * @param int $personId
      */
 
-    public static function deleteAllForPerson(int $personId)
+    public static function deleteAllForPerson(int $personId): void
     {
-        $userId = Auth::id();
-
         $rows = self::where('person_id', $personId)->get();
 
         foreach ($rows as $row) {
-            try {
-                $row->deleteAllVersions();
-                // Remove the files.
-            } catch (Exception $e) {
-                ErrorLog::record('person-photo-delete-exception', [
-                    'person_id' => $userId,
-                    'target_person_id' => $personId,
-                    'person_photo_id' => $row->id,
-                    'image_filename' => $row->image_filename,
-                    'orig_filename' => $row->orig_filename,
-                    'profile_filename' => $row->profile_filename,
-                ]);
-            }
-
             $row->delete();
         }
     }

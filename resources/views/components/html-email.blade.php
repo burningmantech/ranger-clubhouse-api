@@ -268,7 +268,7 @@
             background-color: #e9ecef;
         }
 
-        .table-auto-width {
+        .table-width-auto {
             width: auto !important;
         }
 
