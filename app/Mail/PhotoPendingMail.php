@@ -10,16 +10,14 @@ class PhotoPendingMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $pendingPhotos;
 
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($pendingPhotos)
+    public function __construct(public $pendingPhotos)
     {
-        $this->pendingPhotos = $pendingPhotos;
         parent::__construct();
     }
 
@@ -28,7 +26,7 @@ class PhotoPendingMail extends ClubhouseMailable
      *
      * @return $this
      */
-    public function build()
+    public function build(): static
     {
         return $this->subject('[Clubhouse] '.count($this->pendingPhotos).' photo(s) queued for review')
                 ->view('emails.photo-pending');
