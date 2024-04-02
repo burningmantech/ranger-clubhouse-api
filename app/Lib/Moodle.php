@@ -260,7 +260,6 @@ class Moodle
      *
      * @param OnlineCourse $course
      * @throws MoodleDownForMaintenanceException
-     * @throws ValidationException
      */
 
     public function processCourseCompletion(OnlineCourse $course): void
@@ -320,7 +319,7 @@ class Moodle
             }
 
             if ($finished) {
-                $completed = Carbon::createFromTimestamp($finished);
+                $completed = Carbon::createFromTimestamp($finished)->tz('America/Phoenix');
                 if ($completed->year != $year) {
                     // Not completed in the course year.
                     continue;
