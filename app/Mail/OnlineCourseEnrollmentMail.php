@@ -9,7 +9,7 @@ class OnlineCourseEnrollmentMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $ocUrl;
+    public ?string $otUrl;
 
     /**
      * Create a new message instance.
@@ -18,8 +18,8 @@ class OnlineCourseEnrollmentMail extends ClubhouseMailable
      */
     public function __construct(public $person, public $courseType, public $password)
     {
-        $this->otUrl = setting('OnlineCourseSiteUrl');
         parent::__construct();
+        $this->otUrl = setting('OnlineCourseSiteUrl');
     }
 
     /**
@@ -27,7 +27,8 @@ class OnlineCourseEnrollmentMail extends ClubhouseMailable
      *
      * @return $this
      */
-    public function build()
+
+    public function build(): static
     {
         return $this->from(setting('DoNotReplyEmail'), 'The Ranger Training Academy')
         ->subject('Enrolled In The Ranger Online Course')
