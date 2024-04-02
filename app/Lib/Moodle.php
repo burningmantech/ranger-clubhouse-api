@@ -208,7 +208,7 @@ class Moodle
             }
 
             if ($finished) {
-                $student->completed_at = (string)Carbon::createFromTimestamp($finished);
+                $student->completed_at = (string)Carbon::createFromTimestamp($finished)->tz('America/Phoenix');
             }
         }
 
