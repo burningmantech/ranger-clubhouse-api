@@ -309,6 +309,7 @@ class Position extends ApiModel
         'no_training_required',
         'on_sl_report',
         'on_trainer_report',
+        'parent_position_id',
         'paycode',
         'prevent_multiple_enrollments',
         'pvr_eligible',
@@ -347,14 +348,15 @@ class Position extends ApiModel
     }
 
     protected $rules = [
-        'title' => 'required|string|max:40',
-        'short_title' => 'sometimes|string|max:6|nullable',
-        'min' => 'integer',
         'max' => 'integer',
-        'training_position_id' => 'nullable|exists:position,id',
-        'team_id' => 'nullable|exists:team,id',
+        'min' => 'integer',
+        'parent_position_id' => 'nullable|exists:position,id',
         'role_ids' => 'sometimes|array',
-        'role_ids.*' => 'sometimes|integer|exists:role,id'
+        'role_ids.*' => 'sometimes|integer|exists:role,id',
+        'short_title' => 'sometimes|string|max:6|nullable',
+        'team_id' => 'nullable|exists:team,id',
+        'title' => 'required|string|max:40',
+        'training_position_id' => 'nullable|exists:position,id',
     ];
 
     protected $hidden = [
@@ -379,6 +381,7 @@ class Position extends ApiModel
         self::deleted(function ($model) {
             DB::table('position_role')->where('position_id', $model->id)->delete();
             DB::table('person_position')->where('position_id', $model->id)->delete();
+            DB::table('position')->where(['parent_position_id' => $model->id])->update(['parent_position_id' => null]);
             ClubhouseCache::flush();
         });
     }
@@ -400,6 +403,11 @@ class Position extends ApiModel
 
         if ($this->no_training_required && $this->training_position_id) {
             $this->addError('no_training_required', 'Training position and no training required flag cannot be set together.');
+            return false;
+        }
+
+        if ($this->parent_position_id && $this->parent_position_id == $this->id) {
+            $this->addError('parent_position_id', "The position cannot be it's own parent.");
             return false;
         }
 
@@ -434,6 +442,16 @@ class Position extends ApiModel
     public function members(): HasManyThrough
     {
         return $this->hasManyThrough(Person::class, PersonPosition::class, 'position_id', 'id', 'id', 'person_id')->orderBy('person.callsign');
+    }
+
+    public function parent_position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function child_positions(): HasMany
+    {
+        return $this->hasMany(Position::class, 'parent_position_id');
     }
 
     /**

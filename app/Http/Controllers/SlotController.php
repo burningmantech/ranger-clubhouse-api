@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
+use App\Lib\LinkSlots;
 use App\Lib\Reports\FlakeReport;
 use App\Lib\Reports\HQWindowCheckInOutForecastReport;
 use App\Lib\Reports\ScheduleByCallsignReport;
@@ -17,6 +19,8 @@ use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use UnexpectedValueException;
 
 
@@ -58,7 +62,7 @@ class SlotController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -99,7 +103,7 @@ class SlotController extends ApiController
      *
      * @param Slot $slot
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Slot $slot): JsonResponse
@@ -321,6 +325,32 @@ class SlotController extends ApiController
     }
 
     /**
+     * Link slots together with either a trainer slot or parent slot set.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws UnacceptableConditionException
+     */
+
+    public function linkSlots(): JsonResponse
+    {
+        $this->authorize('linkSlots', Slot::class);
+        $params = request()->validate([
+            'slot_ids' => 'required|array',
+            'slot_ids.*' => 'integer|exists:slot,id',
+            'type' => [
+                'required',
+                Rule::in(['multiplier', 'parent'])
+            ],
+            'commit' => 'required|boolean'
+        ]);
+
+        return response()->json([
+            'slots' => LinkSlots::execute($params['slot_ids'], $params['type'], $params['commit'] ?? false)
+        ]);
+    }
+
+    /**
      * Report on the Dirt Shifts - used for the shift Lead Report
      *
      * @return JsonResponse
@@ -381,7 +411,7 @@ class SlotController extends ApiController
      * Shift Coverage Report
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function shiftCoverageReport(): JsonResponse
