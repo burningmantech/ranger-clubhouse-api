@@ -64,15 +64,18 @@ class ErrorLog extends ApiModel
         // Inspect the exception for name, message, source location,
         // and backtrace
 
-        $data = [];
+        $data = [
+            'class' =>  class_basename($e),
+        ];
+
         if ($e instanceof Exception) {
             $data['exception'] = [
-                'class' => class_basename($e),
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ];
         }
+
 
         // Record the method and parameters
         $req = request();
