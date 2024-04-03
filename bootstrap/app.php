@@ -53,6 +53,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontReport(Handler::NO_REPORTING);
-        $exceptions->report(fn(Exception $e) => Handler::report($e));
-        $exceptions->render(fn(Exception $e, Request $request) => Handler::render($e, $request));
+        $exceptions->report(fn(Throwable $e) => Handler::report($e));
+        $exceptions->render(fn(Throwable $e, Request $request) => Handler::render($e, $request));
     })->create();
