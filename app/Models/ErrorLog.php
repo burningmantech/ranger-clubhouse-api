@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Exception;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -62,14 +63,16 @@ class ErrorLog extends ApiModel
     {
         // Inspect the exception for name, message, source location,
         // and backtrace
-        $data = [
-            'exception' => [
+
+        $data = [];
+        if ($e instanceof Exception) {
+            $data['exception'] = [
                 'class' => class_basename($e),
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-            ]
-        ];
+            ];
+        }
 
         // Record the method and parameters
         $req = request();
