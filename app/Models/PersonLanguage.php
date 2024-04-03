@@ -167,7 +167,7 @@ class PersonLanguage extends ApiModel
                     $q->from('asset_person')
                         ->select(DB::raw(1))
                         ->join('asset', 'asset_person.asset_id', 'asset.id')
-                        ->where('asset.description', ASSET::TYPE_RADIO)
+                        ->where('asset.description', Asset::TYPE_RADIO)
                         ->whereColumn('asset_person.person_id', 'person_language.person_id')
                         ->whereYear('asset_person.checked_out', $year)
                         ->whereNull('asset_person.checked_in')
