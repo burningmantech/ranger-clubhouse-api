@@ -42,7 +42,9 @@ class Slot extends ApiModel
     const array WITH_POSITION_TRAINER = [
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers,paycode',
         'trainer_slot',
-        'trainer_slot.position:id,title'
+        'trainer_slot.position:id,title',
+        'parent_signup_slot',
+        'parent_signup_slot.position:id,title',
     ];
 
 
@@ -187,6 +189,7 @@ class Slot extends ApiModel
             TraineeNote::deleteForSlot($model->id);
             SurveyAnswer::deleteForSlot($model->id);
             Slot::where('parent_signup_slot_id', $model->id)->update(['parent_signup_slot_id' => null]);
+            Slot::where('trainer_slot_id', $model->id)->update(['trainer_slot_id' => null]);
         });
     }
 
@@ -219,6 +222,13 @@ class Slot extends ApiModel
                     return false;
                 }
             }
+        }
+
+        if ($this->parent_signup_slot_id && $this->trainer_slot_id){
+            $msg = 'The parent signup slot and trainer signup slot cannot be set together.';
+            $this->addError('trainer_slot_id', $msg);
+            $this->addError('parent_signup_slot_id', $msg);
+            return false;
         }
 
         return parent::save($options);

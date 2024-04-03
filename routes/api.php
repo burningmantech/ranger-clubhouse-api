@@ -423,6 +423,7 @@ Route::middleware('api')->group(function () {
     Route::get('slot/dirt-shift-times', [SlotController::class, 'dirtShiftTimes']);
     Route::get('slot/flakes', [SlotController::class, 'flakeReport']);
     Route::get('slot/hq-forecast-report', [SlotController::class, 'hqForecastReport']);
+    Route::post('slot/link-slots', [ SlotController::class, 'linkSlots']);
     Route::get('slot/shift-coverage-report', [SlotController::class, 'shiftCoverageReport']);
     Route::get('slot/shift-lead-report', [SlotController::class, 'shiftLeadReport']);
     Route::get('slot/shift-signups-report', [SlotController::class, 'shiftSignUpsReport']);
