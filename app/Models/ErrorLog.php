@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Exception;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -64,17 +63,19 @@ class ErrorLog extends ApiModel
         // Inspect the exception for name, message, source location,
         // and backtrace
 
-        $data = [
-            'class' =>  class_basename($e),
+        $stack = $e->getTrace();
+        foreach ($stack as &$call) {
+            // argument dumping might cause an infinite recursion bug, or too large of a stack trace.
+            unset($call['args']);
+        }
+
+        $data['exception'] = [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'stacktrace' => $stack,
         ];
 
-        if ($e instanceof Exception) {
-            $data['exception'] = [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ];
-        }
 
 
         // Record the method and parameters
