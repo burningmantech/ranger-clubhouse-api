@@ -44,6 +44,55 @@
     @else
         <p>No errors were logged.</p>
     @endif
+    <h3>Failed Background Jobs ({{count($failedJobs)}})</h3>
+    @if (count($failedJobs) > 0)
+        <table class="table table-sm table-striped table-width-auto">
+            <thead>
+            <tr>
+                <th>Timestamp (UTC-7)</th>
+                <th>UUID</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach ($failedJobs as $job)
+                <tr>
+                    <td>{{$job->failed_at}}</td>
+                    <td>{{$job->uuid}}</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @else
+        <p>
+            No failed jobs.
+        </p>
+    @endif
+
+    <h3>Unknown Phone Numbers ({{count($unknownPhones)}})</h3>
+    @if (count($unknownPhones) > 0)
+        <table class="table table-sm table-striped table-width-auto">
+            <thead>
+            <tr>
+                <th>Timestamp (UTC-7)</th>
+                <th>Phone</th>
+                <th>Message</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach ($unknownPhones as $phone)
+                <tr>
+                    <td>{{$phone->created_at}}</td>
+                    <td>{{$phone->address}}</td>
+                    <td>{{$phone->message}}</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @else
+        <p>
+            No unknown phones numbers texted to the RBS number.
+        </p>
+    @endif
 
     <h3>Email Issues ({{count($emailIssues)}})</h3>
     @if (count($emailIssues) > 0)
@@ -262,7 +311,7 @@
             </tbody>
         </table>
     @endif
-    <table class="table table-striped" style="width: auto;margin-top: 10px">
+    <table class="table table-striped table-width-auto" style="margin-top: 1vh;">
         <thead>
         <tr>
             <th>Clubhouse Setting</th>

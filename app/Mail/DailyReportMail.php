@@ -22,7 +22,10 @@ class DailyReportMail extends ClubhouseMailable
         public $settings,
         public $settingLogs,
         public $emailIssues,
-        public $dashboardPeriod)
+        public $dashboardPeriod,
+        public $failedJobs,
+        public $unknownPhones
+    )
     {
         parent::__construct();
     }
@@ -32,7 +35,7 @@ class DailyReportMail extends ClubhouseMailable
      *
      * @return $this
      */
-    public function build()
+    public function build(): static
     {
         return $this->subject('Clubhouse Daily Report ' . date('Y-m-d'))->view('emails.daily-report');
     }

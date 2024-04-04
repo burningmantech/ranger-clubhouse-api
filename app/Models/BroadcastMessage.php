@@ -20,9 +20,12 @@ class BroadcastMessage extends ApiModel
     }
 
     /**
+     * Find all unknown phone numbers (aka spam) for this year.
+     *
      * @param $year
      * @return Collection
      */
+
     public static function findUnknownPhonesForYear($year): Collection
     {
         return self::where('status', Broadcast::STATUS_UNKNOWN_PHONE)
@@ -31,7 +34,27 @@ class BroadcastMessage extends ApiModel
             ->get();
     }
 
-    public static function findForQuery($query)
+    /**
+     * Retrieve all the unknown phone numbers for the last 24 hours.
+     *
+     * @return Collection
+     */
+
+    public static function retrieveUnknownPhonesForDailyReport(): Collection
+    {
+        return self::where('status', Broadcast::STATUS_UNKNOWN_PHONE)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->get();
+    }
+
+    /**
+     * Find the broadcasts based on the given query
+     *
+     * @param $query
+     * @return array
+     */
+
+    public static function findForQuery($query): array
     {
         $page = (int)($query['page'] ?? 1);
         $pageSize = (int)($query['page_size'] ?? self::DEFAULT_PAGE_SIZE);

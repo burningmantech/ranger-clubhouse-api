@@ -5,10 +5,12 @@ namespace App\Console\Commands;
 use App\Mail\DailyReportMail;
 use App\Models\ActionLog;
 use App\Models\Broadcast;
+use App\Models\BroadcastMessage;
 use App\Models\ErrorLog;
 use App\Models\EventDate;
 use App\Models\PersonStatus;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class ClubhouseDailyReportCommand extends Command
 {
@@ -74,7 +76,15 @@ class ClubhouseDailyReportCommand extends Command
             false
         )['action_logs'];
 
-        mail_to(setting('DailyReportEmail'),
+        $failedJobs = DB::table('failed_jobs')
+            ->where('failed_at', '>=', now()->subHours(24))
+            ->orderBy('failed_at')
+            ->get();
+
+        $unknownPhones = BroadcastMessage::retrieveUnknownPhonesForDailyReport();
+
+        mail_to(
+            setting('DailyReportEmail'),
             new DailyReportMail(
                 $failedBroadcasts,
                 $errorLogs,
@@ -83,7 +93,9 @@ class ClubhouseDailyReportCommand extends Command
                 $settings,
                 $settingLogs,
                 $emailIssues,
-                EventDate::calculatePeriod()
+                EventDate::calculatePeriod(),
+                $failedJobs,
+                $unknownPhones
             ));
 
         return true;
