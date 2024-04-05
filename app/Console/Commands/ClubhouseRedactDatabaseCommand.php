@@ -18,6 +18,7 @@ class ClubhouseRedactDatabaseCommand extends Command
     protected $signature = 'clubhouse:redact-db
                     {--dumpfile= : filename to dump the groundhog day database into. Default is rangers-redacted-YYYY-MM-DD.sql}
                     {--tempdb=rangers_redacted_temp : temporary database name}
+                    {--super-redact : clear tickets, provisions, bmids, and photos. Set all passwords to abcdef. }
                     ';
 
     /**
@@ -28,21 +29,11 @@ class ClubhouseRedactDatabaseCommand extends Command
     protected $description = 'Create a redacted database using current';
 
     /**
-     * Create a new command instance.
+     * Execute the console command.
      *
      * @return void
      */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
-     * Execute the console command.
-     *
-     * @return mixed
-     */
-    public function handle(): mixed
+    public function handle(): void
     {
         $redactedName = $this->option('tempdb') ?? self::TEMP_DATABASE;
 
@@ -67,7 +58,7 @@ class ClubhouseRedactDatabaseCommand extends Command
         config([ 'database.connections.mysql.database' => $redactedName ]);
         DB::purge('mysql');
 
-        RedactDatabase::execute(current_year());
+        RedactDatabase::execute(current_year(), $this->option('super-redact') ?? false);
 
         $this->info("Creating mysql redacted dump");
         $dump = $this->option('dumpfile') ?? "rangers-redacted-".date('Y-m-d').".sql";

@@ -21,26 +21,38 @@ use Illuminate\Support\Facades\Schema;
  */
 class RedactDatabase
 {
-    public static function execute($year)
+    public static function execute(int $year, bool $superRedact = false): void
     {
         // No fruit-cup.. err.. Personal Information for you tonight!
         DB::table('person')->update([
-            'on_site' => false,
-            'home_phone' => '123-456-7890',
             'alt_phone' => '123-456-7890',
-            'sms_on_playa' => '',
-            'sms_off_playa' => '',
-            'street1' => '123 Any St.',
-            'street2' => '',
             'behavioral_agreement' => false,
-            'message' => '',
             'bpguid' => 'DEAD-BEEF',
-            'sfuid' => '',
             'camp_location' => 'D-Lot',
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
+            'employee_id' => '',
+            'home_phone' => '123-456-7890',
+            'known_pnvs' => '',
+            'known_rangers' => '',
+            'has_note_on_file' => false,
+            'lms_id' => '',
+            'lms_username' => '',
+            'message' => '',
+            'on_site' => false,
+            'sfuid' => '',
+            'sms_off_playa' => '',
+            'sms_on_playa' => '',
+            'street1' => '123 Any St.',
+            'street2' => '',
             'tpassword' => '',
-            //  'password' => "$salt:$sha",
+            'vehicle_blacklisted' => false
         ]);
+
+        if ($superRedact) {
+            $salt = Person::generateRandomString();
+            $sha = sha1($salt . "abcdef");
+            DB::table('person')->update(['password' => "$salt:$sha"]);
+        }
 
         DB::table('person')->where('status', Person::ACTIVE)
             ->update([
@@ -55,67 +67,93 @@ class RedactDatabase
         // Zap training notes
         DB::table('trainee_status')->update(['notes' => '', 'rank' => null]);
 
+        DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
+
         // And nuke a bunch of tables
         $tables = [
-//            'access_document',
             'access_document_changes',
             'broadcast',
             'broadcast_message',
+            'bmid_export',
+            'cache',
+            'cache_locks',
             'contact_log',
+            'email_history',
+            'error_logs',
             'failed_jobs',
             'jobs',
             'log',
             'mail_log',
+            'manual_review',
             'mentee_status',
             'motd',
             'oauth_client',
             'oauth_code',
+            'online_course',
             'person_event',
             'person_intake',
             'person_intake_note',
+            'person_motd',
+            'person_pog',
             'personal_access_tokens',
             'prospective_application',
             'prospective_application_log',
             'prospective_application_note',
             'survey_answer',
+            'telescope_entries',
+            'telescope_entries_tags',
+            'telescope_monitoring',
+            'timesheet_log',
+            'timesheet_missing',
+            'timesheet_missing_note',
             'trainee_note',
             'vehicle',
         ];
 
+        if ($superRedact) {
+            $tables[] = 'person_photo';
+        }
+
+        DB::statement("SET FOREIGN_KEY_CHECKS = 0");
         foreach ($tables as $table) {
             if (Schema::hasTable($table)) {
                 DB::statement("TRUNCATE $table");
             }
         }
+        DB::statement("SET FOREIGN_KEY_CHECKS = 1");
 
-        DB::table('provision')->update(['status' => Provision::AVAILABLE]);
+        if ($superRedact) {
+            DB::statement('TRUNCATE access_document');
+            DB::statement('TRUNCATE bmid');
+            DB::statement('TRUNCATE provision');
+        } else {
+            DB::table('provision')->update(['status' => Provision::AVAILABLE]);
 
-        DB::table('action_logs')->whereNotIn('event', ['person-slot-add', 'person-slot-remove'])->delete();
+            DB::table('access_document')->update(['comments' => '']);
+            DB::table('access_document')->whereYear('expiry_date', '>', current_year() + 3);
 
-        DB::table('access_document')->update(['comments' => '']);
-        DB::table('access_document')->whereYear('expiry_date', '>', current_year() + 3);
+            $address = [
+                'street1' => '1 Main St',
+                'street2' => '',
+                'city' => 'Springfield',
+                'state' => 'NT',
+                'postal_code' => '99999',
+            ];
 
-        $address = [
-            'street1' => '1 Main St',
-            'street2' => '',
-            'city' => 'Springfield',
-            'state' => 'NT',
-            'postal_code' => '99999',
-        ];
+            foreach ($address as $key => $value) {
+                DB::table('access_document')
+                    ->where($key, '!=', '')
+                    ->update([$key => $value]);
+            }
 
-        foreach ($address as $key => $value) {
             DB::table('access_document')
-                ->where($key, '!=', '')
-                ->update([$key => $value]);
+                ->where('type', AccessDocument::WAPSO)
+                ->update(['name' => DB::raw('CONCAT("WAP Name #", id)')]);
+
+            DB::table('access_document')
+                ->where('type', '!=', AccessDocument::WAPSO)
+                ->update(['name' => '']);
         }
-
-        DB::table('access_document')
-            ->where('type', AccessDocument::WAPSO)
-            ->update(['name' => DB::raw('CONCAT("WAP Name #", id)')]);
-
-        DB::table('access_document')
-            ->where('type', '!=', AccessDocument::WAPSO)
-            ->update(['name' => '']);
 
         // Zap all the Clubhouse message archives including the current table
         $rows = DB::select('SHOW TABLES LIKE "person_message%"');
@@ -139,7 +177,7 @@ class RedactDatabase
             'AuditorRegistrationDisabled' => 'true',
             'BroadcastClubhouseNotify' => 'false',
             'BroadcastClubhouseSandbox' => 'true',
-            'DatabaseCreatedOn' => (string) new Carbon(new DateTime),
+            'DatabaseCreatedOn' => (string)new Carbon(new DateTime),
             'HQWindowInterfaceEnabled' => 'true',
             'MealInfoAvailable' => 'true',
             'OnlineCourseDisabledAllowSignups' => 'true',
