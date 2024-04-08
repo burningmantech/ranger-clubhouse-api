@@ -29,11 +29,11 @@ class PersonFkaPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $user->id == $personId || $user->hasRole(Role::MANAGE);
+        return $user->id == $personId || $user->hasRole([Role::MANAGE, Role::TRAINER]);
     }
 
     /**
-     * Can the person create a fka record
+     * Can the person show a fka record
      *
      * @param Person $user
      * @param PersonFka $person_fka
@@ -42,7 +42,7 @@ class PersonFkaPolicy
 
     public function show(Person $user, PersonFka $person_fka): true
     {
-        return $user->id == $person_fka->person_id || $user->hasRole(Role::MANAGE);
+        return $user->id == $person_fka->person_id || $user->hasRole([Role::MANAGE, Role::TRAINER]);
     }
 
     /**
