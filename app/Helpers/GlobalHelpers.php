@@ -134,6 +134,10 @@ if (!function_exists('maintenance_year')) {
 if (!function_exists('request_ip')) {
     function request_ip(): string
     {
+        $header = request()->header('CF-Connecting-IP');
+        if (!empty($header)){
+            return $header;
+        }
         $header = request()->header('X-Forwarded-For');
         return !empty($header) ? $header : implode(',', request()->ips());
     }
