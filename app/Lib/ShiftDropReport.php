@@ -43,7 +43,7 @@ class ShiftDropReport
                     'person_id' => $row->target_person_id,
                     'callsign' => $row->target_person->callsign,
                     'dropped_at' => (string)$row->created_at,
-                    'hours_before' => round($slot->begins->diffInMinutes($row->created_at) / 60.0, 1),
+                    'hours_before' => round(Carbon::parse($row->created_at)->diffInMinutes($slot->begins) / 60.0, 1),
                 ];
             }
         }
