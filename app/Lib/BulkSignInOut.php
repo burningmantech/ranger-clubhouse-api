@@ -18,24 +18,24 @@ class BulkSignInOut
      * Time format 07:30 or 0730
      */
 
-    const TIME_REGEXP = '/^(\d{1,2}):?(\d{2})$/';
+    const string TIME_REGEXP = '/^(\d{1,2}):?(\d{2})$/';
 
     /*
      * Date formats - MM-DD, MM/DD, MM-DD-YYYY, MM/DD/YYYY
      */
 
-    const DATE_REGEXP = '/^(\d{1,2})[-\/](\d{1,2})([-\/]\d+)?$/';
+    const string DATE_REGEXP = '/^(\d{1,2})[-\/](\d{1,2})([-\/]\d+)?$/';
 
-    const DATETIME_FORMAT = 'Y-m-d H:i:s';
+    const string DATETIME_FORMAT = 'Y-m-d H:i:s';
 
     /**
      * Parse out the bulk sign in/out lines
      *
-     * @param $lines
+     * @param string $lines
      * @return array
      */
 
-    public static function parse($lines)
+    public static function parse(string $lines): array
     {
         $lines = explode("\n", $lines);
         $positions = Position::all();
@@ -88,7 +88,7 @@ class BulkSignInOut
      * @return object processed line
      */
 
-    public static function processLine($columns, $positionTitles, &$entry)
+    public static function processLine($columns, $positionTitles, &$entry): bool
     {
         $signin = null;
         $signout = null;
@@ -215,7 +215,7 @@ class BulkSignInOut
         if ($person) {
             $personId = $person->id;
             $callsign = $person->callsign;
-        }  else {
+        } else {
             $personId = null;
         }
 
@@ -284,24 +284,47 @@ class BulkSignInOut
         return empty($errors);
     }
 
-    public static function isTime($value)
+    /**
+     * Are we dealing with a time value?
+     *
+     * @param string $value
+     * @return false|int
+     */
+
+    public static function isTime(string $value): false|int
     {
         if ($value == '007') {
+            // Ahh, the 007 position, not a time.
             return false;
         }
         return preg_match(self::TIME_REGEXP, $value);
     }
 
+    /**
+     * Is this a date?
+     *
+     * @param string $value
+     * @return false|int
+     */
 
-    public static function isDate($value)
+    public static function isDate(string $value): false|int
     {
         if ($value == '007') {
+            // the 007 position again..
             return false;
         }
         return preg_match(self::DATE_REGEXP, $value);
     }
 
-    public static function parseTime($value, $name, &$errors)
+    /**
+     * Try to parse out a time.
+     *
+     * @param $value
+     * @param $name
+     * @param $errors
+     * @return int|null
+     */
+    public static function parseTime($value, $name, &$errors): ?int
     {
         if (!preg_match(self::TIME_REGEXP, $value, $match)) {
             $errors[] = "$name is not a valid time format [$value]";
@@ -317,7 +340,17 @@ class BulkSignInOut
         return $time;
     }
 
-    public static function parseDateAndTime($date, $time, $name, &$errors)
+    /**
+     * Try to parse out a date/time.
+     *
+     * @param $date
+     * @param $time
+     * @param $name
+     * @param $errors
+     * @return int|null
+     */
+
+    public static function parseDateAndTime($date, $time, $name, &$errors): ?int
     {
         if (!preg_match(self::DATE_REGEXP, $date, $match)) {
             $errors[] = "$name has an invalid date [$date]";
@@ -352,8 +385,15 @@ class BulkSignInOut
         return $dateTime;
     }
 
+    /**
+     * Process each line.
+     * @param $entries
+     * @param int $userId
+     * @return bool
+     * @throws \Illuminate\Validation\ValidationException
+     */
 
-    public static function process($entries, int $userId)
+    public static function process($entries, int $userId): bool
     {
         $haveError = false;
         foreach ($entries as $entry) {

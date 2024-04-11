@@ -183,6 +183,8 @@ class Position extends ApiModel
 
     const int REGIONAL_RANGER_NETWORK = 154;
 
+    const int SICK_TIME = 150;
+
     /*
      * Position types
      */

@@ -199,32 +199,14 @@ class MarcatoExport
             throw new RuntimeException("Failed to create CSV file [$this->csvFile]");
         }
 
-        self::writeCSV($fh, self::CSV_HEADERS);
+        CSV::write($fh, self::CSV_HEADERS);
         foreach ($this->bmids as $bmid) {
-            self::writeCSV($fh, self::buildExportRow($bmid));
+            CSV::write($fh, self::buildExportRow($bmid));
         }
 
         fclose($fh);
     }
 
-    /**
-     * Write out a CSV row, quoting string columns
-     * (Why the f**k doesn't fputcsv() do this!?!?)
-     *
-     * @param $fh
-     * @param $columns
-     */
-
-    public static function writeCSV($fh, array $columns)
-    {
-        $quoted = array_map(function ($c) {
-            if (empty($c)) {
-                return '';
-            }
-            return is_string($c) ? '"' . str_replace('"', '""', $c) . '"' : $c;
-        }, $columns);
-        fwrite($fh, implode(',', $quoted) . PHP_EOL);
-    }
 
     /**
      * Build an array used to represent a BMID in the CSV file.
