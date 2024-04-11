@@ -28,6 +28,7 @@ use App\Lib\ShiftDropReport;
 use App\Lib\TimesheetManagement;
 use App\Lib\TimesheetSlotAssocRepair;
 use App\Mail\AutomaticActiveConversionMail;
+use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Position;
@@ -720,7 +721,7 @@ class TimesheetController extends ApiController
      * Bulk Sign In and/or Out action
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function bulkSignInOut(): JsonResponse
@@ -744,6 +745,7 @@ class TimesheetController extends ApiController
         }
 
         $haveError = BulkSignInOut::process($entries, $this->user->id);
+        ActionLog::record($this->user, 'bulk-sign-in-out', '', ['lines' => $people, 'processed' => $entries]);
 
         return response()->json(['status' => ($haveError ? 'error' : 'success'), 'entries' => $entries, 'commit' => true]);
     }

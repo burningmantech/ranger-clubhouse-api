@@ -293,6 +293,11 @@ class Timesheet extends ApiModel
         }
     }
 
+    public function timesheet_log(): HasMany
+    {
+        return $this->hasMany(TimesheetLog::class);
+    }
+
     public function save($options = []): bool
     {
         if ($this->off_duty && $this->on_duty) {
