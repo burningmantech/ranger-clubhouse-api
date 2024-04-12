@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class DocumentControllerTest extends TestCase
@@ -25,7 +24,8 @@ class DocumentControllerTest extends TestCase
      * Test showing all the documents
      */
 
-    public function testDocumentIndexSuccess() {
+    public function testDocumentIndexSuccess()
+    {
         $this->addAdminRole();
         $document = Document::factory()->create();
         $response = $this->json('GET', 'document');
@@ -44,9 +44,9 @@ class DocumentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'document' => [
-                'id'          => $document->id,
-                'tag'        => $document->tag,
-                'description'      => $document->description,
+                'id' => $document->id,
+                'tag' => $document->tag,
+                'description' => $document->description,
                 'body' => $document->body,
             ]
         ]);
@@ -56,17 +56,18 @@ class DocumentControllerTest extends TestCase
      * Test creating a document
      */
 
-    public function testDocumentCreateSuccess() {
+    public function testDocumentCreateSuccess()
+    {
         $this->addAdminRole();
         $data = [
             'tag' => 'new-tag',
             'description' => 'a description',
             'body' => 'a body'
         ];
-        $response = $this->json('POST', 'document', ['document' =>  $data]);
+        $response = $this->json('POST', 'document', ['document' => $data]);
         $response->assertStatus(200);
         $response->assertJson([
-            'document' => array_merge($data, [ 'person_create_id' => $this->user->id])
+            'document' => array_merge($data, ['person_create_id' => $this->user->id])
         ]);
         $this->assertDatabaseHas('document', $data);
     }
@@ -75,16 +76,38 @@ class DocumentControllerTest extends TestCase
      * Test updating a document
      */
 
-    public function testDocumentUpdateSuccess() {
+    public function testDocumentUpdateSuccess()
+    {
         $this->addAdminRole();
         $document = Document::factory()->create();
-        $data = [ 'tag' => 'a new tag' ];
+        $data = ['tag' => 'a-new-tag'];
 
-        $response = $this->json('PUT', "document/{$document->id}", ['document' =>  $data]);
+        $response = $this->json('PUT', "document/{$document->id}", ['document' => $data]);
         $response->assertStatus(200);
         $this->assertDatabaseHas('document', [
             'id' => $document->id,
-            'tag' => 'a new tag'
+            'tag' => 'a-new-tag'
+        ]);
+    }
+
+    /**
+     * Test no spaces in tag
+     */
+
+    public function testNoSpacesInTag()
+    {
+        $this->addAdminRole();
+        $document = Document::factory()->create();
+        $data = ['tag' => 'a new tag'];
+
+        $response = $this->json('PUT', "document/{$document->id}", ['document' => $data]);
+        $response->assertStatus(422);
+        $response->assertJson([
+            'errors' => [
+                [
+                    'source' => ['pointer' => '/data/attributes/tag']
+                ]
+            ]
         ]);
     }
 
@@ -98,6 +121,6 @@ class DocumentControllerTest extends TestCase
         $document = Document::factory()->create();
         $response = $this->json('DELETE', "document/{$document->id}");
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('document', [ 'id' => $document->id ]);
+        $this->assertDatabaseMissing('document', ['id' => $document->id]);
     }
 }

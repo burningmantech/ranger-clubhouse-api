@@ -24,6 +24,7 @@ class Document extends ApiModel
     const string PERSONAL_VEHICLE_AGREEMENT_TAG = 'personal-vehicle-agreement';
     const string RADIO_CHECKOUT_AGREEMENT_TAG = 'radio-checkout-agreement';
     const string SANDMAN_AFFIDAVIT_TAG = 'sandman-affidavit';
+    const string MVR_FORM_INSTRUCTIONS_TAG = 'mvr-form-instructions';
 
     protected $fillable = [
         'tag',
@@ -57,6 +58,11 @@ class Document extends ApiModel
 
     public function save($options = []): bool
     {
+        if (stripos($this->tag, ' ') !== false) {
+            $this->addError('tag', 'Tag may not contain spaces');
+            return false;
+        }
+
         if (!$this->exists || $this->isDirty('tag')) {
             $this->rules['tag'] = [
                 'required',
