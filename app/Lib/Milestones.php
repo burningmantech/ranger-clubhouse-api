@@ -49,7 +49,7 @@ class Milestones
         $isNonRanger = ($status == Person::NON_RANGER);
 
         $settings = setting([
-            'MotorpoolPolicyEnable',
+            'MotorPoolProtocolEnabled',
             'OnboardAlphaShiftPrepLink',
             'OnlineCourseEnabled',
             'OnlineCourseSiteUrl',
@@ -144,7 +144,7 @@ class Milestones
                 break;
         }
 
-        $milestones['motorpool_agreement_available'] = $settings['MotorpoolPolicyEnable'];
+        $milestones['motorpool_agreement_available'] = $settings['MotorPoolProtocolEnabled'];
         $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
 
         if (!in_array($status, Person::ACTIVE_STATUSES) && !$isNonRanger) {

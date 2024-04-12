@@ -147,7 +147,7 @@ class VehicleController extends ApiController
         } else {
             $deadline = "{$year}-".setting('MVRDeadline')." 23:59:59";
             $info = [
-                'motorpool_agreement_available' => setting('MotorpoolPolicyEnable'),
+                'motorpool_agreement_available' => setting('MotorPoolProtocolEnabled'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
 
                 'mvr_positions' => Position::vehicleEligibleForPerson('mvr', $personId),

@@ -43,7 +43,7 @@ class Agreements
 
         Document::MOTORPOOL_POLICY_TAG => [
             'term' => self::TERM_ANNUAL,
-            'setting' => 'MotorpoolPolicyEnable',
+            'setting' => 'MotorPoolProtocolEnabled',
             'column' => 'signed_motorpool_agreement',
         ],
 

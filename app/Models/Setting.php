@@ -180,9 +180,10 @@ class Setting extends ApiModel
             'type' => self::TYPE_EMAIL
         ],
 
-        'MotorpoolPolicyEnable' => [
-            'description' => 'Enable Motorpool Policy Page',
+        'MotorPoolProtocolEnabled' => [
+            'description' => 'Allow the Motor Pool Protocol to be signed, and to enable the dashboard prompt',
             'type' => self::TYPE_BOOL,
+            'default' => false,
         ],
 
         'MVRDeadline' => [
@@ -777,7 +778,7 @@ class Setting extends ApiModel
             $value = null;
         }
 
-        if ($throwOnEmpty && self::notEmpty($value)) {
+        if ($throwOnEmpty && self::isEmpty($value)) {
             throw new RuntimeException("Setting is empty.");
         }
 
@@ -794,9 +795,9 @@ class Setting extends ApiModel
         };
     }
 
-    public static function notEmpty($value): bool
+    public static function isEmpty($value): bool
     {
-        return !is_bool($value) && empty($value);
+        return (!is_numeric($value) && !is_bool($value) && empty($value));
     }
 
     public function getTypeAttribute()
