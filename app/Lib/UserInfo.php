@@ -52,7 +52,7 @@ class UserInfo
             'unread_message_count' => PersonMessage::countUnread($personId),
             'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
             'may_request_stickers' => PVR::isEligible($personId, $event, $year),
-            'motorpool_policy_enabled' => setting('MotorpoolPolicyEnable'),
+            'motorpool_policy_enabled' => setting('MotorPoolProtocolEnabled'),
             'onduty_position' => $timesheet?->buildOnDutyInfo(),
 
             'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),

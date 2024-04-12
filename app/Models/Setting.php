@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\ClubhouseCache;
 use Exception;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 
 class Setting extends ApiModel
@@ -180,19 +180,15 @@ class Setting extends ApiModel
             'type' => self::TYPE_EMAIL
         ],
 
-        'MotorpoolPolicyEnable' => [
-            'description' => 'Enable Motorpool Policy Page',
+        'MotorPoolProtocolEnabled' => [
+            'description' => 'Allow the Motor Pool Protocol to be signed, and to enable the dashboard prompt',
             'type' => self::TYPE_BOOL,
+            'default' => false,
         ],
 
         'MVRDeadline' => [
             'description' => 'The Clubhouse will show the MVR request form link, if eligible, up until the month and day (not year) at 23:59. Format is MM-DD',
             'type' => self::TYPE_STRING,
-        ],
-
-        'MVRRequestFormURL' => [
-            'description' => 'MVR request form URL. Shown on the Motorpool dashboard step if the person is MVR eligible.',
-            'type' => self::TYPE_URL,
         ],
 
         'OnboardAlphaShiftPrepLink' => [
@@ -777,7 +773,7 @@ class Setting extends ApiModel
             $value = null;
         }
 
-        if ($throwOnEmpty && self::notEmpty($value)) {
+        if ($throwOnEmpty && self::isEmpty($value)) {
             throw new RuntimeException("Setting is empty.");
         }
 
@@ -794,9 +790,9 @@ class Setting extends ApiModel
         };
     }
 
-    public static function notEmpty($value): bool
+    public static function isEmpty($value): bool
     {
-        return !is_bool($value) && empty($value);
+        return (!is_numeric($value) && !is_bool($value) && empty($value));
     }
 
     public function getTypeAttribute()
