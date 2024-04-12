@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\ClubhouseCache;
 use Exception;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 
 class Setting extends ApiModel
@@ -189,11 +189,6 @@ class Setting extends ApiModel
         'MVRDeadline' => [
             'description' => 'The Clubhouse will show the MVR request form link, if eligible, up until the month and day (not year) at 23:59. Format is MM-DD',
             'type' => self::TYPE_STRING,
-        ],
-
-        'MVRRequestFormURL' => [
-            'description' => 'MVR request form URL. Shown on the Motorpool dashboard step if the person is MVR eligible.',
-            'type' => self::TYPE_URL,
         ],
 
         'OnboardAlphaShiftPrepLink' => [

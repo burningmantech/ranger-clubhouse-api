@@ -175,7 +175,6 @@ class VehicleController extends ApiController
 
             if (MVR::isEligible($personId, $event, current_year())) {
                 $info['mvr_eligible'] = true;
-                $info['mvr_request_url'] = setting('MVRRequestFormURL');
             } else {
                 $info['mvr_eligible'] = false;
             }

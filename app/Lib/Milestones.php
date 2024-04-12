@@ -214,7 +214,6 @@ class Milestones
 
         if (MVR::isEligible($personId, $event, $year)) {
             $milestones['mvr_eligible'] = true;
-            $milestones['mvr_request_url'] = setting('MVRRequestFormURL');
             $milestones['ignore_mvr'] = $event->ignore_mvr;
         }
         // Person might not be eligible until an MVR eligible position is signed up for.
