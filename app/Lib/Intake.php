@@ -107,6 +107,7 @@ class Intake
         $onlineCourse = PersonOnlineCourse::whereIntegerInRaw('person_id', $pnvIds)
             ->where('year', $year)
             ->where('position_id', Position::TRAINING)
+            ->whereNotNull('completed_at')
             ->with('person:id,callsign')
             ->get();
 
