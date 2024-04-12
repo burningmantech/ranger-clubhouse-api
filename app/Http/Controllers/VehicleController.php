@@ -175,6 +175,7 @@ class VehicleController extends ApiController
 
             if (MVR::isEligible($personId, $event, current_year())) {
                 $info['mvr_eligible'] = true;
+                $info['mvr_form_instructions_tag'] = Document::MVR_FORM_INSTRUCTIONS_TAG;
             } else {
                 $info['mvr_eligible'] = false;
             }
