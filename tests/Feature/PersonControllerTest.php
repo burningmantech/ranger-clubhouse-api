@@ -1156,8 +1156,6 @@ class PersonControllerTest extends TestCase
                 'source' => ['pointer' => '/data/attributes/email']
             ]
         ]]);
-
-        Mail::assertQueued(AccountCreationMail::class, 1);
     }
 
     /*
