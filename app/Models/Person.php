@@ -29,6 +29,7 @@ use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\HasApiTokens;
 use Normalizer;
 use NumberFormatter;
@@ -582,7 +583,9 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      *
      * @param $options
      * @return bool
+     * @throws ValidationException
      */
+
     public function save($options = []): bool
     {
         $isNew = !$this->exists;
