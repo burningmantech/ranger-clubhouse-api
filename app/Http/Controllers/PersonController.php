@@ -705,7 +705,6 @@ class PersonController extends ApiController
         $person->auditReason = 'registration';
         if (!$person->save()) {
             // Ah, crapola. Something nasty happened that shouldn't have.
-            mail_to($accountCreateEmail, new AccountCreationMail('failed', 'database creation error', $person, $intent), true);
             $this->log('person-create-fail', 'database creation error', ['person' => $person, 'errors' => $person->getErrors()]);
             return $this->restError($person);
         }
