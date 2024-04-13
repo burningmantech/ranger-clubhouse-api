@@ -20,14 +20,15 @@ FROM scratch as source
 
 # Copy the application over
 WORKDIR /var/www/application
-COPY ./tests/         ./tests/
-COPY ./routes/        ./routes/
-COPY ./resources/     ./resources/
-COPY ./public/        ./public/
-COPY ./database/      ./database/
-COPY ./config/        ./config/
-COPY ./bootstrap/     ./bootstrap/
 COPY ./app/           ./app/
+COPY ./bootstrap/     ./bootstrap/
+COPY ./config/        ./config/
+COPY ./database/      ./database/
+COPY ./lang/          ./lang/
+COPY ./public/        ./public/
+COPY ./resources/     ./resources/
+COPY ./routes/        ./routes/
+COPY ./tests/         ./tests/
 COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./server.php", "./.env.testing", "./"]
 
 
