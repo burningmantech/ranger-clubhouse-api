@@ -553,18 +553,25 @@ class Training extends Position
             ->groupBy('person_id');
 
         $slotIds = $rows->pluck('id')->unique();
-        $trainingNotes =  TraineeNote::whereIn('person_id', $peopleIds)
+        $trainingNotes = TraineeNote::whereIn('person_id', $peopleIds)
             ->whereIn('slot_id', $slotIds)
             ->orderBy('created_at')
             ->with('person_source:id,callsign')
             ->get()
-            ->groupBy([ 'slot_id', 'person_id']);
+            ->groupBy(['slot_id', 'person_id']);
 
         $trainings = [];
         foreach ($rows as $row) {
-            $ps = $personStatuses->get($row->person_id)?->first();
-            if ($ps) {
-                $status = ($ps->new_status == Person::VINTAGE) ? Person::ACTIVE : $ps->new_status;
+            $statuses = $personStatuses->get($row->person_id);
+            if ($statuses) {
+                $found = $statuses->first();
+                foreach ($statuses as $ps) {
+                    if ($ps->created_at->lt($row->begins)) {
+                        $found = $ps;
+                        break;
+                    }
+                }
+                $status = ($found->new_status == Person::VINTAGE) ? Person::ACTIVE : $found->new_status;
             } else {
                 $status = 'unknown';
             }
