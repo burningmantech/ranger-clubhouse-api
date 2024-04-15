@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\MoodleConnectFailureException;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Models\ActionLog;
 use App\Models\ErrorLog;
@@ -10,10 +11,10 @@ use App\Models\Person;
 use App\Models\PersonOnlineCourse;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use stdClass;
 
@@ -638,11 +639,21 @@ class Moodle
 
         $url = $this->domain . self::WEB_SERVICE_URL . '?' . http_build_query($query);
         $client = Http::connectTimeout(10);
-        $response = match ($method) {
-            'GET' => $client->get($url),
-            'POST' => $client->asForm()->post($url),
-            default => throw new RuntimeException("Unknown method [$method]"),
-        };
+        try {
+            $response = match ($method) {
+                'GET' => $client->get($url),
+                'POST' => $client->asForm()->post($url),
+                default => throw new RuntimeException("Unknown method [$method]"),
+            };
+        } catch (ConnectionException $exception) {
+            $message = $exception->getMessage();
+            ErrorLog::record('moodle-connect-failure', [
+                'message' => $message,
+                'url' => $url,
+                'query' => $query
+            ]);
+            throw new MoodleConnectFailureException($message);
+        }
 
         return self::decodeResponse($response, $url);
     }
