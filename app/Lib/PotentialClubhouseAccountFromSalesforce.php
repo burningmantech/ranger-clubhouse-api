@@ -180,41 +180,41 @@ class PotentialClubhouseAccountFromSalesforce
         $blankFields = [];
 
 
-        if (!isset($rInfo->SFUID__c)) {
-            $errors[] = "Possible Tech Cadre import account permission issue, cannot see Salesforce UID from Contact Record";
-        }
+        if (empty($rInfo)) {
+            $errors[] = "Possible import account and/or Ranger record permission issue, cannot see Contact Info. BMIT intervention required.";
+        } else {
+            foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req => $label) {
+                if ($req == 'MailingState'
+                    && !in_array($rInfo->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
+                    continue;
+                }
 
-        foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req => $label) {
-            if ($req == 'MailingState'
-                && !in_array($rInfo->{'MailingCountry'} ?? '', ['US', 'CA', 'AU'])) {
-                continue;
-            }
-
-            if (!isset($rInfo->$req) || empty(trim($rInfo->$req))) {
-                $blankFields[] = $label;
-            }
-        }
-
-        foreach (self::PHONE_FIELDS as $field) {
-            if (isset($rInfo->{$field})) {
-                $phone = trim($rInfo->{$field});
-                if (!empty($phone)) {
-                    $this->phone = $phone;
-                    break;
+                if (!isset($rInfo->$req) || empty(trim($rInfo->$req))) {
+                    $blankFields[] = $label;
                 }
             }
-        }
 
-        if (empty($this->phone)) {
-            $blankFields[] = 'Phone (home, mobile, or other)';
-        }
+            foreach (self::PHONE_FIELDS as $field) {
+                if (isset($rInfo->{$field})) {
+                    $phone = trim($rInfo->{$field});
+                    if (!empty($phone)) {
+                        $this->phone = $phone;
+                        break;
+                    }
+                }
+            }
 
-        if (!empty($blankFields)) {
-            $errors[] = "Required fields are blank: " . implode(', ', $blankFields);
-        }
+            if (empty($this->phone)) {
+                $blankFields[] = 'Phone (home, mobile, or other)';
+            }
 
-        if (empty($this->email)) {
-            $errors[] = "No email address found. Both Ranger record Contact Email field and Contact Record Home Email fields are blank.";
+            if (!empty($blankFields)) {
+                $errors[] = "Required fields are blank: " . implode(', ', $blankFields);
+            }
+
+            if (empty($this->email)) {
+                $errors[] = "No email address found. Both Ranger record Contact Email field and Contact Record Home Email fields are blank.";
+            }
         }
 
         if (!empty($errors)) {
