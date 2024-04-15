@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\MoodleConnectFailureException;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Models\OnlineCourse;
@@ -27,11 +28,10 @@ class ClubhouseMoodleCompletion extends Command
     /**
      * Scan the Moodle courses to see who completed.
      *
-     * @return mixed
-     * @throws ValidationException
+     * @return void
      */
 
-    public function handle()
+    public function handle(): void
     {
         if (!setting('OnlineCourseEnabled')) {
             $this->info("Online course is disabled. Aborting.");
@@ -49,6 +49,8 @@ class ClubhouseMoodleCompletion extends Command
             } catch (MoodleDownForMaintenanceException $e) {
                 $this->error("Moodle down for maintenance");
                 return;
+            } catch (MoodleConnectFailureException $e) {
+                $this->error("Failed to connect to Moodle server ".$e->getMessage());
             }
         }
     }

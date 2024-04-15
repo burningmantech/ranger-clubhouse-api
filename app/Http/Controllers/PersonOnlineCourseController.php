@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\MoodleConnectFailureException;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
 use App\Mail\OnlineCourseEnrollmentMail;
@@ -98,6 +99,8 @@ class PersonOnlineCourseController extends ApiController
                 $lms->enrollPerson($person, $poc, $course);
             }
         } catch (MoodleDownForMaintenanceException $e) {
+            return response()->json(['status' => 'down-for-maintenance']);
+        } catch (MoodleConnectFailureException $e) {
             return response()->json(['status' => 'down-for-maintenance']);
         }
 
