@@ -46,7 +46,7 @@ class SalesforceController extends ApiController
     public function import(): JsonResponse
     {
         prevent_if_ghd_server('Salesforce import');
-        Gate::allowIf(fn (Person $user) => $user->hasRole([ Role::ADMIN, Role::SALESFORCE_IMPORT]));
+        Gate::allowIf(fn(Person $user) => $user->hasRole([Role::ADMIN, Role::SALESFORCE_IMPORT]));
 
         $params = request()->validate([
             'create_accounts' => 'sometimes|boolean|required',
@@ -173,20 +173,21 @@ class SalesforceController extends ApiController
 
     private function importPerson($sfch, $pca, $updateSf): void
     {
-        if ($pca->status == 'existing') {
+        if ($pca->status == PotentialClubhouseAccountFromSalesforce::STATUS_EXISTING) {
             $person = $pca->existingPerson;
             $isNew = false;
         } else {
             $person = new Person;
             $isNew = true;
-            if ($pca->status == 'existing-claim-callsign') {
-                $old = $pca->existingPerson;
+        }
 
-                if ($old) {
-                    $old->resetCallsign();
-                    $old->auditReason = 'Recycled callsign due to Salesforce import';
-                    $old->saveWithoutValidation();
-                }
+        if ($pca->releaseCallsign) {
+            $old = $pca->releaseCallsign;
+
+            if ($old) {
+                $old->resetCallsign();
+                $old->auditReason = 'released callsign due to incoming prospective';
+                $old->saveWithoutValidation();
             }
         }
 

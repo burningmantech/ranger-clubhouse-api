@@ -285,7 +285,7 @@ class ProspectiveClubhouseAccountFromApplication
 
     /**
      * See if this callsign is on the reserved List.
-     * 
+     *
      * @return string|bool a string if on the reserved list, false otherwise
      */
 
@@ -318,12 +318,13 @@ class ProspectiveClubhouseAccountFromApplication
         } else {
             $person = new Person;
             $isNew = true;
-            if ($this->reassignCallsign) {
-                $old = $this->reassignCallsign;
-                $old->resetCallsign();
-                $old->auditReason = 'Reassigned callsign due to incoming prospective application';
-                $old->saveWithoutValidation();
-            }
+        }
+
+        if ($this->reassignCallsign) {
+            $old = $this->reassignCallsign;
+            $old->resetCallsign();
+            $old->auditReason = 'Reassigned callsign due to incoming prospective application';
+            $old->saveWithoutValidation();
         }
 
         $app = $this->application;
