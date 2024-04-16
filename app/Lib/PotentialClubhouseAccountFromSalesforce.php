@@ -59,6 +59,7 @@ class PotentialClubhouseAccountFromSalesforce
     public $status;     /* "null", "invalid", "ready", "imported", "succeeded" */
     public $message;
     public ?Person $existingPerson = null; // Person record which matches callsign, email, sfuid, or bpguid.
+    public ?Person $releaseCallsign = null; // Person record which matches callsign, email, sfuid, or bpguid.
     public $applicant_type;
     public $salesforce_ranger_object_id;        /* Internal Salesforce ID */
     public $salesforce_ranger_object_name;      /* "R-201" etc. */
@@ -179,8 +180,7 @@ class PotentialClubhouseAccountFromSalesforce
         $errors = [];
         $blankFields = [];
 
-
-        if (empty($rInfo)) {
+        if (empty($rInfo->BPGUID__c)) {
             $errors[] = "Possible import account and/or Ranger record permission issue, cannot see Contact Info. BMIT intervention required.";
         } else {
             foreach (self::REQUIRED_RANGER_INFO_FIELDS as $req => $label) {
@@ -268,7 +268,7 @@ class PotentialClubhouseAccountFromSalesforce
                         return;
                     } else {
                         $this->status = self::STATUS_EXISTING_CLAIM_CALLSIGN;
-                        $this->existingPerson = $person;
+                        $this->releaseCallsign = $person;
                         // fall thru to additional checks
                     }
                 }
@@ -279,7 +279,7 @@ class PotentialClubhouseAccountFromSalesforce
                 return;
             } else {
                 $this->status = self::STATUS_EXISTING_CLAIM_CALLSIGN;
-                $this->existingPerson = $person;
+                $this->releaseCallsign = $person;
                 // fall thru to additional checks
             }
         }
@@ -347,7 +347,7 @@ class PotentialClubhouseAccountFromSalesforce
             if (Person::normalizeCallsign($handle->handle) == $cookedCallsign) {
                 $message = "Is a reserved handle/word ({$handle->getTypeLabel()})";
                 if ($handle->expires_on) {
-                    $message .= ', expires on '.$handle->expires_on->format('Y-m-d');
+                    $message .= ', expires on ' . $handle->expires_on->format('Y-m-d');
                 }
 
                 return $message;
