@@ -11,10 +11,10 @@ class TimesheetNote extends ApiModel
 
     protected $table = 'timesheet_note';
 
-    const TYPE_USER = 'user';
-    const TYPE_HQ_WORKER = 'hq-worker';
-    const TYPE_WRANGLER = 'wrangler';
-    const TYPE_ADMIN = 'admin';
+    const string TYPE_USER = 'user';
+    const string TYPE_HQ_WORKER = 'hq-worker';
+    const string TYPE_WRANGLER = 'wrangler';
+    const string TYPE_ADMIN = 'admin';
 
     public bool $auditModel = true;
 
@@ -48,7 +48,7 @@ class TimesheetNote extends ApiModel
     public static function record(int $timesheetId, ?int $personId, ?string $note, string $type): void
     {
         if (!empty($note)) {
-            $notes = trim($note);
+            $note = trim($note);
         }
 
         if (empty($note)) {
