@@ -12,10 +12,13 @@ class TimesheetMissingNote extends ApiModel
     protected $table = 'timesheet_missing_note';
     protected bool $auditModel = true;
 
-    const TYPE_USER = 'user';
-    const TYPE_HQ_WORKER = 'hq-worker';
-    const TYPE_WRANGLER = 'wrangler';
-    const TYPE_ADMIN = 'admin';
+    /**
+     * Keep in sync with TimesheetNote because a new timesheet generated through here
+     */
+    const string TYPE_USER = 'user';
+    const string TYPE_HQ_WORKER = 'hq-worker';
+    const string TYPE_WRANGLER = 'wrangler';
+    const string TYPE_ADMIN = 'admin';
 
 
     // Notes are not directly updatable by the user.
@@ -48,7 +51,7 @@ class TimesheetMissingNote extends ApiModel
     public static function record(int $timesheetMissingId, ?int $personId, ?string $note, string $type): void
     {
         if (!empty($note)) {
-            $notes = trim($note);
+            $note = trim($note);
         }
 
         if (empty($note)) {

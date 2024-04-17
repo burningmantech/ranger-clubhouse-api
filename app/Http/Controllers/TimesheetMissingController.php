@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
@@ -10,13 +11,14 @@ use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\TimesheetMissing;
+use App\Models\TimesheetMissingNote;
+use App\Models\TimesheetNote;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class TimesheetMissingController extends ApiController
 {
@@ -130,7 +132,7 @@ class TimesheetMissingController extends ApiController
         $exists = $timesheetMissing->exists;
         if ($createNew) {
             // Verify the person may hold the position
-            $newPositionId = $exists ? $timesheetMissing->new_position_id : $timesheetMissing->position_id;
+            $newPositionId = ($exists &&  $timesheetMissing->new_position_id) ? $timesheetMissing->new_position_id : $timesheetMissing->position_id;
             if (!PersonPosition::havePosition($person->id, $newPositionId)) {
                 $timesheetMissing->addError('new_position_id', 'Person does not hold the position.');
                 return $this->restError($timesheetMissing);
@@ -173,6 +175,21 @@ class TimesheetMissingController extends ApiController
                         'off_duty' => (string)$timesheet->off_duty
                     ]
                 );
+
+                // Copy the notes over to the new entry.
+                $missingNotes = $timesheetMissing->allNotes()->get();
+                foreach ($missingNotes as $row) {
+                    $copyNote = new TimesheetNote;
+                    $copyNote->timesheet_id = $timesheet->id;
+                    $copyNote->type = $row->type;
+                    $copyNote->note = "[copied from Missing Timesheet request]\n".$row->note;
+                    $copyNote->create_person_id = $row->create_person_id;
+                    $copyNote->created_at = $row->created_at;
+                    $copyNote->save();
+                }
+
+                TimesheetMissingNote::record($timesheetMissing->id, $this->user->id, "Timesheet #{$timesheet->id} created.", TimesheetMissingNote::TYPE_ADMIN);
+                TimesheetNote::record($timesheet->id, $this->user->id, "Timesheet created from Missing Timesheet Request.", TimesheetNote::TYPE_ADMIN);
 
                 $year = $timesheet->on_duty->year;
                 if ($year == current_year()) {

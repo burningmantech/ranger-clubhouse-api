@@ -149,6 +149,11 @@ class TimesheetMissing extends ApiModel
         return $this->hasMany(TimesheetMissingNote::class)->where('type', TimesheetMissingNote::TYPE_ADMIN);
     }
 
+    public function allNotes() : HasMany
+    {
+        return $this->hasMany(TimesheetMissingNote::class);
+    }
+
     public static function boot(): void
     {
         parent::boot();
