@@ -8,7 +8,7 @@ class VehiclePaperworkReport
 {
 
     /**
-     * Report on people who either have signed the motorpool agreement, and/or have org insurance.
+     * Report on people who either have signed the Motor Pool Protocol, and/or have org insurance.
      *
      * @return array
      */
@@ -30,32 +30,18 @@ class VehiclePaperworkReport
             $peopleByTeams = collect([]);
         }
 
-        $positions = DB::table('position')
-            ->where(function ($w) {
-                $w->where('mvr_eligible',true);
-                $w->orWhere('pvr_eligible', true);
-            })->where('active', true)
-            ->orderBy('title')
-            ->get();
+        list ($peopleByMVRPositions, $mvrPositionsById) = self::retrievePositionSignups('mvr_eligible');
+        list ($peopleByPVRPositions, $pvrPositionsById) = self::retrievePositionSignups('pvr_eligible');
 
-        $positionById = $positions->keyBy('id');
-        if ($positions->isNotEmpty()) {
-            $peopleByPositions = DB::table('slot')
-                ->select('person_slot.person_id', 'slot.position_id')
-                ->join('person_slot', 'person_slot.slot_id', 'slot.id')
-                ->where('slot.begins_year', current_year())
-                ->whereIn('slot.position_id', $positions->pluck('id'))
-                ->where('slot.active', true)
-                ->get()
-                ->groupBy('person_id');
-        } else {
-            $peopleByPositions = collect([]);
-        }
-
-        $ids = $peopleByTeams->keys()->merge($peopleByPositions->keys())->unique();
+        $ids = $peopleByTeams->keys()
+            ->merge($peopleByMVRPositions->keys())
+            ->merge($peopleByPVRPositions->keys())
+            ->unique();
 
         if ($ids->isNotEmpty()) {
-            $eligibles = DB::table('person')->select('id', 'callsign', 'status')->whereIntegerInRaw('id', $ids)->get();
+            $eligibles = DB::table('person')->select('id', 'callsign', 'status')
+                ->whereIntegerInRaw('id', $ids)
+                ->get();
         } else {
             $eligibles = [];
         }
@@ -84,34 +70,14 @@ class VehiclePaperworkReport
                 usort($pvrTeams, fn($a, $b) => strcasecmp($a['title'], $b['title']));
             }
 
-            $personPositions = $peopleByPositions->get($person->id);
-            $mvrPositions = [];
-            $pvrPositions = [];
-            if ($personPositions) {
-                foreach ($personPositions as $pp) {
-                    $position = $positionById->get($pp->position_id);
-                    $pInfo = [
-                        'id' => $position->id,
-                        'title' => $position->title,
-                    ];
-                    if ($position->mvr_eligible) {
-                        $mvrPositions[] = $pInfo;
-                    } else {
-                        $pvrPositions[] = $pInfo;
-                    }
-                }
-                usort($mvrPositions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-                usort($pvrPositions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-            }
-
             $peopleById[$person->id] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
                 'mvr_teams' => $mvrTeams,
-                'mvr_positions' => $mvrPositions,
+                'mvr_positions' => self::buildPositions($person->id, $peopleByMVRPositions, $mvrPositionsById),
                 'pvr_teams' => $pvrTeams,
-                'pvr_positions' => $pvrPositions,
+                'pvr_positions' => self::buildPositions($person->id, $peopleByPVRPositions, $pvrPositionsById),
             ];
         }
 
@@ -155,5 +121,62 @@ class VehiclePaperworkReport
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
         return $people;
+    }
+
+    /**
+     * Retrieve all eligible signups
+     */
+
+    public static function retrievePositionSignups(string $eligible): array
+    {
+        $positions = DB::table('position')
+            ->where($eligible, true)
+            ->where('active', true)
+            ->orderBy('title')
+            ->get();
+
+        $positionsById = $positions->keyBy('id');
+        if ($positions->isNotEmpty()) {
+            $peopleByPositions = DB::table('slot')
+                ->select('person_slot.person_id', 'slot.position_id')
+                ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+                ->where('slot.begins_year', current_year())
+                ->whereIn('slot.position_id', $positionsById->pluck('id'))
+                ->where('slot.active', true)
+                ->get()
+                ->groupBy('person_id');
+        } else {
+            $peopleByPositions = collect([]);
+        }
+
+        return [$peopleByPositions, $positionsById];
+    }
+
+    /**
+     * Build up a list of positions the person is a part of
+     *
+     * @param int $personId
+     * @param $peopleByPositions
+     * @param $positionsById
+     * @return array
+     */
+
+    public static function buildPositions(int $personId, $peopleByPositions, $positionsById): array
+    {
+        $positions = [];
+        $personPositions = $peopleByPositions->get($personId)?->unique('position_id');
+        if ($personPositions) {
+            foreach ($personPositions as $pp) {
+                $position = $positionsById->get($pp->position_id);
+                $pInfo = [
+                    'id' => $position->id,
+                    'title' => $position->title,
+                ];
+                $positions[] = $pInfo;
+            }
+            usort($positions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
+        }
+
+        return $positions;
     }
 }
