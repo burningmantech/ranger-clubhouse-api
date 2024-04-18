@@ -72,6 +72,10 @@ class TimesheetManagement
         }
 
         $position = Position::find($positionId);
+        if ($position->not_timesheet_eligible) {
+            $response = [ 'status' => 'position-not-eligible' ];
+            return false;
+        }
         // Are they trained for this position?
         if (!$position->no_training_required && !Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);

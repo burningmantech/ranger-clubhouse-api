@@ -59,6 +59,7 @@ class TimesheetControllerTest extends TestCase
                 'id' => Position::TRAINING,
                 'title' => 'Training',
                 'type' => 'Training',
+                'not_timesheet_eligible' => true,
             ]
         );
 
@@ -435,6 +436,24 @@ class TimesheetControllerTest extends TestCase
                 ]
             )
         ]);
+    }
+
+    /*
+     * Fail a sign in for a position that's set to be ineligible to be signed in to.
+     */
+
+    public function testSigninPreventionForIneligiblePosition()
+    {
+        $this->createTrainingSession(true);
+        $targetPersonId = $this->targetPerson->id;
+        $this->addPosition(Position::TRAINING, $this->targetPerson);
+
+        $response = $this->json('POST', 'timesheet/signin', [
+            'person_id' => $targetPersonId,
+            'position_id' => Position::TRAINING,
+        ]);
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'position-not-eligible']);
     }
 
     /*
