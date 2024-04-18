@@ -108,6 +108,7 @@ class Training extends Position
                 'active' => $position->active,
                 'type' => $position->type,
                 'no_training_required' => $position->no_training_required,
+                'not_timesheet_eligible' => $position->not_timesheet_eligible,
             ];
 
             $personPositions[] = $info;
