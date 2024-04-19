@@ -19,18 +19,18 @@ class HandleReservation extends ApiModel
     public $timestamps = true;
 
     // Handle reservation types
-    const TYPE_BRC_TERM = 'brc_term';
-    const TYPE_DECEASED_PERSON = 'deceased_person';
-    const TYPE_DISMISSED_PERSON = 'dismissed_person';
-    const TYPE_OBSCENE = 'obscene';
-    const TYPE_PHONETIC_ALPHABET = 'phonetic-alphabet';
-    const TYPE_RADIO_JARGON = 'radio_jargon';
-    const TYPE_RANGER_TERM = 'ranger_term';
-    const TYPE_SLUR = 'slur';
-    const TYPE_TWII_PERSON = 'twii_person';
-    const TYPE_UNCATEGORIZED = 'uncategorized';
+    const string TYPE_BRC_TERM = 'brc_term';
+    const string TYPE_DECEASED_PERSON = 'deceased_person';
+    const string TYPE_DISMISSED_PERSON = 'dismissed_person';
+    const string TYPE_OBSCENE = 'obscene';
+    const string TYPE_PHONETIC_ALPHABET = 'phonetic-alphabet';
+    const string TYPE_RADIO_JARGON = 'radio_jargon';
+    const string TYPE_RANGER_TERM = 'ranger_term';
+    const string TYPE_SLUR = 'slur';
+    const string TYPE_TWII_PERSON = 'twii_person';
+    const string TYPE_UNCATEGORIZED = 'uncategorized';
 
-    const TYPE_LABELS = [
+    const array TYPE_LABELS = [
         self::TYPE_BRC_TERM => 'BRC Term',
         self::TYPE_DECEASED_PERSON => 'Deceased person',
         self::TYPE_DISMISSED_PERSON => 'Dismissed person',
@@ -61,8 +61,8 @@ class HandleReservation extends ApiModel
     protected $rules = [
         'handle' => [
             'required',
-            'string', '
-            max:100'
+            'string',
+            'max:100'
         ],
         'reservation_type' => 'required|string|max:100',
         'expires_on' => 'sometimes|date:Y-m-d|nullable',
@@ -93,11 +93,11 @@ class HandleReservation extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    protected function setHandleAttribute($value)
+    protected function setHandleAttribute(?string $value): void
     {
         $value = trim($value ?: '');
-        $this->handle = $value;
-        $this->normalized_handle = Person::normalizeCallsign($value);
+        $this->attributes['handle'] = $value;
+        $this->attributes['normalized_handle'] = Person::normalizeCallsign($value);
     }
 
     protected function getHasExpiredAttribute(): bool
@@ -234,6 +234,23 @@ class HandleReservation extends ApiModel
             'expires_on' => (string)(now()->addYears(Person::GRIEVING_PERIOD_YEARS)),
             'reason' => 'marked deceased by ' . (Auth::user()->callsign ?? 'unknown') . ' on ' . now()->format('Y-m-d'),
         ]);
+    }
+
+    /**
+     * Expire handles.
+     *
+     * @return Collection
+     */
+
+    public static function expireHandles(): Collection
+    {
+        $rows = HandleReservation::findForQuery(['expired' => true]);
+        foreach ($rows as $row) {
+            $row->auditReason = 'expire handle';
+            $row->delete();
+        }
+
+        return $rows;
     }
 
     public function getTypeLabel(): string
