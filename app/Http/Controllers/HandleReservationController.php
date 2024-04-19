@@ -152,16 +152,12 @@ class HandleReservationController extends ApiController
     {
         $this->authorize('expire', HandleReservation::class);
 
-        $rows = HandleReservation::findForQuery(['expired' => true]);
-        foreach ($rows as $row) {
-            $row->auditReason = 'expire handle';
-            $row->delete();
-        }
+        $rows = HandleReservation::expireHandles();
 
         return response()->json(['expired' => $rows->count()]);
     }
 
-    const EXCLUDE_STATUSES = [Person::PAST_PROSPECTIVE, Person::AUDITOR];
+    const array EXCLUDE_STATUSES = [Person::PAST_PROSPECTIVE, Person::AUDITOR];
 
     /**
      * List all handles. Used by the Handle Checker.

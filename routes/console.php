@@ -67,6 +67,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server
     // Expire archived photos after 6 months
     Schedule::command('clubhouse:expire-photos')->weeklyOn(1, '04:30')->onOneServer();
 
+    // Delete expired reserved handles
+    Schedule::command('clubhouse:expire-handle-reservations')->dailyAt('04:00')->onOneServer();
+
     if (config('telescope.enabled')) {
         // Purge Laravel Telescope logs
         Schedule::command('telescope:prune --hours=72')->dailyAt('05:30')->onOneServer();
