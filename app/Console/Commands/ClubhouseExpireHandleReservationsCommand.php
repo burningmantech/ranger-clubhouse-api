@@ -37,6 +37,12 @@ class ClubhouseExpireHandleReservationsCommand extends Command
             'expires_on' => (string)$r->expires_on,
         ])->toArray();
 
+        if (empty($expired)) {
+            $this->info("* No expired reserved handles found.");
+            return;
+        }
+
+        $this->info("* Expired ".count($expired)." handles.");
         mail_to(setting('VCEmail'), new ExpiredHandleReservationsMail($expired));
     }
 }
