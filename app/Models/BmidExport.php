@@ -33,6 +33,16 @@ class BmidExport extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::deleted(function (BmidExport $export) {
+            error_log("* Got here");
+            $export->deleteExport();
+        });
+    }
+
     /**
      * Find all exports for a given year
      *
@@ -46,6 +56,39 @@ class BmidExport extends ApiModel
             ->with('person:id,callsign')
             ->orderBy('created_at')
             ->get();
+    }
+
+    /**
+     * Delete all exports for a given year.
+     *
+     * @param int $year
+     * @param string|null $reason
+     * @return void
+     */
+
+    public static function deleteAllForYear(int $year, ?string $reason = null): void
+    {
+        $rows = self::whereYear('created_at', $year)->get();
+        foreach ($rows as $row) {
+            $row->auditReason = $reason;
+            $row->delete();
+        }
+    }
+
+    /**
+     * Delete all exports - used for post event cleanup.
+     *
+     * @param string|null $reason
+     * @return void
+     */
+
+    public static function deleteAllForPostEvent(?string $reason = null): void
+    {
+        $rows = self::all();
+        foreach ($rows as $row) {
+            $row->auditReason = $reason;
+            $row->delete();
+        }
     }
 
     /**
