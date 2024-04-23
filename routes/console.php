@@ -70,6 +70,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server
     // Delete expired reserved handles
     Schedule::command('clubhouse:expire-handle-reservations')->dailyAt('04:00')->onOneServer();
 
+    // Delete the BMIDs post-event
+    Schedule::command('clubhouse:delete-bmid-exports --post-event')->yearlyOn(9, 15, '05:30')->onOneServer();
+
     if (config('telescope.enabled')) {
         // Purge Laravel Telescope logs
         Schedule::command('telescope:prune --hours=72')->dailyAt('05:30')->onOneServer();
