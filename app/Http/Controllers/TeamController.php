@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Lib\BulkTeamGrantRevoke;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\TeamMembershipReport;
+use App\Models\Role;
 use App\Models\Team;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -130,6 +131,10 @@ class TeamController extends ApiController
             'grant' => 'boolean|required',
             'commit' => 'boolean|sometimes',
         ]);
+
+        if ($params['grant'] && $team->team_roles->first(fn ($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
+            throw new AuthorizationException("The team has either the Admin or Tech Ninja Role associated and cannot be granted through this interface.");
+        }
 
         return response()->json([
             'people' => BulkTeamGrantRevoke::execute(

@@ -9,6 +9,7 @@ use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\SandmanQualificationReport;
 use App\Models\PersonPosition;
 use App\Models\Position;
+use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -166,6 +167,10 @@ class PositionController extends ApiController
             'grant' => 'boolean|required',
             'commit' => 'boolean|sometimes',
         ]);
+
+        if ($params['grant'] && $position->position_roles->first(fn ($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
+            throw new AuthorizationException("The position has either the Admin or Tech Ninja Role associated and cannot be granted through this interface.");
+        }
 
         return response()->json([
             'people' => BulkPositionGrantRevoke::execute(
