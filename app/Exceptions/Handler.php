@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
 use Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Throwable;
@@ -108,14 +109,15 @@ class Handler
         }
 
         // User does not have the appropriate roles.
-        if ($e instanceof AuthorizationException) {
+        if ($e instanceof AuthorizationException ||
+            $e instanceof AccessDeniedHttpException) {
             // Handle the situation where the token was expired.. and return a Not Authenticated response instead
             if (!Auth::check() && request()->header('Authorization')) {
                 return response()->json(['error' => 'Not authenticated.'], 401);
             }
 
             $message = $e->getMessage();
-            if ($message == '') {
+            if (empty($message)) {
                 $message = 'Not permitted';
             }
             return response()->json(['error' => $message], 403);
