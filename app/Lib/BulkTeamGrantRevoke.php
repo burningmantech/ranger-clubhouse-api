@@ -28,7 +28,7 @@ class BulkTeamGrantRevoke
 
         if ($commit) {
             $positionIds = Position::where('team_id', $teamId)
-                ->whereIn('team_category', $grant ? [Position::TEAM_CATEGORY_ALL_MEMBERS] : [Position::TEAM_CATEGORY_ALL_MEMBERS , Position::TEAM_CATEGORY_OPTIONAL])
+                ->whereIn('team_category', $grant ? [Position::TEAM_CATEGORY_ALL_MEMBERS] : [Position::TEAM_CATEGORY_ALL_MEMBERS, Position::TEAM_CATEGORY_OPTIONAL])
                 ->pluck('id')
                 ->toArray();
         }
@@ -39,7 +39,7 @@ class BulkTeamGrantRevoke
                 continue;
             }
 
-            $person = Person::where('callsign_normalized', $normalized)->first();
+            $person = Person::findByCallsign($callsign);
 
             if (!$person) {
                 $results[] = [
@@ -55,7 +55,7 @@ class BulkTeamGrantRevoke
             ];
 
             if (in_array($person->status, [...Person::LOCKED_STATUSES, Person::PAST_PROSPECTIVE])) {
-                $result['errors'] = "Has status [{$person->status}], team cannot be granted thru this interface";
+                $result['errors'] = "Has status {$person->status} - team cannot be granted thru this interface";
                 $results[] = $result;
                 continue;
             }
@@ -74,20 +74,17 @@ class BulkTeamGrantRevoke
                     }
                     $result['success'] = true;
                 }
+            } else if (!$exists) {
+                $result['errors'] = 'Team already revoked';
             } else {
-                if (!$exists) {
-                    $result['errors'] = 'Team already revoked';
-                } else {
-                    if ($commit) {
-                        PersonTeam::removePerson($teamId, $person->id, $reason);
-                        if (!empty($positionIds)) {
-                            PersonPosition::removeIdsFromPerson($person->id, $positionIds, 'bulk team grant');
-                        }
+                if ($commit) {
+                    PersonTeam::removePerson($teamId, $person->id, $reason);
+                    if (!empty($positionIds)) {
+                        PersonPosition::removeIdsFromPerson($person->id, $positionIds, 'bulk team grant');
                     }
-                    $result['success'] = true;
                 }
+                $result['success'] = true;
             }
-
             $results[] = $result;
         }
 

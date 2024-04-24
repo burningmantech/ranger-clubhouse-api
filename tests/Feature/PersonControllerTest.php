@@ -12,6 +12,7 @@ use App\Models\PersonRole;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\PositionCredit;
+use App\Models\PositionRole;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Timesheet;
@@ -636,7 +637,7 @@ class PersonControllerTest extends TestCase
 
 
     /**
-     * Test updating personing positions
+     * Test updating person positions
      */
 
 
@@ -696,6 +697,41 @@ class PersonControllerTest extends TestCase
             [
                 'person_id' => $personId,
                 'position_id' => $oldPosition->id,
+            ]
+        );
+    }
+
+    /**
+     * Test updating person positions
+     */
+
+
+    public function test_update_failure_for_tech_ninja_associated()
+    {
+        $this->addRole(Role::ADMIN);
+        $personId = $this->user->id;
+
+        $position = Position::factory()->create();
+        PositionRole::factory()->create([
+           'position_id' => $position->id,
+           'role_id' => Role::TECH_NINJA,
+        ]);
+
+        $response = $this->json(
+            'POST',
+            "person/$personId/positions",
+            [
+                'position_ids' => [$position->id],
+                'team_manager_ids' => [],
+            ]
+        );
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing(
+            'person_position',
+            [
+                'person_id' => $personId,
+                'position_id' => $position->id,
             ]
         );
     }

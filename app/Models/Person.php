@@ -476,6 +476,19 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 PersonFka::addFkaToPerson($model->id, $callsign[0]);
             }
         });
+
+        self::deleted(function (Person $model) {
+            $personId = $model->id;
+
+            foreach (Person::ASSOC_TABLES as $table) {
+                DB::table($table)->where('person_id', $personId)->delete();
+            }
+
+            DB::update('UPDATE slot SET signed_up = (SELECT COUNT(*) FROM person_slot WHERE slot_id=slot.id) WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
+
+            // Photos require a bit of extra work.
+            PersonPhoto::deleteAllForPerson($personId);
+        });
     }
 
     /**

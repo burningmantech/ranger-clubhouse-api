@@ -11,7 +11,7 @@ class PersonPolicy
 {
     use HandlesAuthorization;
 
-    const AUTHORIZED_ROLES = [
+    const array AUTHORIZED_ROLES = [
         Role::ADMIN,
         Role::ART_TRAINER,
         Role::MANAGE,
@@ -85,9 +85,9 @@ class PersonPolicy
      *
      * @param Person $user
      * @param Person $person
-     * @return mixed
+     * @return bool|Response
      */
-    public function update(Person $user, Person $person): mixed
+    public function update(Person $user, Person $person): bool|Response
     {
         /*
          * Do not allow a person to be updated when the status is problematic.
@@ -170,6 +170,11 @@ class PersonPolicy
     public function mentors(Person $user, Person $person): bool
     {
         return ($user->id == $person->id || $user->hasRole([Role::ADMIN, Role::VC, Role::MENTOR]));
+    }
+
+    public function eventInfo(Person $user, Person $person): bool
+    {
+        return $user->id == $person->id || $user->hasRole([Role::ADMIN, Role::MANAGE]);
     }
 
     public function alphaShirts(Person $user): bool

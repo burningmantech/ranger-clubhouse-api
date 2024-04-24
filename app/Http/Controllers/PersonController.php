@@ -9,7 +9,6 @@ use App\Lib\Milestones;
 use App\Lib\PersonAdvancedSearch;
 use App\Lib\PersonSearch;
 use App\Lib\Reports\AlphaShirtsReport;
-use App\Lib\Reports\LanguagesSpokenOnSiteReport;
 use App\Lib\Reports\PeopleByLocationReport;
 use App\Lib\Reports\PeopleByStatusReport;
 use App\Lib\Reports\RecommendStatusChangeReport;
@@ -21,10 +20,8 @@ use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\EmailHistory;
 use App\Models\Person;
 use App\Models\PersonEventInfo;
-use App\Models\PersonLanguage;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
-use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonStatus;
@@ -35,8 +32,8 @@ use App\Models\Timesheet;
 use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PersonController extends ApiController
 {
@@ -93,7 +90,7 @@ class PersonController extends ApiController
      * Advanced search
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function advancedSearch(): JsonResponse
@@ -145,7 +142,7 @@ class PersonController extends ApiController
      * Create a person
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -182,7 +179,7 @@ class PersonController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Person $person): JsonResponse
@@ -233,28 +230,7 @@ class PersonController extends ApiController
     public function destroy(Person $person): JsonResponse
     {
         $this->authorize('delete', $person);
-
-        DB::transaction(
-            function () use ($person) {
-                $personId = $person->id;
-
-
-                foreach (Person::ASSOC_TABLES as $table) {
-                    DB::table($table)->where('person_id', $personId)->delete();
-                }
-
-                // Ensure slot signed up counts are adjusted.
-
-                DB::update('UPDATE slot SET signed_up = (SELECT COUNT(*) FROM person_slot WHERE slot_id=slot.id) WHERE id IN (SELECT slot_id FROM person_slot WHERE person_id=?)', [$personId]);
-
-                // Photos require a bit of extra work.
-                PersonPhoto::deleteAllForPerson($personId);
-
-                // Farewell, parting is such sweet sorrow . . .
-                $person->delete();
-            }
-        );
-
+        $person->delete();
         return $this->restDeleteSuccess();
     }
 
@@ -263,17 +239,13 @@ class PersonController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function eventInfo(Person $person): JsonResponse
     {
-        $year = $this->getYear();
-        $eventInfo = PersonEventInfo::findForPersonYear($person, $year);
-        if ($eventInfo) {
-            return response()->json(['event_info' => $eventInfo]);
-        }
-
-        return $this->restError('The year could not be found.', 404);
+        $this->authorize('eventInfo', $person);
+        return response()->json(['event_info' => PersonEventInfo::findForPersonYear($person, $this->getYear())]);
     }
 
     /**
@@ -436,20 +408,20 @@ class PersonController extends ApiController
         $newIds = [];
         $deleteIds = [];
 
-        // Only tech ninjas may grant/revoke the tech ninja and admin roles. Ignore attempts to alter the roles by
+        // Only tech ninjas may grant/revoke the tech ninja roles. Ignore attempts to alter the roles by
         // mere mortals.
         $isTechNinja = $this->userHasRole(Role::TECH_NINJA);
 
         // Find the new ids to be added
         foreach ($roleIds as $id) {
-            if (!in_array($id, $existingRoles) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
+            if (!in_array($id, $existingRoles) && ($id != Role::TECH_NINJA || $isTechNinja)) {
                 $newIds[] = $id;
             }
         }
 
         // Find the ids to be deleted
         foreach ($existingRoles as $id) {
-            if (!in_array($id, $roleIds) && (($id != Role::TECH_NINJA && $id != Role::ADMIN) || $isTechNinja)) {
+            if (!in_array($id, $roleIds) && ($id != Role::TECH_NINJA || $isTechNinja)) {
                 $deleteIds[] = $id;
             }
         }

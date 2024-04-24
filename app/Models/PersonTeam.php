@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Traits\HasCompositePrimaryKey;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -144,10 +146,21 @@ class PersonTeam extends ApiModel
      * @param int $personId
      * @param string|null $reason
      * @return void
+     * @throws AuthorizationException
      */
 
     public static function addPerson(int $teamId, int $personId, ?string $reason): void
     {
+        $hasTechNinja = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::TECH_NINJA])->exists();
+        if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
+            throw new AuthorizationException("No authorization to grant membership for a team with the Tech Ninja permission associated.");
+        }
+
+        $hasAdmin = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::ADMIN])->exists();
+        if ($hasAdmin && !Auth::user()?->isAdmin()) {
+            throw new AuthorizationException("No authorization to grant membership for a team with the Admin permission associated.");
+        }
+
         if (self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId]) == 1) {
             PersonTeamLog::addPerson($teamId, $personId);
             ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);

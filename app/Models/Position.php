@@ -376,10 +376,11 @@ class Position extends ApiModel
         parent::boot();
 
         self::saved(function ($model) {
-            if (is_array($model->role_ids)) {
+            if (is_array($model->role_ids) && Auth::user()?->hasRole(Role::TECH_NINJA)) {
                 // Update Position Roles
                 Membership::updatePositionRoles($model->id, $model->role_ids, '');
             }
+            ClubhouseCache::flush();
         });
 
         self::deleted(function ($model) {

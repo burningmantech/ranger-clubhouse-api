@@ -78,11 +78,6 @@ class PositionRole extends ApiModel
 
     public static function add(int $positionId, int $roleId, ?string $reason): void
     {
-        if ($roleId == Role::ADMIN || $roleId == Role::TECH_NINJA) {
-            // Nope, don't allow unchecked privilege escalation.
-            return;
-        }
-
         $data = ['position_id' => $positionId, 'role_id' => $roleId];
         if (self::insertOrIgnore($data) == 1) {
             ClubhouseCache::flush();
