@@ -12,11 +12,9 @@ class TeamPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before(Person $user): ?bool
     {
-        if ($user->hasRole(Role::TECH_NINJA)) {
-            return true;
-        }
+        return $user->hasRole(Role::TECH_NINJA) ? true : null;
     }
 
     /**
@@ -41,7 +39,7 @@ class TeamPolicy
 
     public function store(Person $user): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     /**
@@ -54,7 +52,7 @@ class TeamPolicy
 
     public function update(Person $user, Team $team): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     /**
@@ -67,7 +65,7 @@ class TeamPolicy
 
     public function delete(Person $user, Team $team): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     /**

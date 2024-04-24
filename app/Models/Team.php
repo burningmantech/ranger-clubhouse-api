@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -65,7 +66,7 @@ class Team extends ApiModel
 
         self::saved(function ($model) {
             // Don't use empty() because the array might be empty indicating no roles are to be assigned
-            if (is_array($model->role_ids)) {
+            if (is_array($model->role_ids) && Auth::user()?->hasRole(Role::TECH_NINJA)) {
                 // Update Position Roles
                 Membership::updateTeamRoles($model->id, $model->role_ids, $model->auditReason ?? '');
             }

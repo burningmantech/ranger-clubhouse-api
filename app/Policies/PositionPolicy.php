@@ -13,11 +13,9 @@ class PositionPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before(Person $user): ?bool
     {
-        if ($user->hasRole(Role::TECH_NINJA)) {
-            return true;
-        }
+        return $user->hasRole([Role::ADMIN, Role::TECH_NINJA]) ? true : null;
     }
 
     /**
@@ -36,9 +34,10 @@ class PositionPolicy
      * Determine whether the user can create positions.
      *
      * @param Person $user
-     * @return false
+     * @return bool
      */
-    public function store(Person $user): mixed
+
+    public function store(Person $user): bool
     {
         return false;
     }
@@ -76,7 +75,7 @@ class PositionPolicy
 
     public function sandmanQualified(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -88,7 +87,7 @@ class PositionPolicy
 
     public function peopleByTeamsReport(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -100,7 +99,7 @@ class PositionPolicy
 
     public function sanityChecker(Person $user): bool
     {
-        return $user->hasRole([ Role::ADMIN, Role::MANAGE]);
+        return $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -113,7 +112,7 @@ class PositionPolicy
     public function repair(Person $user): bool
     {
         // Only admins  are allowed to run it.
-        return $user->hasRole(Role::ADMIN);
+        return false;
     }
 
     /**
@@ -142,7 +141,7 @@ class PositionPolicy
      *
      */
 
-    public function peopleByPosition(Person $user) : bool
+    public function peopleByPosition(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
@@ -154,7 +153,7 @@ class PositionPolicy
      * @return bool
      */
 
-    public function grants(Person $user) : bool
+    public function grants(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }

@@ -8,6 +8,7 @@ use App\Lib\Reports\TeamMembershipReport;
 use App\Models\Team;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class TeamController extends ApiController
 {
@@ -32,7 +33,7 @@ class TeamController extends ApiController
      * Create a new team.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -68,12 +69,12 @@ class TeamController extends ApiController
      *
      * @param Team $team
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Team $team): JsonResponse
     {
-        $this->authorize('update', Team::class);
+        $this->authorize('update', $team);
         $this->fromRest($team);
 
         if ($team->save()) {
@@ -94,7 +95,7 @@ class TeamController extends ApiController
 
     public function destroy(Team $team): JsonResponse
     {
-        $this->authorize('delete', Team::class);
+        $this->authorize('delete', $team);
         $team->delete();
         return $this->restDeleteSuccess();
     }
@@ -148,7 +149,7 @@ class TeamController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function membership(Team $team) : JsonResponse
+    public function membership(Team $team): JsonResponse
     {
         $this->authorize('membership', $team);
 

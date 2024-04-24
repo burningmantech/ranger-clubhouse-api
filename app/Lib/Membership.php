@@ -10,6 +10,7 @@ use App\Models\PositionRole;
 use App\Models\Team;
 use App\Models\TeamManager;
 use App\Models\TeamRole;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class Membership
 {
@@ -56,6 +57,7 @@ class Membership
      * @param array|null $revokeIds
      * @param string $reason
      * @param bool $isAdmin
+     * @throws AuthorizationException
      */
 
     public static function updatePositionsForPerson(int    $userId,
@@ -77,7 +79,6 @@ class Membership
 
         if ($positionIds !== null) {
             [$newIds, $deleteIds] = self::determineGrantRevokes($positions, $positionIds, 'id');
-
             if (!$isAdmin) {
                 // Need to check on each position to see if it's allowed
                 $newIds = self::canManagePositions($newIds, $manageIds);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -170,18 +171,29 @@ class PersonPosition extends ApiModel
         self::removeIdsFromPerson($personId, $removeIds, $reason);
     }
 
-    /*
+    /**
      * Add positions to a person. Log the action.
      *
      * @param int $personId person to add
      * @param array $ids position ids to add
-     * @param string $message reason for addition
+     * @param string|null $reason reason for addition
+     * @throws AuthorizationException
      */
 
-    public static function addIdsToPerson(int $personId, $ids, $message)
+    public static function addIdsToPerson(int $personId, $ids, ?string $reason): void
     {
         $addIds = [];
         foreach ($ids as $id) {
+            $hasTechNinja = DB::table('position_role')->where(['position_id' => $id, 'role_id' => Role::TECH_NINJA])->exists();
+            if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
+                throw new AuthorizationException("No authorization to grant a position with the Tech Ninja permission associated.");
+            }
+
+            $hasAdmin = DB::table('position_role')->where(['position_id' => $id, 'role_id' => Role::ADMIN])->exists();
+            if ($hasAdmin && !Auth::user()?->isAdmin()) {
+                throw new AuthorizationException("No authorization to grant a position with the Admin permission associated.");
+            }
+
             // Don't worry if there is a duplicate record.
             if (DB::table('person_position')->insertOrIgnore(['person_id' => $personId, 'position_id' => $id]) == 1) {
                 $addIds[] = $id;
@@ -190,7 +202,7 @@ class PersonPosition extends ApiModel
 
         if (!empty($addIds)) {
             $ids = array_values($addIds);
-            ActionLog::record(Auth::user(), 'person-position-add', $message, ['position_ids' => $ids], $personId);
+            ActionLog::record(Auth::user(), 'person-position-add', $reason, ['position_ids' => $ids], $personId);
             foreach ($ids as $id) {
                 PersonPositionLog::addPerson($id, $personId);
             }
@@ -205,10 +217,10 @@ class PersonPosition extends ApiModel
      *
      * @param int $personId person to remove
      * @param array $ids position ids to remove
-     * @param string $message reason for removal
+     * @param ?string $reason reason for removal
      */
 
-    public static function removeIdsFromPerson(int $personId, array $ids, string $message)
+    public static function removeIdsFromPerson(int $personId, array $ids, ?string $reason)
     {
         if (empty($ids)) {
             return;
@@ -226,7 +238,7 @@ class PersonPosition extends ApiModel
                 ->whereIn('position_id', $existingIds)
                 ->delete();
 
-            ActionLog::record(Auth::user(), 'person-position-remove', $message, ['position_ids' => $existingIds], $personId);
+            ActionLog::record(Auth::user(), 'person-position-remove', $reason, ['position_ids' => $existingIds], $personId);
             foreach ($existingIds as $id) {
                 PersonPositionLog::removePerson($id, $personId);
             }

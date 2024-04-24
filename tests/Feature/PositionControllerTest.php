@@ -74,7 +74,6 @@ class PositionControllerTest extends TestCase
         ];
 
         $response = $this->json('POST', 'position', ['position' => $data]);
-
         $response->assertStatus(200);
         $this->assertDatabaseHas('position', $data);
     }
@@ -85,7 +84,7 @@ class PositionControllerTest extends TestCase
 
     public function testUpdatePosition()
     {
-        $this->addRole(Role::TECH_NINJA);
+        $this->addRole(Role::ADMIN);
         $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
@@ -96,6 +95,41 @@ class PositionControllerTest extends TestCase
         $this->assertDatabaseHas('position',
             ['id' => $position->id, 'title' => 'Something Title', 'active' => false]);
     }
+
+    /**
+     * Try to successfully update the position roles
+     */
+
+    public function testUpdatePositionRoles()
+    {
+        $this->addRole(Role::TECH_NINJA);
+        $position = Position::factory()->create();
+
+        $response = $this->json('PATCH', "position/{$position->id}", [
+            'position' => ['role_ids' => [Role::MANAGE]]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('position_role', [ 'position_id' => $position->id, 'role_id' => Role::MANAGE ]);
+    }
+
+    /**
+     * Try to update the position roles without the right permissions
+     */
+
+    public function testUpdatePositionRolesForNonTechNinja()
+    {
+        $this->addRole(Role::ADMIN);
+        $position = Position::factory()->create();
+
+        $response = $this->json('PATCH', "position/{$position->id}", [
+            'position' => ['role_ids' => [Role::ADMIN]]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('position_role', [ 'position_id' => $position->id, 'role_id' => Role::ADMIN ]);
+    }
+
 
     /*
      * Delete a position
@@ -229,7 +263,7 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/'.Position::DIRT_GREEN_DOT.'/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/' . Position::DIRT_GREEN_DOT . '/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
             'grant' => 1,
             'commit' => 0
@@ -259,7 +293,7 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/'.Position::DIRT_GREEN_DOT.'/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/' . Position::DIRT_GREEN_DOT . '/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
             'grant' => 1,
             'commit' => 1
@@ -291,7 +325,7 @@ class PositionControllerTest extends TestCase
         $this->addRole(Role::ADMIN);
         $this->createBulkPeople();
 
-        $response = $this->json('POST', 'position/'.Position::HQ_WINDOW.'/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/' . Position::HQ_WINDOW . '/bulk-grant-revoke', [
             'callsigns' => 'nosuchcallsign',
             'grant' => 1,
             'commit' => 0
@@ -318,7 +352,7 @@ class PositionControllerTest extends TestCase
         $this->createBulkPeople();
         $person1 = $this->person1;
 
-        $response = $this->json('POST', 'position/'.Position::HQ_WINDOW.'/bulk-grant-revoke', [
+        $response = $this->json('POST', 'position/' . Position::HQ_WINDOW . '/bulk-grant-revoke', [
             'callsigns' => $person1->callsign,
             'grant' => 1,
             'commit' => 0
