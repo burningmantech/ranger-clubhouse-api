@@ -154,7 +154,7 @@ class Survey extends ApiModel
                     'title' => match ($row->type) {
                         self::ALPHA => 'Alpha Feedback',
                         self::TRAINER => 'Trainer-On-Trainer Feedback',
-                        default => 'Venue Feedback',
+                        default => ($row->position_id == Position::TRAINING) ? 'Venue Feedback' : 'General Questions',
                     },
                 ]
             ];
