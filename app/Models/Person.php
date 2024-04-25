@@ -453,6 +453,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 }
                 $model->callsign_approved = false;
             }
+
+            /*
+             * Clear the callsign pronunciation when the callsign is updated.
+             */
+            if ($model->isDirty('callsign') && !$model->isDirty('callsign_pronounce')) {
+                $model->callsign_pronounce = '';
+            }
         });
 
         self::updated(function (Person $model) {
