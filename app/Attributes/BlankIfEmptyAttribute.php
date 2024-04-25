@@ -15,7 +15,7 @@ class BlankIfEmptyAttribute
             } else if (is_numeric($value)) {
                 return $value;
             } else {
-                return empty($value) ? $value : '';
+                return empty($value) ? '' : $value;
             }
         });
     }

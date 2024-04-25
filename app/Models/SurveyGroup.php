@@ -39,8 +39,8 @@ class SurveyGroup extends ApiModel
         'survey_id' => 'required|integer',
         'sort_index' => 'required|integer',
         'title' => 'required|string|max:190',
-        'description' => 'sometimes|string',
-        'report_title' => 'sometimes|string',
+        'description' => 'sometimes|string|nullable',
+        'report_title' => 'sometimes|string|nullable',
     ];
 
     protected $attributes = [
