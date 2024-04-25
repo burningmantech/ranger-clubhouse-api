@@ -38,7 +38,7 @@ class PersonMentor extends ApiModel
     }
 
     /**
-     * Retrieve all mentors for a person, check if the mentees want to be contacted or not.
+     * Retrieve all mentees for a person, check if the mentees want to be contacted or not.
      *
      * @param int $personId
      * @return array
@@ -83,6 +83,18 @@ class PersonMentor extends ApiModel
             ]
         );
 
+        $lastYears = DB::table(function ($q) use ($ids) {
+            $q->from('timesheet')
+                ->select('person_id', DB::raw('MAX(on_duty) as on_duty'))
+                ->whereIn('person_id', $ids)
+                ->where('is_non_ranger', false)
+                ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
+                ->groupBy('person_id')
+                ->orderBy('on_duty', 'desc');
+        })->select('person_id', DB::raw('YEAR(on_duty) as year'))
+            ->get()
+            ->keyBy('person_id');
+
         $fkas = PersonFka::whereIntegerInRaw('person_id', $ids)
             ->orderBy('person_id')
             ->orderBy('fka_normalized')
@@ -111,7 +123,6 @@ class PersonMentor extends ApiModel
 
                 $status = $row->status;
                 if ($status != Person::ACTIVE && $status != Person::INACTIVE && $status != Person::INACTIVE_EXTENSION) {
-                    $status = 'not active';
                     $canContact = 'none';
                 } else {
                     $canContact = $row->use_email ? 'allow' : 'block';
@@ -125,6 +136,7 @@ class PersonMentor extends ApiModel
                     'contact_status' => $canContact,
                     'mentor_status' => $row->mentor_status,
                     'profile_url' => $photos->get($personId)?->profile_url,
+                    'last_worked' => $lastYears->get($personId)?->year,
                     'mentors' => []
                 ];
             }
