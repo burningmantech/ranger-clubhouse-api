@@ -17,120 +17,119 @@ class AccessDocument extends ApiModel
     protected bool $auditModel = true;
 
     // Statuses
-    const BANKED = 'banked';
-    const CANCELLED = 'cancelled';
-    const CLAIMED = 'claimed';
-    const EXPIRED = 'expired';
-    const QUALIFIED = 'qualified';
-    const SUBMITTED = 'submitted';
-    const TURNED_DOWN = 'turned_down';
-    const USED = 'used';
+    const string BANKED = 'banked';
+    const string CANCELLED = 'cancelled';
+    const string CLAIMED = 'claimed';
+    const string EXPIRED = 'expired';
+    const string QUALIFIED = 'qualified';
+    const string SUBMITTED = 'submitted';
+    const string TURNED_DOWN = 'turned_down';
+    const string USED = 'used';
 
-    const ACTIVE_STATUSES = [
+    const array ACTIVE_STATUSES = [
         self::QUALIFIED,
         self::CLAIMED,
         self::BANKED
     ];
 
-    const CURRENT_STATUSES = [
+    const array CURRENT_STATUSES = [
         self::QUALIFIED,
         self::CLAIMED,
         self::BANKED,
         self::SUBMITTED
     ];
 
-    const INVALID_STATUSES = [
+    const array INVALID_STATUSES = [
         self::USED,
         self::CANCELLED,
         self::EXPIRED
     ];
 
     // Access Document types
-    const GIFT = 'gift_ticket';
-    const LSD = 'lsd_ticket';
-    const SPT = 'special_price_ticket'; // fka Reduced-Price Ticket (RPT)
-    // const RPT = 'reduced_price_ticket';
-    const STAFF_CREDENTIAL = 'staff_credential';
-    const VEHICLE_PASS = 'vehicle_pass';
-    const VEHICLE_PASS_GIFT = 'vehicle_pass_gift';
-    const VEHICLE_PASS_LSD = 'vehicle_pass_lsd';
-    const WAP = 'work_access_pass';
-    const WAPSO = 'work_access_pass_so';
+    const string GIFT = 'gift_ticket';
+    const string LSD = 'lsd_ticket';
+    const string SPT = 'special_price_ticket'; // fka Reduced-Price Ticket (RPT)
+    const string STAFF_CREDENTIAL = 'staff_credential';
+    const string VEHICLE_PASS_SP = 'vehicle_pass_sp';
+    const string VEHICLE_PASS_GIFT = 'vehicle_pass_gift';
+    const string VEHICLE_PASS_LSD = 'vehicle_pass_lsd';
+    const string WAP = 'work_access_pass';
+    const string WAPSO = 'work_access_pass_so';
 
-    const TICKET_TYPES = [
+    const array TICKET_TYPES = [
         self::GIFT,
         self::LSD,
         self::SPT,
         self::STAFF_CREDENTIAL,
     ];
 
-    const REGULAR_TICKET_TYPES = [
+    const array REGULAR_TICKET_TYPES = [
         self::SPT,
         self::STAFF_CREDENTIAL,
     ];
 
-    const SPECIAL_TICKET_TYPES = [
+    const array SPECIAL_TICKET_TYPES = [
         self::GIFT,
         self::LSD,
     ];
 
-    const SPECIAL_VP_TYPES = [
+    const array SPECIAL_VP_TYPES = [
         self::VEHICLE_PASS_LSD,
-        self::VEHICLE_PASS_GIFT
     ];
 
-    const DELIVERABLE_TYPES = [
+    const array DELIVERABLE_TYPES = [
         self::GIFT,
         self::LSD,
         self::SPT,
         self::STAFF_CREDENTIAL,
-        self::VEHICLE_PASS
+        self::VEHICLE_PASS_GIFT,
+        self::VEHICLE_PASS_SP,
     ];
 
-    const HAS_ACCESS_DATE_TYPES = [
+    const array HAS_ACCESS_DATE_TYPES = [
         self::STAFF_CREDENTIAL,
         self::WAP,
         self::WAPSO
     ];
 
-    const EXPIRE_THIS_YEAR_TYPES = [
+    const array EXPIRE_THIS_YEAR_TYPES = [
         self::GIFT,
         self::LSD,
-        self::VEHICLE_PASS,
+        self::VEHICLE_PASS_SP,
         self::VEHICLE_PASS_GIFT,
         self::VEHICLE_PASS_LSD,
         self::WAP,
         self::WAPSO,
     ];
 
-    const TYPE_LABELS = [
+    const array TYPE_LABELS = [
         self::GIFT => 'Gift Ticket',
         self::LSD => 'LSD Ticket',
         self::SPT => 'Special Price Ticket',
         self::STAFF_CREDENTIAL => 'Staff Credential',
-        self::VEHICLE_PASS => 'Vehicle Pass',
+        self::VEHICLE_PASS_SP => 'Vehicle Pass (Special Price)',
         self::VEHICLE_PASS_GIFT => 'Vehicle Pass (Gift)',
         self::VEHICLE_PASS_LSD => 'Vehicle Pass (LSD)',
         self::WAP => 'WAP',
         self::WAPSO => 'SO WAP',
     ];
 
-    const SHORT_TICKET_LABELS = [
+    const array SHORT_TICKET_LABELS = [
         self::GIFT => 'GIFT',
         self::LSD => 'LSD',
         self::SPT => 'SPT',
         self::STAFF_CREDENTIAL => 'SC',
-        self::VEHICLE_PASS => 'VP',
+        self::VEHICLE_PASS_SP => 'VPSP',
         self::VEHICLE_PASS_GIFT => 'VPGIFT',
         self::VEHICLE_PASS_LSD => 'VPLSD',
         self::WAP => 'WAP',
         self::WAPSO => 'SO WAP',
     ];
 
-    const DELIVERY_NONE = 'none';
-    const DELIVERY_POSTAL = 'postal';
-    const DELIVERY_EMAIL = 'email';
-    const DELIVERY_WILL_CALL = 'will_call';
+    const string DELIVERY_NONE = 'none';
+    const string DELIVERY_POSTAL = 'postal';
+    const string DELIVERY_EMAIL = 'email';
+    const string DELIVERY_WILL_CALL = 'will_call';
 
     protected $fillable = [
         'access_any_time',
@@ -243,6 +242,14 @@ class AccessDocument extends ApiModel
                 $model->access_any_time = false;
             }
 
+        });
+
+        self::created(function ($model) {
+            AccessDocumentChanges::log($model, Auth::id(), $model, AccessDocumentChanges::OP_CREATE);
+        });
+
+        self::updated(function ($model) {
+            AccessDocumentChanges::log($model, Auth::id(), $model->getAuditedValues());
         });
 
         self::deleted(function ($model) {
@@ -370,12 +377,10 @@ class AccessDocument extends ApiModel
 
 
         foreach ($rows as $row) {
-            $row->status = self::SUBMITTED;
-            $changes = $row->getChangedValues();
+            $row->status = AccessDocument::SUBMITTED;
             $row->additional_comments = 'Consumed by BMID export';
             $row->auditReason = 'Consumed by BMID export';
             $row->saveWithoutValidation();
-            AccessDocumentChanges::log($row, Auth::id(), $changes);
         }
     }
 
@@ -388,7 +393,7 @@ class AccessDocument extends ApiModel
 
     public static function findWAPForPerson(int $personId): ?AccessDocument
     {
-        $rows = self::where('person_id', $personId)
+        $rows = AccessDocument::where('person_id', $personId)
             ->whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED, self::SUBMITTED])
             ->orderBy('source_year')
@@ -482,17 +487,11 @@ class AccessDocument extends ApiModel
             ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::BANKED])
             ->get();
 
-        $userId = Auth::id();
         foreach ($rows as $row) {
             $row->access_date = $accessDate;
             $row->access_any_time = $accessAnyTime;
             $row->auditReason = $reason;
-            $changes = $row->getChangedValues();
             $row->saveWithoutValidation();
-
-            if (!empty($changes)) {
-                AccessDocumentChanges::log($row, $userId, $changes);
-            }
         }
     }
 

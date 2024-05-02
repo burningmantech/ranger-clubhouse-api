@@ -9,15 +9,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\TicketAndProvisionsPackage;
 use App\Lib\TicketingStatistics;
 use App\Models\AccessDocument;
-use App\Models\AccessDocumentChanges;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class TicketingController extends ApiController
 {
@@ -39,6 +38,8 @@ class TicketingController extends ApiController
             'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
             'TAS_Pickup_Locations',
             'TAS_PayByDateTime', 'TAS_LSD_PayByDateTime',
+            'TAS_Special_Price_Ticket_Cost',
+            'TAS_Special_Price_Vehicle_Pass_Cost'
         ]);
 
         return response()->json([
@@ -68,6 +69,9 @@ class TicketingController extends ApiController
 
                 'lsd_paid_by' => $settings['TAS_LSD_PayByDateTime'],
 
+                'spt_cost' => $settings['TAS_Special_Price_Ticket_Cost'],
+                'sp_vp_cost' => $settings['TAS_Special_Price_Vehicle_Pass_Cost'],
+
                 'faqs' => [
                     'ticketing' => $settings['TAS_Ticket_FAQ'],
                     'wap' => $settings['TAS_WAP_FAQ'],
@@ -96,7 +100,7 @@ class TicketingController extends ApiController
      * Update the SO WAP list
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException|ValidationException|UnacceptableConditionException
      */
 
     public function storeWAPSO(Person $person): JsonResponse
@@ -112,7 +116,6 @@ class TicketingController extends ApiController
 
         $maxSO = setting('TAS_WAPSOMax');
 
-        $documents = [];
         $year = current_year();
 
         foreach ($params['names'] as $row) {
@@ -132,8 +135,6 @@ class TicketingController extends ApiController
 
                 // Looks good, create it
                 $accessDocument = AccessDocument::createSOWAP($personId, $year, $soName);
-                AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_CREATE);
-                $documents[] = ['id' => $accessDocument->id, 'name' => $soName];
             } else {
                 // Find the existing record
                 $wap = AccessDocument::findForPerson($personId, $soId);
@@ -147,20 +148,7 @@ class TicketingController extends ApiController
                     $wap->name = $soName;
                 }
 
-                $changes = $wap->getChangedValues();
-                $dirty = $wap->getDirty();
-                $isNew = $wap->id == null;
-                if (!empty($dirty)) {
-                    $wap->save();
-                    $dirty['id'] = $wap->id;
-                    $documents[] = $dirty;
-
-                    if ($isNew) {
-                        AccessDocumentChanges::log($wap, $this->user->id, $wap, AccessDocumentChanges::OP_CREATE);
-                    } else {
-                        AccessDocumentChanges::log($wap, $this->user->id, $changes);
-                    }
-                }
+                $wap->save();
             }
         }
 
@@ -182,7 +170,7 @@ class TicketingController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function delivery(Person $person): JsonResponse
@@ -204,7 +192,7 @@ class TicketingController extends ApiController
             if ($specialTicket->isSpecialDocument()) {
                 throw new UnacceptableConditionException("Access document is not a Special Type document");
             }
-            if ($specialTicket->status != AccessDocument::QUALIFIED || $specialTicketId->status != AccessDocument::CLAIMED) {
+            if ($specialTicket->status != AccessDocument::QUALIFIED && $specialTicketId->status != AccessDocument::CLAIMED) {
                 throw new UnacceptableConditionException("Access document is not qualified nor claimed.");
             }
             $tickets = [$specialTicket];
@@ -217,11 +205,7 @@ class TicketingController extends ApiController
         foreach ($tickets as $ticket) {
             $ticket->fill($params);
             $ticket->auditReason = 'Delivery update';
-            $changes = $ticket->getChangedValues();
-            if (!empty($changes)) {
-                $ticket->save();
-                AccessDocumentChanges::log($ticket, $this->user->id, $changes);
-            }
+            $ticket->save();
         }
 
         return $this->success($tickets, null, 'access_document');

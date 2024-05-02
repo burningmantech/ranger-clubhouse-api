@@ -492,7 +492,8 @@ class BulkUploadControllerTest extends TestCase
             'SPT' => AccessDocument::SPT,
             'GIFT' => AccessDocument::GIFT,
             'LSD' => AccessDocument::LSD,
-            'VP' => AccessDocument::VEHICLE_PASS,
+            'VP' => AccessDocument::VEHICLE_PASS_SP,
+            'VPGIFT' => AccessDocument::VEHICLE_PASS_GIFT,
             'WAP' => AccessDocument::WAP,
         ];
 
@@ -516,7 +517,7 @@ class BulkUploadControllerTest extends TestCase
                 [
                     'person_id' => $this->user->id,
                     // LSD & Gift default to the current year for source.
-                    'source_year' => ($adType == AccessDocument::LSD || $adType == AccessDocument::GIFT) ? $year : $year - 1,
+                    'source_year' => ($adType == AccessDocument::LSD || $adType == AccessDocument::GIFT || $adType == AccessDocument::VEHICLE_PASS_GIFT) ? $year : $year - 1,
                     // LSD tickets are claimed.
                     'status' => ($adType == AccessDocument::LSD) ? AccessDocument::CLAIMED : AccessDocument::QUALIFIED,
                     'type' => $adType

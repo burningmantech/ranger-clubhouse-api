@@ -126,7 +126,8 @@ class TicketingManagement
                             }
                             break;
 
-                        case AccessDocument::VEHICLE_PASS:
+                        case AccessDocument::VEHICLE_PASS_GIFT:
+                        case AccessDocument::VEHICLE_PASS_SP:
                             $hasSC = $peopleHaveStaffCredentials->has($row->person_id);
                             if ($hasSC) {
                                 $deliveryType = AccessDocument::DELIVERY_WILL_CALL;

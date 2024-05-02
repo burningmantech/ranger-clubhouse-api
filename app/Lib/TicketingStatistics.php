@@ -56,9 +56,9 @@ class TicketingStatistics
             'sc_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::STAFF_CREDENTIAL),
             'sc_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::STAFF_CREDENTIAL),
 
-            'vp_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::VEHICLE_PASS),
-            'vp_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::VEHICLE_PASS),
-            'vp_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::VEHICLE_PASS),
+            'sp_vp_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::VEHICLE_PASS_SP),
+            'sp_vp_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::VEHICLE_PASS_SP),
+            'sp_vp_submitted' => self::countStatusType(AccessDocument::SUBMITTED, AccessDocument::VEHICLE_PASS_SP),
 
             'wap_claimed' => self::countStatusType(AccessDocument::CLAIMED, AccessDocument::WAP),
             'wap_unclaimed' => self::countStatusType(AccessDocument::QUALIFIED, AccessDocument::WAP),
