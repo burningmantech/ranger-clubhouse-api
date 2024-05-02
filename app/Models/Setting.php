@@ -473,6 +473,16 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'TAS_Special_Price_Vehicle_Pass_Cost' => [
+          'description' => 'Special Price Vehicle Pass in dollars. (cents not supported)',
+          'type' => self::TYPE_INTEGER,
+        ],
+
+        'TAS_Special_Price_Ticket_Cost' => [
+            'description' => 'Special Price Ticket cost in dollars. (cents not supported)',
+            'type' => self::TYPE_INTEGER,
+        ],
+
         'TAS_SubmitDate' => [
             'description' => 'Use to tell the user when the regular ticketing window will closed. Format: YYYY-MM-DD.',
             'type' => self::TYPE_STRING,

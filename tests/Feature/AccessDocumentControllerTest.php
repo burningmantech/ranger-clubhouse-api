@@ -30,8 +30,8 @@ class AccessDocumentControllerTest extends TestCase
     private function createAccessDocument()
     {
         return AccessDocument::factory()->create([
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'person_id' => $this->user->id,
             'source_year' => (int)date('Y'),
             'expiry_date' => date('Y-12-31'),
@@ -79,8 +79,8 @@ class AccessDocumentControllerTest extends TestCase
 
         $data = [
             'person_id' => $this->user->id,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'source_year' => date('Y'),
             'expiry_date' => date('Y-12-31'),
         ];
@@ -99,13 +99,13 @@ class AccessDocumentControllerTest extends TestCase
         $ad = $this->createAccessDocument();
 
         $response = $this->json('PUT', "access-document/{$ad->id}", ['access_document' => [
-            'status' => 'banked'
+            'status' => AccessDocument::BANKED
         ]]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('access_document', [
             'id' => $ad->id,
-            'status' => 'banked'
+            'status' => AccessDocument::BANKED
         ]);
     }
 
@@ -132,15 +132,7 @@ class AccessDocumentControllerTest extends TestCase
     {
         $ad = $this->createAccessDocument();
 
-        $response = $this->json('PATCH', "access-document/statuses",
-            [
-                'statuses' => [
-                    [
-                        'id' => $ad->id,
-                        'status' => AccessDocument::BANKED
-                    ]]
-
-            ]);
+        $response = $this->json('PATCH', "access-document/{$ad->id}/status", ['status' => AccessDocument::BANKED]);
         $response->assertStatus(200);
         $this->assertDatabaseHas('access_document', ['id' => $ad->id, 'status' => AccessDocument::BANKED]);
     }
@@ -194,8 +186,8 @@ class AccessDocumentControllerTest extends TestCase
 
         $expiring = AccessDocument::factory()->create([
             'person_id' => $this->user->id,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'source_year' => date('Y'),
             'expiry_date' => date("Y-12-31"),
         ]);
@@ -277,11 +269,11 @@ class AccessDocumentControllerTest extends TestCase
             'source_year' => date('Y'),
             'person_id' => $noWap->id,
             'type' => AccessDocument::WAP,
-            'status' => 'qualified'
+            'status' => AccessDocument::QUALIFIED
         ]);
 
         $retired = Person::factory()->create(['status' => 'retired', 'callsign' => 'B']);
-         PersonSlot::factory()->create(['person_id' => $retired->id, 'slot_id' => $slot->id]);
+        PersonSlot::factory()->create(['person_id' => $retired->id, 'slot_id' => $slot->id]);
 
         $response = $this->json('POST', 'access-document/grant-waps');
         $response->assertStatus(200);
@@ -390,7 +382,7 @@ class AccessDocumentControllerTest extends TestCase
             'person_id' => $person->id,
             'source_year' => date('Y'),
             'type' => AccessDocument::SPT,
-            'status' => 'qualified'
+            'status' => AccessDocument::QUALIFIED
         ]);
 
 
@@ -400,14 +392,14 @@ class AccessDocumentControllerTest extends TestCase
             'person_id' => $noVP->id,
             'source_year' => date('Y'),
             'type' => AccessDocument::SPT,
-            'status' => 'qualified'
+            'status' => AccessDocument::QUALIFIED
         ]);
 
         AccessDocument::factory()->create([
             'person_id' => $noVP->id,
             'source_year' => date('Y'),
-            'type' => 'vehicle_pass',
-            'status' => 'qualified'
+            'type' => AccessDocument::VEHICLE_PASS_SP,
+            'status' => AccessDocument::QUALIFIED
         ]);
 
         $response = $this->json('POST', 'access-document/grant-vps');
@@ -423,10 +415,10 @@ class AccessDocumentControllerTest extends TestCase
         ]);
         $this->assertDatabaseHas('access_document', [
             'person_id' => $person->id,
-            'type' => 'vehicle_pass'
+            'type' => AccessDocument::VEHICLE_PASS_SP,
         ]);
 
-        $this->assertEquals(AccessDocument::where('person_id', $noVP->id)->where('type', 'vehicle_pass')->count(), 1);
+        $this->assertEquals(1, AccessDocument::where('person_id', $noVP->id)->where('type', AccessDocument::VEHICLE_PASS_SP)->count());
     }
 
     /*
@@ -444,15 +436,15 @@ class AccessDocumentControllerTest extends TestCase
         $person = Person::factory()->create();
         $setSC = AccessDocument::factory()->create([
             'person_id' => $person->id,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'access_date' => null,
             'access_any_time' => false,
         ]);
         $ignoreSC = AccessDocument::factory()->create([
             'person_id' => $person->id,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'access_date' => null,
             'access_any_time' => true,
         ]);
@@ -493,14 +485,14 @@ class AccessDocumentControllerTest extends TestCase
         $qualified = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'vehicle_pass',
-            'status' => 'qualified',
+            'type' => AccessDocument::VEHICLE_PASS_GIFT,
+            'status' => AccessDocument::QUALIFIED,
         ]);
 
         $submitted = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'staff_credential',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
             'status' => 'submitted',
         ]);
 
@@ -508,7 +500,7 @@ class AccessDocumentControllerTest extends TestCase
             'person_id' => $person->id,
             'source_year' => $year,
             'type' => AccessDocument::SPT,
-            'status' => 'banked',
+            'status' => AccessDocument::BANKED,
         ]);
 
         $response = $this->json('POST', 'access-document/clean-access-documents');
@@ -518,17 +510,17 @@ class AccessDocumentControllerTest extends TestCase
         $response->assertJson(['access_documents' => [
             [
                 'id' => $qualified->id,
-                'status' => 'expired'
+                'status' => AccessDocument::EXPIRED
             ],
             [
                 'id' => $submitted->id,
-                'status' => 'used'
+                'status' => AccessDocument::USED
             ]
         ]]);
 
-        $this->assertDatabaseHas('access_document', ['id' => $qualified->id, 'status' => 'expired']);
-        $this->assertDatabaseHas('access_document', ['id' => $submitted->id, 'status' => 'used']);
-        $this->assertDatabaseHas('access_document', ['id' => $banked->id, 'status' => 'banked']);
+        $this->assertDatabaseHas('access_document', ['id' => $qualified->id, 'status' => AccessDocument::EXPIRED]);
+        $this->assertDatabaseHas('access_document', ['id' => $submitted->id, 'status' => AccessDocument::USED]);
+        $this->assertDatabaseHas('access_document', ['id' => $banked->id, 'status' => AccessDocument::BANKED]);
     }
 
     /*
@@ -545,29 +537,30 @@ class AccessDocumentControllerTest extends TestCase
         $qualified = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
         ]);
 
         // Should not bank this.
         $vp = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'vehicle_pass',
-            'status' => 'qualified',
+            'type' => AccessDocument::VEHICLE_PASS_GIFT,
+            'status' => AccessDocument::QUALIFIED,
         ]);
 
         $response = $this->json('POST', 'access-document/bank-access-documents');
 
         $response->assertStatus(200);
         $response->assertJson([
-            'access_documents' => [['id' => $qualified->id, 'status' => 'banked']
+            'access_documents' => [
+                ['id' => $qualified->id, 'status' => AccessDocument::BANKED]
             ]
         ]);
 
         $response->assertJsonCount(1, 'access_documents.*.id');
-        $this->assertDatabaseHas('access_document', ['id' => $qualified->id, 'status' => 'banked']);
-        $this->assertDatabaseHas('access_document', ['id' => $vp->id, 'status' => 'qualified']);
+        $this->assertDatabaseHas('access_document', ['id' => $qualified->id, 'status' => AccessDocument::BANKED]);
+        $this->assertDatabaseHas('access_document', ['id' => $vp->id, 'status' => AccessDocument::QUALIFIED]);
     }
 
     /*
@@ -586,8 +579,8 @@ class AccessDocumentControllerTest extends TestCase
         $expire = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'expiry_date' => "$lastYear-08-20"
         ]);
 
@@ -595,8 +588,8 @@ class AccessDocumentControllerTest extends TestCase
         $ignore = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'expiry_date' => "$nextYear-08-20"
         ]);
 
@@ -607,7 +600,7 @@ class AccessDocumentControllerTest extends TestCase
             'access_documents' => [
                 [
                     'id' => $expire->id,
-                    'status' => 'expired',
+                    'status' => AccessDocument::EXPIRED,
                     'person' => [
                         'id' => $person->id,
                         'callsign' => $person->callsign
@@ -616,8 +609,8 @@ class AccessDocumentControllerTest extends TestCase
             ]
         ]);
 
-        $this->assertDatabaseHas('access_document', ['id' => $expire->id, 'status' => 'expired']);
-        $this->assertDatabaseHas('access_document', ['id' => $ignore->id, 'status' => 'qualified']);
+        $this->assertDatabaseHas('access_document', ['id' => $expire->id, 'status' => AccessDocument::EXPIRED]);
+        $this->assertDatabaseHas('access_document', ['id' => $ignore->id, 'status' => AccessDocument::QUALIFIED]);
     }
 
     /*
@@ -633,8 +626,8 @@ class AccessDocumentControllerTest extends TestCase
         $ad = AccessDocument::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => 'staff_credential',
-            'status' => 'qualified',
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
             'expiry_date' => "$expireYear-09-15"
         ]);
 

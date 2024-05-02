@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\GrantPasses;
 use App\Lib\Reports\ClaimedTicketsWithNoSignups;
 use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
@@ -12,9 +13,7 @@ use App\Models\Person;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class AccessDocumentController extends ApiController
 {
@@ -124,7 +123,7 @@ class AccessDocumentController extends ApiController
 
         foreach ($rows as $row) {
             $comment = "bulk marked submitted\ndelivery ";
-            if ($row->type == AccessDocument::VEHICLE_PASS
+            if ($row->type == AccessDocument::VEHICLE_PASS_GIFT
                 && $staffCredentials->has($row->person_id)) {
                 $comment .= 'w/Staff Credential';
             } else {
@@ -132,10 +131,8 @@ class AccessDocumentController extends ApiController
             }
 
             $row->additional_comments = $comment;
-            $oldStatus = $row->status;
             $row->status = AccessDocument::SUBMITTED;
             $row->saveWithoutValidation();
-            AccessDocumentChanges::log($row, $this->user->id, ['status' => [$oldStatus, AccessDocument::SUBMITTED]]);
         }
 
         return $this->success();
@@ -174,8 +171,6 @@ class AccessDocumentController extends ApiController
             return $this->restError($accessDocument);
         }
 
-        AccessDocumentChanges::log($accessDocument, $this->user->id, $accessDocument, AccessDocumentChanges::OP_CREATE);
-
         return $this->success($accessDocument);
     }
 
@@ -192,14 +187,8 @@ class AccessDocumentController extends ApiController
         $this->authorize('update', $accessDocument);
         $this->fromRest($accessDocument);
 
-        $changes = $accessDocument->getChangedValues();
-
         if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
-        }
-
-        if (!empty($changes)) {
-            AccessDocumentChanges::log($accessDocument, $this->user->id, $changes);
         }
 
         return $this->success($accessDocument);
@@ -257,147 +246,113 @@ class AccessDocumentController extends ApiController
      * will cause a check for all banked tickets, and if so, release the
      * vehicle pass to prevent gaming the system, or unintentionally give the VP to the person.
      *
+     * @param AccessDocument $access_document
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws UnacceptableConditionException
      */
 
-    public function statuses(): JsonResponse
+    public function updateStatus(AccessDocument $accessDocument): JsonResponse
     {
-        $params = request()->validate([
-            'statuses' => 'required|array',
-            'statuses.*.id' => 'required|integer|exists:access_document,id',
-            'statuses.*.status' => 'required|string'
-        ]);
+        $params = request()->validate(['status' => 'required|string']);
 
-        $rows = AccessDocument::whereIntegerInRaw('id', array_column($params['statuses'], 'id'))->get();
+        $this->authorize('update', $accessDocument);
+        $personId = $accessDocument->person_id;
 
-        $personId = $rows[0]->person_id;
-        foreach ($rows as $row) {
-            // Verify person can update all the documents.
-            $this->authorize('update', $row);
-            if ($personId != $row->person_id) {
-                throw new UnacceptableConditionException("All records must be for the same person");
-            }
+        $rows = AccessDocument::where('person_id', $personId)
+            ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
+            ->whereNotIn('type', [AccessDocument::LSD, AccessDocument::VEHICLE_PASS_LSD])
+            ->get();
+
+        // Find the document in the collection
+        $ad = $rows->firstWhere('id', $accessDocument->id);
+
+        if (!$ad) {
+            throw new UnacceptableConditionException("Document not found");
         }
 
-        $docsById = $rows->keyBy('id');
-
-        $haveTicket = false;
-
-        foreach ($params['statuses'] as $statusUpdate) {
-            $status = $statusUpdate['status'];
-            $ad = $docsById->get($statusUpdate['id']);
-            $adType = $ad->type;
-            $adStatus = $ad->status;
-            switch ($status) {
-                case AccessDocument::BANKED:
-                    if (!in_array($adType, AccessDocument::REGULAR_TICKET_TYPES)
-                        || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
-                        throw new UnacceptableConditionException('Illegal type and status combination');
-                    }
-                    break;
-
-                case AccessDocument::CLAIMED:
-                    if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
-                        throw new UnacceptableConditionException('Document is not banked or qualified');
-                    }
-                    break;
-
-                case AccessDocument::QUALIFIED:
-                    if ($adType != AccessDocument::WAP
-                        && $adType != AccessDocument::VEHICLE_PASS
-                        && $adType != AccessDocument::GIFT) {
-                        throw new UnacceptableConditionException('Document is not a WAP, Vehicle Pass or Gift Ticket.');
-                    }
-
-                    if ($adStatus != AccessDocument::CLAIMED) {
-                        throw new UnacceptableConditionException('Document is not claimed.');
-                    }
-                    break;
-
-                default:
-                    throw new UnacceptableConditionException('Unknown status action');
-            }
-
-            $ad->status = $status;
-
-            $changes = $ad->getChangedValues();
-
-            if (!empty($changes)) {
-                $ad->saveWithoutValidation();
-                $changes['id'] = $ad->id;
-                AccessDocumentChanges::log($ad, $this->user->id, $changes);
-            }
-
-            if ($ad->isRegularTicket()) {
-                $haveTicket = true;
-            }
-        }
-
-
-        if ($haveTicket) {
-            // Prevent people from trying to game the system and grab the VP without claiming any tickets.
-            if (AccessDocument::noAvailableTickets($personId)) {
-                $vp = AccessDocument::where([
-                    'person_id' => $personId,
-                    'type' => AccessDocument::VEHICLE_PASS,
-                    'status' => AccessDocument::CLAIMED
-                ])->first();
-                if ($vp) {
-                    $vp->status = AccessDocument::QUALIFIED;
-                    $vp->auditReason = 'All tickets were banked';
-                    $vp->saveWithoutValidation();
-                    AccessDocumentChanges::log($vp, $this->user->id,
-                        ['status' => [AccessDocument::CLAIMED, AccessDocument::QUALIFIED]]
-                    );
+        $status = $params['status'];
+        $adType = $ad->type;
+        $adStatus = $ad->status;
+        switch ($status) {
+            case AccessDocument::BANKED:
+                if (!$ad->isRegularTicket() || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
+                    throw new UnacceptableConditionException('Illegal type and status combination');
                 }
+                break;
+
+            case AccessDocument::CLAIMED:
+                if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
+                    throw new UnacceptableConditionException('Document is not banked nor qualified');
+                }
+                if ($ad->isRegularTicket()) {
+                    // Bank the other tickets
+                    $otherTickets = $rows->where('id', '!=', $ad->id)
+                        ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::SPT]);
+                    foreach ($otherTickets as $ticket) {
+                        $ticket->status = AccessDocument::BANKED;
+                        $ticket->auditReason = 'other ticket claimed';
+                        $ticket->saveWithoutValidation();
+                    }
+                    $passes = $rows->whereIn('type', [AccessDocument::VEHICLE_PASS_SP, AccessDocument::VEHICLE_PASS_GIFT]);
+                    foreach ($passes as $pass) {
+                        // Release the vehicle passes
+                        if ($ad->type == AccessDocument::STAFF_CREDENTIAL && $pass->type == AccessDocument::VEHICLE_PASS_SP) {
+                            $pass->status = AccessDocument::QUALIFIED;
+                            $pass->auditReason = 'staff credential claimed - released SP VP';
+                            $pass->saveWithoutValidation();
+                        } else if ($ad->type == AccessDocument::SPT && $pass->type == AccessDocument::VEHICLE_PASS_GIFT) {
+                            $pass->status = AccessDocument::QUALIFIED;
+                            $pass->auditReason = 'SP ticket claimed - released Gift VP';
+                            $pass->saveWithoutValidation();
+                        }
+                    }
+                } else if ($ad->type == AccessDocument::VEHICLE_PASS_GIFT || $ad->type == AccessDocument::VEHICLE_PASS_SP) {
+                    // Release the other vehicle passes
+                    $otherPasses = $rows->where('id', '!=', $ad->id)
+                        ->whereIn('type', [AccessDocument::VEHICLE_PASS_SP, AccessDocument::VEHICLE_PASS_GIFT]);
+                    foreach ($otherPasses as $pass) {
+                        $pass->status = AccessDocument::QUALIFIED;
+                        $pass->auditReason = 'other vehicle pass claimed';
+                        $pass->saveWithoutValidation();
+                    }
+                }
+                break;
+
+            case AccessDocument::QUALIFIED:
+                if ($adType != AccessDocument::WAP
+                    && $adType != AccessDocument::VEHICLE_PASS_GIFT
+                    && $adType != AccessDocument::VEHICLE_PASS_SP
+                    && $adType != AccessDocument::GIFT) {
+                    throw new UnacceptableConditionException('Document is not a WAP, Vehicle Pass nor Gift Ticket.');
+                }
+
+                if ($adStatus != AccessDocument::CLAIMED) {
+                    throw new UnacceptableConditionException('Document is not claimed.');
+                }
+                break;
+
+            default:
+                throw new UnacceptableConditionException('Unknown status action');
+        }
+
+        $ad->status = $status;
+        $ad->saveWithoutValidation();
+
+        // Prevent people from trying to game the system and grab the VP without claiming any tickets.
+        if (AccessDocument::noAvailableTickets($personId)) {
+            $passes = $rows->where('status', AccessDocument::CLAIMED)
+                ->whereIn('type', [AccessDocument::VEHICLE_PASS_GIFT, AccessDocument::VEHICLE_PASS_SP]);
+            foreach ($passes as $vp) {
+                $vp->status = AccessDocument::QUALIFIED;
+                $vp->auditReason = 'all tickets were banked';
+                $vp->saveWithoutValidation();
             }
         }
 
         return $this->success($rows, null, 'access_document');
     }
 
-    /**
-     * Update the status on a single special (Gift or LSD) access document.
-     *
-     * @param AccessDocument $accessDocument
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function updateStatus(AccessDocument $accessDocument): JsonResponse
-    {
-        $this->authorize('update', $accessDocument);
-
-        $params = request()->validate([
-            'status' => [
-                'required',
-                Rule::in([AccessDocument::CLAIMED, AccessDocument::TURNED_DOWN])
-            ]
-        ]);
-
-        if (!$accessDocument->isSpecialTicket()) {
-            throw new UnacceptableConditionException("Record is not a Gift or LSD ticket");
-        }
-
-        $status = $accessDocument->status;
-        if ($status != AccessDocument::QUALIFIED
-            && $status != AccessDocument::CLAIMED
-            && $status != AccessDocument::TURNED_DOWN) {
-            throw new UnacceptableConditionException('Existing status is not qualified, claimed, or turned down.');
-        }
-
-        $accessDocument->status = $params['status'];
-        $changes = $accessDocument->getChangedValues();
-
-        if (!empty($changes)) {
-            $accessDocument->saveWithoutValidation();
-            $changes['id'] = $accessDocument->id;
-            AccessDocumentChanges::log($accessDocument, $this->user->id, $changes);
-        }
-
-        return $this->success($accessDocument);
-    }
 
     /**
      * Grant Work Access Passes to people who don't already have them.
@@ -665,9 +620,7 @@ class AccessDocumentController extends ApiController
                 $row->addComment($reason, $callsign);
             }
 
-            $changes = $row->getChangedValues();
             $row->save();
-            AccessDocumentChanges::log($row, $this->user->id, $changes);
         }
 
         return response()->json(['count' => $rows->count()]);
@@ -684,9 +637,7 @@ class AccessDocumentController extends ApiController
 
     private function saveAccessDocument(AccessDocument $ad, &$documents, bool $includeEmail = false): void
     {
-        $changes = $ad->getChangedValues();
         $ad->save();
-        AccessDocumentChanges::log($ad, $this->user->id, $changes);
 
         $person = $ad->person;
         $result = [

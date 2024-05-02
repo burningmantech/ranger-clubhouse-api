@@ -24,9 +24,9 @@ class AccessDocumentChanges extends Model
         'created_at' => 'datetime'
     ];
 
-    const OP_MODIFY = 'modify';
-    const OP_CREATE = 'create';
-    const OP_DELETE = 'delete';
+    const string OP_MODIFY = 'modify';
+    const string OP_CREATE = 'create';
+    const string OP_DELETE = 'delete';
 
     public function changer_person(): BelongsTo
     {

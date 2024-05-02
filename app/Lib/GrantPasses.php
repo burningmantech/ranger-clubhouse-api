@@ -8,6 +8,7 @@ use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonSlot;
 use App\Models\Position;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -276,16 +277,31 @@ class GrantPasses
     {
         $year = current_year();
 
+        $staffCredentials = self::grantVehiclePassType(AccessDocument::STAFF_CREDENTIAL, AccessDocument::VEHICLE_PASS_GIFT, $year);
+        $spts = self::grantVehiclePassType(AccessDocument::SPT, AccessDocument::VEHICLE_PASS_SP, $year);
+
+        return $staffCredentials->merge($spts)->unique('id')->toArray();
+    }
+
+    public static function grantVehiclePassType(string $ticket, string $vp, int $year): Collection
+    {
         $ids = DB::table('access_document')
             ->select('person_id')
-            ->whereIn('type', [AccessDocument::STAFF_CREDENTIAL, AccessDocument::SPT])
+            ->where('type', $ticket)
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::BANKED])
-            ->whereRaw('NOT EXISTS (SELECT 1 FROM access_document ad WHERE ad.person_id=access_document.person_id AND ad.type="vehicle_pass" AND ad.status IN ("qualified", "claimed", "submitted") LIMIT 1)')
+            ->whereNotExists(function ($query) use ($vp) {
+                $query->select(DB::raw(1))
+                    ->from('access_document as ad')
+                    ->where('ad.type', $vp)
+                    ->whereColumn('ad.person_id', 'access_document.person_id')
+                    ->whereIn('ad.status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                    ->limit(1);
+            })
             ->groupBy('person_id')
             ->pluck('person_id');
 
         if (!$ids->count()) {
-            return [];
+            return collect([]);
         }
 
         $people = Person::select('id', 'callsign', 'status')
@@ -294,7 +310,7 @@ class GrantPasses
             ->orderBy('callsign')
             ->get();
 
-        self::grantAccessDocumentToPeople($people, AccessDocument::VEHICLE_PASS, null, $year);
+        self::grantAccessDocumentToPeople($people, $vp, null, $year);
         return $people;
     }
 
@@ -312,7 +328,6 @@ class GrantPasses
     public static function grantAccessDocumentToPeople($people, $type, $accessDate, $year, $status = AccessDocument::QUALIFIED): void
     {
         $user = Auth::user();
-        $userId = Auth::id();
 
         $documents = [];
         foreach ($people as $person) {
@@ -326,7 +341,6 @@ class GrantPasses
             ]);
             $ad->addComment('created via maintenance function', $user);
             $ad->saveWithoutValidation();
-            AccessDocumentChanges::log($ad, $userId, $ad, AccessDocumentChanges::OP_CREATE);
             $documents[] = [
                 'id' => $ad->id,
                 'person_id' => $person->id,

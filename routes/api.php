@@ -140,12 +140,11 @@ Route::middleware('api')->group(function () {
     Route::post('access-document/mark-submitted', [AccessDocumentController::class, 'markSubmitted']);
     Route::post('access-document/set-staff-credentials-access-date', [AccessDocumentController::class, 'setStaffCredentialsAccessDate']);
     Route::get('access-document/special-tickets', [AccessDocumentController::class, 'specialTicketsReport']);
-    Route::patch('access-document/statuses', [AccessDocumentController::class, 'statuses']);
+    Route::patch('access-document/{access_document}/status', [AccessDocumentController::class, 'updateStatus']);
     Route::post('access-document/unbank-access-documents', [AccessDocumentController::class, 'unbankAccessDocuments']);
     Route::get('access-document/unclaimed-tickets-with-signups', [AccessDocumentController::class, 'unclaimedTicketsWithSignups']);
     Route::get('access-document/wap-candidates', [AccessDocumentController::class, 'wapCandidates']);
     Route::get('access-document/{access_document}/changes', [AccessDocumentController::class, 'changes']);
-    Route::patch('access-document/{access_document}/status', [AccessDocumentController::class, 'updateStatus']);
     Route::resource('access-document', AccessDocumentController::class);
 
     Route::resource('action-log', ActionLogController::class)->only('index');

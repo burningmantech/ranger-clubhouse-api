@@ -75,12 +75,15 @@ class AccessDocumentPolicy
     /**
      * Determine whether the user can update the AccessDocument.
      *
+     * @param Person $user
+     * @param AccessDocument $accessDocument
+     * @return bool
      */
+
     public function update(Person $user, AccessDocument $accessDocument): bool
     {
         return ($user->id == $accessDocument->person_id);
     }
-
     /**
      * Determine whether the user can delete the AccessDocument.
      *

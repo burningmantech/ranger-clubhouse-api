@@ -2,8 +2,8 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\AccessDocument;
-use App\Models\AccessDocumentChanges;
 use App\Models\ActionLog;
 use App\Models\Bmid;
 use App\Models\Certification;
@@ -18,7 +18,6 @@ use Carbon\Exceptions\InvalidFormatException;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 
 class BulkUploader
@@ -105,7 +104,7 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), spt (Special Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and spt",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), spt (Special Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Special Price Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and spt",
                 ],
                 [
                     'id' => 'wap',
@@ -521,7 +520,7 @@ class BulkUploader
                     break;
 
                 case 'VP':
-                    $type = AccessDocument::VEHICLE_PASS;
+                    $type = AccessDocument::VEHICLE_PASS_SP;
                     break;
 
                 case 'VPGIFT':
@@ -633,9 +632,7 @@ class BulkUploader
 
             $record->status = self::STATUS_SUCCESS;
             if ($commit) {
-                if (self::saveModel($ad, $record)) {
-                    AccessDocumentChanges::log($ad, Auth::id(), $ad, AccessDocumentChanges::OP_CREATE);
-                }
+                self::saveModel($ad, $record);
             }
         }
     }
@@ -770,7 +767,7 @@ class BulkUploader
             $itemCount = 0;
             if ($isEventRadio) {
                 if ($fieldCount) {
-                    $itemCount = (int) array_shift($data);
+                    $itemCount = (int)array_shift($data);
                     $fieldCount--;
                 } else {
                     $itemCount = 1;
@@ -778,11 +775,11 @@ class BulkUploader
             }
 
             if ($fieldCount >= 1) {
-                $sourceYear = (int) $data[0];
+                $sourceYear = (int)$data[0];
             }
 
             if ($fieldCount >= 2) {
-                $expiryYear = (int) $data[1];
+                $expiryYear = (int)$data[1];
             }
 
             if (!$commit) {
@@ -1053,9 +1050,9 @@ class BulkUploader
     {
         $now = now();
         if ($now->month >= 9) {
-            return [ $now->year, $now->year + 4];
+            return [$now->year, $now->year + 4];
         } else {
-            return [ $now->year - 1, $now->year + 3];
+            return [$now->year - 1, $now->year + 3];
         }
     }
 
