@@ -16,24 +16,25 @@ class VehiclePaperworkReport
     public static function execute(): array
     {
         $teams = DB::table('team')
-            ->where(function ($w) {
-                $w->where('mvr_eligible',true);
-                $w->orWhere('pvr_eligible', true);
-            })->where('active', true)
+            ->whereAny(['mvr_eligible', 'pvr_eligible'], true)
+            ->where('active', true)
             ->orderBy('title')
             ->get();
 
         $teamById = $teams->keyBy('id');
         if ($teams->isNotEmpty()) {
-            $peopleByTeams = DB::table('person_team')->whereIn('team_id', $teams->pluck('id'))->get()->groupBy('person_id');
+            $teamsByPeople = DB::table('person_team')
+                ->whereIn('team_id', $teams->pluck('id'))
+                ->get()
+                ->groupBy('person_id');
         } else {
-            $peopleByTeams = collect([]);
+            $teamsByPeople = collect([]);
         }
 
         list ($peopleByMVRPositions, $mvrPositionsById) = self::retrievePositionSignups('mvr_eligible');
         list ($peopleByPVRPositions, $pvrPositionsById) = self::retrievePositionSignups('pvr_eligible');
 
-        $ids = $peopleByTeams->keys()
+        $ids = $teamsByPeople->keys()
             ->merge($peopleByMVRPositions->keys())
             ->merge($peopleByPVRPositions->keys())
             ->unique();
@@ -49,7 +50,7 @@ class VehiclePaperworkReport
         $peopleById = [];
 
         foreach ($eligibles as $person) {
-            $personTeams = $peopleByTeams->get($person->id);
+            $personTeams = $teamsByPeople->get($person->id);
             $mvrTeams = [];
             $pvrTeams = [];
             if ($personTeams) {
@@ -62,7 +63,8 @@ class VehiclePaperworkReport
                     ];
                     if ($team->mvr_eligible) {
                         $mvrTeams[] = $teamInfo;
-                    } else {
+                    }
+                    if ($team->pvr_eligible) {
                         $pvrTeams[] = $teamInfo;
                     }
                 }
