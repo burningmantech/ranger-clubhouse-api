@@ -27,6 +27,7 @@ class Survey extends ApiModel
     const string ALPHA = 'alpha';
 
     protected $fillable = [
+        'active',
         'year',
         'type',
         'title',
@@ -43,6 +44,13 @@ class Survey extends ApiModel
         'epilogue' => 'sometimes|string',
         'position_id' => 'sometimes|integer|nullable',
     ];
+
+    public function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+        ];
+    }
 
     public static function boot(): void
     {
@@ -277,7 +285,7 @@ class Survey extends ApiModel
             ->where('person_id', $personId)
             ->where('passed', true)
             // is there a survey available?
-            ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINING])
+            ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.active = TRUE AND survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINING])
             // Ensure person is still signed up
             ->whereRaw('EXISTS (SELECT 1 FROM person_slot WHERE person_slot.slot_id=trainee_status.slot_id AND person_slot.person_id=? LIMIT 1)', [$personId])
             // .. and have not responded to the survey
@@ -318,7 +326,7 @@ class Survey extends ApiModel
                     ->where('trainer_status.person_id', '!=', $personId)
                     ->where('trainer_status.status', TrainerStatus::ATTENDED)
                     // is there a survey available?
-                    ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINER])
+                    ->whereRaw('EXISTS (SELECT 1 FROM survey WHERE survey.active = TRUE AND survey.year=? AND survey.position_id=slot.position_id AND survey.type=? LIMIT 1)', [$year, self::TRAINER])
                     ->whereRaw('NOT EXISTS (SELECT 1 FROM survey_answer WHERE survey_answer.slot_id=trainer_status.slot_id AND survey_answer.trainer_id=trainer_status.person_id AND survey_answer.person_id=? LIMIT 1)', [$personId])
                     ->with(['slot:id,begins,description,position_id', 'slot.position:id,title', 'person:id,callsign', 'trainer_slot.position:id,title'])
                     ->get()

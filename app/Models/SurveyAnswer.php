@@ -31,7 +31,6 @@ class SurveyAnswer extends ApiModel
     protected $rules = [
         'can_share_name' => 'sometimes|boolean',
         'person_id' => 'required|integer',
-        'response' => 'required',
         'slot_id' => 'sometimes|integer|nullable',
         'survey_group_id' => 'required|integer',
         'survey_id' => 'required|integer',
@@ -59,6 +58,21 @@ class SurveyAnswer extends ApiModel
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function survey_question(): BelongsTo
+    {
+        return $this->belongsTo(SurveyQuestion::class);
+    }
+
+    public function save($options = []): bool
+    {
+        if ($this->survey_question?->is_required && empty($this->response)) {
+            $this->addError('response', 'A response is required.');
+            return false;
+        }
+
+        return parent::save($options);
     }
 
     /**
