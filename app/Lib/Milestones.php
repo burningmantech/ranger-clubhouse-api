@@ -203,18 +203,18 @@ class Milestones
 
         $milestones['org_vehicle_insurance'] = $event->org_vehicle_insurance;
 
+        $milestones['ignore_pvr'] = $event->ignore_pvr;
         if (PVR::isEligible($personId, $event, $year)) {
             $milestones['pvr_eligible'] = true;
             $milestones['vehicle_requests'] = Vehicle::findForPersonYear($personId, $year);
-            $milestones['ignore_pvr'] = $event->ignore_pvr;
         }
 
         // Person might not be eligible until an PVR eligible position is signed up for.
         $milestones['pvr_potential'] = Position::haveVehiclePotential('pvr', $personId);
 
+        $milestones['ignore_mvr'] = $event->ignore_mvr;
         if (MVR::isEligible($personId, $event, $year)) {
             $milestones['mvr_eligible'] = true;
-            $milestones['ignore_mvr'] = $event->ignore_mvr;
         }
         // Person might not be eligible until an MVR eligible position is signed up for.
         $milestones['mvr_potential'] = Position::haveVehiclePotential('mvr', $personId);
