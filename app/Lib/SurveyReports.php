@@ -120,7 +120,6 @@ class SurveyReports
     {
         $slot = Slot::findOrFail($slotId);
         $survey = Survey::findForTypePositionYear($type, $slot->position_id, $slot->begins->year);
-        error_log("* SLOT " . json_encode($slot, JSON_PRETTY_PRINT));
         $targets = Timesheet::where('position_id', $survey->mentoring_position_id)
             ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND DATE_ADD(?, INTERVAL 1 HOUR)', [$slot->begins, $slot->begins])
             ->with('person:id,callsign,person_photo_id')
@@ -137,7 +136,6 @@ class SurveyReports
                 ];
             })->sortBy('callsign')->values();
 
-        error_log("* TARGET " . json_encode($targets, JSON_PRETTY_PRINT));
         return [$slot, $survey, $targets->toArray()];
     }
 

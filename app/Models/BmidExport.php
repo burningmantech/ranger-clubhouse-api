@@ -38,7 +38,6 @@ class BmidExport extends ApiModel
         parent::boot();
 
         self::deleted(function (BmidExport $export) {
-            error_log("* Got here");
             $export->deleteExport();
         });
     }
