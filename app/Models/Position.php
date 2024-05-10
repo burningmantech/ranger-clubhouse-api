@@ -473,6 +473,8 @@ class Position extends ApiModel
         $includeRoles = $query['include_roles'] ?? false;
         $hasPaycode = $query['has_paycode'] ?? false;
         $canManage = $query['can_manage'] ?? false;
+        $mentor = $query['mentor'] ?? null;
+        $mentee = $query['mentee'] ?? null;
 
         $sql = self::select('position.*')->orderBy('title');
 
@@ -481,6 +483,14 @@ class Position extends ApiModel
                 $j->on('team_manager.team_id', 'position.team_id');
                 $j->where('team_manager.person_id', Auth::id());
             })->addSelect(DB::raw('IF(team_manager.team_id is null, false, true) AS can_manage'));
+        }
+
+        if ($mentor) {
+            $sql->where('title', 'like', '%mentor%');
+        }
+
+        if ($mentee) {
+            $sql->where('title', 'like', '%mentee%');
         }
 
         if (!empty($type)) {

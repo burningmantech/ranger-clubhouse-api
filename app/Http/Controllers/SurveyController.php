@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\SurveyReports;
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
@@ -13,7 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class SurveyController extends ApiController
 {
@@ -161,6 +161,7 @@ class SurveyController extends ApiController
      * Prepare a questionnaire
      *
      * @return JsonResponse
+     * @throws UnacceptableConditionException
      */
 
     public function questionnaire(): JsonResponse
@@ -169,7 +170,7 @@ class SurveyController extends ApiController
             'type' => [
                 'required',
                 'string',
-                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA])
+                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA, Survey::MENTEES_FOR_MENTOR, Survey::MENTOR_FOR_MENTEES])
             ],
             'slot_id' => [
                 'integer',
@@ -181,12 +182,15 @@ class SurveyController extends ApiController
             ],
         ]);
 
-        if ($params['type'] == Survey::ALPHA) {
+        $type = $params['type'];
+        if ($type == Survey::ALPHA) {
             list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user->id);
             return response()->json(['survey' => $survey, 'trainers' => $trainers]);
+        } else if ($type == Survey::MENTOR_FOR_MENTEES || $type == Survey::MENTEES_FOR_MENTOR) {
+            [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $this->user->id);
+        } else {
+            [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $this->user->id);
         }
-
-        list ($slot, $survey, $trainers) = SurveyReports::retrieveSlotSurveyTrainers($params['type'], $params['slot_id'], $this->user->id);
 
         return response()->json(['survey' => $survey, 'trainers' => $trainers, 'slot' => $slot]);
     }
@@ -205,7 +209,7 @@ class SurveyController extends ApiController
             'type' => [
                 'required',
                 'string',
-                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA])
+                Rule::in([Survey::TRAINING, Survey::TRAINER, Survey::ALPHA, Survey::MENTEES_FOR_MENTOR, Survey::MENTOR_FOR_MENTEES])
             ],
             'slot_id' => [
                 'integer',
@@ -224,15 +228,15 @@ class SurveyController extends ApiController
 
         $type = $params['type'];
 
-        $slot = null;
-        $survey = null;
-        $trainers = null;
         $year = $params['year'] ?? null;
         $personId = $this->user->id;
 
         if ($type == Survey::ALPHA) {
             [$survey, $trainers] = SurveyReports::retrieveAlphaSurvey($year, $personId);
             $slotId = null;
+        } else if ($type == Survey::MENTOR_FOR_MENTEES || $type == Survey::MENTEES_FOR_MENTOR) {
+            [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $personId);
+            $slotId = $slot->id;
         } else {
             [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $personId);
             $slotId = $slot->id;
@@ -339,7 +343,7 @@ class SurveyController extends ApiController
      *
      * @param Survey $survey
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function allTrainersReport(Survey $survey): JsonResponse
