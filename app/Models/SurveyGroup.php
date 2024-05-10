@@ -15,16 +15,17 @@ class SurveyGroup extends ApiModel
     public $timestamps = true;
 
     // Group is nothing special, presented with the main report.
-    const TYPE_NORMAL = 'normal';
+    const string TYPE_NORMAL = 'normal';
 
     // The group questions are repeated for each trainer who taught
-    const TYPE_TRAINER = 'trainer';
+    const string TYPE_TRAINER = 'trainer';
     // The group is separated out from the main report, and presented it's own thing.
     // with each slot
-    const TYPE_SEPARATE = 'separate-slot';
+    const string TYPE_SEPARATE = 'separate-slot';
     // The group is separated out from the main report and summarized
     // (e.g., the manual review)
-    const TYPE_SUMMARY = 'separate-summary';
+    const string TYPE_SUMMARY = 'separate-summary';
+
 
     protected $fillable = [
         'type',
@@ -97,7 +98,7 @@ class SurveyGroup extends ApiModel
             case self::TYPE_NORMAL:
                 return '';
             case self::TYPE_TRAINER:
-                return ($surveyType == Survey::ALPHA ) ? 'Alpha-on-Mentor Feedback' : 'Trainee-On-Trainer Feedback';
+                return Survey::TYPE_FOR_REPORTS_LABELS[$surveyType] ?? $this->type;
             default:
                 return $this->report_title;
         }

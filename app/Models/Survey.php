@@ -17,14 +17,19 @@ class Survey extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
-    // Survey is for trainers on trainers.
-    const string TRAINER = 'trainer';
+    const string TRAINER = 'trainer';// Survey is for trainers on trainers.
+    const string TRAINING = 'training'; // Survey is for a training session
+    const string ALPHA = 'alpha';  // Survey is for Alphas
+    const string MENTOR_FOR_MENTEES = 'mentor-for-mentees'; // rate mentees by the mentors
+    const string MENTEES_FOR_MENTOR = 'mentees-for-mentor'; // rate the mentors by the mentees
 
-    // Survey is for a training session
-    const string TRAINING = 'training';
-
-    // Survey is for Alphas
-    const string ALPHA = 'alpha';
+    const array TYPE_FOR_REPORTS_LABELS = [
+        self::TRAINER => "Trainer-on-Trainer Feedback",
+        self::TRAINING => "Trainee-on-Trainer Feedback",
+        self::ALPHA => "Alpha Feedback",
+        self::MENTEES_FOR_MENTOR => "Mentee-on-Mentor Feedback",
+        self::MENTOR_FOR_MENTEES => "Mentor-on-Mentee Feedback"
+    ];
 
     protected $fillable = [
         'active',
@@ -33,7 +38,15 @@ class Survey extends ApiModel
         'title',
         'prologue',
         'epilogue',
-        'position_id'
+        'position_id',
+        // For MENTOR_FOR_MENTEES or MENTOR_FOR_MENTEES is the position to rate, position_id becomes the shifts
+        // to find for when the person worked.
+        'mentoring_position_id',
+    ];
+
+    protected $appends = [
+        'position_title',
+        'mentoring_position_title',
     ];
 
     protected $rules = [
@@ -43,6 +56,7 @@ class Survey extends ApiModel
         'prologue' => 'sometimes|string',
         'epilogue' => 'sometimes|string',
         'position_id' => 'sometimes|integer|nullable',
+        'mentoring_position_id' => 'sometimes|integer|nullable',
     ];
 
     public function casts(): array
@@ -74,6 +88,11 @@ class Survey extends ApiModel
     }
 
     public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function mentoring_position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
@@ -180,6 +199,16 @@ class Survey extends ApiModel
         }
 
         return $rows;
+    }
+
+    public function save($options = []): bool
+    {
+        if (($this->type == self::MENTOR_FOR_MENTEES || $this->type == self::MENTEES_FOR_MENTOR) && !$this->mentoring_position_id) {
+            $this->addError('mentoring_position_id', 'May not be blank for mentor-for-mentees and mentees-for-mentor types');
+            return false;
+        }
+
+        return parent::save($options);
     }
 
     /**
@@ -294,6 +323,7 @@ class Survey extends ApiModel
             ->get()
             ->map(fn($s) => [
                 'id' => $s->slot_id,
+                'type' => self::TRAINING,
                 'begins' => (string)$s->slot->begins,
                 'description' => $s->slot->description,
                 'position_id' => $s->slot->position_id,
@@ -337,6 +367,7 @@ class Survey extends ApiModel
 
                     $trainerSurveys[] = [
                         'id' => $slot->id,
+                        'type' => self::TRAINER,
                         'description' => $slot->description,
                         'begins' => (string)$slot->begins,
                         'position_id' => $slot->position_id,
@@ -360,6 +391,60 @@ class Survey extends ApiModel
             $alphaSurvey = true;
         }
 
+        // Mentor surveys
+        $mentoringSurveys = Survey::where('year', $year)
+            ->join('person_position', 'person_position.position_id', 'survey.position_id')
+            ->where('survey.active', true)
+            ->where('person_position.person_id', $personId)
+            ->whereIn('type', [self::MENTEES_FOR_MENTOR, self::MENTOR_FOR_MENTEES])
+            ->with('position:id,title')
+            ->get();
+
+        foreach ($mentoringSurveys as $m) {
+            $shifts = Timesheet::where('position_id', $m->position_id)
+                ->where('person_id', $personId)
+                ->whereYear('on_duty', $year)
+                ->whereNotNull('slot_id')
+                ->whereNotExists(function ($q) use ($m, $personId) {
+                    $q->select(DB::raw(1))
+                        ->from('survey_answer')
+                        ->where('survey_answer.survey_id', $m->id)
+                        ->whereColumn('survey_answer.slot_id', 'timesheet.slot_id')
+                        ->where('survey_answer.person_id', $personId)
+                        ->limit(1);
+                })
+                ->orderBy('on_duty')
+                ->with(['slot', 'slot.position:id,title'])
+                ->get();
+
+            foreach ($shifts as $shift) {
+                $slot = $shift->slot;
+                if (!$slot) {
+                    continue;
+                }
+
+                $targets = Timesheet::where('position_id', $m->mentoring_position_id)
+                    ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND DATE_ADD(?, INTERVAL 1 HOUR)', [$slot->begins, $slot->begins])
+                    ->get();
+
+                if ($targets->isEmpty()) {
+                    continue;
+                }
+
+                $slots[] = [
+                    'id' => $slot->id,
+                    'type' => $m->type,
+                    'begins' => (string)$slot->begins,
+                    'position_id' => $m->position_id,
+                    'position_title' => $m->position->title,
+                    'mentoring' => $targets->map(fn($t) => [
+                        'id' => $t->person_id,
+                        'callsign' => $t->person->callsign,
+                    ])->toArray()
+                ];
+            }
+        }
+
         return [
             'sessions' => $slots,
             'trainers' => $trainerSurveys,
@@ -370,5 +455,20 @@ class Survey extends ApiModel
     public function positionId(): Attribute
     {
         return NullIfEmptyAttribute::make();
+    }
+
+    public function mentoringPositionId(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function getPositionTitleAttribute(): ?string
+    {
+        return $this->position?->title;
+    }
+
+    public function getMentoringPositionTitleAttribute(): ?string
+    {
+        return $this->mentoring_position_id ? $this->mentoring_position?->title : '';
     }
 }

@@ -18,16 +18,24 @@ class Training extends Position
     protected $appends = [
         'is_art',
         'slug',
-        'graduation_info'
+        'graduation_info',
+        'mentor_position_id',
+        'mentee_position_id',
     ];
 
-    const FAIL = 'fail';        // Person was not marked as pass
-    const PASS = 'pass';        // Person passed or taught a session
-    const NO_SHOW = 'no-show';  // person (as a trainer) was no show.
-    const PENDING = 'pending'; // Training hasn't happened yet, or still within the grace period.
-    const NO_SHIFT = 'no-shift'; // No training sign up was found
+    const string FAIL = 'fail';        // Person was not marked as pass
+    const string PASS = 'pass';        // Person passed or taught a session
+    const string NO_SHOW = 'no-show';  // person (as a trainer) was no show.
+    const string PENDING = 'pending'; // Training hasn't happened yet, or still within the grace period.
+    const string NO_SHIFT = 'no-shift'; // No training sign up was found
 
-    const GRACE_PERIOD_HOURS = 72;
+    const int GRACE_PERIOD_HOURS = 72;
+
+    const array MENTORING_POSITIONS = [
+        Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE ],
+        Position::TROUBLESHOOTER_TRAINING => [ Position::TROUBLESHOOTER_MENTOR, Position::TROUBLESHOOTER_MENTEE ],
+    ];
+
 
     /**
      * Is the person trained for a position in a given year?
@@ -268,7 +276,7 @@ class Training extends Position
      *
      * @param mixed $id position to find by id or slug
      * @return Training
-     * @throws ModelNotFoundException if position was not found.
+     * @throws ModelNotFoundException|UnacceptableConditionException
      */
 
     public static function findOrFail($id)
@@ -663,4 +671,17 @@ class Training extends Position
 
         return $result;
     }
+
+    public function getMentorPositionIdAttribute(): ?int
+    {
+        $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
+        return $mentoring ? $mentoring[0] : null;
+    }
+
+    public function getMenteePositionIdAttribute(): ?int
+    {
+        $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
+        return $mentoring ? $mentoring[1] : null;
+    }
+
 }

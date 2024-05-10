@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\Reports\TrainerAttendanceReport;
 use App\Lib\Reports\TrainingCompletedReport;
 use App\Lib\Reports\TrainingMultipleEnrollmentReport;
@@ -17,7 +18,7 @@ class TrainingController extends ApiController
      * Show a training position
      * @param $id
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function show($id): JsonResponse

@@ -30,6 +30,8 @@ class PositionController extends ApiController
             'include_roles' => 'sometimes|boolean',
             'has_paycode' => 'sometimes|boolean',
             'active' => 'sometimes|boolean',
+            'mentee' => 'sometimes|boolean',
+            'mentor' => 'sometimes|boolean',
         ]);
 
         return $this->success(Position::findForQuery($params, $this->user->isAdmin()), null, 'position');
@@ -168,7 +170,7 @@ class PositionController extends ApiController
             'commit' => 'boolean|sometimes',
         ]);
 
-        if ($params['grant'] && $position->position_roles->first(fn ($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
+        if ($params['grant'] && $position->position_roles->first(fn($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
             throw new AuthorizationException("The position has either the Admin or Tech Ninja Role associated and cannot be granted through this interface.");
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\Position;
@@ -15,7 +16,7 @@ use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\Auth;
-use App\Exceptions\UnacceptableConditionException;
+use InvalidArgumentException;
 
 class SurveyReports
 {
@@ -84,7 +85,7 @@ class SurveyReports
     public static function retrieveAlphaSurvey(int $year, int $personId): array
     {
         if (Timesheet::hasAlphaEntry($personId, $year)) {
-            throw new \InvalidArgumentException("Person was not an alpha in the given year");
+            throw new InvalidArgumentException("Person was not an alpha in the given year");
         }
 
         $survey = Survey::findForTypePositionYear(Survey::ALPHA, Position::ALPHA, $year);
@@ -105,6 +106,41 @@ class SurveyReports
 
         return [$survey, $mentors];
     }
+
+    /**
+     * Retrieve the slot record, the survey for the type, position & year and the attending trainers
+     *
+     * @param string $type
+     * @param int $slotId
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrieveMentoringSurvey(string $type, int $slotId, int $personId): array
+    {
+        $slot = Slot::findOrFail($slotId);
+        $survey = Survey::findForTypePositionYear($type, $slot->position_id, $slot->begins->year);
+        error_log("* SLOT " . json_encode($slot, JSON_PRETTY_PRINT));
+        $targets = Timesheet::where('position_id', $survey->mentoring_position_id)
+            ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND DATE_ADD(?, INTERVAL 1 HOUR)', [$slot->begins, $slot->begins])
+            ->with('person:id,callsign,person_photo_id')
+            ->with('person.person_photo')
+            ->get()
+            ->map(function ($t) {
+                $p = $t->person;
+                return (object)[
+                    'id' => $t->person_id,
+                    'callsign' => $p->callsign,
+                    'position_id' => $t->position_id,
+                    'position_title' => $t->position->title ?? "Position #{$t->position_id}",
+                    'photo_url' => $p->person_photo->image_url ?? null,
+                ];
+            })->sortBy('callsign')->values();
+
+        error_log("* TARGET " . json_encode($targets, JSON_PRETTY_PRINT));
+        return [$slot, $survey, $targets->toArray()];
+    }
+
 
     /**
      * Build up a survey response. The response is broken up into two parts:
