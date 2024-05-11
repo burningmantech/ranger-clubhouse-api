@@ -459,10 +459,10 @@ class AccessDocument extends ApiModel
             }
             if ($wap == null) {
                 $wap = $row;
-            } else if ($wap->access_date && $wap->access_date->gt($row->access_date)) {
+            } else if ($wap->access_date && $row->access_date && $wap->access_date->gt($row->access_date)) {
                 $wap = $row;
             }
-        }
+         }
         return $wap;
     }
 
