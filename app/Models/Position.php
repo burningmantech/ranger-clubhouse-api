@@ -185,6 +185,10 @@ class Position extends ApiModel
 
     const int SICK_TIME = 150;
 
+    const int TRAINER_RADIO_PRACTICE = 178;
+    const int TRAINING_RADIO_PRACTICE = 179;
+
+
     /*
      * Position types
      */
@@ -223,6 +227,7 @@ class Position extends ApiModel
         Position::HQ_REFRESHER_TRAINING => [Position::HQ_TRAINER],
         Position::SANDMAN_TRAINING => [Position::SANDMAN_TRAINER],
         Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER],
+        Position::TRAINING_RADIO_PRACTICE => [Position::TRAINER_RADIO_PRACTICE],
     ];
 
 
