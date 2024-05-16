@@ -1207,7 +1207,8 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 PersonRole::addIdsToPerson($personId, $addIds, $changeReason);
 
                 // First-year Alphas get the Dirt - Shiny Penny position
-                if ($oldStatus == Person::ALPHA) {
+                // FYI, Mentors might accidentally bonk someone due to playa brain.
+                if ($oldStatus == Person::ALPHA || $oldStatus == Person::BONKED) {
                     PersonPosition::addIdsToPerson($personId, [Position::DIRT_SHINY_PENNY], $changeReason);
                 }
                 break;
