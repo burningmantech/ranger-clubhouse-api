@@ -8,7 +8,6 @@ use App\Lib\Reports\ClaimedTicketsWithNoSignups;
 use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
-use App\Models\AccessDocumentChanges;
 use App\Models\Person;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -246,7 +245,7 @@ class AccessDocumentController extends ApiController
      * will cause a check for all banked tickets, and if so, release the
      * vehicle pass to prevent gaming the system, or unintentionally give the VP to the person.
      *
-     * @param AccessDocument $access_document
+     * @param AccessDocument $accessDocument
      * @return JsonResponse
      * @throws AuthorizationException
      * @throws UnacceptableConditionException
@@ -339,17 +338,6 @@ class AccessDocumentController extends ApiController
         $ad->status = $status;
         $ad->saveWithoutValidation();
 
-        // Prevent people from trying to game the system and grab the VP without claiming any tickets.
-        if (AccessDocument::noAvailableTickets($personId)) {
-            $passes = $rows->where('status', AccessDocument::CLAIMED)
-                ->whereIn('type', [AccessDocument::VEHICLE_PASS_GIFT, AccessDocument::VEHICLE_PASS_SP]);
-            foreach ($passes as $vp) {
-                $vp->status = AccessDocument::QUALIFIED;
-                $vp->auditReason = 'all tickets were banked';
-                $vp->saveWithoutValidation();
-            }
-        }
-
         return $this->success($rows, null, 'access_document');
     }
 
@@ -367,7 +355,7 @@ class AccessDocumentController extends ApiController
 
     public function grantWAPs(): JsonResponse
     {
-        $this->authorize('grantWAPs', [AccessDocument::class]);
+        $this->authorize('grantWAPs', AccessDocument::class);
         list ($people, $startYear) = GrantPasses::grantWAPsToRangers();
         return response()->json(['people' => $people, 'start_year' => $startYear]);
     }
@@ -513,7 +501,7 @@ class AccessDocumentController extends ApiController
      * We don't check expiration here, that's handled elsewhere.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function bankAccessDocuments(): JsonResponse

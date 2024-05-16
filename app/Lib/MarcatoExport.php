@@ -14,21 +14,21 @@ use ZipArchive;
 
 class MarcatoExport
 {
-    const BUDGET_CODE = 'Rangers 660';
+    const string BUDGET_CODE = 'Rangers 660';
 
     const CSV_HEADERS = [
         'Name',
         'Email',
+        'Playa Name/Radio Handle',
         'Company',
         'Position',
-        'Notes',
-        'Playa Name/Radio Handle',
+        'Supervisor',
         'Arrival Date',
-        'Shower Access For Entire Event - Shower - Wed9',
+        'Notes',
+        'Shower Access For Entire Event - Shower - Wed7',
         'Period Catering Bundle - BMID Catering  - Pre-Event',
         'Period Catering Bundle - BMID Catering  - During Event',
         'Period Catering Bundle - BMID Catering  - Post Event',
-        //      'mvr', - removed per conversation with Bliss on July 18th, 2022
         'title2',
         'title3'
     ];
@@ -192,7 +192,7 @@ class MarcatoExport
      * titles, showers, and meals.
      */
 
-    public function createCSV()
+    public function createCSV(): void
     {
         $fh = fopen($this->csvFile, 'w');
         if ($fh === false) {
@@ -210,11 +210,11 @@ class MarcatoExport
 
     /**
      * Build an array used to represent a BMID in the CSV file.
-     * @param $bmid
+     * @param Bmid $bmid
      * @return array
      */
 
-    public static function buildExportRow($bmid): array
+    public static function buildExportRow(Bmid $bmid): array
     {
         $person = $bmid->person;
 
@@ -229,16 +229,16 @@ class MarcatoExport
         return [
             $person->first_name . ' ' . $person->last_name,
             $person->email,
+            $person->callsign,
             self::BUDGET_CODE,
             $bmid->title1 ?? '',
-            self::buildPhotoName($person),
-            $person->callsign,
+            '',                     // Supervisor is not required.
             $arrivalDate,
+            self::buildPhotoName($person),
             ($bmid->showers || $bmid->earned_showers || $bmid->allocated_showers) ? '100' : '',
             isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
             isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
             isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
-            //          $bmid->org_vehicle_insurance ? 'yes' : 'no',
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];

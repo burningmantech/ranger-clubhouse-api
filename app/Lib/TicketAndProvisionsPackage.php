@@ -36,7 +36,6 @@ class TicketAndProvisionsPackage
         foreach ($ads as $ad) {
             switch ($ad->type) {
                 case AccessDocument::GIFT:
-                case AccessDocument::VEHICLE_PASS_GIFT:
                     if ($ad->isAvailable()) {
                         $giftItems[] = $ad;
                     }
