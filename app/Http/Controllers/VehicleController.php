@@ -142,7 +142,7 @@ class VehicleController extends ApiController
 
         $event = PersonEvent::findForPersonYear($personId, $year);
 
-        if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV()) {
+        if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV() && $person->status != Person::NON_RANGER) {
             $info = [];
         } else {
             $deadline = "{$year}-".setting('MVRDeadline')." 23:59:59";
