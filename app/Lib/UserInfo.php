@@ -64,7 +64,7 @@ class UserInfo
             'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
         ];
 
-        if (in_array($person->status, Person::ACTIVE_STATUSES)) {
+        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::NON_RANGER) {
             $data['mvr_eligible'] = MVR::isEligible($personId, $event, $year);
             $data['mvr_potential'] = Position::haveVehiclePotential('mvr', $personId);
 

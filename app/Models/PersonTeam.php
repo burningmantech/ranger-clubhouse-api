@@ -104,7 +104,6 @@ class PersonTeam extends ApiModel
     public static function havePVREligibleTeam(int $personId): bool
     {
         return DB::table('team')
-            ->select('team.id', 'team.title')
             ->join('person_team', 'person_team.team_id', 'team.id')
             ->where('person_team.person_id', $personId)
             ->where('team.active', true)
