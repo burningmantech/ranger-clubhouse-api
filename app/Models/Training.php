@@ -364,6 +364,7 @@ class Training extends Position
             $ed->date = $trainer->begins;
             $ed->slot_id = $trainer->id;
             $ed->is_trainer = true;
+            $ed->timezone_abbr = $trainer->timezone_abbr;
             $ed->status = self::PASS;
         } elseif ($training) {
             // If the person did not pass, BUT there is a later sign-up use the later sign-up.
@@ -371,11 +372,13 @@ class Training extends Position
                 $ed->location = $slot->description;
                 $ed->date = $slot->begins;
                 $ed->slot_id = $slot->id;
+                $ed->timezone_abbr = $slot->timezone_abbr;
                 $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now, $slot->timezone) ? self::PENDING : self::FAIL;
             } else {
                 $ed->slot_id = $training->id;
                 $ed->location = $training->description;
                 $ed->date = $training->begins;
+                $ed->timezone_abbr = $training->timezone_abbr;
                 if (!$training->passed && self::isTimeWithinGracePeriod($training->ends, $now, $training->timezone)) {
                     $ed->status = self::PENDING;
                 } else {
@@ -386,6 +389,7 @@ class Training extends Position
             $ed->slot_id = $slot->id;
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
+            $ed->timezone_abbr = $slot->timezone_abbr;
             // Training signed up and no trainee status
             $ed->status = self::isTimeWithinGracePeriod($slot->ends, $now, $slot->timezone) ? self::PENDING : self::FAIL;
         } elseif ($teachingPositions && !$taught->isEmpty()) {
@@ -404,6 +408,7 @@ class Training extends Position
             $ed->slot_id = $slot->id;
             $ed->location = $slot->description;
             $ed->date = $slot->begins;
+            $ed->timezone_abbr = $slot->timezone_abbr;
             $ed->status = $slot->status ?? self::PENDING;
             $ed->is_trainer = true;
         } else {
@@ -415,9 +420,10 @@ class Training extends Position
             $ed->date = (string)$ed->date;
         }
 
-        $ed->required_by = $position->training_positions->map(function ($r) {
-            return ['id' => $r->id, 'title' => $r->title];
-        })->sortBy('title')->values();
+        $ed->required_by = $position->training_positions
+            ->map(fn($r) => ['id' => $r->id, 'title' => $r->title])
+            ->sortBy('title')
+            ->values();
 
         if ($trainingPositionId == Position::GREEN_DOT_TRAINING
             && $ed->status != self::NO_SHIFT) {
