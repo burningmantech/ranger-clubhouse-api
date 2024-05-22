@@ -90,7 +90,7 @@ class TrainerStatus extends ApiModel
     public static function retrieveSessionsForPerson(int $personId, array $positionIds, int $year): Collection
     {
         return DB::table('slot')
-            ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.position_id', DB::raw('IFNULL(trainer_status.status, "pending") as status'))
+            ->select('slot.id', 'slot.begins', 'slot.ends', 'slot.description', 'slot.timezone_abbr', 'slot.position_id', DB::raw('IFNULL(trainer_status.status, "pending") as status'))
             ->join('person_slot', function ($q) use ($personId) {
                 $q->on('person_slot.slot_id', 'slot.id');
                 $q->where('person_slot.person_id', $personId);
