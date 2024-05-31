@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Exceptions\UnacceptableConditionException;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
@@ -74,6 +73,26 @@ class PersonTeam extends ApiModel
             ->toArray();
     }
 
+    /**
+     * Find all teams with pvr eligible for the person
+     *
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrievePVREligibleForPerson(int $personId): array
+    {
+        return DB::table('team')
+            ->select('team.id', 'team.title')
+            ->join('person_team', 'person_team.team_id', 'team.id')
+            ->where('person_team.person_id', $personId)
+            ->where('team.active', true)
+            ->where('team.pvr_eligible', true)
+            ->orderBy('team.title')
+            ->get()
+            ->toArray();
+    }
+
 
     /**
      * Is the person a member of a MVR eligible team?
@@ -85,7 +104,6 @@ class PersonTeam extends ApiModel
     public static function haveMVREligibleForPerson(int $personId): bool
     {
         return DB::table('team')
-            ->select('team.id', 'team.title')
             ->join('person_team', 'person_team.team_id', 'team.id')
             ->where('person_team.person_id', $personId)
             ->where('team.active', true)
@@ -104,7 +122,6 @@ class PersonTeam extends ApiModel
     public static function havePVREligibleTeam(int $personId): bool
     {
         return DB::table('team')
-            ->join('person_team', 'person_team.team_id', 'team.id')
             ->where('person_team.person_id', $personId)
             ->where('team.active', true)
             ->where('team.pvr_eligible', true)

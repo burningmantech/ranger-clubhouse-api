@@ -8,6 +8,7 @@ use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\Vehicle;
 use Carbon\Carbon;
@@ -137,15 +138,21 @@ class VehicleController extends ApiController
     public function info(Person $person): JsonResponse
     {
         $this->authorize('info', [Vehicle::class, $person]);
+        $params = request()->validate([
+            'include_eligible_teams' => 'boolean|sometimes'
+        ]);
+
         $personId = $person->id;
         $year = current_year();
 
         $event = PersonEvent::findForPersonYear($personId, $year);
 
-        if (!in_array($person->status, Person::ACTIVE_STATUSES) && !$person->isPNV() && $person->status != Person::NON_RANGER) {
+        if (!in_array($person->status, Person::ACTIVE_STATUSES)
+            && !$person->isPNV()
+            && $person->status != Person::NON_RANGER) {
             $info = [];
         } else {
-            $deadline = "{$year}-".setting('MVRDeadline')." 23:59:59";
+            $deadline = "{$year}-" . setting('MVRDeadline') . " 23:59:59";
             $info = [
                 'motorpool_agreement_available' => setting('MotorPoolProtocolEnabled'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
@@ -160,6 +167,11 @@ class VehicleController extends ApiController
                 'mvr_deadline' => $deadline,
                 'mvr_past_deadline' => now()->gt(Carbon::parse($deadline)),
             ];
+
+            if ($params['include_eligible_teams'] ?? false) {
+                $info['mvr_teams'] = PersonTeam::retrieveMVREligibleForPerson($personId);
+                $info['pvr_teams'] = PersonTeam::retrievePVREligibleForPerson($personId);
+            }
 
             if ($info['motorpool_agreement_available']) {
                 $info['motorpool_agreement_tag'] = Document::MOTORPOOL_POLICY_TAG;
