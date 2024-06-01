@@ -98,7 +98,7 @@ class PersonEventFilter
                 }
             }
 
-            if ($allow || ($authorizedUser && $roles && $authorizedUser->hasRole($roles))) {
+            if ($allow || ($roles && $authorizedUser?->hasRole($roles))) {
                 $fields = array_merge($fields, $group[0]);
             }
         }

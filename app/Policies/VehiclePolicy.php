@@ -131,7 +131,7 @@ class VehiclePolicy
 
     public function info(Person $user, Person $person): bool
     {
-        return $user->hasRole(Role::VEHICLE_MANAGEMENT) || $user->id == $person->id;
+        return $user->hasRole([Role::VEHICLE_MANAGEMENT, Role::MANAGE]) || $user->id == $person->id;
     }
 
     /**
