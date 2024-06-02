@@ -338,6 +338,17 @@ class AccessDocumentController extends ApiController
         $ad->status = $status;
         $ad->saveWithoutValidation();
 
+        // Prevent people from trying to game the system and grab the VP without claiming any tickets.
+        if (AccessDocument::noAvailableTickets($personId)) {
+            $passes = $rows->where('status', AccessDocument::CLAIMED)
+                ->whereIn('type', [AccessDocument::VEHICLE_PASS_GIFT, AccessDocument::VEHICLE_PASS_SP]);
+            foreach ($passes as $vp) {
+                $vp->status = AccessDocument::QUALIFIED;
+                $vp->auditReason = 'all tickets were banked';
+                $vp->saveWithoutValidation();
+            }
+        }
+
         return $this->success($rows, null, 'access_document');
     }
 
