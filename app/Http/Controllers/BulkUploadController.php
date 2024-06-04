@@ -37,11 +37,14 @@ class BulkUploadController extends ApiController
             'options' => $certActions
         ];
 
-        list ($defaultSourceYear, $defaultExpiryYear) = BulkUploader::defaultYears();
+        list ($defaultTicketSourceYear, $defaultTicketExpiryYear) = BulkUploader::defaultYears(false);
+        list ($defaultProvisionSourceYear, $defaultProvisionExpiryYear) = BulkUploader::defaultYears(true);
         return response()->json([
             'actions' =>  $actions,
-            'default_source_year' => $defaultSourceYear,
-            'default_expiry_year' => $defaultExpiryYear
+            'ticket_default_source_year' => $defaultTicketSourceYear,
+            'ticket_default_expiry_year' => $defaultTicketExpiryYear,
+            'provision_default_source_year' => $defaultProvisionSourceYear,
+            'provision_default_expiry_year' => $defaultProvisionExpiryYear
         ]);
     }
 
