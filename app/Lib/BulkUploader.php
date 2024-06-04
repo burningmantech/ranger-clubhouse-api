@@ -105,11 +105,11 @@ class BulkUploader
                 [
                     'id' => 'tickets',
                     'label' => 'Create Access Documents',
-                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), spt (Special Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Special Price Vehicle Pass), wap (Work Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and spt",
+                    'help' => "callsign,type[,access date]\ntype = cred (Staff Credential), spt (Special Price Ticket), gift (Gift Ticket), vpgift (Gift Vehicle Pass), lsd (Late Season Directed), vplsd (LSD Vehicle Pass), vp (Special Price Vehicle Pass), sap (Setup Access Pass)\n\nAdvanced usage: callsign,type[,access date,source year, expiry year]\nsource year and expiry year are only supported for cred and spt",
                 ],
                 [
                     'id' => 'wap',
-                    'label' => 'Update WAP dates',
+                    'label' => 'Update SAP dates',
                     'help' => "callsign,date\ndate = YYYY-MM-DD or any (for anytime access)"
                 ],
             ]
@@ -698,10 +698,10 @@ class BulkUploader
 
             if ($wap == null) {
                 $record->status = self::STATUS_FAILED;
-                $record->details = 'No WAP access document could be found';
+                $record->details = 'No SAP access document could be found';
             } elseif ($wap->status == AccessDocument::SUBMITTED) {
                 $record->status = self::STATUS_FAILED;
-                $record->details = 'WAP has already been submitted';
+                $record->details = 'SAP has already been submitted';
             } else {
                 if ($anytime) {
                     $accessDate = null;
