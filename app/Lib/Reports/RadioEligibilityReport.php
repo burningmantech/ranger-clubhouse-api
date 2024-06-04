@@ -105,14 +105,11 @@ class RadioEligibilityReport
         $people = $people->filter(fn($p) => ($p->year_1 || $p->year_2 || $p->year_3 || $p->shift_lead))->values();
 
         foreach ($people as $person) {
-            // Qualified radio hours is last year, OR the previous year if last year
-            // was less than 10 hours and the previous year was greater than last year.
-            $person->radio_hours = $person->year_1;
-            if ($person->year_1 < 10.0 && ($person->year_2 > $person->year_1)) {
-                $person->radio_hours = $person->year_2;
-            }
-            if ($person->year_3 > $person->radio_hours) {
-                $person->radio_hours = $person->year_3;
+            foreach (['year_1', 'year_2', 'year_3'] as $y) {
+                if ($person->{$y} > 0) {
+                    $person->radio_hours = $person->{$y};
+                    break;
+                }
             }
         }
 
