@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Lib\Intake;
 use App\Lib\Reports\ShinyPennyReport;
+use App\Lib\Reports\SpigotFlowReport;
 use App\Mail\WelcomeMail;
 use App\Models\Person;
 use App\Models\PersonIntake;
@@ -45,7 +46,7 @@ class IntakeController extends ApiController
     {
         $this->authorize('isVC');
 
-        return response()->json(['days' => Intake::retrieveSpigotFlowForYear($this->getYear())]);
+        return response()->json(['days' => SpigotFlowReport::execute($this->getYear())]);
     }
 
     /**

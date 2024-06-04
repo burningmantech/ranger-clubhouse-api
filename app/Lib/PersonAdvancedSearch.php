@@ -14,7 +14,7 @@ use App\Exceptions\UnacceptableConditionException;
 
 class PersonAdvancedSearch
 {
-    const NO_RESULTS = [
+    const array NO_RESULTS = [
         'people' => [],
     ];
 
@@ -62,6 +62,7 @@ class PersonAdvancedSearch
             }
 
             $personStatus = DB::table('person_status')
+                ->distinct('person_status.person_id')
                 ->whereIn('new_status', $statuses)
                 ->whereYear('created_at', $statusYear)
                 ->get();
