@@ -18,6 +18,7 @@ use Carbon\Exceptions\InvalidFormatException;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class BulkUploader
@@ -468,7 +469,7 @@ class BulkUploader
 
     public static function processTickets($records, $action, $commit, $reason): void
     {
-        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears();
+        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears(false);
         $year = current_year();
 
         $callsign = Auth::user()?->callsign ?? "unknown";
@@ -719,7 +720,7 @@ class BulkUploader
 
     public static function processProvisions($records, $type, $commit, $reason): void
     {
-        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears();
+        list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears(true);
 
         $isAllocated = str_starts_with($type, 'alloc_');
         if ($isAllocated) {
@@ -956,6 +957,7 @@ class BulkUploader
      * @param $type
      * @param $commit
      * @param $reason
+     * @throws ValidationException
      */
 
     public static function processTeamMembership($records, $type, $commit, $reason): void
@@ -1037,22 +1039,26 @@ class BulkUploader
      * Obtain the default source year. If we're running in September or later, default to the current year,
      * otherwise it's assumed the source year was last year.
      *
-     *  Tickets are good for three years.  If you earned a ticket in 2016 for use in the 2017 event then:
+     *  Tickets are good for three years after the year it is intended to be used.
+     *  If you earned a ticket in 2016 for use in the 2017 event then:
      *  2017 is year 0
      *  2018 is year 1
      *  2019 is year 2
      *  2020 is year 3 ... and it expires AFTER the 2020 event.
      *
+     * Provisions expire 3 years after the year earned.
+     *
+     * @param bool $isProvision
      * @return array
      */
 
-    public static function defaultYears(): array
+    public static function defaultYears(bool $isProvision): array
     {
         $now = now();
         if ($now->month >= 9) {
-            return [$now->year, $now->year + 4];
+            return [$now->year, $now->year + ($isProvision ? 3 : 4)];
         } else {
-            return [$now->year - 1, $now->year + 3];
+            return [$now->year - 1, $now->year + ($isProvision ? 2 : 3)];
         }
     }
 
