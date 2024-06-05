@@ -185,6 +185,7 @@ class Provision extends ApiModel
         $year = $query['year'] ?? null;
         $type = $query['type'] ?? null;
         $includePerson = $query['include_person'] ?? false;
+        $excludeRadio = $query['exclude_radio'] ?? false;
 
         $sql = self::query()->orderBy('type')->orderBy('source_year');
 
@@ -210,6 +211,10 @@ class Provision extends ApiModel
 
         if ($year) {
             $sql->where('source_year', $year);
+        }
+
+        if ($excludeRadio) {
+            $sql->where('type', '!=', Provision::EVENT_RADIO);
         }
 
         $rows = $sql->get();

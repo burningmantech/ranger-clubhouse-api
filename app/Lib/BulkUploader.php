@@ -535,7 +535,9 @@ class BulkUploader
                     break;
 
                 case 'WAP':
+                case 'SAP':
                     $type = AccessDocument::WAP;
+                    $sourceYear = $year;
                     break;
 
                 default:
@@ -553,15 +555,18 @@ class BulkUploader
             // Optionally pop a source year if this type supports them
             if (in_array($type, AccessDocument::TICKET_TYPES)) {
                 if ($dataCount >= $nextInd + 1) {
-                    $sourceYear = trim($data[$nextInd++]);
+                    if (!self::checkYearRange($sourceYear, $data[$nextInd++], $record, true)) {
+                        continue;
+                    }
                 }
-
             }
 
             if ($type == AccessDocument::SPT || $type == AccessDocument::STAFF_CREDENTIAL) {
                 // Optionally pop an expiry year if this type supports them
                 if ($dataCount >= $nextInd + 1) {
-                    $expiryYear = trim($data[$nextInd++]);
+                    if (!self::checkYearRange($expiryYear, $data[$nextInd++], $record, false)) {
+                        continue;
+                    }
                 }
             }
 
@@ -569,18 +574,6 @@ class BulkUploader
             if ($dataCount != $nextInd) {
                 $record->status = self::STATUS_FAILED;
                 $record->details = "Unexpected additional data for $type. See the required line format";
-                continue;
-            }
-
-            if (!is_numeric($sourceYear) || $sourceYear > 9999) {
-                $record->status = self::STATUS_FAILED;
-                $record->details = "Expected a year for sourceYear, got $sourceYear";
-                continue;
-            }
-
-            if (!is_numeric($expiryYear) || $expiryYear > 9999) {
-                $record->status = self::STATUS_FAILED;
-                $record->details = "Expected a year for expiryYear, got $expiryYear";
                 continue;
             }
 
@@ -718,14 +711,27 @@ class BulkUploader
         }
     }
 
+    /**
+     * Process provision uploads
+     *
+     * @param $records
+     * @param $type
+     * @param $commit
+     * @param $reason
+     * @return void
+     * @throws UnacceptableConditionException
+     */
+
     public static function processProvisions($records, $type, $commit, $reason): void
     {
         list ($defaultSourceYear, $defaultExpiryYear) = self::defaultYears(true);
 
+        $year = current_year();
+
         $isAllocated = str_starts_with($type, 'alloc_');
         if ($isAllocated) {
             $type = str_replace('alloc_', '', $type);
-
+            $defaultSourceYear = $year;
         }
 
         if (!in_array($type, Provision::ALL_TYPES)) {
@@ -760,7 +766,6 @@ class BulkUploader
 
             $record->status = self::STATUS_SUCCESS;
             $sourceYear = $defaultSourceYear;
-            $expiryYear = $defaultExpiryYear;
 
             $data = $record->data;
             $fieldCount = count($data);
@@ -768,19 +773,46 @@ class BulkUploader
             $itemCount = 0;
             if ($isEventRadio) {
                 if ($fieldCount) {
-                    $itemCount = (int)array_shift($data);
+                    $itemCount = array_shift($data);
+                    if (!is_numeric($itemCount)) {
+                        $record->status = self::STATUS_FAILED;
+                        $record->details = 'Item count is not a number';
+                        continue;
+                    }
+                    $itemCount = (int) $itemCount;
                     $fieldCount--;
                 } else {
                     $itemCount = 1;
                 }
+                $expiryYear = $year;
+            } else {
+                $expiryYear = $defaultExpiryYear;
             }
 
-            if ($fieldCount >= 1) {
-                $sourceYear = (int)$data[0];
+            if ($isAllocated) {
+                if ($fieldCount >= 1) {
+                    $record->status = self::STATUS_FAILED;
+                    $record->details = 'Allocated provisions uploads only take a callsign and no other parameters.';
+                    continue;
+                }
+            } else {
+                if ($fieldCount >= 1) {
+                    if (!self::checkYearRange($sourceYear, $data[0], $record, true)) {
+                        continue;
+                    }
+                }
+
+                if ($fieldCount >= 2) {
+                    if (!self::checkYearRange($expiryYear, $data[1], $record, false)) {
+                        continue;
+                    }
+                }
             }
 
-            if ($fieldCount >= 2) {
-                $expiryYear = (int)$data[1];
+            if ($expiryYear < $sourceYear) {
+                $record->status = self::STATUS_FAILED;
+                $record->details = "Source year [$sourceYear] is after expiry year [$expiryYear]";
+                continue;
             }
 
             if (!$commit) {
@@ -1062,4 +1094,47 @@ class BulkUploader
         }
     }
 
+    /**
+     * Verify the year make sense. Must be a number, and outside of a -/+ 5 year range.
+     *
+     * @param $year
+     * @param $input
+     * @param $record
+     * @param string $label
+     * @return bool
+     */
+
+    public static function checkYearRange(&$year, $input, $record, bool $isSource = false): bool
+    {
+        $label = $isSource ? "Source Year" : "Expiry Year";
+
+        $input = trim($input);
+        if (!is_numeric($input)) {
+            $record->status = self::STATUS_FAILED;
+            $record->details = "$label is not a number";
+            return false;
+        }
+
+        $year = (int)$input;
+        $currentYear = current_year();
+        if ($year < ($currentYear - 5)) {
+            $record->status = self::STATUS_FAILED;
+            $record->details = "$label is more than 5 years in the past";
+            return false;
+        }
+
+        if ($isSource && $year > $currentYear) {
+            $record->status = self::STATUS_FAILED;
+            $record->details = "$label is in the future [$year]";
+            return false;
+        }
+
+        if ($year > ($currentYear + 5)) {
+            $record->status = self::STATUS_FAILED;
+            $record->details = "$label is more than 5 years in the future";
+            return false;
+        }
+
+        return true;
+    }
 }
