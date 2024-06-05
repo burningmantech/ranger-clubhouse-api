@@ -252,7 +252,7 @@ class ProvisionController extends ApiController
      * We don't check expiration here, that's handled elsewhere.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function bankProvisions(): JsonResponse
@@ -282,7 +282,7 @@ class ProvisionController extends ApiController
      * Expire old provisions.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function expireProvisions(): JsonResponse

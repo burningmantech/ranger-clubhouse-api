@@ -84,7 +84,11 @@ class TicketAndProvisionsPackage
 
     public static function buildProvisions(int $personId, &$result): void
     {
-        $provisions = Provision::findForQuery(['person_id' => $personId]);
+        $provisions = Provision::findForQuery([
+            'person_id' => $personId,
+            // Remove below if we decided to have bankable radios again.
+            'exclude_radio' => true
+        ]);
         $result['provision_records'] = $provisions;
 
         $mealMatrix = [];
