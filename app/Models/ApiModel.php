@@ -31,7 +31,6 @@ use RuntimeException;
  * @method static $this whereNotIn(...$args)
  * @method static $this whereYear(...$args)
  */
-
 #[AllowDynamicProperties]
 abstract class ApiModel extends Model
 {
@@ -78,18 +77,23 @@ abstract class ApiModel extends Model
 
     protected $virtualColumns;
 
+    /**
+     * Setup to audit the record before save, after save, and after the record has been deleted.
+     *
+     * @return void
+     */
     public static function boot()
     {
         parent::boot();
-        self::saving(function ($model) {
+        self::saving(function (ApiModel $model) {
             $model->_prepAudit();
         });
 
-        self::saved(function ($model) {
+        self::saved(function (ApiModel $model) {
             $model->_recordAudit(false);
         });
 
-        self::deleted(function ($model) {
+        self::deleted(function (ApiModel $model) {
             $model->_recordAudit(true);
         });
     }
@@ -99,7 +103,7 @@ abstract class ApiModel extends Model
      * before the save happens. Otherwise, the entire record will be logged.
      */
 
-    public function _prepAudit()
+    public function _prepAudit(): void
     {
         if (!$this->auditModel) {
             return;
@@ -135,7 +139,8 @@ abstract class ApiModel extends Model
         return $changes;
     }
 
-    public function getAuditedValues() : array {
+    public function getAuditedValues(): array
+    {
         $data = $this->auditChanges;
         $this->_filterAuditExcluded($data);
         return $data;
@@ -147,7 +152,7 @@ abstract class ApiModel extends Model
      * The changes are logged as the event 'table-name-{create,update}'.
      */
 
-    public function _recordAudit($deleted = false)
+    public function _recordAudit($deleted = false): void
     {
         if (!$this->auditModel) {
             return;
@@ -168,7 +173,7 @@ abstract class ApiModel extends Model
         }
 
         $this->_filterAuditExcluded($data);
-         if (empty($data)) {
+        if (empty($data)) {
             return; // nothing to record, punt.
         }
 
@@ -191,7 +196,7 @@ abstract class ApiModel extends Model
         ActionLog::record($this->auditUserId ?? Auth::user(), $table . '-' . $event, $this->auditReason, $data, $personId);
     }
 
-    public function _filterAuditExcluded(& $data): void
+    public function _filterAuditExcluded(&$data): void
     {
         if (!empty($this->auditExclude)) {
             // exclude any columns
@@ -219,16 +224,16 @@ abstract class ApiModel extends Model
      *
      * @param $options
      * @return bool
-     * @throws ValidationException
      */
 
     public function save($options = []): bool
     {
-        if (!$this->validate()) {
+        if ($this->validateCommon() !== true) {
             return false;
         }
 
         $this->beforeSaveSetup();
+
         return parent::save($options);
     }
 
@@ -242,7 +247,7 @@ abstract class ApiModel extends Model
 
     public function saveOrThrow(array $options = []): void
     {
-        $this->validate(null, true); // throws if validation fails
+        $this->validateOrFail();
         if (!$this->save($options)) {
             throw new RuntimeException("Could not save $this");
         }
@@ -265,12 +270,10 @@ abstract class ApiModel extends Model
      * Validate the object, usually upon create or save.
      *
      * @param null $rules
-     * @param bool $throwOnFailure
-     * @return bool
-     * @throws ValidationException
+     * @return true|\Illuminate\Validation\Validator
      */
 
-    public function validate($rules = null, bool $throwOnFailure = false): bool
+    private function validateCommon($rules = null): true|\Illuminate\Validation\Validator
     {
         if ($rules === null) {
             if ($this->exists) {
@@ -289,18 +292,28 @@ abstract class ApiModel extends Model
         }
 
         $validator = Validator::make($this->getAttributes(), $rules);
-
         if ($validator->fails()) {
             $this->errors = $validator->errors();
-            if ($throwOnFailure) {
-                throw new ValidationException($validator);
-            }
-            return false;
+            return $validator;
         }
 
         return true;
     }
 
+    /**
+     * Validate the object, throw an exception on failure.
+     *
+     * @param null $rules
+     * @throws ValidationException
+     */
+
+    public function validateOrFail($rules = null): void
+    {
+        $result = $this->validateCommon($rules);
+        if ($result !== true) {
+            throw new ValidationException($result);
+        }
+    }
 
     public function getResults()
     {

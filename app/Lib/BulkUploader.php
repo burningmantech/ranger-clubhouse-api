@@ -766,11 +766,12 @@ class BulkUploader
 
             $record->status = self::STATUS_SUCCESS;
             $sourceYear = $defaultSourceYear;
+            $expiryYear = $defaultExpiryYear;
+            $itemCount = 0;
 
             $data = $record->data;
             $fieldCount = count($data);
 
-            $itemCount = 0;
             if ($isEventRadio) {
                 if ($fieldCount) {
                     $itemCount = array_shift($data);
@@ -779,14 +780,11 @@ class BulkUploader
                         $record->details = 'Item count is not a number';
                         continue;
                     }
-                    $itemCount = (int) $itemCount;
+                    $itemCount = (int)$itemCount;
                     $fieldCount--;
                 } else {
                     $itemCount = 1;
                 }
-                $expiryYear = $year;
-            } else {
-                $expiryYear = $defaultExpiryYear;
             }
 
             if ($isAllocated) {
