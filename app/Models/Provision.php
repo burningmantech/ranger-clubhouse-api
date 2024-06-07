@@ -152,7 +152,6 @@ class Provision extends ApiModel
      *
      * @param $options
      * @return bool
-     * @throws ValidationException
      */
 
     public function save($options = []): bool

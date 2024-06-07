@@ -5,9 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Validation\ValidationException;
 
 class PersonMessage extends ApiModel
 {
@@ -131,25 +129,16 @@ class PersonMessage extends ApiModel
      * - make sure the recipient & sender callsigns are present
      * - setup appropriate fields based on the callsigns
      *
-     * @param array $rules array to override class $rules
+     * @param array $options
      * @return bool  true if model is valid
-     * @throws ValidationException
      */
 
-    public function validate($rules = null, $throwOnFailure = false): bool
+    public function save($options = []): bool
     {
-        if (!parent::validate($rules, $throwOnFailure)) {
-            return false;
-        }
-
         if (!$this->exists) {
-            /* Find callsigns and verify contents */
-
+            // Find callsigns and verify contents
             $recipient = Person::findByCallsign($this->recipient_callsign);
             if (!$recipient) {
-                if ($throwOnFailure) {
-                    throw new ModelNotFoundException("Callsign $this->recipient_callsign does not exist");
-                }
                 $this->addError('recipient_callsign', 'Callsign does not exist');
                 return false;
             }
@@ -162,7 +151,7 @@ class PersonMessage extends ApiModel
             $this->person_id = $recipient->id;
         }
 
-        return true;
+        return parent::save();
     }
 
     /**
