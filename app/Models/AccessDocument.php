@@ -658,7 +658,7 @@ class AccessDocument extends ApiModel
 
     public function isRegularTicket(): bool
     {
-        return in_array($this->type, self::TICKET_TYPES);
+        return in_array($this->type, self::REGULAR_TICKET_TYPES);
     }
 
     /**
