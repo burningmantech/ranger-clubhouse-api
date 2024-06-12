@@ -161,6 +161,7 @@ class BulkUploader
         'signed_motorpool_agreement' => self::CHANGE_EVENT_COLUMN_ACTION,
         'may_request_stickers' => self::CHANGE_EVENT_COLUMN_ACTION,
         'sandman_affidavit' => self::CHANGE_EVENT_COLUMN_ACTION,
+        'mvr_eligible' => self::CHANGE_EVENT_COLUMN_ACTION,
 
         'active' => self::CHANGE_PERSON_STATUS_ACTION,
         'alpha' => self::CHANGE_PERSON_STATUS_ACTION,
@@ -182,6 +183,7 @@ class BulkUploader
         'tickets' => self::PROCESS_TICKETS_ACTION,
 
         'wap' => self::PROCESS_WAP_ACTION,
+        'sap' => self::PROCESS_WAP_ACTION,
 
         'team_membership' => self::PROCESS_TEAM_MEMBERSHIP,
     ];
