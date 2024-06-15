@@ -20,7 +20,7 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Build and email a Rangers Who Need WAPs Report';
+    protected $description = 'Build and email a Rangers Who Need SAPs Report';
 
     /**
      * Execute the console command.

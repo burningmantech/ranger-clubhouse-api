@@ -514,7 +514,7 @@ class Setting extends ApiModel
         ],
 
         'TAS_WAP_Report_Email' => [
-            'description' => 'Email address(es) to send nightly WAPS Needed Report to',
+            'description' => 'Email address(es) to send nightly SAPs Needed Report to',
             'type' => self::TYPE_EMAIL
         ],
 

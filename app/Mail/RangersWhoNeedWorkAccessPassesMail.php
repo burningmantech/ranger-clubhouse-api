@@ -21,6 +21,6 @@ class RangersWhoNeedWorkAccessPassesMail extends ClubhouseMailable
      */
     public function build()
     {
-        return $this->subject('Ranger WAP Candidates ' . date('Y-m-d'))->view('emails.rangers-who-need-waps');
+        return $this->subject('Ranger SAP Candidates ' . date('Y-m-d'))->view('emails.rangers-who-need-waps');
     }
 }
