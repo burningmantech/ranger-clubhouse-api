@@ -1,9 +1,9 @@
 <x-html-email>
-    <h2>Ranger WAP Report for {{date('Y-m-d')}}</h2>
+    <h2>Ranger SAP Report for {{date('Y-m-d')}}</h2>
     @if (empty($people))
-        No Rangers found who may need WAPs.
+        No Rangers found who may need SAPs.
     @else
-        The following Rangers may need WAPs:
+        The following Rangers may need SAPs:
         <table class="table table-sm table-striped">
             <thead>
             <tr>
