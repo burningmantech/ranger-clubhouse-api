@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Models\AccessDocument;
+use App\Models\Person;
 use Illuminate\Support\Facades\DB;
 
 
@@ -87,6 +88,9 @@ class TicketingManagement
 
             foreach ($tickets as $row) {
                 $errors = [];
+                if ($holder->status == Person::DECEASED || $holder->status == Person::DISMISSED) {
+                    continue;
+                }
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                     case AccessDocument::WAP:
