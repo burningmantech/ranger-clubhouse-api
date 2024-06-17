@@ -424,7 +424,7 @@ class AccessDocumentController extends ApiController
      * Staff Credential.  Ignores SCs that already have dates.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function setStaffCredentialsAccessDate(): JsonResponse
@@ -437,7 +437,10 @@ class AccessDocumentController extends ApiController
 
         $rows = AccessDocument::where('type', AccessDocument::STAFF_CREDENTIAL)
             ->whereIn('status', [AccessDocument::BANKED, AccessDocument::CLAIMED, AccessDocument::QUALIFIED])
-            ->whereNull('access_date')
+            ->where(function ($w) {
+                $w->whereNull('access_date');
+                $w->orWhereYear('access_date', '!=', current_year());
+            })
             ->where('access_any_time', false)
             ->with('person:id,callsign,status')
             ->get();
