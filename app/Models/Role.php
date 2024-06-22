@@ -48,6 +48,11 @@ class Role extends ApiModel
 
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
+    const int ROLE_BASE_MASK = 0xf000;
+    const int POSITION_MASK = 0x0fff;
+
+    const int ART_TRAINER_BASE = 0x1000;
+    const int SURVEY_MANAGEMENT_BASE = 0x2000;
 
     protected function casts(): array
     {
@@ -71,6 +76,8 @@ class Role extends ApiModel
 
         self::deleted(function ($model) {
             PersonRole::where('role_id', $model->id)->delete();
+            TeamRole::where('role_id', $model->id)->delete();
+            PositionRole::where('role_id', $model->id)->delete();
         });
     }
 

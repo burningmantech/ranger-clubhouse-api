@@ -463,7 +463,7 @@ class PersonScheduleController extends ApiController
 
         if ($slot->isTraining()) {
             if ($slot->isArt()) {
-                $roleCanForce = Role::ART_TRAINER;
+                $roleCanForce = [Role::ART_TRAINER, Role::ART_TRAINER_BASE | $slot->position_id];
                 $isTrainer = true;
             } else if ($isSignup) {
                 /*

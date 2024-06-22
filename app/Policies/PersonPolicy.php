@@ -13,7 +13,6 @@ class PersonPolicy
 
     const array AUTHORIZED_ROLES = [
         Role::ADMIN,
-        Role::ART_TRAINER,
         Role::MANAGE,
         Role::MENTOR,
         Role::TRAINER,
@@ -41,7 +40,7 @@ class PersonPolicy
 
     public function search(Person $user): bool
     {
-        return $user->hasRole(self::AUTHORIZED_ROLES);
+        return $user->hasRole(self::AUTHORIZED_ROLES) || $user->hasARTTrainerPositionRole();
     }
 
     /**
@@ -66,8 +65,9 @@ class PersonPolicy
     public function view(Person $user, Person $person): bool
     {
         return (
-            $person->id == $user->id ||
-            $user->hasRole(self::AUTHORIZED_ROLES)
+            $person->id == $user->id
+            || $user->hasRole(self::AUTHORIZED_ROLES)
+            || $user->hasARTTrainerPositionRole()
         );
     }
 
@@ -101,7 +101,7 @@ class PersonPolicy
             return true;
         }
 
-        return $user->hasRole(self::AUTHORIZED_ROLES);
+        return $user->hasRole(self::AUTHORIZED_ROLES) || $user->hasARTTrainerPositionRole();
     }
 
     /**

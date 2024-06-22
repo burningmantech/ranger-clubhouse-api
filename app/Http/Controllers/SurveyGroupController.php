@@ -2,15 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SurveyGroup;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-
-use Illuminate\Support\Facades\DB;
-
-use App\Models\SurveyGroup;
-
-use App\Http\Controllers\ApiController;
-use Illuminate\Validation\ValidationException;
 
 class SurveyGroupController extends ApiController
 {
@@ -36,7 +30,6 @@ class SurveyGroupController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function store(): JsonResponse
@@ -56,6 +49,7 @@ class SurveyGroupController extends ApiController
      * Show a survey group
      *
      * SurveyGroup $surveyGroup
+     * @param SurveyGroup $surveyGroup
      * @return JsonResponse
      * @throws AuthorizationException
      */
@@ -73,7 +67,6 @@ class SurveyGroupController extends ApiController
      * @param SurveyGroup $surveyGroup
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function update(SurveyGroup $surveyGroup): JsonResponse

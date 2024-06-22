@@ -13,7 +13,7 @@ class TrainingSessionPolicy
 
     public function before($user)
     {
-        if ($user->hasRole([ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ])) {
+        if ($user->hasRole([Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC])) {
             return true;
         }
     }
@@ -72,7 +72,8 @@ class TrainingSessionPolicy
         return $this->checkForArt($user, $training_session);
     }
 
-    private function checkForArt(Person $user, TrainingSession $training_session) {
-        return ($training_session->isArt() && $user->hasRole(Role::ART_TRAINER));
+    private function checkForArt(Person $user, TrainingSession $training_session)
+    {
+        return ($training_session->isArt() && ($user->hasRole(Role::ART_TRAINER) || $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id)));
     }
 }

@@ -66,7 +66,7 @@ class SurveyPolicy
 
     public function report(Person $user, Survey $survey, int $trainerId): bool
     {
-        return ($user->hasRole(($survey->position_id == Position::TRAINING) ? Role::TRAINER : Role::ART_TRAINER));
+        return ($survey->position_id == Position::TRAINING ? $user->hasRole(Role::TRAINER) : $user->hasARTTrainerPositionRole());
     }
 
     /**

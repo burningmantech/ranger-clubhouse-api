@@ -42,8 +42,9 @@ class PersonPhotoPolicy
     public function photo(Person $user, Person $person): bool
     {
         return (
-            $person->id == $user->id ||
-            $user->hasRole([Role::MANAGE, Role::MENTOR, Role::TRAINER, Role::ART_TRAINER])
+            $person->id == $user->id
+            || $user->hasRole([Role::MANAGE, Role::MENTOR, Role::TRAINER])
+            || $user->hasARTTrainerPositionRole()
         );
     }
 
