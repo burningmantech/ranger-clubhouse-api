@@ -33,6 +33,18 @@ class UserInfo
 
         $timesheet = Timesheet::findPersonOnDuty($personId);
 
+        // TODO: be sure to call $person->retrieveRoles() when the ART_TRAINER check is removed from the above.
+        $arts = [];
+        foreach ($person->roles as $role) {
+            if (($role & Role::ROLE_BASE_MASK) == Role::ART_TRAINER_BASE) {
+                $positionId = $role & Role::POSITION_MASK;
+                $arts[] = [
+                    'id' => $positionId,
+                    'title' => Position::retrieveTitle($positionId)
+                ];
+            }
+        }
+
         $data = [
             'id' => $personId,
             'callsign' => $person->callsign,
@@ -77,8 +89,8 @@ class UserInfo
          * a specific set instead of everything for all ART_TRAINERs.
          */
 
-        if ($isArtTrainer) {
-            $data['teacher']['arts'] = Position::findAllTrainings(true);
+        if (!empty($arts) || $isArtTrainer) {
+            $data['teacher']['arts'] = empty($arts) ? Position::findAllTrainings(true) : $arts;
         }
 
         return $data;

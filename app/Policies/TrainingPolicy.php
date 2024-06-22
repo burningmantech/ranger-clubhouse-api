@@ -12,21 +12,23 @@ class TrainingPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?true
     {
         if ($user->hasRole([ Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC ])) {
             return true;
         }
+
+        return null;
     }
 
     /**
      * Can a user see the training and associated reports?
      */
 
-    public function show(Person $user, Training $training)
+    public function show(Person $user, Training $training): bool
     {
         if ($training->is_art) {
-            return $user->hasRole(Role::ART_TRAINER);
+            return $user->hasARTTrainerPositionRole();
         }
         return false;
     }

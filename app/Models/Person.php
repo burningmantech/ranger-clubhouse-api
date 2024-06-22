@@ -1068,6 +1068,27 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         return false;
     }
 
+    /**
+     * Does the person have one of the ART Trainer position specific roles?
+     *
+     * @return bool
+     */
+
+    public function hasARTTrainerPositionRole() : bool
+    {
+        // TODO: Remove the ART_TRAINER check when the role is deprecated.
+        if ($this->hasRole(Role::ART_TRAINER)) {
+            return true;
+        }
+
+        foreach ($this->roles as $role) {
+            if (($role & ~Role::POSITION_MASK) == Role::ART_TRAINER_BASE) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * Is the person an Admin?
