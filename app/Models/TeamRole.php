@@ -15,6 +15,7 @@ class TeamRole extends ApiModel
     protected $table = 'team_role';
     protected $increments = false;
     protected $primaryKey = ['team_id', 'role_id'];
+    protected bool $auditModel = true;
 
     /**
      * Find all team roles for a given team.

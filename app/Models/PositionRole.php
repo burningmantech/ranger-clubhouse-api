@@ -20,6 +20,7 @@ class PositionRole extends ApiModel
     protected $primaryKey = ['position_id', 'role_id'];
 
     protected $increments = false;
+    protected bool $auditModel = true;
 
     /**
      * Find all rows for the given position
