@@ -173,8 +173,8 @@ class ActionLog extends Model
                 continue;
             }
 
-            if (isset($data['slot_id'])) {
-                $row->slot = Slot::where('id', $data['slot_id'])->with('position:id,title')->first();
+            if (isset($data['slot_id']) || $row->event == 'slot-update' || $row->event == 'slot-create') {
+                $row->slot = Slot::where('id', $data['slot_id'] ?? $data['id'])->with('position:id,title')->first();
             }
 
             if (isset($data['enrolled_slot_ids']) && is_array($data['enrolled_slot_ids'])) {
@@ -185,20 +185,20 @@ class ActionLog extends Model
                 $row->positions = Position::whereIn('id', $data['position_ids'])->orderBy('title')->get(['id', 'title']);
             }
 
-            if (isset($data['position_id'])) {
-                $row->position = Position::where('id', $data['position_id'])->first();
+            if (isset($data['position_id']) || $row->event == 'position-update' || $row->event == 'position-create') {
+                $row->position = Position::where('id', $data['position_id'] ?? $data['id'])->first();
             }
 
             if (isset($data['role_ids']) && is_array($data['role_ids'])) {
                 $row->roles = Role::whereIn('id', array_values($data['role_ids']))->orderBy('title')->get(['id', 'title']);
             }
 
-            if (isset($data['role_id'])) {
-                $row->role = Role::select('id', 'title')->where('id', $data['role_id'])->first();
+            if (isset($data['role_id']) || $row->event == 'role-update' || $row->event == 'role-create') {
+                $row->role = Role::select('id', 'title')->where('id', $data['role_id'] ?? $data['id'])->first();
             }
 
-            if (isset($data['team_id'])) {
-                $row->team = Team::select('id', 'title')->where('id', $data['team_id'])->first();
+            if (isset($data['team_id']) || $row->event == 'team-update' || $row->event == 'team-create') {
+                $row->team = Team::select('id', 'title')->where('id', $data['team_id'] ?? $data['id'])->first();
             }
 
             if ($redactData) {
