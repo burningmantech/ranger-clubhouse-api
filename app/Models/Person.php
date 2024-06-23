@@ -913,9 +913,16 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
         $roleIds = [];
         $year = current_year();
+        $trainedPositions = [];
         foreach ($positionRoles as $pos) {
             if ($pos->require_training_for_roles) {
-                if ($pos->training_position_id && Training::didPersonPassForYear($this, $pos->training_position_id, $year)) {
+                if (!$pos->training_position_id) {
+                    continue;
+                }
+                if (!isset($trainedPositions[$pos->training_position_id])) {
+                    $trainedPositions[$pos->training_position_id] = Training::didPersonPassForYear($this, $pos->training_position_id, $year);
+                }
+                if ($trainedPositions[$pos->training_position_id]) {
                     // Person has passed the appropriate ART, grant the roles.
                     $roleIds[] = $pos->role_id;
                 }
@@ -1074,7 +1081,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * @return bool
      */
 
-    public function hasARTTrainerPositionRole() : bool
+    public function hasARTTrainerPositionRole(): bool
     {
         // TODO: Remove the ART_TRAINER check when the role is deprecated.
         if ($this->hasRole(Role::ART_TRAINER)) {
