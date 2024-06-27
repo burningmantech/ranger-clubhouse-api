@@ -171,9 +171,7 @@ class Schedule
             $entry->slot_max = ($entry->trainer_slot_id ? $entry->trainer_count * $entry->slot_max_potential : $entry->slot_max_potential);
             $entry->slot_signed_up = $row->signed_up;
 
-            if ($row->parent_signup_slot) {
-                $entry->slot_signed_up += $row->parent_signup_slot->signed_up;
-            } else if ($row->child_signup_slot) {
+            if ($row->child_signup_slot) {
                 $entry->slot_signed_up += $row->child_signup_slot->signed_up;
             }
         }
@@ -263,28 +261,36 @@ class Schedule
 
             $signUps = $updateSlot->signed_up;
             if ($updateSlot->parent_signup_slot) {
-                if ($signUps >= $updateSlot->max && !$force) {
-                    throw new ScheduleSignUpException(self::FULL);
+                if ($signUps >= $updateSlot->max) {
+                    if (!$force) {
+                        throw new ScheduleSignUpException(self::FULL);
+                    }
+                    $isOvercapacity = true;
+                } else if (($signUps + $updateSlot->parent_signup_slot->signed_up) >= $updateSlot->parent_signup_slot->max) {
+                    if (!$force) {
+                        throw new ScheduleSignUpException(self::FULL);
+                    }
+                    $isOvercapacity = true;
                 }
-                $signUps += $updateSlot->parent_signup_slot->signed_up;
-                $max = $updateSlot->parent_signup_slot->max;
-            } else if ($updateSlot->child_signup_slot) {
-                $signUps += $updateSlot->child_signup_slot->signed_up;
-                $max = $updateSlot->max;
-            } else if ($slot->trainer_slot_id) {
-                $max = $updateSlot->max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
             } else {
-                $max = $updateSlot->max;
-            }
-
-            // Cannot exceed sign up limit unless it is forced.
-            if ($signUps >= $max) {
-                if (!$force) {
-                    throw new ScheduleSignUpException(self::FULL);
+                if ($updateSlot->child_signup_slot) {
+                    $signUps += $updateSlot->child_signup_slot->signed_up;
+                    $max = $updateSlot->max;
+                } else if ($slot->trainer_slot_id) {
+                    $max = $updateSlot->max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
+                } else {
+                    $max = $updateSlot->max;
                 }
+                // Cannot exceed sign up limit unless it is forced.
+                if ($signUps >= $max) {
+                    if (!$force) {
+                        throw new ScheduleSignUpException(self::FULL);
+                    }
 
-                $isOvercapacity = true;
+                    $isOvercapacity = true;
+                }
             }
+
 
             // Sign up the person
             PersonSlot::create(['person_id' => $personId, 'slot_id' => $updateSlot->id]);
