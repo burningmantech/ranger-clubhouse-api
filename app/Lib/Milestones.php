@@ -111,6 +111,7 @@ class Milestones
             case Person::BONKED:
                 $milestones['alpha_shift_prep_link'] = $settings['OnboardAlphaShiftPrepLink'];
                 $milestones['alpha_shifts_available'] = $haveAlphaShifts = Slot::haveActiveForPosition(Position::ALPHA);
+                $milestones['alpha_shift_publish_date'] = Carbon::parse("second Wednesday of July")->format('Y-m-d');
                 if ($haveAlphaShifts) {
                     $alphaShift = Schedule::findEnrolledSlots($personId, $year, Position::ALPHA)->last();
                     if ($alphaShift) {
