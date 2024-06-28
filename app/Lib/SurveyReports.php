@@ -84,7 +84,7 @@ class SurveyReports
 
     public static function retrieveAlphaSurvey(int $year, int $personId): array
     {
-        if (Timesheet::hasAlphaEntry($personId, $year)) {
+        if (!Timesheet::hasAlphaEntry($personId, $year)) {
             throw new InvalidArgumentException("Person was not an alpha in the given year");
         }
 
