@@ -91,7 +91,6 @@ class SurveyReports
         $survey = Survey::findForTypePositionYear(Survey::ALPHA, Position::ALPHA, $year);
         $mentors = PersonMentor::where('mentor_year', $year)
             ->where('person_id', $personId)
-            ->where('status', PersonMentor::PASS)
             ->with(['mentor:id,callsign,person_photo_id', 'mentor.person_photo'])
             ->get()
             ->map(function ($t) {
