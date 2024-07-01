@@ -237,7 +237,7 @@ class Milestones
                     ->where('person_slot.person_id', $personId);
             })
             ->where('slot.begins_year', $year)
-            ->where('slot.position_id', Position::TRAINING)
+            ->whereIn('slot.position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
             ->where('slot.active', true)
             ->exists();
 
