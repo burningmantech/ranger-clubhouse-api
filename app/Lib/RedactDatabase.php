@@ -64,6 +64,8 @@ class RedactDatabase
                 'email' => DB::raw("concat(substring(callsign_normalized, 1, 34), '-', id, '@nomail.none')"),
             ]);
 
+        self::setupWESLTraining();
+
         // Zap training notes
         DB::table('trainee_status')->update(['notes' => '', 'rank' => null]);
 
@@ -99,6 +101,8 @@ class RedactDatabase
             'prospective_application',
             'prospective_application_log',
             'prospective_application_note',
+            'survey',
+            'survey_question',
             'survey_answer',
             'telescope_entries',
             'telescope_entries_tags',
@@ -197,5 +201,31 @@ class RedactDatabase
             $setting->value = $value;
             $setting->saveWithoutValidation();
         }
+    }
+
+    /**
+     * Setup WESL training data
+     *
+     * @return void
+     */
+
+    public static function setupWESLTraining(): void
+    {
+        self::updatePerson(
+            'Safety Phil',
+            ['camp_location' => 'DPW Ghetto']
+        );
+
+        self::updatePerson(
+            'keeper',
+            ['emergency_contact' => "Morticia Addams (Mother), Gomez Addams (Father)\nPhone: +1-415-865-3800"]
+        );
+    }
+
+    public static function updatePerson(string $callsign, array $data): void
+    {
+        DB::table('person')
+            ->where('callsign_normalized', Person::normalizeCallsign($callsign))
+            ->update($data);
     }
 }
