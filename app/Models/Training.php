@@ -157,6 +157,10 @@ class Training extends Position
                     $info->unqualified_reason = $unqualifiedReason;
                     $info->unqualified_message = Position::UNQUALIFIED_MESSAGES[$unqualifiedReason];
                 }
+            } else if ($person->status == Person::RETIRED && $positionId != Position::CHEETAH_CUB && $position->type != Position::TYPE_TRAINING) {
+                $info->is_unqualified = true;
+                $info->unqualified_reason = Position::UNQUALIFIED_IS_RETIRED;
+                $info->unqualified_message = Position::UNQUALIFIED_MESSAGES[Position::UNQUALIFIED_IS_RETIRED];
             }
 
             /*
