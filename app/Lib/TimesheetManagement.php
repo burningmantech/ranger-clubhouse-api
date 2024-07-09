@@ -73,15 +73,29 @@ class TimesheetManagement
 
         $position = Position::find($positionId);
         if ($position->not_timesheet_eligible) {
-            $response = [ 'status' => 'position-not-eligible' ];
+            $response = ['status' => 'position-not-eligible'];
             return false;
         }
+
+        if ($person->status == Person::RETIRED
+            && $position->type != Position::TYPE_TRAINING
+            && $position->id != Position::CHEETAH_CUB) {
+            if (!$canForceSignon) {
+                $response = ['status' => 'is-retired'];
+                return false;
+            }
+
+            $signonForced = true;
+            $unqualifiedReason = Position::UNQUALIFIED_IS_RETIRED;
+        }
+
+
         // Are they trained for this position?
         if (!$position->no_training_required && !Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
             $positionRequired = Position::retrieveTitle($requiredPositionId);
             if ($canForceSignon) {
                 $signonForced = true;
-                $unqualifiedReason =  Position::UNQUALIFIED_UNTRAINED;
+                $unqualifiedReason = Position::UNQUALIFIED_UNTRAINED;
             } else {
                 $response = [
                     'status' => 'not-trained',
@@ -110,7 +124,7 @@ class TimesheetManagement
             if ($canForceSignon) {
                 $signonForced = true;
             } else {
-                 $response = [
+                $response = [
                     'status' => 'not-qualified',
                     'unqualified_reason' => $unqualifiedReason,
                     'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason],
@@ -146,7 +160,7 @@ class TimesheetManagement
             'timesheet_id' => $timesheet->id,
             'on_duty' => (string)$timesheet->on_duty,
             'slot_url' => $timesheet->slot?->url,
-            'position_title'=> $timesheet->position->title,
+            'position_title' => $timesheet->position->title,
         ];
 
         if ($signonForced) {

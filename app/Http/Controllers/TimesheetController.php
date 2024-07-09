@@ -383,12 +383,12 @@ class TimesheetController extends ApiController
      * Start a shift for a person
      *
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
 
     public function signin(): JsonResponse
     {
-        $this->authorize('signin', [Timesheet::class]);
+        $this->authorize('signin', Timesheet::class);
 
         $params = request()->validate([
             'person_id' => 'required|integer|exists:person,id',

@@ -263,10 +263,14 @@ class Position extends ApiModel
     // Person has not completed dirt training or ART as required by the position
     const string UNQUALIFIED_UNTRAINED = 'untrained';
 
+    // Person is retired is attempting to work a shift before walking a cheetah cub shift.
+    const string UNQUALIFIED_IS_RETIRED = 'is-retired';
+
     const array UNQUALIFIED_MESSAGES = [
         self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT => 'Sandman Affidavit not signed',
         self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'No Burn Perimeter, nor Sandman, shift has been worked within the last ' . self::SANDMAN_YEAR_CUTOFF . ' years',
         self::UNQUALIFIED_UNTRAINED => 'Training not completed.',
+        self::UNQUALIFIED_IS_RETIRED => 'Person is retired and and must complete a Cheetah Cub shift first before being allowed to being allowed to check into a non-training shift.',
     ];
 
     const array SANDMAN_QUALIFIED_POSITIONS = [
