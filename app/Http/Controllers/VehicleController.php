@@ -177,10 +177,10 @@ class VehicleController extends ApiController
                 $info['motorpool_agreement_tag'] = Document::MOTORPOOL_POLICY_TAG;
             }
 
+            $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
+            $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
             if (PVR::isEligible($personId, $event, $year)) {
                 $info['pvr_eligible'] = true;
-                $info['personal_vehicle_document_url'] = setting('RangerPersonalVehiclePolicyUrl');
-                $info['personal_vehicle_agreement_tag'] = Document::PERSONAL_VEHICLE_AGREEMENT_TAG;
             } else {
                 $info['pvr_eligible'] = false;
             }
