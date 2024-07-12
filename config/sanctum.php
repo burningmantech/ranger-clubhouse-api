@@ -48,6 +48,8 @@ return [
     */
 
     'expiration' => (30*24*60),
+    // On the training server only provide a 12 hour session since the server's database is reloaded every morning.
+    'training_server_expiration' => (12*60),
 
     /*
     |--------------------------------------------------------------------------

@@ -124,7 +124,7 @@ class UserAuthentication
             $payload = [
                 'access_token' => $token,
                 'token_type' => 'bearer',
-                'expires_in' => config('sanctum.expiration') * 60,
+                'expires_in' => (config('clubhouse.DeploymentEnvironment') == 'Training' ? config('sanctum.training_server_expiration') : config('sanctum.expiration')) * 60,
                 'person_id' => $person->id,
             ];
         }
