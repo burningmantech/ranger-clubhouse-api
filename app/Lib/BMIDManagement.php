@@ -448,7 +448,7 @@ class BMIDManagement
                 break;
         }
 
-        return BMID::findForPersonIds($year, $ids);
+        return BMID::findForPersonIds($year, $ids, ($year == current_year()));
     }
 
     /**

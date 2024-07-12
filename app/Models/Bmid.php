@@ -225,7 +225,7 @@ class Bmid extends ApiModel
         return $rows[0];
     }
 
-    public static function findForPersonIds($year, $personIds)
+    public static function findForPersonIds($year, $personIds, $excludeDeparted = false)
     {
         if (empty($personIds)) {
             return [];
@@ -250,6 +250,10 @@ class Bmid extends ApiModel
         }
 
         self::bulkLoadRelationships($bmids, $personIds);
+
+        if ($excludeDeparted) {
+            $bmids = $bmids->whereNotIn('person.status', [Person::DECEASED, Person::DISMISSED, Person::RESIGNED]);
+        }
 
         $bmids = $bmids->sortBy(
             fn($bmid, $key) => ($bmid->person ? $bmid->person->callsign : ""),
@@ -297,7 +301,7 @@ class Bmid extends ApiModel
         $ids = DB::table('person')
             ->select('id')
             ->whereIntegerInRaw('id', $personIds)
-            ->whereRaw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE person.id=person_slot.person_id AND YEAR(slot.begins)=$year LIMIT 1)")
+            ->whereRaw("EXISTS (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id WHERE person.id=person_slot.person_id AND slot.begins_year=$year LIMIT 1)")
             ->get()
             ->pluck('id');
 
