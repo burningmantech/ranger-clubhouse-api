@@ -236,7 +236,9 @@ class TimesheetController extends ApiController
         if (!Gate::allows('isTimesheetManager')
             && $timesheet->isDirty('review_status')) {
             $status = $timesheet->review_status;
-            if ($status != Timesheet::STATUS_UNVERIFIED && $status != Timesheet::STATUS_VERIFIED) {
+            if ($status != Timesheet::STATUS_UNVERIFIED
+                && $status != Timesheet::STATUS_VERIFIED
+                && $status != Timesheet::STATUS_PENDING) {
                 $timesheet->addError('review_status', 'Unauthorized status.');
                 return $this->restError($timesheet);
             }
