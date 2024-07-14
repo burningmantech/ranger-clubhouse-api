@@ -321,7 +321,7 @@ class Bmid extends ApiModel
 
         $ticketIds = DB::table('access_document')
             ->whereIntegerInRaw('person_id', $personIds)
-            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL, AccessDocument::WAP])
             ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->get()
             ->groupBy('person_id');
