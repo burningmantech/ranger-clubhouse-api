@@ -243,7 +243,7 @@ class Milestones
 
         $haveTicket = DB::table('access_document')
             ->where('person_id', $personId)
-            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL])
+            ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL, AccessDocument::WAP])
             ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
             ->exists();
 
