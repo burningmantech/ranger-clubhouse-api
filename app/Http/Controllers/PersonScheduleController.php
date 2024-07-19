@@ -169,12 +169,15 @@ class PersonScheduleController extends ApiController
             return response()->json($result);
         }
 
+        /*
+        Per July 18th, 2024 timecard conversion - allow people to signup.
         if ($slot->position->paycode && is_null($person->employee_id)) {
             return response()->json([
                 'status' => Schedule::NO_EMPLOYEE_ID,
                 'signed_up' => $slot->signed_up,
             ]);
         }
+        */
 
         // Go try to add the person to the slot/session
         $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
