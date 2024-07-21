@@ -47,12 +47,12 @@ return [
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
             // Symphony Mailer 7.x has a bug where a TLS connection is attempted
-            // regardless of how the tls flag is set. auto_tls has to be explicitly set to false so
-            // TLS negotiation is disabled.
+            // regardless of how the encryption & port config parameters are set. auto_tls has to
+            // be explicitly set to false so TLS negotiation is disabled if no encryption is enabled.
             // On the playa, a local outbound only mail server is used to send mail. It doesn't make
             // any sense to use a encrypted connection when mail server is isolated in a docker instance.
             // Plus setting up a SSL certificate would be a real PITA.
-            'auto_tls' => env('RANGER_CLUBHOUSE_SMTP_PORT') != 25,
+            'auto_tls' => env('MAIL_ENCRYPTION', 'tls') == 'tls',
         ],
 
         'ses' => [
