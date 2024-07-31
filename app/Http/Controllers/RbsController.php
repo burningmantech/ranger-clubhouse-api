@@ -225,8 +225,8 @@ class RbsController extends ApiController
         }
 
         $haveGeneral = $this->userHasRole(Role::MEGAPHONE);
-        $haveEmergency = $this->userHasRole(Role::MEGAPHONE_EMERGENCY_ONPLAYA);
-        $ctmOnly = !$haveEmergency && !$haveGeneral;
+        // $haveEmergency = $this->userHasRole(Role::MEGAPHONE_EMERGENCY_ONPLAYA);
+        $ctmOnly = /*!$haveEmergency &&*/ !$haveGeneral;
 
         // Return positions needing more people
         if (isset($attrs['has_muster_position'])) {
