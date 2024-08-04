@@ -130,6 +130,13 @@ class GroundHogDay
         self::passHQTraining("hqworkertest@nomail.none", $year);
         self::passHQTraining("hqshorttest@nomail.none", $year);
         self::passHQTraining("hqleadtest@nomail.none", $year);
+
+        $hqPassword = env('RANGER_CLUBHOUSE_HQ_TRAINING_PASSWORD');
+        if (!empty($hqPassword)) {
+            self::setPassword("hqworkertest@nomail.none", $hqPassword);
+            self::setPassword("hqshorttest@nomail.none", $hqPassword);
+            self::setPassword("hqleadtest@nomail.none", $hqPassword);
+        }
     }
 
     /**
@@ -138,6 +145,7 @@ class GroundHogDay
      * @param Carbon|string $dt
      * @return string
      */
+
     public static function trainingDatabaseDumpName(Carbon|string $dt): string
     {
         $date = Carbon::parse($dt)->format('Y-m-d');
@@ -306,5 +314,23 @@ class GroundHogDay
             $mentor->off_duty = null;
             $mentor->saveWithoutValidation();
         }
+    }
+
+    /**
+     * Set the password on an account.
+     *
+     * @param string $email
+     * @param string $password
+     * @return void
+     */
+
+    public static function setPassword(string $email, string $password): void
+    {
+        $person = Person::findByEmail($email);
+        if (!$person) {
+            error_log("* Cannot find " . $email . " to change the password");
+            return;
+        }
+        $person->changePassword($password);
     }
 }
