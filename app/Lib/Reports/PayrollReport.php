@@ -7,6 +7,9 @@ use Carbon\Carbon;
 
 class PayrollReport
 {
+    const int DO_NOT_MEAL_BREAK_HOURS = 6;
+    const int DO_NOT_MEAL_BREAK_SECONDS = self::DO_NOT_MEAL_BREAK_HOURS * 3600;
+
     public static function execute(string $startTime,
                                    string $endTime,
                                    int    $breakAfterHours,
@@ -80,12 +83,12 @@ class PayrollReport
                 }
 
                 if ($startTime->gt($onDuty)) {
-                    $notes[] = 'Truncated start time - orig. ' . self::formatDt($onDuty);
+                    $notes[] = 'Truncated start time. Orig was ' . self::formatShiftTime($onDuty);
                     $onDuty = $startTime;
                 }
 
                 if ($offDuty->gt($endTime)) {
-                    $notes[] = 'Truncated end time - orig. ' . self::formatDt($offDuty);
+                    $notes[] = 'Truncated end time. Orig was ' . self::formatShiftTime($offDuty);
                     $offDuty = $endTime;
                 }
 
@@ -97,9 +100,15 @@ class PayrollReport
                 if ($entry->position->no_payroll_hours_adjustment) {
                     array_unshift($notes, 'Position set to not adjust hours.');
                 } else if ($breakAfterHours) {
-                    $hoursRoundedDown = (int)floor($durationSeconds / 3600);
-                    if ($hoursRoundedDown > $breakAfterHours) {
-                        $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $durationSeconds, $breakAfterHours, $breakDuration);
+                    if ($durationSeconds < self::DO_NOT_MEAL_BREAK_SECONDS) {
+                        if ($durationSeconds > ($breakAfterHours * 3600)) {
+                            $notes[] = 'Duration is less than ' . self::DO_NOT_MEAL_BREAK_HOURS . ' hours. No meal break inserted.';
+                        }
+                    } else {
+                        $hoursRoundedDown = (int)floor($durationSeconds / 3600);
+                        if ($hoursRoundedDown > $breakAfterHours) {
+                            $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $durationSeconds, $breakAfterHours, $breakDuration);
+                        }
                     }
                 }
 
@@ -160,5 +169,10 @@ class PayrollReport
     public static function formatDt(Carbon $dt): string
     {
         return $dt->format('Y-m-d G:i');
+    }
+
+    public static function formatShiftTime(Carbon $dt): string
+    {
+        return $dt->format('D M d @ G:i');
     }
 }
