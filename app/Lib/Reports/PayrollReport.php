@@ -93,6 +93,13 @@ class PayrollReport
                 }
 
                 $durationSeconds = $onDuty->diffInSeconds($offDuty);
+                if ($durationSeconds < 60) {
+                    // Either the entry was less than a minute, or spanned two pay periods and the second half was less
+                    // than a minute
+                    // TODO: alert the end user this is happening.
+                    continue;
+                }
+
                 $shift['duration'] = $durationSeconds;
                 $shift['on_duty'] = self::formatDt($onDuty);
                 $shift['off_duty'] = self::formatDt($offDuty);
