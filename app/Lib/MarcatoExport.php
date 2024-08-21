@@ -96,7 +96,7 @@ class MarcatoExport
 
     private function __construct(public $bmids, public $batchInfo)
     {
-        $this->datestamp = date('m-d-Y_H:m');
+        $this->datestamp = date('m-d-Y_H:m:s');
     }
 
     /**
