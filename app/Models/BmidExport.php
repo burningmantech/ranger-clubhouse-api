@@ -121,7 +121,7 @@ class BmidExport extends ApiModel
 
     public static function storage(): Filesystem
     {
-        return Storage::disk(config('clubhouse.BmidExportStorage', true));
+        return Storage::disk(config('clubhouse.BmidExportStorage'));
     }
 
     /**
