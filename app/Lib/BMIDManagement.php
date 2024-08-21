@@ -310,7 +310,7 @@ class BMIDManagement
 
                 $slotIds = DB::table('slot')
                     ->where('begins_year', $year)
-                    ->where('position_id', Position::TRAINING)
+                    ->whereIn('position_id', [ Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
                     ->where('active', true)
                     ->pluck('id')
                     ->toArray();
