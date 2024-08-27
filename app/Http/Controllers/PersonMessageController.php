@@ -47,7 +47,7 @@ class PersonMessageController extends ApiController
         $personId = $this->user->id;
         if ($person_message->reply_to_id) {
             $replyTo = PersonMessage::find($person_message->reply_to_id);
-            if (!$replyTo || $replyTo->person_id != $personId) {
+            if (!$replyTo) {
                 $person_message->addError('reply_to_id', 'Invalid person message id');
                 return $this->restError($person_message);
             }
