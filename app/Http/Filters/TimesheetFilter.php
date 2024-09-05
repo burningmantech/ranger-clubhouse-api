@@ -16,12 +16,12 @@ class TimesheetFilter
         'additional_notes',
         'desired_position_id',
         'desired_on_duty',
-        'desired_off_duty'
+        'desired_off_duty',
+        'review_status'
     ];
 
     const MANAGE_FIELDS = [
         'additional_worker_notes',
-        'review_status',
         'off_duty',
         'on_duty',
     ];
