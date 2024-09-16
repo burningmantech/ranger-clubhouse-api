@@ -391,11 +391,14 @@ class Survey extends ApiModel
         }
 
         // Mentor surveys
-        $mentoringSurveys = Survey::where('year', $year)
-            ->join('person_position', 'person_position.position_id', 'survey.position_id')
+        $mentoringSurveys = Survey::select('survey.*')
+            ->join('timesheet', 'timesheet.position_id', 'survey.position_id')
+            ->where('survey.year', $year)
             ->where('survey.active', true)
-            ->where('person_position.person_id', $personId)
-            ->whereIn('type', [self::MENTEES_FOR_MENTOR, self::MENTOR_FOR_MENTEES])
+            ->where('timesheet.person_id', $personId)
+            ->whereYear('timesheet.on_duty', $year)
+            ->whereNotNull('timesheet.off_duty')
+            ->whereIn('survey.type', [self::MENTEES_FOR_MENTOR, self::MENTOR_FOR_MENTEES])
             ->with('position:id,title')
             ->get();
 
