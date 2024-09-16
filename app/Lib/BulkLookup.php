@@ -35,13 +35,22 @@ class BulkLookup
                     'result' => 'success',
                     'id' => $person->id,
                     'callsign' => $person->callsign,
-                    'first_name' => $person->desired_first_name(),
+                    'first_name' => $person->first_name,
+                    'preferred_name' => $person->preferred_name,
                     'last_name' => $person->last_name,
                     'status' => $person->status,
                     'email' => $person->email,
                     'last_worked' => last($years),
                     'vintage' => $person->vintage,
                     'years_worked' => count($years),
+                    'street1' => $person->street1,
+                    'street2' => $person->street2,
+                    'apt' => $person->apt,
+                    'city' => $person->city,
+                    'state' => $person->state,
+                    'zip' => $person->zip,
+                    'country' => $person->country,
+                    'home_phone' => $person->home_phone,
                 ];
             } else {
                 $results[] = [
