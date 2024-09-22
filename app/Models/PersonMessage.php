@@ -39,8 +39,8 @@ class PersonMessage extends ApiModel
         'has_expired'
     ];
 
-    public $recipient_callsign;
-    public $sender_callsign;
+    public ?string $recipient_callsign;
+    public ?string $sender_callsign;
 
     protected function casts(): array
     {
@@ -136,6 +136,10 @@ class PersonMessage extends ApiModel
     public function save($options = []): bool
     {
         if (!$this->exists) {
+            if (empty($this->recipient_callsign)) {
+                $this->addError('recipient_callsign', 'Recipient callsign is required.');
+                return false;
+            }
             // Find callsigns and verify contents
             $recipient = Person::findByCallsign($this->recipient_callsign);
             if (!$recipient) {
