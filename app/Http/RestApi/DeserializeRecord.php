@@ -3,6 +3,7 @@
 namespace App\Http\RestApi;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class DeserializeRecord
 {
@@ -17,7 +18,7 @@ class DeserializeRecord
 
         if (empty($this->attributes)) {
             if (is_null($this->attributes)) {
-                throw new \InvalidArgumentException("Missing resource identifier '$table' field in request");
+                throw ValidationException::withMessages(["Missing resource identifier '$table' field in request"]);
             } else {
                 $this->attributes = [];
             }
@@ -34,10 +35,10 @@ class DeserializeRecord
     {
         $modelName = class_basename($this->record);
 
-        $filterName = "\\App\\Http\\Filters\\$modelName"."Filter";
+        $filterName = "\\App\\Http\\Filters\\$modelName" . "Filter";
         $modelColumns = (new $filterName($this->record))->deserialize($authorizedUser);
 
-        $filtered = [ ];
+        $filtered = [];
 
         foreach ($this->attributes as $column => $value) {
             if (in_array($column, $modelColumns)) {
