@@ -31,6 +31,7 @@ class NoShowReport
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
             ->where('slot.begins_year', $year)
+            ->where('slot.begins', '<=', now())
             ->where('slot.position_id', $positionId)
             ->whereNotExists(function ($sql) use ($positionId, $year) {
                 $sql->select(DB::raw(1))
