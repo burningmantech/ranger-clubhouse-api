@@ -181,8 +181,8 @@ class Timesheet extends ApiModel
                 // Find new sign up to associate with
                 $model->slot_id = Schedule::findSlotIdSignUpByPositionTime($model->person_id, $model->position_id, $model->on_duty);
                 if (!$model->slot_id) {
-                    $start = $model->on_duty->clone()->subMinutes(45);
-                    $end = $model->on_duty->clone()->addMinutes(45);
+                    $start = $model->on_duty->clone()->subMinutes(Schedule::LOCATE_SHIFT_START_WITHIN);
+                    $end = $model->on_duty->clone()->addMinutes(Schedule::LOCATE_SHIFT_START_WITHIN);
                     $slot = DB::table('slot')
                         ->select('id')
                         ->whereBetween('begins', [$start, $end])
