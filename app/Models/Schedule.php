@@ -376,13 +376,42 @@ class Schedule
             ActionLog::record(
                 Auth::user(),
                 'person-slot-remove',
-                'conversion to past prospective',
+                $reason,
                 ['slot_id' => $row->slot_id],
                 $personId
             );
         }
     }
 
+
+    /**
+     * Remove all future signups for a person and a given position.
+     */
+
+    public static function removeFutureSignUpsForPosition(int $personId, int $positionId, string $reason): void
+    {
+        // Find all upcoming shifts and remove 'em.
+        $now = now();
+        $rows = PersonSlot::select('person_slot.*')
+            ->join('slot', 'slot.id', 'person_slot.slot_id')
+            ->where('slot.begins_year', $now->year)
+            ->where('slot.begins', '>=', $now)
+            ->where('slot.position_id', $positionId)
+            ->where('person_id', $personId)
+            ->with('slot')
+            ->get();
+
+        foreach ($rows as $row) {
+            self::deleteFromSchedule($personId, $row->slot, $reason);
+            ActionLog::record(
+                Auth::user(),
+                'person-slot-remove',
+                $reason,
+                ['slot_id' => $row->slot_id],
+                $personId
+            );
+        }
+    }
 
     /**
      * Does a person have multiple enrollments for the same position (aka Training or Alpha shift)
