@@ -61,7 +61,6 @@ class TrainingSessionPolicy
         return $this->checkForArt($user, $training_session);
     }
 
-
     public function graduationCandidates(Person $user, TrainingSession $training_session): bool
     {
         return $this->checkForArt($user, $training_session);
@@ -72,8 +71,8 @@ class TrainingSessionPolicy
         return $this->checkForArt($user, $training_session);
     }
 
-    private function checkForArt(Person $user, TrainingSession $training_session)
+    private function checkForArt(Person $user, TrainingSession $training_session): bool
     {
-        return ($training_session->isArt() && ($user->hasRole(Role::ART_TRAINER) || $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id)));
+        return ($training_session->isArt() && $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id));
     }
 }

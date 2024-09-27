@@ -1083,13 +1083,32 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function hasARTTrainerPositionRole(): bool
     {
-        // TODO: Remove the ART_TRAINER check when the role is deprecated.
-        if ($this->hasRole(Role::ART_TRAINER)) {
-            return true;
-        }
+        return $this->hasPositionRole(Role::ART_TRAINER_BASE);
+    }
 
+    /**
+     * Does the person have one of the Survey Management position roles?
+     *
+     * @return bool
+     */
+
+    public function hasSurveyManagementPositionRole(): bool
+    {
+        return $this->hasPositionRole(Role::SURVEY_MANAGEMENT_BASE);
+    }
+
+    /**
+     * Does the person hold a position-base role?
+     *
+     * @param $base
+     * @return bool
+     */
+
+    public function hasPositionRole($base): bool
+    {
+        $this->retrieveRoles();
         foreach ($this->roles as $role) {
-            if (($role & ~Role::POSITION_MASK) == Role::ART_TRAINER_BASE) {
+            if (($role & Role::ROLE_BASE_MASK) == $base) {
                 return true;
             }
         }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Lib\ClubhouseCache;
 use App\Traits\HasCompositePrimaryKey;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +14,14 @@ class TeamRole extends ApiModel
     use HasCompositePrimaryKey;
 
     protected $table = 'team_role';
-    protected $increments = false;
+    protected bool $increments = false;
     protected $primaryKey = ['team_id', 'role_id'];
     protected bool $auditModel = true;
+
+    public function team() : BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
 
     /**
      * Find all team roles for a given team.

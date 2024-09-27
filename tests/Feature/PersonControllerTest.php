@@ -713,8 +713,8 @@ class PersonControllerTest extends TestCase
 
         $position = Position::factory()->create();
         PositionRole::factory()->create([
-           'position_id' => $position->id,
-           'role_id' => Role::TECH_NINJA,
+            'position_id' => $position->id,
+            'role_id' => Role::TECH_NINJA,
         ]);
 
         $response = $this->json(
@@ -953,7 +953,7 @@ class PersonControllerTest extends TestCase
 
     public function testUserInfoForTeacherSuccess()
     {
-        $this->addRole([Role::TRAINER, Role::MENTOR, Role::ART_TRAINER]);
+        $this->addRole([Role::TRAINER, Role::MENTOR, (Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING)]);
         PersonMentor::factory()->create(
             [
                 'mentor_id' => $this->user->id,

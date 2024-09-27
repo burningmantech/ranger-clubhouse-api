@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Lib\ClubhouseCache;
+use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,12 @@ use Psr\SimpleCache\InvalidArgumentException;
  */
 class PersonRole extends ApiModel
 {
+    use HasCompositePrimaryKey;
+
     protected $table = 'person_role';
+    protected bool $increments = false;
+    protected $primaryKey = ['person_id', 'role_id'];
+    protected bool $auditModel = true;
 
     public function person(): BelongsTo
     {

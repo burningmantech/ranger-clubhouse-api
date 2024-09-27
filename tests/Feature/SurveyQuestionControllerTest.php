@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Position;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,11 +16,20 @@ class SurveyQuestionControllerTest extends TestCase
     use RefreshDatabase;
     use WithFaker;
 
+    public Survey $survey;
+    public SurveyGroup $surveyGroup;
+
     public function setUp(): void
     {
         parent::setUp();
         $this->signInUser();
         $this->addAdminRole();
+        $this->surveyPosition = Position::factory()->create([
+            'id' => Position::GREEN_DOT_TRAINING,
+            'title' => 'Green Dot Training'
+        ]);
+        $this->survey = Survey::factory()->create(['position_id' => $this->surveyPosition->id]);
+        $this->surveyGroup = SurveyGroup::factory()->create(['survey_id' => $this->survey->id]);
     }
 
     /*
@@ -28,8 +38,8 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testIndexSurveyQuestion()
     {
-        $survey = Survey::factory()->create();
-        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $survey = $this->survey;
+        $surveyGroup = $this->surveyGroup;
         $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
@@ -53,8 +63,8 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testCreateSurveyQuestion()
     {
-        $survey = Survey::factory()->create();
-        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $survey = $this->survey;
+        $surveyGroup = $this->surveyGroup;
 
         $data = [
             'survey_id' => $survey->id,
@@ -80,8 +90,8 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testUpdateSurveyQuestion()
     {
-        $survey = Survey::factory()->create();
-        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $survey = $this->survey;
+        $surveyGroup = $this->surveyGroup;
         $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
@@ -102,8 +112,8 @@ class SurveyQuestionControllerTest extends TestCase
 
     public function testDeleteSurveyQuestion()
     {
-        $survey = Survey::factory()->create();
-        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $survey->id]);
+        $survey = $this->survey;
+        $surveyGroup = $this->surveyGroup;
         $surveyQuestion = SurveyQuestion::factory()->create([
             'survey_id' => $survey->id,
             'survey_group_id' => $surveyGroup->id,
