@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\UnacceptableConditionException;
 use App\Lib\SurveyReports;
+use App\Models\Position;
+use App\Models\Role;
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyGroup;
@@ -33,13 +35,45 @@ class SurveyController extends ApiController
             'type' => 'sometimes|string',
         ]);
 
-        /*
-         * TODO: validate on parameters wrt roles
-         */
-
         $this->authorize('index', Survey::class);
 
         return $this->success(Survey::findForQuery($params), null, 'survey');
+    }
+
+    /**
+     * Return the available positions
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function positions(): JsonResponse
+    {
+        $this->authorize('index', Survey::class);
+
+        $positions = Position::findForQuery(['type' => Position::TYPE_TRAINING]);
+        $results = [];
+
+        foreach ($positions as $position) {
+            if (stripos($position->title, 'training') !== false
+                && Survey::canManageSurveys($this->user, $position->id)) {
+                $results[] = [
+                    'id' => $position->id,
+                    'title' => $position->title,
+                    'active' => $position->active,
+                ];
+            }
+        }
+
+        if ($this->userHasRole(Role::SURVEY_MANAGEMENT_BASE | Position::ALPHA)) {
+            $results[] = [
+                'id' => Position::ALPHA,
+                'title' => Position::retrieveTitle(Position::ALPHA),
+                'active' => true,
+            ];
+        }
+
+        usort($results, fn($a, $b) => strcmp($a['title'], $b['title']));
+
+        return response()->json(['positions' => $results]);
     }
 
     /**
@@ -51,9 +85,9 @@ class SurveyController extends ApiController
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', Survey::class);
         $survey = new Survey;
         $this->fromRest($survey);
+        $this->authorize('store', $survey);
 
         if ($survey->save()) {
             return $this->success($survey);
@@ -82,8 +116,9 @@ class SurveyController extends ApiController
      *
      * @param Survey $survey
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
+
     public function update(Survey $survey): JsonResponse
     {
         $this->authorize('update', $survey);
@@ -183,13 +218,19 @@ class SurveyController extends ApiController
         ]);
 
         $type = $params['type'];
-        if ($type == Survey::ALPHA) {
-            list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user->id);
-            return response()->json(['survey' => $survey, 'trainers' => $trainers]);
-        } else if ($type == Survey::MENTOR_FOR_MENTEES || $type == Survey::MENTEES_FOR_MENTOR) {
-            [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $this->user->id);
-        } else {
-            [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $this->user->id);
+        switch ($type) {
+            case Survey::ALPHA:
+                list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user->id);
+                return response()->json(['survey' => $survey, 'trainers' => $trainers]);
+
+            case Survey::MENTOR_FOR_MENTEES:
+            case Survey::MENTEES_FOR_MENTOR:
+                [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $this->user->id);
+                break;
+
+            default:
+                [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $this->user->id);
+                break;
         }
 
         return response()->json(['survey' => $survey, 'trainers' => $trainers, 'slot' => $slot]);

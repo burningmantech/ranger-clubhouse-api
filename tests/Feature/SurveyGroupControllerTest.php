@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Position;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,11 @@ class SurveyGroupControllerTest extends TestCase
         parent::setUp();
         $this->signInUser();
         $this->addAdminRole();
+        $this->surveyPosition = Position::factory()->create([
+            'id' => Position::GREEN_DOT_TRAINING,
+            'title' => 'Green Dot Training'
+        ]);
+        $this->survey = Survey::factory()->create(['position_id' => $this->surveyPosition->id]);
     }
 
     /*
@@ -27,11 +33,16 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testIndexSurveyGroup()
     {
-        SurveyGroup::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $this->survey->id]);
 
-        $response = $this->json('GET', 'survey-group', [ 'survey_id' => 1]);
+        $response = $this->json('GET', 'survey-group', [ 'survey_id' => $this->survey->id]);
         $response->assertStatus(200);
         $this->assertCount(1, $response->json()['survey_group']);
+        $response->assertJson([
+            'survey_group' => [[
+                'id' => $surveyGroup->id,
+            ]]
+        ]);
     }
 
     /*
@@ -40,10 +51,8 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testCreateSurveyGroup()
     {
-        $survey = Survey::factory()->create();
-
         $data = [
-            'survey_id' => $survey->id,
+            'survey_id' => $this->survey->id,
             'sort_index' => 99,
             'title' => 'A Survey Group',
             'description' => 'This is a group',
@@ -61,7 +70,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testUpdateSurveyGroup()
     {
-        $surveyGroup = SurveyGroup::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $this->survey->id]);
 
         $response = $this->json('PATCH', "survey-group/{$surveyGroup->id}", [
             'survey_group' => [ 'title' => 'Fork Your Survey' ]
@@ -77,7 +86,7 @@ class SurveyGroupControllerTest extends TestCase
 
     public function testDeleteSurveyGroup()
     {
-        $surveyGroup = SurveyGroup::factory()->create();
+        $surveyGroup = SurveyGroup::factory()->create(['survey_id' => $this->survey->id]);
         $surveyGroupId = $surveyGroup->id;
 
         $response = $this->json('DELETE', "survey-group/{$surveyGroupId}");

@@ -28,7 +28,7 @@ class TrainingPolicy
     public function show(Person $user, Training $training): bool
     {
         if ($training->is_art) {
-            return $user->hasARTTrainerPositionRole();
+            return $user->hasRole(Role::ART_TRAINER_BASE | $training->id);
         }
         return false;
     }

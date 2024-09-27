@@ -247,15 +247,6 @@ class Position extends ApiModel
         Position::HOT_SPRINGS_PATROL_DRIVER => 15,
     ];
 
-    const array HQ_WORKERS = [
-        Position::HQ_LEAD,
-        Position::HQ_LEAD_PRE_EVENT,
-        Position::HQ_SHORT,
-        Position::HQ_WINDOW,
-        Position::HQ_WINDOW_PRE_EVENT,
-        Position::HQ_SUPERVISOR,
-    ];
-
     // Person has not signed the Sandman affidavit (all wanna be Sandmen)
     const string UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT = 'unsigned-sandman-affidavit';
     // Person has no Burn Perimeter experience (all wanna be Sandmen)
@@ -279,6 +270,14 @@ class Position extends ApiModel
         Position::BURN_QUAD_LEAD,
         Position::SANDMAN,
         Position::SPECIAL_BURN
+    ];
+
+    const array SURVEY_MANAGEMENT_POSITIONS = [
+        Position::ALPHA => [Position::MENTOR],
+        Position::GREEN_DOT_TRAINING => [Position::GREEN_DOT_TRAINER, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE],
+        Position::HQ_FULL_TRAINING => [Position::HQ_TRAINER],
+        Position::SANDMAN_TRAINING => [Position::SANDMAN_TRAINER],
+        Position::TROUBLESHOOTER_TRAINING => [Position::TROUBLESHOOTER_TRAINER, Position::TROUBLESHOOTER_MENTOR, Position::TROUBLESHOOTER_MENTEE],
     ];
 
     const int SANDMAN_YEAR_CUTOFF = 5;
@@ -311,6 +310,7 @@ class Position extends ApiModel
         'all_rangers',
         'contact_email',
         'count_hours',
+        'cruise_direction',
         'deselect_on_team_join',
         'max',
         'min',
@@ -345,6 +345,7 @@ class Position extends ApiModel
             'alert_when_no_trainers' => 'bool',
             'all_rangers' => 'bool',
             'auto_sign_out' => 'bool',
+            'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'mvr_eligible' => 'bool',
             'new_user_eligible' => 'bool',
@@ -484,6 +485,8 @@ class Position extends ApiModel
         $canManage = $query['can_manage'] ?? false;
         $mentor = $query['mentor'] ?? null;
         $mentee = $query['mentee'] ?? null;
+        $cruiseDirection = $query['cruise_direction'] ?? null;
+        $isActive = $query['active'] ?? null;
 
         $sql = self::select('position.*')->orderBy('title');
 
@@ -511,8 +514,12 @@ class Position extends ApiModel
             $sql->whereNotNull('paycode');
         }
 
-        if (isset($params['active'])) {
-            $sql->where('active', $params['active']);
+        if ($isActive !== null) {
+            $sql->where('active', $isActive);
+        }
+
+        if ($cruiseDirection !== null) {
+            $sql->where('cruise_direction', $cruiseDirection);
         }
 
         $rows = $sql->get();
@@ -558,30 +565,6 @@ class Position extends ApiModel
     }
 
     /**
-     * Find all training positions that are not trainer's training positions.
-     * Optionally exclude Dirt Training (for ART module support)
-     * Return only the id & title.
-     *
-     * @param bool $excludeDirt
-     * @return array
-     */
-
-    public static function findAllTrainings(bool $excludeDirt = false): array
-    {
-        $sql = self::select('id', 'title')
-            ->where('type', Position::TYPE_TRAINING)
-            ->where('title', 'not like', '%trainer%')
-            ->where('active', true)
-            ->orderBy('title');
-
-        if ($excludeDirt) {
-            $sql = $sql->where('id', '!=', Position::TRAINING);
-        }
-
-        return $sql->get()->toArray();
-    }
-
-    /**
      * Retrieve the title for a position. Return a position id if the
      * position was not found.
      * @param int $id
@@ -590,9 +573,7 @@ class Position extends ApiModel
 
     public static function retrieveTitle(int $id): string
     {
-        $row = DB::table('position')->select('title')->where('id', $id)->first();
-
-        return $row ? $row->title : "Position #{$id}";
+        return DB::table('position')->where('id', $id)->value('title') ?? "Position #{$id}";
     }
 
     /**

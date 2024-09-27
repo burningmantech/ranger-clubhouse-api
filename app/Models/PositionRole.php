@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Lib\ClubhouseCache;
 use App\Traits\HasCompositePrimaryKey;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +20,18 @@ class PositionRole extends ApiModel
     protected $table = 'position_role';
     protected $primaryKey = ['position_id', 'role_id'];
 
-    protected $increments = false;
+    protected bool $increments = false;
     protected bool $auditModel = true;
+
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
 
     /**
      * Find all rows for the given position

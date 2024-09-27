@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class Survey extends ApiModel
@@ -131,10 +132,10 @@ class Survey extends ApiModel
      * Find all the surveys based on the give criteria
      *
      * @param array $query
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return array
      */
 
-    public static function findForQuery(array $query): \Illuminate\Database\Eloquent\Collection
+    public static function findForQuery(array $query): array
     {
         $year = $query['year'] ?? null;
         $positionId = $query['position_id'] ?? null;
@@ -159,7 +160,15 @@ class Survey extends ApiModel
 
         $rows = $sql->get();
 
+        $user = Auth::user();
+
+        $results = [];
         foreach ($rows as $row) {
+            if (!$row->canManageSurvey($user)) {
+                continue;
+            }
+
+            $results[] = $row;
             if (!$includeSlots && $row->type != self::ALPHA) {
                 continue;
             }
@@ -179,7 +188,7 @@ class Survey extends ApiModel
                 [
                     'id' => 'main',
                     'title' => match ($row->type) {
-                        self::ALPHA => 'Alpha Feedback',
+                        self::ALPHA => 'Alpha Overall Feedback',
                         self::TRAINER => 'Trainer-On-Trainer Feedback',
                         default => ($row->position_id == Position::TRAINING) ? 'Venue Feedback' : 'General Questions',
                     },
@@ -198,7 +207,7 @@ class Survey extends ApiModel
             $row->reports = $reports;
         }
 
-        return $rows;
+        return $results;
     }
 
     public function save($options = []): bool
@@ -391,11 +400,14 @@ class Survey extends ApiModel
         }
 
         // Mentor surveys
-        $mentoringSurveys = Survey::where('year', $year)
-            ->join('person_position', 'person_position.position_id', 'survey.position_id')
+        $mentoringSurveys = Survey::select('survey.*')
+            ->join('timesheet', 'timesheet.position_id', 'survey.position_id')
+            ->where('survey.year', $year)
             ->where('survey.active', true)
-            ->where('person_position.person_id', $personId)
-            ->whereIn('type', [self::MENTEES_FOR_MENTOR, self::MENTOR_FOR_MENTEES])
+            ->where('timesheet.person_id', $personId)
+            ->whereYear('timesheet.on_duty', $year)
+            ->whereNotNull('timesheet.off_duty')
+            ->whereIn('survey.type', [self::MENTEES_FOR_MENTOR, self::MENTOR_FOR_MENTEES])
             ->with('position:id,title')
             ->get();
 
@@ -469,5 +481,47 @@ class Survey extends ApiModel
     public function getMentoringPositionTitleAttribute(): ?string
     {
         return $this->mentoring_position_id ? $this->mentoring_position?->title : '';
+    }
+
+    public function canManageSurvey(Person $user): bool
+    {
+        return self::canManageSurveys($user, $this->position_id);
+    }
+
+    public static function canManageSurveys(Person $user, int $positionId): bool
+    {
+        return self::hasRoleForPosition($user, Role::SURVEY_MANAGEMENT_TRAINING, Role::SURVEY_MANAGEMENT_BASE, $positionId);
+    }
+
+    public function isTrainerForSurvey(Person $user): bool
+    {
+        return self::hasRoleForPosition($user, Role::TRAINER, Role::ART_TRAINER_BASE, $this->position_id);
+    }
+
+    public static function hasRoleForPosition(Person $user, int $trainerRole, int $base, ?int $positionId): bool
+    {
+        if (!$positionId) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($positionId == Position::TRAINING) {
+            return $user->hasRole($trainerRole);
+        }
+
+        if (isset(Position::SURVEY_MANAGEMENT_POSITIONS[$positionId])) {
+            return $user->hasRole($base | $positionId);
+        }
+
+        foreach (Position::SURVEY_MANAGEMENT_POSITIONS as $id => $positions) {
+            if (in_array($positionId, $positions)) {
+                return $user->hasRole($base | $id);
+            }
+        }
+
+        return false;
     }
 }

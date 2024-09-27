@@ -28,12 +28,9 @@ class UserInfo
 
         $personId = $person->id;
         $person->retrieveRoles();
-        $isArtTrainer = $person->hasRole(Role::ART_TRAINER);
         $event = PersonEvent::firstOrNewForPersonYear($personId, $year);
-
         $timesheet = Timesheet::findPersonOnDuty($personId);
 
-        // TODO: be sure to call $person->retrieveRoles() when the ART_TRAINER check is removed from the above.
         $arts = [];
         foreach ($person->roles as $role) {
             if (($role & Role::ROLE_BASE_MASK) == Role::ART_TRAINER_BASE) {
@@ -56,13 +53,12 @@ class UserInfo
             'true_roles' => $person->trueRoles,
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
-                'is_art_trainer' => $isArtTrainer,
                 'is_mentor' => $person->hasRole([Role::ADMIN, Role::MENTOR]),
                 'have_mentored' => PersonMentor::haveMentees($personId),
                 'have_feedback' => SurveyAnswer::haveTrainerFeedback($personId),
+                'arts' => $arts,
             ],
             'unread_message_count' => PersonMessage::countUnread($personId),
-            'has_hq_window' => PersonPosition::havePosition($personId, Position::HQ_WORKERS),
             'may_request_stickers' => PVR::isEligible($personId, $event, $year),
             'motorpool_policy_enabled' => setting('MotorPoolProtocolEnabled'),
             'onduty_position' => $timesheet?->buildOnDutyInfo(),
@@ -82,15 +78,6 @@ class UserInfo
 
             $data['pvr_eligible'] = PVR::isEligible($personId, $event, $year);
             $data['pvr_potential'] = Position::haveVehiclePotential('pvr', $personId);
-        }
-
-        /*
-         * In the future the ART training positions might be limited to
-         * a specific set instead of everything for all ART_TRAINERs.
-         */
-
-        if (!empty($arts) || $isArtTrainer) {
-            $data['teacher']['arts'] = empty($arts) ? Position::findAllTrainings(true) : $arts;
         }
 
         return $data;

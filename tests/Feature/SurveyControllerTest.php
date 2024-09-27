@@ -26,6 +26,10 @@ class SurveyControllerTest extends TestCase
         parent::setUp();
         $this->signInUser();
         $this->addAdminRole();
+        $this->surveyPosition = Position::factory()->create([
+            'id' => Position::GREEN_DOT_TRAINING,
+            'title' => 'Green Dot Training'
+        ]);
     }
 
     /*
@@ -35,7 +39,7 @@ class SurveyControllerTest extends TestCase
     public function testIndexSurvey()
     {
         $year = 2018;
-        Survey::factory()->create(['year' => $year]);
+        Survey::factory()->create(['year' => $year, 'position_id' => $this->surveyPosition->id]);
 
         $response = $this->json('GET', 'survey', ['year' => $year]);
         $response->assertStatus(200);
@@ -51,6 +55,7 @@ class SurveyControllerTest extends TestCase
         $data = [
             'year' => 2020,
             'type' => Survey::TRAINER,
+            'position_id' => $this->surveyPosition->id,
             'title' => 'My Awesome Survey',
             'prologue' => 'Take the survey',
             'epilogue' => 'Did you take it?'
@@ -70,7 +75,7 @@ class SurveyControllerTest extends TestCase
 
     public function testUpdateSurvey()
     {
-        $survey = Survey::factory()->create();
+        $survey = Survey::factory()->create([ 'position_id' => $this->surveyPosition->id]);
 
         $response = $this->json('PATCH', "survey/{$survey->id}", [
             'survey' => ['epilogue' => 'epilogue your behind']
@@ -86,7 +91,7 @@ class SurveyControllerTest extends TestCase
 
     public function testDeleteSurvey()
     {
-        $survey = Survey::factory()->create();
+        $survey = Survey::factory()->create([ 'position_id' => $this->surveyPosition->id]);
         $surveyId = $survey->id;
 
         $response = $this->json('DELETE', "survey/{$surveyId}");
@@ -103,7 +108,7 @@ class SurveyControllerTest extends TestCase
     {
         $year = 2018;
         $currentYear = current_year();
-        $origSurvey = Survey::factory()->create(['year' => $year, 'title' => "$year Survey Title"]);
+        $origSurvey = Survey::factory()->create(['year' => $year, 'title' => "$year Survey Title", 'position_id' => $this->surveyPosition->id]);
         $origGroup = SurveyGroup::factory()->create(['survey_id' => $origSurvey->id]);
         $origQuestion = SurveyQuestion::factory()->create(['survey_id' => $origSurvey->id, 'survey_group_id' => $origGroup->id]);
 
@@ -126,7 +131,10 @@ class SurveyControllerTest extends TestCase
     {
         $this->buildVenueSurvey();
 
-        $response = $this->json('GET', "survey/questionnaire", ['slot_id' => $this->slot->id, 'type' => Survey::TRAINING]);
+        $response = $this->json('GET', "survey/questionnaire", [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING
+        ]);
         $response->assertStatus(200);
 
         $survey = $this->survey;
@@ -206,7 +214,7 @@ class SurveyControllerTest extends TestCase
      * Test submitting a survey response
      */
 
-    private function buildVenueSurvey()
+    private function buildVenueSurvey(): void
     {
         $this->year = current_year();
 

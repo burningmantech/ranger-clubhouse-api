@@ -24,10 +24,10 @@ class Role extends ApiModel
     const int MENTOR = 101; // Mentor - access mentor section
     const int TRAINER = 102; // Trainer
     const int VC = 103; // Volunteer Coordinator -
-    const int ART_TRAINER = 104; // ART trainer
+    const int ART_TRAINER = 104; // replaced by ART_TRAINER_BASE
     const int MEGAPHONE = 105; // RBS access
     const int TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
-    const int SURVEY_MANAGEMENT = 107; // Allow to create/edit/delete surveys, and view responders identity.
+    const int SURVEY_MANAGEMENT_TRAINING = 107; // Allow to create/edit/delete surveys, and view responders identity.
     const int MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
     const int TRAINER_SEASONAL = 109; // Treated as TRAINER if setting TrainingSeasonalRoleEnabled is true
     const int CERTIFICATION_MGMT = 110; // Person can add certifications on a person's behalf, and view detailed info (card number, notes, etc.)
@@ -48,11 +48,16 @@ class Role extends ApiModel
 
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
-    const int ROLE_BASE_MASK = 0xf000;
     const int POSITION_MASK = 0x0fff;
 
-    const int ART_TRAINER_BASE = 0x1000;
-    const int SURVEY_MANAGEMENT_BASE = 0x2000;
+    /**
+     * ART_TRAINER_BASE and SURVEY_MANAGE_BASE are combined (aka bit or'ed) with a training positions
+     * (e.g., Green Dot Training, Sandman Training) to create a permission specific to that given position.
+     */
+
+    const int ROLE_BASE_MASK = 0x7f000000;
+    const int ART_TRAINER_BASE = 0x1000000;
+    const int SURVEY_MANAGEMENT_BASE = 0x2000000;
 
     protected function casts(): array
     {

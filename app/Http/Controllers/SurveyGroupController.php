@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Survey;
 use App\Models\SurveyGroup;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,8 @@ class SurveyGroupController extends ApiController
             'survey_id' => 'required|integer:exists:survey,id'
         ]);
 
-        $this->authorize('index', SurveyGroup::class);
+        $survey = Survey::findOrFail($params['survey_id']);
+        $this->authorize('index', [SurveyGroup::class, $survey]);
         return $this->success(SurveyGroup::findAllForSurvey($params['survey_id']), null, 'survey_group');
     }
 
@@ -34,9 +36,9 @@ class SurveyGroupController extends ApiController
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', SurveyGroup::class);
         $surveyGroup = new SurveyGroup;
         $this->fromRest($surveyGroup);
+        $this->authorize('store', $surveyGroup);
 
         if ($surveyGroup->save()) {
             return $this->success($surveyGroup);
@@ -56,8 +58,7 @@ class SurveyGroupController extends ApiController
 
     public function show(SurveyGroup $surveyGroup): JsonResponse
     {
-        $this->authorize('show', [SurveyGroup::class]);
-
+        $this->authorize('show', $surveyGroup);
         return $this->success($surveyGroup);
     }
 

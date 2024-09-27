@@ -224,7 +224,7 @@ class Slot extends ApiModel
             }
         }
 
-        if ($this->parent_signup_slot_id && $this->trainer_slot_id){
+        if ($this->parent_signup_slot_id && $this->trainer_slot_id) {
             $msg = 'The parent signup slot and trainer signup slot cannot be set together.';
             $this->addError('trainer_slot_id', $msg);
             $this->addError('parent_signup_slot_id', $msg);
@@ -326,7 +326,7 @@ class Slot extends ApiModel
             ->orderBy('person.callsign', 'asc')
             ->get();
 
-        $results = ['people' => $rows];
+        $results = ['people' => $rows, 'signed_up' => $slot->signed_up, 'max' => $slot->max];
 
         if (!$includeOnDuty) {
             $slot->load([
@@ -550,7 +550,7 @@ class Slot extends ApiModel
      * @return string[]
      */
 
-    public static function checkDateTimeForPosition(int $positionId, Carbon $start, Carbon $finished): array
+    public static function checkDateTimeForPosition(int $positionId, Carbon $start, Carbon $finished, int $lenienceMinutes = 15): array
     {
         $sql = self::where('position_id', $positionId)->where('begins_year', $start->year)->where('active', true);
 
@@ -562,16 +562,23 @@ class Slot extends ApiModel
         $first = $sql->clone()->orderBy('begins')->first();
         $last = $sql->clone()->orderBy('ends', 'desc')->first();
 
-        if ($start->isBetween($first->begins, $last->ends)) {
-            $startStatus = 'success';
-        } else {
-            $startStatus = $start->lt($first->begins) ? 'before-begins' : 'after-ends';
+        $begins = $first->begins->clone();
+        $ends = $last->ends->clone();
+        if ($lenienceMinutes) {
+            $begins->subMinutes($lenienceMinutes);
+            $ends->addMinutes($lenienceMinutes);
         }
 
-        if ($finished->isBetween($first->begins, $last->ends)) {
+        if ($start->isBetween($begins, $ends)) {
+            $startStatus = 'success';
+        } else {
+            $startStatus = $start->lt($begins) ? 'before-begins' : 'after-ends';
+        }
+
+        if ($finished->isBetween($begins, $ends)) {
             $finishedStatus = 'success';
         } else {
-            $finishedStatus = $finished->lt($first->begins) ? 'before-begins' : 'after-ends';
+            $finishedStatus = $finished->lt($begins) ? 'before-begins' : 'after-ends';
         }
 
         if ($startStatus == 'success' && $finishedStatus == 'success') {

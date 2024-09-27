@@ -154,7 +154,7 @@ class SurveyReports
 
     public static function buildSurveyReports(Survey $survey, int|null $trainerId = null): array
     {
-        $includePerson = Auth::user() ? Auth::user()->hasRole(Role::SURVEY_MANAGEMENT) : true;
+        $includePerson = Auth::user() ? Auth::user()->hasRole(Role::SURVEY_MANAGEMENT_TRAINING) : true;
 
         $slots = $survey->retrieveSlots();
         $surveyGroups = SurveyGroup::findAllForSurvey($survey->id);
@@ -162,6 +162,7 @@ class SurveyReports
         $questionsByGroupId = $questions->groupBy('survey_group_id');
 
         $sql = SurveyAnswer::where('survey_id', $survey->id)
+            ->where('response', '!=', '')
             ->with(['trainer:id,callsign', 'person:id,callsign']);
 
         if ($trainerId) {

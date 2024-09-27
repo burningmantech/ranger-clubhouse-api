@@ -2,15 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Survey;
+use App\Models\SurveyQuestion;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-
-use Illuminate\Support\Facades\DB;
-
-use App\Models\SurveyQuestion;
-
-use App\Http\Controllers\ApiController;
-use Illuminate\Validation\ValidationException;
 
 class SurveyQuestionController extends ApiController
 {
@@ -27,7 +22,8 @@ class SurveyQuestionController extends ApiController
             'survey_id' => 'required|integer:exists:survey_group,id'
         ]);
 
-        $this->authorize('index', SurveyQuestion::class);
+        $survey = Survey::findOrFail($params['survey_id']);
+        $this->authorize('index', [SurveyQuestion::class, $survey]);
         return $this->success(SurveyQuestion::findAllForSurvey($params['survey_id']), null, 'survey_question');
     }
 
@@ -36,14 +32,13 @@ class SurveyQuestionController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', SurveyQuestion::class);
         $surveyQuestion = new SurveyQuestion;
         $this->fromRest($surveyQuestion);
+        $this->authorize('store', $surveyQuestion);
 
         if ($surveyQuestion->save()) {
             return $this->success($surveyQuestion);
@@ -62,8 +57,7 @@ class SurveyQuestionController extends ApiController
 
     public function show(SurveyQuestion $surveyQuestion): JsonResponse
     {
-        $this->authorize('show', SurveyQuestion::class);
-
+        $this->authorize('show', $surveyQuestion);
         return $this->success($surveyQuestion);
     }
 
@@ -73,7 +67,6 @@ class SurveyQuestionController extends ApiController
      * @param SurveyQuestion $surveyQuestion
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function update(SurveyQuestion $surveyQuestion): JsonResponse

@@ -87,6 +87,7 @@ class PersonPolicy
      * @param Person $person
      * @return bool|Response
      */
+
     public function update(Person $user, Person $person): bool|Response
     {
         /*
@@ -101,7 +102,7 @@ class PersonPolicy
             return true;
         }
 
-        return $user->hasRole(self::AUTHORIZED_ROLES) || $user->hasARTTrainerPositionRole();
+        return $user->hasRole(self::AUTHORIZED_ROLES);
     }
 
     /**

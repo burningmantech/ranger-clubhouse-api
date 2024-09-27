@@ -31,7 +31,7 @@ class RoleController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
 
     public function store(): JsonResponse
@@ -49,7 +49,7 @@ class RoleController extends ApiController
     }
 
     /**
-     * Display the specified resource.
+     * Show a role
      *
      * @param Role $role
      * @return JsonResponse
@@ -65,7 +65,7 @@ class RoleController extends ApiController
      *
      * @param Role $role
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
 
     public function update(Role $role): JsonResponse

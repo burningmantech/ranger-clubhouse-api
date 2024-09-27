@@ -433,6 +433,7 @@ Route::middleware('api')->group(function () {
     Route::get('slot/{slot}/people', [SlotController::class, 'people']);
     Route::resource('slot', SlotController::class);
 
+    Route::get('survey/positions', [SurveyController::class, 'positions']);
     Route::get('survey/questionnaire', [SurveyController::class, 'questionnaire']);
     Route::post('survey/submit', [SurveyController::class, 'submit']);
     Route::get('survey/trainer-surveys', [SurveyController::class, 'trainerSurveys']);
