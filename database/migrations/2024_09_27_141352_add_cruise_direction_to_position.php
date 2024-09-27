@@ -35,6 +35,9 @@ return new class extends Migration
 
         foreach($positions as $id) {
             $position = Position::find($id);
+            if (!$position) {
+                continue;
+            }
             $position->cruise_direction = true;
             $position->auditReason = "Cruise Direction flag deployment";
             $position->save();
