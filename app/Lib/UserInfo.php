@@ -35,7 +35,6 @@ class UserInfo
         foreach ($person->roles as $role) {
             if (($role & Role::ROLE_BASE_MASK) == Role::ART_TRAINER_BASE) {
                 $positionId = $role & Role::POSITION_MASK;
-                error_log("* ADDING ".$positionId);
                 $arts[] = [
                     'id' => $positionId,
                     'title' => Position::retrieveTitle($positionId)

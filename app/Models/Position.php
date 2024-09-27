@@ -310,6 +310,7 @@ class Position extends ApiModel
         'all_rangers',
         'contact_email',
         'count_hours',
+        'cruise_direction',
         'deselect_on_team_join',
         'max',
         'min',
@@ -344,6 +345,7 @@ class Position extends ApiModel
             'alert_when_no_trainers' => 'bool',
             'all_rangers' => 'bool',
             'auto_sign_out' => 'bool',
+            'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'mvr_eligible' => 'bool',
             'new_user_eligible' => 'bool',
@@ -483,6 +485,8 @@ class Position extends ApiModel
         $canManage = $query['can_manage'] ?? false;
         $mentor = $query['mentor'] ?? null;
         $mentee = $query['mentee'] ?? null;
+        $cruiseDirection = $query['cruise_direction'] ?? null;
+        $isActive = $query['active'] ?? null;
 
         $sql = self::select('position.*')->orderBy('title');
 
@@ -510,8 +514,12 @@ class Position extends ApiModel
             $sql->whereNotNull('paycode');
         }
 
-        if (isset($params['active'])) {
-            $sql->where('active', $params['active']);
+        if ($isActive !== null) {
+            $sql->where('active', $isActive);
+        }
+
+        if ($cruiseDirection !== null) {
+            $sql->where('cruise_direction', $cruiseDirection);
         }
 
         $rows = $sql->get();
