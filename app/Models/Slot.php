@@ -224,7 +224,7 @@ class Slot extends ApiModel
             }
         }
 
-        if ($this->parent_signup_slot_id && $this->trainer_slot_id){
+        if ($this->parent_signup_slot_id && $this->trainer_slot_id) {
             $msg = 'The parent signup slot and trainer signup slot cannot be set together.';
             $this->addError('trainer_slot_id', $msg);
             $this->addError('parent_signup_slot_id', $msg);
@@ -326,7 +326,7 @@ class Slot extends ApiModel
             ->orderBy('person.callsign', 'asc')
             ->get();
 
-        $results = ['people' => $rows];
+        $results = ['people' => $rows, 'signed_up' => $slot->signed_up, 'max' => $slot->max];
 
         if (!$includeOnDuty) {
             $slot->load([
