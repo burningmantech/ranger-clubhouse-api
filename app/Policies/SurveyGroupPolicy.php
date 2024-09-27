@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Person;
-use App\Models\Role;
+use App\Models\Survey;
 use App\Models\SurveyGroup;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -11,30 +11,23 @@ class SurveyGroupPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function index(Person $user, Survey $survey): bool
     {
-        if ($user->hasRole([Role::ADMIN, Role::SURVEY_MANAGEMENT])) {
-            return true;
-        }
+        return $survey->canManageSurvey($user);
     }
 
-    public function index(Person $person): bool
+    public function show(Person $user, SurveyGroup $surveyGroup): bool
     {
-        return false;
-    }
-
-    public function show(Person $person): bool
-    {
-        return false;
+        return $surveyGroup->survey?->canManageSurvey($user);
     }
 
     /**
      * Determine whether the user can create a surveyGroup document.
      */
 
-    public function store(Person $user): bool
+    public function store(Person $user, SurveyGroup $surveyGroup): bool
     {
-        return false;
+        return $surveyGroup->survey?->canManageSurvey($user);
     }
 
     /**
@@ -42,7 +35,7 @@ class SurveyGroupPolicy
      */
     public function update(Person $user, SurveyGroup $surveyGroup): bool
     {
-        return false;
+        return $surveyGroup->survey?->canManageSurvey($user);
     }
 
     /**
@@ -50,6 +43,6 @@ class SurveyGroupPolicy
      */
     public function destroy(Person $user, SurveyGroup $surveyGroup): bool
     {
-        return false;
+        return $surveyGroup->survey?->canManageSurvey($user);
     }
 }

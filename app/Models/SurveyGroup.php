@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
@@ -63,6 +64,11 @@ class SurveyGroup extends ApiModel
         return $this->hasMany(SurveyQuestion::class);
     }
 
+    public function survey() : BelongsTo
+    {
+        return $this->belongsTo(Survey::class);
+    }
+
     public static function findAllForSurvey(int $surveyId): Collection
     {
         return self::where('survey_id', $surveyId)->orderBy('sort_index')->get();
@@ -94,10 +100,13 @@ class SurveyGroup extends ApiModel
 
     public function getReportTitleDefault($surveyType)
     {
-        switch ($this->type) {
+         switch ($this->type) {
             case self::TYPE_NORMAL:
                 return '';
             case self::TYPE_TRAINER:
+                if ($surveyType == Survey::ALPHA) {
+                    return "Alpha Feedback For Mentors";
+                }
                 return Survey::TYPE_FOR_REPORTS_LABELS[$surveyType] ?? $this->type;
             default:
                 return $this->report_title;

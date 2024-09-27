@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class SurveyQuestion extends ApiModel
@@ -58,6 +59,11 @@ class SurveyQuestion extends ApiModel
         self::deleted(function ($model) {
             DB::table('survey_answer')->where('survey_question_id', $model->id)->delete();
         });
+    }
+
+    public function survey() : BelongsTo
+    {
+        return $this->belongsTo(Survey::class);
     }
 
     public static function findAllForSurvey(int $surveyId): Collection

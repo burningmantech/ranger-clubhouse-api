@@ -4,69 +4,79 @@ namespace App\Policies;
 
 use App\Models\Person;
 use App\Models\Position;
-use App\Models\Survey;
 use App\Models\Role;
+use App\Models\Survey;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SurveyPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user): ?bool
     {
-        if ($user->hasRole([ Role::SURVEY_MANAGEMENT, Role::ADMIN ])) {
+        if ($user->isAdmin()) {
             return true;
         }
+
+        return null;
     }
 
-    public function index(Person $user): false
+    public function index(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::SURVEY_MANAGEMENT_TRAINING) | $user->hasSurveyManagementPositionRole();
     }
 
-    public function show(Person $user): false
+    public function show(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 
-    public function duplicate(Person $user, Survey $survey): false
+    public function duplicate(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 
     /**
      * Determine whether the user can create a survey document.
      */
 
-    public function store(Person $user): false
+    public function store(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 
     /**
      * Determine whether the user can update the survey.
      */
-    public function update(Person $user, Survey $survey): false
+    public function update(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 
     /**
      * Determine whether the user can delete the survey.
      */
 
-    public function destroy(Person $user, Survey $survey): false
+    public function destroy(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 
     /**
      * Determine if the user can see all the responses
      */
 
-    public function report(Person $user, Survey $survey, int $trainerId): bool
+    public function report(Person $user, Survey $survey): bool
     {
-        return ($survey->position_id == Position::TRAINING ? $user->hasRole(Role::TRAINER) : $user->hasARTTrainerPositionRole());
+        if ($survey->canManageSurvey($user)) {
+            return true;
+        }
+
+        if ($survey->position_id == Position::ALPHA) {
+            return false;
+        }
+
+        return $survey->isTrainerForSurvey($user);
     }
 
     /**
@@ -91,8 +101,8 @@ class SurveyPolicy
         return ($user->id == $personId);
     }
 
-    public function allTrainersReport(Person $user, Survey $survey): false
+    public function allTrainersReport(Person $user, Survey $survey): bool
     {
-        return false;
+        return $survey->canManageSurvey($user);
     }
 }
