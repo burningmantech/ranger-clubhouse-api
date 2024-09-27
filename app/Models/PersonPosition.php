@@ -150,7 +150,7 @@ class PersonPosition extends ApiModel
      * @param string $action
      */
 
-    public static function resetPositions(int $personId, string $reason, string $action)
+    public static function resetPositions(int $personId, string $reason, string $action): void
     {
         $removeIds = self::where('person_id', $personId)->pluck('position_id')->toArray();
 
@@ -241,6 +241,7 @@ class PersonPosition extends ApiModel
             ActionLog::record(Auth::user(), 'person-position-remove', $reason, ['position_ids' => $existingIds], $personId);
             foreach ($existingIds as $id) {
                 PersonPositionLog::removePerson($id, $personId);
+                Schedule::removeFutureSignUpsForPosition($personId, $id, 'position revoked');
             }
         }
 
