@@ -84,9 +84,6 @@ class ProvisionMaintenance
             if ($p->type == Provision::EVENT_RADIO) {
                 $p->status = Provision::EXPIRED;
                 $p->addComment('unclaimed event radio marked as expired via bank maintenance function', $user);
-            } else {
-                $p->status = Provision::BANKED;
-                $p->addComment('marked as banked via bank maintenance function', $user);
             }
             self::saveProvision($p, $provisions);
         }
