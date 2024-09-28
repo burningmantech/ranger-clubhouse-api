@@ -498,22 +498,22 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
-        'TAS_WAPDateRange' => [
+        'TAS_SAPDateRange' => [
             'description' => 'Allowable SC & WAP August day range. Use used Format: DD-DD. (just the start & ending days, not month). Use to build WAP date options and the TRS spreadsheet.',
             'type' => self::TYPE_STRING,
         ],
 
-        'TAS_WAPSOMax' => [
+        'TAS_SAPSOMax' => [
             'description' => 'Max. WAP SO Count',
             'type' => self::TYPE_INTEGER,
         ],
 
-        'TAS_WAP_FAQ' => [
+        'TAS_SAP_FAQ' => [
             'description' => 'WAP FAQ Link',
             'type' => self::TYPE_STRING,
         ],
 
-        'TAS_WAP_Report_Email' => [
+        'TAS_SAP_Report_Email' => [
             'description' => 'Email address(es) to send nightly SAPs Needed Report to',
             'type' => self::TYPE_EMAIL
         ],

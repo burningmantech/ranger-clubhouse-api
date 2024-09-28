@@ -66,7 +66,7 @@ class TicketingManagement
 
         $people = [];
 
-        $dateRange = setting('TAS_WAPDateRange');
+        $dateRange = setting('TAS_SAPDateRange');
         if ($dateRange) {
             list($low, $high) = explode("-", trim($dateRange));
         } else {

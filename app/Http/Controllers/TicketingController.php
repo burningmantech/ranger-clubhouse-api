@@ -30,12 +30,12 @@ class TicketingController extends ApiController
     {
         $settings = setting([
             'TicketingPeriod', 'TicketsAndStuffEnablePNV',
-            'TAS_WAPSOMax',
-            'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_WAPDateRange', 'TAS_DefaultAlphaWAPDate',
+            'TAS_SAPSOMax',
+            'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_SAPDateRange', 'TAS_DefaultAlphaWAPDate',
             'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
             'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
             'SpTicketThreshold', 'ScTicketThreshold',
-            'TAS_Ticket_FAQ', 'TAS_WAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
+            'TAS_Ticket_FAQ', 'TAS_SAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
             'TAS_Pickup_Locations',
             'TAS_PayByDateTime', 'TAS_LSD_PayByDateTime',
             'TAS_Special_Price_Ticket_Cost',
@@ -47,10 +47,10 @@ class TicketingController extends ApiController
                 'period' => $settings['TicketingPeriod'],
                 'is_enabled_for_pnv' => $settings['TicketsAndStuffEnablePNV'],
 
-                'wap_so_max' => $settings['TAS_WAPSOMax'],
+                'wap_so_max' => $settings['TAS_SAPSOMax'],
                 'box_office_open_date' => $settings['TAS_BoxOfficeOpenDate'],
                 'wap_default_date' => $settings['TAS_DefaultWAPDate'],
-                'wap_date_range' => $settings['TAS_WAPDateRange'],
+                'wap_date_range' => $settings['TAS_SAPDateRange'],
                 'wap_alpha_default_date' => $settings['TAS_DefaultAlphaWAPDate'],
                 'wap_so_default_date' => $settings['TAS_DefaultSOWAPDate'],
 
@@ -74,7 +74,7 @@ class TicketingController extends ApiController
 
                 'faqs' => [
                     'ticketing' => $settings['TAS_Ticket_FAQ'],
-                    'wap' => $settings['TAS_WAP_FAQ'],
+                    'wap' => $settings['TAS_SAP_FAQ'],
                     'vp' => $settings['TAS_VP_FAQ'],
                     'alpha' => $settings['TAS_Alpha_FAQ'],
                 ]
@@ -114,7 +114,7 @@ class TicketingController extends ApiController
             'names.*.name' => 'sometimes|nullable',
         ]);
 
-        $maxSO = setting('TAS_WAPSOMax');
+        $maxSO = setting('TAS_SAPSOMax');
 
         $year = current_year();
 
