@@ -32,6 +32,7 @@ class Team extends ApiModel
 
     protected $fillable = [
         'active',
+        'email',
         'mvr_eligible',
         'pvr_eligible',
         'title',
@@ -76,9 +77,9 @@ class Team extends ApiModel
         self::deleted(function ($model) {
             $teamId = $model->id;
             Position::where('team_id', $teamId)->update(['team_id' => null]);
-            PersonTeam::where('team_id', $teamId)->delete();
-            PersonTeamLog::where('team_id', $teamId)->delete();
-            TeamRole::where('team_id', $teamId)->delete();
+            PersonTeam::where('team_id', $teamId)->deleteWithReason('Team deletion');
+            PersonTeamLog::where('team_id', $teamId)->deleteWithReason('Team deletion');
+            TeamRole::where('team_id', $teamId)->deleteWithReason('Team deletion');
             ClubhouseCache::flush();
         });
     }

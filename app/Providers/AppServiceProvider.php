@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Database\Eloquent\Builder;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -53,6 +54,16 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('hyperlinktext', function ($text) {
             return '<?php echo \App\Helpers\HyperLinkHelper::text(' . $text . '); ?>';
         });
+
+        Builder::macro('deleteWithReason', function(string $reason) {
+            $rows = $this->get();
+            foreach ($rows as $row) {
+                $row->auditReason = $reason;
+                $row->delete();
+            }
+            return $rows;
+        });
+
 
         $this->bootAuth();
         $this->bootRoute();

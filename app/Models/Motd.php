@@ -46,7 +46,7 @@ class Motd extends ApiModel
         parent::boot();
 
         self::deleted(function ($model) {
-            DB::table('person_motd')->where('motd_id', $model->id)->delete();
+            PersonMotd::where('motd_id', $model->id)->deleteWithReason('Motd deletion');
         });
     }
 
