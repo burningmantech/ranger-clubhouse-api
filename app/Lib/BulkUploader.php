@@ -648,7 +648,7 @@ class BulkUploader
         $year = current_year();
         $low = 5;
         $high = 26;
-        $wapDate = setting('TAS_WAPDateRange', true);
+        $wapDate = setting('TAS_SAPDateRange', true);
         if (!empty($wapDate)) {
             list($low, $high) = explode("-", $wapDate);
         }

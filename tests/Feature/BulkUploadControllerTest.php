@@ -570,7 +570,7 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $personId = $this->user->id;
 
-        $this->setting('TAS_WAPDateRange', '3-28');
+        $this->setting('TAS_SAPDateRange', '3-28');
 
         AccessDocument::factory()->create([
             'person_id' => $personId,
@@ -636,7 +636,7 @@ class BulkUploadControllerTest extends TestCase
         $callsign = $this->user->callsign;
         $personId = $this->user->id;
 
-        $this->setting('TAS_WAPDateRange', '3-28');
+        $this->setting('TAS_SAPDateRange', '3-28');
 
         $response = $this->json('POST', 'bulk-upload', [
             'action' => 'wap',

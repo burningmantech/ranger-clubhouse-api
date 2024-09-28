@@ -30,7 +30,7 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
 
     public function handle(): mixed
     {
-        $email = setting('TAS_WAP_Report_Email');
+        $email = setting('TAS_SAP_Report_Email');
         if (empty($email)) {
             return true;
         }

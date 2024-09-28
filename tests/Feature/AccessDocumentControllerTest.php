@@ -145,7 +145,7 @@ class AccessDocumentControllerTest extends TestCase
     {
         $this->addAdminRole();
 
-        $this->setting('TAS_WAPDateRange', '3-24');
+        $this->setting('TAS_SAPDateRange', '3-24');
 
         $ad = $this->createAccessDocument();
 
