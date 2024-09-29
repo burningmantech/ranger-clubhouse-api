@@ -739,7 +739,7 @@ class SurveyReports
                 'id' => $trainer->trainer_id,
                 'callsign' => $trainer->callsign,
                 'photo_url' => $trainer->trainer->person_photo->image_url ?? null,
-                'report' => SurveyReports::buildSurveyReports($survey, $trainer->trainer_id)[0],
+                'report' => SurveyReports::buildSurveyReports($survey, $trainer->trainer_id)[0] ?? [],
             ];
         }
 
