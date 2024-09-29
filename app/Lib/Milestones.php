@@ -145,6 +145,17 @@ class Milestones
                 break;
         }
 
+        if (in_array($status, Person::ACTIVE_STATUSES)) {
+            $linksTag = 'dashboard-links-ranger';
+            $contactTag = 'contacts-ranger';
+        } else {
+            $linksTag = 'dashboard-links-pnv';
+            $contactTag = 'contacts-pnv';
+        }
+
+        $milestones['links'] = Document::contentsByTag($linksTag);
+        $milestones['contacts'] = Document::contentsByTag($contactTag);
+
         $milestones['motorpool_agreement_available'] = $settings['MotorPoolProtocolEnabled'];
         $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
 

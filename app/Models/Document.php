@@ -53,7 +53,6 @@ class Document extends ApiModel
      *
      * @param $options
      * @return bool
-     * @throws ValidationException
      */
 
     public function save($options = []): bool
@@ -113,5 +112,17 @@ class Document extends ApiModel
     public static function haveTag(string $tag): bool
     {
         return DB::table('document')->where('tag', $tag)->exists();
+    }
+
+    /**
+     * Obtain the document contents (aka body) by tag
+     *
+     * @param string $tag
+     * @return string
+     */
+
+    public static function contentsByTag(string $tag) : string
+    {
+        return self::where('tag', $tag)->first()?->body ?? '';
     }
 }
