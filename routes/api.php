@@ -107,6 +107,8 @@ Route::middleware('api')->group(function () {
 
     Route::post('mail-log/sns', [MailLogController::class, 'snsNotification']);
 
+    Route::get('bookmark/{id}', [DocumentController::class, 'bookmark']);
+
     // Only used for development.
     if (app()->isLocal()) {
         // Serve up files in exports, photos, and staging

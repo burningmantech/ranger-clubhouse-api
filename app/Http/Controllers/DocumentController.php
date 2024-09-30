@@ -72,6 +72,25 @@ class DocumentController extends ApiController
     }
 
     /**
+     * Show a bookmark document. Does not require authorization. Only
+     * allowed to show tags beginning with 'bookmark-'.
+     *
+     * @param string $id
+     * @return JsonResponse
+     */
+
+    public function bookmark(string $id) : JsonResponse
+    {
+        $document = Document::findIdOrTagOrFail("bookmark-{$id}");
+
+        return response()->json([
+            'content' => $document->body,
+            'updated_at' => (string) ($document->updated_at ?? $document->created_at),
+            'refresh_time' => $document->refresh_time,
+        ]);
+    }
+
+    /**
      * Update a document
      *
      * @param Document $document
