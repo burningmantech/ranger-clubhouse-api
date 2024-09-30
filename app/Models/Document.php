@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,15 +29,17 @@ class Document extends ApiModel
     const string MVR_FORM_INSTRUCTIONS_TAG = 'mvr-form-instructions';
 
     protected $fillable = [
-        'tag',
+        'body',
         'description',
-        'body'
+        'refresh_time',
+        'tag',
     ];
 
     protected $rules = [
         'tag' => 'required|string',
         'description' => 'required|string',
-        'body' => 'required|string'
+        'body' => 'required|string',
+        'refresh_time' => 'sometimes|nullable|integer',
     ];
 
     public function person_create(): BelongsTo
@@ -124,5 +128,10 @@ class Document extends ApiModel
     public static function contentsByTag(string $tag) : string
     {
         return self::where('tag', $tag)->first()?->body ?? '';
+    }
+
+    public function refreshTime(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
     }
 }
