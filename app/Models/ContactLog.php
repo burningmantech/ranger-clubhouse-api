@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ContactLog extends ApiModel
 {
     protected $table = 'contact_log';
+    protected bool $auditModel = true;
+    public array $auditExclude = [
+        'message'
+    ];
 
     protected $fillable = [
         'sender_person_id',
