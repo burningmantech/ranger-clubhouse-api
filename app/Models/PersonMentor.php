@@ -64,14 +64,12 @@ class PersonMentor extends ApiModel
             person_mentor.mentor_id,
             person_mentor.status as mentor_status,
             person_mentor.mentor_year,
-            IFNULL(alert_person.use_email,1) as use_email,
-            (SELECT DATE(sent_at) FROM contact_log WHERE person.id=contact_log.recipient_person_id AND mentor.id=contact_log.sender_person_id AND contact_log.action=:type ORDER BY contact_log.sent_at desc LIMIT 1) as last_contact_date
+            IFNULL(alert_person.use_email,1) as use_email
             FROM person_mentor
             JOIN person ON person.id=person_mentor.person_id
             LEFT JOIN person_photo ON person.person_photo_id=person_photo.id
             LEFT JOIN person as mentor ON mentor.id=person_mentor.mentor_id
-            LEFT JOIN alert_person ON alert_person.person_id=person_mentor.person_id AND
-                    alert_person.alert_id=:alert_id
+            LEFT JOIN alert_person ON alert_person.person_id=person_mentor.person_id AND alert_person.alert_id=:alert_id
             WHERE person_mentor.person_id IN (' . implode(',', $ids) . ') AND
                 EXISTS (SELECT 1 FROM person_mentor pm WHERE pm.mentor_id=:person_id AND pm.person_id=person_mentor.person_id AND pm.mentor_year=person_mentor.mentor_year LIMIT 1)
 
@@ -79,9 +77,20 @@ class PersonMentor extends ApiModel
             [
                 'person_id' => $personId,
                 'alert_id' => Alert::MENTOR_CONTACT,
-                'type' => 'mentee-contact',
             ]
         );
+
+        $lastContact = DB::table(function ($q) use ($personId, $ids) {
+            $q->from('contact_log')
+                ->select('recipient_person_id', DB::raw('MAX(sent_at) as sent_at'))
+                ->where('sender_person_id', $personId)
+                ->whereIn('recipient_person_id', $ids)
+                ->where('action', 'mentee-contact')
+                ->groupBy('recipient_person_id')
+                ->orderBy('sent_at', 'desc');
+        })->select('recipient_person_id', 'sent_at')
+            ->get()
+            ->keyBy('recipient_person_id');
 
         $lastYears = DB::table(function ($q) use ($ids) {
             $q->from('timesheet')
@@ -108,14 +117,14 @@ class PersonMentor extends ApiModel
 
         $years = [];
         foreach ($rows as $row) {
-            $personId = $row->person_id;
+            $menteeId = $row->person_id;
             $year = $row->mentor_year;
 
             if (!isset($years[$year])) {
                 $years[$year] = [];
             }
 
-            if (!isset($years[$year][$personId])) {
+            if (!isset($years[$year][$menteeId])) {
                 /*
                  * sanitize the status. A disabled account, or status that is not
                  * active or inactive is marked 'not active'.
@@ -128,27 +137,24 @@ class PersonMentor extends ApiModel
                     $canContact = $row->use_email ? 'allow' : 'block';
                 }
 
-                $years[$year][$personId] = [
-                    'person_id' => $personId,
+                $years[$year][$menteeId] = [
+                    'person_id' => $menteeId,
                     'callsign' => $row->callsign,
                     'status' => $status,
-                    'formerly_known_as' => implode(', ', PersonFka::filterOutIrrelevant($fkas->get($personId)?->pluck('fka')->toArray())),
+                    'formerly_known_as' => implode(', ', PersonFka::filterOutIrrelevant($fkas->get($menteeId)?->pluck('fka')->toArray())),
                     'contact_status' => $canContact,
                     'mentor_status' => $row->mentor_status,
-                    'profile_url' => $photos->get($personId)?->profile_url,
-                    'last_worked' => $lastYears->get($personId)?->year,
+                    'profile_url' => $photos->get($menteeId)?->profile_url,
+                    'last_worked' => $lastYears->get($menteeId)?->year,
+                    'last_contact' => $lastContact->get($menteeId)?->sent_at,
                     'mentors' => []
                 ];
             }
 
-            $years[$year][$personId]['mentors'][] = [
+            $years[$year][$menteeId]['mentors'][] = [
                 'callsign' => $row->mentor_callsign,
                 'person_id' => $row->mentor_id,
             ];
-
-            if ($row->mentor_id == $personId) {
-                $years[$year][$personId]['last_contact'] = $row->last_contact_date;
-            }
         }
 
         $result = [];

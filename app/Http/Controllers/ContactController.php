@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Mail\ContactMail;
 use App\Mail\UpdateMailingListSubscriptionsMail;
 use App\Models\Alert;
 use App\Models\AlertPerson;
+use App\Models\ContactLog;
 use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use App\Exceptions\UnacceptableConditionException;
 
 class ContactController extends ApiController
 {
@@ -51,13 +52,14 @@ class ContactController extends ApiController
         if ($type == 'mentor') {
             $subject = "Your mentor, Ranger {$sender->callsign}, wishes to get in contact.";
             $alertId = Alert::MENTOR_CONTACT;
+            $action = 'mentee-contact';
         } else {
             $subject = "Ranger {$sender->callsign} wishes to get in contact.";
             $alertId = Alert::RANGER_CONTACT;
+            $action = 'ranger-contact';
         }
 
         // And verify the recipient wants to be contacted
-
         if (!AlertPerson::allowEmailForAlert($recipient->id, $alertId)) {
             $this->notPermitted('recipient does not wish to be contacted');
         }
@@ -66,6 +68,8 @@ class ContactController extends ApiController
         if (!mail_to_person($recipient, $mail, true)) {
             return $this->error('Failed to send email');
         }
+
+        ContactLog::record($sender->id, $recipient->id, $action, $recipient->email, $subject, $message);
 
         return $this->success();
     }
