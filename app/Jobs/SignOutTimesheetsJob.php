@@ -28,7 +28,7 @@ class SignOutTimesheetsJob implements ShouldQueue
             ->where('position.auto_sign_out', true)
             ->where('sign_out_hour_cap', '>', 0)
             // Give a hour grace period just in case.
-            ->whereRaw('TIMEDIFF(?, on_duty) >= ((sign_out_hour_cap * 3600)+3600)', [now()])
+            ->whereRaw('TIME_TO_SEC(TIMEDIFF(?, on_duty)) >= (sign_out_hour_cap * 3600)', [now()])
             ->with(['position:id,title,sign_out_hour_cap,auto_sign_out,contact_email', 'person:id,callsign,status'])
             ->get();
 

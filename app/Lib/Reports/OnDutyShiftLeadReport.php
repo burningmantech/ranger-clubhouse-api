@@ -3,7 +3,6 @@
 namespace App\Lib\Reports;
 
 use App\Lib\SummarizeGender;
-use App\Models\Person;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
@@ -13,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class OnDutyShiftLeadReport
 {
-    const NON_DIRT = 'non-dirt';
-    const COMMAND = 'command';
-    const DIRT_AND_GREEN_DOT = 'dirt+green';
+    const string NON_DIRT = 'non-dirt';
+    const string COMMAND = 'command';
+    const string DIRT_AND_GREEN_DOT = 'dirt+green';
 
     /**
      * Run the ON DUTY Shift Lead report. Find on duty Rangers in positions of interest and show them to Khaki.

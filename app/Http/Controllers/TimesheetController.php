@@ -10,6 +10,7 @@ use App\Lib\Reports\ForcedSigninsReport;
 use App\Lib\Reports\FreakingYearsReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\NoShowReport;
+use App\Lib\Reports\OnDutyReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
 use App\Lib\Reports\PayrollReport;
 use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
@@ -860,10 +861,29 @@ class TimesheetController extends ApiController
     }
 
     /**
+     * Who is on duty?
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function onDutyReport(): JsonResponse
+    {
+        $this->authorize('onDutyReport', [Timesheet::class]);
+        $params = request()->validate([
+            'duty_date' => 'sometimes|date',
+            'has_excessive_duration' => 'sometimes|boolean',
+        ]);
+
+        return response()->json(OnDutyReport::execute($params['duty_date'] ?? null, $params['has_excessive_duration'] ?? false));
+    }
+
+    /**
      * The On Duty Shift Lead Report
      *
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws \Exception
      */
 
     public function onDutyShiftLeadReport(): JsonResponse

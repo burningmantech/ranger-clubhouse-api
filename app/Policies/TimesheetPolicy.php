@@ -264,6 +264,11 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
+    public function onDutyReport(Person $user): bool
+    {
+        return $user->hasRole(Role::MANAGE);
+    }
+
     public function retentionReport(Person $user): bool
     {
         return false;

@@ -497,6 +497,7 @@ Route::middleware('api')->group(function () {
     Route::get('timesheet/log', [TimesheetController::class, 'showLog']);
     Route::get('timesheet/no-shows-report', [TimesheetController::class, 'noShowsReport']);
     Route::get('timesheet/on-duty-shift-lead-report', [TimesheetController::class, 'onDutyShiftLeadReport']);
+    Route::get('timesheet/on-duty-report', [TimesheetController::class, 'OnDutyReport']);
     Route::get('timesheet/payroll', [TimesheetController::class, 'payrollReport']);
     Route::get('timesheet/radio-eligibility', [TimesheetController::class, 'radioEligibilityReport']);
     Route::get('timesheet/potential-shirts-earned', [TimesheetController::class, 'potentialShirtsEarnedReport']);

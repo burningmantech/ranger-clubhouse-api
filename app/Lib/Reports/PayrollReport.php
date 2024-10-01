@@ -71,7 +71,7 @@ class PayrollReport
                     'verified' => $entry->review_status == Timesheet::STATUS_VERIFIED || $entry->review_status == Timesheet::STATUS_APPROVED,
                     'orig_on_duty' => (string)$onDuty,
                     'orig_off_duty' => (string)$offDuty,
-                    'orig_duration' => $onDuty->diffInSeconds($offDuty),
+                    'orig_duration' => (int) $onDuty->diffInSeconds($offDuty),
                 ];
 
                 if (!$entry->off_duty) {
@@ -92,7 +92,7 @@ class PayrollReport
                     $offDuty = $endTime;
                 }
 
-                $durationSeconds = $onDuty->diffInSeconds($offDuty);
+                $durationSeconds = (int) $onDuty->diffInSeconds($offDuty);
                 if ($durationSeconds < 60) {
                     // Either the entry was less than a minute, or spanned two pay periods and the second half was less
                     // than a minute

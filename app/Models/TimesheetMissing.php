@@ -257,7 +257,7 @@ class TimesheetMissing extends ApiModel
         $on_duty = $this->getOriginal('on_duty');
         $off_duty = $this->getOriginal('off_duty');
 
-        return Carbon::parse($on_duty)->diffInSeconds(Carbon::parse($off_duty));
+        return (int) Carbon::parse($on_duty)->diffInSeconds(Carbon::parse($off_duty));
     }
 
     /**
