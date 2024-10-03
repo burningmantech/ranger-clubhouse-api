@@ -298,6 +298,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'ProspectiveApplicationMailSandbox' => [
+            'description' => 'Prospective Application Mail Sandbox. If enabled, no emails related to processing applications will be sent.',
+            'type' => self::TYPE_BOOL,
+            'default' => 'false',
+        ],
+
         'RadioCheckoutAgreementEnabled' => [
             'description' => 'Allows the Radio Checkout Agreement to be signed.',
             'type' => self::TYPE_BOOL,

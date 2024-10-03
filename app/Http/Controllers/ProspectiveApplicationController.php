@@ -205,7 +205,9 @@ class ProspectiveApplicationController extends ApiController
         $prospectiveApplication->saveOrThrow();
         $prospectiveApplication->loadRelationships();
 
-        ProspectiveApplicationStatusMail::execute($prospectiveApplication, $status, $message);
+        if (!setting('ProspectiveApplicationMailSandbox')) {
+            ProspectiveApplicationStatusMail::execute($prospectiveApplication, $status, $message);
+        }
         return $this->success();
     }
 
@@ -299,7 +301,9 @@ class ProspectiveApplicationController extends ApiController
             'message' => 'required|string'
         ]);
 
-        Mail::send(new SendEmail($prospectiveApplication, $params['subject'], $params['message']));
+        if (!setting('ProspectiveApplicationMailSandbox')) {
+            Mail::send(new SendEmail($prospectiveApplication, $params['subject'], $params['message']));
+        }
 
         return $this->success();
     }
