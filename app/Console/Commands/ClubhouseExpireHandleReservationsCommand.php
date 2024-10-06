@@ -43,6 +43,6 @@ class ClubhouseExpireHandleReservationsCommand extends Command
         }
 
         $this->info("* Expired ".count($expired)." handles.");
-        mail_to(setting('VCEmail'), new ExpiredHandleReservationsMail($expired));
+        mail_send(new ExpiredHandleReservationsMail($expired));
     }
 }

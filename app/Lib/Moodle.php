@@ -340,7 +340,7 @@ class Moodle
              * fired up during the off season) is found.
             if (!in_array($person->status, Person::LOCKED_STATUSES)
                 && !in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
-                mail_to_person($person, new OnlineCourseCompletedMail($person));
+                mail_send(new OnlineCourseCompletedMail($person));
             }
             */
         }

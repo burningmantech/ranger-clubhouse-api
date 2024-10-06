@@ -407,7 +407,7 @@ class ProspectiveClubhouseAccountFromApplication
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
             $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
-            mail_to_person($person, new WelcomeMail($person, $inviteToken), true);
+            mail_send(new WelcomeMail($person, $inviteToken));
         }
 
         if ($this->commit && setting('SFEnableWritebacks')) {

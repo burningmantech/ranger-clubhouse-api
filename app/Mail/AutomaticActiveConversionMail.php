@@ -5,12 +5,11 @@ namespace App\Mail;
 use App\Models\Person;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class AutomaticActiveConversionMail extends Mailable
+class AutomaticActiveConversionMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -22,6 +21,7 @@ class AutomaticActiveConversionMail extends Mailable
     public function __construct(public Person $person, public string $oldStatus, public string $positionTitle, public string $workerCallsign)
     {
         $this->timeOfConversion = now();
+        parent::__construct();
     }
 
     /**
@@ -29,7 +29,9 @@ class AutomaticActiveConversionMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "{$this->person->callsign}: Automatic Conversion to Active");
+        $envelope = $this->fromVC("[Clubhouse] {$this->person->callsign} automatic conversion to active");
+        $envelope->to($this->buildAddresses(setting('VCEmail')));
+        return $envelope;
     }
 
     /**

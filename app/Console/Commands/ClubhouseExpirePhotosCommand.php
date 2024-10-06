@@ -41,8 +41,8 @@ class ClubhouseExpirePhotosCommand extends Command
             ];
         }
 
-        if (!empty($expired)) {
-            mail_to(setting('PhotosExpiredEmail'), new PhotosExpiredMail($expired));
+        if (!empty($expired) && !empty(setting('PhotosExpiredEmail'))) {
+            mail_send(new PhotosExpiredMail($expired));
         }
     }
 }

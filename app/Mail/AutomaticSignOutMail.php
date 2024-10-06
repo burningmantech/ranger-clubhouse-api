@@ -3,14 +3,12 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class AutomaticSignOutMail extends Mailable
+class AutomaticSignOutMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -19,7 +17,7 @@ class AutomaticSignOutMail extends Mailable
      */
     public function __construct(public string $contact_email, public string $title, public float $hourCap, public array $entries)
     {
-        //
+        parent::__construct();
     }
 
     /**
@@ -27,11 +25,9 @@ class AutomaticSignOutMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            from: new Address(setting('DoNotReplyEmail'), 'The Clubhouse Timesheet Bot'),
-            to: $this->contact_email,
-            subject: 'Automatic Sign Out Report',
-        );
+        $envelope = $this->fromDoNotReply('[Clubhouse] Automatic sign out report');
+        $envelope->to($this->buildAddresses($this->contact_email));
+        return $envelope;
     }
 
     /**
@@ -42,15 +38,5 @@ class AutomaticSignOutMail extends Mailable
         return new Content(
             view: 'emails.automatic-sign-out',
         );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
     }
 }

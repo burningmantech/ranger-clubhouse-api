@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\TrainingSignup;
+use App\Mail\TrainingSignupMail;
 
 use App\Models\Person;
 use App\Models\PersonSlot;
@@ -44,7 +44,7 @@ class TrainingSignupEmailJob implements ShouldQueue
         $slot = $this->slot;
 
         if (PersonSlot::haveSlot($person->id, $slot->id)) {
-            mail_to_person($person, new TrainingSignup($slot));
+            mail_send(new TrainingSignupMail($slot, $person));
         }
     }
 }

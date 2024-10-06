@@ -2,14 +2,16 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class OnlineCourseCompletedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
-
-    public $person;
 
     /**
      * Create a new message instance.
@@ -17,22 +19,22 @@ class OnlineCourseCompletedMail extends ClubhouseMailable
      * @return void
      */
 
-    public function __construct($person)
+    public function __construct(public Person $person)
     {
-        $this->person = $person;
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->from(setting('DoNotReplyEmail'), 'The Ranger Training Academy')
-            ->subject('Ranger Online Course Completed')
-            ->view('emails.online-course-completed');
+        $envelope = $this->fromTrainingAcademy('[Clubhouse] Ranger Online Course Completed');
+        $envelope->to(new Address($this->person->email));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.online-course-completed',
+        );
     }
 }

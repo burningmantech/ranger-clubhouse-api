@@ -2,37 +2,38 @@
 
 namespace App\Mail;
 
+use App\Models\Slot;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class TrainingSessionFullMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $slot;
-    public $signedUp;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($slot, $signedUp)
+    public function __construct(public Slot $slot, public int $signedUp, public string $notifyEmail)
     {
-        $this->slot = $slot;
-        $this->signedUp = $signedUp;
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this
-            ->subject('Training Session Full')
-            ->view('emails.training-session-full');
+        $emails = $this->buildAddresses($this->notifyEmail);
+        return new Envelope(
+            from: $emails[0],
+            to: $emails,
+            subject: '[Clubhouse] A training session has become full',
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.training-session-full');
     }
 }

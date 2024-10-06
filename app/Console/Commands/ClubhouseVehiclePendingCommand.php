@@ -33,7 +33,7 @@ class ClubhouseVehiclePendingCommand extends Command
 
         $email = setting('VehiclePendingEmail');
         if ($pendingVehicles->isNotEmpty() && !empty($email)) {
-            mail_to($email, new VehiclePendingMail($pendingVehicles));
+            mail_send(new VehiclePendingMail($pendingVehicles));
         }
     }
 }

@@ -6,6 +6,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Helpers\SqlHelper;
 use App\Mail\ClubhouseNewMessageMail;
 use App\Mail\RBSMail;
@@ -19,9 +20,7 @@ use App\Models\Person;
 use App\Models\PersonMessage;
 use App\Models\Position;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Support\Facades\DB;
-use App\Exceptions\UnacceptableConditionException;
 use ReflectionException;
 use RuntimeException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -920,18 +919,15 @@ class RBS
         $emailFail = 0;
         if ($sendEmail) {
             $email = $person->email;
-            try {
-                if (!$emailSandboxed) {
-                    mail_to_person($person, new ClubhouseNewMessageMail($person, $from, $subject, $message), true);
+            if (!$emailSandboxed) {
+                if (!mail_send(new ClubhouseNewMessageMail($person, $from, $subject, $message))) {
+                    $status = Broadcast::STATUS_SERVICE_FAIL;
+                    $emailFail = 1;
+                } else {
+                    $status = Broadcast::STATUS_SENT;
                 }
+            } else {
                 $status = Broadcast::STATUS_SENT;
-            } catch (Exception $e) {
-                ErrorLog::recordException($e, 'email-exception', [
-                    'type' => 'clubhouse-notify',
-                    'email' => $message->address
-                ]);
-                $status = Broadcast::STATUS_SERVICE_FAIL;
-                $emailFail = 1;
             }
 
             $logIds[] = BroadcastMessage::record(null, $status, $personId, 'email', $email, 'outbound', $message);

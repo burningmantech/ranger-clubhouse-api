@@ -11,10 +11,7 @@ use App\Mail\ProspectiveApplicant\RejectTooYoungMail;
 use App\Mail\ProspectiveApplicant\RejectUnqualifiedMail;
 use App\Mail\ProspectiveApplicant\ReturningRangerMail;
 use App\Mail\ProspectiveApplicant\RRNCheckMail;
-use App\Models\ErrorLog;
 use App\Models\ProspectiveApplication;
-use Illuminate\Support\Facades\Mail;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class ProspectiveApplicationStatusMail
 {
@@ -37,7 +34,6 @@ class ProspectiveApplicationStatusMail
      * @param string $status
      * @param string|null $message
      * @return void
-     * @throws TransportExceptionInterface
      */
 
     public static function execute(ProspectiveApplication $application, string $status, ?string $message): void
@@ -47,15 +43,6 @@ class ProspectiveApplicationStatusMail
             return;
         }
 
-        try {
-            Mail::send(new $mailable($application, $status, $message));
-        } catch (TransportExceptionInterface $e) {
-            ErrorLog::recordException($e, 'email-exception', [
-                'type' => 'mail-to',
-                'message' => $message
-            ]);
-
-            throw $e;
-        }
+        mail_send(new $mailable($application, $status, $message));
     }
 }

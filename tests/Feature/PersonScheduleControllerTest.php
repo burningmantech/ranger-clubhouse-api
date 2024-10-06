@@ -293,16 +293,6 @@ class PersonScheduleControllerTest extends TestCase
                 'slot_id' => $shift->id,
             ]
         );
-
-        /*
-        $to = $this->user->email;
-
-        Mail::assertSent(
-            SlotSignup::class,
-            function ($mail) use ($to) {
-                return $mail->hasTo($to);
-            }
-        );*/
     }
 
 
@@ -1231,7 +1221,7 @@ class PersonScheduleControllerTest extends TestCase
         $response = $this->json('POST', "person/$personId/schedule", ['slot_id' => $shift->id]);
         $response->assertStatus(200);
 
-         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
+        $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
 
         // Grab the audit trail

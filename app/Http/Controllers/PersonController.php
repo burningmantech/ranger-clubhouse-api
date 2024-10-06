@@ -16,8 +16,6 @@ use App\Lib\Reports\TimesheetWorkSummaryReport;
 use App\Lib\TicketsAndProvisionsProgress;
 use App\Lib\UserInfo;
 use App\Mail\AccountCreationMail;
-use App\Mail\NotifyVCEmailChangeMail;
-use App\Models\EmailHistory;
 use App\Models\Person;
 use App\Models\PersonEventInfo;
 use App\Models\PersonMentor;
@@ -189,14 +187,7 @@ class PersonController extends ApiController
         $this->fromRestFiltered($person);
         $person->retrieveRoles();
 
-        $emailChanged = false;
-        if ($person->isDirty('email')) {
-            $emailChanged = true;
-            $oldEmail = $person->getOriginal('email');
-        }
-
         $person->auditReason = 'person update';
-
         if ($person->has_reviewed_pi) {
             $person->reviewed_pi_at = now();
             if (setting('DashboardPeriod') != 'after-event') {
@@ -206,14 +197,6 @@ class PersonController extends ApiController
 
         if (!$person->save()) {
             return $this->restError($person);
-        }
-
-        if ($emailChanged) {
-            EmailHistory::record($person->id, $oldEmail, $this->user->id);
-            // Alert VCs when the email address changes for a prospective.
-            if ($person->status == Person::PROSPECTIVE || $person->status == Person::ALPHA) {
-                mail_to(setting('VCEmail'), new NotifyVCEmailChangeMail($person, $oldEmail), true);
-            }
         }
 
         return $this->toRestFiltered($person);
@@ -658,8 +641,6 @@ class PersonController extends ApiController
             'person.alt_phone' => 'sometimes|string',
         ]);
 
-        $accountCreateEmail = setting('AccountCreationEmail');
-
         $intent = $params['intent'];
 
         $person = new Person;
@@ -682,7 +663,7 @@ class PersonController extends ApiController
         }
 
         // Log account creation
-        mail_to($accountCreateEmail, new AccountCreationMail('success', 'account created', $person, $intent), true);
+        mail_send(new AccountCreationMail('success', 'account created', $person, $intent));
 
         // Set the password
         $person->changePassword($params['person']['password']);

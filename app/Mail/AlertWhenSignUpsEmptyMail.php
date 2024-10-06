@@ -5,6 +5,8 @@ namespace App\Mail;
 use App\Models\Position;
 use App\Models\Slot;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class AlertWhenSignUpsEmptyMail extends ClubhouseMailable
@@ -16,15 +18,15 @@ class AlertWhenSignUpsEmptyMail extends ClubhouseMailable
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->subject("{$this->position->title} shift has become empty")
-            ->view('emails.alert-when-sign-ups-empty');
+        $envelope= $this->fromDoNotReply("[Clubhouse] A {$this->position->title} shift has become empty");
+        $envelope->to($this->buildAddresses($this->position->contact_email));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.alert-when-sign-ups-empty');
     }
 }

@@ -64,8 +64,7 @@ class ContactController extends ApiController
             $this->notPermitted('recipient does not wish to be contacted');
         }
 
-        $mail = new ContactMail($sender, $recipient, $subject, $message);
-        if (!mail_to_person($recipient, $mail, true)) {
+        if (!mail_send( new ContactMail($sender, $recipient, $subject, $message))) {
             return $this->error('Failed to send email');
         }
 
@@ -79,7 +78,7 @@ class ContactController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
     public function updateMailingLists(Person $person): JsonResponse
     {
@@ -108,7 +107,7 @@ class ContactController extends ApiController
         }
 
         $teams = PersonTeam::findAllTeamsForPerson($person->id);
-        mail_to($email, new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? '', $teams), true);
+        mail_send(new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? '', $teams));
         return $this->success();
     }
 }

@@ -9,6 +9,11 @@
         New email address: {{$person->email}}<br>
     </p>
     <p>
+        <a href="https://ranger-clubhouse.burningman.org/person/{{$person->id}}">
+            https://ranger-clubhouse.burningman.org/person/{{$person->id}}
+        </a>
+    </p>
+    <p>
         @if ($teams->isNotEmpty())
             The person is a member of the following Clubhouse Teams:<br>
             @foreach ($teams as $team)
@@ -24,7 +29,8 @@
         </p>
     @else
         <p>
-            {{$person->callsign}} left the following message about updating other Ranger mailing lists besides Allcom &amp; Announce:
+            {{$person->callsign}} left the following message about updating other Ranger mailing lists besides Allcom
+            &amp; Announce:
         </p>
         <p>
             {!! nl2br(e($additionalLists)) !!}

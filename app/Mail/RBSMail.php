@@ -4,6 +4,8 @@ namespace App\Mail;
 
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class RBSMail extends ClubhouseMailable
@@ -23,14 +25,13 @@ class RBSMail extends ClubhouseMailable
         $this->expiresAt = $expiresAt ? (new Carbon($expiresAt)) : null;
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->subject($this->subject)->view('emails.rbs-mail');
+        return $this->fromDoNotReply($this->subject);
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.rbs-mail');
     }
 }

@@ -2,39 +2,35 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class PhotoRejectedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $person;
-    public $rejectMessage;
-    public $rejectReasons;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($person, $rejectReasons, $rejectMessage)
+    public function __construct(public Person $person, public $rejectReasons, public $rejectMessage)
     {
-        $this->person = $person;
-        $this->rejectMessage = $rejectMessage;
-        $this->rejectReasons = $rejectReasons;
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->from(setting('VCEmail'), 'The Volunteer Coordinators')
-            ->subject('Ranger Clubhouse photo submission REJECTED.')
-            ->view('emails.photo-rejected');
+        $envelope = $this->fromVC('Ranger Clubhouse photo submission REJECTED.');
+        $envelope->to(new Address($this->person->email));
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.photo-rejected');
     }
 }

@@ -482,7 +482,7 @@ class TimesheetController extends ApiController
             $person->auditReason = 'automatic status conversion';
             $person->saveWithoutValidation();
             $response['now_active_status'] = true;
-            mail_to(setting('VCEmail'), new AutomaticActiveConversionMail($person, $status, $timesheet->position->title, $this->user->callsign), false);
+            mail_send(new AutomaticActiveConversionMail($person, $status, $timesheet->position->title, $this->user->callsign));
         }
 
         return response()->json($response);
@@ -502,7 +502,7 @@ class TimesheetController extends ApiController
         $this->authorize('deleteMistake', $timesheet);
 
         if ($timesheet->off_duty) {
-            throw new UnacceptableConditionException('Delete-for-mistake request can only happen on still on duty entries.');
+            throw new UnacceptableConditionException('Delete mistake request can only happen on still on duty entries.');
         }
 
         $timesheet->auditReason = 'accidental creation';
