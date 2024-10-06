@@ -4,6 +4,9 @@ namespace App\Mail;
 
 use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class UpdateMailingListSubscriptionsMail extends ClubhouseMailable
@@ -25,15 +28,17 @@ class UpdateMailingListSubscriptionsMail extends ClubhouseMailable
 
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->from(setting('DoNotReplyEmail'))
-            ->subject("Update mailing list subscriptions for {$this->person->callsign}")
-            ->view('emails.update-mailing-list-subscriptions');
+        return new Envelope(
+            from: new Address('rangers@burningman.org'),
+            to: $this->buildAddresses(setting('MailingListUpdateRequestEmail')),
+            subject: "[Clubhouse] Update mailing list subscriptions for {$this->person->callsign}"
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.update-mailing-list-subscriptions');
     }
 }

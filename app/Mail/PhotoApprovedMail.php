@@ -2,14 +2,16 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class PhotoApprovedMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
-
-    public $person;
 
     /**
      * Create a new message instance.
@@ -17,21 +19,20 @@ class PhotoApprovedMail extends ClubhouseMailable
      * @return void
      */
 
-    public function __construct($person)
+    public function __construct(public Person $person)
     {
-        $this->person = $person;
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->from(setting('DoNotReplyEmail'), 'The Volunteer Coordinators')
-            ->subject('Ranger Clubhouse photo submission APPROVED.')
-            ->view('emails.photo-approved');
+        $envelope = $this->fromVC('Ranger Clubhouse photo submission APPROVED.');
+        $envelope->to(new Address($this->person->email));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.photo-approved');
     }
 }

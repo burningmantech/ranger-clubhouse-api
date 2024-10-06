@@ -17,6 +17,7 @@ use App\Attributes\PhoneAttribute;
 use App\Exceptions\UnacceptableConditionException;
 use App\Helpers\SqlHelper;
 use App\Jobs\OnlineCourseSyncPersonJob;
+use App\Mail\NotifyVCEmailChangeMail;
 use App\Validators\StateForCountry;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
@@ -472,6 +473,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 $changed = $model->getAuditedValues()['status'] ?? null;
                 if ($changed) {
                     $model->changeStatus($changed[0], $model->auditReason);
+                }
+            }
+
+            if ($model->wasChanged('email')) {
+                $email = $model->getAuditedValues()['email'][0];
+                EmailHistory::record($model->id, $email,Auth::id());
+                // Alert the VCs when the email address changes for a prospective.
+                if ($model->status == Person::PROSPECTIVE || $model->status == Person::ALPHA) {
+                    mail_send(new NotifyVCEmailChangeMail($model, $email));
                 }
             }
         });

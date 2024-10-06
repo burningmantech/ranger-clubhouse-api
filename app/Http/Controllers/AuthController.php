@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\UserAuthentication;
-use App\Mail\ResetPassword;
+use App\Mail\ResetPasswordMail;
 use App\Models\ActionLog;
 use App\Models\Person;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -86,7 +86,7 @@ class AuthController extends Controller
 
         ActionLog::record($person, 'auth-password-reset-success', 'Password reset request', $action);
 
-        if (!mail_to_person($person, new ResetPassword($person, $token), false)) {
+        if (!mail_send(new ResetPasswordMail($person, $token), false)) {
             return response()->json(['status' => 'mail-fail']);
         }
 

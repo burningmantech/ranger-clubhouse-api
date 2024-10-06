@@ -238,7 +238,7 @@ class ProspectiveApplicationControllerTest extends TestCase
             'status' => ProspectiveApplication::STATUS_REJECT_UNQUALIFIED
         ]);
 
-        Mail::assertSent(RejectUnqualifiedMail::class, function ($mail) use ($app) {
+        Mail::assertQueued(RejectUnqualifiedMail::class, function ($mail) use ($app) {
             return $mail->hasTo($app->email) && $mail->hasFrom(self::VCEMAIL);
         });
     }

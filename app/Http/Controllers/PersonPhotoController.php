@@ -145,9 +145,9 @@ class PersonPhotoController extends ApiController
         if ($reviewed && !in_array($person->status, Person::LOCKED_STATUSES)) {
             $status = $personPhoto->status;
             if ($status == PersonPhoto::APPROVED) {
-                mail_to_person($person, new PhotoApprovedMail($person), true);
+                mail_send(new PhotoApprovedMail($person));
             } elseif ($status == PersonPhoto::REJECTED) {
-                mail_to_person($person, new PhotoRejectedMail($person, $personPhoto->reject_reasons, $personPhoto->reject_message), true);
+                mail_send(new PhotoRejectedMail($person, $personPhoto->reject_reasons, $personPhoto->reject_message));
             }
         }
 

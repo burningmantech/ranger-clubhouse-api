@@ -46,6 +46,6 @@ class AlertWhenSignUpsEmptyJob implements ShouldQueue
             return;
         }
 
-        mail_to($this->position->contact_email, new AlertWhenSignUpsEmptyMail($this->position, $this->slot, $this->traineeSlot ? $this->traineeSlot->signed_up : 0));
+        mail_send(new AlertWhenSignUpsEmptyMail($this->position, $this->slot, $this->traineeSlot ? $this->traineeSlot->signed_up : 0));
     }
 }

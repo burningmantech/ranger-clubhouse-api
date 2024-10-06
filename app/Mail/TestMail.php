@@ -3,35 +3,21 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-use App\Models\Person;
-
-class TestMail extends Mailable
+class TestMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    public function envelope(): Envelope
     {
+        return $this->fromDoNotReply('Test Email');
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build()
+    public function content(): Content
     {
-        return $this->from(setting('DoNotReplyEmail'))
-                ->subject('Test Email')
-                ->view('emails.test-mail');
+        return new Content(view: 'emails.test-mail');
     }
 }

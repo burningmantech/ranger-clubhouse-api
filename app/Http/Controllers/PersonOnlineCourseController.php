@@ -105,7 +105,7 @@ class PersonOnlineCourseController extends ApiController
         }
 
         if (!$exists) {
-            mail_to_person($person, new OnlineCourseEnrollmentMail($person, $course, $password), true);
+            mail_send(new OnlineCourseEnrollmentMail($person, $course, $password));
         }
 
         return response()->json([
@@ -136,7 +136,7 @@ class PersonOnlineCourseController extends ApiController
         $password = null;
         $lms->resetPassword($person, $password);
 
-        mail_to_person($person, new OnlineCourseResetPasswordMail($person, $password), true);
+        mail_send(new OnlineCourseResetPasswordMail($person, $password), false);
         ActionLog::record($person, 'lms-password-reset', 'password reset requested');
 
         return response()->json(['status' => 'success', 'password' => $password]);

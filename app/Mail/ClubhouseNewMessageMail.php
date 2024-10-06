@@ -2,45 +2,44 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
-
 use App\Models\Person;
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
 
-class ClubhouseNewMessageMail extends Mailable
+class ClubhouseNewMessageMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
-
-    public $person;
-    public $clubhouseFrom;
-    public $clubhouseSubject;
-    public $clubhouseMessage;
 
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct(Person $person, $from, $subject, $message)
+
+    public function __construct(public Person $person,
+                                public string $clubhouseFrom,
+                                public string $clubhouseSubject,
+                                public string $clubhouseMessage)
     {
-        $this->person = $person;
-        $this->clubhouseFrom = $from;
-        $this->clubhouseSubject = $subject;
-        $this->clubhouseMessage = $message;
+        parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->from(setting('DoNotReplyEmail'))
-                ->subject('[Rangers] A New Clubhouse Message')
-                ->view('emails.clubhouse-new-message');
+        return new Envelope(
+            from: new Address(setting('DoNotReplyEmail'), 'The Black Rock Rangers'),
+            to: new Address($this->person->email),
+            subject: "[Clubhouse Message] {$this->clubhouseSubject}",
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.clubhouse-new-message',
+        );
     }
 }

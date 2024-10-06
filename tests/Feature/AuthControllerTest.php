@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Mail\ResetPassword;
+use App\Mail\ResetPasswordMail;
 use App\Models\Person;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -88,7 +88,7 @@ class AuthControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['status' => 'success']);
 
-        Mail::assertSent(ResetPassword::class, function ($mail) use ($user) {
+        Mail::assertSent(ResetPasswordMail::class, function ($mail) use ($user) {
             return $mail->hasTo($user->email);
         });
     }

@@ -9,7 +9,6 @@ use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Mail\Mailable;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -30,48 +29,35 @@ if (!function_exists('setting')) {
 }
 
 /**
- * Send an email. Alias for Mail:to()->send() with exception handling.
+ * Send an email.
  *
- * @param string|array $email string, string with a comma(s), or string array of email addresses to send
  * @param Mailable $message the message to send
  * @param bool $queueMail true if the email is to be queued for delivery
  * @return bool true if mail was successfully queued, false if an exception happened.
  */
 
-if (!function_exists('mail_to')) {
-    function mail_to(string|array $email, Mailable $message, bool $queueMail = false, $personId = null): bool
+if (!function_exists('mail_send')) {
+     function mail_send(Mailable $message, bool $queueMail = true): bool
     {
         prevent_if_ghd_server('Sending email');
 
-        if (is_string($email) && str_contains($email, ',')) {
-            $email = explode(',', $email);
-        }
-
         try {
-            $to = Mail::to($email);
             if ($queueMail && !env('APP_DEBUG')) {
-                $to->queue($message);
+                Mail::queue($message);
             } else {
-                $to->send($message);
+                Mail::send($message);
             }
             return true;
         } catch (TransportExceptionInterface $e) {
             ErrorLog::recordException($e, 'email-exception', [
                 'type' => 'mail-to',
-                'email' => $email,
                 'message' => $message
             ]);
 
             return false;
         }
     }
-}
 
-if (!function_exists('mail_to_person')) {
-    function mail_to_person(Person $person, Mailable $message, bool $queueMail = false): bool
-    {
-        return mail_to($person->email, $message, $queueMail, $person->id);
-    }
 }
 
 /**
@@ -135,7 +121,7 @@ if (!function_exists('request_ip')) {
     function request_ip(): string
     {
         $header = request()->header('CF-Connecting-IP');
-        if (!empty($header)){
+        if (!empty($header)) {
             return $header;
         }
         $header = request()->header('X-Forwarded-For');

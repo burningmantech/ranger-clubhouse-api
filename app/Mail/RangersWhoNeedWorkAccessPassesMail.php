@@ -3,6 +3,8 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class RangersWhoNeedWorkAccessPassesMail extends ClubhouseMailable
@@ -14,13 +16,15 @@ class RangersWhoNeedWorkAccessPassesMail extends ClubhouseMailable
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->subject('Ranger SAP Candidates ' . date('Y-m-d'))->view('emails.rangers-who-need-waps');
+        $envelope = $this->fromVC('[Clubhouse] Ranger SAP Candidates ' . date('Y-m-d'));
+        $envelope->to($this->buildAddresses(setting('TAS_SAP_Report_Email')));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.rangers-who-need-waps');
     }
 }

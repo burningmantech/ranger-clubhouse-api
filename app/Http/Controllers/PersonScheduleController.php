@@ -236,7 +236,7 @@ class PersonScheduleController extends ApiController
             && !$slot->has_started
             && !empty($slot->position->contact_email)) {
             // fire off an email letting the TA or ART team know a session has become full.
-            mail_to($slot->position->contact_email, new TrainingSessionFullMail($slot, $signedUp), true);
+            mail_send(new TrainingSessionFullMail($slot, $signedUp, $slot->position->contact_email));
         }
 
         $response = [

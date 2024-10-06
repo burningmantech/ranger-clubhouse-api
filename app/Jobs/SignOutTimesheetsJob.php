@@ -64,7 +64,7 @@ class SignOutTimesheetsJob implements ShouldQueue
             if (empty($email)) {
                 continue;
             }
-            mail_to($position['contact_email'], new AutomaticSignOutMail($position['contact_email'], $position['title'], $position['hour_cap'], $position['entries']), false);
+            mail_send(new AutomaticSignOutMail($position['contact_email'], $position['title'], $position['hour_cap'], $position['entries']), false);
         }
     }
 }

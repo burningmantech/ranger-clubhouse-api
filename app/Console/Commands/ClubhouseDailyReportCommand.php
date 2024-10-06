@@ -83,8 +83,7 @@ class ClubhouseDailyReportCommand extends Command
 
         $unknownPhones = BroadcastMessage::retrieveUnknownPhonesForDailyReport();
 
-        mail_to(
-            setting('DailyReportEmail'),
+        mail_send(
             new DailyReportMail(
                 $failedBroadcasts,
                 $errorLogs,

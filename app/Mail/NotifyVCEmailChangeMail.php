@@ -2,35 +2,35 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class NotifyVCEmailChangeMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $person;
-    public $oldEmail;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($person, $oldEmail)
+    public function __construct(public Person $person, public string $oldEmail)
     {
-        $this->person = $person;
-        $this->oldEmail = $oldEmail;
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->subject('[clubhouse notification] Prospective email change')->view('emails.notify-vc-email-change');
+        $envelope = $this->fromVC('[Clubhouse] Applicant email address update');
+        $envelope->to(setting('VCEmail'));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.notify-vc-email-change');
     }
 }

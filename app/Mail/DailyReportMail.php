@@ -3,6 +3,8 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class DailyReportMail extends ClubhouseMailable
@@ -30,13 +32,15 @@ class DailyReportMail extends ClubhouseMailable
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->subject('Clubhouse Daily Report ' . date('Y-m-d'))->view('emails.daily-report');
+        $envelope = $this->fromDoNotReply('[Clubhouse] Daily Report ' . date('Y-m-d'));
+        $envelope->to($this->buildAddresses(setting('DailyReportEmail')));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.daily-report');
     }
 }

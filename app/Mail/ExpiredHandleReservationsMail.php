@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -25,10 +24,7 @@ class ExpiredHandleReservationsMail extends ClubhouseMailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            from: setting('DoNotReplyEmail'),
-            subject: 'Expired Handle Reservations',
-        );
+        return $this->fromVC('Expired Handle Reservations');
     }
 
     /**
@@ -39,15 +35,5 @@ class ExpiredHandleReservationsMail extends ClubhouseMailable
         return new Content(
             view: 'emails.expired-handle-reservations',
         );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
     }
 }

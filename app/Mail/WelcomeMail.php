@@ -6,14 +6,18 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class WelcomeMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public $inviteUrl;
+    public string $inviteUrl;
 
     /**
      * Create a new message instance.
@@ -21,22 +25,22 @@ class WelcomeMail extends ClubhouseMailable
      * @return void
      */
 
-    public function __construct(public $person, public $inviteToken)
+    public function __construct(public Person $person, public string $inviteToken)
     {
         $host = request()->getSchemeAndHttpHost();
         $this->inviteUrl = "{$host}/login?token={$inviteToken}&welcome=1";
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
+    public function envelope() : Envelope
     {
-        return $this->from(setting('DoNotReplyEmail'), 'The Black Rock Rangers')
-            ->subject('Welcome to the Black Rock Rangers Secret Clubhouse!')
-            ->view('emails.welcome');
+        $envelope = $this->fromVC('Welcome to the Black Rock Rangers Secret Clubhouse!');
+        $envelope->to(new Address($this->person->email));
+        return $envelope;
+    }
+
+    public function content() : Content
+    {
+        return new Content(view: 'emails.welcome');
     }
 }

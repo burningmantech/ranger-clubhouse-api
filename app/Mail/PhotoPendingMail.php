@@ -3,8 +3,10 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 class PhotoPendingMail extends ClubhouseMailable
 {
@@ -21,14 +23,16 @@ class PhotoPendingMail extends ClubhouseMailable
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->subject('[Clubhouse] '.count($this->pendingPhotos).' photo(s) queued for review')
-                ->view('emails.photo-pending');
+        $count = count($this->pendingPhotos);
+        $envelope = $this->fromVC('[Clubhouse] ' . $count . ' ' . Str::plural('photo', $count) . ' queued for review.');
+        $envelope->to($this->buildAddresses(setting('PhotoPendingNotifyEmail')));
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.photo-pending');
     }
 }

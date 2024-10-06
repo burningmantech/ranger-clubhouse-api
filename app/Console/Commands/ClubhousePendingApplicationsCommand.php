@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Mail\ProspectiveApplicant\ApprovedReminderMail;
 use App\Models\ProspectiveApplication;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 
 class ClubhousePendingApplicationsCommand extends Command
 {
@@ -31,7 +30,7 @@ class ClubhousePendingApplicationsCommand extends Command
         $applications = ProspectiveApplication::retrieveApproved();
 
         if ($applications->isNotEmpty()) {
-            Mail::send(new ApprovedReminderMail($applications));
+            mail_send(new ApprovedReminderMail($applications));
         }
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
 use App\Models\Person;
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
 
-class ResetPassword extends ClubhouseMailable
+class ResetPasswordMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
@@ -20,7 +21,7 @@ class ResetPassword extends ClubhouseMailable
      *
      * @return void
      */
-    public function __construct($person, $token)
+    public function __construct(public Person $person, $token)
     {
         $this->adminEmail = setting('AdminEmail');
 
@@ -30,7 +31,7 @@ class ResetPassword extends ClubhouseMailable
                 break;
             case Person::PROSPECTIVE:
             case Person::ALPHA:
-                $this->greeting = "Prospective Ranger {$person->callsign}";
+                $this->greeting = "Ranger Applicant {$person->callsign}";
                 break;
             case Person::NON_RANGER:
                 $this->greeting = "Ranger Volunteer {$person->callsign}";
@@ -45,14 +46,15 @@ class ResetPassword extends ClubhouseMailable
         parent::__construct();
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-
-    public function build(): static
+    public function envelope(): Envelope
     {
-        return $this->subject('Ranger Clubhouse password reset')->view('emails.reset-password');
+        $envelope =  $this->fromDoNotReply('Ranger Clubhouse password reset');
+        $envelope->to($this->person->email);
+        return $envelope;
+    }
+
+    public function content(): Content
+    {
+        return new Content(view: 'emails.reset-password');
     }
 }
