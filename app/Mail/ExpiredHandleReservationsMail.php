@@ -24,7 +24,9 @@ class ExpiredHandleReservationsMail extends ClubhouseMailable
      */
     public function envelope(): Envelope
     {
-        return $this->fromVC('Expired Handle Reservations');
+        $envelope =  $this->fromVC('Expired Handle Reservations');
+        $envelope->to(setting('VCEmail'));
+        return $envelope;
     }
 
     /**

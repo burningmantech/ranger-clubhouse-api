@@ -27,7 +27,7 @@ class PhotoApprovedMail extends ClubhouseMailable
     public function envelope(): Envelope
     {
         $envelope = $this->fromVC('Ranger Clubhouse photo submission APPROVED.');
-        $envelope->to(new Address($this->person->email));
+        $envelope->to([new Address($this->person->email)]);
         return $envelope;
     }
 

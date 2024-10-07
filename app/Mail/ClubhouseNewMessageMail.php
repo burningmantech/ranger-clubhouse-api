@@ -31,7 +31,7 @@ class ClubhouseNewMessageMail extends ClubhouseMailable
     {
         return new Envelope(
             from: new Address(setting('DoNotReplyEmail'), 'The Black Rock Rangers'),
-            to: new Address($this->person->email),
+            to: [new Address($this->person->email)],
             subject: "[Clubhouse Message] {$this->clubhouseSubject}",
         );
     }

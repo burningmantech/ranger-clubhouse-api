@@ -35,7 +35,7 @@ class AccountCreationMail extends ClubhouseMailable
     {
         return new Envelope(
             from: new Address(setting('DoNotReplyEmail')),
-            to: new Address(setting('AccountCreationEmail')),
+            to: [new Address(setting('AccountCreationEmail'))],
             subject: '[Clubhouse] Account creation ' . $this->person->callsign,
         );
     }
