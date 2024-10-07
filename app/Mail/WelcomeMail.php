@@ -35,7 +35,7 @@ class WelcomeMail extends ClubhouseMailable
     public function envelope() : Envelope
     {
         $envelope = $this->fromVC('Welcome to the Black Rock Rangers Secret Clubhouse!');
-        $envelope->to(new Address($this->person->email));
+        $envelope->to([new Address($this->person->email)]);
         return $envelope;
     }
 

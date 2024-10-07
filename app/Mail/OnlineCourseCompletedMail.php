@@ -27,7 +27,7 @@ class OnlineCourseCompletedMail extends ClubhouseMailable
     public function envelope(): Envelope
     {
         $envelope = $this->fromTrainingAcademy('[Clubhouse] Ranger Online Course Completed');
-        $envelope->to(new Address($this->person->email));
+        $envelope->to([new Address($this->person->email)]);
         return $envelope;
     }
 

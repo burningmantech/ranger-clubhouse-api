@@ -34,7 +34,7 @@ class TrainingSignupMail extends ClubhouseMailable
     public function envelope(): Envelope
     {
         $envelope = $this->fromDoNotReply('[Clubhouse] Ranger Training Signup');
-        $envelope->to(new Address($this->person->email));
+        $envelope->to([new Address($this->person->email)]);
         return $envelope;
     }
 
