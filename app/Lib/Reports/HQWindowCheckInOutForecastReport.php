@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class HQWindowCheckInOutForecastReport
 {
-    public static function execute(int $year, int $interval = 15)
+    public static function execute(int $year, int $interval = 15): array
     {
         // All shift visits excluding Training, Trainer, TiT, Uber & Burn Perimeter
         $hqPositions = [Position::HQ_WINDOW, Position::HQ_RUNNER, Position::HQ_SHORT, Position::HQ_LEAD];
@@ -98,7 +98,7 @@ class HQWindowCheckInOutForecastReport
      *
      */
 
-    public static function findAllHQVisits($start, $end, $intervalSeconds)
+    public static function findAllHQVisits($start, $end, $intervalSeconds): array
     {
         $dtStart = DateTime::createFromFormat('Y-m-d H:i:s', $start);
         $dtEnd = DateTime::createFromFormat('Y-m-d H:i:s', $end);
@@ -162,7 +162,7 @@ class HQWindowCheckInOutForecastReport
      * @param int $intervalSeconds
      * @return array
      */
-    public static function findBurnPerimeterVisits(string $start, $periods, int $intervalSeconds)
+    public static function findBurnPerimeterVisits(string $start, $periods, int $intervalSeconds): array
     {
         $cond = "position_id=" . Position::BURN_PERIMETER . " AND begins='$start'";
         $checkins = self::findHQVisits('begins', $cond, $intervalSeconds);
@@ -236,7 +236,7 @@ class HQWindowCheckInOutForecastReport
      * @return Collection
      */
 
-    public static function findHQVisits(string $column, string $cond, int $intervalSeconds = 900)
+    public static function findHQVisits(string $column, string $cond, int $intervalSeconds = 900): Collection
     {
         return DB::table('slot')
             ->selectRaw("from_unixtime($intervalSeconds*floor(unix_timestamp($column)/$intervalSeconds)) as 'time'")
@@ -255,7 +255,7 @@ class HQWindowCheckInOutForecastReport
      * @param $periods
      * @param $column
      */
-    public static function populateForecastColumn($rows, &$periods, $column)
+    public static function populateForecastColumn($rows, &$periods, $column): void
     {
         foreach ($rows as $row) {
             $time = $row->time;
@@ -269,7 +269,7 @@ class HQWindowCheckInOutForecastReport
      * Loop thru and update the shift end counts by subtracting
      */
 
-    public static function populateForecastShiftEnd($rows, &$periods, $column)
+    public static function populateForecastShiftEnd($rows, &$periods, $column): void
     {
         $subtract = [];
         foreach ($rows as $row) {

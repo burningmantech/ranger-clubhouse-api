@@ -269,6 +269,21 @@ class SlotController extends ApiController
     }
 
     /**
+     * Find all signups within a given period for a position
+     */
+
+    public function peopleInPeriod() : JsonResponse
+    {
+        $params = request()->validate([
+            'period' => 'required|date',
+            'interval' => 'required|integer',
+            'position_id' => 'required|integer:exists:position,id'
+        ]);
+
+        return response()->json(Slot::retrieveSignUpsInAPeriod($params['position_id'], $params['period'], $params['interval']));
+    }
+
+    /**
      * Return how many years the slots span
      *
      * @return JsonResponse

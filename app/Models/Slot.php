@@ -432,6 +432,54 @@ class Slot extends ApiModel
     }
 
     /**
+     * Find all people within a given period and interval.
+     *
+     * @param int $positionId
+     * @param string $period
+     * @param int $intervalMinutes
+     * @return array
+     */
+
+    public static function retrieveSignUpsInAPeriod(int $positionId, string $period, int $intervalMinutes): array
+    {
+        $intervalSeconds = $intervalMinutes * 60;
+        $begins = $period;
+        $date = Carbon::parse($period);
+        $ends = (string)$date->addSeconds($intervalSeconds);
+        $people = DB::table('slot')
+            ->select('person.id', 'person.callsign', 'slot.begins')
+            ->join('person_slot', 'person_slot.slot_id', '=', 'slot.id')
+            ->join('person', 'person.id', '=', 'person_slot.person_id')
+            ->where('slot.position_id', $positionId)
+            ->where('slot.begins_year', $date->year)
+            ->where(function ($w) use ($begins, $ends) {
+                $w->where(function ($q) use ($begins, $ends) {
+                    $q->where('slot.begins', '<=', $begins);
+                    $q->where('slot.ends', '>=', $ends);
+                })
+                    // Shift happens within the period
+                    ->orWhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.begins', '>=', $begins);
+                        $q->where('slot.ends', '<=', $ends);
+                    })
+                    // Shift ends within the period
+                    ->orWhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.ends', '>', $begins);
+                        $q->where('slot.ends', '<=', $ends);
+                    })
+                    // Shift begins within the period
+                    ->orWhere(function ($q) use ($begins, $ends) {
+                        $q->where('slot.begins', '>=', $begins);
+                        $q->where('slot.begins', '<', $ends);
+                    });
+            })
+            ->get();
+
+        return ['people' => $people];
+    }
+
+
+    /**
      * Find all the signs up for a given person, position, and year.
      *
      * @param $personId
