@@ -428,6 +428,7 @@ Route::middleware('api')->group(function () {
     Route::get('slot/shift-coverage-report', [SlotController::class, 'shiftCoverageReport']);
     Route::get('slot/shift-lead-report', [SlotController::class, 'shiftLeadReport']);
     Route::get('slot/shift-signups-report', [SlotController::class, 'shiftSignUpsReport']);
+    Route::get('slot/people-in-period', [SlotController::class, 'peopleInPeriod']);
     Route::get('slot/position-schedule-report', [SlotController::class, 'positionScheduleReport']);
     Route::get('slot/callsign-schedule-report', [SlotController::class, 'callsignScheduleReport']);
     Route::get('slot/years', [SlotController::class, 'years']);
