@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -25,7 +26,7 @@ class ExpiredHandleReservationsMail extends ClubhouseMailable
     public function envelope(): Envelope
     {
         $envelope =  $this->fromVC('Expired Handle Reservations');
-        $envelope->to(setting('VCEmail'));
+        $envelope->to([new Address(setting('VCEmail'))]);
         return $envelope;
     }
 

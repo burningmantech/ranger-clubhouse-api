@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Person;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -48,8 +49,8 @@ class ResetPasswordMail extends ClubhouseMailable
 
     public function envelope(): Envelope
     {
-        $envelope =  $this->fromDoNotReply('Ranger Clubhouse password reset');
-        $envelope->to($this->person->email);
+        $envelope = $this->fromDoNotReply('Ranger Clubhouse password reset');
+        $envelope->to([new Address($this->person->email)]);
         return $envelope;
     }
 
