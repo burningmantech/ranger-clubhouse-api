@@ -105,4 +105,16 @@ class TeamPolicy
     {
         return $user->isAdmin() || TeamManager::isManager($team->id, $user->id);
     }
+
+    /**
+     * Can the user see the directory?
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function directory(Person $user): bool
+    {
+        return in_array($user->status, Person::ACTIVE_STATUSES);
+    }
 }

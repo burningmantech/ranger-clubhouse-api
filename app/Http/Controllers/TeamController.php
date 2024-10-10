@@ -160,4 +160,15 @@ class TeamController extends ApiController
 
         return response()->json(TeamMembershipReport::execute($team));
     }
+
+    /**
+     * Provide a directory of known Cadres & Delegations
+     */
+
+    public function directory() : JsonResponse
+    {
+        $this->authorize('directory', Team::class);
+
+        return response()->json([ 'teams' => Team::retrieveDirectory()]);
+    }
 }

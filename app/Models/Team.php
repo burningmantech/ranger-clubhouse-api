@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
 use App\Lib\ClubhouseCache;
 use App\Lib\Membership;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -193,6 +195,32 @@ class Team extends ApiModel
     }
 
     /**
+     * Return a list of all cadres & delegations with email contacts.
+     *
+     * @return array
+     */
+
+    public static function retrieveDirectory(): array
+    {
+        $rows = self::whereIn('type', [self::TYPE_CADRE, self::TYPE_DELEGATION])
+            ->where('active', true)
+            ->whereNotNull('email')
+            ->orderBy('title')
+            ->get();
+
+        $contacts = [];
+        foreach ($rows as $row) {
+            $contacts[] = [
+                'id' => $row->id,
+                'title' => $row->title,
+                'email' => $row->email,
+            ];
+        }
+
+        return $contacts;
+    }
+
+    /**
      * Load the roles associated with the team, and set the pseudo column role_ids
      * @return void
      */
@@ -224,5 +252,10 @@ class Team extends ApiModel
     public function setRoleIdsAttribute($value): void
     {
         $this->role_ids = $value;
+    }
+
+    public function email(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
     }
 }
