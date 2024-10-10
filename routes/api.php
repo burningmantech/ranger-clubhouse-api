@@ -424,7 +424,7 @@ Route::middleware('api')->group(function () {
     Route::get('slot/dirt-shift-times', [SlotController::class, 'dirtShiftTimes']);
     Route::get('slot/flakes', [SlotController::class, 'flakeReport']);
     Route::get('slot/hq-forecast-report', [SlotController::class, 'hqForecastReport']);
-    Route::post('slot/link-slots', [ SlotController::class, 'linkSlots']);
+    Route::post('slot/link-slots', [SlotController::class, 'linkSlots']);
     Route::get('slot/shift-coverage-report', [SlotController::class, 'shiftCoverageReport']);
     Route::get('slot/shift-lead-report', [SlotController::class, 'shiftLeadReport']);
     Route::get('slot/shift-signups-report', [SlotController::class, 'shiftSignUpsReport']);
@@ -455,6 +455,7 @@ Route::middleware('api')->group(function () {
     Route::get('swag/shirts', [SwagController::class, 'shirts']);
     Route::resource('swag', SwagController::class);
 
+    Route::get('team/directory', [TeamController::class, 'directory']);
     Route::get('team/people-by-teams', [TeamController::class, 'peopleByTeamsReport']);
     Route::post('team/{team}/bulk-grant-revoke', [TeamController::class, 'bulkGrantRevoke']);
     Route::get('team/{team}/membership', [TeamController::class, 'membership']);
