@@ -27,6 +27,7 @@ class PhotoRejectedMail extends ClubhouseMailable
     {
         $envelope = $this->fromVC('Ranger Clubhouse photo submission REJECTED.');
         $envelope->to([new Address($this->person->email)]);
+        return $envelope;
     }
 
     public function content(): Content
