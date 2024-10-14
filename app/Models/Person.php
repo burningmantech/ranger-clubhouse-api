@@ -216,6 +216,10 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             'vanity_changed_at' => 'datetime',
             'vehicle_blacklisted' => 'boolean',
             'vintage' => 'boolean',
+            'years_as_contributor' => 'json',
+            'years_as_ranger' => 'json',
+            'years_combined' => 'json',
+            'years_seen' => 'json',
         ];
     }
 
@@ -478,7 +482,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
             if ($model->wasChanged('email')) {
                 $email = $model->getAuditedValues()['email'][0];
-                EmailHistory::record($model->id, $email,Auth::id());
+                EmailHistory::record($model->id, $email, Auth::id());
                 // Alert the VCs when the email address changes for a prospective.
                 if ($model->status == Person::PROSPECTIVE || $model->status == Person::ALPHA) {
                     mail_send(new NotifyVCEmailChangeMail($model, $email));

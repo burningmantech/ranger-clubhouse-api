@@ -526,6 +526,7 @@ class PersonController extends ApiController
 
     /**
      * Return the years person has worked and has sign ups
+     * TODO: remove when all cached clients have expired.
      *
      * @param Person $person
      * @return JsonResponse
@@ -535,12 +536,11 @@ class PersonController extends ApiController
     public function years(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
-        $personId = $person->id;
         return response()->json([
-            'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
-            'all_years' => Timesheet::findYears($personId, Timesheet::YEARS_ALL),
-            'rangered_years' => Timesheet::findYears($personId, Timesheet::YEARS_RANGERED),
-            'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
+            'years' => $person->years_combined,
+            'all_years' => $person->years_seen,
+            'rangered_years' => $person->years_as_ranger,
+            'non_ranger_years' => $person->years_as_contributor,
         ]);
     }
 

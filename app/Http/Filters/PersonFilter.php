@@ -67,7 +67,6 @@ class PersonFilter
         'home_phone',
         'alt_phone',
 
-
         'reviewed_pi_at',
         'pi_reviewed_for_dashboard_at',
         'has_reviewed_pi', // pseudo field
@@ -100,7 +99,7 @@ class PersonFilter
         'on_site',
     ];
 
-    const array BMID_FIELDS = [
+    const array BPGUID_FIELD = [
         'bpguid',
     ];
 
@@ -138,6 +137,14 @@ class PersonFilter
         'has_note_on_file',
     ];
 
+    // Read only.
+    const array YEAR_FIELDS = [
+        'years_as_contributor',
+        'years_as_ranger',
+        'years_combined',
+        'years_seen',
+    ];
+
     //
     // FIELDS_SERIALIZE & FIELDS_DESERIALIZE elements are
     // 0: array of field names
@@ -157,7 +164,7 @@ class PersonFilter
         [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS],
         [self::EVENT_FIELDS, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS]],
-        [self::BMID_FIELDS, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR, Role::EDIT_BMIDS]],
+        [self::BPGUID_FIELD, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::MENTOR, Role::EDIT_BMIDS]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         // Note: self is not allowed to see mentor notes
         [self::INTAKE_FIELDS, false, [Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE]],
@@ -166,6 +173,7 @@ class PersonFilter
         [self::RANGER_ADMIN_FIELDS],
         [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
         [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
+        [self::YEAR_FIELDS, true, [Role::MANAGE, Role::TRAINER]],
     ];
 
     const array FIELDS_DESERIALIZE = [
@@ -180,7 +188,7 @@ class PersonFilter
         [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS, true, [Role::ADMIN]],
         [self::EVENT_FIELDS, false, [Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
-        [self::BMID_FIELDS, true, [Role::EDIT_BMIDS]],
+        [self::BPGUID_FIELD, true, [Role::EDIT_BMIDS]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         [self::INTAKE_FIELDS, false, [Role::INTAKE, Role::VC]],
         [self::SMS_FIELDS, true, [Role::ADMIN]],

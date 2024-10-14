@@ -881,7 +881,7 @@ class PersonControllerTest extends TestCase
      * Test how many years a person has rangered
      */
 
-    public function testUserInfoYearsForActiveSucess()
+    public function testUserInfoYearsForActiveSuccess()
     {
         $personId = $this->user->id;
 
@@ -907,8 +907,8 @@ class PersonControllerTest extends TestCase
         $response->status(200);
         $response->assertJson([
             'user_info' => [
-                'years' => [2010, 2011, 2012],
-                'all_years' => [2009, 2010, 2011, 2012]
+                'years_as_ranger' => [2010, 2011, 2012],
+                'years_seen' => [2009, 2010, 2011, 2012]
             ]
         ]);
     }
@@ -923,7 +923,10 @@ class PersonControllerTest extends TestCase
         $personId = $this->user->id;
         $response = $this->json('GET', "person/$personId/user-info");
         $response->status(200);
-        $response->assertJson(['user_info' => ['years' => []]]);
+        $response->assertJson(['user_info' => [
+            'years_as_ranger' => [],
+            'years_as_contributor' => [],
+        ]]);
     }
 
 

@@ -36,7 +36,7 @@ class RangerRetentionReport
 
         $people = [];
         foreach ($rows as $person) {
-            $years = Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED);
+            $years = Timesheet::findYears($person->id, Timesheet::YEARS_AS_RANGER);
             $people[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
