@@ -23,6 +23,7 @@ use RuntimeException;
  * Declarations for phpstorm
  * @method static $this find(array|string|integer $id)
  * @method static $this findOrFail(array|string|integer $id)
+ * @method static $this chunk(int $count, callable $func)
  * @method static $this select(...$args)
  * @method static $this selectRaw(...$args)
  * @method static $this where(...$args)

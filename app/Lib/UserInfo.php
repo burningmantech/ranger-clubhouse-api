@@ -66,10 +66,10 @@ class UserInfo
             'is_team_manager' => $person->isAdmin() || TeamManager::isManagerOfAny($personId),
 
             // Years breakdown
-            'years' => Timesheet::findYears($personId, Timesheet::YEARS_WORKED),
-            'all_years' => Timesheet::findYears($personId, Timesheet::YEARS_ALL),
-            'rangered_years' => Timesheet::findYears($personId, Timesheet::YEARS_RANGERED),
-            'non_ranger_years' => Timesheet::findYears($personId, Timesheet::YEARS_NON_RANGERED),
+            'years_as_contributor' => $person->years_as_contributor,
+            'years_as_ranger' => $person->years_as_ranger,
+            'years_combined' => $person->years_combined,
+            'years_seen' => $person->years_seen,
         ];
 
         if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::NON_RANGER) {

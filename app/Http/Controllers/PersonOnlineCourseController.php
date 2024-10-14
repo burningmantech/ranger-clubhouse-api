@@ -49,7 +49,7 @@ class PersonOnlineCourseController extends ApiController
              * everyone else - Applicants, Binaries (less than 2 years experience.), Inactive Rangers, and Retirees.
              */
 
-            if ($person->status == Person::ACTIVE && count(Timesheet::findYears($person->id, Timesheet::YEARS_RANGERED)) >= 2) {
+            if ($person->status == Person::ACTIVE && count(Timesheet::findYears($person->id, Timesheet::YEARS_AS_RANGER)) >= 2) {
                 $for = OnlineCourse::COURSE_FOR_RETURNING;
             } else {
                 $for = OnlineCourse::COURSE_FOR_NEW;

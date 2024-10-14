@@ -52,10 +52,10 @@ class Timesheet extends ApiModel
     const string STATUS_UNVERIFIED = 'unverified';
 
     // type for findYears()
-    const string YEARS_ALL = 'all';
-    const string YEARS_WORKED = 'worked';
-    const string YEARS_RANGERED = 'rangered';
-    const string YEARS_NON_RANGERED = 'non-rangered';
+    const string YEARS_SEEN = 'seen';           // All years the person worked and/or had signups
+    const string YEARS_COMBINED = 'combined';   // All the years worked as both a ranger and contributor
+    const string YEARS_AS_RANGER = 'as-ranger'; // All the years worked as a ranger
+    const string YEARS_AS_CONTRIBUTOR = 'as-contributor'; // All the years worked as a contributor / non-ranger
 
     const array EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
@@ -162,8 +162,8 @@ class Timesheet extends ApiModel
          * not actual Ranger)
          */
 
-        self::creating(function ($model) {
-            if ($model->person && $model->person->status == Person::NON_RANGER) {
+        self::creating(function (Timesheet $model) {
+            if ($model->person?->status == Person::NON_RANGER) {
                 $model->is_non_ranger = true;
             }
         });
@@ -173,7 +173,7 @@ class Timesheet extends ApiModel
          * a matching shift in the full schedule.
          */
 
-        self::saving(function ($model) {
+        self::saving(function (Timesheet $model) {
             if (!$model->isDirty('slot_id')
                 && $model->on_duty && $model->position_id
                 && ($model->isDirty('position_id') || $model->isDirty('on_duty'))
@@ -212,7 +212,7 @@ class Timesheet extends ApiModel
             }
         });
 
-        self::saved(function ($model) {
+        self::saved(function (Timesheet $model) {
             $offDuty = $model->getChangedValues()['off_duty'] ?? null;
 
             // Did the off duty column go from nothing to a value? (i.e. shift ended)
@@ -234,9 +234,14 @@ class Timesheet extends ApiModel
             if ($model->additionalWranglerNotes) {
                 TimesheetNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetNote::TYPE_WRANGLER);
             }
+            $onDuty = $model->getChangedValues()['on_duty'] ?? null;
+            $isNonRanger = $model->getChangedValues()['is_non_ranger'] ?? null;
+            if ($offDuty || $onDuty || $isNonRanger) {
+                $model->computePersonYears();
+            }
         });
 
-        self::deleted(function ($model) {
+        self::deleted(function (Timesheet $model) {
             TimesheetNote::where('timesheet_id', $model->id)->delete();
             $model->log(TimesheetLog::DELETE, [
                     'position_id' => $model->position_id,
@@ -244,6 +249,7 @@ class Timesheet extends ApiModel
                     'off_duty' => (string)$model->off_duty
                 ]
             );
+            $model->computePersonYears();
         });
     }
 
@@ -525,10 +531,10 @@ class Timesheet extends ApiModel
     /**
      * Find the years a person has based on $type:
      *
-     * YEARS_ALL: Timesheet years *including* Alpha & Training combined with shift sign up years
-     * YEARS_WORKED: Timesheet years excluding Alpha & Training entries
-     * YEARS_RANGERED: Timesheet years excluding Alpha & Training entries as a Ranger (is_non_ranger=false)
-     * YEARS_NON_RANGERED: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_non_ranger=true)
+     * YEARS_SEEN: Timesheet years *including* Alpha & Training combined with shift sign up years
+     * YEARS_COMBINED: Combined timesheet years excluding Alpha & Training entries for both Ranger and Non-Ranger work.
+     * YEARS_AS_RANGER: Timesheet years excluding Alpha & Training entries as a Ranger (is_non_ranger=false)
+     * YEARS_AS_CONTRIBUTOR: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_non_ranger=true)
      *
      * @param int $personId
      * @param string $type
@@ -537,7 +543,7 @@ class Timesheet extends ApiModel
 
     public static function findYears(int $personId, string $type): array
     {
-        $everything = ($type == self::YEARS_ALL);
+        $everything = ($type == self::YEARS_SEEN);
 
         $sql = DB::table('timesheet')
             ->selectRaw("YEAR(on_duty) as year")
@@ -549,9 +555,9 @@ class Timesheet extends ApiModel
             $sql = $sql->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS);
         }
 
-        if ($type == self::YEARS_NON_RANGERED) {
+        if ($type == self::YEARS_AS_CONTRIBUTOR) {
             $sql->where('is_non_ranger', true);
-        } else if ($type == self::YEARS_RANGERED) {
+        } else if ($type == self::YEARS_AS_RANGER) {
             $sql->where('is_non_ranger', false);
         }
 
@@ -575,6 +581,23 @@ class Timesheet extends ApiModel
         sort($years, SORT_NUMERIC);
 
         return $years;
+    }
+
+    public function computePersonYears(): void
+    {
+        $person = $this->person;
+        if (!$person) {
+            // Account may have been deleted
+            return;
+        }
+
+        $personId = $person->id;
+        $person->years_seen = Timesheet::findYears($personId, Timesheet::YEARS_SEEN);
+        $person->years_as_contributor = Timesheet::findYears($personId, Timesheet::YEARS_AS_CONTRIBUTOR);
+        $person->years_as_ranger = Timesheet::findYears($personId, Timesheet::YEARS_AS_RANGER);
+        $person->years_combined = Timesheet::findYears($personId, Timesheet::YEARS_COMBINED);
+        $person->auditReason = 'years recompute';
+        $person->saveWithoutValidation();
     }
 
     /**
@@ -845,7 +868,7 @@ class Timesheet extends ApiModel
         }
 
         $offDuty = $this->off_duty ?: now();
-        $duration = (int) $this->on_duty->diffInSeconds($offDuty);
+        $duration = (int)$this->on_duty->diffInSeconds($offDuty);
         $this->attributes['duration'] = $duration;
         return $duration;
     }
@@ -988,17 +1011,17 @@ class Timesheet extends ApiModel
         return $this->desired_warnings;
     }
 
-    public function desiredOnDuty() : Attribute
+    public function desiredOnDuty(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
 
-    public function desiredOffDuty() : Attribute
+    public function desiredOffDuty(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
 
-    public function desiredPositionId() : Attribute
+    public function desiredPositionId(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
