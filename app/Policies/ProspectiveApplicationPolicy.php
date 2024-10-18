@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\Person;
-use App\Models\PersonRole;
 use App\Models\ProspectiveApplication;
 use App\Models\Role;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -108,6 +107,19 @@ class ProspectiveApplicationPolicy
     }
 
     /**
+     * Can the user preview emails to be sent?
+     *
+     * @param Person $user
+     * @param ProspectiveApplication $prospectiveApplication
+     * @return false
+     */
+
+    public function previewEmail(Person $user, ProspectiveApplication $prospectiveApplication): false
+    {
+        return false;
+    }
+
+    /**
      * Can the user email the applicant?
      *
      * @param Person $user
@@ -152,7 +164,7 @@ class ProspectiveApplicationPolicy
      * @return false
      */
 
-    public function createProspectives(Person $user) : false
+    public function createProspectives(Person $user): false
     {
         return false;
     }

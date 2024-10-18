@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\ProspectiveApplicationImport;
 use App\Lib\ProspectiveApplicationStatusMail;
 use App\Lib\ProspectiveClubhouseAccountFromApplication;
 use App\Mail\ProspectiveApplicant\SendEmail;
-use App\Models\HandleReservation;
 use App\Models\MailLog;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationNote;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use ReflectionException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class ProspectiveApplicationController extends ApiController
@@ -205,9 +205,7 @@ class ProspectiveApplicationController extends ApiController
         $prospectiveApplication->saveOrThrow();
         $prospectiveApplication->loadRelationships();
 
-        if (!setting('ProspectiveApplicationMailSandbox')) {
-            ProspectiveApplicationStatusMail::execute($prospectiveApplication, $status, $message);
-        }
+        ProspectiveApplicationStatusMail::execute($prospectiveApplication, $status, $message);
         return $this->success();
     }
 
@@ -301,11 +299,41 @@ class ProspectiveApplicationController extends ApiController
             'message' => 'required|string'
         ]);
 
-        if (!setting('ProspectiveApplicationMailSandbox')) {
-            Mail::send(new SendEmail($prospectiveApplication, $params['subject'], $params['message']));
-        }
+        mail_send(new SendEmail($prospectiveApplication, $params['subject'], $params['message']));
 
         return $this->success();
+    }
+
+    /**
+     * Preview an email based on the proposed status.
+     *
+     * @param ProspectiveApplication $prospectiveApplication
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws UnacceptableConditionException|ReflectionException
+     */
+
+    public function previewEmail(ProspectiveApplication $prospectiveApplication): JsonResponse
+    {
+        $this->authorize('previewEmail', $prospectiveApplication);
+        $params = request()->validate([
+            'status' => 'sometimes|string',
+            'message' => 'sometimes|string',
+            'subject' => 'sometimes|string',
+            'is_raw_email' => 'sometimes|boolean',
+        ]);
+
+        $message = $params['message'] ?? null;
+        $isRawEmail = $params['is_raw_email'] ?? false;
+
+        if ($isRawEmail) {
+            $rendered = (new SendEmail($prospectiveApplication, $params['subject'] ?? null, $message))->render();
+        } else {
+            $status = $params['status'];
+            $rendered = ProspectiveApplicationStatusMail::preview($prospectiveApplication, $status, $message);
+        }
+
+        return response()->json(['mail' => $rendered]);
     }
 
     /**

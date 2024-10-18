@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Mail\ProspectiveApplicant\ApprovedCallsignMail;
 use App\Mail\ProspectiveApplicant\ExperienceConfirmationMail;
 use App\Mail\ProspectiveApplicant\MoreHandlesMail;
@@ -45,4 +46,25 @@ class ProspectiveApplicationStatusMail
 
         mail_send(new $mailable($application, $status, $message));
     }
+
+    /**
+     * Preview an email based on the given status.
+     *
+     * @param ProspectiveApplication $application
+     * @param string $status
+     * @param string|null $message
+     * @return string
+     * @throws UnacceptableConditionException
+     */
+
+    public static function preview(ProspectiveApplication $application, string $status, ?string $message): string
+    {
+        $mailable = self::STATUS_TO_MAIL[$status] ?? null;
+        if (!$mailable) {
+            throw new UnacceptableConditionException("Status has no associated email: $status");
+        }
+
+        return (new $mailable($application, $status, $message))->render();
+    }
+
 }
