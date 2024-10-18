@@ -375,6 +375,7 @@ Route::middleware('api')->group(function () {
     Route::post('prospective-application/create-prospectives', [ProspectiveApplicationController::class, 'createProspectives']);
     Route::get('prospective-application/search', [ProspectiveApplicationController::class, 'search']);
     Route::get('prospective-application/{prospective_application}/email-logs', [ProspectiveApplicationController::class, 'emailLogs']);
+    Route::get('prospective-application/{prospective_application}/preview-email', [ProspectiveApplicationController::class, 'previewEmail']);
     Route::get('prospective-application/{prospective_application}/related', [ProspectiveApplicationController::class, 'relatedApplications']);
     Route::post('prospective-application/{prospective_application}/status', [ProspectiveApplicationController::class, 'updateStatus']);
     Route::post('prospective-application/{prospective_application}/note', [ProspectiveApplicationController::class, 'addNote']);
