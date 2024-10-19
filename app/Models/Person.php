@@ -363,6 +363,10 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'alt_phone' => '',
         'gender_identity' => self::GENDER_NONE,
         'preferred_name' => '',
+        'years_as_contributor' => '[]',
+        'years_as_ranger' => '[]',
+        'years_combined' => '[]',
+        'years_seen' => '[]',
     ];
 
     public bool $has_reviewed_pi = false;

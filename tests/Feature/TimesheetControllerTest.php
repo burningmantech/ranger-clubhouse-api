@@ -227,6 +227,11 @@ class TimesheetControllerTest extends TestCase
 
         $response = $this->json('POST', 'timesheet', ['timesheet' => $data]);
         $response->assertStatus(200);
+        $this->targetPerson->refresh();
+        $this->assertEquals([$year], $this->targetPerson->years_as_ranger);
+        $this->assertEquals([$year], $this->targetPerson->years_combined);
+        $this->assertEquals([$year], $this->targetPerson->years_seen);
+        $this->assertEquals([], $this->targetPerson->years_as_contributor);
         $this->assertDatabaseHas('timesheet', $data);
     }
 
