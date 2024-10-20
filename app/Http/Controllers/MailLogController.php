@@ -92,6 +92,10 @@ class MailLogController extends ApiController
                 $bounceType = $sns->bounce->bounceType;
                 $isPermanent = $bounceType == 'Permanent';
                 foreach ($sns->bounce->bouncedRecipients as $to) {
+                    if (stripos($to->emailAddres, 'burningman.slack.com') !== false) {
+                        // Don't deal with slack bounces.
+                        continue;
+                    }
                     if (!empty($messageId)) {
                         $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
                     } else {
