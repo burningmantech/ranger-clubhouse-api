@@ -184,7 +184,7 @@ class ApiController extends Controller
             }
             $rows = [];
             foreach ($resource as $row) {
-                $rows[] = $row->toArray();
+                $rows[] = is_array($row) ? $row : $row->toArray();
             }
 
             $result = [$resourceName => $rows];

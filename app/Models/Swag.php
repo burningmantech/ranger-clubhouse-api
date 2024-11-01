@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
@@ -86,10 +85,10 @@ class Swag extends ApiModel
      * Find all the swag.
      *
      * @param array $query
-     * @return Collection
+     * @return array
      */
 
-    public static function findForQuery(array $query): Collection
+    public static function findForQuery(array $query): array
     {
         $type = $query['type'] ?? null;
 
@@ -102,7 +101,7 @@ class Swag extends ApiModel
             $sql->where('active', $query['active']);
         }
 
-        return self::sortShirtSizes($sql->get());
+        return self::sortSwag($sql->get());
     }
 
     /**
@@ -145,30 +144,37 @@ class Swag extends ApiModel
      * @return mixed
      */
 
-    public static function sortShirtSizes($rows): mixed
+    public static function sortSwag($rows): mixed
     {
-        return $rows->sort(function ($a, $b) {
-            $aTitle = $a->title;
-            $bTitle = $b->title;
-            if ($a->type != self::TYPE_DEPT_SHIRT || $b->type != self::TYPE_DEPT_SHIRT) {
-                return strnatcmp($aTitle, $bTitle);
-            }
-            $aType = empty($a->shirt_type) ? 3 : self::SHIRT_TYPE_SORT_WEIGHT[$a->shirt_type];
-            $bType = empty($b->shirt_type) ? 3 : self::SHIRT_TYPE_SORT_WEIGHT[$b->shirt_type];
-            if ($aType != $bType) {
-                return $aType > $bType ? 1 : -1;
-            }
-            list ($aTitle, $aWeight) = self::shirtSortWeight($aTitle);
-            list ($bTitle, $bWeight) = self::shirtSortWeight($bTitle);
-            $cmp = strcasecmp($aTitle, $bTitle);
-            if ($cmp) {
-                return $cmp;
-            }
-            if ($aWeight == $bWeight) {
-                return 0;
-            }
-            return $aWeight > $bWeight ? 1 : -1;
-        })->values();
+        $sorted = [];
+        $grouped = $rows->groupBy('type');
+
+        foreach ($grouped as $type => $group) {
+            $sorted = array_merge($sorted, $group->sort(function ($a, $b) {
+                $aTitle = $a->title;
+                $bTitle = $b->title;
+                if ($a->type != self::TYPE_DEPT_SHIRT) {
+                    return strnatcmp($aTitle, $bTitle);
+                }
+                $aType = empty($a->shirt_type) ? 3 : (self::SHIRT_TYPE_SORT_WEIGHT[$a->shirt_type] ?? 99);
+                $bType = empty($b->shirt_type) ? 3 : (self::SHIRT_TYPE_SORT_WEIGHT[$b->shirt_type] ?? 99);
+                if ($aType != $bType) {
+                    return $aType > $bType ? 1 : -1;
+                }
+                list ($aTitle, $aWeight) = self::shirtSortWeight($aTitle);
+                list ($bTitle, $bWeight) = self::shirtSortWeight($bTitle);
+                $cmp = strnatcmp($aTitle, $bTitle);
+                if ($cmp) {
+                    return $cmp;
+                }
+                if ($aWeight == $bWeight) {
+                    return 0;
+                }
+                return $aWeight > $bWeight ? 1 : -1;
+            })->values()->toArray());
+        }
+
+        return $sorted;
     }
 
     /**
@@ -182,7 +188,8 @@ class Swag extends ApiModel
 
     public static function shirtSortWeight($title): array
     {
-        if (preg_match("/^(.+)\s+(\d?-?[lmsx]+)(\s+\d+(\s*-\d+\s*)?\")?$/i", $title, $matches) === false) {
+        if (preg_match("/^(.+)\s+(\d?-?[lmsx]+)(\s+\d+(\s*-\d+\s*)?\")?$/i", $title, $matches) === false
+            || count($matches) < 3) {
             return [$title, 99];
         }
 
