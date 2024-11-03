@@ -328,7 +328,7 @@
         <tr>
             <td>Online Course</td>
             <td>
-                @if ($dashboardPeriod == 'after-event')
+                @if ($dashboardPeriod == 'after-event' || $dashboardPeriod == 'post-event')
                     {!!($settings['OnlineCourseEnabled'] ?? false) ? 'Enabled' : 'Disabled'  !!}
                     (ok for After Event period)
                 @else
@@ -363,8 +363,8 @@
         <tr>
             <td>Training Seasonal</td>
             <td>
-                @if ($dashboardPeriod == 'after-event')
-                    {!!($settings['TrainingSeasonalRoleEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL for after event)</b>' : 'Disabled (normal for after event)'  !!}
+                @if ($dashboardPeriod == 'after-event' || $dashboardPeriod == 'post-event')
+                    {!!($settings['TrainingSeasonalRoleEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL for post / after event)</b>' : 'Disabled (normal for after event)'  !!}
                 @else
                     {!! ($settings['TrainingSeasonalRoleEnabled'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL for pre-event/event)</b>' !!}
                 @endif

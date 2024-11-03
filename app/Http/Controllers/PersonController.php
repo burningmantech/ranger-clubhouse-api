@@ -190,7 +190,8 @@ class PersonController extends ApiController
         $person->auditReason = 'person update';
         if ($person->has_reviewed_pi) {
             $person->reviewed_pi_at = now();
-            if (setting('DashboardPeriod') != 'after-event') {
+            $period = setting('DashboardPeriod');
+            if ($period != 'after-event' && $period != 'post-event') {
                 $person->pi_reviewed_for_dashboard_at = now();
             }
         }
