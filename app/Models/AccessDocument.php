@@ -175,6 +175,12 @@ class AccessDocument extends ApiModel
 
     protected $attributes = [
         'delivery_method' => 'none',
+        'street1' => '',
+        'street2' => '',
+        'city' => '',
+        'state' => '',
+        'country' => '',
+        'postal_code' => '',
     ];
 
     public function access_document_changes(): HasMany
@@ -462,7 +468,7 @@ class AccessDocument extends ApiModel
             } else if ($wap->access_date && $row->access_date && $wap->access_date->gt($row->access_date)) {
                 $wap = $row;
             }
-         }
+        }
         return $wap;
     }
 
