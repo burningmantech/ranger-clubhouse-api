@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Swag extends ApiModel
@@ -85,10 +86,10 @@ class Swag extends ApiModel
      * Find all the swag.
      *
      * @param array $query
-     * @return array
+     * @return Collection
      */
 
-    public static function findForQuery(array $query): array
+    public static function findForQuery(array $query): Collection
     {
         $type = $query['type'] ?? null;
 
@@ -141,16 +142,16 @@ class Swag extends ApiModel
      * Sort the rows by title and using shirt sizes if possible.
      *
      * @param $rows
-     * @return mixed
+     * @return Collection
      */
 
-    public static function sortSwag($rows): mixed
+    public static function sortSwag($rows): Collection
     {
-        $sorted = [];
+        $sorted = collect([]);
         $grouped = $rows->groupBy('type');
 
         foreach ($grouped as $type => $group) {
-            $sorted = array_merge($sorted, $group->sort(function ($a, $b) {
+            $sorted = $sorted->merge($group->sort(function ($a, $b) {
                 $aTitle = $a->title;
                 $bTitle = $b->title;
                 if ($a->type != self::TYPE_DEPT_SHIRT) {
@@ -171,7 +172,7 @@ class Swag extends ApiModel
                     return 0;
                 }
                 return $aWeight > $bWeight ? 1 : -1;
-            })->values()->toArray());
+            })->values());
         }
 
         return $sorted;
