@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +27,6 @@ class ProspectiveApplication extends ApiModel
 
     const string STATUS_PENDING = 'pending';
     const string STATUS_APPROVED = 'approved';
-    const string STATUS_APPROVED_PII_ISSUE = 'approved-pii-issue';
 
     const string STATUS_CREATED = 'created';
 
@@ -37,6 +37,8 @@ class ProspectiveApplication extends ApiModel
 
     const string STATUS_HOLD_QUALIFICATION_ISSUE = 'qualification-issue';
     const string STATUS_HOLD_RRN_CHECK = 'rrn-check';
+
+    const string STATUS_PII_ISSUE = 'pii-issue';
 
     const string STATUS_REJECT_PRE_BONK = 'reject-pre-bonk';
     const string STATUS_REJECT_UBERBONKED = 'reject-uber-bonked';
@@ -151,9 +153,9 @@ class ProspectiveApplication extends ApiModel
 
     // Account potentially associated with the applicant. Used to detect returning Rangers
     // who submitted an application mistakenly, or returning past prospectives.
-    public function bpguid_person(): BelongsTo
+    public function bpguid_person(): HasOne
     {
-        return $this->belongsTo(Person::class, 'bpguid');
+        return $this->hasOne(Person::class, 'bpguid', 'bpguid');
     }
 
     public function review_person(): BelongsTo
@@ -328,6 +330,7 @@ class ProspectiveApplication extends ApiModel
             'rejected_at' => (string)now(),
             'handles' => $handles,
             'message' => $message,
+            'rejected_by_id' => Auth::id(),
         ];
 
         if (empty($this->rejected_handles)) {
@@ -461,17 +464,19 @@ class ProspectiveApplication extends ApiModel
         foreach ($handles as $handle) {
             $normalized = Person::normalizeCallsign($handle);
             $reserved = $findReserved($normalized);
+            $person = DB::table('person')
+                ->select('id', 'callsign', 'status', 'bpguid')
+                ->where('callsign_normalized', $normalized)
+                ->where(function ($sql) {
+                    $sql->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::PROSPECTIVE, Person::ALPHA]);
+                    $sql->orWhere('vintage', true);
+                })
+                ->first();
             $results[] = [
                 'handle' => $handle,
                 'reserved_handles' => $reserved,
-                'existing_person' => DB::table('person')
-                    ->select('id', 'callsign', 'status')
-                    ->where('callsign_normalized', $normalized)
-                    ->where(function ($sql) {
-                        $sql->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION]);
-                        $sql->orWhere('vintage', true);
-                    })
-                    ->first()
+                'existing_person' => $person,
+                'is_applicant' => $person?->bpguid == $this->bpguid,
             ];
         }
 

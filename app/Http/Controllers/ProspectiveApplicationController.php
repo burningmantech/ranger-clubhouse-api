@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UnacceptableConditionException;
+use App\Lib\AIHandlesExtract;
+use App\Lib\AIHandlesParse;
 use App\Lib\ProspectiveApplicationImport;
 use App\Lib\ProspectiveApplicationStatusMail;
 use App\Lib\ProspectiveClubhouseAccountFromApplication;
@@ -42,6 +44,7 @@ class ProspectiveApplicationController extends ApiController
         if ($applicationId) {
             // Support hack for ember-data queryRecord().
             $record = ProspectiveApplication::findByApplicationIdOrFail($applicationId);
+            $record->loadRelationships();
             $record->screenHandles();
             return $this->success($record);
         }
@@ -74,7 +77,6 @@ class ProspectiveApplicationController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function store(): JsonResponse
@@ -184,7 +186,7 @@ class ProspectiveApplicationController extends ApiController
             'approved_handle' => [
                 'required_if:status,'
                 . ProspectiveApplication::STATUS_APPROVED
-                . ',' . ProspectiveApplication::STATUS_APPROVED_PII_ISSUE,
+                . ',' . ProspectiveApplication::STATUS_PII_ISSUE,
                 'string'
             ]
         ]);
@@ -349,6 +351,24 @@ class ProspectiveApplicationController extends ApiController
         $this->authorize('emailLogs', ProspectiveApplication::class);
 
         return response()->json(['email_logs' => MailLog::findForProspectiveApplication($prospectiveApplication->id)]);
+    }
+
+    /**
+     * Run text through an AI Engine to parse out the actual names, and remove any
+     * extraneous bits related to handle preference, and other commentary.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException|UnacceptableConditionException
+     */
+
+    public function handlesExtract(): JsonResponse
+    {
+        $this->authorize('handlesExtract', ProspectiveApplication::class);
+        $params = request()->validate([
+            'text' => 'required|string'
+        ]);
+
+        return response()->json(['handles' => AIHandlesExtract::execute($params['text'])]);
     }
 
     /**

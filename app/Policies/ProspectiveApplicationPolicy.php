@@ -168,4 +168,14 @@ class ProspectiveApplicationPolicy
     {
         return false;
     }
+
+    /**
+     * Can the person extract handles using an AI Engine?
+     *
+     */
+
+    public function handlesExtract(Person $user) : false
+    {
+        return false;
+    }
 }
