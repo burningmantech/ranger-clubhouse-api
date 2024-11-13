@@ -18,7 +18,7 @@ class ProspectiveApplicationStatusMail
 {
     const array STATUS_TO_MAIL = [
         ProspectiveApplication::STATUS_APPROVED => ApprovedCallsignMail::class,
-        ProspectiveApplication::STATUS_APPROVED_PII_ISSUE => PiiIssueMail::class,
+        ProspectiveApplication::STATUS_PII_ISSUE => PiiIssueMail::class,
         ProspectiveApplication::STATUS_MORE_HANDLES => MoreHandlesMail::class,
         ProspectiveApplication::STATUS_REJECT_REGIONAL => RejectRegionalMail::class,
         ProspectiveApplication::STATUS_REJECT_TOO_YOUNG => RejectTooYoungMail::class,

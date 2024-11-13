@@ -373,6 +373,7 @@ Route::middleware('api')->group(function () {
 
     Route::post('prospective-application/import', [ProspectiveApplicationController::class, 'import']);
     Route::post('prospective-application/create-prospectives', [ProspectiveApplicationController::class, 'createProspectives']);
+    Route::get('prospective-application/handles-extract', [ProspectiveApplicationController::class, 'handlesExtract']);
     Route::get('prospective-application/search', [ProspectiveApplicationController::class, 'search']);
     Route::get('prospective-application/{prospective_application}/email-logs', [ProspectiveApplicationController::class, 'emailLogs']);
     Route::get('prospective-application/{prospective_application}/preview-email', [ProspectiveApplicationController::class, 'previewEmail']);

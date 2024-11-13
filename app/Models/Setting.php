@@ -110,6 +110,12 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'ChatGPTToken' => [
+            'description' => 'ChatGPT token used to process freeform text (handle extraction, etc)',
+            'type' => self::TYPE_STRING,
+            'is_credential' => true,
+        ],
+
         'DailyReportEmail' => [
             'description' => 'Email address to send the Clubhouse Daily Report',
             'type' => self::TYPE_EMAIL,
