@@ -7,7 +7,11 @@ use Orhanerday\OpenAi\OpenAi;
 
 class AIHandlesExtract
 {
-    const string AI_PROMPT = "Identify and extract each name or handle from the following text, and display them in JSON format using the field \"handles\" as an array. Remove any punctuation except dashes, single quotes, or periods from each handle. Apply proper capitalization to each handle, and if a handle is confidently a combination of separate words (and not a single proper word), split it into individual words. List each callsign on a separate line within the array, including only the callsigns in the specified JSON structure, without any extra context or explanations.";
+    const string AI_PROMPT = "Identify and extract each name or handle from the following text, and display them in JSON format using the field \"handles\" as an array." .
+    " Remove any punctuation except dashes, single quotes, or periods from each handle." .
+    " Remove the word Ranger from each handles." .
+    " Apply proper capitalization to each handle, and if a handle is confidently a combination of separate words (and not a single proper word), split it into individual words." .
+    " List each callsign on a separate line within the array, including only the callsigns in the specified JSON structure, without any extra context or explanations.";
 
     public static function execute(string $text)
     {
