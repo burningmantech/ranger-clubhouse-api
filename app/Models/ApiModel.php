@@ -72,11 +72,14 @@ abstract class ApiModel extends Model
     protected $updateRules;
     protected $createRules;
 
+    protected array $validateMessages = [];
+
     // Resource name for REST requests
     protected $resourceSingle;
     protected $resourceCollection;
 
     protected $virtualColumns;
+
 
     /**
      * Setup to audit the record before save, after save, and after the record has been deleted.
@@ -292,7 +295,7 @@ abstract class ApiModel extends Model
             return true;
         }
 
-        $validator = Validator::make($this->getAttributes(), $rules);
+        $validator = Validator::make($this->getAttributes(), $rules, $this->validateMessages);
         if ($validator->fails()) {
             $this->errors = $validator->errors();
             return $validator;

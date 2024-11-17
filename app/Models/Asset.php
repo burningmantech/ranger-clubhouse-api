@@ -38,7 +38,7 @@ class Asset extends ApiModel
     ];
 
     protected $appends = [
-      'has_expired'
+        'has_expired'
     ];
 
 
@@ -167,11 +167,14 @@ class Asset extends ApiModel
                 'string',
                 Rule::unique('asset')->where(function ($q) {
                     $q->where('barcode', $this->barcode);
-                    $q->whereYear('year', $this->year);
+                    $q->where('year', $this->year);
                     if ($this->exists) {
                         $q->where('id', '!=', $this->id);
                     }
                 })
+            ];
+            $this->validateMessages = [
+                'barcode.unique' => 'The barcode '.$this->barcode.' already exists for year '.$this->year,
             ];
         }
 
