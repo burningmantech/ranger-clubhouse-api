@@ -152,7 +152,17 @@ class AssetController extends ApiController
                 'asset_id' => $asset->id,
                 'person_id' => $asset_person->person_id,
                 'callsign' => $asset_person->person ? $asset_person->person->callsign : "Deleted #{$asset_person->person_id}",
-                'checked_out' => (string)$asset_person->checked_out
+                'checked_out' => (string)$asset_person->checked_out,
+                'barcode' => $asset->barcode,
+            ]);
+        }
+
+        if ($asset->has_expired) {
+            return response()->json([
+                'status' => 'expired',
+                'asset_id' => $asset->id,
+                'expires_on' => (string)$asset->expires_on,
+                'barcode' => $asset->barcode,
             ]);
         }
 
