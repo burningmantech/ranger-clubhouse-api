@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -19,7 +21,7 @@ class Asset extends ApiModel
     const string TYPE_RADIO = 'radio';
     const string TYPE_TEMP_ID = 'temp-id';
 
-    // Only used
+    // Deprecated types
     const string TYPE_AMBER = 'amber';     // Only used in 2013
     const string TYPE_KEY = 'key';         // Only used in 2013 & 2014
     const string TYPE_VEHICLE = 'vehicle'; // Only used from 2013 to 2015
@@ -28,17 +30,24 @@ class Asset extends ApiModel
         'barcode',
         'category',
         'description',
+        'expires_on',
         'notes',
         'perm_assign',
         'type',
         'year',
     ];
 
+    protected $appends = [
+      'has_expired'
+    ];
+
+
     protected function casts(): array
     {
         return [
-            'perm_assign' => 'boolean',
             'created_at' => 'datetime',
+            'expires_on' => 'date:Y-m-d',
+            'perm_assign' => 'boolean',
         ];
     }
 
@@ -48,6 +57,7 @@ class Asset extends ApiModel
         'type' => 'required|string',
         'description' => 'sometimes|nullable|string|max:25',
         'year' => 'required|integer',
+        'expires_on' => 'sometimes|nullable|date',
     ];
 
     public function asset_person(): BelongsTo
@@ -166,5 +176,18 @@ class Asset extends ApiModel
         }
 
         return parent::save($options);
+    }
+
+    /**
+     * Has the asset expired?
+     *
+     * @return Attribute
+     */
+
+    public function hasExpired(): Attribute
+    {
+        return Attribute::make(
+            get: fn(mixed $value, array $attributes) => $attributes['expires_on'] && Carbon::parse($attributes['expires_on'])->lte(now()),
+        );
     }
 }
