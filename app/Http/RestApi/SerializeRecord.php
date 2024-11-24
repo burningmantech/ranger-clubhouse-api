@@ -22,7 +22,7 @@ class SerializeRecord
      * @return array a REST API record
      */
 
-    public function toRest(Model $authorizedUser = null): array
+    public function toRest(?Model $authorizedUser = null): array
     {
         $modelName = class_basename($this->record);
         $recordArray = $this->record->toArray();

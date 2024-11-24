@@ -242,12 +242,12 @@ class PersonFilter
         return $fields;
     }
 
-    public function serialize(Person $authorizedUser = null): array
+    public function serialize(?Person $authorizedUser = null): array
     {
         return $this->buildFields(self::FIELDS_SERIALIZE, $authorizedUser);
     }
 
-    public function deserialize(Person $authorizedUser = null): array
+    public function deserialize(?Person $authorizedUser = null): array
     {
         return $this->buildFields(self::FIELDS_DESERIALIZE, $authorizedUser);
     }
