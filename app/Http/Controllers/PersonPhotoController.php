@@ -436,9 +436,6 @@ class PersonPhotoController extends ApiController
         $params = request()->validate([
             'image' => [
                 'required',
-                File::types([
-                    'jpg', 'png', 'gif', 'heic'
-                ])
             ]
         ]);
 
