@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Mail\PhotoApprovedMail;
 use App\Mail\PhotoRejectedMail;
 use App\Models\ErrorLog;
@@ -13,8 +14,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 use ReflectionException;
 use RuntimeException;
 
@@ -270,7 +271,7 @@ class PersonPhotoController extends ApiController
         prevent_if_ghd_server('Photo deletion');
 
         $personPhoto->delete();
-       return $this->restDeleteSuccess();
+        return $this->restDeleteSuccess();
     }
 
     /**
@@ -292,7 +293,7 @@ class PersonPhotoController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function upload(Person $person): JsonResponse
@@ -303,7 +304,7 @@ class PersonPhotoController extends ApiController
 
         if (!setting('PhotoUploadEnable')
             && !$this->userHasRole([Role::ADMIN, Role:: VC])) {
-            throw new UnacceptableConditionException('Photo upload is currently disabled.');
+            throw new UnacceptableConditionException('Photo uploading is currently disabled.');
         }
 
         $params = request()->validate([
@@ -422,4 +423,32 @@ class PersonPhotoController extends ApiController
         return response()->json(['mail' => $mail->render()]);
     }
 
+    /**
+     * Convert a photo to jpg, and send it back. Used to handle HEIC (Apple/iPhone format) for editing purposes.
+     *
+     * @throws AuthorizationException|ValidationException
+     */
+
+    public function convertPhoto(): JsonResponse
+    {
+        prevent_if_ghd_server('Photo uploading');
+        $this->authorize('convertPhoto', PersonPhoto::class);
+        $params = request()->validate([
+            'image' => [
+                'required',
+                File::types([
+                    'jpg', 'png', 'gif', 'heic'
+                ])
+            ]
+        ]);
+
+        $converted = PersonPhoto::convertToJpeg($params['image']);
+        if (!$converted) {
+            throw  ValidationException::withMessages([
+                'image' => 'Cannot convert the image'
+            ]);
+        }
+
+        return response()->json(['image' => base64_encode($converted)]);
+    }
 }
