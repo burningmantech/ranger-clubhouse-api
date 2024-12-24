@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use Aws\Credentials\Credentials;
 use Aws\Rekognition\RekognitionClient;
 use Exception;
@@ -411,11 +412,17 @@ class PersonPhoto extends ApiModel
             if ($imageParam->extension() == 'heic') {
                 // ImageMagick is VERY slow, only use it to decode HEIC formats, GD for everything else
                 // including conversion to JPG.
-                $imagickDriver = new ImageManager(ImagickDriver::class);
+                $driver = new ImagickDriver;
+                // Safety check to ensure ImagicMagick was compiled correctly.
+                if (!$driver->supports('heic')) {
+                    throw new UnacceptableConditionException('Backend was not compiled correctly - HEIC is missing.');
+                }
+                $imagickDriver = new ImageManager($driver);
                 $imagickImage = $imagickDriver->read($imageParam);
                 $image = $gdDriver->read($imagickImage);
                 $imagickImage = null;
                 $imagickDriver = null;
+                $driver = null;
                 gc_collect_cycles();
             } else {
                 $image = $gdDriver->read($imageParam);
