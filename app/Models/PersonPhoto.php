@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\GD\Driver as GDDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\ImageManager;
 use RuntimeException;
@@ -372,7 +373,7 @@ class PersonPhoto extends ApiModel
         }
 
         try {
-            $manager = new ImageManager(Driver::class);
+            $manager = new ImageManager(GDDriver::class);
             $image = $manager->read($imageParam);
 
             // correct image orientation
@@ -406,11 +407,23 @@ class PersonPhoto extends ApiModel
     public static function convertToJpeg($imageParam): ?string
     {
         try {
-            $manager = new ImageManager(Driver::class);
-            $image = $manager->read($imageParam);
-            // correct image orientation
+            $gdDriver = new ImageManager(GDDriver::class);
+            if ($imageParam->extension() == 'heic') {
+                // ImageMagick is VERY slow, only use it to decode HEIC formats, GD for everything else
+                // including conversion to JPG.
+                $imagickDriver = new ImageManager(ImagickDriver::class);
+                $imagickImage = $imagickDriver->read($imageParam);
+                $image = $gdDriver->read($imagickImage);
+                $imagickImage = null;
+                $imagickDriver = null;
+                gc_collect_cycles();
+            } else {
+                $image = $gdDriver->read($imageParam);
+            }
             $fp = $image->encode(new JpegEncoder())->toFilePointer();
             $contents = stream_get_contents($fp);
+            $gdDriver = null;
+            $image = null;
             gc_collect_cycles();     // Images can be huge, garbage collect.
             return $contents !== false ? $contents : null;
         } catch (Exception $e) {
