@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\ImageManager;
 use RuntimeException;
@@ -392,6 +392,30 @@ class PersonPhoto extends ApiModel
             ]);
 
             return [null, 0, 0];
+        }
+    }
+
+    /**
+     * Convert an image to JPEG -- used exclusively for photo editing during upload and to handle
+     * HEIC (Apple format / iPhone) to JPEG.
+     *
+     * @param $imageParam
+     * @return string|null
+     */
+
+    public static function convertToJpeg($imageParam): ?string
+    {
+        try {
+            $manager = new ImageManager(Driver::class);
+            $image = $manager->read($imageParam);
+            // correct image orientation
+            $fp = $image->encode(new JpegEncoder())->toFilePointer();
+            $contents = stream_get_contents($fp);
+            gc_collect_cycles();     // Images can be huge, garbage collect.
+            return $contents !== false ? $contents : null;
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'person-photo-convert-jpeg');
+            return null;
         }
     }
 

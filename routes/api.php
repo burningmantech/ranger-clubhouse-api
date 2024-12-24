@@ -337,6 +337,7 @@ Route::middleware('api')->group(function () {
     Route::post('person-photo/{person_photo}/replace', [PersonPhotoController::class, 'replace']);
     Route::post('person-photo/{person_photo}/activate', [PersonPhotoController::class, 'activate']);
     Route::get('person-photo/{person_photo}/reject-preview', [PersonPhotoController::class, 'rejectPreview']);
+    Route::post('person-photo/convert', [PersonPhotoController::class, 'convertPhoto']);
     Route::resource('person-photo', PersonPhotoController::class);
 
     Route::get('person-pog/config', [PersonPogController::class, 'config']);
