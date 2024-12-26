@@ -79,6 +79,7 @@ db_init() {
         --env="RANGER_DB_DATABASE_NAME=${db_database}"    \
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
+        --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \
         "${api_image_name}"                               \
         php artisan migrate:fresh --force --env=testing;
@@ -116,6 +117,7 @@ EOF
         --env="RANGER_DB_DATABASE_NAME=${db_database}"    \
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
+        --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \
         "${image_repo}_test"                              \
         sh -c "/usr/bin/composer require --dev phpunit/phpunit && php artisan test --compact \"$@\"";
