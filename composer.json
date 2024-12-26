@@ -12,6 +12,7 @@
         "ext-ctype": "*",
         "ext-exif": "*",
         "ext-gd": "*",
+        "ext-imagick": "*",
         "ext-intl": "*",
         "ext-json": "*",
         "ext-mbstring": "*",

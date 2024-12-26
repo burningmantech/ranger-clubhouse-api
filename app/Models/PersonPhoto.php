@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Exceptions\UnacceptableConditionException;
 use Aws\Credentials\Credentials;
 use Aws\Rekognition\RekognitionClient;
 use Exception;
@@ -13,8 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Imagick;
 use Intervention\Image\Drivers\Gd\Driver as GDDriver;
-use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\ImageManager;
 use RuntimeException;
@@ -408,29 +407,14 @@ class PersonPhoto extends ApiModel
     public static function convertToJpeg($imageParam): ?string
     {
         try {
-            $gdDriver = new ImageManager(GDDriver::class);
-            if ($imageParam->extension() == 'heic') {
-                // ImageMagick is VERY slow, only use it to decode HEIC formats, GD for everything else
-                // including conversion to JPG.
-                $driver = new ImagickDriver;
-                // Safety check to ensure ImagicMagick was compiled correctly.
-                if (!$driver->supports('heic')) {
-                    throw new UnacceptableConditionException('Backend was not compiled correctly - HEIC is missing.');
-                }
-                $imagickDriver = new ImageManager($driver);
-                $imagickImage = $imagickDriver->read($imageParam);
-                $image = $gdDriver->read($imagickImage);
-                $imagickImage = null;
-                $imagickDriver = null;
-                $driver = null;
-                gc_collect_cycles();
-            } else {
-                $image = $gdDriver->read($imageParam);
+            $imagick = new Imagick();
+            $contents = $imageParam->get();
+            $imagick->readImageBlob($contents);
+            if ($imagick->getFormat() !== 'jpeg') {
+                $imagick->setFormat('jpeg');
+                $contents = $imagick->getImageBlob();
             }
-            $fp = $image->encode(new JpegEncoder())->toFilePointer();
-            $contents = stream_get_contents($fp);
-            $gdDriver = null;
-            $image = null;
+            $imagick = null;
             gc_collect_cycles();     // Images can be huge, garbage collect.
             return $contents !== false ? $contents : null;
         } catch (Exception $e) {
