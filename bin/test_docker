@@ -87,6 +87,7 @@ start_db_container() {
         --env="MYSQL_USER=${db_user}"           \
         --env="MYSQL_PASSWORD=${db_password}"   \
         --env="MYSQL_ROOT_HOST=%"               \
+        --env="MYSQL_HOME=/var/www/application/database"  \
         "${db_image_name}"                      \
         > /dev/null;
 }
@@ -137,6 +138,7 @@ db_init() {
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --env="JWT_SECRET=deadbeef"                       \
         --env="APP_KEY=base64:ko1L+Qbmd3ygR7OXPwy8h8TPa95hONlaAkFAbEO3mL0=" \
+        --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \
         "${api_image_name}"                               \
         php artisan migrate:fresh --seed --force;
@@ -178,6 +180,7 @@ start_api_container() {
         --env="RANGER_DB_PASSWORD=${db_password}"         \
         --env="JWT_SECRET=deadbeef"                       \
         --env="APP_KEY=base64:ko1L+Qbmd3ygR7OXPwy8h8TPa95hONlaAkFAbEO3mL0=" \
+        --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \
         --publish="${host_api_port}:80"                   \
         "${api_image_name}"                               \
