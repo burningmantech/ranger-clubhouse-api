@@ -37,12 +37,6 @@ COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./ser
 # -----------------------------------------------------------------------------
 FROM php as build
 
-# Install OS packages required by Composer
-RUN apk add --no-cache  \
-    icu-dev             \
-    libzip-dev          \
-    ;
-
 # Install Composer
 COPY --from=composer:2.5 /usr/bin/composer /usr/bin/composer
 
