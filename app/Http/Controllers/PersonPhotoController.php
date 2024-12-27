@@ -14,7 +14,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\ValidationException;
 use ReflectionException;
 use RuntimeException;
@@ -176,7 +175,7 @@ class PersonPhotoController extends ApiController
         $params = request()->validate(['image' => 'required']);
 
         $oldFilename = $personPhoto->image_filename;
-        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_ORIGINAL);
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image']->get(), $personPhoto->person_id, PersonPhoto::SIZE_ORIGINAL);
 
         $personPhoto->edit_person_id = $this->user->id;
         $personPhoto->edited_at = now();
@@ -196,7 +195,7 @@ class PersonPhotoController extends ApiController
         }
 
         $oldProfileFilename = $personPhoto->profile_filename;
-        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_PROFILE);
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image']->get(), $personPhoto->person_id, PersonPhoto::SIZE_PROFILE);
         $personPhoto->profile_width = $width;
         $personPhoto->profile_height = $height;
         if ($personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, PersonPhoto::SIZE_PROFILE) === false) {
@@ -314,9 +313,9 @@ class PersonPhotoController extends ApiController
 
         $personId = $person->id;
 
-        list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image'], $personId, PersonPhoto::SIZE_ORIGINAL);
-        list ($imageContents, $imageWidth, $imageHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_BMID);
-        list ($profileContents, $profileWidth, $profileHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_PROFILE);
+        list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image']->get(), $personId, PersonPhoto::SIZE_ORIGINAL);
+        list ($imageContents, $imageWidth, $imageHeight) = PersonPhoto::processImage(($params['image'] ?? $params['orig_image'])->get(), $personId, PersonPhoto::SIZE_BMID);
+        list ($profileContents, $profileWidth, $profileHeight) = PersonPhoto::processImage(($params['image'] ?? $params['orig_image'])->get(), $personId, PersonPhoto::SIZE_PROFILE);
 
         if (!$imageContents || !$origContents) {
             return response()->json(['status' => 'conversion-fail'], 500);
@@ -439,13 +438,17 @@ class PersonPhotoController extends ApiController
             ]
         ]);
 
-        $converted = PersonPhoto::convertToJpeg($params['image']);
+        list ($converted, $height, $width) = PersonPhoto::processImage($params['image']->get(), PersonPhoto::SIZE_ORIGINAL);
         if (!$converted) {
             throw  ValidationException::withMessages([
                 'image' => 'Cannot convert the image'
             ]);
         }
 
-        return response()->json(['image' => base64_encode($converted)]);
+        return response()->json([
+            'image' => base64_encode($converted),
+            'height' => $height,
+            'width' => $width
+        ]);
     }
 }

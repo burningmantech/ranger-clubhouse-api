@@ -12,10 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Imagick;
-use Intervention\Image\Drivers\Gd\Driver as GDDriver;
-use Intervention\Image\Encoders\JpegEncoder;
-use Intervention\Image\ImageManager;
+use Jcupitt\Vips;
 use RuntimeException;
 
 /*
@@ -348,10 +345,8 @@ class PersonPhoto extends ApiModel
      * Process an image
      */
 
-    public static function processImage($imageParam, $personId, string $type = self::SIZE_BMID): array
+    public static function processImage(string $imageParam, $personId, string $type = self::SIZE_BMID): array
     {
-        $filename = $imageParam->getClientOriginalName();
-
         switch ($type) {
             case self::SIZE_BMID:
                 $width = PersonPhoto::BMID_WIDTH;
@@ -373,53 +368,21 @@ class PersonPhoto extends ApiModel
         }
 
         try {
-            $manager = new ImageManager(GDDriver::class);
-            $image = $manager->read($imageParam);
+            $image = Vips\Image::thumbnail_buffer($imageParam, $width, ['height' => $height]);
+            $width = $image->width;
+            $height = $image->height;
 
-            // correct image orientation
-            //$image->orientate();
-            $image->scaleDown($width, $height);
-            $width = $image->width();
-            $height = $image->height();
-            $fp = $image->encode(new JpegEncoder(quality: 75))->toFilePointer();
-            $contents = stream_get_contents($fp);
+            $contents = $image->writeToBuffer('.jpg', ['Q' => 90]);
+            $image = null;
             gc_collect_cycles();     // Images can be huge, garbage collect.
 
             return [$contents, $width, $height];
         } catch (Exception $e) {
             ErrorLog::recordException($e, 'person-photo-convert-exception', [
                 'target_person_id' => $personId,
-                'filename' => $filename
             ]);
 
             return [null, 0, 0];
-        }
-    }
-
-    /**
-     * Convert an image to JPEG -- used exclusively for photo editing during upload and to handle
-     * HEIC (Apple format / iPhone) to JPEG.
-     *
-     * @param $imageParam
-     * @return string|null
-     */
-
-    public static function convertToJpeg($imageParam): ?string
-    {
-        try {
-            $imagick = new Imagick();
-            $contents = $imageParam->get();
-            $imagick->readImageBlob($contents);
-            if ($imagick->getFormat() !== 'jpeg') {
-                $imagick->setFormat('jpeg');
-                $contents = $imagick->getImageBlob();
-            }
-            $imagick = null;
-            gc_collect_cycles();     // Images can be huge, garbage collect.
-            return $contents !== false ? $contents : null;
-        } catch (Exception $e) {
-            ErrorLog::recordException($e, 'person-photo-convert-jpeg');
-            return null;
         }
     }
 
