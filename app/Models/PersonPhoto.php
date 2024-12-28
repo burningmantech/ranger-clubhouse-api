@@ -368,11 +368,14 @@ class PersonPhoto extends ApiModel
         }
 
         try {
+            error_log("**** GENERATING THUMBNAIL");
             $image = Vips\Image::thumbnail_buffer($imageParam, $width, ['height' => $height]);
+            error_log("**** GENERATED");
             $width = $image->width;
             $height = $image->height;
 
             $contents = $image->writeToBuffer('.jpg', ['Q' => 90]);
+            error_log("**** Wrote To Buffer");
             $image = null;
             gc_collect_cycles();     // Images can be huge, garbage collect.
 
