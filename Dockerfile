@@ -31,14 +31,13 @@ COPY ./routes/        ./routes/
 COPY ./tests/         ./tests/
 COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./server.php", "./.env.testing", "./"]
 
-
 # -----------------------------------------------------------------------------
 # This stage runs composer to build the PHP package dependencies.
 # -----------------------------------------------------------------------------
 FROM php as build
 
 # Install Composer
-COPY --from=composer:2.5 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8.4 /usr/bin/composer /usr/bin/composer
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
