@@ -163,7 +163,7 @@ class PersonPhotoController extends ApiController
      *
      * @param PersonPhoto $personPhoto
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function replace(PersonPhoto $personPhoto): JsonResponse
@@ -292,7 +292,7 @@ class PersonPhotoController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException|UnacceptableConditionException
+     * @throws AuthorizationException|UnacceptableConditionException|ValidationException
      */
 
     public function upload(Person $person): JsonResponse
@@ -439,11 +439,6 @@ class PersonPhotoController extends ApiController
         ]);
 
         list ($converted, $height, $width) = PersonPhoto::processImage($params['image']->get(), PersonPhoto::SIZE_ORIGINAL);
-        if (!$converted) {
-            throw  ValidationException::withMessages([
-                'image' => 'Cannot convert the image'
-            ]);
-        }
 
         return response()->json([
             'image' => base64_encode($converted),
