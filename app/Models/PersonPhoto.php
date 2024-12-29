@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Jcupitt\Vips;
 use RuntimeException;
 
@@ -368,24 +369,40 @@ class PersonPhoto extends ApiModel
         }
 
         try {
-            ErrorLog::record('photo-generating', [ 'message' => 'Generating thumbnail'] );
             $image = Vips\Image::thumbnail_buffer($imageParam, $width, ['height' => $height]);
-            $width = $image->width;
-            $height = $image->height;
-            ErrorLog::record('photo-generated', [ 'message' => 'Generated thumbnail', 'height'=> $height, 'width'=> $width ] );
-
-            $contents = $image->jpegsave_buffer();
-            ErrorLog::record('photo-wrote-to-buffer', [ 'message' => 'Wrote'] );
-            $image = null;
-            gc_collect_cycles();     // Images can be huge, garbage collect.
-
-            return [$contents, $width, $height];
         } catch (Exception $e) {
-            ErrorLog::recordException($e, 'person-photo-convert-exception', [
+            ErrorLog::recordException($e, 'person-photo-decode-exception', [
                 'target_person_id' => $personId,
             ]);
 
-            return [null, 0, 0];
+            throw  ValidationException::withMessages([
+                'image' => 'Unsupported image format'
+            ]);
+        }
+
+        if (str_starts_with($image->get("vips-loader"), 'hei')) {
+            // The VIPS library will hang when attempting to convert HEIC to JPG while running under AWS Fargate.
+            // This does not occur when running under Docker (x86 & arm), or in the local development environment.
+            throw  ValidationException::withMessages([
+                'image' => 'HEIC (iOS/Apple) images are not supported'
+            ]);
+        }
+
+        try {
+            $width = $image->width;
+            $height = $image->height;
+            $contents = $image->jpegsave_buffer();
+            $image = null;
+            gc_collect_cycles();     // Images can be huge, garbage collect.
+            return [$contents, $width, $height];
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'person-encode-decode-exception', [
+                'target_person_id' => $personId,
+            ]);
+
+            throw  ValidationException::withMessages([
+                'image' => 'Unable to convert image'
+            ]);
         }
     }
 
