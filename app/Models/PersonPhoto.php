@@ -374,7 +374,7 @@ class PersonPhoto extends ApiModel
             $height = $image->height;
             ErrorLog::record('photo-generated', [ 'message' => 'Generated thumbnail', 'height'=> $height, 'width'=> $width ] );
 
-            $contents = $image->writeToBuffer('.jpg', ['Q' => 90]);
+            $contents = $image->jpegsave_buffer();
             ErrorLog::record('photo-wrote-to-buffer', [ 'message' => 'Wrote'] );
             $image = null;
             gc_collect_cycles();     // Images can be huge, garbage collect.
