@@ -33,10 +33,12 @@ class VehiclePaperworkReport
 
         list ($peopleByMVRPositions, $mvrPositionsById) = self::retrievePositionSignups('mvr_eligible');
         list ($peopleByPVRPositions, $pvrPositionsById) = self::retrievePositionSignups('pvr_eligible');
+        list ($peopleByMVRSignups, $mvrSignupsById) = self::retrievePositionSignups('mvr_signup_eligible');
 
         $ids = $teamsByPeople->keys()
             ->merge($peopleByMVRPositions->keys())
             ->merge($peopleByPVRPositions->keys())
+            ->merge($peopleByMVRSignups->keys())
             ->unique();
 
         if ($ids->isNotEmpty()) {
@@ -78,6 +80,7 @@ class VehiclePaperworkReport
                 'status' => $person->status,
                 'mvr_teams' => $mvrTeams,
                 'mvr_positions' => self::buildPositions($person->id, $peopleByMVRPositions, $mvrPositionsById),
+                'mvr_signups' => self::buildSignups($person->id, $peopleByMVRSignups, $mvrSignupsById),
                 'pvr_teams' => $pvrTeams,
                 'pvr_positions' => self::buildPositions($person->id, $peopleByPVRPositions, $pvrPositionsById),
             ];
@@ -140,8 +143,9 @@ class VehiclePaperworkReport
         $positionsById = $positions->keyBy('id');
         if ($positions->isNotEmpty()) {
             $peopleByPositions = DB::table('slot')
-                ->select('person_slot.person_id', 'slot.position_id')
+                ->select('slot.id', 'person_slot.person_id', 'slot.position_id', 'slot.begins', 'position.title as position_title')
                 ->join('person_slot', 'person_slot.slot_id', 'slot.id')
+                ->join('position', 'slot.position_id', 'position.id')
                 ->where('slot.begins_year', current_year())
                 ->whereIn('slot.position_id', $positionsById->pluck('id'))
                 ->where('slot.active', true)
@@ -180,5 +184,25 @@ class VehiclePaperworkReport
         }
 
         return $positions;
+    }
+
+    public static function buildSignups(int $personId, $peopleBySignups, $positionsById): array
+    {
+        $signups = [];
+        $personSignups = $peopleBySignups->get($personId);
+        if (!$personSignups) {
+            return [];
+        }
+
+        foreach ($personSignups as $signup) {
+            $signups[] = [
+                'id' => $signup->id,
+                'position_id' => $signup->position_id,
+                'position_title' => $signup->position_title,
+                'begins' => $signup->begins,
+            ];
+        }
+
+        return $signups;
     }
 }
