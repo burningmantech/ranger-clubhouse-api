@@ -8,6 +8,7 @@ use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonSlot;
 use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\Vehicle;
@@ -158,6 +159,7 @@ class VehicleController extends ApiController
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
 
                 'mvr_positions' => Position::vehicleEligibleForPerson('mvr', $personId),
+                'mvr_signups' => PersonSlot::retrieveMVRSignups($personId, $year),
                 'ignore_mvr' => $event?->ignore_mvr ?? false,
                 'org_vehicle_insurance' => $event?->org_vehicle_insurance,
 

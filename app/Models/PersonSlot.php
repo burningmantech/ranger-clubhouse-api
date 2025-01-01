@@ -72,7 +72,29 @@ class PersonSlot extends ApiModel
      */
     public static function hasMVREligibleSignups(int $personId, int $year): bool
     {
-        return self::commonVehicleEligibility($personId, $year, 'mvr_eligible');
+        return self::commonVehicleEligibility($personId, $year, 'mvr_eligible')
+            || self::commonVehicleEligibility($personId, $year, 'mvr_signup_eligible');
+    }
+
+    /**
+     * Retrieve all MVR signup-eligible shifts for a person
+     * @param int $personId
+     * @param int $year
+     * @return array
+     */
+
+    public static function retrieveMVRSignups(int $personId, int $year): array
+    {
+        return self::select('slot.id', 'slot.begins', 'slot.position_id', 'position.title as position_title')
+            ->join('slot', 'slot.id', 'person_slot.slot_id')
+            ->join('position', 'position.id', 'slot.position_id')
+            ->where('person_slot.person_id', $personId)
+            ->where('slot.begins_year', $year)
+            ->where('slot.active', true)
+            ->where('position.mvr_signup_eligible', true)
+            ->orderBy('slot.begins')
+            ->get()
+            ->toArray();
     }
 
     /**
