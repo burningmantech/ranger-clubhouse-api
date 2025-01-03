@@ -33,7 +33,7 @@ class RequestLoggerMiddleware
 
     public function terminate($request, $response): void
     {
-        if (!app()->isLocal()) {
+        if (app()->isLocal()) {
             return;
         }
 
