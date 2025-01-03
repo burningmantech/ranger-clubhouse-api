@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\RequestLog;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
-class RequestLogger
+class RequestLoggerMiddleware
 {
     protected float $startTime = 0;
 
@@ -42,6 +44,22 @@ class RequestLogger
         $status = method_exists($response, 'status') ? $response->status() : 200;
         $type = $status >= 500 ? 'error' : 'debug';
 
-        Log::$type(number_format((microtime(true) - $this->startTime) * 100, 3) . ' ms: ' . $status . ' ' . $request->method() . ' ' . $request->fullUrl());
+        $time = (microtime(true) - $this->startTime) * 100;
+
+        Log::$type(number_format($time, 3) . ' ms: ' . $status . ' ' . $request->method() . ' ' . $request->fullUrl());
+
+        $method = $request->method();
+        if ($method == 'OPTIONS') {
+            // Don't record CORS preflight requests
+            return;
+        }
+
+        if (method_exists($response, 'file')) {
+            $size = $response->file->getSize();
+        } else {
+            $size = method_exists($response, 'content') ? strlen($response->content()) : 0;
+        }
+
+        RequestLog::record(Auth::id(), implode(',', $request->ips()), $request->path(), $status, $method, $size, $time);
     }
 }

@@ -2,7 +2,7 @@
 
 use App\Exceptions\Handler;
 use App\Http\Middleware\AccountGuard;
-use App\Http\Middleware\RequestLogger;
+use App\Http\Middleware\RequestLoggerMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
                $middleware->redirectUsersTo('/home');
         */
 
-        $middleware->append(RequestLogger::class);
+        $middleware->append(RequestLoggerMiddleware::class);
 
         $middleware->api(AccountGuard::class);
 

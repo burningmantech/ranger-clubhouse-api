@@ -25,6 +25,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server
     // Let someone know what's been happening in the Clubhouse
     Schedule::command('clubhouse:daily-report')->dailyAt('03:00')->onOneServer();
 
+    // Let someone know what's been happening in the Clubhouse
+    Schedule::command('clubhouse:request-log-expire')->dailyAt('03:15')->onOneServer();
+
     // Let the photo reviewers know if photos are queued up.
     Schedule::command('clubhouse:photo-pending')->twiceDaily(9, 21)->onOneServer();
 
