@@ -102,7 +102,7 @@ Route::middleware('api')->group(function () {
     Route::post('person/register', [PersonController::class, 'register']);
 
     Route::post('error-log/record', [ErrorLogController::class, 'record']);
-    Route::post('action-log/record', [RequestLogController::class, 'record']);
+    Route::post('action-log/record', [ActionLogController::class, 'record']);
 
     Route::match(['GET', 'POST'], 'sms/inbound', [SmsController::class, 'inbound']);
 
