@@ -67,6 +67,7 @@ use App\Http\Controllers\PositionSanityCheckController;
 use App\Http\Controllers\ProspectiveApplicationController;
 use App\Http\Controllers\ProvisionController;
 use App\Http\Controllers\RbsController;
+use App\Http\Controllers\RequestLogController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalesforceController;
 use App\Http\Controllers\SettingController;
@@ -101,7 +102,7 @@ Route::middleware('api')->group(function () {
     Route::post('person/register', [PersonController::class, 'register']);
 
     Route::post('error-log/record', [ErrorLogController::class, 'record']);
-    Route::post('action-log/record', [ActionLogController::class, 'record']);
+    Route::post('action-log/record', [RequestLogController::class, 'record']);
 
     Route::match(['GET', 'POST'], 'sms/inbound', [SmsController::class, 'inbound']);
 
@@ -405,6 +406,9 @@ Route::middleware('api')->group(function () {
     Route::get('rbs/unverified-stopped', [RbsController::class, 'unverifiedStopped']);
     Route::post('rbs/retry', [RbsController::class, 'retry']);
     Route::post('rbs/transmit', [RbsController::class, 'transmit']);
+
+    Route::get('request-log', [ RequestLogController::class, 'index']);
+    Route::delete('request-log/expire', [ RequestLogController::class, 'expire']);
 
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);
