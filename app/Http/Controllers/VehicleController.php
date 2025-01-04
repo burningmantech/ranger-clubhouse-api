@@ -153,7 +153,7 @@ class VehicleController extends ApiController
             && $person->status != Person::NON_RANGER) {
             $info = [];
         } else {
-            $deadline = "{$year}-" . setting('MVRDeadline') . " 23:59:59";
+            list ($deadline, $pastDeadline) = MVR::retrieveDeadline();
             $info = [
                 'motorpool_agreement_available' => setting('MotorPoolProtocolEnabled'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
@@ -167,7 +167,7 @@ class VehicleController extends ApiController
                 'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
                 'pvr_positions' => Position::vehicleEligibleForPerson('pvr', $personId),
                 'mvr_deadline' => $deadline,
-                'mvr_past_deadline' => now()->gt(Carbon::parse($deadline)),
+                'mvr_past_deadline' => $pastDeadline,
             ];
 
             if ($params['include_eligible_teams'] ?? false) {
