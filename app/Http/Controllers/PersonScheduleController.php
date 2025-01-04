@@ -260,6 +260,10 @@ class PersonScheduleController extends ApiController
         if ($position->mvr_signup_eligible && !$isMVREligible) {
             // Has become MVR eligible.
             $response['is_mvr_eligible'] = true;
+            list ($deadline, $pastDeadline) = MVR::retrieveDeadline();
+            $response['mvr_deadline'] = $deadline;
+            $response['is_past_mvr_deadline'] = $pastDeadline;
+            $response['signed_motorpool_agreement'] = $personEvent?->signed_motorpool_agreement;
         }
 
         if ($result['overcapacity']) {
