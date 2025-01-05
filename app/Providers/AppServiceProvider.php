@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\RequestLoggerMiddleware;
 use App\Models\Bmid;
 use App\Models\Document;
 use App\Models\Help;
@@ -72,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // The logger needs to stay instantiated between handle() and terminate()
+        $this->app->singleton(RequestLoggerMiddleware::class);
+
         if (config('telescope.enabled')) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);
