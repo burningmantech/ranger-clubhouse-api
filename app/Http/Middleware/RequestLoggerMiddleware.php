@@ -37,10 +37,6 @@ class RequestLoggerMiddleware
             return;
         }
 
-        if (!$this->startTime) {
-            $this->startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
-        }
-
         $status = method_exists($response, 'status') ? $response->status() : 200;
         $type = $status >= 500 ? 'error' : 'debug';
 
