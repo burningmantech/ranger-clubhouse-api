@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Mail\PhotoApprovedMail;
 use App\Mail\PhotoRejectedMail;
 use App\Models\ErrorLog;
@@ -14,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 use ReflectionException;
 use RuntimeException;
 
@@ -163,7 +163,7 @@ class PersonPhotoController extends ApiController
      *
      * @param PersonPhoto $personPhoto
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function replace(PersonPhoto $personPhoto): JsonResponse
@@ -175,7 +175,7 @@ class PersonPhotoController extends ApiController
         $params = request()->validate(['image' => 'required']);
 
         $oldFilename = $personPhoto->image_filename;
-        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_ORIGINAL);
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image']->get(), $personPhoto->person_id, PersonPhoto::SIZE_ORIGINAL);
 
         $personPhoto->edit_person_id = $this->user->id;
         $personPhoto->edited_at = now();
@@ -195,7 +195,7 @@ class PersonPhotoController extends ApiController
         }
 
         $oldProfileFilename = $personPhoto->profile_filename;
-        list ($image, $width, $height) = PersonPhoto::processImage($params['image'], $personPhoto->person_id, PersonPhoto::SIZE_PROFILE);
+        list ($image, $width, $height) = PersonPhoto::processImage($params['image']->get(), $personPhoto->person_id, PersonPhoto::SIZE_PROFILE);
         $personPhoto->profile_width = $width;
         $personPhoto->profile_height = $height;
         if ($personPhoto->storeImage($image, $personPhoto->edited_at->timestamp, PersonPhoto::SIZE_PROFILE) === false) {
@@ -270,7 +270,7 @@ class PersonPhotoController extends ApiController
         prevent_if_ghd_server('Photo deletion');
 
         $personPhoto->delete();
-       return $this->restDeleteSuccess();
+        return $this->restDeleteSuccess();
     }
 
     /**
@@ -292,7 +292,7 @@ class PersonPhotoController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException|ValidationException
      */
 
     public function upload(Person $person): JsonResponse
@@ -303,7 +303,7 @@ class PersonPhotoController extends ApiController
 
         if (!setting('PhotoUploadEnable')
             && !$this->userHasRole([Role::ADMIN, Role:: VC])) {
-            throw new UnacceptableConditionException('Photo upload is currently disabled.');
+            throw new UnacceptableConditionException('Photo uploading is currently disabled.');
         }
 
         $params = request()->validate([
@@ -313,9 +313,9 @@ class PersonPhotoController extends ApiController
 
         $personId = $person->id;
 
-        list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image'], $personId, PersonPhoto::SIZE_ORIGINAL);
-        list ($imageContents, $imageWidth, $imageHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_BMID);
-        list ($profileContents, $profileWidth, $profileHeight) = PersonPhoto::processImage($params['image'] ?? $params['orig_image'], $personId, PersonPhoto::SIZE_PROFILE);
+        list ($origContents, $origWidth, $origHeight) = PersonPhoto::processImage($params['orig_image']->get(), $personId, PersonPhoto::SIZE_ORIGINAL);
+        list ($imageContents, $imageWidth, $imageHeight) = PersonPhoto::processImage(($params['image'] ?? $params['orig_image'])->get(), $personId, PersonPhoto::SIZE_BMID);
+        list ($profileContents, $profileWidth, $profileHeight) = PersonPhoto::processImage(($params['image'] ?? $params['orig_image'])->get(), $personId, PersonPhoto::SIZE_PROFILE);
 
         if (!$imageContents || !$origContents) {
             return response()->json(['status' => 'conversion-fail'], 500);
@@ -422,4 +422,28 @@ class PersonPhotoController extends ApiController
         return response()->json(['mail' => $mail->render()]);
     }
 
+    /**
+     * Convert a photo to jpg, and send it back. Used to handle HEIC (Apple/iPhone format) for editing purposes.
+     *
+     * @throws AuthorizationException|ValidationException
+     */
+
+    public function convertPhoto(): JsonResponse
+    {
+        prevent_if_ghd_server('Photo uploading');
+        $this->authorize('convertPhoto', PersonPhoto::class);
+        $params = request()->validate([
+            'image' => [
+                'required',
+            ]
+        ]);
+
+        list ($converted, $height, $width) = PersonPhoto::processImage($params['image']->get(), PersonPhoto::SIZE_ORIGINAL);
+
+        return response()->json([
+            'image' => base64_encode($converted),
+            'height' => $height,
+            'width' => $width
+        ]);
+    }
 }

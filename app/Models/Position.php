@@ -314,7 +314,8 @@ class Position extends ApiModel
         'deselect_on_team_join',
         'max',
         'min',
-        'mvr_eligible',
+        'mvr_eligible',         // dashboard prompt will always appear
+        'mvr_signup_eligible',  // dashboard prompt will only appear after signing up for a shift.
         'new_user_eligible',
         'no_payroll_hours_adjustment',
         'no_training_required',
@@ -348,6 +349,7 @@ class Position extends ApiModel
             'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'mvr_eligible' => 'bool',
+            'mvr_signup_eligible' => 'bool',
             'new_user_eligible' => 'bool',
             'no_payroll_hours_adjustment' => 'bool',
             'no_training_required' => 'bool',

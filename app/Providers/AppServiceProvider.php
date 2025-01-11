@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\RequestLoggerMiddleware;
 use App\Models\Bmid;
 use App\Models\Document;
 use App\Models\Help;
@@ -26,10 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Allow modern sized photos to be uploaded
-        ini_set('upload_max_filesize', '32M');
-        ini_set('post_max_size', '32M');
-
         if (env('APP_SQL_DEBUG')) {
             DB::listen(function ($query) {
                 $placeholder = preg_quote('?', '/');
@@ -76,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // The logger needs to stay instantiated between handle() and terminate()
+        $this->app->singleton(RequestLoggerMiddleware::class);
+
         if (config('telescope.enabled')) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);

@@ -12,9 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Encoders\JpegEncoder;
-use Intervention\Image\ImageManager;
+use Illuminate\Validation\ValidationException;
+use Jcupitt\Vips;
 use RuntimeException;
 
 /*
@@ -347,10 +346,8 @@ class PersonPhoto extends ApiModel
      * Process an image
      */
 
-    public static function processImage($imageParam, $personId, string $type = self::SIZE_BMID): array
+    public static function processImage(string $imageParam, $personId, string $type = self::SIZE_BMID): array
     {
-        $filename = $imageParam->getClientOriginalName();
-
         switch ($type) {
             case self::SIZE_BMID:
                 $width = PersonPhoto::BMID_WIDTH;
@@ -372,26 +369,40 @@ class PersonPhoto extends ApiModel
         }
 
         try {
-            $manager = new ImageManager(Driver::class);
-            $image = $manager->read($imageParam);
-
-            // correct image orientation
-            //$image->orientate();
-            $image->scaleDown($width, $height);
-            $width = $image->width();
-            $height = $image->height();
-            $fp = $image->encode(new JpegEncoder(quality: 75))->toFilePointer();
-            $contents = stream_get_contents($fp);
-            gc_collect_cycles();     // Images can be huge, garbage collect.
-
-            return [$contents, $width, $height];
+            $image = Vips\Image::thumbnail_buffer($imageParam, $width, ['height' => $height]);
         } catch (Exception $e) {
-            ErrorLog::recordException($e, 'person-photo-convert-exception', [
+            ErrorLog::recordException($e, 'person-photo-decode-exception', [
                 'target_person_id' => $personId,
-                'filename' => $filename
             ]);
 
-            return [null, 0, 0];
+            throw  ValidationException::withMessages([
+                'image' => 'Unsupported image format'
+            ]);
+        }
+
+        if (str_starts_with($image->get("vips-loader"), 'hei')) {
+            // The VIPS library will hang when attempting to convert HEIC to JPG while running under AWS Fargate.
+            // This does not occur when running under Docker (x86 & arm), or in the local development environment.
+            throw  ValidationException::withMessages([
+                'image' => 'HEIC (iOS/Apple) images are not supported'
+            ]);
+        }
+
+        try {
+            $width = $image->width;
+            $height = $image->height;
+            $contents = $image->jpegsave_buffer();
+            $image = null;
+            gc_collect_cycles();     // Images can be huge, garbage collect.
+            return [$contents, $width, $height];
+        } catch (Exception $e) {
+            ErrorLog::recordException($e, 'person-encode-decode-exception', [
+                'target_person_id' => $personId,
+            ]);
+
+            throw  ValidationException::withMessages([
+                'image' => 'Unable to convert image'
+            ]);
         }
     }
 

@@ -72,4 +72,9 @@ class PersonPhotoPolicy
     {
         return false;
     }
+
+    public function convertPhoto(Person $user): true
+    {
+        return true;
+    }
 }

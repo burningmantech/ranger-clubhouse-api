@@ -8,6 +8,7 @@ use App\Lib\Reports\VehiclePaperworkReport;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonSlot;
 use App\Models\PersonTeam;
 use App\Models\Position;
 use App\Models\Vehicle;
@@ -152,12 +153,13 @@ class VehicleController extends ApiController
             && $person->status != Person::NON_RANGER) {
             $info = [];
         } else {
-            $deadline = "{$year}-" . setting('MVRDeadline') . " 23:59:59";
+            list ($deadline, $pastDeadline) = MVR::retrieveDeadline();
             $info = [
                 'motorpool_agreement_available' => setting('MotorPoolProtocolEnabled'),
                 'motorpool_agreement_signed' => $event?->signed_motorpool_agreement,
 
                 'mvr_positions' => Position::vehicleEligibleForPerson('mvr', $personId),
+                'mvr_signups' => PersonSlot::retrieveMVRSignups($personId, $year),
                 'ignore_mvr' => $event?->ignore_mvr ?? false,
                 'org_vehicle_insurance' => $event?->org_vehicle_insurance,
 
@@ -165,7 +167,7 @@ class VehicleController extends ApiController
                 'personal_vehicle_signed' => $event?->signed_personal_vehicle_agreement,
                 'pvr_positions' => Position::vehicleEligibleForPerson('pvr', $personId),
                 'mvr_deadline' => $deadline,
-                'mvr_past_deadline' => now()->gt(Carbon::parse($deadline)),
+                'mvr_past_deadline' => $pastDeadline,
             ];
 
             if ($params['include_eligible_teams'] ?? false) {

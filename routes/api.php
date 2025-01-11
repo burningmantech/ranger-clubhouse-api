@@ -67,6 +67,7 @@ use App\Http\Controllers\PositionSanityCheckController;
 use App\Http\Controllers\ProspectiveApplicationController;
 use App\Http\Controllers\ProvisionController;
 use App\Http\Controllers\RbsController;
+use App\Http\Controllers\RequestLogController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalesforceController;
 use App\Http\Controllers\SettingController;
@@ -337,6 +338,7 @@ Route::middleware('api')->group(function () {
     Route::post('person-photo/{person_photo}/replace', [PersonPhotoController::class, 'replace']);
     Route::post('person-photo/{person_photo}/activate', [PersonPhotoController::class, 'activate']);
     Route::get('person-photo/{person_photo}/reject-preview', [PersonPhotoController::class, 'rejectPreview']);
+    Route::post('person-photo/convert', [PersonPhotoController::class, 'convertPhoto']);
     Route::resource('person-photo', PersonPhotoController::class);
 
     Route::get('person-pog/config', [PersonPogController::class, 'config']);
@@ -404,6 +406,9 @@ Route::middleware('api')->group(function () {
     Route::get('rbs/unverified-stopped', [RbsController::class, 'unverifiedStopped']);
     Route::post('rbs/retry', [RbsController::class, 'retry']);
     Route::post('rbs/transmit', [RbsController::class, 'transmit']);
+
+    Route::get('request-log', [ RequestLogController::class, 'index']);
+    Route::delete('request-log/expire', [ RequestLogController::class, 'expire']);
 
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);
