@@ -74,9 +74,9 @@ class RedactDatabase
         // And nuke a bunch of tables
         $tables = [
             'access_document_changes',
+            'bmid_export',
             'broadcast',
             'broadcast_message',
-            'bmid_export',
             'cache',
             'cache_locks',
             'contact_log',
@@ -101,9 +101,10 @@ class RedactDatabase
             'prospective_application',
             'prospective_application_log',
             'prospective_application_note',
+            'request_log',
             'survey',
-            'survey_question',
             'survey_answer',
+            'survey_question',
             'telescope_entries',
             'telescope_entries_tags',
             'telescope_monitoring',
