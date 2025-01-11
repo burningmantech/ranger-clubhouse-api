@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\TrainingSignupEmailJob;
+use App\Lib\MVR;
 use App\Lib\Scheduling;
 use App\Lib\WorkSummary;
 use App\Mail\TrainingSessionFullMail;
 use App\Models\EventDate;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
@@ -86,6 +88,7 @@ class PersonScheduleController extends ApiController
         $slotId = $params['slot_id'];
 
         $slot = Slot::findOrFail($slotId);
+        $position = $slot->position;
 
         // Slot must be activated in order to allow signups
         if (!$slot->active) {
@@ -136,7 +139,7 @@ class PersonScheduleController extends ApiController
             }
         }
 
-        $preventMultipleEnrollments = $slot->position->prevent_multiple_enrollments;
+        $preventMultipleEnrollments = $position->prevent_multiple_enrollments;
         if ($slot->isTraining()
             && $preventMultipleEnrollments
             && !Schedule::canJoinTrainingSlot($person->id, $slot, $enrollments)) {
@@ -178,6 +181,14 @@ class PersonScheduleController extends ApiController
             ]);
         }
         */
+
+        if ($position->mvr_signup_eligible) {
+            $year = current_year();
+            $personEvent = PersonEvent::findForPersonYear($person->id, $year);
+            $isMVREligible = MVR::isEligible($person->id, $personEvent, $year);
+        } else {
+            $isMVREligible = false;
+        }
 
         // Go try to add the person to the slot/session
         $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
@@ -234,16 +245,26 @@ class PersonScheduleController extends ApiController
         if ($slot->isTraining()
             && $signedUp >= $slot->max
             && !$slot->has_started
-            && !empty($slot->position->contact_email)) {
+            && !empty($position->contact_email)) {
             // fire off an email letting the TA or ART team know a session has become full.
-            mail_send(new TrainingSessionFullMail($slot, $signedUp, $slot->position->contact_email));
+            mail_send(new TrainingSessionFullMail($slot, $signedUp, $position->contact_email));
         }
+
 
         $response = [
             'status' => 'success',
             'signed_up' => $signedUp,
             'recommend_burn_weekend_shift' => Scheduling::recommendBurnWeekendShift($person),
         ];
+
+        if ($position->mvr_signup_eligible && !$isMVREligible) {
+            // Has become MVR eligible.
+            $response['is_mvr_eligible'] = true;
+            list ($deadline, $pastDeadline) = MVR::retrieveDeadline();
+            $response['mvr_deadline'] = $deadline;
+            $response['is_past_mvr_deadline'] = $pastDeadline;
+            $response['signed_motorpool_agreement'] = $personEvent?->signed_motorpool_agreement;
+        }
 
         if ($result['overcapacity']) {
             $response['overcapacity'] = true;
