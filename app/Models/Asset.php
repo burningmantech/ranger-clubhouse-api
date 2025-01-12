@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,8 +19,12 @@ class Asset extends ApiModel
     protected bool $auditModel = true;
 
     const string TYPE_GEAR = 'gear';
-    const string TYPE_RADIO = 'radio';
+    const string TYPE_RADIO = 'radio';          // Hand held
     const string TYPE_TEMP_ID = 'temp-id';
+
+    const string TYPE_DESKTOP_RADIO = 'desktop-radio';
+    const string TYPE_MOBILE_RADIO = 'mobile-radio';
+    const string TYPE_RADIO_CHARGER = 'radio-charger';
 
     // Deprecated types
     const string TYPE_AMBER = 'amber';     // Only used in 2013
@@ -28,10 +33,13 @@ class Asset extends ApiModel
 
     protected $fillable = [
         'barcode',
-        'category',
+        'group_name',
         'description',
+        'entity_assignment',
         'expires_on',
+        'group_name',
         'notes',
+        'order_number',
         'perm_assign',
         'type',
         'year',
@@ -53,11 +61,13 @@ class Asset extends ApiModel
 
     protected $rules = [
         'barcode' => 'required|string|max:25',
-        'category' => 'sometimes|nullable|string|max:25',
-        'type' => 'required|string',
+        'group_name' => 'sometimes|nullable|string|max:25',
         'description' => 'sometimes|nullable|string|max:25',
-        'year' => 'required|integer',
+        'entity_assignment' => 'sometimes|nullable|string',
         'expires_on' => 'sometimes|nullable|date',
+        'order_number' => 'sometimes|nullable|string',
+        'type' => 'required|string',
+        'year' => 'required|integer',
     ];
 
     public function asset_person(): BelongsTo
@@ -99,6 +109,9 @@ class Asset extends ApiModel
         $type = $query['type'] ?? null;
         $checkedOut = $query['checked_out'] ?? null;
         $includeHistory = $query['include_history'] ?? null;
+        $orderNumber = $query['order_number'] ?? null;
+        $entityAssignment = $query['entity_assignment'] ?? null;
+        $groupName = $query['group_name'] ?? null;
 
         $sql = self::where('year', $year);
 
@@ -112,6 +125,18 @@ class Asset extends ApiModel
 
         if ($type) {
             $sql->where('type', $type);
+        }
+
+        if ($orderNumber) {
+            $sql->where('order_number', $orderNumber);
+        }
+
+        if ($entityAssignment) {
+            $sql->where('entity_assignment', $entityAssignment);
+        }
+
+        if ($groupName) {
+            $sql->where('group_name', $groupName);
         }
 
         if ($checkedOut) {
@@ -174,7 +199,7 @@ class Asset extends ApiModel
                 })
             ];
             $this->validateMessages = [
-                'barcode.unique' => 'The barcode '.$this->barcode.' already exists for year '.$this->year,
+                'barcode.unique' => 'The barcode ' . $this->barcode . ' already exists for year ' . $this->year,
             ];
         }
 
@@ -192,5 +217,30 @@ class Asset extends ApiModel
         return Attribute::make(
             get: fn(mixed $value, array $attributes) => $attributes['expires_on'] && Carbon::parse($attributes['expires_on'])->lte(now()),
         );
+    }
+
+    public function orderNumber(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function groupName(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function expiresOn(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function description(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function entityAssignment(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
     }
 }

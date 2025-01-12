@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Asset;
 use App\Models\AssetPerson;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class AssetController extends ApiController
 {
@@ -23,11 +23,14 @@ class AssetController extends ApiController
         $this->authorize('index', Asset::class);
 
         $query = request()->validate([
-            'barcode' => 'sometimes|string',    // specific barcode to find
-            'include_history' => 'sometimes|boolean',   // include checkout history
+            'barcode' => 'sometimes|string',        // specific barcode to find
             'checked_out' => 'sometimes|boolean',   // find only outstanding assets
+            'entity_assignment' => 'sometimes|string', // person or group
+            'exclude' => 'sometimes|string',        // exclude a type (aka description)
+            'group_name' => 'sometimes|string',
+            'include_history' => 'sometimes|boolean',   // include checkout history
+            'order_number' => 'sometimes|string', // the vendor order number
             'type' => 'sometimes|string',    // find for a type (aka description)
-            'exclude' => 'sometimes|string',    // exclude a type (aka description)
             'year' => 'sometimes|integer',   // year to go searching in
         ]);
 
@@ -123,7 +126,7 @@ class AssetController extends ApiController
      * Checkout Asset
      *
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function checkout(): JsonResponse
@@ -135,7 +138,10 @@ class AssetController extends ApiController
             'person_id' => 'required|integer',
             'year' => 'sometimes|integer',
             'attachment_id' => 'sometimes|integer|nullable|exists:asset_attachment,id',
+            'force' => 'sometimes|boolean',
         ]);
+
+        $force = $params['force'] ?? false;
 
         $year = $params['year'] ?? current_year();
 
@@ -157,13 +163,27 @@ class AssetController extends ApiController
             ]);
         }
 
-        if ($asset->has_expired) {
+        if (!empty($asset->entity_assignment)) {
             return response()->json([
-                'status' => 'expired',
+                'status' => 'entity-assigned',
                 'asset_id' => $asset->id,
-                'expires_on' => (string)$asset->expires_on,
+                'entity' => $asset->entity_assignment,
                 'barcode' => $asset->barcode,
             ]);
+        }
+
+        $wasForced = false;
+        if ($asset->has_expired) {
+            if (!$force) {
+                return response()->json([
+                    'status' => 'expired',
+                    'asset_id' => $asset->id,
+                    'expires_on' => (string)$asset->expires_on,
+                    'barcode' => $asset->barcode,
+                ]);
+            } else {
+                $wasForced = true;
+            }
         }
 
         $row = new AssetPerson([
@@ -172,6 +192,7 @@ class AssetController extends ApiController
             'checked_out' => now(),
             'person_id' => $params['person_id'],
             'check_out_person_id' => $this->user->id,
+            'check_out_forced' => $wasForced,
         ]);
 
         if (!$row->save()) {
