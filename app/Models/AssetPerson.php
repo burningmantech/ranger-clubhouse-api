@@ -14,13 +14,18 @@ class AssetPerson extends ApiModel
     protected bool $auditModel = true;
 
     protected $fillable = [
-        'person_id',
         'asset_id',
-        'checked_out',
-        'checked_in',
-        'check_out_person_id',
+        'attachment_id',
         'check_int_person_id',
-        'attachment_id'
+        'check_out_forced',
+        'check_out_person_id',
+        'checked_in',
+        'checked_out',
+        'person_id',
+    ];
+
+    protected $appends = [
+        'duration'
     ];
 
     protected function casts(): array
@@ -28,6 +33,7 @@ class AssetPerson extends ApiModel
         return [
             'checked_out' => 'datetime',
             'checked_in' => 'datetime',
+            'check_out_forced' => 'boolean'
         ];
     }
 
@@ -140,5 +146,16 @@ class AssetPerson extends ApiModel
     protected function attachmentId(): Attribute
     {
         return NullIfEmptyAttribute::make();
+    }
+
+    /**
+     * Return the duration of how long the asset is/was checked out for.
+     *
+     * @return int
+     */
+
+    public function getDurationAttribute(): int
+    {
+        return ($this->checked_out ?? now())->diffInSeconds($this->checked_in ?? now());
     }
 }
