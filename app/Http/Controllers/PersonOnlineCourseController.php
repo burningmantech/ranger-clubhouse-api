@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\MoodleConnectFailureException;
 use App\Exceptions\MoodleDownForMaintenanceException;
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\Moodle;
-use App\Mail\OnlineCourseEnrollmentMail;
 use App\Mail\OnlineCourseResetPasswordMail;
 use App\Models\ActionLog;
 use App\Models\OnlineCourse;
@@ -16,7 +16,6 @@ use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class PersonOnlineCourseController extends ApiController
 {
@@ -25,7 +24,7 @@ class PersonOnlineCourseController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function setupPerson(Person $person): JsonResponse
@@ -104,9 +103,13 @@ class PersonOnlineCourseController extends ApiController
             return response()->json(['status' => 'down-for-maintenance']);
         }
 
+        /*
+         In 2025, Moodle was upgraded and SSO activated. We don't have to let the user know what their
+        username and password is anymore.
         if (!$exists) {
             mail_send(new OnlineCourseEnrollmentMail($person, $course, $password));
         }
+        */
 
         return response()->json([
             'status' => $exists ? 'exists' : 'created',
@@ -136,7 +139,7 @@ class PersonOnlineCourseController extends ApiController
         $password = null;
         $lms->resetPassword($person, $password);
 
-        mail_send(new OnlineCourseResetPasswordMail($person, $password), false);
+        //mail_send(new OnlineCourseResetPasswordMail($person, $password), false);
         ActionLog::record($person, 'lms-password-reset', 'password reset requested');
 
         return response()->json(['status' => 'success', 'password' => $password]);
@@ -147,7 +150,7 @@ class PersonOnlineCourseController extends ApiController
      * Mark a person as having completed the online course.
      * (Very dangerous, only use this superpower for good.)
      *
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function markCompleted(Person $person): JsonResponse
@@ -266,7 +269,7 @@ class PersonOnlineCourseController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function change(Person $person): JsonResponse
