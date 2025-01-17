@@ -33,18 +33,19 @@ class RequestLoggerMiddleware
 
     public function terminate($request, $response): void
     {
-        if (app()->isLocal()) {
-            return;
-        }
 
         $status = method_exists($response, 'status') ? $response->status() : 200;
         $type = $status >= 500 ? 'error' : 'debug';
 
         $time = (microtime(true) - $this->startTime) * 100;
-
-        Log::$type(number_format($time, 3) . ' ms: ' . $status . ' ' . $request->method() . ' ' . $request->fullUrl());
-
         $method = $request->method();
+
+        Log::$type(number_format($time, 3) . ' ms: ' . $status . ' ' . $method . ' ' . $request->fullUrl());
+
+        if (app()->isLocal()) {
+            return;
+        }
+
         if ($method == 'OPTIONS') {
             // Don't record CORS preflight requests
             return;
@@ -56,6 +57,6 @@ class RequestLoggerMiddleware
             $size = method_exists($response, 'content') ? strlen($response->content()) : 0;
         }
 
-        RequestLog::record(Auth::id(), implode(',', $request->ips()), $request->path(), $status, $method, $size, $time);
+        RequestLog::record(Auth::id(), request_ip(), $request->path(), $status, $method, $size, $time);
     }
 }
