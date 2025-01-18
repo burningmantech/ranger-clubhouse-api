@@ -92,22 +92,30 @@ class MailLogController extends ApiController
                 $bounceType = $sns->bounce->bounceType;
                 $isPermanent = $bounceType == 'Permanent';
                 foreach ($sns->bounce->bouncedRecipients as $to) {
-                    if (stripos($to->emailAddres, 'burningman.slack.com') !== false) {
+                    $email = $to->emailAddress ?? '';
+
+                    if (empty($email)) {
+                        ErrorLog::record('sns-malformed-notification', [
+                            'reason' => 'emailAddress field is missing',
+                            'sns' => $sns,
+                        ]);
+                    }
+                    if (stripos($email, 'burningman.slack.com') !== false) {
                         // Don't deal with slack bounces.
                         continue;
                     }
                     if (!empty($messageId)) {
-                        $mailLog = MailLog::markAsBounced($to->emailAddress, $messageId);
+                        $mailLog = MailLog::markAsBounced($email, $messageId);
                     } else {
                         $mailLog = null;
                     }
-                    $person = Person::findByEmail($to->emailAddress);
+                    $person = Person::findByEmail($email);
                     if ($isPermanent && $person) {
                         $person->is_bouncing = true;
                         $person->saveWithoutValidation();
                     }
                     ActionLog::record(null, 'email-bouncing', '', [
-                        'to_email' => $to->emailAddress,
+                        'to_email' => $email,
                         'message_id' => $messageId,
                         'bounce_type' => $bounceType,
                         'mail_log_id' => $mailLog?->id,
