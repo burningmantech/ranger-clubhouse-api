@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 class RequestLoggerMiddleware
 {
+    // IP Block AWS uses for internal IPs.
+    const string PRIVATE_IP_RANGE = "172.16.0.0";
+    const int PRIVATE_IP_NETMASK = 12;
+
     protected float $startTime = 0;
 
     /**
@@ -57,6 +61,29 @@ class RequestLoggerMiddleware
             $size = method_exists($response, 'content') ? strlen($response->content()) : 0;
         }
 
-        RequestLog::record(Auth::id(), request_ip(), $request->path(), $status, $method, $size, $time);
+        $ip = request_ip();
+        $path = $request->path();
+
+        // Don't record AWS IP heartbeat requests
+        if (!(self::isPrivateIp($ip) && $path == "config")) {
+            RequestLog::record(Auth::id(), $ip, $path, $status, $method, $size, $time);
+        }
+    }
+
+    /**
+     * Test if the IP is in the private IP block.
+     *
+     * @param string $ip
+     * @return bool
+     */
+
+    public static function isPrivateIp(string $ip): bool
+    {
+        $rangeInteger = ip2long(self::PRIVATE_IP_RANGE);
+        $ipInteger = ip2long($ip);
+        $wildcard = pow(2, (32 - self::PRIVATE_IP_NETMASK)) - 1;
+        $netmask = ~$wildcard;
+        return (($ipInteger & $netmask) == ($rangeInteger & $netmask));
+
     }
 }
