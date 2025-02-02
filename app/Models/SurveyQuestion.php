@@ -7,6 +7,7 @@ use App\Attributes\BlankIfEmptyAttribute;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 class SurveyQuestion extends ApiModel
@@ -64,6 +65,11 @@ class SurveyQuestion extends ApiModel
     public function survey() : BelongsTo
     {
         return $this->belongsTo(Survey::class);
+    }
+
+    public function survey_answers() : HasMany
+    {
+        return $this->hasMany(SurveyAnswer::class);
     }
 
     public static function findAllForSurvey(int $surveyId): Collection

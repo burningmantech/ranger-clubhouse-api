@@ -78,14 +78,9 @@ class Survey extends ApiModel
         });
     }
 
-    public function survey_group(): HasMany
-    {
-        return $this->hasMany(SurveyGroup::class);
-    }
-
     public function survey_groups(): HasMany
     {
-        return $this->hasMany(SurveyGroup::class);
+        return $this->hasMany(SurveyGroup::class)->orderBy('sort_index');
     }
 
     public function position(): BelongsTo
@@ -97,6 +92,12 @@ class Survey extends ApiModel
     {
         return $this->belongsTo(Position::class);
     }
+
+    public function survey_questions(): HasMany
+    {
+        return $this->hasMany(SurveyQuestion::class);
+    }
+
 
     /**
      * Find all the surveys
@@ -143,7 +144,7 @@ class Survey extends ApiModel
         $type = $query['type'] ?? null;
 
         $sql = self::with('position:id,title')
-            ->with('survey_group')
+            ->with('survey_groups')
             ->orderBy('year');
 
         if ($year) {
@@ -195,7 +196,7 @@ class Survey extends ApiModel
                 ]
             ];
 
-            foreach ($row->survey_group as $group) {
+            foreach ($row->survey_groups as $group) {
                 if ($group->type != SurveyGroup::TYPE_NORMAL) {
                     $reports[] = [
                         'id' => $group->getReportId(),
@@ -485,12 +486,12 @@ class Survey extends ApiModel
 
     public function canManageSurvey(Person $user): bool
     {
-        return self::canManageSurveys($user, $this->position_id);
+        return $user->isAdmin() || self::canManageSurveys($user, $this->position_id);
     }
 
     public static function canManageSurveys(Person $user, int $positionId): bool
     {
-        return self::hasRoleForPosition($user, Role::SURVEY_MANAGEMENT_TRAINING, Role::SURVEY_MANAGEMENT_BASE, $positionId);
+        return $user->isAdmin() || self::hasRoleForPosition($user, Role::SURVEY_MANAGEMENT_TRAINING, Role::SURVEY_MANAGEMENT_BASE, $positionId);
     }
 
     public function isTrainerForSurvey(Person $user): bool

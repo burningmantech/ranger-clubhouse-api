@@ -32,7 +32,8 @@ class TimesheetLog extends ApiModel
     protected function casts(): array
     {
         return [
-            'created_at' => 'datetime'
+            'created_at' => 'datetime',
+            'data' => 'array'
         ];
     }
 
@@ -106,13 +107,13 @@ class TimesheetLog extends ApiModel
      * @param int $year
      */
 
-    public static function record(string $action, int $personId, ?int $userId, int|null $timesheetId, mixed $data, int $year = 0)
+    public static function record(string $action, int $personId, ?int $userId, int|null $timesheetId, mixed $data, int $year = 0): void
     {
         $columns = [
             'action' => $action,
             'person_id' => $personId,
             'create_person_id' => $userId,
-            'data' => json_encode(is_array($data) ? $data : ['message' => $data]),
+            'data' => is_array($data) ? $data : ['message' => $data],
             'year' => $year ? $year : current_year(),
             'created_at' => now(),
         ];
@@ -132,25 +133,21 @@ class TimesheetLog extends ApiModel
             return null;
         }
 
-        $decode = json_decode($data);
-        if (!$decode) {
-            return $data;
-        }
 
-        $positionId = $decode->position_id ?? null;
+        $positionId = $data->position_id ?? null;
         if ($positionId) {
             if (is_array($positionId)) {
                 list ($oldId, $newId) = $positionId;
-                $decode->position_id = [
+                $data->position_id = [
                     ['id' => $oldId, 'title' => Position::retrieveTitle($oldId)],
                     ['id' => $newId, 'title' => Position::retrieveTitle($newId)],
                 ];
             } else {
-                $decode->position_title = Position::retrieveTitle($decode->position_id);
+                $data->position_title = Position::retrieveTitle($data->position_id);
             }
         }
 
-        $forced = $decode->forced ?? null;
+        $forced = $data->forced ?? null;
         if ($forced) {
             $positionId = $forced->position_id ?? null;
             if ($positionId) {
@@ -160,6 +157,6 @@ class TimesheetLog extends ApiModel
             $forced->message = Position::UNQUALIFIED_MESSAGES[$forced->reason] ?? "Unknown reason [{$forced->reason}]";
         }
 
-        return $decode;
+        return $data;
     }
 }
