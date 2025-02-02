@@ -198,10 +198,10 @@ class TimesheetControllerTest extends TestCase
                         'creator_callsign' => $this->user->callsign,
                         'created_at' => date("$year-08-25 06:00:00"),
                         'action' => 'signon',
-                        'data' => [
+                        'data' => json_encode([
                             'position_id' => Position::DIRT,
                             'on_duty' => (string)$this->timesheet->on_duty,
-                        ]
+                        ])
                     ]
                     ]],
             ]
