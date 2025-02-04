@@ -3,22 +3,23 @@
 namespace App\Lib;
 
 use App\Exceptions\UnacceptableConditionException;
-use App\Mail\ProspectiveApplicant\ApprovedCallsignMail;
-use App\Mail\ProspectiveApplicant\ExperienceConfirmationMail;
-use App\Mail\ProspectiveApplicant\MoreHandlesMail;
-use App\Mail\ProspectiveApplicant\PiiIssueMail;
-use App\Mail\ProspectiveApplicant\RejectRegionalMail;
-use App\Mail\ProspectiveApplicant\RejectTooYoungMail;
-use App\Mail\ProspectiveApplicant\RejectUnqualifiedMail;
-use App\Mail\ProspectiveApplicant\ReturningRangerMail;
-use App\Mail\ProspectiveApplicant\RRNCheckMail;
+use App\Mail\ProspectiveApplication\ApprovedCallsignMail;
+use App\Mail\ProspectiveApplication\ExperienceConfirmationMail;
+use App\Mail\ProspectiveApplication\MoreHandlesMail;
+use App\Mail\ProspectiveApplication\PiiIssueMail;
+use App\Mail\ProspectiveApplication\RejectRegionalMail;
+use App\Mail\ProspectiveApplication\RejectTooYoungMail;
+use App\Mail\ProspectiveApplication\RejectUnqualifiedMail;
+use App\Mail\ProspectiveApplication\ReturningRangerMail;
+use App\Mail\ProspectiveApplication\RRNCheckMail;
+use App\Mail\ProspectiveApplication\WhyRangerQuestionMail;
 use App\Models\ProspectiveApplication;
 
 class ProspectiveApplicationStatusMail
 {
     const array STATUS_TO_MAIL = [
         ProspectiveApplication::STATUS_APPROVED => ApprovedCallsignMail::class,
-        ProspectiveApplication::STATUS_PII_ISSUE => PiiIssueMail::class,
+        ProspectiveApplication::STATUS_HOLD_PII_ISSUE => PiiIssueMail::class,
         ProspectiveApplication::STATUS_MORE_HANDLES => MoreHandlesMail::class,
         ProspectiveApplication::STATUS_REJECT_REGIONAL => RejectRegionalMail::class,
         ProspectiveApplication::STATUS_REJECT_TOO_YOUNG => RejectTooYoungMail::class,
@@ -26,6 +27,7 @@ class ProspectiveApplicationStatusMail
         ProspectiveApplication::STATUS_HOLD_RRN_CHECK => RRNCheckMail::class,
         ProspectiveApplication::STATUS_HOLD_QUALIFICATION_ISSUE => ExperienceConfirmationMail::class,
         ProspectiveApplication::STATUS_REJECT_RETURNING_RANGER => ReturningRangerMail::class,
+        ProspectiveApplication::STATUS_HOLD_WHY_RANGER_QUESTION => WhyRangerQuestionMail::class,
     ];
 
     /**

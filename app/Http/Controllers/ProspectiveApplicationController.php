@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\UnacceptableConditionException;
 use App\Lib\AIHandlesExtract;
-use App\Lib\AIHandlesParse;
 use App\Lib\ProspectiveApplicationImport;
 use App\Lib\ProspectiveApplicationStatusMail;
 use App\Lib\ProspectiveClubhouseAccountFromApplication;
-use App\Mail\ProspectiveApplicant\SendEmail;
+use App\Mail\ProspectiveApplication\SendEmail;
 use App\Models\MailLog;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationNote;
@@ -186,7 +185,7 @@ class ProspectiveApplicationController extends ApiController
             'approved_handle' => [
                 'required_if:status,'
                 . ProspectiveApplication::STATUS_APPROVED
-                . ',' . ProspectiveApplication::STATUS_PII_ISSUE,
+                . ',' . ProspectiveApplication::STATUS_HOLD_PII_ISSUE,
                 'string'
             ]
         ]);

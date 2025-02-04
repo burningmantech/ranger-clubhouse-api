@@ -30,15 +30,15 @@ class ProspectiveApplication extends ApiModel
 
     const string STATUS_CREATED = 'created';
 
-    const string STATUS_REASON_ISSUE = 'reason-issue';
     const string STATUS_MORE_HANDLES = 'more-handles';
 
     const string STATUS_HANDLE_CHECK = 'handle-check';
 
     const string STATUS_HOLD_QUALIFICATION_ISSUE = 'qualification-issue';
     const string STATUS_HOLD_RRN_CHECK = 'rrn-check';
+    const string STATUS_HOLD_WHY_RANGER_QUESTION = 'why-ranger-question';
 
-    const string STATUS_PII_ISSUE = 'pii-issue';
+    const string STATUS_HOLD_PII_ISSUE = 'pii-issue';
 
     const string STATUS_REJECT_PRE_BONK = 'reject-pre-bonk';
     const string STATUS_REJECT_UBERBONKED = 'reject-uber-bonked';
