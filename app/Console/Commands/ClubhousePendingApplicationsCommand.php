@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\ProspectiveApplicant\ApprovedReminderMail;
+use App\Mail\ProspectiveApplication\ApprovedReminderMail;
 use App\Models\ProspectiveApplication;
 use Illuminate\Console\Command;
 
