@@ -319,16 +319,15 @@ class ShiftLeadReport
                 ['ends', '>=', $shiftEnd]
             ]);
             // or starting within 1 hour before
-            $q->orWhere([
-                ['begins', '>=', $shiftStart->clone()->addHours(-1)],
-                ['begins', '<', $shiftEnd->clone()->addHours(-1)]
-            ]);
-
+            $q->orWhere(function ($q) use ($shiftStart, $shiftEnd) {
+                $q->where('begins', '>=', $shiftStart->clone()->addHours(-1));
+                $q->where('begins', '<', $shiftEnd->clone()->addHours(-1));
+            });
             // or.. starting within after X minutes
-            $q->orWhere([
-                ['ends', '>=', $shiftStart->clone()->addMinutes($minAfterStart)],
-                ['ends', '<=', $shiftEnd]
-            ]);
+            $q->orWhere(function ($q) use ($shiftStart, $shiftEnd, $minAfterStart) {
+                $q->where('ends', '>=', $shiftStart->clone()->addMinutes($minAfterStart));
+                $q->where('ends', '<=', $shiftEnd);
+            });
         });
     }
 
