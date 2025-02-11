@@ -26,6 +26,7 @@ class PositionController extends ApiController
     {
         $params = request()->validate([
             'type' => 'sometimes|string',
+            'art_training' => 'sometimes|boolean',
             'can_manage' => 'sometimes|boolean',
             'cruise_direction' => 'sometimes|boolean',
             'include_roles' => 'sometimes|boolean',

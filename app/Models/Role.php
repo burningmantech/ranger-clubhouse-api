@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -58,6 +59,18 @@ class Role extends ApiModel
     const int ROLE_BASE_MASK = 0x7f000000;
     const int ART_TRAINER_BASE = 0x1000000;
     const int SURVEY_MANAGEMENT_BASE = 0x2000000;
+    const int ART_GRADUATE_BASE = 0x30000000;
+
+    const array ART_BASE_ROLES = [
+        self::ART_GRADUATE_BASE => 'ART Graduate',
+        self::ART_TRAINER_BASE => ['ART', 'ART Trainer'],
+        self::SURVEY_MANAGEMENT_BASE => ['ART Survey Mgmt', 'ART Survey Management'],
+    ];
+
+    protected $appends = [
+        'art_position_title',
+        'art_role_title'
+    ];
 
     protected function casts(): array
     {
@@ -122,4 +135,90 @@ class Role extends ApiModel
         }
         return $sql->get();
     }
+
+    /**
+     * Create the ART Roles for a given position
+     *
+     * @param int $positionId
+     * @return void
+     * @throws UnacceptableConditionException
+     */
+
+    public static function createARTRoles(int $positionId): array
+    {
+        $position = Position::findOrFail($positionId);
+        if ($position->type != Position::TYPE_TRAINING) {
+            throw new UnacceptableConditionException('Position type is not "training"');
+        }
+
+        if (!str_contains($position->title, 'Training')) {
+            throw new UnacceptableConditionException('Position title does not contain the word "Training"');
+        }
+
+        if (!$position->active) {
+            throw new UnacceptableConditionException('Position is not active');
+        }
+
+        $title = str_replace(' Training', '', $position->title);
+
+        $added = [];
+        $existing = [];
+        foreach (self::ART_BASE_ROLES as $base => $rolePrefixs) {
+            $role = $base | $positionId;
+            if ($existingRole = Role::find($role)) {
+                $existing[] = [
+                    'id' => $role,
+                    'title' => $existingRole->title,
+                ];
+                continue;
+            }
+
+            if (is_array($rolePrefixs)) {
+                $prefix = $rolePrefixs[0];
+            } else {
+                $prefix = $rolePrefixs;
+            }
+
+            $newRole = new Role;
+            $newRole->id = $role;
+            $newRole->title = $prefix . ' ' . $title;
+            $newRole->new_user_eligible = false;
+            $newRole->save();
+            $added[] = [
+                'id' => $newRole->id,
+                'title' => $newRole->title,
+            ];
+        }
+
+        return [ $added, $existing ];
+    }
+
+    public function getArtPositionTitleAttribute(): ?string
+    {
+        if (($this->id & self::ROLE_BASE_MASK) == 0) {
+            return null;
+        }
+
+        return Position::retrieveTitle($this->id & ~self::ROLE_BASE_MASK);
+    }
+
+    public function getArtRoleTitleAttribute(): ?string
+    {
+        $base = $this->id & self::ROLE_BASE_MASK;
+        if ($base == 0) {
+            return null;
+        }
+
+        $prefixes = self::ART_BASE_ROLES[$base] ?? null;
+        if ($prefixes === null) {
+            $title = "Unknown base {$base}";
+        } else if (is_array($prefixes)) {
+            $title = $prefixes[1];
+        } else {
+            $title = $prefixes;
+        }
+
+        return $title;
+    }
 }
+

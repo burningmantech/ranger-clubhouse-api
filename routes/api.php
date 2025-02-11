@@ -413,6 +413,7 @@ Route::middleware('api')->group(function () {
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);
     Route::post('role/clear-cache', [RoleController::class, 'clearCache']);
+    Route::post('role/create-art-roles', [RoleController::class, 'createARTRoles']);
     Route::resource('role', RoleController::class);
 
     Route::get('salesforce/config', [SalesforceController::class, 'config']);
