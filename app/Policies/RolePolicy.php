@@ -10,11 +10,13 @@ class RolePolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?true
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole(Role::TECH_NINJA)) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -38,6 +40,11 @@ class RolePolicy
      */
 
     public function store(Person $user): bool
+    {
+        return false;
+    }
+
+    public function createARTRoles(Person $user): bool
     {
         return false;
     }

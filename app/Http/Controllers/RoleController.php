@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\Reports\PeopleByRoleReport;
 use App\Models\PersonRole;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class RoleController extends ApiController
@@ -21,7 +21,7 @@ class RoleController extends ApiController
     public function index(): JsonResponse
     {
         $params = request()->validate([
-            'include_associations' => 'sometimes|boolean'
+            'include_associations' => 'sometimes|boolean',
         ]);
 
         return $this->success(Role::findForQuery($params), null, 'role');
@@ -46,6 +46,23 @@ class RoleController extends ApiController
         }
 
         return $this->restError($role);
+    }
+
+    /**
+     * Create a set of new ART Roles
+     *
+     * @throws AuthorizationException|UnacceptableConditionException
+     */
+
+    public function createARTRoles(): JsonResponse
+    {
+        $this->authorize('createARTRoles', Role::class);
+        $params = request()->validate([
+            'position_id' => 'required|integer|exists:position,id',
+        ]);
+
+        list ($roles,$existing) = Role::createARTRoles($params['position_id']);
+        return response()->json([ 'roles' => $roles, 'existing' => $existing ]);
     }
 
     /**
