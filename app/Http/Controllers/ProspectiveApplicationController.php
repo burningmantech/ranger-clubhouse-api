@@ -200,6 +200,7 @@ class ProspectiveApplicationController extends ApiController
                 break;
 
             case ProspectiveApplication::STATUS_APPROVED:
+            case ProspectiveApplication::STATUS_HOLD_PII_ISSUE:
                 $prospectiveApplication->approved_handle = $params['approved_handle'];
                 break;
         }
