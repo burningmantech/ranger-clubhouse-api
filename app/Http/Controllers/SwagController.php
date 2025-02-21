@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\Reports\PotentialEarnedShirtsReport;
 use App\Lib\Reports\PotentialSwagReport;
-use App\Models\PersonSwag;
 use App\Models\Swag;
+use App\Models\Timesheet;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class SwagController extends ApiController
 {
@@ -30,7 +32,7 @@ class SwagController extends ApiController
      * Create a swag
      *
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -64,7 +66,7 @@ class SwagController extends ApiController
      *
      * @param Swag $swag
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function update(Swag $swag): JsonResponse
@@ -117,5 +119,27 @@ class SwagController extends ApiController
         $this->authorize('potentialSwagReport', Swag::class);
 
         return response()->json(PotentialSwagReport::execute());
+    }
+
+    /**
+     * Potential T-Shirts Earned Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function potentialShirtsEarnedReport(): JsonResponse
+    {
+        $this->authorize('potentialShirtsEarnedReport', [Timesheet::class]);
+
+        $year = $this->getYear();
+        $thresholdLS = setting('ShirtLongSleeveHoursThreshold', true);
+        $thresholdSS = setting('ShirtShortSleeveHoursThreshold', true);
+
+        return response()->json([
+            'people' => PotentialEarnedShirtsReport::execute($year, $thresholdSS, $thresholdLS),
+            'threshold_ss' => $thresholdSS,
+            'threshold_ls' => $thresholdLS,
+        ]);
     }
 }

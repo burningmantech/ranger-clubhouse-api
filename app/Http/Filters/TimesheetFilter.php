@@ -12,7 +12,7 @@ class TimesheetFilter
     {
     }
 
-    const USER_FIELDS = [
+    const array USER_FIELDS = [
         'additional_notes',
         'desired_position_id',
         'desired_on_duty',
@@ -20,13 +20,13 @@ class TimesheetFilter
         'review_status'
     ];
 
-    const MANAGE_FIELDS = [
+    const array MANAGE_FIELDS = [
         'additional_worker_notes',
         'off_duty',
         'on_duty',
     ];
 
-    const WRANGLER_FIELDS = [
+    const array WRANGLER_FIELDS = [
         'additional_admin_notes',
         'additional_wrangler_notes',
         'is_non_ranger',
@@ -35,11 +35,11 @@ class TimesheetFilter
         'suppress_duration_warning'
     ];
 
-    public function deserialize(Person $user = null): array
+    public function deserialize(?Person $user = null): array
     {
         $fields = [self::USER_FIELDS];
 
-        if ($user->hasRole(Role::MANAGE)) {
+        if ($user->hasRole(Role::SHIFT_MANAGEMENT)) {
             $fields[] = self::MANAGE_FIELDS;
         }
 

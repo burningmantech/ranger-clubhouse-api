@@ -39,13 +39,16 @@ class Role extends ApiModel
     const int REGIONAL_MANAGEMENT = 114;    // Person can access Regional Ranger liaison features.
     const int PAYROLL = 115;                // Can access payroll features
     const int VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
-    const int TIMECARD_YEAR_ROUND = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
+    const int SHIFT_MANAGEMENT_SELF = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
     const int SALESFORCE_IMPORT = 118;      // Allowed to import new accounts from Salesforce
     const int MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round regardless of LMOP Enabled setting.
     const int EDIT_CLOTHING = 120;   // Can edit a clothing fields.
     const int MEGAPHONE_TEAM_ONPLAYA = 121;  // On-Playa Megaphone permission
     const int MEGAPHONE_EMERGENCY_ONPLAYA = 122;    // Allows access to the broadcast all emergency
     const int ANNOUNCEMENT_MANAGEMENT = 123;    // Allow announcements to be created and deleted.
+    const int QUARTERMASTER = 124;  // Allows access to Quartermaster reports
+    const int SHIFT_MANAGEMENT = 125;   // Allows shift check-in / out, timesheet correction submissions, etc.
+    const int POD_MANAGEMENT = 126; // Access to Cruise Direction interface
 
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
@@ -61,10 +64,10 @@ class Role extends ApiModel
     const int SURVEY_MANAGEMENT_BASE = 0x2000000;
     const int ART_GRADUATE_BASE = 0x30000000;
 
-    const array ART_BASE_ROLES = [
-        self::ART_GRADUATE_BASE => 'ART Graduate',
-        self::ART_TRAINER_BASE => ['ART', 'ART Trainer'],
-        self::SURVEY_MANAGEMENT_BASE => ['ART Survey Mgmt', 'ART Survey Management'],
+    const array ART_ROLE_SUFFIXES = [
+        self::ART_GRADUATE_BASE => 'Graduate',
+        self::ART_TRAINER_BASE => 'Interface',
+        self::SURVEY_MANAGEMENT_BASE => 'Survey Mgmt',
     ];
 
     protected $appends = [
@@ -163,7 +166,7 @@ class Role extends ApiModel
 
         $added = [];
         $existing = [];
-        foreach (self::ART_BASE_ROLES as $base => $rolePrefixs) {
+        foreach (self::ART_ROLE_SUFFIXES as $base => $suffix) {
             $role = $base | $positionId;
             if ($existingRole = Role::find($role)) {
                 $existing[] = [
@@ -173,15 +176,9 @@ class Role extends ApiModel
                 continue;
             }
 
-            if (is_array($rolePrefixs)) {
-                $prefix = $rolePrefixs[0];
-            } else {
-                $prefix = $rolePrefixs;
-            }
-
             $newRole = new Role;
             $newRole->id = $role;
-            $newRole->title = $prefix . ' ' . $title;
+            $newRole->title = 'ART '.$title.' '.$suffix;
             $newRole->new_user_eligible = false;
             $newRole->save();
             $added[] = [
@@ -209,7 +206,7 @@ class Role extends ApiModel
             return null;
         }
 
-        $prefixes = self::ART_BASE_ROLES[$base] ?? null;
+        $prefixes = self::ART_ROLE_SUFFIXES[$base] ?? null;
         if ($prefixes === null) {
             $title = "Unknown base {$base}";
         } else if (is_array($prefixes)) {

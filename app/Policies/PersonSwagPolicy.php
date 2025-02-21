@@ -11,11 +11,13 @@ class PersonSwagPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user)
+    public function before(Person $user) : ?true
     {
-        if ($user->hasRole([Role::ADMIN, Role::MANAGE])) {
+        if ($user->hasRole([Role::ADMIN, Role::QUARTERMASTER])) {
             return true;
         }
+
+        return null;
     }
 
     /**

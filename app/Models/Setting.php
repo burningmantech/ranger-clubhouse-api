@@ -407,8 +407,14 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
+        'ShiftManagementSelfEnabled' => [
+            'description' => 'Enable Shift Management Self permission',
+            'type' => self::TYPE_BOOL,
+            'default' => false,
+        ],
+
         'ShiftSignupFromEmail' => [
-            'description' => 'From email  address for shift sign up messages',
+            'description' => 'From email address for shift sign up messages',
             'type' => self::TYPE_EMAIL,
         ],
 
