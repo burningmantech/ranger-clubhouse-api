@@ -190,7 +190,7 @@ class Milestones
         }
 
         // Timesheets!
-        if (setting('TimesheetCorrectionEnable') || $person->hasRole(Role::TIMECARD_YEAR_ROUND)) {
+        if (setting('TimesheetCorrectionEnable') || $person->hasRole(Role::SHIFT_MANAGEMENT_SELF)) {
             $didWork = $milestones['did_work'] = Timesheet::didPersonWork($personId, $year);
 
             if ($didWork) {

@@ -12,7 +12,7 @@ class PodPolicy
 
     public function before(Person $user): bool|null
     {
-        if ($user->hasRole([Role::ADMIN, Role::MENTOR, Role::MANAGE])) {
+        if ($user->hasRole([Role::ADMIN, Role::MENTOR, Role::POD_MANAGEMENT])) {
             return true;
         }
 

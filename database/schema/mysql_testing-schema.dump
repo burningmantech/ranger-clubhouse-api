@@ -1944,7 +1944,7 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (175,'2023_05_26_10
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (176,'2023_06_04_081908_add_deselect_on_join_to_position',96);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (177,'2023_06_10_161617_add_no_payroll_meal_adjustment_to_position',97);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (178,'2023_06_23_152037_add_info_to_pod',98);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (179,'2023_07_24_163001_add_timecard_year_round_to_role',99);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (179,'2023_07_24_163001_add_SHIFT_MANAGEMENT_SELF_to_role',99);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (180,'2023_07_26_145320_add_no_training_requirement_to_position',100);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (181,'2023_09_17_115650_replace_rpt_with_spt',101);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (182,'2023_09_18_091018_add_salesforce_import_permission',102);

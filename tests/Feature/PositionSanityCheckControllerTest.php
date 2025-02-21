@@ -97,7 +97,7 @@ class PositionSanityCheckControllerTest extends TestCase
 
     public function testPositionSanityCheckerInspection()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::ADMIN);
 
         $person = $this->person;
         $personYear = $this->personYear;
@@ -153,7 +153,7 @@ class PositionSanityCheckControllerTest extends TestCase
             'position_id' => Position::HQ_RUNNER
         ]);
 
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::ADMIN);
 
         $person = $this->person;
 

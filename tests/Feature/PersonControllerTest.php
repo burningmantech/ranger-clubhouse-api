@@ -1271,7 +1271,7 @@ class PersonControllerTest extends TestCase
 
     public function testPeopleByLocationNoEmail()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::ADMIN);
 
         $personUS = Person::factory()->create([
             'country' => 'US',
@@ -1347,7 +1347,7 @@ class PersonControllerTest extends TestCase
         // New roles may have seeder migrations, and we don't want that here.
         DB::table('role')->delete();
 
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::ADMIN);
 
         $adminRole = Role::factory()->create([
             'id' => Role::ADMIN,
@@ -1359,11 +1359,11 @@ class PersonControllerTest extends TestCase
             'title' => 'Manage'
         ]);
 
-        $adminPerson = Person::factory()->create();
+        $mgmtPerson = Person::factory()->create();
 
         PersonRole::factory()->create([
-            'person_id' => $adminPerson->id,
-            'role_id' => Role::ADMIN
+            'person_id' => $mgmtPerson->id,
+            'role_id' => Role::MANAGE
         ]);
 
         $response = $this->json('GET', 'role/people-by-role');
@@ -1376,8 +1376,8 @@ class PersonControllerTest extends TestCase
                     'title' => 'Admin',
                     'people' => [
                         [
-                            'id' => $adminPerson->id,
-                            'callsign' => $adminPerson->callsign
+                            'id' => $this->user->id,
+                            'callsign' => $this->user->callsign
                         ]
                     ]
                 ],
@@ -1386,8 +1386,8 @@ class PersonControllerTest extends TestCase
                     'title' => 'Manage',
                     'people' => [
                         [
-                            'id' => $this->user->id,
-                            'callsign' => $this->user->callsign
+                            'id' => $mgmtPerson->id,
+                            'callsign' => $mgmtPerson->callsign
                         ]
                     ]
                 ]
@@ -1401,7 +1401,7 @@ class PersonControllerTest extends TestCase
 
     public function testPeopleByStatus()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::ADMIN);
 
         $deceased = Person::factory()->create(['status' => 'deceased']);
         $inactive = Person::factory()->create(['status' => 'inactive']);
