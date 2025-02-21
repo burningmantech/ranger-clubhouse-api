@@ -39,7 +39,7 @@ class TimesheetFilter
     {
         $fields = [self::USER_FIELDS];
 
-        if ($user->hasRole(Role::SHIFT_MANAGEMENT)) {
+        if ($user->hasRole([Role::ADMIN, Role::SHIFT_MANAGEMENT])) {
             $fields[] = self::MANAGE_FIELDS;
         }
 
