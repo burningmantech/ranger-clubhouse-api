@@ -180,17 +180,17 @@ class PersonPolicy
 
     public function alphaShirts(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole([ Role::QUARTERMASTER, Role::MENTOR]);
     }
 
     public function peopleByLocation(Person $user): bool
     {
-        return $user->hasRole([Role::ADMIN, Role::VIEW_PII, Role::MANAGE]);
+        return $user->hasRole([Role::ADMIN, Role::MENTOR, Role::TRAINER, Role::VC]);
     }
 
     public function peopleByStatus(Person $user): bool
     {
-        return $user->hasRole([Role::ADMIN, Role::MANAGE]);
+        return $user->hasRole(Role::ADMIN);
     }
 
     public function peopleByStatusChange(Person $user): bool

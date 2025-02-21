@@ -14,7 +14,6 @@ use App\Lib\Reports\OnDutyReport;
 use App\Lib\Reports\OnDutyShiftLeadReport;
 use App\Lib\Reports\PayrollReport;
 use App\Lib\Reports\PeopleWithUnconfirmedTimesheetsReport;
-use App\Lib\Reports\PotentialEarnedShirtsReport;
 use App\Lib\Reports\RadioEligibilityReport;
 use App\Lib\Reports\RangerRetentionReport;
 use App\Lib\Reports\SpecialTeamsWorkReport;
@@ -37,6 +36,7 @@ use App\Models\PositionCredit;
 use App\Models\Role;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
+use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
@@ -661,27 +661,6 @@ class TimesheetController extends ApiController
         return response()->json(TimesheetSanityCheckReport::execute($year));
     }
 
-    /**
-     * Potential T-Shirts Earned Report
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function potentialShirtsEarnedReport(): JsonResponse
-    {
-        $this->authorize('potentialShirtsEarnedReport', [Timesheet::class]);
-
-        $year = $this->getYear();
-        $thresholdLS = setting('ShirtLongSleeveHoursThreshold', true);
-        $thresholdSS = setting('ShirtShortSleeveHoursThreshold', true);
-
-        return response()->json([
-            'people' => PotentialEarnedShirtsReport::execute($year, $thresholdSS, $thresholdLS),
-            'threshold_ss' => $thresholdSS,
-            'threshold_ls' => $thresholdLS,
-        ]);
-    }
 
     /**
      * Freaking years report!
@@ -883,7 +862,7 @@ class TimesheetController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws \Exception
+     * @throws Exception
      */
 
     public function onDutyShiftLeadReport(): JsonResponse

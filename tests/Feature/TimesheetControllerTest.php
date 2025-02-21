@@ -285,6 +285,7 @@ class TimesheetControllerTest extends TestCase
     {
         $timesheetId = $this->timesheet->id;
 
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $response = $this->json('PUT', "timesheet/{$timesheetId}", [
             'timesheet' => [
                 'position_id' => Position::HQ_WINDOW,
@@ -317,6 +318,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testSigninForTrained()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $this->createTrainingSession(true);
         $targetPersonId = $this->targetPerson->id;
 
@@ -341,6 +343,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testSigninForOnlineCourseOnly()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $this->createTrainingSession(false);
         $targetPersonId = $this->targetPerson->id;
 
@@ -369,6 +372,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testNoSignInForUntrainedPerson()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $this->createTrainingSession(false);
         $targetPersonId = $this->targetPerson->id;
 
@@ -389,6 +393,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testNoSignInForNoOnlineCourse()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $this->createTrainingSession(false);
         $targetPersonId = $this->targetPerson->id;
         $this->setting('OnlineCourseOnlyForBinaries', true);
@@ -449,6 +454,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testSigninPreventionForIneligiblePosition()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $this->createTrainingSession(true);
         $targetPersonId = $this->targetPerson->id;
         $this->addPosition(Position::TRAINING, $this->targetPerson);
@@ -473,6 +479,7 @@ class TimesheetControllerTest extends TestCase
             'position_id' => Position::DIRT,
         ]);
 
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $response = $this->json('POST', "timesheet/{$timesheet->id}/signoff");
         $response->assertStatus(200);
 
@@ -502,6 +509,7 @@ class TimesheetControllerTest extends TestCase
 
     public function testAlreadySignedout()
     {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
         $response = $this->json('POST', "timesheet/{$this->timesheet->id}/signoff");
         $response->assertStatus(200);
         $response->assertJson(['status' => 'already-signed-off']);
@@ -621,6 +629,7 @@ class TimesheetControllerTest extends TestCase
             'additional_notes' => 'Give me hours!',
         ]);
 
+        $this->addRole(Role::TIMESHEET_MANAGEMENT);
         $response = $this->json('GET', 'timesheet/correction-requests', ['year' => $year]);
         $response->assertStatus(200);
 
@@ -653,6 +662,7 @@ class TimesheetControllerTest extends TestCase
         // The test person will be unconfirmed.
         $person = $this->targetPerson;
 
+        $this->addRole(Role::TIMESHEET_MANAGEMENT);
         $response = $this->json('GET', 'timesheet/unconfirmed-people', ['year' => $this->year]);
         $response->assertStatus(200);
         $response->assertJson([
@@ -762,7 +772,8 @@ class TimesheetControllerTest extends TestCase
             'slot_id' => $slot->id
         ]);
 
-        $response = $this->json('GET', 'timesheet/potential-shirts-earned', ['year' => $year]);
+        $this->addRole(Role::QUARTERMASTER);
+        $response = $this->json('GET', 'swag/potential-shirts-earned', ['year' => $year]);
         $response->assertStatus(200);
 
         // Should return the settings
@@ -813,6 +824,7 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => "$prevYear-08-25 01:00:00",
         ]);
 
+        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/freaking-years', ['year' => $this->year]);
         $response->assertStatus(200);
         $this->assertCount(1, $response->json()['freaking']);
@@ -895,6 +907,7 @@ class TimesheetControllerTest extends TestCase
 
         PersonSlot::factory()->create(['person_id' => $personB->id, 'slot_id' => $slot->id]);
 
+        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/radio-eligibility', ['year' => $this->year]);
         $response->assertStatus(200);
 
@@ -1225,6 +1238,7 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => date("$year-m-d 02:00:00"),
         ]);
 
+        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/thank-you', ['year' => $year, 'password' => $password]);
         $response->assertStatus(200);
 
@@ -1271,6 +1285,7 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => date("$year-08-25 01:00:00"),
         ]);
 
+        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/by-callsign', ['year' => $year]);
         $response->assertStatus(200);
         $response->assertJson([
@@ -1326,6 +1341,7 @@ class TimesheetControllerTest extends TestCase
             'position_id' => Position::HQ_WINDOW
         ]);
 
+        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/totals', ['year' => $year]);
         $response->assertStatus(200);
 

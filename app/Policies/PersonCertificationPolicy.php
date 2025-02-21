@@ -11,9 +11,17 @@ class PersonCertificationPolicy
 {
     use HandlesAuthorization;
 
-    public function peopleReport(Person $user)
+    public function before(Person $user): ?true
     {
-        return $user->hasRole(Role::MANAGE);
+        if ($user->hasRole([Role::CERTIFICATION_MGMT, Role::ADMIN])) {
+            return true;
+        }
+        return null;
+    }
+
+    public function peopleReport(Person $user): bool
+    {
+        return false;
     }
 
     /**
@@ -26,7 +34,7 @@ class PersonCertificationPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $personId == $user->id || $user->hasRole([Role::CERTIFICATION_MGMT, Role::MANAGE]);
+        return $personId == $user->id || $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -35,7 +43,7 @@ class PersonCertificationPolicy
 
     public function show(Person $user, PersonCertification $certification): bool
     {
-        return $user->id == $certification->person_id || $user->hasRole([Role::CERTIFICATION_MGMT, Role::MANAGE]);
+        return $user->id == $certification->person_id || $user->hasRole(Role::MANAGE);
     }
 
     /**
@@ -44,7 +52,7 @@ class PersonCertificationPolicy
 
     public function store(Person $user, $personId): bool
     {
-        return $user->id == $personId || $user->hasRole([Role::CERTIFICATION_MGMT, Role::ADMIN]);
+        return false;
     }
 
     /**
@@ -53,7 +61,7 @@ class PersonCertificationPolicy
 
     public function update(Person $user, PersonCertification $certification): bool
     {
-        return ($user->id == $certification->person_id) || $user->hasRole([Role::CERTIFICATION_MGMT, Role::ADMIN]);
+        return false;
     }
 
     /**
@@ -62,6 +70,6 @@ class PersonCertificationPolicy
 
     public function destroy(Person $user, PersonCertification $certification): bool
     {
-        return ($user->id == $certification->person_id) || $user->hasRole([Role::CERTIFICATION_MGMT, Role::ADMIN]);
+        return false;
     }
 }

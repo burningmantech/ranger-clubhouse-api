@@ -11,11 +11,13 @@ class SwagPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?true
     {
         if ($user->hasRole([Role::ADMIN, Role::EDIT_SWAG])) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -28,7 +30,7 @@ class SwagPolicy
 
     public function view(Person $user, Swag $swag): bool
     {
-        return true;
+        return $user->hasRole(Role::QUARTERMASTER);
     }
 
     /**
@@ -77,7 +79,7 @@ class SwagPolicy
 
     public function personSwags(Person $user, Person $person): bool
     {
-        return $user->id == $person->id || $user->hasRole(Role::MANAGE);
+        return $user->id == $person->id || $user->hasRole(Role::QUARTERMASTER);
     }
 
     /**
@@ -89,6 +91,6 @@ class SwagPolicy
 
     public function potentialSwagReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::QUARTERMASTER);
     }
 }

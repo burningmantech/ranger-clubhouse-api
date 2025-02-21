@@ -99,7 +99,7 @@ class PositionPolicy
 
     public function sanityChecker(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /**

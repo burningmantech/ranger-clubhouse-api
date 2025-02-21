@@ -85,7 +85,7 @@ class RolePolicy
 
     public function peopleByRole(Person $user): bool
     {
-        return $user->hasRole([Role::ADMIN, Role::MANAGE]);
+        return $user->hasRole(Role::ADMIN);
     }
 
     /**
