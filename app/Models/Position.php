@@ -489,6 +489,7 @@ class Position extends ApiModel
         $mentee = $query['mentee'] ?? null;
         $cruiseDirection = $query['cruise_direction'] ?? null;
         $isActive = $query['active'] ?? null;
+        $artTraining = $query['art_training'] ?? null;
 
         $sql = self::select('position.*')->orderBy('title');
 
@@ -522,6 +523,11 @@ class Position extends ApiModel
 
         if ($cruiseDirection !== null) {
             $sql->where('cruise_direction', $cruiseDirection);
+        }
+
+        if ($artTraining) {
+            $sql->where('type', self::TYPE_TRAINING);
+            $sql->whereLike('title', '%Training%');
         }
 
         $rows = $sql->get();

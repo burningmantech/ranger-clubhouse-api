@@ -11,11 +11,9 @@ class TrainingSessionPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before(Person $user) : ?true
     {
-        if ($user->hasRole([Role::ADMIN, Role::TRAINER, Role::MENTOR, Role::VC])) {
-            return true;
-        }
+        return $user->isAdmin() ? true : null;
     }
 
     /**
@@ -24,7 +22,7 @@ class TrainingSessionPolicy
 
     public function show(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session, true);
     }
 
     /**
@@ -33,7 +31,7 @@ class TrainingSessionPolicy
 
     public function score(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session);
     }
 
     /**
@@ -43,7 +41,7 @@ class TrainingSessionPolicy
 
     public function admissions(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session);
     }
 
     /**
@@ -53,26 +51,39 @@ class TrainingSessionPolicy
 
     public function trainerStatus(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session);
     }
 
     public function trainers(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session);
     }
 
     public function graduationCandidates(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        return $this->isAllowedForSession($user, $training_session);
     }
 
     public function graduateCandidates(Person $user, TrainingSession $training_session): bool
     {
-        return $this->checkForArt($user, $training_session);
+        if (!$training_session->isArt()) {
+            // Only ARTs have graduations.
+            return false;
+        }
+
+        return $user->hasRole(Role::ART_GRADUATE_BASE | $training_session->position_id);
     }
 
-    private function checkForArt(Person $user, TrainingSession $training_session): bool
+    private function isAllowedForSession(Person $user, TrainingSession $training_session, bool $inTakeAllow = false): bool
     {
-        return ($training_session->isArt() && $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id));
+        if ($training_session->isArt()) {
+            return $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id);
+        }
+
+        if ($inTakeAllow && $user->hasRole([Role::MENTOR, Role::VC])) {
+            return true;
+        }
+
+        return $user->hasRole(Role::TRAINER);
     }
 }

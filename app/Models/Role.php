@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\UnacceptableConditionException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -38,13 +39,16 @@ class Role extends ApiModel
     const int REGIONAL_MANAGEMENT = 114;    // Person can access Regional Ranger liaison features.
     const int PAYROLL = 115;                // Can access payroll features
     const int VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
-    const int TIMECARD_YEAR_ROUND = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
+    const int SHIFT_MANAGEMENT_SELF = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
     const int SALESFORCE_IMPORT = 118;      // Allowed to import new accounts from Salesforce
     const int MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round regardless of LMOP Enabled setting.
     const int EDIT_CLOTHING = 120;   // Can edit a clothing fields.
     const int MEGAPHONE_TEAM_ONPLAYA = 121;  // On-Playa Megaphone permission
     const int MEGAPHONE_EMERGENCY_ONPLAYA = 122;    // Allows access to the broadcast all emergency
     const int ANNOUNCEMENT_MANAGEMENT = 123;    // Allow announcements to be created and deleted.
+    const int QUARTERMASTER = 124;  // Allows access to Quartermaster reports
+    const int SHIFT_MANAGEMENT = 125;   // Allows shift check-in / out, timesheet correction submissions, etc.
+    const int POD_MANAGEMENT = 126; // Access to Cruise Direction interface
 
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
@@ -58,6 +62,18 @@ class Role extends ApiModel
     const int ROLE_BASE_MASK = 0x7f000000;
     const int ART_TRAINER_BASE = 0x1000000;
     const int SURVEY_MANAGEMENT_BASE = 0x2000000;
+    const int ART_GRADUATE_BASE = 0x30000000;
+
+    const array ART_ROLE_SUFFIXES = [
+        self::ART_GRADUATE_BASE => 'Graduate',
+        self::ART_TRAINER_BASE => 'Interface',
+        self::SURVEY_MANAGEMENT_BASE => 'Survey Mgmt',
+    ];
+
+    protected $appends = [
+        'art_position_title',
+        'art_role_title'
+    ];
 
     protected function casts(): array
     {
@@ -122,4 +138,84 @@ class Role extends ApiModel
         }
         return $sql->get();
     }
+
+    /**
+     * Create the ART Roles for a given position
+     *
+     * @param int $positionId
+     * @return void
+     * @throws UnacceptableConditionException
+     */
+
+    public static function createARTRoles(int $positionId): array
+    {
+        $position = Position::findOrFail($positionId);
+        if ($position->type != Position::TYPE_TRAINING) {
+            throw new UnacceptableConditionException('Position type is not "training"');
+        }
+
+        if (!str_contains($position->title, 'Training')) {
+            throw new UnacceptableConditionException('Position title does not contain the word "Training"');
+        }
+
+        if (!$position->active) {
+            throw new UnacceptableConditionException('Position is not active');
+        }
+
+        $title = str_replace(' Training', '', $position->title);
+
+        $added = [];
+        $existing = [];
+        foreach (self::ART_ROLE_SUFFIXES as $base => $suffix) {
+            $role = $base | $positionId;
+            if ($existingRole = Role::find($role)) {
+                $existing[] = [
+                    'id' => $role,
+                    'title' => $existingRole->title,
+                ];
+                continue;
+            }
+
+            $newRole = new Role;
+            $newRole->id = $role;
+            $newRole->title = 'ART '.$title.' '.$suffix;
+            $newRole->new_user_eligible = false;
+            $newRole->save();
+            $added[] = [
+                'id' => $newRole->id,
+                'title' => $newRole->title,
+            ];
+        }
+
+        return [ $added, $existing ];
+    }
+
+    public function getArtPositionTitleAttribute(): ?string
+    {
+        if (($this->id & self::ROLE_BASE_MASK) == 0) {
+            return null;
+        }
+
+        return Position::retrieveTitle($this->id & ~self::ROLE_BASE_MASK);
+    }
+
+    public function getArtRoleTitleAttribute(): ?string
+    {
+        $base = $this->id & self::ROLE_BASE_MASK;
+        if ($base == 0) {
+            return null;
+        }
+
+        $prefixes = self::ART_ROLE_SUFFIXES[$base] ?? null;
+        if ($prefixes === null) {
+            $title = "Unknown base {$base}";
+        } else if (is_array($prefixes)) {
+            $title = $prefixes[1];
+        } else {
+            $title = $prefixes;
+        }
+
+        return $title;
+    }
 }
+

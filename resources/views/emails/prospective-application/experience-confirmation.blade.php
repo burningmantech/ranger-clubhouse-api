@@ -4,6 +4,8 @@
     </p>
     <p>
         The Ranger Volunteer Coordinators have a question regarding your Ranger application.
+    </p>
+    <p>
         <b style="color: red;">Your application is on hold until we hear back from you.</b>
     </p>
     <p>

@@ -413,6 +413,7 @@ Route::middleware('api')->group(function () {
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);
     Route::post('role/clear-cache', [RoleController::class, 'clearCache']);
+    Route::post('role/create-art-roles', [RoleController::class, 'createARTRoles']);
     Route::resource('role', RoleController::class);
 
     Route::get('salesforce/config', [SalesforceController::class, 'config']);
@@ -460,6 +461,7 @@ Route::middleware('api')->group(function () {
     Route::post('swag/bulk-grant-swag', [SwagController::class, 'bulkGrantSwag']);
     Route::get('swag/potential-swag', [SwagController::class, 'potentialSwagReport']);
     Route::get('swag/shirts', [SwagController::class, 'shirts']);
+    Route::get('swag/potential-shirts-earned', [SwagController::class, 'potentialShirtsEarnedReport']);
     Route::resource('swag', SwagController::class);
 
     Route::get('team/directory', [TeamController::class, 'directory']);
@@ -509,7 +511,6 @@ Route::middleware('api')->group(function () {
     Route::get('timesheet/on-duty-report', [TimesheetController::class, 'OnDutyReport']);
     Route::get('timesheet/payroll', [TimesheetController::class, 'payrollReport']);
     Route::get('timesheet/radio-eligibility', [TimesheetController::class, 'radioEligibilityReport']);
-    Route::get('timesheet/potential-shirts-earned', [TimesheetController::class, 'potentialShirtsEarnedReport']);
     Route::get('timesheet/sanity-checker', [TimesheetController::class, 'sanityChecker']);
     Route::post('timesheet/signin', [TimesheetController::class, 'signin']);
     Route::get('timesheet/shift-drop-report', [TimesheetController::class, 'shiftDropReport']);

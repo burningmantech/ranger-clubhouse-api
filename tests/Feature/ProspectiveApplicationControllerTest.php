@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Lib\ProspectiveClubhouseAccountFromApplication;
-use App\Mail\ProspectiveApplicant\RejectUnqualifiedMail;
+use App\Mail\ProspectiveApplication\RejectUnqualifiedMail;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationNote;
 use App\Models\Role;

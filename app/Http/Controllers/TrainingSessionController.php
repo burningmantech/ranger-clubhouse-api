@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonSlot;
@@ -12,7 +13,7 @@ use App\Models\Training;
 use App\Models\TrainingSession;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use App\Exceptions\UnacceptableConditionException;
+use Illuminate\Validation\ValidationException;
 
 class TrainingSessionController extends ApiController
 {
@@ -40,7 +41,7 @@ class TrainingSessionController extends ApiController
      * Retrieve all the training sessions for a given training (position) & year.
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function sessions(): JsonResponse
@@ -71,7 +72,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function scoreStudent(TrainingSession $training_session): JsonResponse
@@ -128,7 +129,7 @@ class TrainingSessionController extends ApiController
             TraineeNote::record($personId, $slotId, $note);
         }
 
-        // Kill the roles cache, the person might  be granted or revoked roles based on if the course was passed or not
+        // Kill the roles cache, the person might be granted or revoked roles based on if the course was passed or not
         PersonRole::clearCache($personId);
 
         return response()->json(['students' => $training_session->retrieveStudents()]);
@@ -139,7 +140,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function trainerStatus(TrainingSession $training_session): JsonResponse
@@ -183,7 +184,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TraineeNote $trainee_note
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function updateNote(TraineeNote $trainee_note): JsonResponse
@@ -241,7 +242,7 @@ class TrainingSessionController extends ApiController
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function graduateCandidates(TrainingSession $training_session): JsonResponse

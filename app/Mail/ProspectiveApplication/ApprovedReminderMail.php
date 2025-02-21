@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Mail\ProspectiveApplicant;
+namespace App\Mail\ProspectiveApplication;
 
 use App\Mail\ClubhouseMailable;
 use Illuminate\Bus\Queueable;

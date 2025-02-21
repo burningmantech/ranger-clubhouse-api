@@ -1,20 +1,18 @@
 <?php
 
-namespace App\Mail;
+namespace App\Mail\ProspectiveApplication;
 
+use App\Mail\ClubhouseMailable;
 use App\Models\ProspectiveApplication;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ProspectiveApplicantMail extends ClubhouseMailable
+class RRNCheckMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public string $subjectLine;
-    public string $viewResource;
 
     /**
      * Create a new message instance.
@@ -31,18 +29,18 @@ class ProspectiveApplicantMail extends ClubhouseMailable
      */
     public function envelope(): Envelope
     {
-        $envelope = $this->fromVC('Hey ' . $this->application->first_name . ', ' . $this->subjectLine);
-        $sandboxEmail = setting('ProspectiveApplicationMailSandbox');
-        if (!empty($sandboxEmail)) {
-            $envelope->to($this->buildAddresses($sandboxEmail));
-        } else {
-            $envelope->to([new Address($this->application->email, $this->application->first_name . ' ' . $this->application->last_name)]);
-        }
+        $envelope = $this->fromVC('A-' . ($this->application->id) . ' : Request for Regional Ranger Experience Validation');
+        $envelope->to($this->buildAddresses(setting('RRNEmail')));
         return $envelope;
     }
 
+    /**
+     * Get the message content definition.
+     */
     public function content(): Content
     {
-        return new Content(view: $this->viewResource);
+        return new Content(
+            view: 'emails.prospective-application.rrn-check'
+        );
     }
 }

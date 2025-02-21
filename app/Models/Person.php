@@ -978,6 +978,11 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             $this->rolesById[Role::TRAINER] = true;
         }
 
+        if (!setting('ShiftManagementSelfEnabled')
+        && isset($this->rolesById[Role::SHIFT_MANAGEMENT_SELF])) {
+            unset($this->rolesById[Role::SHIFT_MANAGEMENT_SELF]);
+        }
+
         foreach ([Role::MEGAPHONE_EMERGENCY_ONPLAYA, Role::MEGAPHONE_TEAM_ONPLAYA] as $role) {
             if (isset($this->rolesById[$role]) && !$lmopEnabled) {
                 unset($this->rolesById[$role]);

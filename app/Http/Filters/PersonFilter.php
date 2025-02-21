@@ -79,7 +79,6 @@ class PersonFilter
     ];
 
     const array HQ_INFO = [
-        'on_site',
         'camp_location',
     ];
 
@@ -163,7 +162,7 @@ class PersonFilter
         [self::CLOTHING_FIELDS, true, [Role::VIEW_PII, Role::VC, Role::EDIT_CLOTHING]],
         [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS],
-        [self::EVENT_FIELDS, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::TRAINER, Role::EDIT_BMIDS]],
+        [self::EVENT_FIELDS, true, [Role::MANAGE]],
         [self::BPGUID_FIELD, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::MENTOR, Role::EDIT_BMIDS]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         // Note: self is not allowed to see mentor notes
@@ -187,7 +186,7 @@ class PersonFilter
         [self::CLOTHING_FIELDS, true, [Role::VC, Role::EDIT_CLOTHING]],
         [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS, true, [Role::ADMIN]],
-        [self::EVENT_FIELDS, false, [Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
+        [self::EVENT_FIELDS, false, [Role::SHIFT_MANAGEMENT]],
         [self::BPGUID_FIELD, true, [Role::EDIT_BMIDS]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         [self::INTAKE_FIELDS, false, [Role::INTAKE, Role::VC]],

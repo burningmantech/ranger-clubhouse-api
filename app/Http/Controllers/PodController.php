@@ -41,7 +41,6 @@ class PodController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function store(): JsonResponse
@@ -131,7 +130,6 @@ class PodController extends ApiController
      * @param Pod $pod
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function update(Pod $pod): JsonResponse

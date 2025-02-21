@@ -3,21 +3,20 @@
         Hey {{$application->first_name}} {{$application->last_name}},
     </p>
     <p>
-        The Ranger Volunteer Coordinators have been reviewing your application and noticed some information is missing.
+        The Ranger Volunteer Coordinators have reviewed your application and have a question about your response to the <i>Why Do You Want to Ranger?</i> section.
         <b style="color: red;">Your application is on hold until we hear back from you.</b>
     </p>
     <p>
-        The following field(s) are blank on your application:
+        Here is the message from the Volunteer Coordinators:
     </p>
     <p>
-        @foreach($application->blankPersonalInfo() as $field)
-            {{$field}}<br>
-        @endforeach
+        {!! nl2br($messageToUser) !!}
     </p>
     <p>
-        Reply to this message with the missing information.
+        Please respond to this message promptly to avoid delays in processing your application.
+        Failure to do so in a timely manner may result in your application being withdrawn.
     </p>
-     <p>
+    <p>
         Your Friendly Black Rock Ranger Volunteer Coordinators
     </p>
     <p>

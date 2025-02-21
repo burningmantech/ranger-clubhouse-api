@@ -11,11 +11,13 @@ class TimesheetPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user)
+    public function before(Person $user) : ?true
     {
         if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN])) {
             return true;
         }
+
+        return null;
     }
 
     /*
@@ -42,7 +44,7 @@ class TimesheetPolicy
 
     public function update(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE) || ($user->id == $timesheet->person_id);
+        return $user->hasRole(Role::SHIFT_MANAGEMENT) || ($user->id == $timesheet->person_id);
     }
 
     /**
@@ -51,7 +53,7 @@ class TimesheetPolicy
 
     public function updatePosition(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $user->id == $timesheet->person_id);
+        return $user->hasRole(Role::SHIFT_MANAGEMENT) || ($user->hasRole(Role::SHIFT_MANAGEMENT_SELF) && $user->id == $timesheet->person_id);
     }
 
     /*
@@ -70,7 +72,7 @@ class TimesheetPolicy
     public function destroy(Person $user, Timesheet $timesheet): bool
     {
         // Allow a timesheet to be deleted if the duration is too short - i.e., accidental shift start.
-        if (($user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $timesheet->person_id == $user->id))
+        if (($user->hasRole(Role::SHIFT_MANAGEMENT) || ($user->hasRole(Role::SHIFT_MANAGEMENT_SELF) && $timesheet->person_id == $user->id))
             && $timesheet->duration < Timesheet::TOO_SHORT_LENGTH) {
             return true;
         }
@@ -88,7 +90,7 @@ class TimesheetPolicy
 
     public function deleteMistake(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole(Role::MANAGE) || ($user->hasRole(Role::TIMECARD_YEAR_ROUND) && $timesheet->person_id == $user->id);
+        return $user->hasRole(Role::SHIFT_MANAGEMENT) || ($user->hasRole(Role::SHIFT_MANAGEMENT_SELF) && $timesheet->person_id == $user->id);
     }
 
     /**
@@ -97,7 +99,7 @@ class TimesheetPolicy
 
     public function signin(Person $user): bool
     {
-        return $user->hasRole([ Role::MANAGE, Role::TIMECARD_YEAR_ROUND]);
+        return $user->hasRole([Role::SHIFT_MANAGEMENT, Role::SHIFT_MANAGEMENT_SELF]);
     }
 
     /**
@@ -106,7 +108,7 @@ class TimesheetPolicy
 
     public function resignin(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::SHIFT_MANAGEMENT);
     }
 
     /**
@@ -115,7 +117,7 @@ class TimesheetPolicy
 
     public function signoff(Person $user, Timesheet $timesheet): bool
     {
-        return $user->hasRole([ Role::MANAGE, Role::TIMECARD_YEAR_ROUND ]);
+        return $user->hasRole([Role::SHIFT_MANAGEMENT, Role::SHIFT_MANAGEMENT_SELF]);
     }
 
     /**
@@ -133,7 +135,7 @@ class TimesheetPolicy
 
     public function correctionRequests(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::TIMESHEET_MANAGEMENT);
     }
 
     /**
@@ -142,7 +144,7 @@ class TimesheetPolicy
 
     public function unconfirmedPeople(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::TIMESHEET_MANAGEMENT);
     }
 
     /**
@@ -160,16 +162,7 @@ class TimesheetPolicy
 
     public function freakingYearsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
-    }
-
-    /**
-     * Can the user run a freaking years report?
-     */
-
-    public function shirtsEarnedReport(Person $user): bool
-    {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::QUARTERMASTER);
     }
 
     /**
@@ -178,7 +171,7 @@ class TimesheetPolicy
 
     public function potentialShirtsEarnedReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::QUARTERMASTER);
     }
 
     /**
@@ -187,7 +180,7 @@ class TimesheetPolicy
 
     public function radioEligibilityReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /**
@@ -205,7 +198,7 @@ class TimesheetPolicy
 
     public function hoursCreditsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /**
@@ -223,7 +216,7 @@ class TimesheetPolicy
 
     public function thankYou(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /*
@@ -232,7 +225,7 @@ class TimesheetPolicy
 
     public function timesheetByCallsign(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /*
@@ -241,7 +234,7 @@ class TimesheetPolicy
 
     public function timesheetTotals(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return false;
     }
 
     /*
@@ -289,28 +282,28 @@ class TimesheetPolicy
         return $user->hasRole(Role::MANAGE);
     }
 
-    public function shiftDropReport(Person $user) : bool
+    public function shiftDropReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
 
-    public function forcedSigninsReport(Person $user) : bool
+    public function forcedSigninsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
 
-    public function noShowsReport(Person $user) : bool
+    public function noShowsReport(Person $user): bool
     {
         return $user->hasRole(Role::MANAGE);
     }
 
-    public function correctionStatistics(Person $user) : false
+    public function correctionStatistics(Person $user): false
     {
         return false;
     }
 
-    public function checkForOverlaps(Person $user, $personId) : bool
+    public function checkForOverlaps(Person $user, $personId): bool
     {
-        return $personId == $user->id;
+        return $user->hasRole(Role::MANAGE) || $personId == $user->id;
     }
 }

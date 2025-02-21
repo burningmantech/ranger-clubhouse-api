@@ -61,7 +61,7 @@ class SurveyGroup extends ApiModel
 
     public function survey_questions(): HasMany
     {
-        return $this->hasMany(SurveyQuestion::class);
+        return $this->hasMany(SurveyQuestion::class)->orderBy('sort_index');
     }
 
     public function survey() : BelongsTo

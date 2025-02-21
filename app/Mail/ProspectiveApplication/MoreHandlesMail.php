@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Mail\ProspectiveApplicant;
+namespace App\Mail\ProspectiveApplication;
 
-use App\Mail\ProspectiveApplicantMail;
+use App\Mail\ProspectiveApplicationMail;
 
-class MoreHandlesMail extends ProspectiveApplicantMail
+class MoreHandlesMail extends ProspectiveApplicationMail
 {
 
     public string $subjectLine = 'your Ranger Application needs attention!';

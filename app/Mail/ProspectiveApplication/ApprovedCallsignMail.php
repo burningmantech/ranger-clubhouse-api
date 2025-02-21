@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Mail\ProspectiveApplicant;
+namespace App\Mail\ProspectiveApplication;
 
-use App\Mail\ProspectiveApplicantMail;
+use App\Mail\ProspectiveApplicationMail;
 
-class ApprovedCallsignMail extends ProspectiveApplicantMail
+class ApprovedCallsignMail extends ProspectiveApplicationMail
 {
     public string $viewResource = 'emails.prospective-application.approved-callsign';
     public string $subjectLine = 'your Ranger Radio Handle has been approved!';
