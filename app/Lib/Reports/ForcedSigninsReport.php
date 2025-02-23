@@ -33,11 +33,13 @@ class ForcedSigninsReport
                 $reason = 'unknown';
             } else {
                 $log = $log[0];
-                $data = json_decode($log->data);
-                $forced = $data->forced;
-                $reason = Position::UNQUALIFIED_MESSAGES[$forced->reason] ?? $forced->reason;
-                if ($forced->position_id ?? null) {
-                    $untrained = Position::find($forced->position_id);
+                $data = $log->data;
+                $forced = $data['forced'];
+                $reason = $forced['reason'] ?? 'unknown';
+                $reason = Position::UNQUALIFIED_MESSAGES[$reason] ?? $reason;
+                $positionId = $forced['position_id'] ?? null;
+                if ($positionId) {
+                    $untrained = Position::find($positionId);
                     if ($untrained) {
                         $reason .= " ({$untrained->title})";
                     }
