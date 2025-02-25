@@ -6,48 +6,34 @@
         Thanks for considering the Rangers! We’ve reviewed your application.
     </p>
 
-    <p>
-        When asked whether you meet the minimum qualifications to volunteer with the Rangers, you responded:
-        @if ($application->experience == ProspectiveApplication::EXPERIENCE_BRC2)
-            <i>Attended Burning Man at least twice</i>
-        @elseif ($application->experience == ProspectiveApplication::EXPERIENCE_BRC1R1)
-            <i>Attend Burning Man at least once, and have worked as regional Ranger at a sanctioned regional event at
-                least once</i>
-        @else
-            <i>Have never attended Burning Man</i>
+    @if ($application->experience == ProspectiveApplication::EXPERIENCE_NONE)
+        <p>
+            In your Ranger Application, you have indicated you have never been to Burning Man.
+        </p>
+    @elseif (!count($application->qualifiedEvents()))
+        <p>
+            In your Ranger application, you have indicated you have been to Burning Man, but in your Burning Man
+            Profile, no qualifying years were listed.
+        </p>
+        @if (count($application->oldEvents()))
+            <p>
+                The following years are ineligible for the attendance qualification as they are more than ten years ago:<br>
+                {{implode(', ', $application->oldEvents())}}
+            </p>
         @endif
-    </p>
-    @if ($application->experience != ProspectiveApplication::EXPERIENCE_NONE)
-        <p>
-            In your Burner Profile, you have indicated you have
-            @if (empty($application->qualifiedEvents()))
-                not been to Burning Man.
-            @else
-                attended {{count($application->qualifiedEvents())}} Burning Man event(s):<br>
-                {{implode(', ', $application->qualifiedEvents())}}
-            @endif
-        </p>
-        <p>
-            Note that, 2020 and 2021 do not count towards the attendance qualification for either Burning Man
-            nor sanctioned regional events.
-        </p>
+        @if ($application->havePandemicYears())
+            <p>
+                Your Burner Profile does have either 2020 and/or 2021 listed. Unfortunately these years do not
+                count towards the attendance qualification.
+            </p>
+        @endif
+
     @endif
     <p>
         Unfortunately, it appears you do not meet the qualifications. In order to apply to volunteer
-        with the Black Rock Rangers, you must be at least eighteen years old and:
+        with the Black Rock Rangers, you must be at least eighteen years old and have attended Burning Man once in
+        the last ten years. Please note, 2020 and 2021 do not count towards the attendance qualification.
     </p>
-    <b>&mdash; EITHER &mdash;</b>
-    <ul>
-        <li>
-            have attended Burning Man at least twice with one of those years being in the last ten
-            years.
-        </li>
-        <li>
-            <b>OR:</b> have attended Burning Man at least once in the last ten years, as well as have participated
-            as a Ranger at a sanctioned Burning Man regional event at least once in the last five years (or will have by
-            April 5th of this year).
-        </li>
-    </ul>
     <p>
         Thanks again for your interest in the Rangers! Please re-apply when you can meet our qualifications. In the
         meantime, there are lots of great ways to volunteer at Burning Man that don't have these requirements:<br>
