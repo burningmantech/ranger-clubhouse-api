@@ -5,6 +5,8 @@
     <p>
         The Ranger Handle Wranglers have reviewed the radio Ranger callsign options you have submitted, and sadly, we
         were unable to approve any of them.
+    </p>
+    <p>
         <b style="color: red;">Your application is on hold until we hear back from you.</b>
     </p>
     <p>

@@ -25,19 +25,9 @@
         To review, you must meet the following qualifications below in order to apply to volunteer with the Black Rock Rangers.
     </p>
     <p>
-        You must be at least eighteen years old and:
+        <b>You must be at least eighteen years old and have attended Burning Man once in the last ten years.</b>
+        Please note, 2020 and 2021 do not count towards the attendance qualification.
     </p>
-    <b>&mdash; EITHER &mdash;</b>
-    <ul>
-        <li>
-            have attended Burning Man at least twice with one of those years being in the last ten years.
-        </li>
-        <li>
-            <b>OR:</b> have attended Burning Man at least once in the last ten years, as well as have participated
-            as a Ranger at a sanctioned Burning Man regional event at least once in the last five years (or will have by
-            April 5th of this year).
-        </li>
-    </ul>
     <p>
         Thanks again for your interest in the Rangers! Please re-apply when you can meet our qualifications. In the
         meantime, there are lots of great ways to volunteer at Burning Man that don't have these requirements:<br>

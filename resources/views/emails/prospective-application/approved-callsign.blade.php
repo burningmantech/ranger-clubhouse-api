@@ -54,8 +54,8 @@
             <b style="color: red;">
                 Note: You are required to complete the Online Course prior to signing up for In Person Training.
             </b>
-            In Person Training Sign-Ups will not be visible to you in the Clubhouse until the Online Course is
-            completed.
+            In-Person Training Sign-Ups will not be available to you in the Clubhouse until the Online Course
+            is completed.
         </p>
 
         <p>
