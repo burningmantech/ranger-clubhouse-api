@@ -50,6 +50,7 @@ class ProspectiveApplication extends ApiModel
 
     const string STATUS_DUPLICATE = 'duplicate';
 
+    const string EXPERIENCE_BRC1 = 'brc1';
     const string EXPERIENCE_BRC1R1 = 'brc1r1';
     const string EXPERIENCE_BRC2 = 'brc2';
     const string EXPERIENCE_NONE = 'none';

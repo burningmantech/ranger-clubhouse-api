@@ -34,9 +34,10 @@ class ProspectiveApplicationImport
     const array EXPERIENCE_MAP = [
         'Never' => ProspectiveApplication::EXPERIENCE_NONE,
         'No' => ProspectiveApplication::EXPERIENCE_NONE,
+        'Yes BRC1' => ProspectiveApplication::EXPERIENCE_BRC1,
         'Yes BRC1-RR1' => ProspectiveApplication::EXPERIENCE_BRC1R1,
         'Yes BRC2' => ProspectiveApplication::EXPERIENCE_BRC2,
-        'Yes' => ProspectiveApplication::EXPERIENCE_BRC2,
+        'Yes' => ProspectiveApplication::EXPERIENCE_BRC1,
     ];
 
     const array SF_FIELDS = [
@@ -268,7 +269,7 @@ class ProspectiveApplicationImport
             if (!is_numeric($field)) {
                 if (str_contains($field, '.')) {
                     list ($n, $c) = explode('.', $field);
-                    $value = $rInfo->{$c};
+                    $value = $rInfo->{$c} ?? '';
                 } else {
                     $value = $sobj->{$field};
                 }
