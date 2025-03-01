@@ -670,12 +670,11 @@ class Timesheet extends ApiModel
             return [];
         }
 
-        $excludePositions = implode(',', [Position::ALPHA, Position::TRAINING]);
-        $rows = DB::select("SELECT person_id, COUNT(year) as years FROM (SELECT YEAR(on_duty) as year, person_id FROM timesheet WHERE person_id in (" . implode(',', $ids) . ") AND  position_id not in ($excludePositions) AND is_non_ranger IS FALSE GROUP BY person_id,year ORDER BY year) as rangers group by person_id");
+        $rows = DB::table('person')->select('id', 'years_as_ranger')->whereIn('id', $ids)->get();
 
         $people = [];
         foreach ($rows as $row) {
-            $people[$row->person_id] = $row->years;
+            $people[$row->id] = count(json_decode($row->years_as_ranger));
         }
 
         return $people;

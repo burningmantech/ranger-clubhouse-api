@@ -853,4 +853,9 @@ class PersonPhoto extends ApiModel
     {
         return $this->status === self::APPROVED;
     }
+
+    public function profileUrlApproved() : ?string
+    {
+        return $this->isApproved() ? $this->profile_url : null;
+    }
 }
