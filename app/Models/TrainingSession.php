@@ -119,7 +119,7 @@ class TrainingSession extends Slot
                 'last_name' => $person->last_name,
                 'status' => $status,
                 'current_status' => $person->status,
-                'photo_url' => PersonPhoto::retrieveProfileUrlForPerson($person->id),
+                'photo_url' => $person->person_photo?->profileUrlApproved(),
                 'email' => $person->email,
                 'years' => $peopleYearsRangered[$person->id] ?? 0,
                 // Remove this once the frontend is using team_short_titles.
@@ -183,7 +183,8 @@ class TrainingSession extends Slot
         // Find everyone signed up
         $people = PersonSlot::with([
             'person',
-            'person.person_position'
+            'person.person_position',
+            'person.person_photo'
         ])->where('slot_id', $this->id)->get();
 
         return $people->sortBy(fn($p) => $p->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)->values();
