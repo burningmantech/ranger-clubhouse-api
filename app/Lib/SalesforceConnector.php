@@ -79,7 +79,7 @@ class SalesforceConnector
     public function auth(): bool
     {
         if (empty(setting("SFprdPassword"))) {
-            $this->errorMessage = "sfch->auth: no password";
+            $this->errorMessage = "SFprdPassword setting is empty ";
             return false;
         }
 
@@ -101,7 +101,7 @@ class SalesforceConnector
                 ]
             ]);
         } catch (GuzzleException $e) {
-            $this->errorMessage = "SOQL Request error: " . $e->getMessage();
+            $this->errorMessage = "Failed to retrieve authentication token: " . $e->getMessage();
             ErrorLog::recordException($e, 'salesforce-auth-exception', ['auth_url' => $this->auth_url]);
             return false;
         }
@@ -110,7 +110,7 @@ class SalesforceConnector
             $result = json_decode($response->getBody(), false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             ErrorLog::recordException($e, 'salesforce-json-exception', ['body' => $response->getBody()]);
-            $this->errorMessage = "json_decode failed: " . $e->getMessage();
+            $this->errorMessage = "json_decode failed on Salesforce token response: " . $e->getMessage();
             return false;
         }
 
@@ -126,6 +126,7 @@ class SalesforceConnector
 
         $this->access_token = $result->access_token;
         $this->instanceurl = $result->instance_url;
+
         if ($this->debug) {
             Log::debug("sf->auth: access token = " . $this->access_token);
             Log::debug("sf->auth: instanceurl = " . $this->instanceurl);
@@ -155,14 +156,14 @@ class SalesforceConnector
             ]);
         } catch (GuzzleException $e) {
             ErrorLog::recordException($e, 'salesforce-query-exception', ['query' => $q]);
-            $this->errorMessage = "SOQL Request error: " . $e->getMessage();
+            $this->errorMessage = "Salesforce SOQL error: " . $e->getMessage();
             return false;
         }
 
         try {
             $result = json_decode($response->getBody(), false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            $this->errorMessage = "JSON decode error: " . $e->getMessage();
+            $this->errorMessage = "Salesforce SOQL JSON decode error: " . $e->getMessage();
             ErrorLog::recordException($e, 'salesforce-json-exception', ['body' => $response->getBody()]);
             return false;
         }
@@ -170,10 +171,10 @@ class SalesforceConnector
         // If it's not an object, presumably the query failed.
         if (!is_object($result)) {
             if (is_array($result) && isset($result[0]->errorCode)) {
-                $this->errorMessage = "SOQL query failed: "
+                $this->errorMessage = "Salesforce SOQL query failed: "
                     . $result[0]->errorCode . ": " . $result[0]->message;
             } else {
-                $this->errorMessage = "SOQL query failed; something funny happened and the result is neither an array nor an object.";
+                $this->errorMessage = "Salesforce SOQL query failed; something funny happened and the result is neither an array nor an object.";
             }
             ErrorLog::record('salesforce-query-failed', ['query' => $q, 'result' => $result]);
             return false;

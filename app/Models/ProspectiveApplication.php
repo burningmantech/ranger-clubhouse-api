@@ -59,6 +59,26 @@ class ProspectiveApplication extends ApiModel
     const string WHY_VOLUNTEER_REVIEW_PROBLEM = 'problem';
     const string WHY_VOLUNTEER_REVIEW_UNREVIEWED = 'unreviewed';
 
+    const string API_ERROR_NONE = 'none';
+    // Can see the contact record, but all the fields are blank.
+    const string API_ERROR_CONTACT_BLANK = 'contact-blank';
+    // Cannot see the contact record at all.
+    const string API_ERROR_CONTACT_INACCESSIBLE = 'contact-inaccessible';
+    // BPGUID is blank.
+    const string API_ERROR_MISSING_BPGUID = 'missing-bgpuid';
+    // Failed to insert into the database
+    const string API_ERROR_CREATE_FAILURE = 'create-failure';
+
+    // Record failed to validate before creation.
+    const string API_ERROR_INVALID = 'invalid';
+
+    // used only for Salesforce querying and importing
+    public string $api_error = self::API_ERROR_NONE;
+    public ?string $api_error_message = null;
+    public ?string $contact_id = null;
+
+    public ?array $screened_handles = null;
+
     protected $guarded = [
         'created_at',
         'updated_at',
@@ -89,6 +109,13 @@ class ProspectiveApplication extends ApiModel
         'review_person:id,callsign'
     ];
 
+    protected $appends = [
+        'api_error',
+        'contact_id',
+        'screened_handles',
+    ];
+
+
     protected function casts(): array
     {
         return [
@@ -100,13 +127,6 @@ class ProspectiveApplication extends ApiModel
             'updated_by_person_at' => 'datetime',
         ];
     }
-
-    protected $appends = [
-        'screened_handles'
-    ];
-
-
-    public ?array $screened_handles = null;
 
     public static function boot(): void
     {
@@ -460,6 +480,21 @@ class ProspectiveApplication extends ApiModel
     public function getScreenedHandlesAttribute(): ?array
     {
         return $this->screened_handles;
+    }
+
+    public function getApiErrorAttribute(): ?string
+    {
+        return $this->api_error;
+    }
+
+    public function getApiErrorMessageAttribute(): ?string
+    {
+        return $this->api_error_message;
+    }
+
+    public function getContactIdAttribute(): ?string
+    {
+        return $this->contact_id;
     }
 
     public function bulkScreenHandles($reservedHandles): void

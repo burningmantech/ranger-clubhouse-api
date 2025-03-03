@@ -2,11 +2,12 @@
 
 namespace App\Lib;
 
+use App\Models\ErrorLog;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationLog;
 use App\Models\ProspectiveApplicationNote;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class ProspectiveApplicationImport
 {
@@ -14,6 +15,10 @@ class ProspectiveApplicationImport
 
     public array $newApplications = [];
     public array $existingApplications = [];
+    public array $creationFailures = [];
+    public array $queryFailures = [];
+
+    public ?string $errorMessage = null;
 
     const array STATUS_MAP = [
         'Not Yet Started' => ProspectiveApplication::STATUS_PENDING,
@@ -40,13 +45,16 @@ class ProspectiveApplicationImport
         'Yes' => ProspectiveApplication::EXPERIENCE_BRC1,
     ];
 
-    const array SF_FIELDS = [
+    const array APPLICATION_RECORD_FIELDS = [
         'Id' => 'salesforce_id',
+        'Name' => 'salesforce_name',
         'CH_UID__c' => 'person_id',
+        'Applicant_BPGUID__c' => 'bpguid',
+        'Applicant_First_Name__c' => 'first_name',
+        'Applicant_Last_Name__c' => 'last_name',
         'Contact_Email__c' => 'email',
         'Known_Prospective_Volunteer_Names__c' => 'known_applicants',
         'Known_Rangers_Names__c' => 'known_rangers',
-        'Name' => 'salesforce_name',
         'Ranger_Applicant_Type__c',
         'Submit_Radio_Call_Signs__c' => 'handles',
         'VC_Approved_Radio_Call_Sign__c' => 'approved_handle',
@@ -57,23 +65,22 @@ class ProspectiveApplicationImport
         'Why_Ranger_Comments__c',
         'Regional_Ranger_Experience__c' => 'regional_experience',
         'Current_Regional_Callsign__c' => 'regional_callsign',
-        'Ranger_Info__r.Years_Attended_Burning_Man__c' => 'events_attended',
         'Ranger_Info_Over_18_Check__c',
         'Attended_Burning_Man_Twice__c',
+    ];
 
-        'Ranger_Info__r.FirstName' => 'first_name',
-        'Ranger_Info__r.LastName' => 'last_name',
+    const array CONTACT_RECORD_FIELDS = [
+        'Ranger_Info__r.Years_Attended_Burning_Man__c' => 'events_attended',
         'Ranger_Info__r.MailingStreet' => 'street',
         'Ranger_Info__r.MailingCity' => 'city',
         'Ranger_Info__r.MailingState' => 'state',
         'Ranger_Info__r.MailingCountry' => 'country',
         'Ranger_Info__r.MailingPostalCode' => 'postal_code',
 
-        'Ranger_Info__r.npe01__HomeEmail__c',
+        'Ranger_Info__r.MailingAddress',
         'Ranger_Info__r.Phone',
         'Ranger_Info__r.MobilePhone',
         'Ranger_Info__r.OtherPhone',
-        'Ranger_Info__r.BPGUID__c' => 'bpguid',
         'Ranger_Info__r.SFUID__c' => 'sfuid',
         'Ranger_Info__r.Emergency_Contact_Name__c',
         'Ranger_Info__r.Emergency_Contact_Phone__c',
@@ -115,7 +122,7 @@ class ProspectiveApplicationImport
     {
         $sql = $this->buildSOQLBase()
             . " AND (Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger' OR Ranger_Applicant_Type__c = 'Prospective New Volunteer - Black Rock Ranger Redux')"
-            . " AND VC_Event_Year__c='$year'";
+            . " AND CALENDAR_YEAR(CreatedDate)=$year";
         return $this->executeQuery($sql, $offset);
     }
 
@@ -140,6 +147,7 @@ class ProspectiveApplicationImport
 
         $sql .= " AND (VC_Qualifications_Check__c='Needs checking' OR VC_Qualifications_Check__c='On hold / checking (see VC notes)')";
 
+        $sql .= " AND CALENDAR_YEAR(CreatedDate)=" . current_year();
         return $this->executeQuery($sql, $offset);
     }
 
@@ -151,8 +159,13 @@ class ProspectiveApplicationImport
 
     public function buildSOQLBase(): string
     {
+        return 'SELECT ' . $this->buildFields(self::APPLICATION_RECORD_FIELDS) . " FROM Ranger__c WHERE (NOT VC_Approved_Radio_Call_Sign__c LIKE 'Testing%')";
+    }
+
+    public function buildFields(array $fields): string
+    {
         $cols = [];
-        foreach (self::SF_FIELDS as $idx => $field) {
+        foreach ($fields as $idx => $field) {
             if (is_numeric($idx)) {
                 $cols[] = $field;
             } else {
@@ -160,7 +173,18 @@ class ProspectiveApplicationImport
             }
         }
 
-        return 'SELECT ' . implode(', ', $cols) . " FROM Ranger__c WHERE (NOT VC_Approved_Radio_Call_Sign__c LIKE 'Testing%')";
+        return implode(', ', $cols);
+    }
+
+    public function queryContactRecord(string $id): mixed
+    {
+        $sql = "SELECT Ranger_Info__r.Id, " . $this->buildFields(self::CONTACT_RECORD_FIELDS) . " FROM Ranger__c WHERE Id='" . $id . "'";
+        $results = $this->executeQuery($sql, 0, true);
+        if ($results === false) {
+            return false;
+        }
+
+        return $results->records[0];
     }
 
     /**
@@ -168,11 +192,16 @@ class ProspectiveApplicationImport
      *
      * @param string $sql
      * @param int $offset
+     * @param bool $enforceSecurity
      * @return mixed
      */
 
-    public function executeQuery(string $sql, int $offset): mixed
+    public function executeQuery(string $sql, int $offset, bool $enforceSecurity = false): mixed
     {
+        if ($enforceSecurity) {
+            $sql .= " WITH USER_MODE";
+        }
+
         $sql .= " LIMIT 400";
         if ($offset) {
             $sql .= " OFFSET $offset";
@@ -181,7 +210,9 @@ class ProspectiveApplicationImport
         $r = $this->sf->soqlQuery($sql);
         if (!$r
             || (is_array($r) && $r[0]->message != "")) {
-            $this->sf->errorMessage = "Salesforce API query failed for $sql: {$this->sf->errorMessage}";
+            if (!$enforceSecurity) {
+                $this->errorMessage = "Salesforce API query failed for $sql: {$this->sf->errorMessage}";
+            }
             return false;
         }
 
@@ -194,7 +225,6 @@ class ProspectiveApplicationImport
      * @param int $year
      * @param bool $commit
      * @return array
-     * @throws ValidationException
      */
 
     public function importForYear(int $year, bool $commit = false): array
@@ -224,11 +254,10 @@ class ProspectiveApplicationImport
      * Import unprocessed applications.
      *
      * @param bool $commit
-     * @return array
-     * @throws ValidationException
+     * @return void
      */
 
-    public function importUnprocessed(bool $commit): array
+    public function importUnprocessed(bool $commit): void
     {
         $offset = 0;
         while (true) {
@@ -247,8 +276,28 @@ class ProspectiveApplicationImport
 
             $offset += count($rows->records);
         }
+    }
 
-        return [$this->newApplications, $this->existingApplications];
+    public function extractFields(array $fields, mixed $sfObj, ProspectiveApplication $application, bool $ignoreNameCheck = false): bool
+    {
+        $allEmpty = true;
+        foreach ($fields as $field => $col) {
+            if (!is_numeric($field)) {
+                if (str_contains($field, '.')) {
+                    list ($n, $c) = explode('.', $field);
+                    $queryField = $c;
+                } else {
+                    $queryField = $field;
+                }
+                $value = $sfObj->{$queryField} ?? null;
+                if (!empty($value)) {
+                    $allEmpty = false;
+                }
+                $application->{$col} = $value ?? '';
+            }
+        }
+
+        return $allEmpty;
     }
 
     /**
@@ -257,24 +306,42 @@ class ProspectiveApplicationImport
      * @param mixed $sobj
      * @param bool $setEventYear
      * @param bool $commit
-     * @throws ValidationException
      */
 
     public function importApplication(mixed $sobj, bool $setEventYear = false, bool $commit = false): void
     {
         $row = new ProspectiveApplication();
+        $this->extractFields(self::APPLICATION_RECORD_FIELDS, $sobj, $row);
+        if ($setEventYear) {
+            $row->year = current_year();
+        }
 
-        $rInfo = $sobj->Ranger_Info__r;
-        foreach (self::SF_FIELDS as $field => $col) {
-            if (!is_numeric($field)) {
-                if (str_contains($field, '.')) {
-                    list ($n, $c) = explode('.', $field);
-                    $value = $rInfo->{$c} ?? '';
-                } else {
-                    $value = $sobj->{$field};
-                }
-                $row->{$col} = $value ?? '';
-            }
+        $existing = ProspectiveApplication::findByYearSalesforceName($row->year, $row->salesforce_name);
+        if ($existing) {
+            $row->id = $existing->id;
+            $this->existingApplications[] = $existing;
+            return;
+        }
+
+        $contactObj = $this->queryContactRecord($sobj->Id);
+        if (!$contactObj) {
+            $row->api_error = ProspectiveApplication::API_ERROR_CONTACT_INACCESSIBLE;
+            $this->queryFailures[] = $row;
+            return;
+        }
+
+        $rInfo = $contactObj->Ranger_Info__r;
+        if (!$rInfo) {
+            $row->api_error = ProspectiveApplication::API_ERROR_CONTACT_INACCESSIBLE;
+            $this->queryFailures[] = $row;
+            return;
+        }
+        $row->contact_id = $rInfo->Id ?? null;
+        $isBlank = $this->extractFields(self::CONTACT_RECORD_FIELDS, $rInfo, $row);
+        if ($isBlank) {
+            $row->api_error = ProspectiveApplication::API_ERROR_CONTACT_BLANK;
+            $this->queryFailures[] = $row;
+            return;
         }
 
         if (empty($row->person_id)) {
@@ -283,7 +350,6 @@ class ProspectiveApplicationImport
         }
 
         if (empty($row->bpguid)) {
-            // Don't bother with applications without a BPGUID -- too old.
             if ($row->person_id) {
                 $bpguid = DB::table('person')->where('id', $row->person_id)->value('bpguid');
                 if (empty($bpguid)) {
@@ -291,15 +357,13 @@ class ProspectiveApplicationImport
                 }
                 $row->bpguid = $bpguid;
             } else {
+                $row->api_error = ProspectiveApplication::API_ERROR_MISSING_BPGUID;
+                $this->queryFailures[] = $row;
                 return;
             }
         }
 
         $row->street = self::sanitizeStreet($rInfo);
-
-        if (empty($row->email)) {
-            $row->email = self::sanitizeField($rInfo, 'npe01__HomeEmail__c');
-        }
 
         // Build up the emergency contact info
         $ecName = self::sanitizeField($rInfo, 'Emergency_Contact_Name__c');
@@ -351,10 +415,6 @@ class ProspectiveApplicationImport
             $row->approved_handle = '';
         }
 
-        if ($setEventYear) {
-            $row->year = current_year();
-        }
-
         foreach (self::PHONE_FIELDS as $field) {
             if (isset($rInfo->{$field})) {
                 $phone = trim($rInfo->{$field});
@@ -366,42 +426,63 @@ class ProspectiveApplicationImport
         }
 
 
-        $existing = ProspectiveApplication::findByYearSalesforceName($row->year, $row->salesforce_name);
-        if ($existing) {
-            $row->id = $existing->id;
-            $this->existingApplications[] = $existing;
-        } else {
-            if ($commit) {
-                $row->save();
-
-                ProspectiveApplicationLog::record($row->id,
-                    ProspectiveApplicationLog::ACTION_IMPORTED,
-                    [
-                        'salesforce_status' => $status,
-                        'salesforce_type' => self::sanitizeField($sobj, 'Ranger_Applicant_Type__c'),
-                    ]);
-
-                $comments = self::sanitizeField($sobj, 'VC_Comments__c');
-                if (!empty($comments)) {
-                    ProspectiveApplicationNote::insert([
-                        'type' => ProspectiveApplicationNote::TYPE_VC,
-                        'prospective_application_id' => $row->id,
-                        'note' => $comments,
-                        'created_at' => now(),
-                    ]);
-                }
-
-                $why = self::sanitizeField($sobj, 'Why_Ranger_Comments__c');
-                if (!empty($why)) {
-                    ProspectiveApplicationNote::insert([
-                        'type' => ProspectiveApplicationNote::TYPE_VC_COMMENT,
-                        'prospective_application_id' => $row->id,
-                        'note' => $why,
-                        'created_at' => now(),
-                    ]);
-                }
-            }
+        if (!$commit) {
             $this->newApplications[] = $row;
+            return;
+        }
+
+        try {
+            $success = $row->save();
+        } catch (QueryException $e) {
+            $row->api_error = ProspectiveApplication::API_ERROR_CREATE_FAILURE;
+            $row->append('api_error_message');
+            $row->api_error_message = $e->getMessage();
+            $this->creationFailures[] = $row;
+            ErrorLog::recordException($e, 'prospective-application-create-failure', ['record' => $row]);
+            return;
+        }
+
+        if (!$success) {
+            $row->append('api_error_message');
+            $message = "Fields failed to validate:\n";
+            $errors = $row->getErrors();
+            foreach ($errors as $column => $messages) {
+                $message .= "$column: " . implode("\n", $messages) . "\n";
+            }
+            $row->api_error = ProspectiveApplication::API_ERROR_INVALID;
+            $row->api_error_message = $message;
+            $this->creationFailures[] = $row;
+            ErrorLog::record('prospective-application-validation-failure', ['record' => $row, 'errors' => $errors]);
+            return;
+        }
+
+        $this->newApplications[] = $row;
+
+        ProspectiveApplicationLog::record($row->id,
+            ProspectiveApplicationLog::ACTION_IMPORTED,
+            [
+                'salesforce_status' => $status,
+                'salesforce_type' => self::sanitizeField($sobj, 'Ranger_Applicant_Type__c'),
+            ]);
+
+        $comments = self::sanitizeField($sobj, 'VC_Comments__c');
+        if (!empty($comments)) {
+            ProspectiveApplicationNote::insert([
+                'type' => ProspectiveApplicationNote::TYPE_VC,
+                'prospective_application_id' => $row->id,
+                'note' => $comments,
+                'created_at' => now(),
+            ]);
+        }
+
+        $why = self::sanitizeField($sobj, 'Why_Ranger_Comments__c');
+        if (!empty($why)) {
+            ProspectiveApplicationNote::insert([
+                'type' => ProspectiveApplicationNote::TYPE_VC_COMMENT,
+                'prospective_application_id' => $row->id,
+                'note' => $why,
+                'created_at' => now(),
+            ]);
         }
     }
 
