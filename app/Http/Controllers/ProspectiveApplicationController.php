@@ -376,7 +376,6 @@ class ProspectiveApplicationController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function import(): JsonResponse
@@ -388,15 +387,21 @@ class ProspectiveApplicationController extends ApiController
 
         $import = new ProspectiveApplicationImport();
         if (!$import->auth()) {
-            return response()->json(['status' => 'auth-failure']);
+            return response()->json([
+                'status' => 'auth-fail',
+                'message' => $import->sf->errorMessage,
+            ]);
         }
 
-        list ($new, $existing) = $import->importUnprocessed($params['commit'] ?? false);
+        $import->importUnprocessed($params['commit'] ?? false);
 
         return response()->json([
             'status' => 'success',
-            'new' => $new,
-            'existing' => $existing,
+            'new' => $import->newApplications,
+            'existing' => $import->existingApplications,
+            'query_failures' => $import->queryFailures,
+            'create_failures' => $import->creationFailures,
+            'api_error' => $import->errorMessage,
         ]);
     }
 
