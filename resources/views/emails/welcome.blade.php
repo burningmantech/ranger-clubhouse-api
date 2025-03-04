@@ -79,9 +79,9 @@
             <a href="https://rangers.burningman.org/training">rangers.burningman.org/training</a>,
             which will continue to be updated through the end of Spring, as
             new trainings are announced. Specific location information will be released by email
-            closer to the training date to those Rangers signed up for that date. Stay tuned to
-            Ranger Applicant News as new trainings are posted. Please sign up for a training by June
-            15th, as they fill up.  <b style="color: #ff0000;">There are no walk-ins for trainings</b>,
+            closer to the training date to those Rangers signed up for that date. You will receive updates from the
+            Ranger Applicant News whenever new training sessions are posted. Please sign up for a training by June
+            15th, as they fill up. <b style="color: #ff0000;">There are no walk-ins for trainings</b>,
             so make sure you sign up in the Clubhouse.
         </p>
         <p>

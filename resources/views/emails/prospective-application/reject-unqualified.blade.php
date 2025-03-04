@@ -1,7 +1,8 @@
 @php use App\Models\ProspectiveApplication; @endphp
 <x-html-email>
-    Hey {{$application->first_name}} {{$application->last_name}},
-
+    <p>
+        Hey {{$application->first_name}} {{$application->last_name}},
+    </p>
     <p>
         Thanks for considering the Rangers! We’ve reviewed your application.
     </p>
@@ -46,5 +47,5 @@
     <p>
         Your Friendly Black Rock Ranger Volunteer Coordinators
     </p>
-    <b>Questions?</b> Email <a href="mailto:ranger-vc-list@burningman.org">ranger-vc-list@burningman.org</a>
+    <x-vc-questions/>
 </x-html-email>
