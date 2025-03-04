@@ -5,9 +5,7 @@
     <p>
         The Ranger Volunteer Coordinators have been reviewing your application and noticed some information is missing.
     </p>
-    <p>
-        <b style="color: red;">Your application is on hold until we hear back from you.</b>
-    </p>
+    <x-vc-application-on-hold />
     <p>
         The following field(s) are blank on your application:
     </p>
@@ -22,8 +20,6 @@
     <p>
         Your Friendly Black Rock Ranger Volunteer Coordinators
     </p>
-    <p>
-        <b>Questions?</b> Email <a href="mailto:ranger-vc-list@burningman.org">ranger-vc-list@burningman.org</a>
-    </p>
+    <x-vc-questions />
     Application ID A-{{$application->id}}
 </x-html-email>
