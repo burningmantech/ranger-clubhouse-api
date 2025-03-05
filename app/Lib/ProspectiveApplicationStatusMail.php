@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Exceptions\UnacceptableConditionException;
+use App\Mail\ProspectiveApplication\AgeConfirmationMail;
 use App\Mail\ProspectiveApplication\ApprovedCallsignMail;
 use App\Mail\ProspectiveApplication\ExperienceConfirmationMail;
 use App\Mail\ProspectiveApplication\MoreHandlesMail;
@@ -19,15 +20,16 @@ class ProspectiveApplicationStatusMail
 {
     const array STATUS_TO_MAIL = [
         ProspectiveApplication::STATUS_APPROVED => ApprovedCallsignMail::class,
+        ProspectiveApplication::STATUS_HOLD_AGE_ISSUE => AgeConfirmationMail::class,
         ProspectiveApplication::STATUS_HOLD_PII_ISSUE => PiiIssueMail::class,
+        ProspectiveApplication::STATUS_HOLD_QUALIFICATION_ISSUE => ExperienceConfirmationMail::class,
+        ProspectiveApplication::STATUS_HOLD_RRN_CHECK => RRNCheckMail::class,
+        ProspectiveApplication::STATUS_HOLD_WHY_RANGER_QUESTION => WhyRangerQuestionMail::class,
         ProspectiveApplication::STATUS_MORE_HANDLES => MoreHandlesMail::class,
         ProspectiveApplication::STATUS_REJECT_REGIONAL => RejectRegionalMail::class,
+        ProspectiveApplication::STATUS_REJECT_RETURNING_RANGER => ReturningRangerMail::class,
         ProspectiveApplication::STATUS_REJECT_TOO_YOUNG => RejectTooYoungMail::class,
         ProspectiveApplication::STATUS_REJECT_UNQUALIFIED => RejectUnqualifiedMail::class,
-        ProspectiveApplication::STATUS_HOLD_RRN_CHECK => RRNCheckMail::class,
-        ProspectiveApplication::STATUS_HOLD_QUALIFICATION_ISSUE => ExperienceConfirmationMail::class,
-        ProspectiveApplication::STATUS_REJECT_RETURNING_RANGER => ReturningRangerMail::class,
-        ProspectiveApplication::STATUS_HOLD_WHY_RANGER_QUESTION => WhyRangerQuestionMail::class,
     ];
 
     /**
