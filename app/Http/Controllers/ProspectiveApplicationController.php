@@ -179,16 +179,22 @@ class ProspectiveApplicationController extends ApiController
     {
         $this->authorize('updateStatus', $prospectiveApplication);
 
-        $params = request()->validate([
+        $rules = [
             'status' => 'required|string',
             'message' => 'sometimes|string',
-            'approved_handle' => [
+        ];
+
+        if (empty($prospectiveApplication->approved_handle)) {
+            $rules['approved_handle'] = [
                 'required_if:status,'
                 . ProspectiveApplication::STATUS_APPROVED
-                . ',' . ProspectiveApplication::STATUS_HOLD_PII_ISSUE,
+                . ',' . ProspectiveApplication::STATUS_HOLD_PII_ISSUE
+                . ',' . ProspectiveApplication::STATUS_HOLD_AGE_ISSUE,
                 'string'
-            ]
-        ]);
+            ];
+        }
+
+        $params = request()->validate($rules);
 
         $status = $params['status'];
         $message = $params['message'] ?? null;
@@ -201,7 +207,10 @@ class ProspectiveApplicationController extends ApiController
 
             case ProspectiveApplication::STATUS_APPROVED:
             case ProspectiveApplication::STATUS_HOLD_PII_ISSUE:
-                $prospectiveApplication->approved_handle = $params['approved_handle'];
+            case ProspectiveApplication::STATUS_HOLD_AGE_ISSUE:
+                if (isset($params['approved_handle'])) {
+                    $prospectiveApplication->approved_handle = $params['approved_handle'];
+                }
                 break;
         }
         $prospectiveApplication->saveOrThrow();
