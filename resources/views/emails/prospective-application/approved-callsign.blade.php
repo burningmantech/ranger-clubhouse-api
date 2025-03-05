@@ -20,8 +20,8 @@
         </p>
 
         <p>
-            Our next step is to load your information into the Ranger scheduling tool called <i>The Secret
-                Clubhouse.</i>
+            Our next step is to load your information into the Ranger scheduling tool called
+            <i>The Secret Clubhouse.</i>
             Look for an email from the Clubhouse asking you to create a password for your account. Please note there
             will be a delay of up to two weeks before you receive an email from the Clubhouse. Thank you for your
             patience.
@@ -39,9 +39,8 @@
         </p>
 
         <p>
-            Read the most recent version of the Ranger Manual and Burn Perimeter Briefing
-            (links at the top, and in the right sidebar of
-            <a href="http://rangers.burningman.org/training/">http://rangers.burningman.org/training/</a>)
+            <b>Read the most recent version of the Ranger Manual</b> found on the main Ranger website.
+            (<a href="http://rangers.burningman.org/">http://rangers.burningman.org/</a>)
         </p>
 
         <p>
@@ -59,15 +58,15 @@
         </p>
 
         <p>
-            Practice your radio skills until they are second nature. Reviewing the ART of Radio (link in the right
-            sidebar of <a href="https://rangers.burningman.org">https://rangers.burningman.org</a>) will help. Also
-            watch your email for information on off-playa virtual radio practice opportunities, coming your way sometime
-            soon.
+            <b>Practice your radio skills until they are second nature.</b> Reading the <i>ART of Radio</i> will help.
+            Click the link <a href="https://drive.google.com/drive/folders/1UHtAd7wQAM0Tn7FjVDhIuNjBmoDN3rHJ">HERE</a>
+            to begin reading. Also watch your email for information on off-playa virtual radio practice opportunities,
+            coming your way sometime soon.
         </p>
 
         <p>
             Your Friendly Black Rock Ranger Volunteer Coordinators
         </p>
-        <x-vc-questions />
+        <x-vc-questions/>
     </div>
 </x-html-email>
