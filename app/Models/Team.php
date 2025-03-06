@@ -202,22 +202,27 @@ class Team extends ApiModel
 
     public static function retrieveDirectory(): array
     {
-        $rows = self::whereIn('type', [self::TYPE_CADRE, self::TYPE_DELEGATION])
-            ->where('active', true)
-            ->whereNotNull('email')
-            ->orderBy('title')
+        $teams = self::whereIn('team.type', [self::TYPE_CADRE, self::TYPE_DELEGATION])
+            ->where('team.active', true)
+            ->orderBy('team.title')
+            ->with(['members', 'members.person_photo'])
             ->get();
 
-        $contacts = [];
-        foreach ($rows as $row) {
-            $contacts[] = [
-                'id' => $row->id,
-                'title' => $row->title,
-                'email' => $row->email,
+        $directory = [];
+        foreach ($teams as $team) {
+            $directory[] = [
+                'id' => $team->id,
+                'title' => $team->title,
+                'email' => $team->email,
+                'members' => $team->members->map(fn($member): array => [
+                    'id' => $member->id,
+                    'callsign' => $member->callsign,
+                    'profile_url' => $member->person_photo?->profileUrlApproved(),
+                ])->toArray(),
             ];
         }
 
-        return $contacts;
+        return $directory;
     }
 
     /**
