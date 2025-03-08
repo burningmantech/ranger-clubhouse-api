@@ -145,9 +145,11 @@ class ProspectiveApplicationImport
         $sql .= " OR Ranger_Applicant_Type__c='Training Auditor'";
         $sql .= " OR Ranger_Applicant_Type__c='Black Rock Ranger')";
 
-        $sql .= " AND (VC_Qualifications_Check__c='Needs checking' OR VC_Qualifications_Check__c='On hold / checking (see VC notes)')";
+        $sql .= " AND VC_Qualifications_Check__c='Needs checking'";
 
-        $sql .= " AND CALENDAR_YEAR(CreatedDate)=" . current_year();
+        // OR VC_Qualifications_Check__c='On hold / checking (see VC notes)')";
+
+        //$sql .= " AND CALENDAR_YEAR(CreatedDate)=" . current_year();
         return $this->executeQuery($sql, $offset);
     }
 
