@@ -5,6 +5,7 @@ namespace App\Lib\Reports;
 use App\Models\Person;
 use App\Models\Position;
 use App\Models\Slot;
+use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\DB;
 
 class TrainingUntrainedPeopleReport
@@ -20,21 +21,26 @@ class TrainingUntrainedPeopleReport
 
     public static function execute($position, int $year): array
     {
-        $trainedPositionIds = Position::where('training_position_id', $position->id)->pluck('id');
-        if ($trainedPositionIds->isEmpty()) {
+        $positionsRequiringTrainingIds = Position::where('training_position_id', $position->id)->pluck('id');
+        if ($positionsRequiringTrainingIds->isEmpty()) {
             return [
                 'not_signed_up' => [],
                 'not_passed' => [],
             ];
         }
 
-        $positionIds = [$position->id];
+        $trainingIds = [$position->id];
 
         if ($position->id == Position::HQ_FULL_TRAINING) {
-            $positionIds[] = Position::HQ_REFRESHER_TRAINING;
+            $trainingIds[] = Position::HQ_REFRESHER_TRAINING;
         }
 
-        $trainingSlotIds = Slot::whereIn('position_id', $positionIds)->where('begins_year', $year)->pluck('id');
+        $trainerPositionIds = Position::TRAINERS[$position->id] ?? [];
+
+        $trainingSlotIds = Slot::whereIn('position_id', [...$trainingIds, ...$trainerPositionIds])
+            ->where('begins_year', $year)
+            ->where('active', true)
+            ->pluck('id');
 
         if ($trainingSlotIds->isEmpty()) {
             return [
@@ -49,27 +55,24 @@ class TrainingUntrainedPeopleReport
          * (yah, not crazy about the sub-selects here.)
          */
 
-        $positionIds = implode(',', $positionIds);
-        $rows = DB::select("SELECT
-                person_slot.person_id,
-                person_slot.slot_id,
-                slot.description,
-                slot.begins,
-                position.title
-            FROM person_slot
-            INNER JOIN slot ON slot.id=person_slot.slot_id
-            INNER JOIN position ON position.id = slot.position_id
-            WHERE person_slot.slot_id IN (
-                SELECT id FROM slot WHERE position_id IN (" .
-            $trainedPositionIds->implode(',') . "
-                ) AND YEAR(begins)=$year
-              )
-             AND person_slot.person_id NOT IN (
-                    SELECT person_id FROM person_slot
-                     WHERE slot_id IN
-                       (SELECT id FROM slot WHERE position_id IN ($positionIds) AND YEAR(begins)=$year)
-               )
-            ORDER BY slot.begins asc");
+
+        $requireTrainingSlotIds = Slot::whereIn('position_id', $positionsRequiringTrainingIds)
+            ->where('begins_year', $year)
+            ->where('active', true)
+            ->pluck('id');
+
+        $rows = DB::table('person_slot')
+            ->select('person_slot.person_id', 'person_slot.slot_id', 'slot.description', 'slot.begins', 'position.title')
+            ->join('slot', 'person_slot.slot_id', '=', 'slot.id')
+            ->join('position', 'slot.position_id', '=', 'position.id')
+            ->whereIn('person_slot.slot_id', $requireTrainingSlotIds)
+            ->whereNotIn('person_slot.person_id', function ($query) use ($trainingSlotIds) {
+                $query->from('person_slot')
+                    ->select('person_slot.person_id')
+                    ->whereIn('person_slot.slot_id', $trainingSlotIds);
+            })
+            ->orderBy('slot.begins')
+            ->get();
 
         $peopleSignedUp = [];
         foreach ($rows as $row) {
@@ -83,16 +86,15 @@ class TrainingUntrainedPeopleReport
         $untrainedSignedup = [];
         if (!empty($peopleSignedUp)) {
             $rows = Person::select('id', 'callsign', 'first_name', 'preferred_name', 'last_name', 'email')
-                ->whereIntegerInRaw('id', array_keys($peopleSignedUp))->get();
+                ->whereIntegerInRaw('id', array_keys($peopleSignedUp))
+                ->get();
             foreach ($rows as $row) {
-                $row->slots = array_map(function ($slot) {
-                    return [
-                        'slot_id' => $slot->slot_id,
-                        'begins' => $slot->begins,
-                        'description' => $slot->description,
-                        'title' => $slot->title,
-                    ];
-                }, $peopleSignedUp[$row->id]);
+                $row->slots = array_map(fn($slot) => [
+                    'slot_id' => $slot->slot_id,
+                    'begins' => $slot->begins,
+                    'description' => $slot->description,
+                    'title' => $slot->title,
+                ], $peopleSignedUp[$row->id]);
                 $untrainedSignedup[] = $row;
             }
             usort($untrainedSignedup, fn($a, $b) => strcasecmp($a->callsign, $b->callsign));
@@ -104,54 +106,79 @@ class TrainingUntrainedPeopleReport
          * regular shifts)
          */
 
-        $rows = DB::select(
-            "SELECT
-                    person.id,
-                    person.callsign,
-                    person.email,
-                    person.first_name,
-                    person.preferred_name,
-                    person.last_name,
-                    slot.description as training_description,
-                    slot.begins as training_begins,
-                    slot.id as training_slot_id
-            FROM person_slot
-            INNER JOIN slot ON person_slot.slot_id=slot.id
-            INNER JOIN person ON person.id=person_slot.person_id
-            LEFT JOIN trainee_status ON person_slot.slot_id=trainee_status.slot_id AND person_slot.person_id=trainee_status.person_id
-            WHERE person_slot.slot_id IN (" . $trainingSlotIds->implode(',') . ")
-            AND trainee_status.passed != TRUE
-            AND NOT EXISTS (SELECT 1 FROM trainee_status ts WHERE ts.slot_id=person_slot.slot_id AND person_slot.person_id=ts.person_id AND ts.passed IS TRUE LIMIT 1)"
-        );
+        $rows = DB::table('person_slot')
+            ->select(
+                'person.id',
+                'person.callsign',
+                'person.email',
+                'person.first_name',
+                'person.preferred_name',
+                'person.last_name',
+                'slot.description as training_description',
+                'slot.begins as training_begins',
+                'slot.id as training_slot_id',
+            )->join('slot', 'person_slot.slot_id', '=', 'slot.id')
+            ->join('person', 'person.id', '=', 'person_slot.person_id')
+            ->leftJoin('trainee_status', function ($j) {
+                $j->on('person_slot.person_id', 'trainee_status.person_id')
+                    ->whereColumn('person_slot.slot_id', 'trainee_status.slot_id');
+            })->whereIn('person_slot.slot_id', $trainingSlotIds)
+            ->where(function ($q) {
+                $q->whereNull('trainee_status.passed')
+                    ->orWhere('trainee_status.passed', false);
+            })
+            ->whereNotExists(function ($q) use ($trainingSlotIds) {
+                $q->from('trainee_status as ts')
+                    ->select(DB::raw(1))
+                    ->whereColumn('ts.person_id', 'person_slot.person_id')
+                    ->whereIn('ts.slot_id', $trainingSlotIds)
+                    ->where('ts.passed', '=', true)
+                    ->limit(1);
+            })->get();
 
-        $peopleNotPassed = collect($rows)->keyBy('id');
+        $peopleNotPassed = $rows->keyBy('id');
+
+        if (!empty($trainerPositionIds)) {
+            $trainerSlotsIds = DB::table('slot')
+                ->whereIn('position_id', $trainerPositionIds)
+                ->where('begins_year', $year)
+                ->where('active', true)
+                ->pluck('id');
+
+            $taught = DB::table('person_slot')
+                ->select('trainer_status.person_id')
+                ->join('slot', 'slot.id', 'person_slot.slot_id')
+                ->join('trainer_status', 'person_slot.slot_id', 'trainer_status.trainer_slot_id')
+                ->whereIn('person_slot.slot_id', $trainerSlotsIds)
+                ->where('trainer_status.status', TrainerStatus::ATTENDED)
+                ->distinct()
+                ->get()
+                ->keyBy('person_id');
+
+            $peopleNotPassed = $peopleNotPassed->filter(fn($person) => !$taught->has($person->id));
+        }
 
         $untrainedNotPassed = [];
         if (!$peopleNotPassed->isEmpty()) {
-            $peopleInfo = [];
             $personIds = $peopleNotPassed->keys();
 
             //
             // Find which shifts the person signed up for.
             //
-            $rows = DB::select(
-                "SELECT
-                     person_slot.person_id,
-                     person_slot.slot_id,
-                     slot.description,
-                     slot.begins,
-                     position.title as position_title
-                 FROM person_slot
-                 INNER JOIN slot ON slot.id=person_slot.slot_id
-                 INNER JOIN position ON position.id = slot.position_id
-                 WHERE person_slot.person_id IN (" . $personIds->implode(',') . ")
-                 AND  person_slot.slot_id IN (
-                     SELECT id FROM slot WHERE position_id IN (" .
-                $trainedPositionIds->implode(',') .
-                ") AND YEAR(begins)=$year
-                   )
-                 ORDER BY person_slot.person_id asc,slot.begins asc"
-            );
+            $rows = DB::table('person_slot')
+                ->select(
+                    'person_slot.person_id',
+                    'person_slot.slot_id',
+                    'slot.description',
+                    'slot.begins',
+                    'position.title as position_title')
+                ->join('slot', 'person_slot.slot_id', '=', 'slot.id')
+                ->join('position', 'slot.position_id', '=', 'position.id')
+                ->whereIn('person_slot.person_id', $personIds)
+                ->whereIn('person_slot.slot_id', $requireTrainingSlotIds)
+                ->orderBy('person_slot.person_id')
+                ->orderBy('slot.begins')
+                ->get();
 
             foreach ($rows as $row) {
                 $personId = $row->person_id;
