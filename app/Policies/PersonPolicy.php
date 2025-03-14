@@ -165,7 +165,7 @@ class PersonPolicy
 
     public function mentees(Person $user, Person $person): bool
     {
-        return ($user->id == $person->id || $user->hasRole(Role::MENTOR));
+        return ($user->id == $person->id || $user->hasRole([Role::ADMIN, Role::MENTOR]));
     }
 
     public function mentors(Person $user, Person $person): bool
@@ -180,7 +180,7 @@ class PersonPolicy
 
     public function alphaShirts(Person $user): bool
     {
-        return $user->hasRole([ Role::QUARTERMASTER, Role::MENTOR]);
+        return $user->hasRole([ Role::ADMIN, Role::QUARTERMASTER, Role::MENTOR]);
     }
 
     public function peopleByLocation(Person $user): bool
@@ -236,7 +236,7 @@ class PersonPolicy
 
     public function ticketsProvisionsProgress(Person $user, Person $person): bool
     {
-        return ($user->id == $person->id) || $user->hasRole(Role::MANAGE);
+        return ($user->id == $person->id) || $user->hasRole([Role::ADMIN, Role::MANAGE]);
     }
 
     /**
