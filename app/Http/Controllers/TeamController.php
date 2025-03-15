@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\BulkTeamGrantRevoke;
+use App\Lib\Reports\DirectoryReport;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\TeamMembershipReport;
 use App\Models\Role;
@@ -132,7 +133,7 @@ class TeamController extends ApiController
             'commit' => 'boolean|sometimes',
         ]);
 
-        if ($params['grant'] && $team->team_roles->first(fn ($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
+        if ($params['grant'] && $team->team_roles->first(fn($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
             throw new AuthorizationException("The team has either the Admin or Tech Ninja Role associated and cannot be granted through this interface.");
         }
 
@@ -163,12 +164,15 @@ class TeamController extends ApiController
 
     /**
      * Provide a directory of known Cadres & Delegations
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function directory() : JsonResponse
+    public function directory(): JsonResponse
     {
         $this->authorize('directory', Team::class);
 
-        return response()->json([ 'teams' => Team::retrieveDirectory()]);
+        return response()->json(['teams' => DirectoryReport::execute()]);
     }
 }

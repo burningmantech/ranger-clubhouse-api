@@ -34,6 +34,7 @@ class Team extends ApiModel
 
     protected $fillable = [
         'active',
+        'description',
         'email',
         'mvr_eligible',
         'pvr_eligible',
@@ -195,40 +196,6 @@ class Team extends ApiModel
     }
 
     /**
-     * Return a list of all cadres & delegations with email contacts.
-     *
-     * @return array
-     */
-
-    public static function retrieveDirectory(): array
-    {
-        $teams = self::whereIn('team.type', [self::TYPE_CADRE, self::TYPE_DELEGATION])
-            ->where('team.active', true)
-            ->orderBy('team.title')
-            ->with(['members', 'members.person_photo', 'members.overseer_positions'])
-            ->get();
-        
-        $directory = [];
-        foreach ($teams as $team) {
-            $directory[] = [
-                'id' => $team->id,
-                'title' => $team->title,
-                'email' => $team->email,
-                'members' => $team->members->map(fn($member): array => [
-                    'id' => $member->id,
-                    'callsign' => $member->callsign,
-                    'profile_url' => $member->person_photo?->profileUrlApproved(),
-                    'overseer_positions' => $member->overseer_positions
-                        ->map(fn($position) => ['id' => $position->id, 'title' => $position->title])
-                        ->toArray(),
-                ])->toArray(),
-            ];
-        }
-
-        return $directory;
-    }
-
-    /**
      * Load the roles associated with the team, and set the pseudo column role_ids
      * @return void
      */
@@ -263,6 +230,11 @@ class Team extends ApiModel
     }
 
     public function email(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function description() : Attribute
     {
         return NullIfEmptyAttribute::make();
     }
