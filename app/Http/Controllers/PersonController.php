@@ -647,14 +647,8 @@ class PersonController extends ApiController
         $person = new Person;
         $person->fill($params['person']);
 
-        if ($person->status != Person::AUDITOR) {
-            throw new UnacceptableConditionException('Only the auditor status is allowed currently for registration.');
-        }
-
-        // make the callsign for an auditor.
-        if ($person->status == Person::AUDITOR) {
-            $person->resetCallsign();
-        }
+        $person->status = Person::AUDITOR;
+        $person->resetCallsign();
 
         $person->auditReason = 'registration';
         if (!$person->save()) {
