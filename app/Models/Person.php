@@ -26,6 +26,7 @@ use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
@@ -563,6 +564,17 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         return $this->hasMany(PersonFka::class)->orderBy('fka_normalized');
     }
 
+    public function overseer_positions(): HasManyThrough
+    {
+        return $this->hasManyThrough(Position::class, PersonPosition::class, 'person_id', 'id', 'id', 'position_id')
+            ->select('position.id', 'position.title')
+            ->where('position.active', true)
+            ->where(function ($w) {
+                $w->where('position.title', 'like', '%manager')
+                    ->orWhere('position.title', 'like', '%supervisor');
+            })->orderBy('position.title');
+    }
+
     /**
      * Find an account by its email.
      *
@@ -979,7 +991,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         }
 
         if (!setting('ShiftManagementSelfEnabled')
-        && isset($this->rolesById[Role::SHIFT_MANAGEMENT_SELF])) {
+            && isset($this->rolesById[Role::SHIFT_MANAGEMENT_SELF])) {
             unset($this->rolesById[Role::SHIFT_MANAGEMENT_SELF]);
         }
 
