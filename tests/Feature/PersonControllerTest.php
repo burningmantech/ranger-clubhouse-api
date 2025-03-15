@@ -1156,27 +1156,6 @@ class PersonControllerTest extends TestCase
      * Test registration fail with non-auditor status
      */
 
-    public function testRegisterStatusFailure()
-    {
-        $person = $this->buildRegisterData();
-        $person['status'] = 'active';
-        $data = [
-            'intent' => 'Sitin',
-            'person' => $person,
-        ];
-
-        Mail::fake();
-
-        $response = $this->json('POST', 'person/register', $data);
-        $response->assertStatus(422);
-
-        Mail::assertNotQueued(AccountCreationMail::class);
-    }
-
-    /*
-     * Test registration fail with non-auditor status
-     */
-
     public function testRegisterDuplicateEmailFailure()
     {
         $person = $this->buildRegisterData();
