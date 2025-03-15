@@ -205,9 +205,9 @@ class Team extends ApiModel
         $teams = self::whereIn('team.type', [self::TYPE_CADRE, self::TYPE_DELEGATION])
             ->where('team.active', true)
             ->orderBy('team.title')
-            ->with(['members', 'members.person_photo'])
+            ->with(['members', 'members.person_photo', 'members.overseer_positions'])
             ->get();
-
+        
         $directory = [];
         foreach ($teams as $team) {
             $directory[] = [
@@ -218,6 +218,9 @@ class Team extends ApiModel
                     'id' => $member->id,
                     'callsign' => $member->callsign,
                     'profile_url' => $member->person_photo?->profileUrlApproved(),
+                    'overseer_positions' => $member->overseer_positions
+                        ->map(fn($position) => ['id' => $position->id, 'title' => $position->title])
+                        ->toArray(),
                 ])->toArray(),
             ];
         }
