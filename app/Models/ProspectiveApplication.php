@@ -340,7 +340,7 @@ class ProspectiveApplication extends ApiModel
 
     public function allEvents(): array
     {
-        if (empty($this->events_attended)) {
+        if (empty($this->events_attended) || $this->events_attended == 'None') {
             return [];
         }
 
@@ -350,8 +350,8 @@ class ProspectiveApplication extends ApiModel
 
     public function havePandemicYears(): bool
     {
-        $events = $this->events_attended;
-        return str_contains($events, 2020) || str_contains($events, 2021);
+        $events = $this->allEvents();
+        return in_array(2020, $events) || in_array(2021, $events);
     }
 
     public function recordRejections(?string $message): void
@@ -412,7 +412,17 @@ class ProspectiveApplication extends ApiModel
 
     public function eventsAttended(): Attribute
     {
-        return BlankIfEmptyAttribute::make();
+        return Attribute::make(
+            get: function ($value) {
+                return $value == 'None' ? '' : $value;
+            },
+            set: function ($value) {
+                if ($value == 'None') {
+                    return '';
+                }
+                return empty($value) ? '' : $value;
+            },
+        );
     }
 
     public function regionalExperience(): Attribute
