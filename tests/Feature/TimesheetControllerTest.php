@@ -19,6 +19,7 @@ use App\Models\TraineeStatus;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 
@@ -1379,7 +1380,7 @@ class TimesheetControllerTest extends TestCase
      * Test the Timesheet By Position report
      */
 
-    public function testTimesheetByPositionReport()
+    public function testTimesheetByPositionReportForNotMember()
     {
         $year = date('Y');
 
@@ -1405,6 +1406,38 @@ class TimesheetControllerTest extends TestCase
 
         $response = $this->json('GET', 'timesheet/by-position', ['year' => $year]);
         $response->assertStatus(200);
+        $response->assertJsonCount(0, 'positions.*.id');
+        $response->assertJson(['status' => 'no-membership']);
+    }
+
+    public function testTimesheetByPositionReportForAdmins()
+    {
+        $this->addRole(Role::ADMIN);
+        $year = date('Y');
+
+        $personA = Person::factory()->create(['callsign' => 'A']);
+        $personB = Person::factory()->create(['callsign' => 'B']);
+
+        // Clear out the default timesheets created in setUp()
+        Timesheet::query()->delete();
+
+        $entryA = Timesheet::factory()->create([
+            'person_id' => $personA->id,
+            'on_duty' => date('Y-08-20 10:00:00'),
+            'off_duty' => date('Y-08-20 11:00:00'),
+            'position_id' => Position::DIRT
+        ]);
+
+        $entryB = Timesheet::factory()->create([
+            'person_id' => $personB->id,
+            'on_duty' => date('Y-08-20 10:00:00'),
+            'off_duty' => date('Y-08-20 12:00:00'),
+            'position_id' => Position::HQ_WINDOW
+        ]);
+
+        $response = $this->json('GET', 'timesheet/by-position', ['year' => $year]);
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'full-report']);
 
         $response->assertJsonCount(2, 'positions.*.id');
 
