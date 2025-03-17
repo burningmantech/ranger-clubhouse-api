@@ -829,7 +829,7 @@ class TimesheetController extends ApiController
      * Timesheet By Position
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|InvalidArgumentException
      */
 
     public function timesheetByPosition(): JsonResponse

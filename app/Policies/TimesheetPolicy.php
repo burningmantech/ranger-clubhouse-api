@@ -225,7 +225,7 @@ class TimesheetPolicy
 
     public function timesheetByCallsign(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::MANAGE);
     }
 
     /*

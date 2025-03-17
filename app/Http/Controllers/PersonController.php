@@ -786,7 +786,7 @@ class PersonController extends ApiController
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function ticketsProvisionsProgress(Person $person): JsonResponse
@@ -806,6 +806,8 @@ class PersonController extends ApiController
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws UnacceptableConditionException
+     * @throws ValidationException
      */
 
     public function releaseCallsign(Person $person): JsonResponse
