@@ -34,7 +34,7 @@ class ResetPasswordMail extends ClubhouseMailable
             case Person::ALPHA:
                 $this->greeting = "Ranger Applicant {$person->callsign}";
                 break;
-            case Person::NON_RANGER:
+            case Person::ECHELON:
                 $this->greeting = "Ranger Volunteer {$person->callsign}";
                 break;
             default:

@@ -1597,7 +1597,7 @@ CREATE TABLE `timesheet` (
   `reviewer_person_id` bigint(20) DEFAULT NULL,
   `reviewed_at` datetime DEFAULT NULL,
   `slot_id` bigint(20) DEFAULT NULL,
-  `is_non_ranger` tinyint(1) NOT NULL DEFAULT 0,
+  `is_echelon` tinyint(1) NOT NULL DEFAULT 0,
   `suppress_duration_warning` tinyint(1) NOT NULL DEFAULT 0,
   `was_signin_forced` tinyint(1) NOT NULL DEFAULT 0,
   `desired_position_id` int(11) DEFAULT NULL,

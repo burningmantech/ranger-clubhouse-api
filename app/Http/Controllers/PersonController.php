@@ -541,7 +541,7 @@ class PersonController extends ApiController
             'years' => $person->years_combined,
             'all_years' => $person->years_seen,
             'rangered_years' => $person->years_as_ranger,
-            'non_ranger_years' => $person->years_as_contributor,
+            'echelon_years' => $person->years_as_contributor,
         ]);
     }
 

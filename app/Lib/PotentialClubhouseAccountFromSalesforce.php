@@ -324,9 +324,9 @@ class PotentialClubhouseAccountFromSalesforce
 
         if ($status != Person::AUDITOR
             && $status != Person::PAST_PROSPECTIVE
-            && $status != Person::NON_RANGER) {
+            && $status != Person::ECHELON) {
             $this->status = self::STATUS_EXISTING_BAD_STATUS;
-            $this->message .= ' and is not an auditor, past prospective, or non-ranger';
+            $this->message .= ' and is not an auditor, past prospective, or echelon';
         } else {
             $this->status = self::STATUS_EXISTING;
         }

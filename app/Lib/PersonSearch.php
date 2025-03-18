@@ -43,7 +43,7 @@ class PersonSearch
                 Person::ALPHA,
                 Person::INACTIVE,
                 Person::INACTIVE_EXTENSION,
-                Person::NON_RANGER,
+                Person::ECHELON,
                 Person::PROSPECTIVE,
                 Person::SUSPENDED,
             ]

@@ -23,7 +23,7 @@ use Psr\SimpleCache\InvalidArgumentException;
  * @property ?string $notes
  * @property Carbon $on_duty
  * @property Carbon $reviewed_at
- * @property bool $is_non_ranger
+ * @property bool $is_echelon
  * @property bool $timesheet_confirmed
  * @property int $person_id
  * @property int $position_id
@@ -68,7 +68,7 @@ class Timesheet extends ApiModel
         'desired_position_id',
         'desired_off_duty',
         'desired_on_duty',
-        'is_non_ranger',
+        'is_echelon',
         'off_duty',
         'on_duty',
         'person_id',
@@ -163,8 +163,8 @@ class Timesheet extends ApiModel
          */
 
         self::creating(function (Timesheet $model) {
-            if ($model->person?->status == Person::NON_RANGER) {
-                $model->is_non_ranger = true;
+            if ($model->person?->status == Person::ECHELON) {
+                $model->is_echelon = true;
             }
         });
 
@@ -235,8 +235,8 @@ class Timesheet extends ApiModel
                 TimesheetNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetNote::TYPE_WRANGLER);
             }
             $onDuty = $model->getChangedValues()['on_duty'] ?? null;
-            $isNonRanger = $model->getChangedValues()['is_non_ranger'] ?? null;
-            if ($offDuty || $onDuty || $isNonRanger) {
+            $isEchelon = $model->getChangedValues()['is_echelon'] ?? null;
+            if ($offDuty || $onDuty || $isEchelon) {
                 $model->computePersonYears();
             }
         });
@@ -533,8 +533,8 @@ class Timesheet extends ApiModel
      *
      * YEARS_SEEN: Timesheet years *including* Alpha & Training combined with shift sign up years
      * YEARS_COMBINED: Combined timesheet years excluding Alpha & Training entries for both Ranger and Non-Ranger work.
-     * YEARS_AS_RANGER: Timesheet years excluding Alpha & Training entries as a Ranger (is_non_ranger=false)
-     * YEARS_AS_CONTRIBUTOR: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_non_ranger=true)
+     * YEARS_AS_RANGER: Timesheet years excluding Alpha & Training entries as a Ranger (is_echelon=false)
+     * YEARS_AS_CONTRIBUTOR: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_echelon=true)
      *
      * @param int $personId
      * @param string $type
@@ -556,9 +556,9 @@ class Timesheet extends ApiModel
         }
 
         if ($type == self::YEARS_AS_CONTRIBUTOR) {
-            $sql->where('is_non_ranger', true);
+            $sql->where('is_echelon', true);
         } else if ($type == self::YEARS_AS_RANGER) {
-            $sql->where('is_non_ranger', false);
+            $sql->where('is_echelon', false);
         }
 
         $years = $sql->pluck('year')->toArray();

@@ -62,7 +62,7 @@ class Bmid extends ApiModel
         Person::ALPHA,
         Person::INACTIVE,
         Person::INACTIVE_EXTENSION,
-        Person::NON_RANGER,
+        Person::ECHELON,
         Person::PROSPECTIVE,
         Person::RETIRED,
     ];

@@ -118,7 +118,7 @@ class OnDutyShiftLeadReport
             'person.vehicle_blacklisted',
             DB::raw('IFNULL(person_event.signed_motorpool_agreement, FALSE) as signed_motorpool_agreement'),
             DB::raw('IFNULL(person_event.org_vehicle_insurance, FALSE) as org_vehicle_insurance'),
-            DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id AND is_non_ranger = false) AS years'),
+            DB::raw('(SELECT COUNT(DISTINCT YEAR(on_duty)) FROM timesheet WHERE person_id = person.id AND is_echelon = false) AS years'),
         )
             ->whereNull('timesheet.off_duty')
             ->whereYear('timesheet.on_duty', $year)
