@@ -14,21 +14,21 @@
         <h3>You shall hereby be known as: {{$application->approved_handle}}. Congratulations!</h3>
 
         <p>
-            This is the handle you will be using in training, on the BRC Ranger radios, and as a way to identify
+            This is the handle you will be using in training, on the Black Rock Ranger radios, and as a way to identify
             yourself in person while Rangering. As a courtesy to the hard working Handle Wranglers, please do not
-            request changes to your handle between now and the conclusion of this year’s event.
+            request changes to your handle between now and the conclusion of this year's event.
         </p>
 
         <p>
             Our next step is to load your information into the Ranger scheduling tool called
-            <i>The Secret Clubhouse.</i>
+            <i>The Ranger Secret Clubhouse.</i>
             Look for an email from the Clubhouse asking you to create a password for your account. Please note there
-            will be a delay of up to two weeks before you receive an email from the Clubhouse. Thank you for your
+            may be a delay of up to two weeks before you receive an email from the Clubhouse. Thank you for your
             patience.
         </p>
         <p>
             We will also subscribe you to the Ranger Applicant News email group, which we use for all of our important
-            communication to Ranger Applicants.
+            communication to Ranger applicants.
         </p>
 
         <h3>What can you do now?</h3>
@@ -46,14 +46,14 @@
         <p>
             Check out Ranger trainings near you, or on Playa, and plan on attending one:
             <a href="https://rangers.burningman.org/training/">https://rangers.burningman.org/training/</a>
-            Trainings will be posted between April and May, as they are scheduled.
+            Trainings will be posted between April and June, as they are scheduled.
         </p>
 
         <p>
             <b style="color: red;">
                 Note: You are required to complete the Online Course prior to signing up for In Person Training.
             </b>
-            In-Person Training Sign-Ups will not be available to you in the Clubhouse until the Online Course
+            In-Person Training sign-ups will not be available to you in the Clubhouse until the Online Course
             is completed.
         </p>
 

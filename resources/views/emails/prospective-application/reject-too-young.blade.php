@@ -2,7 +2,7 @@
     Hey {{$application->first_name}} {{$application->last_name}},
 
     <p>
-        Thanks for considering the Rangers! We’ve reviewed your application.
+        Thanks for considering the Rangers! We've reviewed your application.
     </p>
 
     <p>
