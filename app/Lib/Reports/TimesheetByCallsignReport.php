@@ -2,8 +2,11 @@
 
 namespace App\Lib\Reports;
 
+use App\Models\PersonTeam;
 use App\Models\PositionCredit;
+use App\Models\TeamManager;
 use App\Models\Timesheet;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TimesheetByCallsignReport
@@ -14,16 +17,45 @@ class TimesheetByCallsignReport
      * @param int $year
      * @return array
      */
-    public static function execute(int $year)
+
+    public static function execute(int $year): array
     {
         $now = now();
-        $rows = Timesheet::whereYear('on_duty', $year)
+        $user = Auth::user();
+
+        $sql = Timesheet::whereYear('on_duty', $year)
             ->select([
                 '*',
                 DB::raw("(UNIX_TIMESTAMP(IFNULL(off_duty, '$now')) - UNIX_TIMESTAMP(on_duty)) AS duration"),
-            ])
-            ->with(['person:id,callsign,status', 'position:id,title,type,count_hours,active'])
-            ->orderBy('on_duty')
+            ]);
+
+        if (!$user->isAdmin()) {
+            // Need to filter based on what cadre / delegations (not teams) the person belongs to
+            // and what teams they are a Clubhouse Team Manager for.
+            $opsMemberIds = PersonTeam::retrieveCadreMembershipIds($user->id);
+            $managerIds = TeamManager::retrieveTeamIdsForPerson($user->id);
+
+            $teamIds = [...$opsMemberIds, ...$managerIds];
+
+            if (empty($teamIds)) {
+                return self::noTeamsOrPositionsResult();
+            }
+
+            $positionIds = DB::table('position')
+                ->whereIn('team_id', $teamIds)
+                ->pluck('id');
+
+            if ($positionIds->isEmpty()) {
+                return self::noTeamsOrPositionsResult();
+            }
+
+            $sql->whereIn('position_id', $positionIds);
+        }
+
+        $rows = $sql->with([
+            'person:id,callsign,status',
+            'position:id,title,type,count_hours,active'
+        ])->orderBy('on_duty')
             ->get();
 
         if (!$rows->isEmpty()) {
@@ -71,8 +103,18 @@ class TimesheetByCallsignReport
         }
 
         return [
+            'status' => $user->isAdmin() ? 'full-report' : 'partial-report',
             'people' => $callsigns,
             'positions' => $positions,
+        ];
+    }
+
+    public static function noTeamsOrPositionsResult(): array
+    {
+        return [
+            'status' => 'no-membership',
+            'people' => [],
+            'positions' => [],
         ];
     }
 }

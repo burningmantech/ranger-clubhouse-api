@@ -54,6 +54,26 @@ class PersonTeam extends ApiModel
     }
 
     /**
+     * Retrieve all Cadre/Delegation membership team ids for a given person.
+     *
+     * @param int $personId
+     * @return array
+     */
+
+    public static function retrieveCadreMembershipIds(int $personId): array
+    {
+        return DB::table('person_team')
+            ->select('team.id')
+            ->join('team', 'person_team.team_id', '=', 'team.id')
+            ->where('team.active', true)
+            ->where('person_team.person_id', $personId)
+            ->whereIn('team.type', [Team::TYPE_CADRE, Team::TYPE_DELEGATION])
+            ->get()
+            ->pluck('id')
+            ->toArray();
+    }
+
+    /**
      * Find all teams with mvr eligible for the person
      *
      * @param int $personId

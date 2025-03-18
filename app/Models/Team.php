@@ -64,6 +64,8 @@ class Team extends ApiModel
 
     public array|null $role_ids = null;
 
+    const string DELETE_REASON = 'Team deletion';
+
     public static function boot(): void
     {
         parent::boot();
@@ -80,9 +82,9 @@ class Team extends ApiModel
         self::deleted(function ($model) {
             $teamId = $model->id;
             Position::where('team_id', $teamId)->update(['team_id' => null]);
-            PersonTeam::where('team_id', $teamId)->deleteWithReason('Team deletion');
-            PersonTeamLog::where('team_id', $teamId)->deleteWithReason('Team deletion');
-            TeamRole::where('team_id', $teamId)->deleteWithReason('Team deletion');
+            PersonTeam::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
+            PersonTeamLog::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
+            TeamRole::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
             ClubhouseCache::flush();
         });
     }
@@ -234,7 +236,7 @@ class Team extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function description() : Attribute
+    public function description(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }
