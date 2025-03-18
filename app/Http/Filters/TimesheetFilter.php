@@ -29,7 +29,7 @@ class TimesheetFilter
     const array WRANGLER_FIELDS = [
         'additional_admin_notes',
         'additional_wrangler_notes',
-        'is_non_ranger',
+        'is_echelon',
         'person_id',
         'position_id',
         'suppress_duration_warning'

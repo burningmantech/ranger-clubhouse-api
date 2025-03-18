@@ -254,13 +254,13 @@ class ProspectiveClubhouseAccountFromApplication
             $status = $person->status;
             if ($status == Person::AUDITOR
                 || $status == Person::PAST_PROSPECTIVE
-                || $status == Person::NON_RANGER) {
+                || $status == Person::ECHELON) {
                 // Totally fine if the account is updated to prospective status.
                 $this->existing_person = $this->buildPerson($person);
                 $this->existingPerson = $person;
             } else {
                 $this->status = self::STATUS_EXISTING_BAD_STATUS;
-                $this->errors[] = "Account with the same {$unique} already exists, and is not an auditor, past prospective, or non-ranger";
+                $this->errors[] = "Account with the same {$unique} already exists, and is not an auditor, past prospective, or echelon";
                 $this->conflicting_person = $this->buildPerson($person);
                 return;
             }

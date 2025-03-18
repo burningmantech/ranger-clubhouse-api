@@ -150,7 +150,7 @@ class VehicleController extends ApiController
 
         if (!in_array($person->status, Person::ACTIVE_STATUSES)
             && !$person->isPNV()
-            && $person->status != Person::NON_RANGER) {
+            && $person->status != Person::ECHELON) {
             $info = [];
         } else {
             list ($deadline, $pastDeadline) = MVR::retrieveDeadline();

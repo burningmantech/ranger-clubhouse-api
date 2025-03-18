@@ -44,7 +44,7 @@ class MissingPositionsCheck extends SanityCheck
                 Person::INACTIVE,
                 Person::INACTIVE_EXTENSION,
                 Person::PROSPECTIVE,
-                Person::NON_RANGER,
+                Person::ECHELON,
             ]);
 
             foreach ($allUsers as $row) {

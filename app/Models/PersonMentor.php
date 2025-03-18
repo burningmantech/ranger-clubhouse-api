@@ -96,7 +96,7 @@ class PersonMentor extends ApiModel
             $q->from('timesheet')
                 ->select('person_id', DB::raw('MAX(on_duty) as on_duty'))
                 ->whereIn('person_id', $ids)
-                ->where('is_non_ranger', false)
+                ->where('is_echelon', false)
                 ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING])
                 ->groupBy('person_id')
                 ->orderBy('on_duty', 'desc');

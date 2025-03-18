@@ -29,7 +29,7 @@ class RangerRetentionReport
                     ->whereColumn('person.id', 'timesheet.person_id')
                     ->whereYear('on_duty', '>=', $startYear)
                     ->whereNotIn('position_id', [Position::ALPHA, Position::TRAINING, Position::DEEP_FREEZE])
-                    ->where('is_non_ranger', false)
+                    ->where('is_echelon', false)
                     ->limit(1);
             })->orderBy('callsign')
             ->get();

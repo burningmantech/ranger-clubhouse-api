@@ -35,7 +35,7 @@ class FreakingYearsReport
             'FROM (SELECT person.id as person_id, COUNT(DISTINCT(YEAR(on_duty))) AS year FROM ' .
             "person, timesheet WHERE $statusCond person.id = person_id " .
             "AND position_id NOT IN ($excludePositionIds) " .
-            "AND is_non_ranger is false " .
+            "AND is_echelon is false " .
             'GROUP BY person.id, YEAR(on_duty)) AS E ' .
             'GROUP BY E.person_id'
         );

@@ -63,7 +63,7 @@ class Scheduling
         }
 
         $isPNV = ($status == Person::PROSPECTIVE || $status == Person::ALPHA);
-        $isNonRanger = ($status == Person::NON_RANGER);
+        $isEchelon = ($status == Person::ECHELON);
 
         if ($isAuditor || setting('AllowSignupsWithoutPhoto')) {
             // Auditors do not have BMIDs.. or sign ups are allowed explicitly without a photo (DANGEROUS).
@@ -79,7 +79,7 @@ class Scheduling
             $ocCompleted = PersonOnlineCourse::didCompleteForYear($personId, current_year(), Position::TRAINING);
         }
 
-        $canSignUpForTraining = $isNonRanger || $ocCompleted;
+        $canSignUpForTraining = $isEchelon || $ocCompleted;
         $canSignUpForAllShifts = true;
 
         $requirements = [];
@@ -95,7 +95,7 @@ class Scheduling
                 // .. and must pass Online Course before doing anything else
                 $requirements[] = $ocEnabled ? self::OC_MISSING : self::OC_DISABLED;
             }
-        } else if (!$isNonRanger && !$ocCompleted) {
+        } else if (!$isEchelon && !$ocCompleted) {
             // Online Course not completed. Bad Ranger, no biscuit.
             //$requirements[] = $ocEnabled ? self::OC_MISSING : self::OC_DISABLED;
             $canSignUpForTraining = false;
@@ -112,7 +112,7 @@ class Scheduling
             }
 
             // Everyone except Auditors and Non Rangers need to have BPGUID on file.
-            if (!$isNonRanger && empty($person->bpguid)) {
+            if (!$isEchelon && empty($person->bpguid)) {
                 $requirements[] = self::BPGUID_MISSING;
             }
         }
@@ -160,7 +160,7 @@ class Scheduling
         if ($status == Person::ALPHA
             || $status == Person::AUDITOR
             || $status == Person::PROSPECTIVE
-            || $status == Person::NON_RANGER) {
+            || $status == Person::ECHELON) {
             // Do not recommend to PNVs, Auditors, and Non Rangers
             return false;
         }

@@ -52,7 +52,7 @@ class Training extends Position
         $personId = $person->id;
 
         // The person has to have passed dirt training
-        if ($person->status != Person::NON_RANGER
+        if ($person->status != Person::ECHELON
             && !self::didPersonPassForYear($person, Position::TRAINING, $year)) {
             $requiredPositionId = Position::TRAINING;
             return false;

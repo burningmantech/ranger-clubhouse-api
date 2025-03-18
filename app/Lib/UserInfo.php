@@ -72,7 +72,7 @@ class UserInfo
             'years_seen' => $person->years_seen,
         ];
 
-        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::NON_RANGER) {
+        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::ECHELON) {
             $data['mvr_eligible'] = MVR::isEligible($personId, $event, $year);
             $data['mvr_potential'] = Position::haveVehiclePotential('mvr', $personId);
 

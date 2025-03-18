@@ -26,7 +26,6 @@ use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
@@ -58,11 +57,11 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     const string ALPHA = 'alpha';
     const string AUDITOR = 'auditor';
     const string BONKED = 'bonked';
+    const string ECHELON = 'echelon';
     const string DECEASED = 'deceased';
     const string DISMISSED = 'dismissed';
     const string INACTIVE = 'inactive';
     const string INACTIVE_EXTENSION = 'inactive extension';
-    const string NON_RANGER = 'non ranger';
     const string PAST_PROSPECTIVE = 'past prospective';
     const string PROSPECTIVE = 'prospective';
     const string RESIGNED = 'resigned';
@@ -85,7 +84,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         Person::ALPHA,
         Person::INACTIVE,
         Person::INACTIVE_EXTENSION,
-        Person::NON_RANGER,
+        Person::ECHELON,
         Person::PAST_PROSPECTIVE,
         Person::PROSPECTIVE,
         Person::RETIRED,
@@ -145,6 +144,24 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         Person::PAST_PROSPECTIVE,
         Person::RESIGNED,
         Person::UBERBONKED
+    ];
+
+    const array ALL_STATUSES = [
+        self::ACTIVE,
+        self::ALPHA,
+        self::AUDITOR,
+        self::BONKED,
+        self::ECHELON,
+        self::DECEASED,
+        self::DISMISSED,
+        self::INACTIVE,
+        self::INACTIVE_EXTENSION,
+        self::PAST_PROSPECTIVE,
+        self::PROSPECTIVE,
+        self::RESIGNED,
+        self::RETIRED,
+        self::SUSPENDED,
+        self::UBERBONKED,
     ];
 
     /*

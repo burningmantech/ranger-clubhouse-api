@@ -11,23 +11,23 @@ DROP TABLE IF EXISTS `access_document`;
 CREATE TABLE `access_document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `person_id` int(11) NOT NULL,
-  `type` enum('gift_ticket','lsd_ticket','special_price_ticket','staff_credential','vehicle_pass_sp','vehicle_pass_gift','vehicle_pass_lsd','work_access_pass','work_access_pass_so') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `status` enum('qualified','claimed','banked','used','cancelled','expired','submitted','turned_down') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'qualified',
+  `type` enum('gift_ticket','lsd_ticket','special_price_ticket','staff_credential','vehicle_pass_sp','vehicle_pass_gift','vehicle_pass_lsd','work_access_pass','work_access_pass_so') NOT NULL,
+  `status` enum('qualified','claimed','banked','used','cancelled','expired','submitted','turned_down') NOT NULL DEFAULT 'qualified',
   `source_year` int(4) DEFAULT NULL,
   `access_date` datetime DEFAULT NULL,
   `access_any_time` tinyint(1) DEFAULT 0,
-  `name` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `comments` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `name` text DEFAULT NULL,
+  `comments` text DEFAULT NULL,
   `expiry_date` date DEFAULT NULL,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `delivery_method` enum('none','postal','will_call','email') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'none',
-  `street1` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `street2` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `city` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `state` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `postal_code` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `country` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `delivery_method` enum('none','postal','will_call','email') NOT NULL DEFAULT 'none',
+  `street1` varchar(191) NOT NULL DEFAULT '',
+  `street2` varchar(191) NOT NULL DEFAULT '',
+  `city` varchar(191) NOT NULL DEFAULT '',
+  `state` varchar(191) NOT NULL DEFAULT '',
+  `postal_code` varchar(191) NOT NULL DEFAULT '',
+  `country` varchar(191) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   KEY `person_id` (`person_id`,`type`),
   KEY `access_document_type_status_index` (`type`,`status`),
@@ -40,10 +40,10 @@ DROP TABLE IF EXISTS `access_document_changes`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `access_document_changes` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `table_name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `table_name` varchar(32) NOT NULL,
   `record_id` int(11) NOT NULL,
-  `operation` enum('create','modify','delete') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `changes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `operation` enum('create','modify','delete') NOT NULL,
+  `changes` text DEFAULT NULL,
   `changer_person_id` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
@@ -104,17 +104,21 @@ DROP TABLE IF EXISTS `asset`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `asset` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `barcode` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `description` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `type` varchar(255) DEFAULT NULL,
+  `barcode` varchar(25) NOT NULL,
+  `description` varchar(25) DEFAULT NULL COMMENT 'placed by staff',
   `perm_assign` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'assigned "permanently" to a person?',
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `category` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `group_name` varchar(25) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   `year` int(11) NOT NULL DEFAULT 0,
+  `expires_on` date DEFAULT NULL,
+  `order_number` varchar(255) DEFAULT NULL,
+  `entity_assignment` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `asset_type_year_barcode_index` (`type`,`year`,`barcode`),
-  KEY `asset_year_barcode_index` (`year`,`barcode`)
+  KEY `asset_year_barcode_index` (`year`,`barcode`),
+  KEY `asset_order_number_year_index` (`order_number`,`year`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `asset_attachment`;
@@ -122,8 +126,8 @@ DROP TABLE IF EXISTS `asset_attachment`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `asset_attachment` (
   `id` bigint(20) unsigned NOT NULL,
-  `parent_type` enum('Radio','Vehicle') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `description` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `parent_type` enum('Radio','Vehicle') NOT NULL,
+  `description` varchar(32) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -139,6 +143,7 @@ CREATE TABLE `asset_person` (
   `attachment_id` bigint(20) unsigned DEFAULT NULL,
   `check_out_person_id` int(11) DEFAULT NULL,
   `check_in_person_id` int(11) DEFAULT NULL,
+  `check_out_forced` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `person_id` (`person_id`),
   KEY `asset_id` (`asset_id`),
@@ -164,17 +169,17 @@ DROP TABLE IF EXISTS `bmid`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `bmid` (
   `person_id` int(11) NOT NULL,
-  `status` enum('in_prep','do_not_print','ready_to_print','ready_to_reprint_lost','ready_to_reprint_changed','issues','submitted') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('in_prep','do_not_print','ready_to_print','ready_to_reprint_lost','ready_to_reprint_changed','issues','submitted') DEFAULT NULL,
   `year` int(4) NOT NULL DEFAULT 0,
-  `title1` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `title2` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `title3` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `title1` varchar(64) DEFAULT NULL,
+  `title2` varchar(64) DEFAULT NULL,
+  `title3` varchar(64) DEFAULT NULL,
   `showers` tinyint(1) DEFAULT 0,
   `org_vehicle_insurance` tinyint(1) DEFAULT 0,
-  `meals` enum('all','pre','post','event','pre+event','event+post','pre+post') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `batch` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `team` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `meals` enum('all','pre','post','event','pre+event','event+post','pre+post') DEFAULT NULL,
+  `batch` varchar(128) DEFAULT NULL,
+  `team` text DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp(),
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -485,7 +490,7 @@ CREATE TABLE `mentee_status` (
   `mentor_year` int(4) unsigned NOT NULL,
   `person_id` bigint(20) unsigned NOT NULL DEFAULT 0,
   `rank` tinyint(1) unsigned NOT NULL DEFAULT 0,
-  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `mentor_year` (`mentor_year`,`person_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
@@ -592,7 +597,7 @@ CREATE TABLE `person` (
   `has_note_on_file` tinyint(1) NOT NULL DEFAULT 0,
   `callsign_approved` tinyint(1) NOT NULL DEFAULT 0,
   `shirt_size` varchar(10) DEFAULT NULL,
-  `status` enum('prospective','prospective waitlist','past prospective','alpha','bonked','active','inactive','inactive extension','retired','uberbonked','dismissed','resigned','deceased','auditor','non ranger','suspended') NOT NULL DEFAULT 'prospective',
+  `status` enum('active','alpha','auditor','bonked','echelon','deceased','dismissed','inactive','inactive extension','past prospective','prospective','resigned','retired','suspended','uberbonked') NOT NULL,
   `status_date` date DEFAULT NULL,
   `tpassword` varchar(64) DEFAULT NULL,
   `tpassword_expire` int(11) DEFAULT NULL,
@@ -786,8 +791,8 @@ CREATE TABLE `person_mentor` (
   `person_id` bigint(20) unsigned NOT NULL,
   `mentor_id` bigint(20) unsigned NOT NULL,
   `mentor_year` int(4) unsigned NOT NULL,
-  `status` enum('pass','bonk','self-bonk','pending') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` enum('pass','bonk','self-bonk','pending') DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`),
   UNIQUE KEY `person_id` (`person_id`,`mentor_id`,`mentor_year`)
@@ -819,10 +824,10 @@ CREATE TABLE `person_message_2012` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `body` text CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+  `message_from` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_message_2013`;
@@ -833,10 +838,10 @@ CREATE TABLE `person_message_2013` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `body` text CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+  `message_from` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_message_2014`;
@@ -847,10 +852,10 @@ CREATE TABLE `person_message_2014` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `body` text CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+  `message_from` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_message_2015`;
@@ -861,10 +866,10 @@ CREATE TABLE `person_message_2015` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) NOT NULL DEFAULT '',
+  `body` text NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `message_from` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -876,10 +881,10 @@ CREATE TABLE `person_message_2016` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) NOT NULL DEFAULT '',
+  `body` text NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `message_from` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -891,10 +896,10 @@ CREATE TABLE `person_message_2017` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `body` text CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+  `message_from` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_message_2018`;
@@ -905,10 +910,10 @@ CREATE TABLE `person_message_2018` (
   `person_id` int(11) NOT NULL,
   `creator_person_id` int(11) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT '',
+  `body` text CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `delivered` tinyint(1) NOT NULL DEFAULT 0,
-  `message_from` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+  `message_from` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_message_2019`;
@@ -1075,6 +1080,22 @@ CREATE TABLE `person_position_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `person_profile`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `person_profile` (
+  `person_id` int(11) NOT NULL,
+  `show_real_name` tinyint(1) NOT NULL DEFAULT 0,
+  `show_email` tinyint(1) NOT NULL DEFAULT 0,
+  `show_years` tinyint(1) NOT NULL DEFAULT 0,
+  `show_camp` tinyint(1) NOT NULL DEFAULT 0,
+  `show_location` tinyint(1) NOT NULL DEFAULT 0,
+  `biography` text NOT NULL DEFAULT '',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  UNIQUE KEY `person_profile_person_id_unique` (`person_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `person_role`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -1136,7 +1157,6 @@ CREATE TABLE `person_team` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `person_id` int(11) NOT NULL,
   `team_id` int(11) NOT NULL,
-  `is_manager` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -1203,7 +1223,7 @@ DROP TABLE IF EXISTS `position`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `position` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `title` varchar(40) NOT NULL,
   `new_user_eligible` tinyint(1) NOT NULL DEFAULT 0,
   `all_rangers` tinyint(1) NOT NULL DEFAULT 0,
   `count_hours` tinyint(1) NOT NULL DEFAULT 1,
@@ -1211,20 +1231,20 @@ CREATE TABLE `position` (
   `max` int(10) DEFAULT NULL COMMENT 'Max suggested Rangers per slot',
   `on_sl_report` tinyint(1) DEFAULT NULL,
   `on_trainer_report` tinyint(1) NOT NULL DEFAULT 0,
-  `short_title` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `short_title` varchar(6) DEFAULT NULL,
+  `type` varchar(32) DEFAULT NULL,
   `training_position_id` bigint(20) unsigned DEFAULT NULL,
-  `contact_email` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contact_email` varchar(200) DEFAULT NULL,
   `prevent_multiple_enrollments` tinyint(1) NOT NULL DEFAULT 0,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   `alert_when_empty` tinyint(1) NOT NULL DEFAULT 0,
   `team_id` int(11) DEFAULT NULL,
   `require_training_for_roles` tinyint(1) NOT NULL DEFAULT 0,
-  `team_category` enum('public','all_members','optional') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
+  `team_category` enum('public','all_members','optional') NOT NULL DEFAULT 'public',
   `alert_when_becomes_empty` tinyint(1) NOT NULL DEFAULT 0,
   `alert_when_no_trainers` tinyint(1) NOT NULL DEFAULT 0,
-  `paycode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `resource_tag` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `paycode` varchar(255) DEFAULT NULL,
+  `resource_tag` varchar(255) DEFAULT NULL,
   `deselect_on_team_join` tinyint(1) NOT NULL DEFAULT 0,
   `no_payroll_hours_adjustment` tinyint(1) NOT NULL DEFAULT 0,
   `no_training_required` tinyint(1) NOT NULL DEFAULT 0,
@@ -1235,6 +1255,7 @@ CREATE TABLE `position` (
   `parent_position_id` int(11) DEFAULT NULL,
   `not_timesheet_eligible` tinyint(1) NOT NULL DEFAULT 0,
   `cruise_direction` tinyint(1) NOT NULL DEFAULT 0,
+  `mvr_signup_eligible` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `position_mvr_eligible_index` (`mvr_eligible`),
   KEY `position_pvr_eligible_index` (`pvr_eligible`),
@@ -1251,7 +1272,7 @@ CREATE TABLE `position_credit` (
   `start_time` datetime NOT NULL,
   `end_time` datetime NOT NULL,
   `credits_per_hour` decimal(4,2) NOT NULL,
-  `description` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `description` varchar(25) NOT NULL,
   `start_year` int(11) GENERATED ALWAYS AS (year(`start_time`)) STORED,
   `end_year` int(11) GENERATED ALWAYS AS (year(`end_time`)) STORED,
   PRIMARY KEY (`id`),
@@ -1393,12 +1414,31 @@ CREATE TABLE `radio_eligible` (
   PRIMARY KEY (`person_id`,`year`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `request_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `request_log` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `person_id` int(11) DEFAULT NULL,
+  `url` varchar(255) NOT NULL,
+  `ips` varchar(255) NOT NULL,
+  `status` int(11) NOT NULL,
+  `method` varchar(255) NOT NULL,
+  `response_size` int(11) NOT NULL,
+  `completion_time` double NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `request_log_person_id_index` (`person_id`),
+  KEY `request_log_created_at_index` (`created_at`),
+  KEY `request_log_status_created_at_index` (`status`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `role`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `role` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `title` varchar(255) NOT NULL,
   `new_user_eligible` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci COMMENT='authorization roles';
@@ -1556,6 +1596,7 @@ CREATE TABLE `team` (
   `mvr_eligible` tinyint(1) NOT NULL DEFAULT 0,
   `pvr_eligible` tinyint(1) NOT NULL DEFAULT 0,
   `email` varchar(255) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `team_mvr_eligible_index` (`mvr_eligible`),
   KEY `team_pvr_eligible_index` (`pvr_eligible`)
@@ -1593,11 +1634,11 @@ CREATE TABLE `timesheet` (
   `off_duty` datetime DEFAULT NULL COMMENT 'date/time that person signed off of duty',
   `verified_at` datetime DEFAULT NULL,
   `verified_person_id` bigint(20) DEFAULT NULL,
-  `review_status` enum('approved','rejected','pending','unverified','verified') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'unverified',
+  `review_status` enum('approved','rejected','pending','unverified','verified') DEFAULT 'unverified',
   `reviewer_person_id` bigint(20) DEFAULT NULL,
   `reviewed_at` datetime DEFAULT NULL,
   `slot_id` bigint(20) DEFAULT NULL,
-  `is_non_ranger` tinyint(1) NOT NULL DEFAULT 0,
+  `is_echelon` tinyint(1) NOT NULL DEFAULT 0,
   `suppress_duration_warning` tinyint(1) NOT NULL DEFAULT 0,
   `was_signin_forced` tinyint(1) NOT NULL DEFAULT 0,
   `desired_position_id` int(11) DEFAULT NULL,
@@ -1641,7 +1682,7 @@ CREATE TABLE `timesheet_missing` (
   `position_id` bigint(20) NOT NULL,
   `on_duty` datetime NOT NULL,
   `off_duty` datetime NOT NULL,
-  `partner` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `partner` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci NOT NULL,
   `review_status` enum('approved','rejected','pending') DEFAULT 'pending',
   `reviewer_person_id` bigint(20) DEFAULT NULL,
   `reviewed_at` datetime DEFAULT NULL,
@@ -1700,7 +1741,7 @@ CREATE TABLE `trainee_status` (
   `slot_id` bigint(20) unsigned NOT NULL DEFAULT 0,
   `person_id` bigint(20) unsigned NOT NULL DEFAULT 0,
   `passed` tinyint(1) NOT NULL DEFAULT 0,
-  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   `rank` tinyint(1) unsigned DEFAULT NULL,
   `feedback_delivered` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
@@ -1944,7 +1985,7 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (175,'2023_05_26_10
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (176,'2023_06_04_081908_add_deselect_on_join_to_position',96);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (177,'2023_06_10_161617_add_no_payroll_meal_adjustment_to_position',97);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (178,'2023_06_23_152037_add_info_to_pod',98);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (179,'2023_07_24_163001_add_SHIFT_MANAGEMENT_SELF_to_role',99);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (179,'2023_07_24_163001_add_timecard_year_round_to_role',99);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (180,'2023_07_26_145320_add_no_training_requirement_to_position',100);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (181,'2023_09_17_115650_replace_rpt_with_spt',101);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (182,'2023_09_18_091018_add_salesforce_import_permission',102);
@@ -1988,3 +2029,12 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (219,'2024_09_28_12
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (220,'2024_09_29_141416_add_refresh_time_to_document',137);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (221,'2024_10_13_110531_add_years_to_person',138);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (222,'2024_11_01_160128_change_character_set',139);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (223,'2024_11_17_122911_add_expirations_to_asset',140);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (224,'2024_12_29_133444_add_mvr_signup_potential_to_position',141);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (225,'2025_01_02_131811_create_request_log',142);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (226,'2025_01_11_020731_asset_adjustments',143);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (227,'2025_02_17_110308_create_more_roles',144);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (228,'2025_02_28_163225_load_on_trainers_report_flag',145);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (229,'2025_03_14_211343_add_description_to_team',146);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (230,'2025_03_16_174138_drop_is_manager_from_person_team',147);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (231,'2025_03_17_185641_change_non_ranger_to_echelon',148);

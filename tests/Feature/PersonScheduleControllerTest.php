@@ -1144,7 +1144,7 @@ class PersonScheduleControllerTest extends TestCase
     {
         $year = $this->year;
 
-        $person = Person::factory()->create(['status' => Person::NON_RANGER]);
+        $person = Person::factory()->create(['status' => Person::ECHELON]);
         $this->actingAs($person);
         $this->setupPhotoStatus('approved', $person);
 

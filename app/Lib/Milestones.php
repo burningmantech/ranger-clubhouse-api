@@ -46,7 +46,7 @@ class Milestones
         $period = EventDate::calculatePeriod();
         list ($fullTraining, $isBinary) = Training::doesRequireInPersonTrainingFullDay($person);
 
-        $isNonRanger = ($status == Person::NON_RANGER);
+        $isEchelon = ($status == Person::ECHELON);
 
         $settings = setting([
             'MotorPoolProtocolEnabled',
@@ -159,7 +159,7 @@ class Milestones
         $milestones['motorpool_agreement_available'] = $settings['MotorPoolProtocolEnabled'];
         $milestones['motorpool_agreement_signed'] = $event->signed_motorpool_agreement;
 
-        if (!in_array($status, Person::ACTIVE_STATUSES) && !$isNonRanger) {
+        if (!in_array($status, Person::ACTIVE_STATUSES) && !$isEchelon) {
             return $milestones;
         }
 
@@ -179,7 +179,7 @@ class Milestones
             $milestones['nda_required'] = true;
         }
 
-        if (!$isNonRanger) {
+        if (!$isEchelon) {
             // note, some inactives are active trainers yet do not work on playa.
             $milestones['is_trainer'] = PersonPosition::havePosition($personId, Position::TRAINERS[Position::TRAINING]);
         }
@@ -203,7 +203,7 @@ class Milestones
             return $milestones;
         }
 
-        if (!$isNonRanger) {
+        if (!$isEchelon) {
             $milestones['dirt_shifts_available'] = Schedule::areDirtShiftsAvailable();
         }
 
@@ -231,7 +231,7 @@ class Milestones
         // Person might not be eligible until an MVR eligible position is signed up for.
         $milestones['mvr_potential'] = Position::haveVehiclePotential('mvr', $personId);
 
-        if (!$isNonRanger && PersonPosition::havePosition($personId, Position::SANDMAN)) {
+        if (!$isEchelon && PersonPosition::havePosition($personId, Position::SANDMAN)) {
             if ($event->sandman_affidavit) {
                 $milestones['sandman_affidavit_signed'] = true;
             } else if (TraineeStatus::didPersonPassForYear($personId, Position::SANDMAN_TRAINING, $year)

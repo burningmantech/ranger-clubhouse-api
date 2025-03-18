@@ -127,7 +127,7 @@ class PersonEventInfo extends ApihouseResult
             $info->signed_motorpool_agreement = false;
         }
 
-        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::NON_RANGER) {
+        if (in_array($person->status, Person::ACTIVE_STATUSES) || $person->status == Person::ECHELON) {
             $info->mvr_eligible = MVR::isEligible($person->id, $event, $year);
             $info->may_request_stickers = PVR::isEligible($personId, $event, $year);
         }
