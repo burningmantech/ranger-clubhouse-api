@@ -128,7 +128,7 @@ class PersonPhoto extends ApiModel
 
         'is-photo-of-id' => [
             'label' => "Driver's License / Photo",
-            'message' => "Pictures of your driver’s license, passport, or similar id is not allowed. Submit an original photo."
+            'message' => "Pictures of your driver's license, passport, or similar id is not allowed. Submit an original photo."
         ],
 
         'not-color' => [
