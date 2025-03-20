@@ -19,6 +19,8 @@ class RequestLog extends ApiModel
     {
         return [
             'created_at' => 'datetime',
+            'response_payload' => 'json',
+            'request_payload' => 'json',
         ];
     }
 
@@ -103,11 +105,19 @@ class RequestLog extends ApiModel
      * @param string $method
      * @param int $responseSize response content size
      * @param float $completionTime completion time in milliseconds
-     * @return void
+     * @param mixed $requestPayload
+     * @param mixed $responsePayload
      */
 
-    public
-    static function record(?int $personId, string $ips, string $url, int $status, string $method, int $responseSize, float $completionTime): void
+    public static function record(?int    $personId,
+                                  string  $ips,
+                                  string  $url,
+                                  int     $status,
+                                  string  $method,
+                                  int     $responseSize,
+                                  float   $completionTime,
+                                  mixed $requestPayload,
+                                  mixed $responsePayload): void
     {
         self::create([
             'person_id' => $personId,
@@ -116,12 +126,13 @@ class RequestLog extends ApiModel
             'status' => $status,
             'method' => $method,
             'response_size' => $responseSize,
+            'response_payload' => $responsePayload,
+            'request_payload' => $requestPayload,
             'completion_time' => round($completionTime, 2),
         ]);
     }
 
-    public
-    static function expire(int $days = self::EXPIRE_DAYS_DEFAULT): void
+    public static function expire(int $days = self::EXPIRE_DAYS_DEFAULT): void
     {
         self::where('created_at', '<=', now()->subDays($days))->delete();
     }

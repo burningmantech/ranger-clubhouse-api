@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\RequestLog;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -46,19 +47,37 @@ class RequestLoggerMiddleware
 
         Log::$type(number_format($time, 3) . ' ms: ' . $status . ' ' . $method . ' ' . $request->fullUrl());
 
-        if (app()->isLocal()) {
+       /* if (app()->isLocal()) {
             return;
-        }
+        }*/
 
         if ($method == 'OPTIONS') {
             // Don't record CORS preflight requests
             return;
         }
 
+        $requestPayload = null;
+        $responsePayload = null;
         if (method_exists($response, 'file')) {
             $size = $response->file->getSize();
         } else {
-            $size = method_exists($response, 'content') ? strlen($response->content()) : 0;
+            $content = method_exists($response, 'content') ? $response->content() : null;
+            if ($status == 422) {
+                $responsePayload = $content;
+            }
+            $size = $content ? strlen($content) : 0;
+        }
+
+        if ($status == 422) {
+            $requestPayload = [];
+            $params = $request->all();
+            foreach ($params as $name => $param) {
+                if ($param instanceof UploadedFile) {
+                    $requestPayload[$name] = $param->getClientOriginalName();
+                } else {
+                    $requestPayload[$name] = $param;
+                }
+            }
         }
 
         $ip = request_ip();
@@ -66,7 +85,7 @@ class RequestLoggerMiddleware
 
         // Don't record AWS IP heartbeat requests
         if (!(self::isPrivateIp($ip) && $path == "config")) {
-            RequestLog::record(Auth::id(), $ip, $path, $status, $method, $size, $time);
+            RequestLog::record(Auth::id(), $ip, $path, $status, $method, $size, $time, $requestPayload, $responsePayload);
         }
     }
 
