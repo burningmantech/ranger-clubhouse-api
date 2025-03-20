@@ -57,12 +57,14 @@
             is completed.
         </p>
 
-        <p>
-            <b>Practice your radio skills until they are second nature.</b> Reading the <i>ART of Radio</i> will help.
-            Click the link <a href="https://drive.google.com/drive/folders/1UHtAd7wQAM0Tn7FjVDhIuNjBmoDN3rHJ">HERE</a>
-            to begin reading. Also watch your email for information on off-playa virtual radio practice opportunities,
-            coming your way sometime soon.
-        </p>
+        {{--
+                <p>
+                    <b>Practice your radio skills until they are second nature.</b> Reading the <i>ART of Radio</i> will help.
+                    Click the link <a href="https://drive.google.com/drive/folders/1UHtAd7wQAM0Tn7FjVDhIuNjBmoDN3rHJ">HERE</a>
+                    to begin reading. Also watch your email for information on off-playa virtual radio practice opportunities,
+                    coming your way sometime soon.
+                </p>
+        --}}
 
         <p>
             Your Friendly Black Rock Ranger Volunteer Coordinators
