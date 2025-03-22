@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\UnacceptableConditionException;
 use App\Lib\GrantPasses;
 use App\Lib\Reports\ClaimedTicketsWithNoSignups;
+use App\Lib\Reports\EarlyArrivalReport;
 use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
@@ -754,5 +755,19 @@ class AccessDocumentController extends ApiController
 
         usort($results, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
         return response()->json(['access_documents' => $results]);
+    }
+
+    /**
+     * Early Arrival Report
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function earlyArrivalReport() : JsonResponse
+    {
+        $this->authorize('earlyArrivalReport', AccessDocument::class);
+
+        return response()->json(EarlyArrivalReport::execute(current_year()));
     }
 }

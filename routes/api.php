@@ -135,6 +135,7 @@ Route::middleware('api')->group(function () {
     Route::get('access-document/claimed-tickets-with-no-signups', [AccessDocumentController::class, 'claimedTicketsWithNoSignups']);
     Route::post('access-document/clean-access-documents', [AccessDocumentController::class, 'cleanAccessDocsFromPriorEvent']);
     Route::get('access-document/current', [AccessDocumentController::class, 'current']);
+    Route::get('access-document/early-arrival', [AccessDocumentController::class, 'earlyArrivalReport']);
     Route::post('access-document/expire-access-documents', [AccessDocumentController::class, 'expireAccessDocuments']);
     Route::get('access-document/expiring', [AccessDocumentController::class, 'expiring']);
     Route::post('access-document/grant-alpha-waps', [AccessDocumentController::class, 'grantAlphaWAPs']);

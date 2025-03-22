@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class Provision extends ApiModel
 {
@@ -229,11 +228,11 @@ class Provision extends ApiModel
      *
      * @param int $personId
      * @param array|string $type
-     * @param null $isAllocated
+     * @param bool|null $isAllocated
      * @return ?Provision
      */
 
-    public static function findAvailableTypeForPerson(int $personId, array|string $type, $isAllocated = null): ?Provision
+    public static function findAvailableTypeForPerson(int $personId, array|string $type, ?bool $isAllocated = null): ?Provision
     {
         if (!is_array($type)) {
             $type = [$type];
@@ -253,6 +252,26 @@ class Provision extends ApiModel
         }
 
         return $sql->first();
+    }
+
+    /**
+     * Retrieve all active records for a given type and list of people
+     *
+     * @param string $type
+     * @param array $personIds
+     * @return Collection
+     */
+
+    public static function retrieveTypeForPersonIds(string $type, array $personIds): Collection
+    {
+        return self::whereIn('person_id', $personIds)
+            ->where('type', $type)
+            ->whereIn('status', [
+                self::AVAILABLE,
+                self::CLAIMED,
+                self::SUBMITTED,
+            ])->get()
+            ->groupBy('person_id');
     }
 
     /**
@@ -291,7 +310,7 @@ class Provision extends ApiModel
      * @param array $type
      */
 
-    public static function markSubmittedForBMID(int $personId, array $type)
+    public static function markSubmittedForBMID(int $personId, array $type): void
     {
         $rows = self::whereIn('type', $type)
             ->where('person_id', $personId)
@@ -313,7 +332,7 @@ class Provision extends ApiModel
      * @param Person|string|null $user
      */
 
-    public function addComment(string $comment, Person|string|null $user)
+    public function addComment(string $comment, Person|string|null $user): void
     {
         if ($user instanceof Person) {
             $user = $user->callsign;
@@ -359,7 +378,7 @@ class Provision extends ApiModel
      * @param $value
      */
 
-    public function setAdditionalCommentsAttribute($value)
+    public function setAdditionalCommentsAttribute($value): void
     {
         if (empty($value)) {
             return;

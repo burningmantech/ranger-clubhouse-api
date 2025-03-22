@@ -449,6 +449,32 @@ class AccessDocument extends ApiModel
     }
 
     /**
+     * Retrieve everyone who has a SAP prior to the given date.
+     *
+     * @param Carbon $priorTo
+     * @return array
+     */
+
+    public static function retrieveSAPsPriorTo(Carbon $priorTo): array
+    {
+        $waps = self::whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED, self::USED])
+            ->whereYear('access_date', $priorTo->year)
+            ->where('access_date', '<', $priorTo)
+            ->with('person:id,callsign,status,on_site')
+            ->orderBy('source_year')
+            ->get()
+            ->groupBy('person_id');
+
+        $people = [];
+        foreach ($waps as $personId => $rows) {
+            $people[$personId] = self::wapCandidate($rows);
+        }
+
+        return array_values($people);
+    }
+
+    /**
      * Find the most appropriate WAP candidate record. The first record with any time access takes priority,
      * followed by the earliest access date.
      *
