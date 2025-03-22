@@ -30,7 +30,6 @@ class SpigotFlowReport
         // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
         $pnvStatus = PersonStatus::select('person_id', 'created_at')
             ->whereYear('created_at', $year)
-            ->where('created_at', '>=', "$year-04-01")
             ->where('new_status', Person::PROSPECTIVE)
             ->orderBy('created_at')
             ->get()
@@ -68,7 +67,6 @@ class SpigotFlowReport
         // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
         $droppedStatus = PersonStatus::select('person_id', 'created_at', 'new_status')
             ->whereYear('created_at', $year)
-            ->where('created_at', '>=', "$year-04-01")
             ->where('new_status', Person::PAST_PROSPECTIVE)
             ->whereIntegerInRaw('person_id', $pnvIds)
             ->orderBy('created_at')
