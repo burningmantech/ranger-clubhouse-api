@@ -13,18 +13,18 @@ class EventDate extends ApiModel
     /**
      * On playa operation periods
      */
-    const PRE_EVENT_OPS = 'pre';
-    const POST_EVENT_OPS = 'post';
-    const EVENT_WEEK_OPS = 'event';
+    const string PRE_EVENT_OPS = 'pre';
+    const string POST_EVENT_OPS = 'post';
+    const string EVENT_WEEK_OPS = 'event';
 
     /**
      * Event cycle periods throughout the year wrt the {Ranger,PNV,Auditor} dashboards.
      * (not to be confuse with the {pre,post}-event weeks.)
      */
 
-    const AFTER_EVENT = 'after-event';
-    const BEFORE_EVENT = 'before-event';
-    const EVENT = 'event';
+    const string AFTER_EVENT = 'after-event';
+    const string BEFORE_EVENT = 'before-event';
+    const string EVENT = 'event';
 
     protected $resourceSingle = 'event_date';
 

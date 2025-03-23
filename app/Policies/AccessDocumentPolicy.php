@@ -11,11 +11,13 @@ class AccessDocumentPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user)
+    public function before(Person $user) : ?bool
     {
         if ($user->hasRole([Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -216,6 +218,18 @@ class AccessDocumentPolicy
      */
 
     public function specialTicketsReport(Person $user) : false
+    {
+        return false;
+    }
+
+    /**
+     * Can the user run the Early Arrival report
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function earlyArrivalReport(Person $user) : false
     {
         return false;
     }

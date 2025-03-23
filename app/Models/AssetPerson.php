@@ -42,7 +42,7 @@ class AssetPerson extends ApiModel
         'asset_id' => 'required|integer',
     ];
 
-    const RELATIONSHIPS = [
+    const array RELATIONSHIPS = [
         'asset',
         'attachment',
         'person:id,callsign',
@@ -109,7 +109,28 @@ class AssetPerson extends ApiModel
     }
 
     /**
-     * Find the check out/in history for an asset.
+     * Retrieve all checked out type for a list of person ids
+     *
+     * @param string $type
+     * @param array $personIds
+     * @return Collection
+     */
+
+    public static function retrieveTypeForPersonIds(string $type, array $personIds): Collection
+    {
+        return self::join('asset', 'asset_person.asset_id', 'asset.id')
+            ->select('asset_person.*')
+            ->whereYear('checked_out', current_year())
+            ->whereNull('checked_in')
+            ->whereIn('person_id', $personIds)
+            ->where('asset.type', $type)
+            ->with('asset')
+            ->get()
+            ->groupBy('person_id');
+    }
+
+    /**
+     * Find the check-out/in history for an asset.
      *
      * @param $assetId
      * @return Collection|array
