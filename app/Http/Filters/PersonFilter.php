@@ -149,21 +149,21 @@ class PersonFilter
     // 0: array of field names
     // 1: allow fields if the person is the user
     // 2: which roles are allowed the field (if null, allow any)
-    // 3: Only allowed if LoginManagementOnPlayaEnabled is turned on.
+    // 3: Only allowed if EventManagementOnPlayaEnabled is turned on.
 
     const array FIELDS_SERIALIZE = [
         [self::NAME_GENDER_FIELDS],
         [self::STATUS_FIELDS],
         [self::ACCOUNT_FIELDS],
         [self::CALLSIGNS_FIELDS],
-        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER]],
+        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT, Role::VC, Role::TRAINER]],
         [self::EMAIL_FIELDS, true, [Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]],
         [self::PERSONAL_INFO_FIELDS, true, [Role::VIEW_PII, Role::VC]],
         [self::CLOTHING_FIELDS, true, [Role::VIEW_PII, Role::VC, Role::EDIT_CLOTHING]],
-        [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
+        [self::HQ_INFO, true, [Role::EVENT_MANAGEMENT, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS],
-        [self::EVENT_FIELDS, true, [Role::MANAGE]],
-        [self::BPGUID_FIELD, true, [Role::VIEW_PII, Role::MANAGE, Role::VC, Role::MENTOR, Role::EDIT_BMIDS]],
+        [self::EVENT_FIELDS, true, [Role::EVENT_MANAGEMENT]],
+        [self::BPGUID_FIELD, true, [Role::VIEW_PII, Role::EVENT_MANAGEMENT, Role::VC, Role::MENTOR, Role::EDIT_BMIDS]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         // Note: self is not allowed to see mentor notes
         [self::INTAKE_FIELDS, false, [Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE]],
@@ -172,7 +172,7 @@ class PersonFilter
         [self::RANGER_ADMIN_FIELDS],
         [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
         [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
-        [self::YEAR_FIELDS, true, [Role::MANAGE, Role::TRAINER]],
+        [self::YEAR_FIELDS, true, [Role::EVENT_MANAGEMENT, Role::TRAINER]],
     ];
 
     const array FIELDS_DESERIALIZE = [
@@ -184,7 +184,7 @@ class PersonFilter
         [self::EMAIL_FIELDS, true, [Role::VC]],
         [self::PERSONAL_INFO_FIELDS, true, [Role::VC]],
         [self::CLOTHING_FIELDS, true, [Role::VC, Role::EDIT_CLOTHING]],
-        [self::HQ_INFO, true, [Role::MANAGE, Role::VIEW_PII, Role::VC]],
+        [self::HQ_INFO, true, [Role::EVENT_MANAGEMENT, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS, true, [Role::ADMIN]],
         [self::EVENT_FIELDS, false, [Role::SHIFT_MANAGEMENT]],
         [self::BPGUID_FIELD, true, [Role::EDIT_BMIDS]],
@@ -199,7 +199,7 @@ class PersonFilter
 
     public function buildFields(array $fieldGroups, $authorizedUser): array
     {
-        $onplaya = setting('LoginManageOnPlayaEnabled');
+        $onplaya = setting('EventManagementOnPlayaEnabled');
 
         $fields = [];
 
@@ -225,7 +225,7 @@ class PersonFilter
                 if (isset($group[2])) {
                     $roles = $group[2];
                     if (isset($group[3]) && $onplaya) {
-                        $roles[] = Role::MANAGE;
+                        $roles[] = Role::EVENT_MANAGEMENT;
                     }
                 }
             }

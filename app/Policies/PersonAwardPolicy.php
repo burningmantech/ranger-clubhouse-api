@@ -28,7 +28,7 @@ class PersonAwardPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $personId == $user->id || $user->hasRole(Role::MANAGE);
+        return $personId == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -37,7 +37,7 @@ class PersonAwardPolicy
 
     public function show(Person $user, PersonAward $award): bool
     {
-        return $award->person_id == $user->id || $user->hasRole(Role::MANAGE);
+        return $award->person_id == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

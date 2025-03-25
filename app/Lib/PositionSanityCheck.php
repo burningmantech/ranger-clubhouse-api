@@ -17,7 +17,7 @@ class PositionSanityCheck
         'deactivated_accounts' => PositionSanityCheck\DeactivatedAccounts::class,
         'deactivated_positions' => DeactivatedPositionCheck::class,
         'deactivated_teams' => PositionSanityCheck\DeactivatedTeamsCheck::class,
-        'lmyr' => PositionSanityCheck\LoginManagementYearRoundCheck::class,
+        'emop' => PositionSanityCheck\EventManagementYearRoundCheck::class,
         'missing_positions' => PositionSanityCheck\MissingPositionsCheck::class,
         'retired_accounts' => PositionSanityCheck\RetiredAccounts::class,
         'shiny_pennies' => PositionSanityCheck\ShinnyPenniesCheck::class,

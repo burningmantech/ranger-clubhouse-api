@@ -29,7 +29,7 @@ class PersonFkaPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $user->id == $personId || $user->hasRole([Role::MANAGE, Role::TRAINER]);
+        return $user->id == $personId || $user->hasRole([Role::EVENT_MANAGEMENT, Role::TRAINER]);
     }
 
     /**
@@ -42,7 +42,7 @@ class PersonFkaPolicy
 
     public function show(Person $user, PersonFka $person_fka): true
     {
-        return $user->id == $person_fka->person_id || $user->hasRole([Role::MANAGE, Role::TRAINER]);
+        return $user->id == $person_fka->person_id || $user->hasRole([Role::EVENT_MANAGEMENT, Role::TRAINER]);
     }
 
     /**

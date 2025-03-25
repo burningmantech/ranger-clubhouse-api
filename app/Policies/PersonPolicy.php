@@ -13,7 +13,7 @@ class PersonPolicy
 
     const array AUTHORIZED_ROLES = [
         Role::ADMIN,
-        Role::MANAGE,
+        Role::EVENT_MANAGEMENT,
         Role::MENTOR,
         Role::TRAINER,
         Role::VC,
@@ -143,7 +143,7 @@ class PersonPolicy
 
     public function updatePositions(Person $user, Person $person): bool
     {
-        return $user->isAdmin() || $user->hasRole(Role::MANAGE);
+        return $user->isAdmin() || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -160,7 +160,7 @@ class PersonPolicy
 
     public function updateTeams(Person $user, Person $person): bool
     {
-        return $user->isAdmin() || $user->hasRole(Role::MANAGE);
+        return $user->isAdmin() || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function mentees(Person $user, Person $person): bool
@@ -175,7 +175,7 @@ class PersonPolicy
 
     public function eventInfo(Person $user, Person $person): bool
     {
-        return $user->id == $person->id || $user->hasRole([Role::ADMIN, Role::MANAGE]);
+        return $user->id == $person->id || $user->hasRole([Role::ADMIN, Role::EVENT_MANAGEMENT]);
     }
 
     public function alphaShirts(Person $user): bool
@@ -200,7 +200,7 @@ class PersonPolicy
 
     public function statusHistory(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function isAdmin(Person $user): bool
@@ -236,7 +236,7 @@ class PersonPolicy
 
     public function ticketsProvisionsProgress(Person $user, Person $person): bool
     {
-        return ($user->id == $person->id) || $user->hasRole([Role::ADMIN, Role::MANAGE]);
+        return ($user->id == $person->id) || $user->hasRole([Role::ADMIN, Role::EVENT_MANAGEMENT]);
     }
 
     /**

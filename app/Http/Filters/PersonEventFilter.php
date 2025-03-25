@@ -62,7 +62,7 @@ class PersonEventFilter
         [self::USER_FIELDS, true, [Role::ADMIN]],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::READONLY_FIELDS, false, [Role::ADMIN]],
-        [self::HQ_FIELDS, false, [Role::ADMIN, Role::MANAGE, Role::VC, Role::TRAINER, Role::MENTOR]],
+        [self::HQ_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT, Role::VC, Role::TRAINER, Role::MENTOR]],
         [self::TIMESHEET_FIELDS, true, [Role::ADMIN, Role::TIMESHEET_MANAGEMENT]]
     ];
 

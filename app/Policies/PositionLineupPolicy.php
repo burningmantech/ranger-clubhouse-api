@@ -18,12 +18,12 @@ class PositionLineupPolicy
 
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function show(Person $user, PositionLineup $positionLineup): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function store(Person $user): false
@@ -43,6 +43,6 @@ class PositionLineupPolicy
 
     public function positions(Person $user, PositionLineup $positionLineup): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

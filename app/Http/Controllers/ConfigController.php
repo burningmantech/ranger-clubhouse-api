@@ -17,7 +17,7 @@ class ConfigController extends Controller
         'AuditorRegistrationDisabled',
         'HQWindowInterfaceEnabled',
         'JoiningRangerSpecialTeamsUrl',
-        'LoginManageOnPlayaEnabled',
+        'EventManagementOnPlayaEnabled',
         'MealDates',
         'MealInfoAvailable',
         'MentorEmail',

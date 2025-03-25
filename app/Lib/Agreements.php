@@ -66,7 +66,7 @@ class Agreements
         Document::DEPT_NDA_TAG => [
             'term' => self::TERM_ANNUAL,
             'column' => 'signed_nda',
-            'role' => Role::MANAGE,     // Only show if the effective role has been granted
+            'role' => Role::EVENT_MANAGEMENT,     // Only show if the effective role has been granted
         ]
     ];
 

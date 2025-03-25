@@ -30,7 +30,7 @@ class PersonLanguageControllerTest extends TestCase
 
     public function testLanguagesReport()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $personEnglish = Person::factory()->create(['on_site' => 1]);
         PersonLanguage::factory()->create([

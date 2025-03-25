@@ -26,7 +26,7 @@ class AssetPersonPolicy
 
     public function view(Person $user, AssetPerson $asset_person): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -45,7 +45,7 @@ class AssetPersonPolicy
 
     public function update(Person $user, AssetPerson $asset_person): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -64,6 +64,6 @@ class AssetPersonPolicy
 
     public function radioCheckoutReport(Person $user): false
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

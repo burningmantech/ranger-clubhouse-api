@@ -374,9 +374,9 @@
             <td>Login Mgmt On Playa</td>
             <td>
                 @if ($dashboardPeriod == 'event')
-                    {!! ($settings['LoginManageOnPlayaEnabled'] ?? false) ? "Enabled (normal for event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                    {!! ($settings['EventManagementOnPlayaEnabled'] ?? false) ? "Enabled (normal for event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
                 @else
-                    {!!($settings['LoginManageOnPlayaEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal for pre-event/after-event)'  !!}
+                    {!!($settings['EventManagementOnPlayaEnabled'] ?? false) ? '<b style="color: red">ENABLED (NOT NORMAL)</b>' : 'Disabled (normal for pre-event/after-event)'  !!}
                 @endif
             </td>
         </tr>

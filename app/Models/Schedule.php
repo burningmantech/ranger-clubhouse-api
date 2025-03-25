@@ -347,7 +347,7 @@ class Schedule
                 }
             }
 
-            if ($slot->position->alert_when_becomes_empty && setting('LoginManageOnPlayaEnabled')) {
+            if ($slot->position->alert_when_becomes_empty && setting('EventManagementOnPlayaEnabled')) {
                 AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot)->delay(now()->addMinutes(5));
             }
         }

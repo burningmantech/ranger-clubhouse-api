@@ -67,14 +67,14 @@ class VehicleFilter
         [self::REVIEW_FIELDS],
         [self::PAPERWORK_FIELDS],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
-        [self::VEHICLE_MAINTENANCE_FIELDS, true, [Role::ADMIN, Role::MANAGE]],
+        [self::VEHICLE_MAINTENANCE_FIELDS, true, [Role::ADMIN, Role::EVENT_MANAGEMENT]],
     ];
 
     const FIELDS_DESERIALIZE = [
         [self::VEHICLE_FIELDS, true, [Role::ADMIN]],
         [self::REVIEW_FIELDS, false, [Role::ADMIN]],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
-        [self::VEHICLE_MAINTENANCE_FIELDS, false, [Role::ADMIN, Role::MANAGE]],
+        [self::VEHICLE_MAINTENANCE_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT]],
     ];
 
     protected $record;

@@ -39,7 +39,7 @@ class TimesheetMissingFilter
     {
         $fields = [self::USER_FIELDS];
 
-        if ($user->hasRole(Role::MANAGE)) {
+        if ($user->hasRole(Role::EVENT_MANAGEMENT)) {
             $fields[] = self::MANAGE_FIELDS;
         }
 

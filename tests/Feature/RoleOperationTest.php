@@ -70,7 +70,7 @@ class RoleOperationTest extends TestCase
     public function test_roles_are_retained_when_nda_does_not_exist(): void
     {
         $this->signInUser();
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
         $person = Person::factory()->create();
 
         // Ensure the user can retain LM if the NDA doesn't exist.
@@ -86,7 +86,7 @@ class RoleOperationTest extends TestCase
 
     public function test_roles_are_nuked_when_nda_is_not_signed(): void
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
@@ -104,7 +104,7 @@ class RoleOperationTest extends TestCase
 
     public function test_roles_are_kept_for_tech_ninjas(): void
     {
-        $this->addRole([Role::TECH_NINJA, Role::MANAGE]);
+        $this->addRole([Role::TECH_NINJA, Role::EVENT_MANAGEMENT]);
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.
@@ -122,7 +122,7 @@ class RoleOperationTest extends TestCase
 
     public function test_roles_are_kept_when_NDA_is_signed(): void
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
         $person = Person::factory()->create();
 
         // Ensure the LM is revoked when the NDA is present and has not agreed to the doc.

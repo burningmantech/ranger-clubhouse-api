@@ -106,11 +106,11 @@ class PositionControllerTest extends TestCase
         $position = Position::factory()->create();
 
         $response = $this->json('PATCH', "position/{$position->id}", [
-            'position' => ['role_ids' => [Role::MANAGE]]
+            'position' => ['role_ids' => [Role::EVENT_MANAGEMENT]]
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('position_role', [ 'position_id' => $position->id, 'role_id' => Role::MANAGE ]);
+        $this->assertDatabaseHas('position_role', [ 'position_id' => $position->id, 'role_id' => Role::EVENT_MANAGEMENT ]);
     }
 
     /**
@@ -152,7 +152,7 @@ class PositionControllerTest extends TestCase
 
     public function testSandmanQualificationReport()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $sandmanTraining = Slot::factory()->create([
             'description' => 'Stop that runner',

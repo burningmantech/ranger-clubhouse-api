@@ -49,7 +49,7 @@ class ClubhouseDailyReportCommand extends Command
 
         $settings = setting([
             'DashboardPeriod',
-            'LoginManageOnPlayaEnabled',
+            'EventManagementOnPlayaEnabled',
             'OnlineCourseDisabledAllowSignups',
             'OnlineCourseEnabled',
             'PhotoUploadEnable',
