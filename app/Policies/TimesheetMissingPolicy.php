@@ -13,7 +13,7 @@ class TimesheetMissingPolicy
 
 
     private function hasRoles(Person $user) {
-        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::MANAGE, Role::ADMIN])) {
+        if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::EVENT_MANAGEMENT, Role::ADMIN])) {
             return true;
         }
     }

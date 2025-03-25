@@ -298,7 +298,7 @@ class SlotControllerTest extends TestCase
 
     public function testHQForestcastReport()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $year = $this->year;
 
@@ -439,7 +439,7 @@ class SlotControllerTest extends TestCase
 
     public function testScheduleByPosition()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $year = date('Y');
         $person = Person::factory()->create();
@@ -500,7 +500,7 @@ class SlotControllerTest extends TestCase
 
     public function testScheduleByCallsign()
     {
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $year = date('Y');
         $person = Person::factory()->create();

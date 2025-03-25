@@ -13,7 +13,7 @@ class PersonPogPolicy
 
     public function before(Person $user)
     {
-        if ($user->hasRole([Role::ADMIN, Role::MANAGE])) {
+        if ($user->hasRole([Role::ADMIN, Role::EVENT_MANAGEMENT])) {
             return true;
         }
     }

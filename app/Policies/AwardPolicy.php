@@ -77,7 +77,7 @@ class AwardPolicy
 
     public function personAwards(Person $user, Person $person): bool
     {
-        return $user->id == $person->id || $user->hasRole(Role::MANAGE);
+        return $user->id == $person->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

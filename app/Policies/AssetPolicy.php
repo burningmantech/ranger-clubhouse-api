@@ -23,7 +23,7 @@ class AssetPolicy
      */
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -31,7 +31,7 @@ class AssetPolicy
      */
     public function view(Person $user, Asset $asset): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -68,7 +68,7 @@ class AssetPolicy
 
     public function checkout(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /*
@@ -77,7 +77,7 @@ class AssetPolicy
 
     public function checkin(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /*
@@ -86,6 +86,6 @@ class AssetPolicy
 
     public function history(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

@@ -78,7 +78,7 @@ class PersonLanguagePolicy
 
     public function search(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -87,6 +87,6 @@ class PersonLanguagePolicy
 
     public function onSiteReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

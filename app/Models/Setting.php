@@ -623,7 +623,7 @@ class Setting extends ApiModel
             'type' => self::TYPE_EMAIL
         ],
 
-        'LoginManageOnPlayaEnabled' => [
+        'EventManagementOnPlayaEnabled' => [
             'description' => 'Enables Login Manage On Playa role AND allows LM Year Round to view Emergency Contact Info plus read Clubhouse Messages',
             'type' => self::TYPE_BOOL
         ]

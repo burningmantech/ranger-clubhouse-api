@@ -28,7 +28,7 @@ class PersonPositionLogPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return ($personId == $user->id) || $user->hasRole(Role::MANAGE);
+        return ($personId == $user->id) || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -41,7 +41,7 @@ class PersonPositionLogPolicy
 
     public function view(Person $user, PersonPositionLog $PersonPositionLog): bool
     {
-        return ($user->id == $PersonPositionLog->person_id) || $user->hasRole(Role::MANAGE);
+        return ($user->id == $PersonPositionLog->person_id) || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

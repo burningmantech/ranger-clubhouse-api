@@ -1209,7 +1209,7 @@ class PersonScheduleControllerTest extends TestCase
     public function testScheduleLogSuccess()
     {
         $this->addPosition(Position::DIRT);
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
         $this->setupDirtSlots();
 
         $shift = $this->dirtSlots[0];

@@ -916,7 +916,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     /**
      * Retrieve the person's effective roles.
      *
-     * Add MANAGE if person has MANAGE_ON_PLAYA and if LoginManageOnPlayaEnabled is true
+     * Add MANAGE if person has MANAGE_ON_PLAYA and if EventManagementOnPlayaEnabled is true
      * Add TRAINER if person has TRAINER_SEASONAL and if TrainingSeasonalRoleEnabled is true
      *
      * User has to have the Ranger NDA signed if an LM role is in effect, otherwise kill
@@ -981,13 +981,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $this->trueRolesById = $this->rolesById;
         $this->trueRoles = array_keys($this->rolesById);
 
-        $haveManage = $this->rolesById[Role::MANAGE] ?? false;
-        $lmopEnabled = setting('LoginManageOnPlayaEnabled');
+        $haveManage = $this->rolesById[Role::EVENT_MANAGEMENT] ?? false;
+        $lmopEnabled = setting('EventManagementOnPlayaEnabled');
 
         if (!$haveManage
-            && isset($this->rolesById[Role::MANAGE_ON_PLAYA])
+            && isset($this->rolesById[Role::EVENT_MANAGEMENT_ON_PLAYA])
             && $lmopEnabled) {
-            $this->rolesById[Role::MANAGE] = true;
+            $this->rolesById[Role::EVENT_MANAGEMENT] = true;
             $haveManage = true;
         }
 

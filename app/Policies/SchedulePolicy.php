@@ -12,7 +12,7 @@ class SchedulePolicy
 
     public function before(Person $user)
     {
-        if ($user->hasRole([Role::MANAGE, Role::ADMIN, Role::VC, Role::TRAINER, Role::MENTOR])
+        if ($user->hasRole([Role::EVENT_MANAGEMENT, Role::ADMIN, Role::VC, Role::TRAINER, Role::MENTOR])
             || $user->hasARTTrainerPositionRole()) {
             return true;
         }

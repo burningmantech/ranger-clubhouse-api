@@ -7,7 +7,7 @@ use App\Models\Role;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class LoginManagementYearRoundCheck extends SanityCheck
+class EventManagementYearRoundCheck extends SanityCheck
 {
     /**
      * Find people who have the Login Management Year Round Role but do not belong to
@@ -33,7 +33,7 @@ class LoginManagementYearRoundCheck extends SanityCheck
     }
 
     /**
-     * Revoke the LMYR Role from selected individuals
+     * Revoke the Event Management Year Round Role from selected individuals
      *
      * @param $peopleIds
      * @param ...$options
@@ -47,7 +47,7 @@ class LoginManagementYearRoundCheck extends SanityCheck
 
         foreach ($rows as $person) {
             $personId = $person->id;
-            PersonRole::removeIdsFromPerson($personId, [Role::MANAGE], 'position sanity checker repair - no LMYR position');
+            PersonRole::removeIdsFromPerson($personId, [Role::EVENT_MANAGEMENT], 'position sanity checker repair - no Event Management Year Round position');
             $results[] = ['id' => $personId];
         }
 
@@ -55,8 +55,8 @@ class LoginManagementYearRoundCheck extends SanityCheck
     }
 
     /**
-     * Retrieve folks who were manually assigned the LMYR Role but do not hold
-     * any position which grants LMYR.
+     * Retrieve folks who were manually assigned the EMYR Role but do not hold
+     * any position which grants EMYR.
      *
      * @param array $peopleIds
      * @return Collection
@@ -66,7 +66,7 @@ class LoginManagementYearRoundCheck extends SanityCheck
     {
         if (empty($peopleIds)) {
             $peopleIds = DB::table('person_role')
-                ->where('person_role.role_id', Role::MANAGE)
+                ->where('person_role.role_id', Role::EVENT_MANAGEMENT)
                 ->get('person_id')
                 ->pluck('person_id');
         }
@@ -77,14 +77,14 @@ class LoginManagementYearRoundCheck extends SanityCheck
 
         $positionIds = DB::table('position_role')
             ->select('position_role.position_id')
-            ->where('position_role.role_id', Role::MANAGE)
+            ->where('position_role.role_id', Role::EVENT_MANAGEMENT)
             ->get()
             ->pluck('position_id')
             ->toArray();
 
         $teamIds = DB::table('team_role')
             ->select('team_role.team_id')
-            ->where('team_role.role_id', Role::MANAGE)
+            ->where('team_role.role_id', Role::EVENT_MANAGEMENT)
             ->get()
             ->pluck('team_id')
             ->toArray();

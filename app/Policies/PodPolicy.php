@@ -21,12 +21,12 @@ class PodPolicy
 
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function show(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function store(Person $user): bool

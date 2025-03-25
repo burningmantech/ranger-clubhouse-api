@@ -34,7 +34,7 @@ class PersonCertificationPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $personId == $user->id || $user->hasRole(Role::MANAGE);
+        return $personId == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -43,7 +43,7 @@ class PersonCertificationPolicy
 
     public function show(Person $user, PersonCertification $certification): bool
     {
-        return $user->id == $certification->person_id || $user->hasRole(Role::MANAGE);
+        return $user->id == $certification->person_id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

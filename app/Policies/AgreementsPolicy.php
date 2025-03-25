@@ -20,7 +20,7 @@ class AgreementsPolicy
 
     public function index(Person $user, Person $person): bool
     {
-        return $person->id == $user->id || $user->hasRole(Role::MANAGE);
+        return $person->id == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -33,7 +33,7 @@ class AgreementsPolicy
 
     public function show(Person $user, Person $person): bool
     {
-        return $person->id == $user->id || $user->hasRole(Role::MANAGE);
+        return $person->id == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

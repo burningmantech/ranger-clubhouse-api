@@ -19,8 +19,8 @@ class Role extends ApiModel
     const int EDIT_ACCESS_DOCS = 5;   // Edit Access Documents
     const int EDIT_BMIDS = 6;   // Edit BMIDs
     const int EDIT_SLOTS = 7;   // Edit Slots
-    const int LOGIN = 11;  // Obsoleted: Person allowed to login (not used, superseded by the suspend status)
-    const int MANAGE = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
+    //const int LOGIN = 11;  --  Obsoleted: Person allowed to login (not used, superseded by the suspend status)
+    const int EVENT_MANAGEMENT = 12;  // Ranger HQ: access other schedule, asset checkin/out, send messages
     const int INTAKE = 13;  // Intake Management
     const int MENTOR = 101; // Mentor - access mentor section
     const int TRAINER = 102; // Trainer
@@ -29,7 +29,7 @@ class Role extends ApiModel
     const int MEGAPHONE = 105; // RBS access
     const int TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
     const int SURVEY_MANAGEMENT_TRAINING = 107; // Allow to create/edit/delete surveys, and view responders identity.
-    const int MANAGE_ON_PLAYA = 108; // Treated as MANAGE if setting LoginManageOnPlayaEnabled is true
+    const int EVENT_MANAGEMENT_ON_PLAYA = 108; // Treated as Event Management if setting EventManagementOnPlayaEnabled is true
     const int TRAINER_SEASONAL = 109; // Treated as TRAINER if setting TrainingSeasonalRoleEnabled is true
     const int CERTIFICATION_MGMT = 110; // Person can add certifications on a person's behalf, and view detailed info (card number, notes, etc.)
     const int EDIT_ASSETS = 111;    // Person can create and edit asset records
@@ -41,8 +41,8 @@ class Role extends ApiModel
     const int VEHICLE_MANAGEMENT = 116;     // Can access vehicle fleet management features
     const int SHIFT_MANAGEMENT_SELF = 117;    // Paid folks who can self check in/out, and submit timesheet corrections year round.
     const int SALESFORCE_IMPORT = 118;      // Allowed to import new accounts from Salesforce
-    const int MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round regardless of LMOP Enabled setting.
-    const int EDIT_CLOTHING = 120;   // Can edit a clothing fields.
+    const int MESSAGE_MANAGEMENT = 119;     // Allow access to Clubhouse Messages year round
+    const int EDIT_CLOTHING = 120;   // Can edit clothing fields for anyone.
     const int MEGAPHONE_TEAM_ONPLAYA = 121;  // On-Playa Megaphone permission
     const int MEGAPHONE_EMERGENCY_ONPLAYA = 122;    // Allows access to the broadcast all emergency
     const int ANNOUNCEMENT_MANAGEMENT = 123;    // Allow announcements to be created and deleted.

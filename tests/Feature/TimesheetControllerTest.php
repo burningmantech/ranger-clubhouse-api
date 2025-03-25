@@ -41,7 +41,7 @@ class TimesheetControllerTest extends TestCase
         parent::setUp();
 
         $this->signInUser();
-        $this->addRole(Role::MANAGE);
+        $this->addRole(Role::EVENT_MANAGEMENT);
 
         $year = $this->year = date('Y');
 

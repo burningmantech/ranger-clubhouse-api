@@ -25,6 +25,6 @@ class ActionLogPolicy
 
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

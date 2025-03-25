@@ -26,7 +26,7 @@ class TimesheetPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $user->hasRole(Role::MANAGE) || ($user->id == $personId);
+        return $user->hasRole(Role::EVENT_MANAGEMENT) || ($user->id == $personId);
     }
 
     /*
@@ -126,7 +126,7 @@ class TimesheetPolicy
 
     public function log(Person $user, $id): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -207,7 +207,7 @@ class TimesheetPolicy
 
     public function specialTeamsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -225,7 +225,7 @@ class TimesheetPolicy
 
     public function timesheetByCallsign(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /*
@@ -243,7 +243,7 @@ class TimesheetPolicy
 
     public function timesheetByPosition(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -254,12 +254,12 @@ class TimesheetPolicy
      */
     public function onDutyShiftLeadReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function onDutyReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function retentionReport(Person $user): bool
@@ -279,22 +279,22 @@ class TimesheetPolicy
 
     public function eventStatsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function shiftDropReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function forcedSigninsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function noShowsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     public function correctionStatistics(Person $user): false
@@ -304,6 +304,6 @@ class TimesheetPolicy
 
     public function checkForOverlaps(Person $user, $personId): bool
     {
-        return $user->hasRole(Role::MANAGE) || $personId == $user->id;
+        return $user->hasRole(Role::EVENT_MANAGEMENT) || $personId == $user->id;
     }
 }

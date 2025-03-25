@@ -110,7 +110,7 @@ class GroundHogDay
         $trueSettings = [
             'RadioCheckoutAgreementEnabled',
             'MotorPoolProtocolEnabled',
-            'LoginManageOnPlayaEnabled',
+            'EventManagementOnPlayaEnabled',
             'RadioInfoAvailable',
             'TimesheetCorrectionEnable',
             'BroadcastClubhouseSandbox',

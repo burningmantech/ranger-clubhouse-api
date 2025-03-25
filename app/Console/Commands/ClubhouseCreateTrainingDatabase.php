@@ -137,7 +137,7 @@ COMMIT;
             throw new \InvalidArgumentException("Cannot create catch all slot");
         }
 
-        // Grant everyone LMOP and pass training.
+        // Grant everyone EMOP and pass training.
         DB::table('person')
             ->select('id')
             ->where('status', Person::ACTIVE)
@@ -147,7 +147,7 @@ COMMIT;
                     DB::table('person_slot')->insertOrIgnore([ 'slot_id' => $slot->id, 'person_id' => $row->id ]);
                     DB::table('trainee_status')
                         ->insertOrIgnore(['slot_id' => $slot->id, 'person_id' => $row->id, 'rank' => 2, 'passed' => 1, 'notes' => 'GHD passed']);
-                    DB::table('person_role')->insertOrIgnore(['person_id' => $row->id, 'role_id' => Role::MANAGE_ON_PLAYA]);
+                    DB::table('person_role')->insertOrIgnore(['person_id' => $row->id, 'role_id' => Role::EVENT_MANAGEMENT_ON_PLAYA]);
                 }
             });
     }

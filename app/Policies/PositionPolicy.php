@@ -75,7 +75,7 @@ class PositionPolicy
 
     public function sandmanQualified(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -87,7 +87,7 @@ class PositionPolicy
 
     public function peopleByTeamsReport(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -143,7 +143,7 @@ class PositionPolicy
 
     public function peopleByPosition(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -155,6 +155,6 @@ class PositionPolicy
 
     public function grants(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 }

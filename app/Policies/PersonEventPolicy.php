@@ -25,7 +25,7 @@ class PersonEventPolicy
      */
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -33,7 +33,7 @@ class PersonEventPolicy
      */
     public function show(Person $user, PersonEvent $personEvent): bool
     {
-        return ($user->id == $personEvent->person_id) || $user->hasRole(Role::MANAGE);
+        return ($user->id == $personEvent->person_id) || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -43,7 +43,7 @@ class PersonEventPolicy
 
     public function store(Person $user, $personId): bool
     {
-        return ($user->id == $personId) || $user->hasRole(Role::MANAGE);
+        return ($user->id == $personId) || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -51,7 +51,7 @@ class PersonEventPolicy
      */
     public function update(Person $user, PersonEvent $personEvent): bool
     {
-        return ($user->id == $personEvent->person_id) || $user->hasRole(Role::MANAGE);
+        return ($user->id == $personEvent->person_id) || $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**

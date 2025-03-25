@@ -1334,7 +1334,7 @@ class PersonControllerTest extends TestCase
         ]);
 
         $manageRole = Role::factory()->create([
-            'id' => Role::MANAGE,
+            'id' => Role::EVENT_MANAGEMENT,
             'title' => 'Manage'
         ]);
 
@@ -1342,7 +1342,7 @@ class PersonControllerTest extends TestCase
 
         PersonRole::factory()->create([
             'person_id' => $mgmtPerson->id,
-            'role_id' => Role::MANAGE
+            'role_id' => Role::EVENT_MANAGEMENT
         ]);
 
         $response = $this->json('GET', 'role/people-by-role');
@@ -1361,7 +1361,7 @@ class PersonControllerTest extends TestCase
                     ]
                 ],
                 [
-                    'id' => Role::MANAGE,
+                    'id' => Role::EVENT_MANAGEMENT,
                     'title' => 'Manage',
                     'people' => [
                         [

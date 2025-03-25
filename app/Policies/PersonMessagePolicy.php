@@ -10,28 +10,31 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 class PersonMessagePolicy
 {
     use HandlesAuthorization;
-    
+
     /**
      * Allow ADMIN, VC or Message Management to do anything with messages
      */
 
-    public function before(Person $user)
+    public function before(Person $user): ?true
     {
         if ($user->hasRole([Role::ADMIN, Role::VC, Role::MESSAGE_MANAGEMENT])) {
             return true;
         }
+        
+        return null;
     }
 
     /**
-     * Can a person with LMOP/LMYR be allowed to access messages? Only if LoginManageOnPlayaEnabled is true.
-     *
+     * Can a person with either Event Management role be allowed to access messages? Only if EventManagementOnPlayaEnabled is true.
+     * People with only Event Management and not Message Management are only allowed event access. 
+     * 
      * @param Person $user
      * @return bool
      */
 
-    private function isLMAccessAllowed(Person $user): bool
+    private function isEventManagementAccessAllowed(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE) && setting('LoginManageOnPlayaEnabled');
+        return $user->hasRole(Role::EVENT_MANAGEMENT) && setting('EventManagementOnPlayaEnabled');
     }
 
     /**
@@ -44,7 +47,7 @@ class PersonMessagePolicy
 
     public function index(Person $user, ?int $personId): bool
     {
-        return ($this->isLMAccessAllowed($user) || $user->id == $personId);
+        return ($this->isEventManagementAccessAllowed($user) || $user->id == $personId);
     }
 
     /**
@@ -56,7 +59,7 @@ class PersonMessagePolicy
 
     public function store(Person $user): bool
     {
-        return $user->hasRole(Role::MANAGE);
+        return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
 
     /**
@@ -69,7 +72,7 @@ class PersonMessagePolicy
 
     public function delete(Person $user, PersonMessage $person_message): bool
     {
-        return ($this->isLMAccessAllowed($user) || $user->id == $person_message->person_id);
+        return ($this->isEventManagementAccessAllowed($user) || $user->id == $person_message->person_id);
     }
 
     /**
@@ -82,6 +85,6 @@ class PersonMessagePolicy
 
     public function markread(Person $user, PersonMessage $person_message): bool
     {
-        return ($this->isLMAccessAllowed($user) || $user->id == $person_message->person_id);
+        return ($this->isEventManagementAccessAllowed($user) || $user->id == $person_message->person_id);
     }
 }
