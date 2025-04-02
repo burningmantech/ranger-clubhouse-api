@@ -3,17 +3,40 @@
 namespace App\Lib;
 
 use App\Exceptions\UnacceptableConditionException;
+use App\Models\ErrorLog;
 use Orhanerday\OpenAi\OpenAi;
 
 class AIHandlesExtract
 {
-    const string AI_PROMPT = "Identify and extract each name or handle from the following text, and display them in JSON format using the field \"handles\" as an array." .
-    " Remove any punctuation except dashes, single quotes, or periods from each handle." .
-    " Remove the word Ranger from each handles." .
-    " Apply proper capitalization to each handle, and if a handle is confidently a combination of separate words (and not a single proper word), split it into individual words." .
-    " List each callsign on a separate line within the array, including only the callsigns in the specified JSON structure, without any extra context or explanations.";
+    const string AI_PROMPT = <<<__HERE__
+Extract all names or handles from the input text and return them as a JSON object under the "handles" field as an array.
+For each handle:
+- Remove all punctuation except dashes (-), single quotes ('), and periods (.).
+- Remove the word "Ranger".
+- Apply proper capitalization.
+- If the handle is a combination of multiple recognizable words (not a single proper word), split them into separate capitalized words.
 
-    public static function execute(string $text)
+Format the output as:
+{
+  "handles": [
+    "First Handle",
+    "Second-Handle",
+    "Name.O'Neil"
+  ]
+}
+
+Only return the JSON. Do not include explanations or extra text.
+__HERE__;
+
+    /**
+     * Extract a list of supplied handles into a machine-readable format.
+     *
+     * @param string $text
+     * @return mixed
+     * @throws UnacceptableConditionException
+     */
+
+    public static function execute(string $text) : array
     {
         $token = setting('ChatGPTToken');
         if (empty($token)) {
@@ -23,7 +46,7 @@ class AIHandlesExtract
         $ai = new OpenAi($token);
 
         $result = $ai->chat([
-            'model' => 'gpt-4o',
+            'model' => 'gpt-4o-mini',
             'messages' => [
                 [
                     "role" => "user",
@@ -38,7 +61,33 @@ class AIHandlesExtract
         ]);
 
         $chat = json_decode($result);
+
+        if ($chat->error ?? null) {
+            ErrorLog::record('chatgpt-error', [
+                'text' => $text,
+                'response' => $chat,
+            ]);
+            throw new UnacceptableConditionException($chat->error->message);
+        }
+
+        if (empty($chat->choices[0]->message->content)) {
+            ErrorLog::record('chatgpt-malformed-response', [
+                'handles' => $text,
+                'response' => $chat,
+            ]);
+            throw new UnacceptableConditionException("ChatGPT returned an unexpected response.");
+        }
+
         $content = json_decode($chat->choices[0]->message->content);
+
+        if (empty($content->handles)) {
+            ErrorLog::record('chatgpt-malformed-response', [
+                'handles' => $text,
+                'response' => $chat,
+            ]);
+            throw new UnacceptableConditionException("ChatGPT returned an unexpected response.");
+        }
+
         return $content->handles;
     }
 }
