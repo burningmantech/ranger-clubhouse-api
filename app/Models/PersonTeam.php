@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\AwardManagement;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,6 +25,19 @@ class PersonTeam extends ApiModel
     protected $primaryKey = ['person_id', 'team_id'];
 
     protected $guarded = [];
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::saved(function ($model) {
+            AwardManagement::rebuildPerson($model->person_id);
+        });
+
+        self::deleted(function ($model) {
+            AwardManagement::rebuildPerson($model->person_id);
+        });
+    }
 
     public function person(): BelongsTo
     {
@@ -198,10 +212,9 @@ class PersonTeam extends ApiModel
             throw new AuthorizationException("No authorization to grant membership for a team with the Admin permission associated.");
         }
 
-        if (self::insertOrIgnore(['team_id' => $teamId, 'person_id' => $personId]) == 1) {
-            PersonTeamLog::addPerson($teamId, $personId);
-            ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
-        }
+        self::create(['team_id' => $teamId, 'person_id' => $personId]);
+        PersonTeamLog::addPerson($teamId, $personId);
+        ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
     }
 
     /**
@@ -215,10 +228,9 @@ class PersonTeam extends ApiModel
 
     public static function removePerson($teamId, $personId, $reason): void
     {
-        if (self::where(['team_id' => $teamId, 'person_id' => $personId])->delete()) {
-            PersonTeamLog::removePerson($teamId, $personId);
-            ActionLog::record(Auth::user(), 'person-team-remove', $reason, ['team_id' => $teamId], $personId);
-        }
+        self::where(['team_id' => $teamId, 'person_id' => $personId])->delete();
+        PersonTeamLog::removePerson($teamId, $personId);
+        ActionLog::record(Auth::user(), 'person-team-remove', $reason, ['team_id' => $teamId], $personId);
     }
 
     /**

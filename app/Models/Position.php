@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class Position extends ApiModel
 {
@@ -305,6 +304,7 @@ class Position extends ApiModel
     protected $fillable = [
         'active',
         'auto_sign_out',
+        'awards_eligible',
         'alert_when_no_trainers',
         'alert_when_becomes_empty',
         'all_rangers',
@@ -346,6 +346,7 @@ class Position extends ApiModel
             'alert_when_no_trainers' => 'bool',
             'all_rangers' => 'bool',
             'auto_sign_out' => 'bool',
+            'awards_eligible' => 'bool',
             'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'mvr_eligible' => 'bool',
@@ -399,6 +400,7 @@ class Position extends ApiModel
             DB::table('position_role')->where('position_id', $model->id)->delete();
             DB::table('person_position')->where('position_id', $model->id)->delete();
             DB::table('position')->where(['parent_position_id' => $model->id])->update(['parent_position_id' => null]);
+            DB::table('person_award')->where('position_id', $model->id)->delete();
             ClubhouseCache::flush();
         });
     }
@@ -406,9 +408,8 @@ class Position extends ApiModel
     /**
      * Validate if require_training_for_roles is set, then  training_position_id has to be set as well.
      *
-     * @param $options
+     * @param array $options
      * @return bool
-     * @throws ValidationException
      */
 
     public function save($options = []): bool
@@ -451,6 +452,11 @@ class Position extends ApiModel
         return $this->hasMany(Position::class, 'team_id');
     }
 
+    public function person_awards(): HasMany
+    {
+        return $this->hasMany(PersonAward::class, 'position_id');
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'position_role');
@@ -490,6 +496,7 @@ class Position extends ApiModel
         $cruiseDirection = $query['cruise_direction'] ?? null;
         $isActive = $query['active'] ?? null;
         $artTraining = $query['art_training'] ?? null;
+        $awardsEligible = $query['awards_eligible'] ?? null;
 
         $sql = self::select('position.*')->orderBy('title');
 
@@ -528,6 +535,10 @@ class Position extends ApiModel
         if ($artTraining) {
             $sql->where('type', self::TYPE_TRAINING);
             $sql->whereLike('title', '%Training%');
+        }
+
+        if ($awardsEligible) {
+            $sql->where('awards_eligible', $awardsEligible);
         }
 
         $rows = $sql->get();

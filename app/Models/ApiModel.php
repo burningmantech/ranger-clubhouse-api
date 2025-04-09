@@ -31,6 +31,7 @@ use RuntimeException;
  * @method static $this whereIntegerInRaw(...$args)
  * @method static $this whereNotIn(...$args)
  * @method static $this whereYear(...$args)
+ * @method deleteWithReason(string $reason) -- defined as a Builder macro
  */
 #[AllowDynamicProperties]
 abstract class ApiModel extends Model

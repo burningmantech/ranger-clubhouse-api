@@ -34,6 +34,7 @@ class PositionController extends ApiController
             'active' => 'sometimes|boolean',
             'mentee' => 'sometimes|boolean',
             'mentor' => 'sometimes|boolean',
+            'awards_eligible' => 'sometimes|boolean',
         ]);
 
         return $this->success(Position::findForQuery($params, $this->user->isAdmin()), null, 'position');

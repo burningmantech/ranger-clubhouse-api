@@ -69,7 +69,7 @@ class PersonTeamLog extends ApiModel
         return $sql->get()->sortBy($teamId ? 'joined_on' : ['team.title', 'joined_on'])->values();
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
         $this->load(['person:id,callsign', 'team:id,title,type']);
     }
@@ -81,9 +81,14 @@ class PersonTeamLog extends ApiModel
      * @param int $personId
      */
 
-    public static function addPerson(int $teamId, int $personId)
+    public static function addPerson(int $teamId, int $personId): void
     {
-        self::insert(['person_id' => $personId, 'team_id' => $teamId, 'joined_on' => now()]);
+        self::insert([
+            'person_id' => $personId,
+            'team_id' => $teamId,
+            'joined_on' => now(),
+            'created_at' => now(),
+        ]);
     }
 
     /**
@@ -93,9 +98,9 @@ class PersonTeamLog extends ApiModel
      * @param int $personId
      */
 
-    public static function removePerson(int $teamId, int $personId)
+    public static function removePerson(int $teamId, int $personId): void
     {
-        self::where(['person_id' => $personId, 'team_id' => $teamId])->update(['left_on' => now()]);
+        self::where(['person_id' => $personId, 'team_id' => $teamId])->first()?->update(['left_on' => now()]);
     }
 
     public function setLeftOnAttribute($date)

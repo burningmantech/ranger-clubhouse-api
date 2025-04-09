@@ -26,6 +26,7 @@ class TeamController extends ApiController
             'can_manage' => 'sometimes|bool',
             'include_roles' => 'sometimes|bool',
             'include_managers' => 'sometimes|bool',
+            'awards_eligible' => 'sometimes|bool',
         ]);
 
         return $this->success(Team::findForQuery($params, $this->user->id, $this->user->isAdmin()), null, 'team');

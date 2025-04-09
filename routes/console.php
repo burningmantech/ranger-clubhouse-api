@@ -1,7 +1,7 @@
 <?php
 
+use App\Jobs\AwardsRebuildJob;
 use App\Jobs\SignOutTimesheetsJob;
-use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -21,7 +21,7 @@ Artisan::command('inspire', function () {
 })->describe('Display an inspiring quote');
 */
 
-if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server()) {
+if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server()) {
     // Let someone know what's been happening in the Clubhouse
     Schedule::command('clubhouse:daily-report')->dailyAt('03:00')->onOneServer();
 
@@ -75,6 +75,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && ! is_ghd_server
 
     // Delete the BMIDs post-event
     Schedule::command('clubhouse:delete-bmid-exports --post-event')->yearlyOn(9, 15, '05:30')->onOneServer();
+
+    // Rebuild the granted awards
+    Schedule::job(new AwardsRebuildJob())->weeklyOn(0, '04:00')->onOneServer();
 
     if (config('telescope.enabled')) {
         // Purge Laravel Telescope logs

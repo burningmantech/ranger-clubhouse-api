@@ -237,6 +237,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             'years_as_contributor' => 'json',
             'years_as_ranger' => 'json',
             'years_combined' => 'json',
+            'years_of_service' => 'json',
             'years_seen' => 'json',
         ];
     }
@@ -314,6 +315,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'mail_log',
         'manual_review',
         'mentee_status',
+        'person_award',
         'person_certification',
         'person_event',
         'person_fka',

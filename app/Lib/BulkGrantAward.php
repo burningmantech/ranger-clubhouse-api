@@ -2,134 +2,281 @@
 
 namespace App\Lib;
 
+use App\Models\Award;
+use App\Models\ErrorLog;
 use App\Models\Person;
 use App\Models\PersonAward;
-use App\Models\Timesheet;
+use App\Models\Position;
+use App\Models\Team;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class BulkGrantAward
 {
-    /**
-     * Find people who might qualify to receive a service award and grant them one.
-     *
-     * @param int $awardId
-     * @param int $serviceYears
-     * @param bool $commit
-     * @return array
-     */
-
-    public static function grantServiceYearsAward(int $awardId, int $serviceYears, bool $commit): array
-    {
-        // Find accounts which are still active (active, inactive, retired, etc.)
-        $ids = DB::table('person')
-            ->select('id')
-            ->whereIn('status', Person::ACTIVE_STATUSES)
-            ->get()
-            ->pluck('id')
-            ->toArray();
-
-        $chunkedIds = array_chunk($ids, 300);
-
-        $candidates = [];
-        foreach ($chunkedIds as $chunk) {
-            $rangerYears = Timesheet::yearsRangeredCountForIds($chunk);
-
-            foreach ($rangerYears as $personId => $years) {
-                if ($years >= $serviceYears) {
-                    $candidates[$personId] = $years;
-                }
-            }
-        }
-
-        // Check to see who already has the award
-        $existingAward = PersonAward::haveAwardForIds($awardId, array_keys($candidates));
-        foreach ($existingAward as $personId) {
-            unset($candidates[$personId]);
-        }
-
-        if (empty($candidates)) {
-            return [];
-        }
-
-        $people = DB::table('person')
-            ->select('id', 'callsign', 'status')
-            ->whereIn('id', array_keys($candidates))
-            ->orderBy('callsign')
-            ->get();
-
-        $results = [];
-        foreach ($people as $person) {
-            if ($commit) {
-                PersonAward::create([
-                    'person_id' => $person->id,
-                    'award_id' => $awardId,
-                    'notes' => 'Bulk granted by ' . Auth::user()?->callsign,
-                ]);
-            }
-
-            $results[] = [
-                'id' => $person->id,
-                'callsign' => $person->callsign,
-                'status' => $person->status,
-                'years' => $candidates[$person->id] ?? 0,
-            ];
-        }
-
-        return $results;
-    }
 
     /**
      * Bulk grant a list of callsigns to give an award to
      *
-     * @param int $awardId
      * @param string $callsigns
      * @param bool $commit
      * @return array
      */
 
-    public static function bulkGrant(int $awardId, string $callsigns, bool $commit): array
+    public static function upload(string $callsigns, bool $commit): array
     {
         $lines = explode("\n", str_replace("\r", "", $callsigns));
         $callsigns = [];
         $records = [];
-        foreach ($lines as $callsign) {
-            $callsign = trim($callsign);
-            if (empty($callsign)) {
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
                 continue;
             }
 
-            $records[] = (object)[
+            $columns = explode(',', $line);
+            $callsign = trim($columns[0]);
+
+            $record = (object)[
+                'awards' => [],
                 'callsign' => $callsign,
+                'columns' => $columns,
+                'error' => null,
+                'title' => '',
+                'type' => '',
+                'year' => [],
             ];
 
+            $records[] = $record;
+
+            if (empty($callsign)) {
+                $record->error = 'No callsign entered. There might be an extra comma (,) at the beginning of the line.';
+                continue;
+            }
+
             $callsigns[] = $callsign;
+        }
+
+        if (empty($callsigns)) {
+            return $records;
         }
 
         $people = Person::findAllByCallsigns($callsigns);
 
         foreach ($records as $record) {
+            if ($record->error) {
+                continue;
+            }
+
             $person = $people[Person::normalizeCallsign($record->callsign)] ?? null;
-            if ($person) {
-                $personId = $person->id;
-                $record->id = $personId;
-                $record->callsign = $person->callsign;
-                $record->status = $person->status;
-                if (PersonAward::haveAward($awardId, $personId)) {
-                    $record->have_award = true;
-                } else if ($commit) {
-                    PersonAward::create([
+            if (!$person) {
+                $record->error = 'Callsign not found';
+                continue;
+            }
+
+            $personId = $person->id;
+            $record->id = $personId;
+            $record->callsign = $person->callsign;
+            $record->status = $person->status;
+
+            $columns = $record->columns;
+            $type = $columns[1] ?? '';
+            if (empty($type)) {
+                $record->error = 'No service type given';
+                continue;
+            }
+
+            if ($type != 'team' && $type != 'award' && $type != 'position') {
+                $record->error = 'Type is neither award, position, or team.';
+                continue;
+            }
+
+            $title = $columns[2] ?? '';
+            if (empty($title)) {
+                $record->error = 'No team/award title given';
+                continue;
+            }
+
+            $teamId = null;
+            $awardId = null;
+            $award = null;
+            $team = null;
+            $positionId = null;
+            $position = null;
+
+            switch ($type) {
+                case 'team':
+                    $team = Team::findBytitle($title);
+                    if (!$team) {
+                        $record->error = 'Team "' . $title . '" not found';
+                        continue 2;
+                    }
+
+                    if (!$team->isAwardsEligible()) {
+                        $record->error = 'Team "' . $title . '" is not set for award eligibility';
+                        continue 2;
+                    }
+                    $teamId = $team->id;
+                    $record->title = $team->title;
+                    break;
+
+                case 'position':
+                    $position = Position::findBytitle($title);
+                    if (!$position) {
+                        $record->error = 'Position "' . $title . '" not found';
+                        continue 2;
+                    }
+                    if (!$position->awards_eligible) {
+                        $record->error = 'Position "' . $title . '" is not set for award eligibility.';
+                        continue 2;
+                    }
+                    $positionId = $position->id;
+                    $record->title = $position->title;
+                    break;
+
+                default:
+                    $award = Award::findBytitle($title);
+                    if (!$award) {
+                        $record->error = 'Special award "' . $title . '" not found';
+                        continue 2;
+                    }
+                    $awardId = $award->id;
+                    $record->title = $award->title;
+                    break;
+            }
+
+
+            if (count($columns) < 4) {
+                $record->error = 'No year(s) given';
+                continue;
+            }
+
+            $serviceAwards = [];
+            for ($idx = 3; $idx < count($columns); $idx++) {
+                $years = $columns[$idx] ?? null;
+                if (empty($years)) {
+                    $record->error = 'No years given. Perhaps an extra comma is to blame.';
+                    continue 2;
+                }
+
+                $range = explode('-', $years);
+                if (count($range) > 2) {
+                    $record->error = 'Years range has too many dashes.';
+                    continue 2;
+                }
+
+                $start = trim($range[0]);
+                if (!self::validateYear($record, $start, 'year')) {
+                    continue 2;
+                }
+
+                if (isset($range[1])) {
+                    $end = trim($range[1]);
+                    if (!self::validateYear($record, $end, 'ending year')) {
+                        continue 2;
+                    }
+
+                    if ($start > $end) {
+                        $record->error = 'Start year is after ending year';
+                        continue 2;
+                    }
+                } else {
+                    $end = $start;
+                }
+
+                $start = (int)$start;
+                $end = (int)$end;
+                $record->type = $type;
+                for ($year = $start; $year <= $end; $year++) {
+                    $record->years[] = $year;
+                    if ($team) {
+                        if (PersonAward::haveTeamAward($personId, $teamId, $year)) {
+                            $record->error = 'Team award ' . $team->title . ' for ' . $year . ' already exists';
+                            continue 3;
+                        }
+                    } else if ($position) {
+                        if (PersonAward::havePositionAward($personId, $positionId, $year)) {
+                            $record->error = 'Position award ' . $position->title . ' for ' . $year . ' already exists';
+                            continue 3;
+                        }
+                    } else {
+                        if (PersonAward::haveServiceAward($personId, $awardId, $year)) {
+                            $record->error = 'Service award ' . $award->title . ' for ' . $year . ' already exists';
+                            continue 3;
+                        }
+                    }
+
+                    $serviceAward = new PersonAward([
                         'person_id' => $personId,
                         'award_id' => $awardId,
+                        'team_id' => $teamId,
+                        'position_id' => $positionId,
+                        'year' => $year,
                         'notes' => 'bulk granted by ' . Auth::user()?->callsign,
                     ]);
-                    $record->have_award = true;
+
+                    $serviceAwards[] = $serviceAward;
                 }
-            } else {
-                $record->not_found = true;
+            }
+
+            $record->awards = $serviceAwards;
+
+            if (empty($serviceAwards)) {
+                // Should never happen.
+                $record->error = 'A bug? All the fields have been validated. Yet no awards were found?';
+                continue;
+            }
+
+            if ($commit) {
+                DB::beginTransaction();
+                foreach ($serviceAwards as $serviceAward) {
+                    try {
+                        if (!$serviceAward->save()) {
+                            DB::rollBack();
+                            foreach ($serviceAward->getErrors() as $column => $errors) {
+                                $record->error = $column . ': ' . implode(' / ', $errors);
+                            }
+                            continue 2;
+                        }
+                    } catch (QueryException $e) {
+                        DB::rollBack();
+                        $record->error = 'A database error occurred.';
+                        ErrorLog::recordException($e, 'person-award-create-failure', ['person-award' => $record]);
+                        continue 2;
+                    }
+                }
+                DB::commit();
             }
         }
 
         return $records;
+    }
+
+    public static function validateYear($record, $year, string $label): bool
+    {
+        if (empty($year)) {
+            $record->error = $label . ' is blank. Perhaps an extra comma is to blame.';
+            return false;
+        }
+
+        if (!is_numeric($year)) {
+            $record->error = 'Year is not an integer';
+            return false;
+        }
+
+        $year = (int)$year;
+        if ($year < PersonAward::FIRST_YEAR_PERMITTED) {
+            $record->error = $label . ' ' . $year . ' is before ' . PersonAward::FIRST_YEAR_PERMITTED;
+            return false;
+        }
+
+        $currentYear = current_year();
+        if ($year > $currentYear) {
+            $record->error = 'Year ' . $year . ' is in the future. Current year is only ' . $currentYear;
+            return false;
+        }
+
+        return true;
     }
 }

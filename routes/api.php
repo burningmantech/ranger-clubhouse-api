@@ -328,6 +328,10 @@ Route::middleware('api')->group(function () {
 
     Route::resource('person', PersonController::class)->only('index', 'show', 'store', 'update', 'destroy');
 
+    Route::get('person-award/person/{person}/awards', [PersonAwardController::class, 'awardsForPerson']);
+    Route::post('person-award/person/{person}/rebuild', [PersonAwardController::class, 'rebuildPerson']);
+    Route::post('person-award/bulk-grant', [PersonAwardController::class, 'bulkGrant']);
+    Route::post('person-award/rebuild-all-awards', [PersonAwardController::class, 'rebuildAllAwards']);
     Route::resource('person-award', PersonAwardController::class);
 
     Route::resource('person-certification', PersonCertificationController::class);

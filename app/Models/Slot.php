@@ -130,6 +130,13 @@ class Slot extends ApiModel
         return $this->belongsTo(Position::class, 'position_id');
     }
 
+    // Handles a deeper position inspection beyond the default limited position column retrieval
+    // due to what's defined in self::$with.
+    public function full_position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'position_id');
+    }
+
     public function parent_signup_slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);

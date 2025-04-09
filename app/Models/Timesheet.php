@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Attributes\NullIfEmptyAttribute;
+use App\Lib\AwardManagement;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -239,6 +240,9 @@ class Timesheet extends ApiModel
             if ($offDuty || $onDuty || $isEchelon) {
                 $model->computePersonYears();
             }
+            if ($offDuty || $onDuty || $isEchelon) {
+                AwardManagement::rebuildPerson($userId);
+            }
         });
 
         self::deleted(function (Timesheet $model) {
@@ -250,6 +254,7 @@ class Timesheet extends ApiModel
                 ]
             );
             $model->computePersonYears();
+            PersonAward::updateYearsOfService($model->person_id);
         });
     }
 

@@ -11,11 +11,13 @@ class PersonAwardPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user)
+    public function before(Person $user): ?true
     {
-        if ($user->hasRole(Role::ADMIN)) {
+        if ($user->hasRole([Role::ADMIN, Role::AWARD_MANAGEMENT])) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -28,7 +30,7 @@ class PersonAwardPolicy
 
     public function index(Person $user, $personId): bool
     {
-        return $personId == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
+        return false;
     }
 
     /**
@@ -37,7 +39,7 @@ class PersonAwardPolicy
 
     public function show(Person $user, PersonAward $award): bool
     {
-        return $award->person_id == $user->id || $user->hasRole(Role::EVENT_MANAGEMENT);
+        return false;
     }
 
     /**
@@ -66,4 +68,25 @@ class PersonAwardPolicy
     {
         return false;
     }
+
+    public function bulkGrant(Person $user) : bool
+    {
+        return false;
+    }
+
+    public function awardsForPerson(Person $user, Person $person): bool
+    {
+        return $user->hasRole(Role::EVENT_MANAGEMENT) || $person->id == $user->id;
+    }
+
+    public function rebuildPerson(Person $user, Person $person): bool
+    {
+        return false;
+    }
+
+    public function rebuildAllAwards(Person $user) : bool
+    {
+        return false;
+    }
+
 }
