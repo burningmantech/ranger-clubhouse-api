@@ -50,6 +50,8 @@ class Role extends ApiModel
     const int SHIFT_MANAGEMENT = 125;   // Allows shift check-in / out, timesheet correction submissions, etc.
     const int POD_MANAGEMENT = 126; // Access to Cruise Direction interface
 
+    const int AWARD_MANAGEMENT = 127; // Allows a person to grant or revoke service awards.
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     const int POSITION_MASK = 0x0fff;

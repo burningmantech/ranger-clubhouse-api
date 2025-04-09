@@ -140,6 +140,7 @@ class PersonFilter
     const array YEAR_FIELDS = [
         'years_as_contributor',
         'years_as_ranger',
+        'years_of_service',
         'years_combined',
         'years_seen',
     ];
