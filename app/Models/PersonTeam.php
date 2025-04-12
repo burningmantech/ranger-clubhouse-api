@@ -31,11 +31,11 @@ class PersonTeam extends ApiModel
         parent::boot();
 
         self::saved(function ($model) {
-            AwardManagement::rebuildPerson($model->person_id);
+            AwardManagement::rebuildForPersonId($model->person_id);
         });
 
         self::deleted(function ($model) {
-            AwardManagement::rebuildPerson($model->person_id);
+            AwardManagement::rebuildForPersonId($model->person_id);
         });
     }
 

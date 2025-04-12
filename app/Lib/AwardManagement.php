@@ -5,7 +5,6 @@ namespace App\Lib;
 use App\Models\Person;
 use App\Models\PersonAward;
 use App\Models\PersonTeamLog;
-use App\Models\Team;
 use App\Models\Timesheet;
 use App\Models\TrainerStatus;
 use Illuminate\Support\Collection;
@@ -26,6 +25,7 @@ class AwardManagement
             $taughtYears = self::retrieveTrainerRecords(null, $positionIds)->groupBy('person_id');
             $timesheetsByPerson = Timesheet::select('person_id', 'on_duty', 'position_id')
                 ->whereIn('position_id', $positionIds)
+                ->with('position:id,awards_grants_service_year')
                 ->get()
                 ->groupBy('person_id');
         } else {
@@ -41,15 +41,13 @@ class AwardManagement
 
         $personIds = array_unique($personIds);
 
-        $people = DB::table('person')
-            ->select('id', 'status')
-            ->whereIn('status', Person::ACTIVE_STATUSES)
+        $people = Person::whereIn('status', Person::ACTIVE_STATUSES)
             ->whereIntegerInRaw('id', $personIds)
             ->get();
 
         foreach ($people as $person) {
             $personId = $person->id;
-            self::reconstructAwards($personId,
+            self::reconstructAwards($person,
                 $awardsByPerson->get($personId) ?: collect([]),
                 $positionIds,
                 $taughtYears?->get($personId),
@@ -59,8 +57,9 @@ class AwardManagement
         }
     }
 
-    public static function rebuildPerson(int $personId): void
+    public static function rebuildForPersonId(int $personId, bool $savePerson = true): void
     {
+        $person = Person::find($personId);
         $awards = PersonAward::where('person_id', $personId)->get();
         $positionIds = self::retrievePositionIds();
         $teams = self::retrieveTeamLogs($personId);
@@ -71,25 +70,28 @@ class AwardManagement
             $timesheets = Timesheet::select('on_duty', 'position_id')
                 ->where('person_id', $personId)
                 ->whereIn('position_id', $positionIds)
+                ->with('position:id,awards_grants_service_year')
                 ->get();
         } else {
             $taughtYears = null;
             $timesheets = null;
         }
 
-        self::reconstructAwards($personId, $awards, $positionIds, $taughtYears, $teams, $timesheets);
+        self::reconstructAwards($person, $awards, $positionIds, $taughtYears, $teams, $timesheets, $savePerson);
     }
 
     public static function reconstructAwards(
-        int         $personId,
+        Person      $person,
         ?Collection $awards,
         ?Collection $positionIds,
         ?Collection $taughtYears,
-        Collection  $teams,
+        ?Collection $teams,
         ?Collection $timesheets,
+        bool        $savePerson = true,
     ): void
     {
         $currentYear = current_year();
+        $personId = $person->id;
 
         $existingTeamYears = [];
         $existingPositionYears = [];
@@ -111,16 +113,20 @@ class AwardManagement
 
         $years = array_unique($existingSpecialYears);
 
-        foreach ($teams as $team) {
-            $endYear = $team->left_on ? $team->left_on->year : $currentYear;
-            $teamId = $team->team_id;
-            for ($year = $team->joined_on->year; $year <= $endYear; $year++) {
-                $years[] = $year;
-                self::removeYear($year, $teamId, $existingTeamYears);
-                self::createIfMissing($personId, 'haveTeamAward', 'team_id', $teamId, $year, $awards);
+        if ($teams) {
+            foreach ($teams as $team) {
+                $endYear = $team->left_on ? $team->left_on->year : $currentYear;
+                $teamId = $team->team_id;
+                for ($year = $team->joined_on->year; $year <= $endYear; $year++) {
+                    $years[] = $year;
+                    self::removeYear($year, $teamId, $existingTeamYears);
+                    self::createIfMissing($personId, 'team_id', $teamId, $year, $awards,
+                        $team->team->awards_grants_service_year);
+                }
             }
         }
 
+        /*
         foreach ($existingTeamYears as $teamId => $teamYears) {
             foreach ($teamYears as $year => $award) {
                 $award->auditReason = 'no team history found';
@@ -128,6 +134,7 @@ class AwardManagement
                 $award->delete();
             }
         }
+*/
 
         // Find the eligible positions
         if ($positionIds) {
@@ -137,7 +144,9 @@ class AwardManagement
                     $year = $taughtYear->begins_year;
                     $years[] = $year;
                     self::removeYear($year, $taughtYear->position_id, $existingPositionYears);
-                    self::createIfMissing($personId, 'havePositionAward', 'position_id', $taughtYear->position_id, $year, $awards);
+                    self::createIfMissing($personId, 'position_id', $taughtYear->position_id, $year, $awards,
+                        $taughtYear->awards_grants_service_year
+                    );
                 }
             }
 
@@ -151,32 +160,39 @@ class AwardManagement
                         continue;
                     }
                     $years[] = $year;
-                    self::createIfMissing($personId, 'havePositionAward', 'position_id', $timesheet->position_id, $year, $awards);
+                    self::createIfMissing($personId, 'position_id', $timesheet->position_id, $year, $awards,
+                        $timesheet->position->awards_grants_service_year);
                     $existingYears[$positionId][] = $year;
                 }
             }
         }
 
+        /*
         foreach ($existingPositionYears as $positionId => $positionYears) {
             foreach ($positionYears as $year => $award) {
                 $award->auditReason = 'No backing trainer status or timesheet found';
                 $award->delete();
             }
-        }
+        }*/
+
 
         $years = array_unique($years);
         sort($years);
 
-        $person = Person::find($personId);
-        $person->years_of_service = $years;
-        $person->auditReason = 'awards rebuild';
-        $person->save();
+        $person->years_of_awards = $years;
+        if ($savePerson) {
+            YearsManagement::savePerson($person, 'awards rebuild');
+        }
     }
 
-    public static function createIfMissing(int $personId, string $existsName, string $column, int $value, int $year, ?Collection $awards): void
+    public static function createIfMissing(int         $personId,
+                                           string      $column,
+                                           int         $value,
+                                           int         $year,
+                                           ?Collection $awards,
+                                           bool        $isServiceYear): void
     {
-        if ($awards
-            && $awards->contains(fn($a) => $a->person_id === $personId && $a->$column === $value && $a->year == $year)) {
+        if ($awards?->contains(fn($a) => $a->person_id === $personId && $a->{$column} === $value && $a->year == $year)) {
             return;
         }
 
@@ -184,6 +200,7 @@ class AwardManagement
             'person_id' => $personId,
             $column => $value,
             'year' => $year,
+            'awards_grants_service_year' => $isServiceYear,
             'notes' => 'automatic creation'
         ]);
         $pa->bulkUpdate = true;
@@ -200,14 +217,19 @@ class AwardManagement
 
     public static function retrievePositionIds(): ?Collection
     {
-        $positionIds = DB::table('position')->where('awards_eligible', true)->pluck('id');
+        $positionIds = DB::table('position')->where('awards_auto_grant', true)->pluck('id');
         return $positionIds->isNotEmpty() ? $positionIds : null;
     }
 
     public static function retrieveTrainerRecords(?int $personId, $positionIds): ?Collection
     {
-        $sql = TrainerStatus::select('trainer_status.person_id', 'slot.position_id', 'slot.begins_year', 'slot.position_id')
-            ->join('slot', 'trainer_status.trainer_slot_id', '=', 'slot.id')
+        $sql = TrainerStatus::select(
+            'trainer_status.person_id',
+            'slot.position_id',
+            'slot.begins_year',
+            'slot.position_id',
+            'position.awards_grants_service_year'
+        )->join('slot', 'trainer_status.trainer_slot_id', '=', 'slot.id')
             ->join('position', 'position.id', '=', 'slot.position_id')
             ->whereIn('position.id', $positionIds)
             ->where('trainer_status.status', TrainerStatus::ATTENDED);
@@ -223,10 +245,7 @@ class AwardManagement
     {
         $sql = PersonTeamLog::select('person_team_log.*')
             ->join('team', 'team.id', '=', 'person_team_log.team_id')
-            ->where(function ($w) {
-                $w->whereIn('team.type', [Team::TYPE_CADRE, Team::TYPE_DELEGATION]);
-                $w->orWhere('team.awards_eligible', true);
-            });
+            ->where('team.awards_auto_grant', true);
 
         if ($personId) {
             $sql->where('person_id', $personId);

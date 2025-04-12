@@ -4,7 +4,6 @@ namespace App\Lib\Reports;
 
 use App\Models\Person;
 use App\Models\Position;
-use App\Models\Timesheet;
 use Illuminate\Support\Facades\DB;
 
 class RangerRetentionReport
@@ -21,7 +20,7 @@ class RangerRetentionReport
             default => $year - 4,
         };
 
-        $rows = Person::select('id', 'callsign', 'email', 'first_name', 'preferred_name', 'last_name', 'status')
+        $rows = Person::select('id', 'callsign', 'email', 'first_name', 'preferred_name', 'last_name', 'status', 'years_as_ranger')
             ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
             ->whereExists(function ($q) use ($startYear) {
                 $q->select(DB::raw(1))
@@ -36,7 +35,7 @@ class RangerRetentionReport
 
         $people = [];
         foreach ($rows as $person) {
-            $years = Timesheet::findYears($person->id, Timesheet::YEARS_AS_RANGER);
+            $years = $person->years_as_ranger;
             $people[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,

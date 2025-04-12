@@ -4,10 +4,10 @@ namespace App\Models;
 
 use App\Attributes\BlankIfEmptyAttribute;
 use App\Attributes\NullIfEmptyAttribute;
+use App\Lib\YearsManagement;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class PersonAward extends ApiModel
 {
@@ -20,6 +20,7 @@ class PersonAward extends ApiModel
 
     protected $fillable = [
         'award_id',
+        'awards_grants_service_year',
         'notes',
         'person_id',
         'position_id',
@@ -37,6 +38,7 @@ class PersonAward extends ApiModel
 
     public $rules = [
         'award_id' => 'sometimes|integer|nullable|exists:award,id',
+        'awards_grants_service_year' => 'sometimes|boolean',
         'notes' => 'sometimes|string|nullable',
         'person_id' => 'required|integer|exists:person,id',
         'position_id' => 'sometimes|integer|nullable|exists:position,id',
@@ -79,6 +81,13 @@ class PersonAward extends ApiModel
         ]);
     }
 
+    public function casts(): array
+    {
+        return [
+            'awards_grants_service_year' => 'boolean',
+        ];
+    }
+
     public static function boot(): void
     {
         parent::boot();
@@ -89,13 +98,13 @@ class PersonAward extends ApiModel
 
         self::saved(function (PersonAward $model) {
             if (!$model->bulkUpdate) {
-                self::updateYearsOfService($model->person_id);
+                YearsManagement::updateYearsOfAwards($model->person_id);
             }
         });
 
         self::deleted(function (PersonAward $model) {
             if (!$model->bulkUpdate) {
-                self::updateYearsOfService($model->person_id);
+                YearsManagement::updateYearsOfAwards($model->person_id);
             }
         });
     }
@@ -133,13 +142,14 @@ class PersonAward extends ApiModel
 
                     if ($sql->exists()) {
                         $this->addError($column, 'award already exists for the year');
+                        error_log("COLUMN $column -> [$value]");
                         return false;
                     }
                 }
             }
         }
 
-        if ($this->team_id && !$this->team?->isAwardsEligible()) {
+        if ($this->team_id && !$this->team?->awards_eligible) {
             $this->addError('team_id', 'Team is not eligible for awards');
             return false;
         } else if ($this->position_id && !$this->position?->awards_eligible) {
@@ -148,27 +158,6 @@ class PersonAward extends ApiModel
         }
 
         return parent::save($options);
-    }
-
-    /**
-     * Update the years of service for a person.
-     *
-     * @param int $personId
-     * @return void
-     */
-
-    public static function updateYearsOfService(int $personId): void
-    {
-        $years = DB::table('person_award')
-            ->select('year')
-            ->distinct()
-            ->where('person_id', $personId)
-            ->orderBy('year')
-            ->get()
-            ->pluck('year')
-            ->toArray();
-
-        Person::where('id', $personId)->update(['years_of_service' => $years]);
     }
 
     /**
@@ -225,64 +214,50 @@ class PersonAward extends ApiModel
         foreach ($rows as $row) {
             // Separate out team awards from service awards
             if ($row->team_id) {
-                $teamId = $row->team_id;
-                if (!isset($teams[$teamId])) {
-                    $teams[$teamId] = [
-                        'id' => $teamId,
-                        'title' => $row->team?->title ?? "Unknown team [$teamId]",
-                        'years' => [],
-                    ];
-                }
-                $teams[$teamId]['years'][] = $row->year;
+                self::buildAward($row->team_id, $teams, 'team', $row);
             } else if ($row->position_id) {
-                $positionId = $row->position_id;
-                if (!isset($positions[$positionId])) {
-                    $positions[$positionId] = [
-                        'id' => $positionId,
-                        'title' => $row->position?->title ?? "Unknown position [$positionId]",
-                        'years' => [],
-                    ];
-                }
-                $positions[$positionId]['years'][] = $row->year;
+                self::buildAward($row->position_id, $positions, 'position', $row);
             } else {
-                $awardId = $row->award_id;
-                if (!isset($special[$awardId])) {
-                    $special[$awardId] = [
-                        'id' => $awardId,
-                        'title' => $row->award?->title ?? "Unknown award [$awardId]",
-                        'years' => [],
-                    ];
-                }
-
-                $special[$awardId]['years'][] = $row->year;
+                self::buildAward($row->award_id, $special, 'award', $row);
             }
         }
 
-        $positions = array_values($positions);
-        $teams = array_values($teams);
-        $special = array_values($special);
-
-        usort($positions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-        usort($teams, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-        usort($special, fn($a, $b) => strcasecmp($a['title'], $b['title']));
-
-        foreach ($positions as &$position) {
-            sort($position['years']);
-        }
-
-        foreach ($teams as &$team) {
-            sort($team['years']);
-        }
-
-        foreach ($special as &$s) {
-            sort($s['years']);
-        }
+        self::sortAwardGroup($positions);
+        self::sortAwardGroup($teams);
+        self::sortAwardGroup($special);
 
         return [
             'teams' => $teams,
             'special' => $special,
             'positions' => $positions,
         ];
+    }
+
+    public static function buildAward(int $id, array &$awards, string $table, PersonAward $row): void
+    {
+        if (!isset($awards[$id])) {
+            $awards[$id] = [
+                'id' => $id,
+                'title' => $row->{$table}?->title ?? "Unknown award [$id]",
+                'years' => [],
+                'service_years' => [],
+            ];
+        }
+
+        $awards[$id]['years'][] = $row->year;
+        if ($row->awards_grants_service_year) {
+            $awards[$id]['service_years'][] = $row->year;
+        }
+    }
+
+    public static function sortAwardGroup(&$group): void
+    {
+        $group = array_values($group);
+        usort($group, fn($a, $b) => strcasecmp($a['title'], $b['title']));
+        foreach ($group as &$award) {
+            sort($award['years'], SORT_NUMERIC);
+            sort($award['service_years'], SORT_NUMERIC);
+        }
     }
 
     /**

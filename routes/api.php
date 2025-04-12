@@ -320,7 +320,6 @@ Route::middleware('api')->group(function () {
     Route::delete('person/{person}/revoke-token', [OAuth2Controller::class, 'revokeToken']);
 
     Route::get('person/{person}/status-history', [PersonController::class, 'statusHistory']);
-    Route::get('person/{person}/years', [PersonController::class, 'years']);
 
     Route::get('person/{person}/user-info', [PersonController::class, 'userInfo']);
     Route::get('person/{person}/unread-message-count', [PersonController::class, 'UnreadMessageCount']);
