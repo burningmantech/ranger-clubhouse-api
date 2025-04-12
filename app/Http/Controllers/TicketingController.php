@@ -29,17 +29,30 @@ class TicketingController extends ApiController
     public function ticketingInfo(): JsonResponse
     {
         $settings = setting([
-            'TicketingPeriod', 'TicketsAndStuffEnablePNV',
-            'TAS_SAPSOMax',
-            'TAS_BoxOfficeOpenDate', 'TAS_DefaultWAPDate', 'TAS_SAPDateRange', 'TAS_DefaultAlphaWAPDate',
-            'TAS_DefaultSOWAPDate', 'TAS_SubmitDate',
-            'TicketVendorEmail', 'TicketVendorName', 'TAS_Email',
-            'SpTicketThreshold', 'ScTicketThreshold',
-            'TAS_Ticket_FAQ', 'TAS_SAP_FAQ', 'TAS_VP_FAQ', 'TAS_Alpha_FAQ',
+            'ScTicketThreshold',
+            'SpTicketThreshold',
+            'TAS_Alpha_FAQ',
+            'TAS_BoxOfficeOpenDate',
+            'TAS_DefaultAlphaWAPDate',
+            'TAS_DefaultSOWAPDate',
+            'TAS_DefaultWAPDate',
+            'TAS_Email',
+            'TAS_LSD_PayByDateTime',
+            'TAS_PayByDateTime',
             'TAS_Pickup_Locations',
-            'TAS_PayByDateTime', 'TAS_LSD_PayByDateTime',
+            'TAS_Provisions_FAQ',
+            'TAS_SAPDateRange',
+            'TAS_SAPSOMax',
+            'TAS_SAP_FAQ',
             'TAS_Special_Price_Ticket_Cost',
-            'TAS_Special_Price_Vehicle_Pass_Cost'
+            'TAS_Special_Price_Vehicle_Pass_Cost',
+            'TAS_SubmitDate',
+            'TAS_Ticket_FAQ',
+            'TAS_VP_FAQ',
+            'TicketVendorEmail',
+            'TicketVendorName',
+            'TicketingPeriod',
+            'TicketsAndStuffEnablePNV',
         ]);
 
         return response()->json([
@@ -77,6 +90,7 @@ class TicketingController extends ApiController
                     'wap' => $settings['TAS_SAP_FAQ'],
                     'vp' => $settings['TAS_VP_FAQ'],
                     'alpha' => $settings['TAS_Alpha_FAQ'],
+                    'provisions' => $settings['TAS_Provisions_FAQ'],
                 ]
             ]
         ]);
