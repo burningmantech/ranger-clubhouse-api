@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Attributes\NullIfEmptyAttribute;
+use App\Lib\AwardManagement;
 use App\Lib\YearsManagement;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -236,6 +237,7 @@ class Timesheet extends ApiModel
             }
 
             if ($model->off_duty) {
+                AwardManagement::rebuildForPersonId($model->person_id);
                 YearsManagement::updateTimesheetYears($model->person_id);
             }
         });
@@ -248,6 +250,7 @@ class Timesheet extends ApiModel
                     'off_duty' => (string)$model->off_duty
                 ]
             );
+            AwardManagement::rebuildForPersonId($model->person_id);
             YearsManagement::updateTimesheetYears($model->person_id);
         });
     }

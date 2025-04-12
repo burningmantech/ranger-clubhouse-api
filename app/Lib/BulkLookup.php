@@ -30,7 +30,7 @@ class BulkLookup
             }
 
             if ($person) {
-                $years = Timesheet::computeYearsForPerson($person->id, Timesheet::YEARS_COMBINED);
+                $years = $person->years_combined;
                 $results[] = [
                     'result' => 'success',
                     'id' => $person->id,
@@ -40,7 +40,7 @@ class BulkLookup
                     'last_name' => $person->last_name,
                     'status' => $person->status,
                     'email' => $person->email,
-                    'last_worked' => last($years),
+                    'last_worked' => !empty($years) ? last($years) : 0,
                     'vintage' => $person->vintage,
                     'years_worked' => count($years),
                     'street1' => $person->street1,

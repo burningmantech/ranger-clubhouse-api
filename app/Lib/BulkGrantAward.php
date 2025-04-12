@@ -147,14 +147,14 @@ class BulkGrantAward
             }
 
 
-            if (count($columns) < 4) {
-                $record->error = 'No service year indicator given.';
+            if (count($columns) < 5) {
+                $record->error = 'No award year(s) given.';
                 continue;
             }
 
             $serviceYear = strtolower($columns[3]);
             if ($serviceYear != 'y' && $serviceYear != 'n') {
-                $record->error = 'Service year indicator "' . $serviceYear . '" is neither y nor n';
+                $record->error = 'Award year indicator "' . $serviceYear . '" is neither y nor n';
             }
 
             $serviceAwards = [];

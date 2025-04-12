@@ -20,8 +20,16 @@ class RangerRetentionReport
             default => $year - 4,
         };
 
-        $rows = Person::select('id', 'callsign', 'email', 'first_name', 'preferred_name', 'last_name', 'status', 'years_as_ranger')
-            ->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
+        $rows = Person::select(
+            'id',
+            'callsign',
+            'email',
+            'first_name',
+            'preferred_name',
+            'last_name',
+            'status',
+            'years_combined'
+        )->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION, Person::RETIRED])
             ->whereExists(function ($q) use ($startYear) {
                 $q->select(DB::raw(1))
                     ->from('timesheet')
@@ -35,7 +43,7 @@ class RangerRetentionReport
 
         $people = [];
         foreach ($rows as $person) {
-            $years = $person->years_as_ranger;
+            $years = $person->years_combined;
             $people[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
