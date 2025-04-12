@@ -347,6 +347,8 @@ class Position extends ApiModel
             'all_rangers' => 'bool',
             'auto_sign_out' => 'bool',
             'awards_eligible' => 'bool',
+            'awards_auto_grant' => 'bool',
+            'awards_grants_service_year' => 'bool',
             'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'mvr_eligible' => 'bool',
@@ -387,6 +389,14 @@ class Position extends ApiModel
     public static function boot(): void
     {
         parent::boot();
+
+        self::saving(function ($model) {
+           if (!$model->awards_eligible) {
+               // Ensure the other flags are cleared.
+               $model->awards_auto_grant = false;
+               $model->awards_grants_service_year = false;
+           }
+        });
 
         self::saved(function ($model) {
             if (is_array($model->role_ids) && Auth::user()?->hasRole(Role::TECH_NINJA)) {

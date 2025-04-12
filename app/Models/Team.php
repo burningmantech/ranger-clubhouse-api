@@ -73,6 +73,14 @@ class Team extends ApiModel
     {
         parent::boot();
 
+        self::saving(function (Team $model) {
+            if (!$model->awards_eligible) {
+                // Ensure the automation does not trigger
+                $model->awards_grants_service_year = false;
+                $model->awards_auto_grant = false;
+            }
+        });
+
         self::saved(function ($model) {
             // Don't use empty() because the array might be empty indicating no roles are to be assigned
             if (is_array($model->role_ids) && Auth::user()?->hasRole(Role::TECH_NINJA)) {
@@ -175,10 +183,7 @@ class Team extends ApiModel
         }
 
         if ($awardsEligible) {
-            $sql->where(function ($w) {
-                $w->whereIn('type', [self::TYPE_CADRE, self::TYPE_DELEGATION]);
-                $w->orWhere('awards_eligible', true);
-            });
+            $sql->where('awards_eligible', true);
         }
 
         if ($includeManagers) {

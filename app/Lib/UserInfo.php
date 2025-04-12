@@ -6,7 +6,6 @@ use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonMentor;
 use App\Models\PersonMessage;
-use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\SurveyAnswer;
@@ -69,6 +68,8 @@ class UserInfo
             'years_as_contributor' => $person->years_as_contributor,
             'years_as_ranger' => $person->years_as_ranger,
             'years_combined' => $person->years_combined,
+            'years_of_awards' => $person->years_of_awards,
+            'years_of_service' => $person->years_of_service,
             'years_seen' => $person->years_seen,
         ];
 

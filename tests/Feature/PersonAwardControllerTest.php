@@ -9,6 +9,7 @@ use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TrainerStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PersonAwardControllerTest extends TestCase
@@ -139,7 +140,7 @@ class PersonAwardControllerTest extends TestCase
      * Test award creation from timesheet creation
      */
 
-    public function testCreateAwardFromTimesheet() : void
+    public function testCreateAwardFromTimesheet(): void
     {
         $this->addRole(Role::SHIFT_MANAGEMENT);
 
@@ -147,6 +148,7 @@ class PersonAwardControllerTest extends TestCase
         $onDuty = date("$year-08-25 06:00:00");
         $offDuty = date("$year-08-25 12:00:00");
 
+        DB::table('position')->where('id', Position::DIRT)->update(['awards_auto_grant' => true]);
         $timesheet = Timesheet::factory()->create([
             'person_id' => $this->user->id,
             'on_duty' => $onDuty,
@@ -162,16 +164,48 @@ class PersonAwardControllerTest extends TestCase
     }
 
     /**
+     * Test a timesheet should not generate an award
+     */
+
+    public function testNoAwardCreationFromTimesheet(): void
+    {
+        $this->addRole(Role::SHIFT_MANAGEMENT);
+        Position::factory()->create([
+            'id' => Position::DIRT_SHINY_PENNY,
+            'title' => 'Dirt Shiny Penny',
+            'awards_eligible' => false,
+        ]);
+
+        $year = 2021;
+        $onDuty = date("$year-08-25 06:00:00");
+        $offDuty = date("$year-08-25 12:00:00");
+
+        $timesheet = Timesheet::factory()->create([
+            'person_id' => $this->user->id,
+            'on_duty' => $onDuty,
+            'off_duty' => $offDuty,
+            'position_id' => Position::DIRT_SHINY_PENNY,
+        ]);
+
+        $this->assertDatabaseMissing('person_award', [
+            'person_id' => $this->user->id,
+            'position_id' => Position::DIRT_SHINY_PENNY,
+            'year' => $year,
+        ]);
+    }
+
+    /**
      * Test award creation from trainer status update
      */
 
-    public function testCreateAwardFromTrainerStatus() : void
+    public function testCreateAwardFromTrainerStatus(): void
     {
         Position::factory()->create([
             'id' => Position::TRAINER,
             'title' => 'Trainer',
             'type' => Position::TYPE_TRAINING,
             'awards_eligible' => true,
+            'awards_auto_grant' => true,
         ]);
 
         Position::factory()->create([
@@ -211,5 +245,154 @@ class PersonAwardControllerTest extends TestCase
             'position_id' => Position::TRAINER,
             'year' => $year,
         ]);
+    }
+
+    /**
+     * Test basic bulk award uploads
+     */
+
+    const string BULK_AWARD_BASIC = ',position,Dirt,y,2025';
+
+    public function test_basic_bulk_grant_awards(): void
+    {
+        $this->addRole(Role::AWARD_MANAGEMENT);
+        $response = $this->post("person-award/bulk-grant", [
+            'lines' => $this->user->callsign . self::BULK_AWARD_BASIC,
+            'commit' => false
+        ]);
+
+        /*
+        'awards' => [],
+                'callsign' => $callsign,
+                'columns' => $columns,
+                'error' => null,
+                'title' => '',
+                'type' => '',
+                'year' => [],
+        */
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'records' => [
+                [
+                    'callsign' => $this->user->callsign,
+                    'awards' => [
+                        [
+                            'person_id' => $this->user->id,
+                            'position_id' => Position::DIRT,
+                            'year' => 2025,
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        $this->assertDatabaseMissing('person_award', [
+            'person_id' => $this->user->id,
+            'position_id' => Position::DIRT,
+            'year' => 2025,
+        ]);
+    }
+
+    /**
+     * Test to see if an award was created via the bulk uploader.
+     *
+     * @return void
+     */
+
+    public function test_basic_bulk_grant_awards_with_commit(): void
+    {
+        $this->addRole(Role::AWARD_MANAGEMENT);
+        $response = $this->post("person-award/bulk-grant", [
+            'lines' => $this->user->callsign . self::BULK_AWARD_BASIC,
+            'commit' => true
+        ]);
+
+        /*
+        'awards' => [],
+                'callsign' => $callsign,
+                'columns' => $columns,
+                'error' => null,
+                'title' => '',
+                'type' => '',
+                'year' => [],
+        */
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('person_award', [
+            'person_id' => $this->user->id,
+            'position_id' => Position::DIRT,
+            'year' => 2025,
+        ]);
+    }
+
+    /**
+     * Test to see if an award was created via the bulk uploader.
+     *
+     * @return void
+     */
+
+    public function test_bulk_grant_award_error_checking(): void
+    {
+        $this->addRole(Role::AWARD_MANAGEMENT);
+        $callsign = $this->user->callsign;
+        $response = $this->post("person-award/bulk-grant", [
+            'lines' => <<<__EOF__
+                bad-callsign,position,Dirt,Y,2025
+                $callsign,unknown,Dirt,Y,2025
+                $callsign,position,Bad Title,Y,2025
+                $callsign,position,Dirt,Y,20
+                $callsign,position,Dirt,Y,2025-2020
+                $callsign,position,Dirt,Y,2199
+                $callsign,position,Dirt,Y
+                $callsign,position,Dirt,why,2025
+                __EOF__,
+            'commit' => true
+        ]);
+
+        /*
+        'awards' => [],
+                'callsign' => $callsign,
+                'columns' => $columns,
+                'error' => null,
+                'title' => '',
+                'type' => '',
+                'year' => [],
+        */
+
+        DB::table('person_award')->delete();
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'records' => [
+                [
+                    'callsign' => 'bad-callsign',
+                    'error' => 'Callsign not found',
+                ],
+                [
+                    'error' => 'Type is neither award, position, or team.',
+                ],
+                [
+                    'error' => 'Position "Bad Title" not found',
+                ],
+                [
+                    'error' => 'year 20 is before 1996',
+                ],
+                [
+                    'error' => 'Start year is after ending year'
+                ],
+                [
+                    'error' => 'Year 2199 is in the future. Current year is only ' . current_year(),
+                ],
+                [
+                    'error' => 'No award year(s) given.',
+                ],
+                [
+                    'error' => 'Award year indicator "why" is neither y nor n',
+                ]
+            ]
+        ]);
+
+        $this->assertDatabaseCount('person_award', 0);
     }
 }

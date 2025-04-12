@@ -40,13 +40,13 @@ class TrainerStatus extends ApiModel
 
         self::saved(function ($model) {
             if ($model->trainer_slot?->full_position?->awards_eligible) {
-                AwardManagement::rebuildPerson($model->person_id);
+                AwardManagement::rebuildForPersonId($model->person_id);
             }
         });
 
         self::deleted(function ($model) {
             if ($model->trainer_slot?->full_position?->awards_eligible) {
-                AwardManagement::rebuildPerson($model->person_id);
+                AwardManagement::rebuildForPersonId($model->person_id);
             }
         });
     }

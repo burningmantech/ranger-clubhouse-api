@@ -148,7 +148,7 @@ class PersonAwardController extends ApiController
     public function rebuildPerson(Person $person): JsonResponse
     {
         $this->authorize('rebuildPerson', [PersonAward::class, $person]);
-        AwardManagement::rebuildPerson($person->id);
+        AwardManagement::rebuildForPersonId($person->id);
         return $this->success();
     }
 

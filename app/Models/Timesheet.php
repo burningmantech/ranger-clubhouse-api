@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Attributes\NullIfEmptyAttribute;
 use App\Lib\AwardManagement;
+use App\Lib\YearsManagement;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -52,11 +53,10 @@ class Timesheet extends ApiModel
     const string STATUS_VERIFIED = 'verified';
     const string STATUS_UNVERIFIED = 'unverified';
 
-    // type for findYears()
-    const string YEARS_SEEN = 'seen';           // All years the person worked and/or had signups
-    const string YEARS_COMBINED = 'combined';   // All the years worked as both a ranger and contributor
+    // type for computeYearsForPerson
     const string YEARS_AS_RANGER = 'as-ranger'; // All the years worked as a ranger
     const string YEARS_AS_CONTRIBUTOR = 'as-contributor'; // All the years worked as a contributor / non-ranger
+    const string YEARS_ALL = 'all';
 
     const array EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
@@ -235,13 +235,10 @@ class Timesheet extends ApiModel
             if ($model->additionalWranglerNotes) {
                 TimesheetNote::record($id, $userId, $model->additionalWranglerNotes, TimesheetNote::TYPE_WRANGLER);
             }
-            $onDuty = $model->getChangedValues()['on_duty'] ?? null;
-            $isEchelon = $model->getChangedValues()['is_echelon'] ?? null;
-            if ($offDuty || $onDuty || $isEchelon) {
-                $model->computePersonYears();
-            }
-            if ($offDuty || $onDuty || $isEchelon) {
-                AwardManagement::rebuildPerson($userId);
+
+            if ($model->off_duty) {
+                AwardManagement::rebuildForPersonId($model->person_id);
+                YearsManagement::updateTimesheetYears($model->person_id);
             }
         });
 
@@ -253,8 +250,8 @@ class Timesheet extends ApiModel
                     'off_duty' => (string)$model->off_duty
                 ]
             );
-            $model->computePersonYears();
-            PersonAward::updateYearsOfService($model->person_id);
+            AwardManagement::rebuildForPersonId($model->person_id);
+            YearsManagement::updateTimesheetYears($model->person_id);
         });
     }
 
@@ -534,76 +531,48 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Find the years a person has based on $type:
+     * Compute the years a person has worked based on $type:
      *
-     * YEARS_SEEN: Timesheet years *including* Alpha & Training combined with shift sign up years
-     * YEARS_COMBINED: Combined timesheet years excluding Alpha & Training entries for both Ranger and Non-Ranger work.
      * YEARS_AS_RANGER: Timesheet years excluding Alpha & Training entries as a Ranger (is_echelon=false)
      * YEARS_AS_CONTRIBUTOR: Timesheet years excluding Alpha & Training entries as a Non Ranger (is_echelon=true)
+     * YEARS_ALL: Compute all the timesheets years.
      *
      * @param int $personId
      * @param string $type
      * @return array
      */
 
-    public static function findYears(int $personId, string $type): array
+    public static function computeYearsForPerson(int $personId, string $type): array
     {
-        $everything = ($type == self::YEARS_SEEN);
+        if ($type == self::YEARS_ALL) {
+            $sql = DB::table('timesheet')
+                ->selectRaw("YEAR(on_duty) as year")
+                ->where('person_id', $personId)
+                ->whereNotNull('off_duty')
+                ->groupBy("year")
+                ->orderBy("year", "asc");
+        } else {
+            $subQuery = self::select(
+                DB::raw('YEAR(on_duty) as year'),
+                DB::raw('SUM(TIMESTAMPDIFF(HOUR, on_duty, off_duty)) AS total_hours')
+            )->where('person_id', $personId)
+                ->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS)
+                ->groupByRaw('YEAR(on_duty)');
 
-        $sql = DB::table('timesheet')
-            ->selectRaw("YEAR(on_duty) as year")
-            ->where('person_id', $personId)
-            ->groupBy("year")
-            ->orderBy("year", "asc");
+            if ($type == self::YEARS_AS_CONTRIBUTOR) {
+                $subQuery->where('is_echelon', true);
+            } else if ($type == self::YEARS_AS_RANGER) {
+                $subQuery->where('is_echelon', false);
+            }
 
-        if (!$everything) {
-            $sql = $sql->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS);
+            $sql = DB::query()->fromSub($subQuery, 'year_summary')
+                ->where(fn($q) => $q->where('year', '<', 2025)->orWhere('total_hours', '>=', 6))
+                ->orderBy('year');
         }
 
-        if ($type == self::YEARS_AS_CONTRIBUTOR) {
-            $sql->where('is_echelon', true);
-        } else if ($type == self::YEARS_AS_RANGER) {
-            $sql->where('is_echelon', false);
-        }
-
-        $years = $sql->pluck('year')->toArray();
-
-        if (!$everything) {
-            return $years;
-        }
-
-        // Look at the sign up schedule as well
-        $signUpYears = DB::table('person_slot')
-            ->selectRaw("YEAR(begins) as year")
-            ->join('slot', 'slot.id', '=', 'person_slot.slot_id')
-            ->where('person_id', $personId)
-            ->groupBy('year')
-            ->orderBy('year')
-            ->pluck('year')
-            ->toArray();
-
-        $years = array_unique(array_merge($years, $signUpYears));
-        sort($years, SORT_NUMERIC);
-
-        return $years;
+        return $sql->pluck('year')->toArray();
     }
 
-    public function computePersonYears(): void
-    {
-        $person = $this->person;
-        if (!$person) {
-            // Account may have been deleted
-            return;
-        }
-
-        $personId = $person->id;
-        $person->years_seen = Timesheet::findYears($personId, Timesheet::YEARS_SEEN);
-        $person->years_as_contributor = Timesheet::findYears($personId, Timesheet::YEARS_AS_CONTRIBUTOR);
-        $person->years_as_ranger = Timesheet::findYears($personId, Timesheet::YEARS_AS_RANGER);
-        $person->years_combined = Timesheet::findYears($personId, Timesheet::YEARS_COMBINED);
-        $person->auditReason = 'years recompute';
-        $person->saveWithoutValidation();
-    }
 
     /**
      * Is the person a binary Ranger (0 or 1 years experience).

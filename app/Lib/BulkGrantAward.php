@@ -113,7 +113,7 @@ class BulkGrantAward
                         continue 2;
                     }
 
-                    if (!$team->isAwardsEligible()) {
+                    if (!$team->awards_eligible) {
                         $record->error = 'Team "' . $title . '" is not set for award eligibility';
                         continue 2;
                     }
@@ -147,13 +147,18 @@ class BulkGrantAward
             }
 
 
-            if (count($columns) < 4) {
-                $record->error = 'No year(s) given';
+            if (count($columns) < 5) {
+                $record->error = 'No award year(s) given.';
                 continue;
             }
 
+            $serviceYear = strtolower($columns[3]);
+            if ($serviceYear != 'y' && $serviceYear != 'n') {
+                $record->error = 'Award year indicator "' . $serviceYear . '" is neither y nor n';
+            }
+
             $serviceAwards = [];
-            for ($idx = 3; $idx < count($columns); $idx++) {
+            for ($idx = 4; $idx < count($columns); $idx++) {
                 $years = $columns[$idx] ?? null;
                 if (empty($years)) {
                     $record->error = 'No years given. Perhaps an extra comma is to blame.';
@@ -250,6 +255,12 @@ class BulkGrantAward
             }
         }
 
+        if ($commit) {
+            foreach ($people as $person) {
+                YearsManagement::updateYearsOfAwards($person->id);
+            }
+        }
+
         return $records;
     }
 
@@ -261,7 +272,7 @@ class BulkGrantAward
         }
 
         if (!is_numeric($year)) {
-            $record->error = 'Year is not an integer';
+            $record->error = 'Year is not a number';
             return false;
         }
 
