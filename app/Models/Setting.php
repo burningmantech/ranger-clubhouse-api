@@ -511,6 +511,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'TAS_Provisions_FAQ' => [
+            'description' => 'Ticketing Provisions FAQ Link',
+            'type' => self::TYPE_STRING,
+        ],
+
         'TAS_VP_FAQ' => [
             'description' => 'Vehicle Pass FAQ Link',
             'type' => self::TYPE_STRING,
@@ -624,7 +629,7 @@ class Setting extends ApiModel
         ],
 
         'EventManagementOnPlayaEnabled' => [
-            'description' => 'Enables Login Manage On Playa role AND allows LM Year Round to view Emergency Contact Info plus read Clubhouse Messages',
+            'description' => 'Enables Event Management (E.M.) On Playa role AND allows E.M. Year Round to view Emergency Contact Info plus read Clubhouse Messages',
             'type' => self::TYPE_BOOL
         ]
     ];

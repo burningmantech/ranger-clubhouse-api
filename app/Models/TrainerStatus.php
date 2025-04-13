@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\AwardManagement;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +13,9 @@ class TrainerStatus extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
-    const ATTENDED = 'attended';
-    const PENDING = 'pending';
-    const NO_SHOW = 'no-show';
+    const string ATTENDED = 'attended';
+    const string PENDING = 'pending';
+    const string NO_SHOW = 'no-show';
 
     protected $guarded = ['id'];
 
@@ -31,6 +32,23 @@ class TrainerStatus extends ApiModel
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::saved(function ($model) {
+            if ($model->trainer_slot?->full_position?->awards_eligible) {
+                AwardManagement::rebuildForPersonId($model->person_id);
+            }
+        });
+
+        self::deleted(function ($model) {
+            if ($model->trainer_slot?->full_position?->awards_eligible) {
+                AwardManagement::rebuildForPersonId($model->person_id);
+            }
+        });
     }
 
     /**
@@ -112,7 +130,7 @@ class TrainerStatus extends ApiModel
      * @param int $slotId
      */
 
-    public static function deleteForSlot(int $slotId)
+    public static function deleteForSlot(int $slotId): void
     {
         self::where('slot_id', $slotId)->delete();
         self::where('trainer_slot_id', $slotId)->delete();

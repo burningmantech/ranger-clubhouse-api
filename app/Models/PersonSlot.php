@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\YearsManagement;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,19 @@ class PersonSlot extends ApiModel
     public function slot(): BelongsTo
     {
         return $this->belongsTo(Slot::class);
+    }
+
+    public static function boot(): void
+    {
+        parent::boot();
+
+        self::created(function ($model) {
+            YearsManagement::updateSignupYears($model->person_id);
+        });
+
+        self::deleted(function ($model) {
+            YearsManagement::updateSignupYears($model->person_id);
+        });
     }
 
     /**

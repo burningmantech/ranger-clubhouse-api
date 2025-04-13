@@ -526,26 +526,6 @@ class PersonController extends ApiController
     }
 
     /**
-     * Return the years person has worked and has sign ups
-     * TODO: remove when all cached clients have expired.
-     *
-     * @param Person $person
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function years(Person $person): JsonResponse
-    {
-        $this->authorize('view', $person);
-        return response()->json([
-            'years' => $person->years_combined,
-            'all_years' => $person->years_seen,
-            'rangered_years' => $person->years_as_ranger,
-            'echelon_years' => $person->years_as_contributor,
-        ]);
-    }
-
-    /**
      * Calculate how many earned credits for a given year
      *
      * @param Person $person

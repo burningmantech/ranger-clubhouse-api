@@ -34,6 +34,7 @@ class Team extends ApiModel
 
     protected $fillable = [
         'active',
+        'awards_eligible',
         'description',
         'email',
         'mvr_eligible',
@@ -47,7 +48,9 @@ class Team extends ApiModel
     {
         return [
             'active' => 'boolean',
+            'awards_eligible' => 'boolean',
             'mvr_eligible' => 'boolean',
+            'pvr_eligible' => 'boolean',
         ];
     }
 
@@ -70,6 +73,14 @@ class Team extends ApiModel
     {
         parent::boot();
 
+        self::saving(function (Team $model) {
+            if (!$model->awards_eligible) {
+                // Ensure the automation does not trigger
+                $model->awards_grants_service_year = false;
+                $model->awards_auto_grant = false;
+            }
+        });
+
         self::saved(function ($model) {
             // Don't use empty() because the array might be empty indicating no roles are to be assigned
             if (is_array($model->role_ids) && Auth::user()?->hasRole(Role::TECH_NINJA)) {
@@ -80,11 +91,12 @@ class Team extends ApiModel
         });
 
         self::deleted(function ($model) {
-            $teamId = $model->id;
-            Position::where('team_id', $teamId)->update(['team_id' => null]);
-            PersonTeam::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
-            PersonTeamLog::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
-            TeamRole::where('team_id', $teamId)->deleteWithReason(self::DELETE_REASON);
+            $awardId = $model->id;
+            PersonAward::where('id', $awardId)->deleteWithReason(self::DELETE_REASON);
+            PersonTeam::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
+            PersonTeamLog::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
+            Position::where('team_id', $awardId)->update(['team_id' => null]);
+            TeamRole::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
             ClubhouseCache::flush();
         });
     }
@@ -159,6 +171,7 @@ class Team extends ApiModel
         $canManage = $query['can_manage'] ?? false;
         $includeRoles = $query['include_roles'] ?? false;
         $includeManagers = $query['include_managers'] ?? false;
+        $awardsEligible = $query['awards_eligible'] ?? false;
 
         $sql = self::query()->select('team.*')->orderBy('team.title');
 
@@ -167,6 +180,10 @@ class Team extends ApiModel
                 $j->on('team_manager.team_id', 'team.id');
                 $j->where('team_manager.person_id', $personId);
             })->addSelect(DB::raw('IF(team_manager.team_id is null, false, true) AS can_manage'));
+        }
+
+        if ($awardsEligible) {
+            $sql->where('awards_eligible', true);
         }
 
         if ($includeManagers) {
@@ -217,6 +234,11 @@ class Team extends ApiModel
     public function getRoleIdsAttribute(): ?array
     {
         return $this->role_ids;
+    }
+
+    public function isAwardsEligible(): bool
+    {
+        return in_array($this->type, [self::TYPE_CADRE, self::TYPE_DELEGATION]) || $this->awards_eligible;
     }
 
     /**
