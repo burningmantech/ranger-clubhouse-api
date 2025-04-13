@@ -49,7 +49,7 @@ class AgreementsController extends ApiController
             'tag' => $document->tag,
             'title' => $document->description,
             'text' => $document->body,
-            'signature' => Agreements::obtainSignature($person, $tag)
+            'signature' => Agreements::didSignDocument($person, $tag)
         ]);
     }
 
