@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\TrainingSignupEmailJob;
+use App\Lib\Agreements;
 use App\Lib\MVR;
 use App\Lib\Scheduling;
 use App\Lib\WorkSummary;
 use App\Mail\TrainingSessionFullMail;
+use App\Models\Document;
 use App\Models\EventDate;
 use App\Models\Person;
 use App\Models\PersonEvent;
@@ -172,15 +174,24 @@ class PersonScheduleController extends ApiController
             return response()->json($result);
         }
 
-        /*
-        Per July 18th, 2024 timecard conversion - allow people to signup.
-        if ($slot->position->paycode && is_null($person->employee_id)) {
-            return response()->json([
-                'status' => Schedule::NO_EMPLOYEE_ID,
-                'signed_up' => $slot->signed_up,
-            ]);
+        $didSignSandmanAffidavit = false;
+        $positionId = $slot->position_id;
+        $isSandmanShift = ($positionId == Position::SANDMAN_TRAINING || $positionId == Position::SANDMAN || $positionId == Position::SANDMAN_TRAINER);
+        if ($isSandmanShift) {
+            $personEvent = PersonEvent::firstOrNewForPersonYear($person->id, current_year());
+            $didSignSandmanAffidavit = Agreements::didSignDocument($person, Document::SANDMAN_AFFIDAVIT_TAG, $personEvent);
+
+            if (!$didSignSandmanAffidavit && !$confirmForce) {
+                return response()->json([
+                    'status' => Schedule::MISSING_REQUIREMENTS,
+                    'signed_up' => $slot->signed_up,
+                    'may_force' => $canForce,
+                    'requirements' => ['unsigned-sandman-affidavit'],
+                    'training_signups_allowed' => $permission['training_signups_allowed'] ?? false,
+                ]);
+            }
         }
-        */
+
 
         if ($position->mvr_signup_eligible) {
             $year = current_year();
@@ -225,6 +236,11 @@ class PersonScheduleController extends ApiController
         if ($slot->has_started) {
             $forcedReasons[] = 'started';
             $logData['started'] = true;
+        }
+
+        if ($isSandmanShift && !$didSignSandmanAffidavit) {
+            $forcedReasons[] = 'unsigned sandman affidavit';
+            $logData['unsigned_sandman_affidavit'] = true;
         }
 
         $action = 'added';
@@ -276,6 +292,10 @@ class PersonScheduleController extends ApiController
 
         if ($isMultipleEnrolled) {
             $response['multiple_enrollment'] = true;
+        }
+
+        if ($isSandmanShift && !$didSignSandmanAffidavit) {
+            $response['unsigned_sandman_affidavit'] = true;
         }
 
         return response()->json($response);

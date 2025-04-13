@@ -2,15 +2,14 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\Position;
 use App\Models\Role;
-use App\Models\TraineeStatus;
-use App\Models\TrainerStatus;
-use App\Exceptions\UnacceptableConditionException;
+use App\Models\Slot;
 
 /*
  * TODO: Move to a flag/certificate/agreement tracking system to layer on top of. This is intended to be a
@@ -75,6 +74,7 @@ class Agreements
      *
      * @param Person $person
      * @return array
+     * @throws UnacceptableConditionException
      */
 
     public static function retrieve(Person $person): array
@@ -115,6 +115,7 @@ class Agreements
      * @param Person $person
      * @param string $tag
      * @param bool $signature
+     * @throws UnacceptableConditionException
      */
 
     public static function signAgreement(Person $person, string $tag, bool $signature): void
@@ -152,9 +153,10 @@ class Agreements
      * @param string $tag
      * @param null $personEvent
      * @return bool
+     * @throws UnacceptableConditionException
      */
 
-    public static function obtainSignature(Person $person, string $tag, $personEvent = null): bool
+    public static function didSignDocument(Person $person, string $tag, $personEvent = null): bool
     {
         $paper = self::DOCUMENTS[$tag] ?? null;
         if (!$paper) {
@@ -215,20 +217,12 @@ class Agreements
      * @return bool
      */
 
-    public static function isDocumentVisible(string $tag, $doc, PersonEvent $personEvent,Person $person): bool
+    public static function isDocumentVisible(string $tag, $doc, PersonEvent $personEvent, Person $person): bool
     {
         if ($tag == Document::SANDMAN_AFFIDAVIT_TAG) {
-            // Special case, only available after sandman training has happened.
-            $year = current_year();
-            if (TraineeStatus::didPersonPassForYear($personEvent->person_id, Position::SANDMAN_TRAINING, $year)) {
-                return true;
-            }
-
-            if (TrainerStatus::didPersonTeachForYear($personEvent->person_id, Position::SANDMAN_TRAINING, $year)) {
-                return true;
-            }
-
-            return false;
+            // Document become visible when the Sandman schedule has been published.
+            return (Slot::haveActiveForPosition(Position::SANDMAN_TRAINING)
+                || Slot::haveActiveForPosition(Position::SANDMAN));
         } else if ($tag == Document::PERSONAL_VEHICLE_AGREEMENT_TAG) {
             return PVR::isEligible($person->id, $personEvent, current_year()) && $personEvent->org_vehicle_insurance;
         }
