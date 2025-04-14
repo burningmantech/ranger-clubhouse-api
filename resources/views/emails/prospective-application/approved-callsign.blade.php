@@ -69,6 +69,6 @@
         <p>
             Your Friendly Black Rock Ranger Volunteer Coordinators
         </p>
-        <x-vc-questions/>
+        <x-vc-application-footer :application="$application" />
     </div>
 </x-html-email>

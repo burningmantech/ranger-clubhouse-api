@@ -11,7 +11,7 @@
         <tbody>
         <tr>
             <td>Application ID</td>
-            <td>A-{{$application->id}} (Salesforce ID {{$application->salesforce_name}})</td>
+            <td>A-{{$application->id}}</td>
         </tr>
         <tr>
             <td>BRC Ranger Applicant</td>
