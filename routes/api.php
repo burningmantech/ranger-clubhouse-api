@@ -362,6 +362,7 @@ Route::middleware('api')->group(function () {
     Route::post('pod/{pod}/person', [PodController::class, 'addPerson']);
     Route::delete('pod/{pod}/person', [PodController::class, 'removePerson']);
     Route::patch('pod/{pod}/person', [PodController::class, 'updatePerson']);
+    Route::patch('pod/{oldPod}/move/{person}/{newPod}', [PodController::class, 'movePerson']);
     Route::resource('pod', PodController::class);
 
     Route::post('position/{position}/bulk-grant-revoke', [PositionController::class, 'bulkGrantRevoke']);
