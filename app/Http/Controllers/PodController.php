@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Person;
 use App\Models\PersonPod;
 use App\Models\Pod;
@@ -11,7 +12,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Exceptions\UnacceptableConditionException;
 
 class PodController extends ApiController
 {
@@ -170,7 +170,7 @@ class PodController extends ApiController
      * @param Pod $pod
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
+     * @throws UnacceptableConditionException
      */
 
     public function addPerson(Pod $pod): JsonResponse
@@ -212,12 +212,12 @@ class PodController extends ApiController
     }
 
     /**
-     * Add a person to a pod
+     * Update the person's info
      *
      * @param Pod $pod
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
+     * @throws UnacceptableConditionException
      */
 
     public function updatePerson(Pod $pod): JsonResponse
@@ -249,13 +249,63 @@ class PodController extends ApiController
         return $this->success($pod);
     }
 
+    /**
+     * Move the person from one pod to another
+     *
+     * @param Pod $oldPod
+     * @param Person $person
+     * @param Pod $newPod
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws UnacceptableConditionException
+     */
+
+    public function movePerson(Pod $oldPod, Person $person, Pod $newPod): JsonResponse
+    {
+        $this->authorize('movePerson', $oldPod);
+
+        $this->removePersonFromPod($person, $oldPod);
+
+        $timesheet = Timesheet::findPersonOnDuty($person->id);
+
+        $newPersonPod = new PersonPod([
+            'person_id' => $person->id,
+            'pod_id' => $newPod->id,
+            'timesheet_id' => $timesheet?->id,
+        ]);
+        $newPersonPod->load('person:id,callsign');
+
+        $newPod->person_pod[] = $newPersonPod;
+        if ($newPod->type == Pod::TYPE_SHIFT) {
+            $people = $newPod->person_pod->sort(fn($a, $b) => strcasecmp($a->person->callsign, $b->person->callsign));
+        } else {
+            $people = $newPod->person_pod;
+        }
+
+        $index = 1;
+        foreach ($people as $i => $podling) {
+            $podling->sort_index = $index;
+            $index++;
+            $podling->saveWithoutValidation();
+        }
+
+        $newPod->person_count = count($newPod->people);
+        if ($newPod->disbanded_at) {
+            // Reform the pod.
+            $newPod->disbanded_at = null;
+        }
+        $newPod->saveWithoutValidation();
+
+        return $this->success();
+    }
+
 
     /**
      * Remove an active person from a pod.
      *
      * @param Pod $pod
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function removePerson(Pod $pod): JsonResponse
@@ -267,9 +317,15 @@ class PodController extends ApiController
         ]);
 
         $person = Person::findOrFail($params['person_id']);
+        $this->removePersonFromPod($person, $pod);
+        $pod->load(Pod::RELATIONSHIPS);
+        $pod->loadPhotos();
+        return $this->success($pod);
+    }
 
+    private function removePersonFromPod(Person $person, Pod $pod): void
+    {
         $personPod = PersonPod::findCurrentPersonPod($person->id, $pod->id);
-
         if (!$personPod) {
             throw new UnacceptableConditionException("Person is not in the pod");
         }
@@ -281,25 +337,21 @@ class PodController extends ApiController
         if (!$pod->person_count) {
             // Disband the pod
             $pod->disbanded_at = now();
+            $pod->saveWithoutValidation();
         }
-        $pod->saveWithoutValidation();
 
         for ($idx = 0; $idx < count($pod->people); $idx++) {
-            $person = $pod->people[$idx];
+            $oldPerson = $pod->people[$idx];
             $sortIdx = $idx + 1;
-            if ($person->sort_index != $sortIdx) {
-                // Update to send back.
+            if ($oldPerson->sort_index != $sortIdx) {
+                // $oldPerson to send back.
                 $person->sort_index = $sortIdx;
-                $pp = PersonPod::findCurrentPersonPod($person->id, $pod->id);
+                $pp = PersonPod::findCurrentPersonPod($oldPerson->id, $pod->id);
                 if ($pp) {
                     $pp->sort_index = $sortIdx;
                     $pp->saveWithoutValidation();
                 }
             }
         }
-
-        $pod->load(Pod::RELATIONSHIPS);
-        $pod->loadPhotos();
-        return $this->success($pod);
     }
 }

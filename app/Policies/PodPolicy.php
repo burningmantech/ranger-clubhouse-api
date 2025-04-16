@@ -63,4 +63,9 @@ class PodPolicy
     {
         return false;
     }
+
+    public function movePerson(Person $user): bool
+    {
+        return false;
+    }
 }

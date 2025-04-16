@@ -557,12 +557,14 @@ class Slot extends ApiModel
         foreach ($rows as $row) {
             $start = new Carbon($row->begins);
 
-            $duration = $row->duration;
-            if ($start->timestamp % 3600) {
-                // If it's not on an hour boundary, bump it by 15 minutes
-                $start->addMinutes(15);
-                $duration -= 30 * 60;
-            }
+            /*
+                       $duration = $row->duration;
+                       if ($start->timestamp % 3600) {
+                           // If it's not on an hour boundary, bump it by 15 minutes
+                           $start->addMinutes(15);
+                           $duration -= 30 * 60;
+                       }
+           */
 
             $slots[] = [
                 'id' => $row->id,
@@ -570,7 +572,7 @@ class Slot extends ApiModel
                 'shift_start' => (string)$start,
                 'begins' => (string)$row->begins,
                 'ends' => (string)$row->ends,
-                'duration' => $duration,
+                'duration' => $row->duration,
                 'has_started' => $row->has_started,
                 'has_ended' => $row->has_ended,
             ];

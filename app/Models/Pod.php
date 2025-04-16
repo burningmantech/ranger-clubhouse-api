@@ -47,14 +47,14 @@ class Pod extends ApiModel
     ];
 
 
-    const TYPE_SHIFT = 'shift';     // Normal shift, dirt pair or group
-    const TYPE_MENTOR = 'mentor';   // Alpha Mentor pod
-    const TYPE_MITTEN = 'mitten';   // Alpha  Mentor-In-Training pod
-    const TYPE_ALPHA = 'alpha';     // Alpha pod
+    const string TYPE_SHIFT = 'shift';     // Normal shift, dirt pair or group
+    const string TYPE_MENTOR = 'mentor';   // Alpha Mentor pod
+    const string TYPE_MITTEN = 'mitten';   // Alpha  Mentor-In-Training pod
+    const string TYPE_ALPHA = 'alpha';     // Alpha pod
 
-    const TRANSPORT_FOOT = 'foot'; // On foot
-    const TRANSPORT_BICYCLE = 'bicycle'; // Bike mobile
-    const TRANSPORT_VEHICLE = 'vehicle'; // In a vehicle
+    const string TRANSPORT_FOOT = 'foot'; // On foot
+    const string TRANSPORT_BICYCLE = 'bicycle'; // Bike mobile
+    const string TRANSPORT_VEHICLE = 'vehicle'; // In a vehicle
 
     protected $attributes = [
         'transport' => self::TRANSPORT_FOOT,
