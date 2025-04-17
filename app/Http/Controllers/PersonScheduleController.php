@@ -507,7 +507,18 @@ class PersonScheduleController extends ApiController
 
         if ($slot->isTraining()) {
             if ($slot->isArt()) {
-                $roleCanForce = Role::ART_TRAINER_BASE | $slot->position_id;
+                $positionId = $slot->position_id;
+
+                // Check to see if the slot is a trainer slot
+                foreach (Position::TRAINERS as $traineePosition => $trainerPositions) {
+                    if (in_array($positionId, $trainerPositions)) {
+                        // yup it is, use the trainee position for permission gating.
+                        $positionId = $traineePosition;
+                        break;
+                    }
+                }
+
+                $roleCanForce = Role::ART_TRAINER_BASE | $positionId;
                 $isTrainer = true;
             } else if ($isSignup) {
                 /*
@@ -519,7 +530,7 @@ class PersonScheduleController extends ApiController
                 }
             } else {
                 /*
-                 * Per request from TA 2020 - Dirt Trainers may NOT manually add trainees BUT
+                 * Per request from TA 2020 - In-Person Trainers may NOT manually add trainees BUT
                  * are allowed to remove trainees.
                  */
                 $roleCanForce = Role::TRAINER;
