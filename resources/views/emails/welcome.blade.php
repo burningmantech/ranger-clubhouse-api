@@ -27,6 +27,13 @@
             <a href="{{$inviteUrl}}">{{$inviteUrl}}</a>
         </p>
         <p>
+            <b>Email the Volunteer Coordinators (V.Cs.)if the button has expired:</b><br>
+            <a href="mailto:ranger-vc-list@burningman.org">ranger-vc-list@burningman.org</a><br>
+            <br>
+            If you have any questions, comments, or concerns, please reach out to the V.Cs. We're here
+            to help.
+        </p>
+         <p>
             When you successfully log in, you will see our dashboard outlining the
             remaining Milestones on the path to becoming a Black Rock Ranger. Click the link to
             "Review and Update Personal Information." Please make sure that your address, phone
