@@ -97,7 +97,7 @@ class MarcatoExport
 
     private function __construct(public $bmids, public $batchInfo)
     {
-        $this->datestamp = date('m-d-Y_H:m:s');
+        $this->datestamp = date('Y-m-d-H:i:s');
     }
 
     /**
@@ -325,16 +325,16 @@ class MarcatoExport
                 }
             }
 
-            $meals = [];
+            $mealsLabel = [];
             if (empty($allocMeals) && empty($earnedMeals)) {
-                $meals[] = 'none';
+                $mealsLabel[] = 'none';
             } else {
                 if (!empty($allocMeals)) {
-                    $meals[] = Provision::sortMealsMatrix($allocMeals) . ' alloc';
+                    $mealsLabel[] = Provision::sortMealsMatrix($allocMeals) . ' alloc';
                 }
 
-                if (!empty($allocMeals)) {
-                    $meals[] = Provision::sortMealsMatrix($earnedMeals) . ' earned';
+                if (!empty($earnedMeals)) {
+                    $mealsLabel[] = Provision::sortMealsMatrix($earnedMeals) . ' earned';
                 }
             }
 
@@ -342,7 +342,7 @@ class MarcatoExport
                 Provision::markSubmittedForBMID($provisions);
             }
 
-            $meals = '[meals ' . implode(', ', $meals) . ']';
+            $meals = '[meals ' . implode(', ', $mealsLabel) . ']';
             $showers = '[showers ' . implode(', ', $showers) . ']';
             $bmid->appendNotes("Exported $meals $showers");
             $bmid->auditReason = 'exported to print';
