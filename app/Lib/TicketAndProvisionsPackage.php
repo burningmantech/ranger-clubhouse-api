@@ -3,7 +3,6 @@
 namespace App\Lib;
 
 use App\Models\AccessDocument;
-use App\Models\Bmid;
 use App\Models\PersonEvent;
 use App\Models\Provision;
 use App\Models\Timesheet;
@@ -20,10 +19,6 @@ class TicketAndProvisionsPackage
     public static function buildPackageForPerson(int $personId): array
     {
         $year = event_year() - 1;
-        if ($year == 2020 || $year == 2021) {
-            // 2020 & 2021 didn't happen. :-(
-            $year = 2019;
-        }
 
         $pe = PersonEvent::firstOrNewForPersonYear($personId, current_year());
 
@@ -84,56 +79,41 @@ class TicketAndProvisionsPackage
 
     public static function buildProvisions(int $personId, &$result): void
     {
-        $provisions = Provision::findForQuery(['person_id' => $personId]);
+        $provisions = Provision::retrieveUsableForPersonIds([$personId]);
         $result['provision_records'] = $provisions;
 
-        $mealMatrix = [];
-        $haveAllocated = false;
-        $radios = 0;
-        $haveShowers = false;
         $haveBanked = false;
         $mealsExpire = null;
         $showersExpire = null;
         $radioExpires = null;
 
+        $package = Provision::buildPackage($provisions);
+        $haveAllocated = $package['have_allocated'];
+
         foreach ($provisions as $provision) {
-            if ($provision->is_allocated) {
-                $haveAllocated = true;
-            } else if ($provision->status == Provision::BANKED) {
+            if ($provision->status == Provision::BANKED) {
                 $haveBanked = true;
             }
-            $isMeal = in_array($provision->type, Provision::MEAL_TYPES);
-            if ($isMeal) {
-                Bmid::populateMealMatrix(Provision::MEAL_MATRIX[$provision->type], $mealMatrix);
-                if (!$haveAllocated) {
-                    $mealsExpire = (string)$provision->expires_on;
-                }
+
+            if ($provision->type == Provision::MEALS) {
+                $mealsExpire = (string)$provision->expires_on;
                 continue;
             }
 
             if ($provision->type == Provision::EVENT_RADIO) {
-                if ($provision->item_count > $radios) {
-                    $radios = $provision->item_count;
-                }
                 if (!$haveAllocated) {
                     $radioExpires = (string)$provision->expires_on;
                 }
             } else if ($provision->type == Provision::WET_SPOT) {
-                $haveShowers = true;
                 if (!$haveAllocated) {
                     $showersExpire = (string)$provision->expires_on;
                 }
             }
         }
 
-        $meals = !empty($mealMatrix) ? Bmid::sortMeals($mealMatrix) : null;
+        if ($package['have_meals'] || $package['showers'] || $package['radios']) {
+            $stuff = $package;
 
-        if ($meals || $radios || $haveShowers) {
-            $stuff = [
-                'meals' => $meals,
-                'radios' => $radios,
-                'showers' => $haveShowers,
-            ];
             if (!$haveAllocated) {
                 $stuff['meals_expire'] = $mealsExpire;
                 $stuff['showers_expire'] = $showersExpire;

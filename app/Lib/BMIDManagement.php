@@ -406,7 +406,7 @@ class BMIDManagement
                                 ->from('provision')
                                 ->where('provision.person_id', 'bmid.person_id')
                                 ->whereIn('provision.status', [Provision::SUBMITTED, Provision::AVAILABLE])
-                                ->whereIn('provision.type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
+                                ->whereIn('provision.type', [Provision::WET_SPOT, Provision::MEALS])
                                 ->limit(1)
                                 ->get();
                         });
@@ -436,7 +436,7 @@ class BMIDManagement
                     ->pluck('person_id')
                     ->toArray();
 
-                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT, ...Provision::MEAL_TYPES])
+                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT,Provision::MEALS])
                     ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
                     ->distinct('person_id')
                     ->get(['person_id'])

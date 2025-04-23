@@ -367,30 +367,6 @@ class AccessDocument extends ApiModel
     }
 
     /**
-     * Find all item types for a given person, and mark as submitted (consumed).
-     * (Don't allow people to bank an item if it was set on the BMID directly.)
-     *
-     * @param int $personId
-     * @param array $type
-     */
-
-    public static function markSubmittedForBMID(int $personId, array $type): void
-    {
-        $rows = self::whereIn('type', $type)
-            ->where('person_id', $personId)
-            ->whereIn('status', [self::QUALIFIED, self::CLAIMED])
-            ->get();
-
-
-        foreach ($rows as $row) {
-            $row->status = AccessDocument::SUBMITTED;
-            $row->additional_comments = 'Consumed by BMID export';
-            $row->auditReason = 'Consumed by BMID export';
-            $row->saveWithoutValidation();
-        }
-    }
-
-    /**
      * Find a candidate WAP for a person
      *
      * @param int $personId
@@ -507,7 +483,7 @@ class AccessDocument extends ApiModel
      * @param string $reason
      */
 
-    public static function updateWAPsForPerson(int  $personId, Carbon|string|null $accessDate,
+    public static function updateSAPsForPerson(int  $personId, Carbon|string|null $accessDate,
                                                bool $accessAnyTime, string $reason): void
     {
         if (empty($accessDate)) {

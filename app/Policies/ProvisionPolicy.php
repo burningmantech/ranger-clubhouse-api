@@ -11,11 +11,13 @@ class ProvisionPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user)
+    public function before(Person $user) : ?bool
     {
         if ($user->hasRole([Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -172,6 +174,15 @@ class ProvisionPolicy
      */
 
     public function statuses(Person $user, Person $person) : bool {
+        return $user->id == $person->id;
+    }
+
+    /**
+     * Can the user see a provision package?
+     */
+
+    public function package(Person $user, Person $person) : bool
+    {
         return $user->id == $person->id;
     }
 }

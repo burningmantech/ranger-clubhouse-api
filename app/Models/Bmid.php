@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\NullIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,24 +15,6 @@ class Bmid extends ApiModel
     protected $table = 'bmid';
     protected bool $auditModel = true;
     public $timestamps = true;
-
-    const string MEALS_ALL = 'all';
-    const string MEALS_EVENT = 'event';
-    const string MEALS_EVENT_PLUS_POST = 'event+post';
-    const string MEALS_POST = 'post';
-    const string MEALS_PRE = 'pre';
-    const string MEALS_PRE_PLUS_EVENT = 'pre+event';
-    const string MEALS_PRE_PLUS_POST = 'pre+post';
-
-    const array MEALS_TYPES = [
-        self::MEALS_ALL,
-        self::MEALS_EVENT,
-        self::MEALS_EVENT_PLUS_POST,
-        self::MEALS_POST,
-        self::MEALS_PRE,
-        self::MEALS_PRE_PLUS_EVENT,
-        self::MEALS_PRE_PLUS_POST
-    ];
 
     // BMID is being prepped
     const string IN_PREP = 'in_prep';
@@ -80,24 +64,20 @@ class Bmid extends ApiModel
     ];
 
 
-    protected $wap;
+    protected ?AccessDocument $wap = null;
 
-    protected $access_any_time = false;
-    protected $access_date = null;
+    protected bool $access_any_time = false;
+    protected ?string $access_date = null;
 
-    protected $has_signups = false;
-    protected $org_vehicle_insurance = false;
-
-    protected $allocated_meals = '';
-    protected $earned_meals = '';
-
-    protected bool $allocated_showers = false;
-    protected bool $earned_showers = false;
-
-    protected bool $has_approved_photo = false;
+    protected bool $has_signups = false;
+    protected bool $org_vehicle_insurance = false;
 
     protected bool $has_ticket = false;
     protected bool $training_signed_up = false;
+
+    protected array $meals_granted = [];
+    protected bool $showers_granted = false;
+    protected bool $have_allocated_provisions = false;
 
     protected $fillable = [
         'person_id',
@@ -111,8 +91,15 @@ class Bmid extends ApiModel
         'meals',
         'batch',
         'notes',
+        'pre_event_meals',
+        'event_week_meals',
 
         // pseudo-columns
+        'access_date',
+        'access_any_time',
+    ];
+
+    protected $virtualColumns = [
         'access_date',
         'access_any_time',
     ];
@@ -127,36 +114,35 @@ class Bmid extends ApiModel
         'meals' => null,
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'access_any_time' => 'bool',
-            'access_date' => 'datetime:Y-m-d',
-            'allocated_showers' => 'bool',
-            'created_at' => 'datetime',
-            'earned_showers' => 'bool',
-            'org_vehicle_insurance' => 'bool',
-            'showers' => 'bool',
-            'updated_at' => 'datetime',
-        ];
-    }
-
     protected $appends = [
         'access_any_time',
         'access_date',
-        'allocated_meals',
-        'allocated_showers',
-        'earned_meals',
-        'earned_showers',
         'has_approved_photo',
         'has_signups',
         'has_ticket',
+        'have_allocated_provisions',
+        'meals_granted',
         'org_vehicle_insurance',
+        'showers_granted',
         'training_signed_up',
         'wap_id',
         'wap_status',
         'wap_type',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'access_any_time' => 'bool',
+            'access_date' => 'datetime:Y-m-d',
+            'created_at' => 'datetime',
+            'has_signups' => 'bool',
+            'have_allocated_provisions' => 'bool',
+            'org_vehicle_insurance' => 'bool',
+            'showers_granted' => 'bool',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public static function boot(): void
     {
@@ -192,12 +178,12 @@ class Bmid extends ApiModel
         return $row;
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
         self::bulkLoadRelationships(new EloquentCollection([$this]), [$this->person_id]);
     }
 
-    public function setWap($wap)
+    public function setWap($wap): void
     {
         $this->access_date = $wap->access_date;
         $this->access_any_time = $wap->access_any_time;
@@ -232,7 +218,14 @@ class Bmid extends ApiModel
         }
 
         // Bulk look up
-        $bmids = Bmid::where('year', $year)->whereIntegerInRaw('person_id', $personIds)->get();
+        $sql = Bmid::where('year', $year)->whereIntegerInRaw('person_id', $personIds);
+        if ($excludeDeparted) {
+            $sql->select('bmid.*')
+                ->join('person', 'person.id', '=', 'bmid.person_id')
+                ->whereNotIn('person.status', [Person::DECEASED, Person::DISMISSED, Person::RESIGNED]);
+        }
+
+        $bmids = $sql->get();
         $bmidsByPerson = $bmids->keyBy('person_id');
 
         // Figure out which people do not have BMIDs yet.
@@ -251,20 +244,12 @@ class Bmid extends ApiModel
 
         self::bulkLoadRelationships($bmids, $personIds);
 
-        if ($excludeDeparted) {
-            $bmids = $bmids->whereNotIn('person.status', [Person::DECEASED, Person::DISMISSED, Person::RESIGNED]);
-        }
-
-        $bmids = $bmids->sortBy(
-            fn($bmid, $key) => ($bmid->person ? $bmid->person->callsign : ""),
-            SORT_NATURAL | SORT_FLAG_CASE
-        )->values();
-
-        return $bmids;
+        return $bmids->sortBy(fn($bmid, $key) => $bmid->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
     }
 
     /**
-     * Populate BMIDs with access date, desired provisions, approved photo check, and job provisions
+     * Populate BMIDs with access date, provisions, approved photo check, and job provisions
      *
      * @param $bmids
      * @param $personIds
@@ -278,14 +263,16 @@ class Bmid extends ApiModel
         // Populate all the BMIDs with people..
         $bmids->load([
             'person:id,callsign,status,first_name,last_name,email,bpguid,person_photo_id',
-            'person.person_photo:id,status'
+            'person.person_photo:id,person_id,status',
         ]);
+
+        // Paranoia check - filter out any deleted accounts
+        $bmids = $bmids->filter(fn($bmid) => $bmid->person != null);
 
         // Load up the org insurance flags
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
         foreach ($bmids as $bmid) {
             $event = $personEvents->get($bmid->person_id);
-            $bmid->has_approved_photo = $bmid->person?->person_photo?->isApproved() ?? false;
             if ($event) {
                 $bmid->org_vehicle_insurance = $event->org_vehicle_insurance;
             }
@@ -309,16 +296,6 @@ class Bmid extends ApiModel
             $bmidsByPerson[$id]->has_signups = true;
         }
 
-
-        // The provisions are special - by default, the items are opt-out so treat an item qualified as
-        // the same as claimed.
-
-        $itemsByPersonId = Provision::whereIntegerInRaw('person_id', $bmids->pluck('person_id'))
-            ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
-            ->whereIn('type', [...Provision::MEAL_TYPES, Provision::WET_SPOT])
-            ->get()
-            ->groupBy('person_id');
-
         $ticketIds = DB::table('access_document')
             ->whereIntegerInRaw('person_id', $personIds)
             ->whereIn('type', [AccessDocument::SPT, AccessDocument::STAFF_CREDENTIAL, AccessDocument::WAP])
@@ -333,53 +310,31 @@ class Bmid extends ApiModel
             ->pluck('id')
             ->toArray();
 
+        $provisionsByPerson = Provision::retrieveUsableForPersonIds($personIds)->groupBy('person_id');
+
+        foreach ($personIds as $id) {
+            $cookies = $provisionsByPerson->get($id);
+            $package = Provision::buildPackage($cookies ?? []);
+            $bmid = $bmidsByPerson[$id];
+            $bmid->meals_granted = $package['meals'];
+            $bmid->showers_granted = $package['showers'];
+            $bmid->have_allocated_provisions = $package['have_allocated'];
+        }
+
+        $trainingIds = null;
         if (!empty($slotIds)) {
             $trainingIds = DB::table('person_slot')
                 ->whereIntegerInRaw('person_id', $personIds)
                 ->whereIntegerInRaw('slot_id', $slotIds)
                 ->get()
                 ->groupBy('person_id');
-        } else {
-            $trainingIds = collect([]);
         }
 
         foreach ($bmids as $bmid) {
-            $bmid->training_signed_up = $trainingIds->has($bmid->person_id);
+            // Don't send back the photo info.
+            $bmid->person->makeHidden(['person_photo_id','person_photo']);
+            $bmid->training_signed_up = $trainingIds?->has($bmid->person_id) ?? false;
             $bmid->has_ticket = $ticketIds->has($bmid->person_id);
-
-            $items = $itemsByPersonId->get($bmid->person_id);
-            if (!$items) {
-                continue;
-            }
-
-            $allocatedMeals = [];
-            $earnedMeals = [];
-
-            foreach ($items as $item) {
-                $isMeal = in_array($item->type, Provision::MEAL_TYPES);
-                if ($isMeal) {
-                    if ($item->is_allocated) {
-                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $allocatedMeals);
-                    } else {
-                        self::populateMealMatrix(Provision::MEAL_MATRIX[$item->type], $earnedMeals);
-                    }
-                }
-                if ($item->type == Provision::WET_SPOT) {
-                    if ($item->is_allocated) {
-                        $bmid->allocated_showers = true;
-                    } else {
-                        $bmid->earned_showers = true;
-                    }
-                }
-            }
-
-            if (!empty($allocatedMeals)) {
-                $bmid->allocated_meals = self::sortMeals($allocatedMeals);
-            }
-
-            if (!empty($earnedMeals)) {
-                $bmid->earned_meals = self::sortMeals($earnedMeals);
-            }
         }
     }
 
@@ -430,7 +385,7 @@ class Bmid extends ApiModel
 
     public function updateWap(): void
     {
-        AccessDocument::updateWAPsForPerson($this->person_id, $this->access_date, $this->access_any_time, 'set via BMID update');
+        AccessDocument::updateSAPsForPerson($this->person_id, $this->access_date, $this->access_any_time, 'set via BMID update');
 
         $wap = $this->wap;
         if ($wap) {
@@ -439,115 +394,99 @@ class Bmid extends ApiModel
         }
     }
 
-    public function setTitle1Attribute($value)
+    public function title1(): Attribute
     {
-        $this->attributes['title1'] = $value ?: null;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setTitle2Attribute($value)
+    public function title2(): Attribute
     {
-        $this->attributes['title2'] = $value ?: null;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setTitle3Attribute($value)
+    public function title3(): Attribute
     {
-        $this->attributes['title3'] = $value ?: null;
+        return NullIfEmptyAttribute::make();
     }
 
-    public function setMealsAttribute($value)
+    public function team(): Attribute
     {
-        $this->attributes['meals'] = $value ?: null;
-    }
-
-    public function setTeamAttribute($value)
-    {
-        $this->attributes['team'] = $value ?: null;
+        return NullIfEmptyAttribute::make();
     }
 
 
-    public function setAccessDateAttribute($value)
+    public function accessDate(): Attribute
     {
-        $this->access_date = $value;
+        return Attribute::make(
+            get: fn() => !empty($this->access_date) ? (string)$this->access_date : null,
+            set: fn($value) => $this->access_date = $value
+        );
     }
 
-    public function getAccessDateAttribute()
+    public function accessAnyTime(): Attribute
     {
-        return (string)$this->access_date;
+        return Attribute::make(
+            get: fn() => $this->access_any_time,
+            set: fn($value) => $this->access_any_time = $value
+        );
     }
 
-    public function setAccessAnyTimeAttribute($value)
+    public function orgVehicleInsurance(): Attribute
     {
-        $this->access_any_time = $value;
+        return Attribute::make(
+            get: fn() => $this->org_vehicle_insurance,
+            set: fn($value) => $this->org_vehicle_insurance = $value
+        );
     }
 
-    public function getAccessAnyTimeAttribute()
+    public function wapId(): Attribute
     {
-        return $this->access_any_time;
+        return Attribute::make(get: fn() => $this->wap?->id);
     }
 
-    public function setOrgVehicleInsuranceAttribute($value)
+    public function wapStatus(): Attribute
     {
-        $this->org_vehicle_insurance = $value;
+        return Attribute::make(get: fn() => $this->wap?->status);
     }
 
-    public function getOrgVehicleInsuranceAttribute()
+    public function wapType(): Attribute
     {
-        return $this->org_vehicle_insurance;
+        return Attribute::make(get: fn() => $this->wap?->type);
     }
 
-    public function getWapIdAttribute()
+    public function hasSignups(): Attribute
     {
-        return $this->wap ? $this->wap->id : null;
+        return Attribute::make(get: fn() => $this->has_signups);
     }
 
-    public function getWapStatusAttribute()
+    public function hasApprovedPhoto(): Attribute
     {
-        return $this->wap ? $this->wap->status : null;
+        return Attribute::make(get: fn() => $this->person->hasApprovedPhoto());
     }
 
-    public function getWapTypeAttribute()
+    public function hasTicket(): Attribute
     {
-        return $this->wap ? $this->wap->type : null;
+        return Attribute::make(get: fn(): bool => $this->has_ticket);
     }
 
-    public function getHasSignupsAttribute(): bool
+    public function trainingSignedUp(): Attribute
     {
-        return $this->has_signups;
+        return Attribute::make(get: fn(): bool => $this->training_signed_up);
     }
 
-    public function getEarnedMealsAttribute()
+    public function mealsGranted(): Attribute
     {
-        return $this->earned_meals;
+        return Attribute::make(get: fn() => $this->meals_granted);
     }
 
-    public function getAllocatedMealsAttribute()
+    public function showersGranted(): Attribute
     {
-        return $this->allocated_meals;
+        return Attribute::make(get: fn() => $this->showers_granted);
     }
 
-    public function getEarnedShowersAttribute(): bool
+    public function haveAllocatedProvisions(): Attribute
     {
-        return $this->earned_showers;
-    }
-
-    public function getAllocatedShowersAttribute(): bool
-    {
-        return $this->allocated_showers;
-    }
-
-    public function getHasApprovedPhotoAttribute(): bool
-    {
-        return $this->has_approved_photo;
-    }
-
-    public function getHasTicketAttribute(): bool
-    {
-        return $this->has_ticket;
-    }
-
-    public function getTrainingSignedUpAttribute(): bool
-    {
-        return $this->training_signed_up;
+        return Attribute::make(get: fn() => $this->have_allocated_provisions);
     }
 
     /**
@@ -558,7 +497,7 @@ class Bmid extends ApiModel
 
     public function isPrintable(): bool
     {
-        if (!$this->person || !in_array($this->person->status, self::ALLOWED_PERSON_STATUSES)) {
+        if (!in_array($this->person->status, self::ALLOWED_PERSON_STATUSES)) {
             return false;
         }
 
@@ -575,83 +514,12 @@ class Bmid extends ApiModel
      * @param string $notes
      */
 
-    public function appendNotes(string $notes)
+    public function appendNotes(string $notes): void
     {
         $date = date('n/j/y G:i:s');
         $callsign = Auth::check() ? Auth::user()->callsign : '(unknown)';
         $this->notes = "$date $callsign: $notes\n{$this->notes}";
     }
 
-    /**
-     * Builds a "meal matrix" indicating which weeks the person can
-     * have meals. This is a union between what has been set by the
-     * BMID administrator, the allocated provisions, and claimed earned provisions.
-     *
-     * @return array
-     */
 
-    public function buildMealsMatrix(): array
-    {
-        if ($this->meals == self::MEALS_ALL
-            || $this->earned_meals == self::MEALS_ALL
-            || $this->allocated_meals == self::MEALS_ALL) {
-            return [self::MEALS_PRE => true, self::MEALS_EVENT => true, self::MEALS_POST => true];
-        }
-
-        $matrix = [];
-        self::populateMealMatrix($this->meals, $matrix);
-        self::populateMealMatrix($this->earned_meals, $matrix);
-        self::populateMealMatrix($this->allocated_meals, $matrix);
-
-        return $matrix;
-    }
-
-    public static function populateMealMatrix($meals, &$matrix)
-    {
-        if (empty($meals)) {
-            return;
-        }
-
-        foreach (explode('+', $meals) as $week) {
-            $matrix[$week] = true;
-        }
-    }
-
-    public function effectiveMeals(): string
-    {
-        return self::sortMeals($this->buildMealsMatrix());
-    }
-
-    public function effectiveShowers(): bool
-    {
-        return $this->showers || $this->allocated_showers || $this->earned_showers;
-    }
-
-    /**
-     * Sort the meals into the expected order: pre-event, event, and post-event weeks.
-     *
-     * @param $meals
-     * @return string
-     */
-
-    public static function sortMeals($meals): string
-    {
-        if (count($meals) == 3) {
-            return self::MEALS_ALL;
-        }
-
-        $sorted = [];
-        if ($meals[self::MEALS_PRE] ?? null) {
-            $sorted[] = self::MEALS_PRE;
-        }
-        if ($meals[self::MEALS_EVENT] ?? null) {
-            $sorted[] = self::MEALS_EVENT;
-        }
-
-        if ($meals[self::MEALS_POST] ?? null) {
-            $sorted[] = self::MEALS_POST;
-        }
-
-        return implode('+', $sorted);
-    }
 }

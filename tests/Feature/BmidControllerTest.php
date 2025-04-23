@@ -16,7 +16,6 @@ use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
 
 class BmidControllerTest extends TestCase
@@ -313,7 +312,10 @@ class BmidControllerTest extends TestCase
 
         Provision::factory()->create([
             'person_id' => $person->id,
-            'type' => Provision::EVENT_EAT_PASS,
+            'type' => Provision::MEALS,
+            'pre_event_meals' => false,
+            'event_week_meals' => true,
+            'post_event_meals' => false,
             'status' => Provision::CLAIMED,
             'source_year' => $this->year,
             'expires_on' => $this->year
@@ -339,8 +341,12 @@ class BmidControllerTest extends TestCase
             'bmid' => [
                 'person_id' => $person->id,
                 'year' => $this->year,
-                'earned_showers' => true,
-                'earned_meals' => Bmid::MEALS_EVENT,
+                'showers_granted' => true,
+                'meals_granted' => [
+                    'pre' => false,
+                    'event' => true,
+                    'post' => false,
+                ]
             ]
         ]);
 
@@ -430,7 +436,8 @@ class BmidControllerTest extends TestCase
         $this->assertDatabaseMissing('bmid', ['person_id' => $simple->id]);
     }
 
-    public function testSetBMIDTitlesWithTrainingSignUp() {
+    public function testSetBMIDTitlesWithTrainingSignUp()
+    {
         // Test for someone who meets the In-Person training criteria
         $shiftLead = Person::factory()->create();
         PersonPosition::factory()->create(['person_id' => $shiftLead->id, 'position_id' => Position::RSC_SHIFT_LEAD]);
@@ -459,7 +466,7 @@ class BmidControllerTest extends TestCase
             ]
         ]);
 
-        $this->assertDatabaseHas('bmid', ['person_id' => $shiftLead->id, 'title1' =>  'Shift Lead']);
+        $this->assertDatabaseHas('bmid', ['person_id' => $shiftLead->id, 'title1' => 'Shift Lead']);
     }
 
     /**
@@ -468,7 +475,8 @@ class BmidControllerTest extends TestCase
      * @return void
      */
 
-    public function testSetBMIDsTitleNoCriteriaMet() {
+    public function testSetBMIDsTitleNoCriteriaMet()
+    {
         // Test for someone who meets the In-Person training criteria
         $shiftLead = Person::factory()->create();
         PersonPosition::factory()->create(['person_id' => $shiftLead->id, 'position_id' => Position::RSC_SHIFT_LEAD]);
@@ -516,7 +524,10 @@ class BmidControllerTest extends TestCase
 
         $meals = Provision::factory()->create([
             'person_id' => $person->id,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::MEALS,
+            'pre_event_meals' => true,
+            'event_week_meals' => true,
+            'post_event_meals' => true,
             'status' => Provision::CLAIMED,
             'source_year' => $this->year,
             'expires_on' => $this->year

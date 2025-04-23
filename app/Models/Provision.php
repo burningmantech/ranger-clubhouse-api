@@ -22,18 +22,9 @@ class Provision extends ApiModel
     const string EXPIRED = 'expired';
     const string SUBMITTED = 'submitted';
 
-    // Meal pass combination
-    const string ALL_EAT_PASS = 'all_eat_pass';
-    const string EVENT_EAT_PASS = 'event_eat_pass';
-    const string PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
-    const string POST_EVENT_EAT_PASS = 'post_event_eat_pass';
-    const string PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
-    const string PRE_POST_EAT_PASS = 'pre_post_eat_pass';
-    const string EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
-
     const string EVENT_RADIO = 'event_radio';
-
     const string WET_SPOT = 'wet_spot';
+    const string MEALS = 'meals';
 
     const array ACTIVE_STATUSES = [
         self::AVAILABLE,
@@ -48,48 +39,35 @@ class Provision extends ApiModel
         self::SUBMITTED
     ];
 
+    const array CAN_USE_STATUSES = [
+        self::AVAILABLE,
+        self::CLAIMED,
+        self::SUBMITTED,
+    ];
+
     const array INVALID_STATUSES = [
         self::USED,
         self::CANCELLED,
         self::EXPIRED
     ];
 
-    const array MEAL_TYPES = [
-        self::ALL_EAT_PASS,
-        self::EVENT_EAT_PASS,
-        self::PRE_EVENT_EAT_PASS,
-        self::POST_EVENT_EAT_PASS,
-        self::PRE_EVENT_EVENT_EAT_PASS,
-        self::EVENT_POST_EAT_PASS,
-        self::PRE_POST_EAT_PASS,
-
-    ];
-
-    const array MEAL_MATRIX = [
-        self::ALL_EAT_PASS => 'pre+event+post',
-        self::EVENT_EAT_PASS => 'event',
-        self::PRE_EVENT_EAT_PASS => 'pre',
-        self::POST_EVENT_EAT_PASS => 'post',
-        self::PRE_EVENT_EVENT_EAT_PASS => 'pre+event',
-        self::EVENT_POST_EAT_PASS => 'event+post',
-        self::PRE_POST_EAT_PASS => 'pre+post'
-    ];
 
     const array TYPE_LABELS = [
-        self::ALL_EAT_PASS => 'All Eat Pass',
-        self::EVENT_EAT_PASS => 'Event Week Eat Pass',
-
-        self::PRE_EVENT_EAT_PASS => 'Pre-Event Eat Pass',
-        self::POST_EVENT_EAT_PASS => 'Post-Event Eat Pass',
-        self::PRE_EVENT_EVENT_EAT_PASS => 'Pre+Post Eat Pass',
-        self::EVENT_POST_EAT_PASS => 'Event+Post Eat Pass',
-
         self::EVENT_RADIO => 'Event Radio',
         self::WET_SPOT => 'Wet Spot Access',
+
+        // Pseudo meal types - key build up from {pre_event,event_week,post_event}_meals fields
+        'pre+event+post' => 'All Eats Pass',
+        'event' => 'Event Week Eat Pass',
+        'pre' => 'Pre-Event Eat Pass',
+        'post' => 'Post-Event Eat Pass',
+        'pre+event' => 'Pre-Event & Event Week Eat Pass',
+        'event+post' => 'Event Week & Post Event Eat Pass',
+        'pre+post' => 'Pre-Event & Post Event Eat Pass',
     ];
 
     const array ALL_TYPES = [
-        ...self::MEAL_TYPES,
+        self::MEALS,
         self::EVENT_RADIO,
         self::WET_SPOT,
     ];
@@ -104,6 +82,9 @@ class Provision extends ApiModel
         'comments',
         'expires_on',
         'additional_comments',
+        'pre_event_meals',
+        'event_week_meals',
+        'post_event_meals',
     ];
 
     protected function casts(): array
@@ -227,31 +208,36 @@ class Provision extends ApiModel
      * Find provisions (available, claimed, banked, submitted) for the given person & type(s)
      *
      * @param int $personId
-     * @param array|string $type
+     * @param string $type
      * @param bool|null $isAllocated
      * @return ?Provision
      */
 
-    public static function findAvailableTypeForPerson(int $personId, array|string $type, ?bool $isAllocated = null): ?Provision
+    public static function findAvailableTypeForPerson(int $personId, string $type, ?bool $isAllocated = null): ?Provision
     {
-        if (!is_array($type)) {
-            $type = [$type];
-        }
 
         $sql = self::where('person_id', $personId)
-            ->whereIn('type', $type)
-            ->whereIn('status', [
-                self::AVAILABLE,
-                self::CLAIMED,
-                self::BANKED,
-                self::SUBMITTED
-            ]);
+            ->where('type', $type)
+            ->whereIn('status', self::CURRENT_STATUSES);
 
         if ($isAllocated !== null) {
             $sql->where('is_allocated', $isAllocated);
         }
 
         return $sql->first();
+    }
+
+    public static function findAvailableMealsForPerson(int  $personId, bool $isAllocated,
+                                                       bool $preMeals, bool $eventMeals, bool $postMeals): ?Provision
+    {
+        return self::where('person_id', $personId)
+            ->where('type', self::MEALS)
+            ->whereIn('status', self::CURRENT_STATUSES)
+            ->where('is_allocated', $isAllocated)
+            ->where('pre_event_meals', $preMeals)
+            ->where('event_week_meals', $eventMeals)
+            ->where('post_event_meals', $postMeals)
+            ->first();
     }
 
     /**
@@ -266,12 +252,90 @@ class Provision extends ApiModel
     {
         return self::whereIn('person_id', $personIds)
             ->where('type', $type)
-            ->whereIn('status', [
-                self::AVAILABLE,
-                self::CLAIMED,
-                self::SUBMITTED,
-            ])->get()
+            ->whereIn('status', self::CAN_USE_STATUSES)->get()
             ->groupBy('person_id');
+    }
+
+    /**
+     * Retrieve the wellness provisions for a given set of people.
+     *
+     * Banked earned provisions are included if the person has allocated provisions.
+     * (You get an allocated cookie, then all the cookies have to be used that year.)
+     */
+
+    public static function retrieveUsableForPersonIds(\Illuminate\Support\Collection|array $personIds): Collection
+    {
+        return self::whereIn('person_id', $personIds)
+            ->where(function ($w) {
+                $w->whereIn('status', self::CAN_USE_STATUSES)
+                    ->orWhere(function ($banked) {
+                        $banked->where('status', self::BANKED)
+                            ->whereExists(function ($exists) {
+                                $exists->selectRaw('1')
+                                    ->from('provision as alloc')
+                                    ->whereColumn('alloc.person_id', 'provision.person_id')
+                                    ->where('alloc.is_allocated', true)
+                                    ->whereIn('alloc.status', self::CAN_USE_STATUSES)
+                                    ->limit(1);
+                            });
+                    });
+            })->get();
+    }
+
+    public static function buildPackage($provisions): array
+    {
+        $showers = false;
+        $haveAllocated = false;
+        $radios = 0;
+
+        $preMeals = false;
+        $postMeals = false;
+        $eventMeals = false;
+
+        foreach ($provisions as $provision) {
+            if ($provision->is_allocated) {
+                $haveAllocated = true;
+            }
+
+            switch ($provision->type) {
+                case self::EVENT_RADIO:
+                    $count = $provision->item_count ?: 1;
+                    if ($count > $radios) {
+                        $radios = $count;
+                    }
+                    break;
+
+                case self::WET_SPOT:
+                    $showers = true;
+                    break;
+
+                case self::MEALS:
+                    if ($provision->pre_event_meals) {
+                        $preMeals = true;
+                    }
+
+                    if ($provision->post_event_meals) {
+                        $postMeals = true;
+                    }
+
+                    if ($provision->event_week_meals) {
+                        $eventMeals = true;
+                    }
+                    break;
+            }
+        }
+
+        return [
+            'have_allocated' => $haveAllocated,
+            'have_meals' => $preMeals || $eventMeals || $postMeals,
+            'meals' => [
+                'pre' => $preMeals,
+                'event' => $eventMeals,
+                'post' => $postMeals,
+            ],
+            'radios' => $radios,
+            'showers' => $showers,
+        ];
     }
 
     /**
@@ -306,18 +370,12 @@ class Provision extends ApiModel
     /**
      * Find all item types for a given person, and mark as submitted (consumed).
      *
-     * @param int $personId
-     * @param array $type
+     * @param $provisions
      */
 
-    public static function markSubmittedForBMID(int $personId, array $type): void
+    public static function markSubmittedForBMID($provisions): void
     {
-        $rows = self::whereIn('type', $type)
-            ->where('person_id', $personId)
-            ->whereIn('status', [self::AVAILABLE, self::CLAIMED])
-            ->get();
-
-        foreach ($rows as $row) {
+        foreach ($provisions as $row) {
             $row->status = self::SUBMITTED;
             $row->additional_comments = 'Consumed by BMID export';
             $row->auditReason = 'Consumed by BMID export';
@@ -360,15 +418,9 @@ class Provision extends ApiModel
         });
     }
 
-    /**
-     * Return true if the document expired
-     *
-     * @return bool
-     */
-
-    public function getPastExpireDateAttribute(): bool
+    public function pastExpireDate(): Attribute
     {
-        return ($this->expires_on && $this->expires_on->year < current_year());
+        return Attribute::make(get: fn() => ($this->expires_on && $this->expires_on->year < current_year()));
     }
 
     /**
@@ -391,6 +443,66 @@ class Provision extends ApiModel
 
     public function getTypeLabel(): string
     {
-        return self::TYPE_LABELS[$this->type] ?? $this->type;
+        if ($this->type != self::MEALS) {
+            return self::TYPE_LABELS[$this->type] ?? $this->type;
+        }
+
+        $periods = [];
+
+        if ($this->pre_event_meals) {
+            $periods[] = 'pre';
+        }
+
+        if ($this->event_week_meals) {
+            $periods[] = 'event';
+        }
+
+        if ($this->post_event_meals) {
+            $periods[] = 'post';
+        }
+
+        $mealType = implode('+', $periods);
+
+        return self::TYPE_LABELS[$mealType] ?? $mealType;
+    }
+
+    public static function populateMealMatrix(Provision $provision, &$matrix): void
+    {
+        if ($provision->pre_event_meals) {
+            $matrix['pre'] = true;
+        }
+
+        if ($provision->event_week_meals) {
+            $matrix['event'] = true;
+        }
+
+        if ($provision->post_event_meals) {
+            $matrix['post'] = true;
+        }
+    }
+
+    public static function sortMealsMatrix($matrix): string
+    {
+        if (count($matrix) == 3) {
+            return 'all';
+        }
+
+        $periods = [];
+        if ($matrix['pre'] ?? false) {
+            $periods[] = 'pre';
+        }
+        if ($matrix['event'] ?? false) {
+            $periods[] = 'event';
+        }
+        if ($matrix['post'] ?? false) {
+            $periods[] = 'post';
+        }
+
+        return implode('+', $periods);
+    }
+
+    public function isShowerType(): bool
+    {
+        return $this->type == self::WET_SPOT;
     }
 }

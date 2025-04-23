@@ -830,6 +830,23 @@ class PersonPhoto extends ApiModel
         }
     }
 
+    public static function retrieveMostRecentApproved(int $personId)
+    {
+        return self::where('person_id', $personId)
+            ->where('status', self::APPROVED)
+            ->orderBy('id', 'desc')
+            ->first();
+    }
+
+    public static function haveAnyApproved(int $personId) : bool
+    {
+        return self::where('person_id', $personId)
+            ->where('status', self::APPROVED)
+            ->orderBy('id', 'desc')
+            ->exists();
+    }
+
+
     /**
      * Create a (local filesystem not url) path to where the image is stored
      *
@@ -854,17 +871,30 @@ class PersonPhoto extends ApiModel
         return $this->status === self::APPROVED;
     }
 
-    public function profileUrlApproved() : ?string
+    /**
+     * Does the person ANY approved photo on file, either this photo or another photo?
+     *
+     * @return bool
+     */
+
+    public function hasApproved(): bool
+    {
+        if ($this->isApproved()) {
+            return true;
+        }
+
+        return self::where('person_id', $this->person_id)
+            ->where('status', self::APPROVED)
+            ->exists();
+    }
+
+    public function profileUrlApproved(): ?string
     {
         if ($this->isApproved()) {
             return $this->profile_url;
         }
 
-        $photo = self::where('person_id', $this->person_id)
-            ->where('status', self::APPROVED)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        return $photo ? $photo->profile_url : null;
+        return  self::retrieveMostRecentApproved($this->person_id)?->profile_url;
     }
+
 }

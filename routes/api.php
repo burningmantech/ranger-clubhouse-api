@@ -397,6 +397,7 @@ Route::middleware('api')->group(function () {
     Route::post('provision/clean-provisions', [ProvisionController::class, 'cleanProvisionsFromPriorEvent']);
     Route::post('provision/expire-provisions', [ProvisionController::class, 'expireProvisions']);
     Route::patch('provision/{person}/statuses', [ProvisionController::class, 'statuses']);
+    Route::get('provision/{person}/package', [ProvisionController::class, 'package']);
     Route::post('provision/unbank-provisions', [ProvisionController::class, 'unbankProvisions']);
     Route::get('provision/unsubmit-recommendations', [ProvisionController::class, 'unsubmitRecommendations']);
     Route::post('provision/unsubmit-provisions', [ProvisionController::class, 'unsubmitProvisions']);

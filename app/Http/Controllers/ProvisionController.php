@@ -184,7 +184,6 @@ class ProvisionController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws ValidationException
      */
 
     public function unbankProvisions(): JsonResponse
@@ -265,5 +264,20 @@ class ProvisionController extends ApiController
         ProvisionMaintenance::unsubmitProvisions($params['people_ids']);
 
         return $this->success();
+    }
+
+    /**
+     * Retrieve the provision package.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function package(Person $person): JsonResponse
+    {
+        $this->authorize('package', [Provision::class, $person]);
+        $provisions = Provision::retrieveUsableForPersonIds([ $person->id]);
+        return response()->json(Provision::buildPackage($provisions));
     }
 }
