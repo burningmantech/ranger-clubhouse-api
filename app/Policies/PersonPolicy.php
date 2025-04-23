@@ -40,7 +40,7 @@ class PersonPolicy
 
     public function search(Person $user): bool
     {
-        return $user->hasRole(self::AUTHORIZED_ROLES) || $user->hasARTTrainerPositionRole();
+        return $user->hasRole(self::AUTHORIZED_ROLES);
     }
 
     /**
@@ -64,11 +64,7 @@ class PersonPolicy
 
     public function view(Person $user, Person $person): bool
     {
-        return (
-            $person->id == $user->id
-            || $user->hasRole(self::AUTHORIZED_ROLES)
-            || $user->hasARTTrainerPositionRole()
-        );
+        return ($person->id == $user->id || $user->hasRole(self::AUTHORIZED_ROLES));
     }
 
     /**

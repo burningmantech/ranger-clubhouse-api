@@ -23,15 +23,20 @@ class ProvisionControllerTest extends TestCase
         $this->signInUser();
     }
 
-    private function createProvision()
+    private function createProvision(array $custom = [])
     {
-        return Provision::factory()->create([
-            'type' => Provision::ALL_EAT_PASS,
+        $data = array_merge([
+            'type' => Provision::MEALS,
             'status' => Provision::AVAILABLE,
             'person_id' => $this->user->id,
             'source_year' => (int)date('Y'),
             'expires_on' => date('Y-12-31'),
-        ]);
+            'pre_event_meals' => true,
+            'event_week_meals' => true,
+            'post_event_meals' => true,
+        ], $custom);
+
+        return Provision::factory()->create($data);
     }
 
     /*
@@ -75,10 +80,13 @@ class ProvisionControllerTest extends TestCase
 
         $data = [
             'person_id' => $this->user->id,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::MEALS,
             'status' => Provision::AVAILABLE,
             'source_year' => date('Y'),
             'expires_on' => date('Y-12-31'),
+            'pre_event_meals' => true,
+            'event_week_meals' => false,
+            'post_event_meals' => false,
         ];
 
         $response = $this->json('POST', 'provision', ['provision' => $data]);
@@ -96,7 +104,7 @@ class ProvisionControllerTest extends TestCase
 
         $data = [
             'person_id' => $this->user->id,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::WET_SPOT,
             'status' => Provision::AVAILABLE,
             'source_year' => date('Y'),
             'is_allocated' => true,
@@ -164,7 +172,7 @@ class ProvisionControllerTest extends TestCase
     {
         $provision = $this->createProvision();
         Provision::factory()->create([
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::EVENT_RADIO,
             'status' => Provision::AVAILABLE,
             'person_id' => $this->user->id,
             'source_year' => (int)date('Y'),
@@ -193,8 +201,9 @@ class ProvisionControllerTest extends TestCase
         $submitted = Provision::factory()->create([
             'person_id' => $personA->id,
             'source_year' => $year,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::MEALS,
             'status' => Provision::SUBMITTED,
+            'pre_event_meals' => true,
             'is_allocated' => false,
         ]);
 
@@ -257,7 +266,7 @@ class ProvisionControllerTest extends TestCase
         $qualified = Provision::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::WET_SPOT,
             'status' => Provision::AVAILABLE,
         ]);
 
@@ -265,7 +274,7 @@ class ProvisionControllerTest extends TestCase
         $available = Provision::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => Provision::EVENT_EAT_PASS,
+            'type' => Provision::EVENT_RADIO,
             'status' => Provision::CLAIMED,
         ]);
 
@@ -299,7 +308,7 @@ class ProvisionControllerTest extends TestCase
         $expire = Provision::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::WET_SPOT,
             'status' => Provision::AVAILABLE,
             'expires_on' => "$lastYear-08-20"
         ]);
@@ -308,7 +317,7 @@ class ProvisionControllerTest extends TestCase
         $ignore = Provision::factory()->create([
             'person_id' => $person->id,
             'source_year' => $year,
-            'type' => Provision::ALL_EAT_PASS,
+            'type' => Provision::WET_SPOT,
             'status' => Provision::AVAILABLE,
             'expires_on' => "$nextYear-08-20"
         ]);

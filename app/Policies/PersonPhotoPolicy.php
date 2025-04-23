@@ -44,7 +44,6 @@ class PersonPhotoPolicy
         return (
             $person->id == $user->id
             || $user->hasRole([Role::EVENT_MANAGEMENT, Role::MENTOR, Role::TRAINER])
-            || $user->hasARTTrainerPositionRole()
         );
     }
 

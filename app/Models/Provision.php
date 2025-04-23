@@ -141,6 +141,14 @@ class Provision extends ApiModel
             return false;
         }
 
+        if ($this->type == self::MEALS
+        && !$this->pre_event_meals
+        && !$this->event_week_meals
+        && !$this->post_event_meals) {
+            $this->addError('status', 'A meal provision must have at least one meal period selected.');
+            return false;
+        }
+
         return parent::save($options);
     }
 
