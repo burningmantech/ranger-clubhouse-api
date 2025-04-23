@@ -21,9 +21,21 @@ class SurveyPolicy
         return null;
     }
 
-    public function index(Person $user): bool
+    public function indexForPosition(Person $user, int $positionId): bool
     {
-        return $user->hasRole(Role::SURVEY_MANAGEMENT_TRAINING) | $user->hasSurveyManagementPositionRole();
+         return Survey::canManageSurveys($user, $positionId);
+    }
+
+    public function indexForAll(Person $user): bool
+    {
+        return $user->hasRole(Role::SURVEY_MANAGEMENT_TRAINING)
+            || $user->hasAnyPositionRole(Role::SURVEY_MANAGEMENT_BASE);
+    }
+
+    public function positions(Person $user): bool
+    {
+        return $user->hasRole(Role::SURVEY_MANAGEMENT_TRAINING)
+            || $user->hasAnyPositionRole(Role::SURVEY_MANAGEMENT_BASE);
     }
 
     public function show(Person $user, Survey $survey): bool

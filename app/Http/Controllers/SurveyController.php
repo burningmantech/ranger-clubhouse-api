@@ -35,7 +35,13 @@ class SurveyController extends ApiController
             'type' => 'sometimes|string',
         ]);
 
-        $this->authorize('index', Survey::class);
+        $positionId = $params['position_id'] ?? null;
+
+        if ($positionId) {
+            $this->authorize('indexForPosition', [Survey::class, $positionId]);
+        } else {
+            $this->authorize('indexForAll', Survey::class);
+        }
 
         return $this->success(Survey::findForQuery($params), null, 'survey');
     }
@@ -45,9 +51,10 @@ class SurveyController extends ApiController
      * @return JsonResponse
      * @throws AuthorizationException
      */
+
     public function positions(): JsonResponse
     {
-        $this->authorize('index', Survey::class);
+        $this->authorize('positions', Survey::class);
 
         $positions = Position::findForQuery(['type' => Position::TYPE_TRAINING]);
         $results = [];
