@@ -1129,24 +1129,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Does the person have one of the Survey Management position roles?
-     *
-     * @return bool
-     */
-
-    public function hasSurveyManagementPositionRole(): bool
-    {
-        return $this->hasPositionRole(Role::SURVEY_MANAGEMENT_BASE);
-    }
-
-    /**
      * Does the person hold a position-base role?
      *
      * @param $base
      * @return bool
      */
 
-    public function hasPositionRole($base): bool
+    public function hasAnyPositionRole($base): bool
     {
         $this->retrieveRoles();
         foreach ($this->roles as $role) {
