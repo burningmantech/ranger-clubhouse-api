@@ -24,39 +24,68 @@ use RuntimeException;
 class BulkUploader
 {
     //
-    const STATUS_SUCCESS = 'success';
-    const STATUS_FAILED = 'failed';
-    const STATUS_WARNING = 'warning';
-    const STATUS_CALLSIGN_NOT_FOUND = 'callsign-not-found';
+    const string STATUS_SUCCESS = 'success';
+    const string STATUS_FAILED = 'failed';
+    const string STATUS_WARNING = 'warning';
+    const string STATUS_CALLSIGN_NOT_FOUND = 'callsign-not-found';
 
-    const CHANGE_PERSON_COLUMN_ACTION = 'changePersonColumn';
-    const CHANGE_EVENT_COLUMN_ACTION = 'changeEventColumn';
-    const CHANGE_PERSON_STATUS_ACTION = 'changePersonStatus';
-    const PROCESS_BMID_ACTION = 'processBmid';
-    const PROCESS_PROVISIONS_ACTION = 'processProvisions';
-    const PROCESS_TICKETS_ACTION = 'processTickets';
-    const PROCESS_WAP_ACTION = 'processWAPs';
-    const CERTIFICATION_ACTION = 'processCertifications';
+    const string CHANGE_PERSON_COLUMN_ACTION = 'changePersonColumn';
+    const string CHANGE_EVENT_COLUMN_ACTION = 'changeEventColumn';
+    const string CHANGE_PERSON_STATUS_ACTION = 'changePersonStatus';
+    const string PROCESS_BMID_ACTION = 'processBmid';
+    const string PROCESS_PROVISIONS_ACTION = 'processProvisions';
+    const string PROCESS_TICKETS_ACTION = 'processTickets';
+    const string PROCESS_WAP_ACTION = 'processSAPs';
+    const string CERTIFICATION_ACTION = 'processCertifications';
 
-    const PROCESS_TEAM_MEMBERSHIP = 'processTeamMembership';
+    const string PROCESS_TEAM_MEMBERSHIP = 'processTeamMembership';
 
-    const HELP_CALLSIGN = 'callsign';
-    const HELP_RADIO = 'callsign,radio count';
-    const HELP_CERTIFICATION = "callsign,issued on date,card number,trained on date\ndate format = YYYY-MM-DD\nAll fields, other than the callsign, are optional and may be left blank.
+    const string HELP_CALLSIGN = 'callsign';
+    const string HELP_RADIO = 'callsign,radio count';
+    const string HELP_CERTIFICATION = "callsign,issued on date,card number,trained on date\ndate format = YYYY-MM-DD\nAll fields, other than the callsign, are optional and may be left blank.
     Examples: hubcap,,12345 to record the card number\nhubcap,2022-01-4,,2021-12-20 to record the issued on and trained on dates.";
 
-    const HELP_PROVISIONS = "callsign[,source year,expiry year] = Source year and expiry year are optional.";
-    const HELP_PROVISION_EVENT_RADIO = "callsign,count[,source year,expiry year] = Source year and expiry year are optional";
+    const string HELP_PROVISIONS = "callsign[,source year,expiry year] = Source year and expiry year are optional.";
+    const string HELP_PROVISION_EVENT_RADIO = "callsign,count[,source year,expiry year] = Source year and expiry year are optional";
+
+    // Meal pass combination (used to be old Provisions type before the conversion to the single Meal type)
+    const string ALL_EAT_PASS = 'all_eat_pass';
+    const string EVENT_EAT_PASS = 'event_eat_pass';
+    const string PRE_EVENT_EAT_PASS = 'pre_event_eat_pass';
+    const string POST_EVENT_EAT_PASS = 'post_event_eat_pass';
+    const string PRE_EVENT_EVENT_EAT_PASS = 'pre_event_event_eat_pass';
+    const string PRE_POST_EAT_PASS = 'pre_post_eat_pass';
+    const string EVENT_POST_EAT_PASS = 'event_post_event_eat_pass';
+
+    const array MEAL_TYPES = [
+        self::ALL_EAT_PASS,
+        self::EVENT_EAT_PASS,
+        self::PRE_EVENT_EAT_PASS,
+        self::POST_EVENT_EAT_PASS,
+        self::PRE_EVENT_EVENT_EAT_PASS,
+        self::EVENT_POST_EAT_PASS,
+        self::PRE_POST_EAT_PASS,
+    ];
+
+    const array MEAL_MATRIX = [
+        self::ALL_EAT_PASS => 'pre+event+post',
+        self::EVENT_EAT_PASS => 'event',
+        self::PRE_EVENT_EAT_PASS => 'pre',
+        self::POST_EVENT_EAT_PASS => 'post',
+        self::PRE_EVENT_EVENT_EAT_PASS => 'pre+event',
+        self::EVENT_POST_EAT_PASS => 'event+post',
+        self::PRE_POST_EAT_PASS => 'pre+post'
+    ];
 
 
     // Note: certification actions will be added by the BulkUploadControl actions method.
 
-    const ACTION_DESCRIPTIONS = [
+    const array ACTION_DESCRIPTIONS = [
         [
             'label' => 'Earned Provisions Actions',
             'options' => [
-                ['id' => Provision::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_PROVISIONS],
-                ['id' => Provision::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_PROVISIONS],
+                ['id' => self::ALL_EAT_PASS, 'label' => 'Earned All Eat Pass', 'help' => self::HELP_PROVISIONS],
+                ['id' => self::EVENT_EAT_PASS, 'label' => 'Earned Event Eat Pass', 'help' => self::HELP_PROVISIONS],
                 ['id' => Provision::WET_SPOT, 'label' => 'Earned Wet Spot', 'help' => self::HELP_PROVISIONS],
                 [
                     'id' => Provision::EVENT_RADIO,
@@ -68,13 +97,13 @@ class BulkUploader
         [
             'label' => 'Allocated Provisions Actions',
             'options' => [
-                ['id' => 'alloc_' . Provision::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
-                ['id' => 'alloc_' . Provision::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::ALL_EAT_PASS, 'label' => 'Allocated All Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::EVENT_EAT_PASS, 'label' => 'Allocated Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::PRE_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::PRE_EVENT_EVENT_EAT_PASS, 'label' => 'Allocated Pre-Event + Event Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::PRE_POST_EAT_PASS, 'label' => 'Allocated Pre+Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::EVENT_POST_EAT_PASS, 'label' => 'Allocated Event + Post Eat Pass', 'help' => self::HELP_CALLSIGN],
+                ['id' => 'alloc_' . self::POST_EVENT_EAT_PASS, 'label' => 'Allocated Post-Event Eat Pass', 'help' => self::HELP_CALLSIGN],
                 ['id' => 'alloc_' . Provision::WET_SPOT, 'label' => 'Allocated Wet Spot', 'help' => self::HELP_CALLSIGN],
                 ['id' => 'alloc_' . Provision::EVENT_RADIO, 'label' => 'Allocated Event Radio', 'help' => self::HELP_RADIO]
             ]
@@ -82,16 +111,6 @@ class BulkUploader
         [
             'label' => 'BMID Actions',
             'options' => [
-                [
-                    'id' => 'meals',
-                    'label' => 'Set meals on BMID',
-                    'help' => "callsign,meals\nmeals = pre, post, event, all\nAdd plus (+) or minus (-) to add or subtract a meal period\n(e.g., hubcap,-event will remove the event week meal period",
-                ],
-                [
-                    'id' => 'showers',
-                    'label' => 'Set showers on BMID',
-                    'help' => "callsign,y/n/1/0"
-                ],
                 [
                     'id' => 'bmidsubmitted',
                     'label' => 'Mark BMID as submitted',
@@ -154,7 +173,7 @@ class BulkUploader
     ];
 
 
-    const ACTIONS = [
+    const array ACTIONS = [
         'vintage' => self::CHANGE_PERSON_COLUMN_ACTION,
 
         'org_vehicle_insurance' => self::CHANGE_EVENT_COLUMN_ACTION,
@@ -188,12 +207,6 @@ class BulkUploader
         'team_membership' => self::PROCESS_TEAM_MEMBERSHIP,
     ];
 
-    const MEALS_SORT = [
-        Bmid::MEALS_PRE => 1,
-        Bmid::MEALS_EVENT => 2,
-        Bmid::MEALS_POST => 3,
-    ];
-
     /**
      * Process a callsign list according to given action
      *
@@ -201,6 +214,7 @@ class BulkUploader
      * @param bool $commit - true if upload is to be committed to the database, otherwise just verify
      * @param string $reason - the reason the bulk upload is being done
      * @param string $recordsParam - a callsign list with parameters new line terminated
+     * @throws UnacceptableConditionException
      */
 
     public static function process(string $action, bool $commit, string $reason, string $recordsParam): array
@@ -266,6 +280,12 @@ class BulkUploader
                 'callsign' => $record->person->callsign,
                 'status' => $record->status,
             ];
+
+            if (in_array($person->status, Person::LOCKED_STATUSES)) {
+                $result['status'] = self::STATUS_FAILED;
+                $result['details'] = "Account is locked due to status {$person->status}";
+                return $result;
+            }
 
             if ($record->changes) {
                 $result['changes'] = $record->changes;
@@ -389,60 +409,17 @@ class BulkUploader
 
             $bmid = Bmid::findForPersonManage($person->id, $year);
 
-            $data = $record->data;
-            if ($action != 'bmidsubmitted' && !count($data)) {
-                $record->status = 'failed';
-                $record->details = ($action == 'showers') ? 'missing showers value (y,1,n,0)' : 'missing meal column';
-                continue;
-            }
-
             $reason = null;
             switch ($action) {
-                case 'showers':
-                    $showers = strtolower(trim($data[0]));
-                    $oldValue = $bmid->showers;
-                    $newValue = $bmid->showers = ($showers[0] == 'y' || $showers[0] == 1);
-                    break;
-
-                case 'meals':
-                    $meals = trim($data[0]);
-                    if ($meals[0] == "+") {
-                        if ($bmid->meals == Bmid::MEALS_ALL) {
-                            $meals = Bmid::MEALS_ALL;
-                        } else {
-                            $meals = substr($meals, 1, strlen($meals) - 1);
-                            $matrix = [];
-                            foreach (explode('+', $bmid->meals) as $week) {
-                                // Deal with '+thing' which turns into [ "", "thing"]
-                                if (!empty($week)) {
-                                    $matrix[$week] = true;
-                                }
-                            }
-                            $matrix[$meals] = true;
-                            if (count($matrix) == 3) {
-                                // Has all three weeks.
-                                $meals = Bmid::MEALS_ALL;
-                            } else {
-                                // Sort week order (pre, event, post)
-                                uksort($matrix, fn($a, $b) => (self::MEALS_SORT[$a] - self::MEALS_SORT[$b]));
-                                $meals = implode('+', array_keys($matrix));
-                            }
-                        }
-                    }
-                    $oldValue = $bmid->meals;
-                    $newValue = $bmid->meals = $meals;
-                    break;
-
                 case 'bmidsubmitted':
-                    if ($bmid->status != "on_hold" && $bmid->status != "ready_to_print") {
+                    if ($bmid->status != Bmid::ISSUES && $bmid->status != Bmid::READY_TO_PRINT) {
                         $record->status = self::STATUS_FAILED;
                         $record->details = "BMID has status [{$bmid->status}] and cannot be submitted";
                         continue 2;
                     }
 
                     $oldValue = $bmid->status;
-                    // TODO: used to be 'uploaded', yet the schema does not include that status.
-                    $newValue = $bmid->status = 'submitted';
+                    $newValue = $bmid->status = Bmid::SUBMITTED;
                     break;
 
                 default:
@@ -643,7 +620,7 @@ class BulkUploader
      * @return void
      */
 
-    public static function processWAPs($records, $action, $commit, $reason): void
+    public static function processSAPs($records, $action, $commit, $reason): void
     {
         $year = current_year();
         $low = 5;
@@ -706,7 +683,7 @@ class BulkUploader
                     $accessAnyTime = false;
                 }
                 if ($commit) {
-                    AccessDocument::updateWAPsForPerson($person->id, $accessDate, $accessAnyTime, 'set via bulk uploader');
+                    AccessDocument::updateSAPsForPerson($person->id, $accessDate, $accessAnyTime, 'set via bulk uploader');
                 }
                 $record->status = self::STATUS_SUCCESS;
             }
@@ -736,15 +713,37 @@ class BulkUploader
             $defaultSourceYear = $year;
         }
 
-        if (!in_array($type, Provision::ALL_TYPES)) {
+        if ($type != Provision::WET_SPOT && $type != Provision::EVENT_RADIO && !in_array($type, self::MEAL_TYPES)) {
             throw new UnacceptableConditionException('Unknown provision type');
         }
 
         $isEventRadio = ($type == Provision::EVENT_RADIO);
-        if (in_array($type, Provision::MEAL_TYPES)) {
-            $existingTypes = Provision::MEAL_TYPES;
+        $isMeals = false;
+        $preMeals = false;
+        $postMeals = false;
+        $eventMeals = false;
+
+        if (in_array($type, self::MEAL_TYPES)) {
+            $existingType = Provision::MEALS;
+            $isMeals = true;
+            $periods = self::MEAL_MATRIX[$type] ?? '';
+            foreach (explode('+', $periods) as $period) {
+                switch ($period) {
+                    case 'pre':
+                        $preMeals = true;
+                        break;
+                    case 'post':
+                        $postMeals = true;
+                        break;
+                    case 'event':
+                        $eventMeals = true;
+                        break;
+                    default:
+                        throw new UnacceptableConditionException("Unknown period [$period] for type [$type]");
+                }
+            }
         } else {
-            $existingTypes = [$type];
+            $existingType = $type;
         }
 
         foreach ($records as $record) {
@@ -755,7 +754,11 @@ class BulkUploader
             $personId = $record->person->id;
             $existing = null;
 
-            $existing = Provision::findAvailableTypeForPerson($personId, $existingTypes, $isAllocated);
+            if ($isMeals) {
+                $existing = Provision::findAvailableMealsForPerson($personId, $isAllocated, $preMeals, $eventMeals, $postMeals);
+            } else {
+                $existing = Provision::findAvailableTypeForPerson($personId, $existingType);
+            }
             if ($existing && !$commit) {
                 $record->status = self::STATUS_WARNING;
                 if ($isAllocated) {
@@ -819,9 +822,9 @@ class BulkUploader
                 continue;
             }
 
-            $ad = new Provision([
+            $provision = new Provision([
                 'person_id' => $person->id,
-                'type' => $type,
+                'type' => $isMeals ? Provision::MEALS : $type,
                 'status' => Provision::AVAILABLE,
                 'expires_on' => $expiryYear,
                 'source_year' => $sourceYear,
@@ -830,21 +833,25 @@ class BulkUploader
             ]);
 
             if ($isEventRadio) {
-                $ad->item_count = $itemCount;
+                $provision->item_count = $itemCount;
+            } else if ($isMeals) {
+                $provision->pre_event_meals = $preMeals;
+                $provision->event_week_meals = $eventMeals;
+                $provision->post_event_meals = $postMeals;
             }
 
-            $ad->auditReason = 'created via bulk upload';
-            self::saveModel($ad, $record);
+            $provision->auditReason = 'created via bulk upload';
+            self::saveModel($provision, $record);
 
             if (!$existing) {
                 continue;
             }
 
             $existing->status = Provision::CANCELLED;
-            $existing->additional_comments = $existing->auditReason = 'Replaced by item #' . $ad->id . ' via bulk uploader';
+            $existing->additional_comments = $existing->auditReason = 'Replaced by item #' . $provision->id . ' via bulk uploader';
             $record->status = self::STATUS_WARNING;
             $record->details = "Existing provision RP-" . $existing->id . " " . $existing->getTypeLabel()
-                . " cancelled and replaced with RP-" . $ad->id . " " . $ad->getTypeLabel();
+                . " cancelled and replaced with RP-" . $provision->id . " " . $provision->getTypeLabel();
             $existing->saveWithoutValidation();
         }
     }

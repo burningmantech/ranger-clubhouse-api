@@ -306,6 +306,10 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'zip',
     ];
 
+    protected $virtualColumns = [
+        'has_reviewed_pi'
+    ];
+
     // Various associated person tables
     const array ASSOC_TABLES = [
         'access_document',
@@ -911,13 +915,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     /**
      * Return the role ids (used by Person record serialization)
-     *
-     * @return ?array
      */
 
-    public function getRolesAttribute(): ?array
+    public function roles(): Attribute
     {
-        return $this->roles;
+        return Attribute::make(
+            get: fn() => $this->roles
+        );
     }
 
     /**
@@ -1125,17 +1129,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Does the person have one of the ART Trainer position specific roles?
-     *
-     * @return bool
-     */
-
-    public function hasARTTrainerPositionRole(): bool
-    {
-        return $this->hasPositionRole(Role::ART_TRAINER_BASE);
-    }
-
-    /**
      * Does the person have one of the Survey Management position roles?
      *
      * @return bool
@@ -1221,15 +1214,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Set pseudo-field has_reviewed_pi.
-     *
-     * @param $value
-     * @return void
+     * Did the person review their PI?
      */
 
-    public function setHasReviewedPiAttribute($value): void
+    public function hasReviewedPi(): Attribute
     {
-        $this->has_reviewed_pi = $value;
+        return Attribute::make(
+            get: fn() => $this->pi_reviewed_for_dashboard_at && $this->pi_reviewed_for_dashboard_at->year == current_year(),
+            set: fn($value) => $this->has_reviewed_pi = $value
+        );
     }
 
     /**
@@ -1482,6 +1475,41 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
+     * Return the most recent approved photo.
+     *
+     * @return mixed|null
+     */
+
+    public function approvedPhoto(): ?PersonPhoto
+    {
+        if (!$this->person_photo) {
+            // Null here means a photo was never submitted.
+            return null;
+        }
+
+        if ($this->person_photo->isApproved()) {
+            // The most recent photo submission was approved!
+            return $this->person_photo;
+        }
+
+        // Find the most recent approval if any.
+        return PersonPhoto::retrieveMostRecentApproved($this->id);
+    }
+
+    public function hasApprovedPhoto(): bool
+    {
+        if (!$this->person_photo) {
+            return false;
+        }
+
+        if ($this->person_photo->isApproved()) {
+            return true;
+        }
+
+        return PersonPhoto::haveAnyApproved($this->id);
+    }
+
+    /**
      * Build the FKA names into an array and optionally filter out irrelevant callsigns
      *
      * @param bool $filter
@@ -1519,16 +1547,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         return self::splitCommas($this->known_rangers);
     }
 
-    /**
-     * Has the person reviewed their personal information?
-     *
-     * @return bool
-     */
-    public function hasReviewedPi(): bool
-    {
-        return ($this->pi_reviewed_for_dashboard_at
-            && $this->pi_reviewed_for_dashboard_at->year == current_year());
-    }
 
     /**
      * Split a string into an array
@@ -1584,7 +1602,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     }
 
     /**
-     * Obtain the first name to use - either the preferred name if present, or the first name.
+     * Get the first name to use - either the preferred name if present, or the first name.
      *
      * @return string
      */

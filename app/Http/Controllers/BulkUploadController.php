@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BulkUploader;
 use App\Models\Certification;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -53,6 +54,7 @@ class BulkUploadController extends ApiController
      *
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws UnacceptableConditionException
      */
 
     public function process(): JsonResponse

@@ -142,7 +142,6 @@ class PersonAward extends ApiModel
 
                     if ($sql->exists()) {
                         $this->addError($column, 'award already exists for the year');
-                        error_log("COLUMN $column -> [$value]");
                         return false;
                     }
                 }

@@ -2,13 +2,13 @@
 
 namespace App\Lib;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Bmid;
 use App\Models\BmidExport;
 use App\Models\Provision;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use App\Exceptions\UnacceptableConditionException;
 use RuntimeException;
 use ZipArchive;
 
@@ -62,11 +62,12 @@ class MarcatoExport
 
         foreach ($marcato->bmids as $bmid) {
             $bmid->load('person.person_photo');
-            if (!$bmid->person->person_photo) {
+            $photo = $bmid->person->approvedPhoto();
+            if (!$photo) {
                 throw new UnacceptableConditionException("{$bmid->person->callsign} does not have a photo record");
             }
 
-            if (!$bmid->person->person_photo->imageExists()) {
+            if (!$photo->imageExists()) {
                 throw new UnacceptableConditionException("{$bmid->person->callsign} has photo record but image file is missing.");
             }
         }
@@ -160,7 +161,7 @@ class MarcatoExport
      * added to the archive.
      *
      */
-    public function createPhotoZipfile()
+    public function createPhotoZipfile(): void
     {
         $zip = new ZipArchive();
         $result = $zip->open($this->photoZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
@@ -170,7 +171,7 @@ class MarcatoExport
 
         foreach ($this->bmids as $bmid) {
             // pull down each file
-            $data = $bmid->person->person_photo->readImage();
+            $data = $bmid->person->approvedPhoto()->readImage();
             $image = self::buildPhotoName($bmid->person);
             $result = $zip->addFromString($image, $data);
             if ($result !== true) {
@@ -224,8 +225,7 @@ class MarcatoExport
             $arrivalDate = Carbon::parse($bmid->access_date)->format('m/d/Y');
         }
 
-        $meals = $bmid->buildMealsMatrix();
-
+        $meals = $bmid->meals_granted;
         return [
             $person->first_name . ' ' . $person->last_name,
             $person->email,
@@ -235,10 +235,10 @@ class MarcatoExport
             '',                     // Supervisor is not required.
             $arrivalDate,
             self::buildPhotoName($person),
-            ($bmid->showers || $bmid->earned_showers || $bmid->allocated_showers) ? '100' : '',
-            isset($meals[Bmid::MEALS_PRE]) ? 1 : 0,
-            isset($meals[Bmid::MEALS_EVENT]) ? 1 : 0,
-            isset($meals[Bmid::MEALS_POST]) ? 1 : 0,
+            $bmid->showers_granted ? '100' : '',
+            $meals['pre'] ? 1 : 0,
+            $meals['event'] ? 1 : 0,
+            $meals['post'] ? 1 : 0,
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];
@@ -264,77 +264,87 @@ class MarcatoExport
 
     public function markSubmitted(): void
     {
-        $user = Auth::user()->callsign;
-        $uploadDate = date('n/j/y G:i:s');
         $batchInfo = $this->batchInfo ?? '';
+
+        $provisionsByPerson = Provision::retrieveUsableForPersonIds($this->bmids->pluck('person_id'))->groupBy('person_id');
 
         foreach ($this->bmids as $bmid) {
             $bmid->status = Bmid::SUBMITTED;
+            $provisions = $provisionsByPerson->get($bmid->person_id);
 
-            /*
-             * Make a note of what provisions were set
-             */
+            $allocShowers = false;
+            $earnedShowers = false;
+
+            $allocMeals = [];
+            $earnedMeals = [];
+
+            if ($provisions) {
+                foreach ($provisions as $provision) {
+                    switch ($provision->type) {
+                        case Provision::WET_SPOT:
+                            if ($provision->is_allocated) {
+                                $allocShowers = true;
+                            } else {
+                                $earnedShowers = true;
+                            }
+                            break;
+
+                        case Provision::MEALS:
+                            if ($provision->is_allocated) {
+                                $meals = &$allocMeals;
+                            } else {
+                                $meals = &$earnedMeals;
+                            }
+
+                            if ($provision->pre_event_meals) {
+                                $meals['pre'] = true;
+                            }
+
+                            if ($provision->event_week_meals) {
+                                $meals['event'] = true;
+                            }
+
+                            if ($provision->post_event_meals) {
+                                $meals['post'] = true;
+                            }
+                            break;
+                    }
+                }
+            }
 
             $showers = [];
-            if ($bmid->showers) {
-                $showers[] = 'set';
-            }
-
-            if ($bmid->earned_showers) {
-                $showers[] = 'earned';
-            }
-            if ($bmid->allocated_showers) {
-                $showers[] = 'allocated';
-            }
-            if (empty($showers)) {
+            if (!$allocShowers && !$earnedShowers) {
                 $showers[] = 'none';
+            } else {
+                if ($allocShowers) {
+                    $showers[] = 'alloc';
+                }
+
+                if ($earnedShowers) {
+                    $showers[] = 'earned';
+                }
             }
 
             $meals = [];
-            if (!empty($bmid->meals)) {
-                $meals[] = $bmid->meals . ' set';
-            }
-            if (!empty($bmid->earned_meals)) {
-                $meals[] = $bmid->earned_meals . ' earned';
-            }
-            if (!empty($bmid->allocated_meals)) {
-                $meals[] = $bmid->allocated_meals . ' allocated';
-            }
-
-            if (empty($meals)) {
+            if (empty($allocMeals) && empty($earnedMeals)) {
                 $meals[] = 'none';
+            } else {
+                if (!empty($allocMeals)) {
+                    $meals[] = Provision::sortMealsMatrix($allocMeals) . ' alloc';
+                }
+
+                if (!empty($allocMeals)) {
+                    $meals[] = Provision::sortMealsMatrix($earnedMeals) . ' earned';
+                }
             }
 
-            /*
-             * Figure out which provisions are to be marked as submitted.
-             *
-             * Note: Meals and showers are not allowed to be banked in the case were the
-             * person earned them yet their position (Council, OOD, Supervisor, etc.) comes
-             * with a provisions package.
-             */
-
-            $items = [];
-            if ($bmid->effectiveShowers()) {
-                $items[] = Provision::WET_SPOT;
-            }
-
-            if (!empty($bmid->meals) || !empty($bmid->allocated_meals)) {
-                // Person is working.. consume all the meals.
-                $items = [...$items, ...Provision::MEAL_TYPES];
-            } else if (!empty($bmid->earned_meals)) {
-                // Currently only two meal provision types, All Eat, and Event Week
-                $items[] = ($bmid->earned_meals == Bmid::MEALS_ALL) ? Provision::ALL_EAT_PASS : Provision::EVENT_EAT_PASS;
-            }
-
-
-            if (!empty($items)) {
-                $items = array_unique($items);
-                Provision::markSubmittedForBMID($bmid->person_id, $items);
+            if ($provisions) {
+                Provision::markSubmittedForBMID($provisions);
             }
 
             $meals = '[meals ' . implode(', ', $meals) . ']';
             $showers = '[showers ' . implode(', ', $showers) . ']';
-            $bmid->notes = "$uploadDate $user: Exported $meals $showers\n$bmid->notes";
+            $bmid->appendNotes("Exported $meals $showers");
             $bmid->auditReason = 'exported to print';
             $bmid->batch = $batchInfo;
             $bmid->saveWithoutValidation();
