@@ -238,7 +238,7 @@ class ProspectiveApplicationController extends ApiController
     }
 
     /**
-     * Edite a note
+     * Edit a note
      *
      * @param ProspectiveApplication $prospectiveApplication
      * @return JsonResponse
