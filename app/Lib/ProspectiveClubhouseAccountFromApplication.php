@@ -46,7 +46,7 @@ class ProspectiveClubhouseAccountFromApplication
 
         'street' => 'Street',
         'city' => 'City',
-        'state' => 'State',
+      //  'state' => 'State', -- only required for counties that have states.
         'postal_code' => 'Postal Code',
         'country' => 'Country',
         'phone' => 'Phone',
@@ -54,6 +54,8 @@ class ProspectiveClubhouseAccountFromApplication
         'bpguid' => 'BPGUID',
         'sfuid' => 'SFUID',
     ];
+
+    const array COUNTRIES_REQUIRING_STATES = ['US', 'CA', 'AU'];
 
     const string APPLICATION_APPROVED_MESSAGE = 'application approved';
 
@@ -173,6 +175,10 @@ class ProspectiveClubhouseAccountFromApplication
             if (empty($this->application->{$field})) {
                 $missing[] = $description;
             }
+        }
+
+        if (in_array($this->application->country, self::COUNTRIES_REQUIRING_STATES) && empty($this->application->state)) {
+            $missing[] = 'State/Province';
         }
 
         if (empty($missing)) {
