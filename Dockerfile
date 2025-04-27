@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM ghcr.io/burningmantech/php-nginx:8.4.2-alpine3.21 as php
+FROM ghcr.io/burningmantech/php-nginx:8.4.6-alpine3.21 as php
 
 # Create runtime directories
 RUN install -d -o www-data -g www-data -m 775  \
