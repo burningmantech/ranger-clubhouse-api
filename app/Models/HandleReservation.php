@@ -78,33 +78,6 @@ class HandleReservation extends ApiModel
         'has_expired'
     ];
 
-    protected function endDate(): Attribute
-    {
-        return NullIfEmptyAttribute::make();
-    }
-
-    protected function twiiYear(): Attribute
-    {
-        return NullIfEmptyAttribute::make();
-    }
-
-    protected function reason(): Attribute
-    {
-        return BlankIfEmptyAttribute::make();
-    }
-
-    protected function setHandleAttribute(?string $value): void
-    {
-        $value = trim($value ?: '');
-        $this->attributes['handle'] = $value;
-        $this->attributes['normalized_handle'] = Person::normalizeCallsign($value);
-    }
-
-    protected function getHasExpiredAttribute(): bool
-    {
-        return ($this->expires_on && now()->gt($this->expires_on));
-    }
-
     public static function boot(): void
     {
         parent::boot();
@@ -256,5 +229,32 @@ class HandleReservation extends ApiModel
     public function getTypeLabel(): string
     {
         return self::TYPE_LABELS[$this->reservation_type] ?? $this->reservation_type;
+    }
+
+    protected function expiresOn(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    protected function twiiYear(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    protected function reason(): Attribute
+    {
+        return BlankIfEmptyAttribute::make();
+    }
+
+    protected function setHandleAttribute(?string $value): void
+    {
+        $value = trim($value ?: '');
+        $this->attributes['handle'] = $value;
+        $this->attributes['normalized_handle'] = Person::normalizeCallsign($value);
+    }
+
+    protected function hasExpired(): Attribute
+    {
+        return Attribute::make(get: fn () => ($this->expires_on && now()->gt($this->expires_on)));
     }
 }
