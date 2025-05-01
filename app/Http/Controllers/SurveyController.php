@@ -274,6 +274,11 @@ class SurveyController extends ApiController
             'survey.*.answers.*.response' => 'present',
         ]);
 
+        if (empty($params['survey'])) {
+            // Sigh. C'mon people submit something.
+            return $this->success();
+        }
+
         $type = $params['type'];
 
         $year = $params['year'] ?? null;
@@ -299,6 +304,7 @@ class SurveyController extends ApiController
         }
 
         $isTrainerSurvey = ($survey->type == Survey::TRAINER);
+
 
         try {
             DB::beginTransaction();
