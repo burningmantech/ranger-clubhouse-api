@@ -66,7 +66,7 @@ class MailLogController extends ApiController
     {
         $sns = json_decode(request()->getContent());
 
-        // Look like two different message format might be seen, deal with both
+        // Look like two different message formats might be seen, deal with both
         if (isset($sns->Type) && $sns->Type == 'SubscriptionConfirmation') {
             // Ping the URL provided to ack the subscription.
             try {
@@ -83,9 +83,7 @@ class MailLogController extends ApiController
             return response()->json([], 200);
         }
 
-        $messageId = $sns->mail->commonHeaders->messageId ?? "";
-
-        $messageId = str_replace(['<', '>'], '', $messageId);
+        $messageId = $sns->mail->messageId ?? "";
 
         switch ($sns->notificationType) {
             case 'Bounce':
@@ -142,7 +140,7 @@ class MailLogController extends ApiController
                 break;
 
             default:
-                ErrorLog::record('sns-message-unknown-type', ['message' => $body]);
+                ErrorLog::record('sns-message-unknown-type', ['message' => $sns]);
                 break;
         }
 
