@@ -14,7 +14,7 @@
     </p>
     <hr>
     <p>
-        {{$contactMessage}}
+        {!! nl2br($contactMessage) !!}
     </p>
     <hr>
 
