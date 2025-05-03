@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UnacceptableConditionException;
+use App\Lib\Reports\TrainedNoWorkReport;
 use App\Lib\Reports\TrainerAttendanceReport;
 use App\Lib\Reports\TrainingCompletedReport;
 use App\Lib\Reports\TrainingMultipleEnrollmentReport;
@@ -33,7 +34,7 @@ class TrainingController extends ApiController
      *
      * @param $id
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function multipleEnrollmentsReport($id): JsonResponse
@@ -83,13 +84,29 @@ class TrainingController extends ApiController
      * (ART modules only)
      * @param $id
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function untrainedPeopleReport($id): JsonResponse
     {
         list($training, $year) = $this->getTrainingAndYear($id);
         return response()->json(TrainingUntrainedPeopleReport::execute($training, $year));
+    }
+
+    /**
+     * Report on the people who trained yet did not work.
+     *
+     * @param $id
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws UnacceptableConditionException
+     */
+
+    public function trainedNoWorkReport($id): JsonResponse
+    {
+        list($training, $year) = $this->getTrainingAndYear($id);
+
+        return response()->json(TrainedNoWorkReport::execute($training->id, $year));
     }
 
     /**
@@ -104,11 +121,11 @@ class TrainingController extends ApiController
     }
 
     /**
-     * Obtain the training position, and year requested
+     * Get the training position, and year requested
      *
      * @param $id
      * @return array
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     private function getTrainingAndYear($id): array
