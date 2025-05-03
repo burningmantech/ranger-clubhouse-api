@@ -26,5 +26,5 @@ return [
     /*
      * Where to store the BMID exports
      */
-    'BmidExportStorage' => env('RANGER_CLUBHOUSE_PHOTO_STORAGE', 'bmid-export-local')
+    'BmidExportStorage' => env('RANGER_CLUBHOUSE_BMID_STORAGE', 'bmid-export-local')
 ];
