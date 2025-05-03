@@ -492,6 +492,7 @@ Route::middleware('api')->group(function () {
     Route::get('training/{id}/people-training-completed', [TrainingController::class, 'peopleTrainingCompleted']);
     Route::get('training/{id}/trainer-attendance', [TrainingController::class, 'trainerAttendanceReport']);
     Route::get('training/{id}/untrained-people', [TrainingController::class, 'untrainedPeopleReport']);
+    Route::get('training/{id}/trained-no-work', [TrainingController::class, 'trainedNoWorkReport']);
     Route::get('training/{id}', [TrainingController::class, 'show']);
 
     Route::get('ticketing/info', [TicketingController::class, 'ticketingInfo']);
