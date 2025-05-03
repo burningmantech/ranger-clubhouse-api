@@ -7,7 +7,8 @@ use App\Models\Position;
 use App\Models\TrainerStatus;
 use Illuminate\Support\Facades\DB;
 
-class SandmanQualificationReport {
+class SandmanQualificationReport
+{
     /**
      * Find everyone who is a Sandman and report on their eligibility to work as a Sandman in the current year.
      *
@@ -33,11 +34,19 @@ class SandmanQualificationReport {
             ->get()
             ->pluck('person_id');
 
-        $trainingIds = DB::table('slot')->where('begins_year', $year)
-                    ->where('position_id', Position::SANDMAN_TRAINING)
-                    ->where('active', true)
-                    ->get()
-                    ->pluck('id');
+        $trainerPersonIds = DB::table('person_position')
+            ->join('person', 'person.id', 'person_position.person_id')
+            ->where('position_id', Position::SANDMAN_TRAINER)
+            ->where('person.status', Person::ACTIVE)
+            ->get()
+            ->pluck('person_id');
+
+        $trainingIds = DB::table('slot')
+            ->where('begins_year', $year)
+            ->where('position_id', Position::SANDMAN_TRAINING)
+            ->where('active', true)
+            ->get()
+            ->pluck('id');
 
         $trainerSlotIds = DB::table('slot')->where('begins_year', $year)
             ->where('position_id', Position::SANDMAN_TRAINER)
@@ -46,38 +55,38 @@ class SandmanQualificationReport {
             ->pluck('id');
 
         $trainedByPersonId = DB::table('trainee_status')
-                ->whereIn('slot_id', $trainingIds)
-                ->whereIntegerInRaw('person_id', $personIds)
-                ->where('passed', true)
-                ->get()
-                ->keyBy('person_id');
+            ->whereIn('slot_id', $trainingIds)
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->where('passed', true)
+            ->get()
+            ->keyBy('person_id');
 
         $trainerByPersonIds = DB::table('trainer_status')
-            ->whereIn('slot_id', $trainingIds)
-            ->whereIntegerInRaw('person_id', $trainerSlotIds)
+            ->whereIn('trainer_slot_id', $trainerSlotIds)
+            ->whereIntegerInRaw('person_id', $trainerPersonIds)
             ->where('status', TrainerStatus::ATTENDED)
             ->get()
             ->keyBy('person_id');
 
         $sandmanSlotIds = DB::table('slot')
-                ->where('begins_year', $year)
-                ->where('position_id', Position::SANDMAN)
-                ->get()
-                ->pluck('id');
+            ->where('begins_year', $year)
+            ->where('position_id', Position::SANDMAN)
+            ->get()
+            ->pluck('id');
 
         $sandmanShiftByPersonId = DB::table('person_slot')
-                ->whereIn('slot_id', $sandmanSlotIds)
-                ->get()
-                ->keyBy('person_id');
+            ->whereIn('slot_id', $sandmanSlotIds)
+            ->get()
+            ->keyBy('person_id');
 
         $pastWork = DB::table('timesheet')
-                ->select('person_id')
-                ->whereYear('on_duty', '>=', $cutoff)
-                ->whereIn('position_id', Position::SANDMAN_QUALIFIED_POSITIONS)
-                ->whereIntegerInRaw('person_id', $personIds)
-                ->groupBy('person_id')
-                ->get()
-                ->keyBy('person_id');
+            ->select('person_id')
+            ->whereYear('on_duty', '>=', $cutoff)
+            ->whereIn('position_id', Position::SANDMAN_QUALIFIED_POSITIONS)
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->groupBy('person_id')
+            ->get()
+            ->keyBy('person_id');
 
         $sandPeople = DB::table('person')
             ->select(
