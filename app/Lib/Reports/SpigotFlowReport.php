@@ -13,7 +13,6 @@ use App\Models\ProspectiveApplication;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class SpigotFlowReport
 {
