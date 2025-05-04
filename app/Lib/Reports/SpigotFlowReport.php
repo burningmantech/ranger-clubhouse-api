@@ -9,6 +9,7 @@ use App\Models\PersonPhoto;
 use App\Models\PersonSlot;
 use App\Models\PersonStatus;
 use App\Models\Position;
+use App\Models\ProspectiveApplication;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Carbon\Carbon;
@@ -27,24 +28,66 @@ class SpigotFlowReport
     {
         $spigot = new SpigotFlowReport;
 
-        // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
-        $pnvStatus = PersonStatus::select('person_id', 'created_at')
-            ->whereYear('created_at', $year)
-            ->where('new_status', Person::PROSPECTIVE)
-            ->orderBy('created_at')
-            ->get()
-            ->groupBy('person_id');
+        $pnvStatus = [];
 
-        if ($pnvStatus->isEmpty()) {
+        // for years prior to 2025, SOR for pnv applications came was Salesforce, so both the import and created column
+        // will be the same since we don’t know how many total applications were received. The applications were vetted
+        // in SF, and only those approved were retrieve to create Clubhouse accounts with (aka imported). The actual
+        // application was not stored in the Clubhouse.
+        if ($year < 2025) {
+            // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
+            $query = PersonStatus::select('person_id', 'created_at')
+                ->whereYear('created_at', $year)
+                ->where('new_status', Person::PROSPECTIVE)
+                ->orderBy('created_at')
+                ->get()
+                ->groupBy('person_id');
+            // just grab the first record from each group-by array
+            foreach ($query as $personId => $rows) {
+                $pnvStatus[$personId] = $rows[0];
+            }
+        } else { // year >= 2025
+          // For 2025 and beyond, the import column will reflect the prospective_application total record count for the
+          // year. Not all applications will be turned into prospective accounts. The reasons an account may not be
+          // created are: the application was pre-bonked (problematic behavior reported by the community, etc.), a
+          // duplicate application was submitted, a returning Shiny Penny thought they had to submit a new
+          // application, etc.
+            $query = ProspectiveApplication::select('person_id', 'created_at', 'status')
+                ->whereYear('created_at', $year)
+                ->orderBy('created_at')
+                ->get();
+            foreach ($query as $data) {
+                $pnvStatus[$data->person_id] = $data;
+            }
+        }
+
+        // pnvStatus has been normalized as an associative array of personId to single data record
+
+        if (!$pnvStatus) {
             // Too soon?
             return $spigot->dates;
         }
 
-        foreach ($pnvStatus as $personId => $rows) {
-            $spigot->setSpigotDate('imported', $rows[0]->created_at, $rows[0]->person);
+        if ($year < 2025) {
+            foreach ($pnvStatus as $personId => $data) {
+                $spigot->setSpigotDate('imported', $data->created_at, $data->person);
+                $spigot->setSpigotDate('created', $data->created_at, $data->person);
+            }
+            $pnvIds = array_keys($pnvStatus);
+        } else {
+            $pnvIds = [];
+            // all records will have a created_at, which signifies their 'imported' date
+            // however, sometimes personId will be null if the prospective application was not accepted,
+            // so only a subset have a 'created' date
+            foreach ($pnvStatus as $personId => $data) {
+                $spigot->setSpigotDate('imported', $data->created_at, null); // not all imported have person-details
+                if ($data->status == ProspectiveApplication::STATUS_CREATED) {
+                    $spigot->setSpigotDate('created', $data->created_at, $data->person);
+                    $pnvIds[] = $personId;
+                }
+            }
+            $pnvStatus = array_intersect_key($pnvStatus, array_flip($pnvIds)); // remove the null/non-accepted prospective_applications from the collection
         }
-
-        $pnvIds = $pnvStatus->keys()->toArray();
 
         $loggedIn = ActionLog::select('person_id', 'created_at')
             ->whereIn('person_id', $pnvIds)
@@ -55,7 +98,7 @@ class SpigotFlowReport
             ->groupBy('person_id');
 
         foreach ($loggedIn as $personId => $logins) {
-            $import = $pnvStatus->get($personId)->first()->created_at;
+            $import = $pnvStatus[$personId]->created_at;
             foreach ($logins as $login) {
                 if ($login->created_at->gte($import)) {
                     $spigot->setSpigotDate('first_login', $login->created_at, $login->person);
@@ -182,11 +225,6 @@ class SpigotFlowReport
 
     public function setSpigotDate(string $type, $date, $person): void
     {
-        if (!$person) {
-            // Deleted account.
-            return;
-        }
-
         if ($date != 'previous') {
             if (is_numeric($date)) {
                 $date = new Carbon($date);
@@ -203,6 +241,10 @@ class SpigotFlowReport
             $this->dates[$day][$type] = [];
         }
 
-        $this->dates[$day][$type][] = ['id' => $person->id, 'callsign' => $person->callsign];
+        if (!$person) { // Deleted account, or rejected application
+            $this->dates[$day][$type][] = ['id' => '', 'callsign' => ''];
+        } else {
+            $this->dates[$day][$type][] = ['id' => $person->id, 'callsign' => $person->callsign];
+        }
     }
 }
