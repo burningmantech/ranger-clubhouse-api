@@ -28,7 +28,7 @@ class SpigotFlowReport
     {
         $spigot = new SpigotFlowReport;
 
-        $pnvStatus = [];
+        $rawQueryData = [];
 
         // for years prior to 2025, SOR for pnv applications came was Salesforce, so both the import and created column
         // will be the same since we don’t know how many total applications were received. The applications were vetted
@@ -44,7 +44,7 @@ class SpigotFlowReport
                 ->groupBy('person_id');
             // just grab the first record from each group-by array
             foreach ($query as $personId => $rows) {
-                $pnvStatus[$personId] = $rows[0];
+                $rawQueryData[] = $rows[0];
             }
         } else { // year >= 2025
           // For 2025 and beyond, the import column will reflect the prospective_application total record count for the
@@ -56,37 +56,40 @@ class SpigotFlowReport
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at')
                 ->get();
+
+            // can't put into an associative array of person_id -> data because person_id can be null
             foreach ($query as $data) {
-                $pnvStatus[$data->person_id] = $data;
+                $rawQueryData[] = $data;
             }
         }
 
-        // pnvStatus has been normalized as an associative array of personId to single data record
-
-        if (!$pnvStatus) {
+        if (!$rawQueryData) {
             // Too soon?
             return $spigot->dates;
         }
 
+        $pnvStatus = []; // associative array of personId -> data
+        $pnvIds = []; // array of personIds
+
         if ($year < 2025) {
-            foreach ($pnvStatus as $personId => $data) {
+            foreach ($rawQueryData as $data) {
                 $spigot->setSpigotDate('imported', $data->created_at, $data->person);
                 $spigot->setSpigotDate('created', $data->created_at, $data->person);
+                $pnvStatus[$data->person_id] = $data;
+                $pnvIds[] = $data->person_id;
             }
-            $pnvIds = array_keys($pnvStatus);
         } else {
-            $pnvIds = [];
             // all records will have a created_at, which signifies their 'imported' date
             // however, sometimes personId will be null if the prospective application was not accepted,
             // so only a subset have a 'created' date
-            foreach ($pnvStatus as $personId => $data) {
+            foreach ($rawQueryData as $data) {
                 $spigot->setSpigotDate('imported', $data->created_at, null); // not all imported have person-details
                 if ($data->status == ProspectiveApplication::STATUS_CREATED) {
                     $spigot->setSpigotDate('created', $data->created_at, $data->person);
-                    $pnvIds[] = $personId;
+                    $pnvStatus[$data->person_id] = $data;
+                    $pnvIds[] = $data->person_id;
                 }
             }
-            $pnvStatus = array_intersect_key($pnvStatus, array_flip($pnvIds)); // remove the null/non-accepted prospective_applications from the collection
         }
 
         $loggedIn = ActionLog::select('person_id', 'created_at')
