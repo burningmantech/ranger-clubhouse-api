@@ -38,7 +38,7 @@ class CertificationPolicy
 
     public function store(Person $user): bool
     {
-        return $user->hasRole(Role::TECH_NINJA);
+        return $user->hasRole(Role::ADMIN);
     }
 
     /**
@@ -47,7 +47,7 @@ class CertificationPolicy
 
     public function update(Person $user, Certification $certification): bool
     {
-        return $user->hasRole(Role::TECH_NINJA);
+        return $user->hasRole(Role::ADMIN);
     }
 
     /**
@@ -56,6 +56,6 @@ class CertificationPolicy
 
     public function delete(Person $user, Certification $certification): bool
     {
-        return $user->hasRole(Role::TECH_NINJA);
+        return $user->hasRole(Role::ADMIN);
     }
 }
