@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Exceptions\UnacceptableConditionException;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class Training extends Position
         'graduation_info',
         'mentor_position_id',
         'mentee_position_id',
+        'has_mentees',
     ];
 
     const string FAIL = 'fail';        // Person was not marked as pass
@@ -32,8 +34,8 @@ class Training extends Position
     const int GRACE_PERIOD_HOURS = 72;
 
     const array MENTORING_POSITIONS = [
-        Position::GREEN_DOT_TRAINING => [ Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE ],
-        Position::TROUBLESHOOTER_TRAINING => [ Position::TROUBLESHOOTER_MENTOR, Position::TROUBLESHOOTER_MENTEE ],
+        Position::GREEN_DOT_TRAINING => [Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE],
+        Position::TROUBLESHOOTER_TRAINING => [Position::TROUBLESHOOTER_MENTOR, Position::TROUBLESHOOTER_MENTEE],
     ];
 
 
@@ -49,8 +51,6 @@ class Training extends Position
 
     public static function isPersonTrained(Person $person, int $positionId, int $year, int &$requiredPositionId): bool
     {
-        $personId = $person->id;
-
         // The person has to have passed dirt training
         if ($person->status != Person::ECHELON
             && !self::didPersonPassForYear($person, Position::TRAINING, $year)) {
@@ -257,7 +257,7 @@ class Training extends Position
      * @throws UnacceptableConditionException
      */
 
-    public static function find($id)
+    public static function find($id): Training
     {
         // Can't call parent::findOrFail because an infinite loop happens, bug with Eloquent?
         if (is_numeric($id)) {
@@ -283,7 +283,7 @@ class Training extends Position
      * @throws ModelNotFoundException|UnacceptableConditionException
      */
 
-    public static function findOrFail($id)
+    public static function findOrFail($id): Training
     {
         $position = self::find($id);
 
@@ -694,4 +694,10 @@ class Training extends Position
         return $mentoring ? $mentoring[1] : null;
     }
 
+    public function hasMentees(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => (Position::ART_GRADUATE_TO_POSITIONS[$this->id]['has_mentees'] ?? false)
+        );
+    }
 }
