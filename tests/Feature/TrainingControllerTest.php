@@ -36,6 +36,7 @@ class TrainingControllerTest extends TestCase
 
     public function testTrainerAttendanceReport()
     {
+        $this->addRole(Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING);
         $personId = $this->user->id;
 
         Position::factory()->create([
