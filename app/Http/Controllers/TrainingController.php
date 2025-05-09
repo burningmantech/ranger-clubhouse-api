@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UnacceptableConditionException;
+use App\Lib\Reports\ARTMenteesReport;
 use App\Lib\Reports\TrainedNoWorkReport;
 use App\Lib\Reports\TrainerAttendanceReport;
 use App\Lib\Reports\TrainingCompletedReport;
 use App\Lib\Reports\TrainingMultipleEnrollmentReport;
 use App\Lib\Reports\TrainingSlotCapacityReport;
 use App\Lib\Reports\TrainingUntrainedPeopleReport;
+use App\Models\Person;
+use App\Models\PersonPosition;
+use App\Models\Position;
 use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -17,14 +21,14 @@ class TrainingController extends ApiController
 {
     /**
      * Show a training position
-     * @param $id
+     *
+     * @param Training $training
      * @return JsonResponse
-     * @throws AuthorizationException|UnacceptableConditionException
+     * @throws AuthorizationException
      */
 
-    public function show($id): JsonResponse
+    public function show(Training $training): JsonResponse
     {
-        $training = Training::findOrFail($id);
         $this->authorize('show', $training);
         return response()->json($training);
     }
@@ -37,9 +41,10 @@ class TrainingController extends ApiController
      * @throws AuthorizationException|UnacceptableConditionException
      */
 
-    public function multipleEnrollmentsReport($id): JsonResponse
+    public function multipleEnrollmentsReport(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
+        $this->authorize('multipleEnrollmentsReport', $training);
+        $year = $this->getYear();
 
         return response()->json([
             'enrollments' => TrainingMultipleEnrollmentReport::execute($training, $year),
@@ -50,14 +55,15 @@ class TrainingController extends ApiController
     /**
      * Show how full each training session is
      *
-     * @param $id
+     * @param Training $training
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function capacityReport($id): JsonResponse
+    public function capacityReport(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
+        $this->authorize('capacityReport', $training);
+        $year = $this->getYear();
 
         return response()->json(TrainingSlotCapacityReport::execute($training, $year));
     }
@@ -65,14 +71,15 @@ class TrainingController extends ApiController
     /**
      * Show who has completed the training for a given year
      *
-     * @param $id
+     * @param Training $training
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function peopleTrainingCompleted($id): JsonResponse
+    public function peopleTrainingCompleted(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
+        $this->authorize('peopleTrainingCompleted', $training);
+        $year = $this->getYear();
 
         return response()->json([
             'slots' => TrainingCompletedReport::execute($training, $year)
@@ -82,59 +89,89 @@ class TrainingController extends ApiController
     /**
      * Show who has not completed training or not signed up for training
      * (ART modules only)
-     * @param $id
+     *
+     * @param Training $training
      * @return JsonResponse
-     * @throws AuthorizationException|UnacceptableConditionException
+     * @throws AuthorizationException
      */
 
-    public function untrainedPeopleReport($id): JsonResponse
+    public function untrainedPeopleReport(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
+        $this->authorize('untrainedPeopleReport', $training);
+
+        $year = $this->getYear();
+
         return response()->json(TrainingUntrainedPeopleReport::execute($training, $year));
     }
 
     /**
      * Report on the people who trained yet did not work.
      *
-     * @param $id
+     * @param Training $training
      * @return JsonResponse
      * @throws AuthorizationException
-     * @throws UnacceptableConditionException
      */
 
-    public function trainedNoWorkReport($id): JsonResponse
+    public function trainedNoWorkReport(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
-
+        $this->authorize('trainedNoWorkReport', $training);
+        $year = $this->getYear();
         return response()->json(TrainedNoWorkReport::execute($training->id, $year));
     }
 
     /**
      * Show who has not completed training or not signed up for training
      * (ART modules only)
+     *
+     * @param Training $training
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    public function trainerAttendanceReport($id): JsonResponse
+    public function trainerAttendanceReport(Training $training): JsonResponse
     {
-        list($training, $year) = $this->getTrainingAndYear($id);
+        $this->authorize('trainerAttendanceReport', $training);
+        $year = $this->getYear();
+
         return response()->json(['trainers' => TrainerAttendanceReport::execute($training, $year)]);
     }
 
     /**
-     * Get the training position, and year requested
-     *
-     * @param $id
-     * @return array
-     * @throws AuthorizationException|UnacceptableConditionException
+     * Report on the current mentees
+     * @param Training $training
+     * @return JsonResponse
+     * @throws AuthorizationException
      */
 
-    private function getTrainingAndYear($id): array
+    public function mentees(Training $training): JsonResponse
     {
-        $year = $this->getYear();
-        $training = Training::findOrFail($id);
-        $this->authorize('show', $training);
-
-        return [$training, $year];
+        $this->authorize('mentees', $training);
+        return response()->json(ARTMenteesReport::execute($training));
     }
 
+    /**
+     * Revoke mentee positions for mentee
+     *
+     * @param Training $training
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws UnacceptableConditionException
+     */
+
+    public function revokeMenteePositions(Training $training, Person $person): JsonResponse
+    {
+        $this->authorize('revokeMenteePositions', $training);
+
+        $info = Position::ART_GRADUATE_TO_POSITIONS[$training->id] ?? null;
+
+        if (!isset($info['has_mentees'])) {
+            throw new UnacceptableConditionException("ART does not have any mentee positions");
+        }
+
+        $positionIds = $info['positions'];
+        PersonPosition::removeIdsFromPerson($person->id, $positionIds, "ART mentee position revoke");
+
+        return $this->success();
+    }
 }

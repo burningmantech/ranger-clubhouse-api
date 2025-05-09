@@ -285,6 +285,7 @@ class Position extends ApiModel
         self::TOW_TRUCK_TRAINING => [
             'veteran' => self::TOW_TRUCK_DRIVER,
             'positions' => [self::TOW_TRUCK_MENTEE],
+            'has_mentees' => true,
         ],
 
         self::SANDMAN_TRAINING => [
@@ -293,7 +294,8 @@ class Position extends ApiModel
 
         self::GREEN_DOT_TRAINING => [
             'veteran' => self::DIRT_GREEN_DOT,
-            'positions' => [self::GREEN_DOT_MENTEE, self::SANCTUARY_MENTEE]
+            'positions' => [self::GREEN_DOT_MENTEE, self::SANCTUARY_MENTEE],
+            'has_mentees' => true,
         ],
     ];
 

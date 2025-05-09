@@ -487,13 +487,15 @@ Route::middleware('api')->group(function () {
     Route::delete('training-session/{trainee_note}/delete-note', [TrainingSessionController::class, 'deleteNote']);
     Route::get('training-session/{training_session}', [TrainingSessionController::class, 'show']);
 
-    Route::get('training/{id}/multiple-enrollments', [TrainingController::class, 'multipleEnrollmentsReport']);
-    Route::get('training/{id}/capacity', [TrainingController::class, 'capacityReport']);
-    Route::get('training/{id}/people-training-completed', [TrainingController::class, 'peopleTrainingCompleted']);
-    Route::get('training/{id}/trainer-attendance', [TrainingController::class, 'trainerAttendanceReport']);
-    Route::get('training/{id}/untrained-people', [TrainingController::class, 'untrainedPeopleReport']);
-    Route::get('training/{id}/trained-no-work', [TrainingController::class, 'trainedNoWorkReport']);
-    Route::get('training/{id}', [TrainingController::class, 'show']);
+    Route::get('training/{training}/capacity', [TrainingController::class, 'capacityReport']);
+    Route::get('training/{training}/mentees', [TrainingController::class, 'mentees']);
+    Route::get('training/{training}/multiple-enrollments', [TrainingController::class, 'multipleEnrollmentsReport']);
+    Route::get('training/{training}/people-training-completed', [TrainingController::class, 'peopleTrainingCompleted']);
+    Route::post('training/{training}/revoke-mentee-positions/{person}', [TrainingController::class, 'revokeMenteePositions']);
+    Route::get('training/{training}/trained-no-work', [TrainingController::class, 'trainedNoWorkReport']);
+    Route::get('training/{training}/trainer-attendance', [TrainingController::class, 'trainerAttendanceReport']);
+    Route::get('training/{training}/untrained-people', [TrainingController::class, 'untrainedPeopleReport']);
+    Route::get('training/{training}', [TrainingController::class, 'show']);
 
     Route::get('ticketing/info', [TicketingController::class, 'ticketingInfo']);
     Route::get('ticketing/thresholds', [TicketingController::class, 'thresholds']);
