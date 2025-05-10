@@ -98,6 +98,19 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     ];
 
     /*
+     * Statuses that we only care about for training purposes.
+     */
+
+    const array TRAINING_STATUSES = [
+        Person::ACTIVE,
+        Person::INACTIVE,
+        Person::INACTIVE_EXTENSION,
+        Person::RETIRED,
+        Person::PROSPECTIVE,
+        Person::ALPHA
+    ];
+
+    /*
      * Locked status are those which the account cannot be allowed
      * to logged into (either temporarily or permanently), and which
      * should not receive messages.

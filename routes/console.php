@@ -2,6 +2,7 @@
 
 use App\Jobs\AwardsRebuildJob;
 use App\Jobs\SignOutTimesheetsJob;
+use App\Jobs\TrainerReminderJob;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -61,6 +62,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server(
     // Let the VCs know applications are pending.
     Schedule::command('clubhouse:pending-applications')->dailyAt('17:00')->onOneServer();
 
+    // Reminder the trainers to record the training results
+    Schedule::job(new TrainerReminderJob())->cron('45 * * 4-8 *')->onOneServer();
+
     // Prune failed jobs
     Schedule::command('queue:prune-failed --hours=48')->dailyAt('04:00')->onOneServer();
 
@@ -73,7 +77,7 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server(
     // Delete expired reserved handles
     Schedule::command('clubhouse:expire-handle-reservations')->dailyAt('04:00')->onOneServer();
 
-    // Delete the BMIDs post-event
+    // Delete the BMID export archive post-event
     Schedule::command('clubhouse:delete-bmid-exports --post-event')->yearlyOn(9, 15, '05:30')->onOneServer();
 
     // Rebuild the granted awards

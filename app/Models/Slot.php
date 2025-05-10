@@ -95,8 +95,9 @@ class Slot extends ApiModel
     protected function casts(): array
     {
         return [
-            'ends' => 'datetime',
             'begins' => 'datetime',
+            'did_notify' => 'boolean',
+            'ends' => 'datetime',
         ];
     }
 
