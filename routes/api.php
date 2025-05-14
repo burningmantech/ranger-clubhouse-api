@@ -36,6 +36,7 @@ use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\EventDatesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\HandleReservationController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\MailLogController;
 use App\Http\Controllers\MaintenanceController;
@@ -45,13 +46,13 @@ use App\Http\Controllers\OAuth2Controller;
 use App\Http\Controllers\OauthClientController;
 use App\Http\Controllers\OnlineCourseController;
 use App\Http\Controllers\PersonAwardController;
+use App\Http\Controllers\PersonBannerController;
 use App\Http\Controllers\PersonCertificationController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\PersonEventController;
 use App\Http\Controllers\PersonFkaController;
 use App\Http\Controllers\PersonLanguageController;
 use App\Http\Controllers\PersonMessageController;
-use App\Http\Controllers\PersonBannerController;
 use App\Http\Controllers\PersonOnlineCourseController;
 use App\Http\Controllers\PersonPhotoController;
 use App\Http\Controllers\PersonPogController;
@@ -542,7 +543,7 @@ Route::middleware('api')->group(function () {
 
     Route::resource('timesheet-missing', TimesheetMissingController::class);
 
-    Route::resource('help', PersonBannerController::class);
+    Route::resource('help', HelpController::class);
 
     Route::get('vehicle/info/{person}', [VehicleController::class, 'info']);
     Route::get('vehicle/paperwork', [VehicleController::class, 'paperwork']);
