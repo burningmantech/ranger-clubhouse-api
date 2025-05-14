@@ -127,11 +127,6 @@ class PersonFilter
         'sms_off_playa_code',
     ];
 
-    const array MESSAGE_FIELDS = [
-        'message',
-        'message_updated_at'
-    ];
-
     const array PERSONNEL_FIELDS = [
         'has_note_on_file',
     ];
@@ -159,7 +154,6 @@ class PersonFilter
         [self::STATUS_FIELDS],
         [self::ACCOUNT_FIELDS],
         [self::CALLSIGNS_FIELDS],
-        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT, Role::VC, Role::TRAINER]],
         [self::EMAIL_FIELDS, true, [Role::VIEW_PII, Role::VIEW_EMAIL, Role::VC]],
         [self::PERSONAL_INFO_FIELDS, true, [Role::VIEW_PII, Role::VC]],
         [self::CLOTHING_FIELDS, true, [Role::VIEW_PII, Role::VC, Role::EDIT_CLOTHING]],
@@ -181,7 +175,6 @@ class PersonFilter
     const array FIELDS_DESERIALIZE = [
         [self::NAME_GENDER_FIELDS, true, [Role::VC]],
         [self::ACCOUNT_FIELDS, false, [Role::ADMIN]],
-        [self::MESSAGE_FIELDS, false, [Role::ADMIN, Role::VC]],
         [self::STATUS_FIELDS, false, [Role::MENTOR, Role::VC]],
         [self::CALLSIGNS_FIELDS, false, [Role::MENTOR, Role::VC]],
         [self::EMAIL_FIELDS, true, [Role::VC]],

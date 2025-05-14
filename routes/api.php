@@ -36,7 +36,6 @@ use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\EventDatesController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\HandleReservationController;
-use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\MailLogController;
 use App\Http\Controllers\MaintenanceController;
@@ -52,6 +51,7 @@ use App\Http\Controllers\PersonEventController;
 use App\Http\Controllers\PersonFkaController;
 use App\Http\Controllers\PersonLanguageController;
 use App\Http\Controllers\PersonMessageController;
+use App\Http\Controllers\PersonBannerController;
 use App\Http\Controllers\PersonOnlineCourseController;
 use App\Http\Controllers\PersonPhotoController;
 use App\Http\Controllers\PersonPogController;
@@ -338,6 +338,8 @@ Route::middleware('api')->group(function () {
     Route::post('person-event/{person}/progress', [PersonEventController::class, 'updateProgress']);
     Route::resource('person-event', PersonEventController::class);
 
+    Route::resource('person-banner', PersonBannerController::class);
+
     Route::get('person-photo/review-config', [PersonPhotoController::class, 'reviewConfig']);
     Route::post('person-photo/{person_photo}/replace', [PersonPhotoController::class, 'replace']);
     Route::post('person-photo/{person_photo}/activate', [PersonPhotoController::class, 'activate']);
@@ -413,8 +415,8 @@ Route::middleware('api')->group(function () {
     Route::post('rbs/retry', [RbsController::class, 'retry']);
     Route::post('rbs/transmit', [RbsController::class, 'transmit']);
 
-    Route::get('request-log', [ RequestLogController::class, 'index']);
-    Route::delete('request-log/expire', [ RequestLogController::class, 'expire']);
+    Route::get('request-log', [RequestLogController::class, 'index']);
+    Route::delete('request-log/expire', [RequestLogController::class, 'expire']);
 
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);
@@ -540,7 +542,7 @@ Route::middleware('api')->group(function () {
 
     Route::resource('timesheet-missing', TimesheetMissingController::class);
 
-    Route::resource('help', HelpController::class);
+    Route::resource('help', PersonBannerController::class);
 
     Route::get('vehicle/info/{person}', [VehicleController::class, 'info']);
     Route::get('vehicle/paperwork', [VehicleController::class, 'paperwork']);

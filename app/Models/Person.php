@@ -237,7 +237,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             'has_note_on_file' => 'boolean',
             'last_seen_at' => 'datetime',
             'logged_in_at' => 'datetime',
-            'message_updated_at' => 'datetime',
             'on_site' => 'boolean',
             'pi_reviewed_for_dashboard_at' => 'datetime',
             'reviewed_pi_at' => 'datetime',
@@ -335,6 +334,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'manual_review',
         'mentee_status',
         'person_award',
+        'person_banner',
         'person_certification',
         'person_event',
         'person_fka',
@@ -468,10 +468,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         self::saving(function ($model) {
             if ($model->isDirty('status')) {
                 $model->status_date = now();
-            }
-
-            if ($model->isDirty('message')) {
-                $model->message_updated_at = now();
             }
 
             if ($model->pronouns != 'custom') {
