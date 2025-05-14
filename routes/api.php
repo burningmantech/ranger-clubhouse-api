@@ -46,6 +46,7 @@ use App\Http\Controllers\OAuth2Controller;
 use App\Http\Controllers\OauthClientController;
 use App\Http\Controllers\OnlineCourseController;
 use App\Http\Controllers\PersonAwardController;
+use App\Http\Controllers\PersonBannerController;
 use App\Http\Controllers\PersonCertificationController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\PersonEventController;
@@ -338,6 +339,8 @@ Route::middleware('api')->group(function () {
     Route::post('person-event/{person}/progress', [PersonEventController::class, 'updateProgress']);
     Route::resource('person-event', PersonEventController::class);
 
+    Route::resource('person-banner', PersonBannerController::class);
+
     Route::get('person-photo/review-config', [PersonPhotoController::class, 'reviewConfig']);
     Route::post('person-photo/{person_photo}/replace', [PersonPhotoController::class, 'replace']);
     Route::post('person-photo/{person_photo}/activate', [PersonPhotoController::class, 'activate']);
@@ -413,8 +416,8 @@ Route::middleware('api')->group(function () {
     Route::post('rbs/retry', [RbsController::class, 'retry']);
     Route::post('rbs/transmit', [RbsController::class, 'transmit']);
 
-    Route::get('request-log', [ RequestLogController::class, 'index']);
-    Route::delete('request-log/expire', [ RequestLogController::class, 'expire']);
+    Route::get('request-log', [RequestLogController::class, 'index']);
+    Route::delete('request-log/expire', [RequestLogController::class, 'expire']);
 
     Route::get('role/people-by-role', [RoleController::class, 'peopleByRole']);
     Route::get('role/inspect-cache', [RoleController::class, 'inspectCache']);

@@ -92,6 +92,7 @@ class RedactDatabase
             'oauth_client',
             'oauth_code',
             'online_course',
+            'person_banner',
             'person_event',
             'person_intake',
             'person_intake_note',
