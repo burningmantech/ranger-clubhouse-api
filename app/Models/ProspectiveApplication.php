@@ -112,7 +112,7 @@ class ProspectiveApplication extends ApiModel
     protected $appends = [
         'api_error',
         'contact_id',
-        'screened_handles',
+        //   'screened_handles', -- only appended on individual record show.
     ];
 
 
@@ -515,6 +515,7 @@ class ProspectiveApplication extends ApiModel
     public function screenHandles(): void
     {
         $this->buildScreenedHandles(fn($normalized) => HandleReservation::retrieveAllByNormalizedHandle($normalized) ?? null);
+        $this->append('screened_handles');
     }
 
     public function buildScreenedHandles(callable $findReserved): void
