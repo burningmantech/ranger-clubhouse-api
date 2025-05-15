@@ -95,7 +95,15 @@ class ProspectiveApplication extends ApiModel
         'sfuid' => '',
     ];
 
-    const array RELATIONSHIPS = [
+    const array BASIC_RELATIONSHIPS = [
+        'person:id,callsign,status',
+        'bpguid_person:bpguid,id,callsign,status',    // Note, lookup is by BPGUID not record id.
+        'assigned_person:id,callsign',
+        'updated_by_person:id,callsign',
+        'review_person:id,callsign'
+    ];
+
+    const array FULL_RELATIONSHIPS = [
         'audit_logs',
         'audit_logs.person:id,callsign',
         'mail_logs',
@@ -106,7 +114,8 @@ class ProspectiveApplication extends ApiModel
         'bpguid_person:bpguid,id,callsign,status',    // Note, lookup is by BPGUID not record id.
         'assigned_person:id,callsign',
         'updated_by_person:id,callsign',
-        'review_person:id,callsign'
+        'review_person:id,callsign',
+        ...self::BASIC_RELATIONSHIPS
     ];
 
     protected $appends = [
@@ -206,7 +215,7 @@ class ProspectiveApplication extends ApiModel
 
     public function loadRelationships(): void
     {
-        $this->load(self::RELATIONSHIPS);
+        $this->load(self::FULL_RELATIONSHIPS);
     }
 
     public function mail_logs(): HasMany
@@ -221,7 +230,7 @@ class ProspectiveApplication extends ApiModel
         $contact = $query['contact'] ?? null;
         $personId = $query['person_id'] ?? null;
 
-        $sql = self::query()->with(self::RELATIONSHIPS);
+        $sql = self::query()->with(self::BASIC_RELATIONSHIPS);
 
         if ($year) {
             $sql->where('year', $year);
@@ -316,7 +325,7 @@ class ProspectiveApplication extends ApiModel
     public static function findByApplicationIdOrFail(string $applicationId): ProspectiveApplication
     {
         $applicationId = preg_replace("/^A-/", '', $applicationId);
-        return self::where('id', $applicationId)->with(self::RELATIONSHIPS)->firstOrFail();
+        return self::where('id', $applicationId)->with(self::FULL_RELATIONSHIPS)->firstOrFail();
     }
 
     /**
