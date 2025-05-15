@@ -23,8 +23,8 @@ class AccountGuard
     public function handle(Request $request, Closure $next): Response
     {
         /*
-         * The JWT token has an expiry timestamp - do the authentication check
-         * before setting up the groundhog day time, otherwise the JWT token will be invalidated
+         * The authentication tokens have an expiry timestamp - do the authentication check
+         * before setting up the groundhog day time, otherwise the token will be invalidated
          */
 
         $ghdTime = config('clubhouse.GroundhogDayTime');

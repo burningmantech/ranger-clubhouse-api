@@ -31,7 +31,6 @@ return [
     | are able to authenticate the request, Sanctum will use the bearer
     | token that's present on an incoming request for authentication.
     |
-    | TODO: Delete jwt when the last of the older Clubhouse clients are updated.
     */
 
     'guard' => [],
