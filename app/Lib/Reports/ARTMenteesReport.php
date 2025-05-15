@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 /**
  * Show who still has ART mentee position(s), when the positions were granted, and the last time they worked said positions.
  */
-
 class ARTMenteesReport
 {
     const array EMPTY_RESPONSE = [
@@ -37,44 +36,62 @@ class ARTMenteesReport
             ->orderBy('title')
             ->get();
 
-        $logs = PersonPositionLog::whereIn('position_id', $positionIds)
-            ->with('person:id,callsign,status')
-            ->whereNull('left_on')
+        $positionGrants = DB::table('person_position')
             ->whereIn('position_id', $positionIds)
             ->get();
 
-        $people = [];
-        foreach ($logs as $log) {
-            $personId = $log->person_id;
-            if (!isset($people[$personId])) {
-                $person = $log->person;
-                $people[$personId] = [
-                    'id' => $person->id,
-                    'callsign' => $person->callsign,
-                    'status' => $person->status,
-                    'positions' => []
+        if ($positionGrants->isEmpty()) {
+            return self::EMPTY_RESPONSE;
+        }
+
+        $grantIds = $positionGrants->pluck('person_id')->unique();
+        $positionGrants = $positionGrants->groupBy('person_id');
+
+        $people = DB::table('person')
+            ->select('id', 'callsign', 'status')
+            ->whereIn('id', $grantIds)
+            ->distinct()
+            ->orderBy('person.callsign')
+            ->get();
+
+        $grantLogs = PersonPositionLog::whereIn('position_id', $positionIds)
+            ->whereIn('person_id', $grantIds)
+            ->whereNull('left_on')
+            ->get()
+            ->groupBy('person_id');
+
+        $mentees = [];
+        foreach ($people as $person) {
+            $mentee = [
+                'id' => $person->id,
+                'callsign' => $person->callsign,
+                'status' => $person->status,
+                'positions' => []
+            ];
+
+            foreach ($positionIds as $pid) {
+                $timesheet = Timesheet::where('person_id', $person->id)
+                    ->select('on_duty')
+                    ->where('position_id', $pid)
+                    ->orderBy('on_duty', 'desc')
+                    ->first();
+
+                $foundLog = $grantLogs->get($person->id)?->firstWhere('position_id', $pid);
+                $granted = $positionGrants->get($person->id);
+                $mentee['positions'][] = [
+                    'id' => $pid,
+                    'is_granted' => $granted?->contains(fn ($p) => $p->position_id == $pid),
+                    'granted' => $foundLog?->joined_on?->year,
+                    'last_worked' => $timesheet?->on_duty->year,
                 ];
             }
 
-            $timesheet = Timesheet::where('person_id', $personId)
-                ->where('position_id', $log->position_id)
-                ->orderBy('on_duty', 'desc')
-                ->first();
-
-            $people[$personId]['positions'][] = [
-                'id' => $log->position_id,
-                'granted' => $log->joined_on?->year,
-                'last_worked' => $timesheet?->on_duty->year,
-            ];
+            $mentees[] = $mentee;
         }
-
-        $people = array_values($people);
-
-        usort($people, fn($a, $b) => strcmp($a['callsign'], $b['callsign']));
 
         return [
             'positions' => $positions,
-            'people' => $people,
+            'people' => $mentees,
         ];
     }
 }
