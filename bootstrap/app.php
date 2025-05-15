@@ -12,12 +12,8 @@ use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Middleware\ValidatePostSize;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
-use PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withProviders([
-        LaravelServiceProvider::class,
-    ])
     ->withRouting(
     //  web: __DIR__ . '/../routes/web.php',
         api: __DIR__ . '/../routes/api.php',

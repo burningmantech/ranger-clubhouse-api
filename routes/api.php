@@ -95,7 +95,6 @@ Route::middleware('api')->group(function () {
     Route::get('config/dashboard-period', [ConfigController::class, 'dashboardPeriod']);
     Route::get('config', [ConfigController::class, 'show']);
 
-    Route::post('auth/login', [AuthController::class, 'jwtLogin']);
     Route::post('auth/oauth2/temp-token', [OAuth2Controller::class, 'tempToken']);
     Route::match(['GET', 'POST'], 'auth/oauth2/token', [OAuth2Controller::class, 'grantOAuthToken']);
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);

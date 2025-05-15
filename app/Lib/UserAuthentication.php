@@ -6,11 +6,10 @@ use App\Models\ActionLog;
 use App\Models\Person;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 
 class UserAuthentication
 {
-    public static function attempt(string $email, string $password, bool $isJWT): JsonResponse
+    public static function attempt(string $email, string $password): JsonResponse
     {
         $actionData = self::buildLogInfo();
 
@@ -18,15 +17,15 @@ class UserAuthentication
         if (!$person) {
             $actionData['email'] = $email;
             ActionLog::record(null, 'auth-failed', 'Email not found', $actionData);
-            return self::errorResponse('invalid-credentials', $isJWT);
+            return self::errorResponse('invalid-credentials');
         }
 
         if (!$person->isValidPassword($password)) {
             ActionLog::record($person, 'auth-failed', 'Password incorrect', $actionData);
-            return self::errorResponse('invalid-credentials', $isJWT);
+            return self::errorResponse('invalid-credentials');
         }
 
-        return self::loginUser($person, $actionData, $isJWT);
+        return self::loginUser($person, $actionData);
     }
 
     public static function buildLogInfo(): array
@@ -59,18 +58,18 @@ class UserAuthentication
         return $actionData;
     }
 
-    public static function loginUser(Person $person, $actionData, $isJWT): JsonResponse
+    public static function loginUser(Person $person, $actionData): JsonResponse
     {
         $status = $person->status;
 
         if ($status == Person::SUSPENDED) {
             ActionLog::record($person, 'auth-failed', 'Account suspended', $actionData);
-            return self::errorResponse('account-suspended', $isJWT);
+            return self::errorResponse('account-suspended');
         }
 
         if (in_array($status, Person::LOCKED_STATUSES)) {
             ActionLog::record($person, 'auth-failed', 'Account disabled', $actionData);
-            return self::errorResponse('account-disabled', $isJWT);
+            return self::errorResponse('account-disabled');
         }
 
         $person->logged_in_at = now();
@@ -78,9 +77,9 @@ class UserAuthentication
 
         ActionLog::record($person, 'auth-login', 'User login', $actionData);
 
-        $token = self::groundHogDayWrap(fn() => ($isJWT ? Auth::guard('jwt')->login($person) : $person->createToken('login')->plainTextToken));
+        $token = self::groundHogDayWrap(fn() => $person->createToken('login')->plainTextToken);
 
-        return self::respondWithToken($token, $person, $isJWT);
+        return self::respondWithToken($token, $person);
     }
 
     /**
@@ -105,61 +104,50 @@ class UserAuthentication
     }
 
     /**
-     * Get the JWT token array structure.
+     * Respond with a token, adjusting the Groundhog Day time if need be.
      *
      * @param string $token
      * @param Person $person
-     * @param bool $isJWT
      * @return JsonResponse
      */
 
-    public static function respondWithToken(string $token, Person $person, bool $isJWT): JsonResponse
+    public static function respondWithToken(string $token, Person $person): JsonResponse
     {
-        if ($isJWT) {
-            $payload = [
-                'token' => $token,
-                'token_type' => 'bearer',
-            ];
-        } else {
-            $payload = [
-                'access_token' => $token,
-                'token_type' => 'bearer',
-                'expires_in' => (config('clubhouse.DeploymentEnvironment') == 'Training' ? config('sanctum.training_server_expiration') : config('sanctum.expiration')) * 60,
-                'person_id' => $person->id,
-            ];
-        }
-
-        return response()->json($payload);
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => (config('clubhouse.DeploymentEnvironment') == 'Training' ? config('sanctum.training_server_expiration') : config('sanctum.expiration')) * 60,
+            'person_id' => $person->id,
+        ]);
     }
 
     /**
      * Attempt a login via a temporary (password reset) token.
      *
      * @param string $token
-     * @param bool $isJWT
      * @return JsonResponse
      */
 
-    public static function attemptTemporaryTokenLogin(string $token, bool $isJWT): JsonResponse
+    public static function attemptTemporaryTokenLogin(string $token): JsonResponse
     {
         $actionData = self::buildLogInfo();
 
         $person = Person::where('tpassword', $token)->first();
         if (!$person) {
             ActionLog::record(null, 'auth-failed', 'Temporary login token not found', $actionData);
-            return self::errorResponse('invalid-token', $isJWT);
+            return self::errorResponse('invalid-token');
         }
 
         if ($person->tpassword_expire < now()->timestamp) {
             ActionLog::record($person, 'auth-failed', 'Temporary login token expired', $actionData);
-            return self::errorResponse('token_expired', $isJWT);
+            return self::errorResponse('token_expired');
         }
 
-        return UserAuthentication::loginUser($person, $actionData, $isJWT);
+        return UserAuthentication::loginUser($person, $actionData);
     }
 
-    public static function errorResponse(string $status, bool $isJWT): JsonResponse
+    public static function errorResponse(string $status): JsonResponse
     {
-        return response()->json([($isJWT ? 'status' : 'error') => $status], 401);
+        return response()->json(['error' => $status], 401);
     }
 }

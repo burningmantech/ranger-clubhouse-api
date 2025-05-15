@@ -17,7 +17,7 @@ class AuthControllerTest extends TestCase
      */
     public function testMissingParameters()
     {
-        $response = $this->json('POST', 'auth/login', []);
+        $response = $this->json('POST', 'auth/oauth2/token', []);
         $response->assertStatus(422);
     }
 
@@ -28,14 +28,15 @@ class AuthControllerTest extends TestCase
     public function testUnknownPerson()
     {
         $response = $this->json(
-            'POST', 'auth/login', [
-                'identification' => 'no-such-user@example.com',
+            'POST', 'auth/oauth2/token', [
+                'grant_type' => 'password',
+                'username' => 'no-such-user@example.com',
                 'password' => 'noshowers',
             ]
         );
 
         $response->assertStatus(401);
-        $response->assertJson(['status' => 'invalid-credentials']);
+        $response->assertJson(['error' => 'invalid-credentials']);
     }
 
     /**
@@ -47,14 +48,17 @@ class AuthControllerTest extends TestCase
         $user = Person::factory()->create(['status' => 'suspended']);
 
         $response = $this->json(
-            'POST', 'auth/login',
-            ['identification' => $user->email, 'password' => 'ineedashower!']
+            'POST', 'auth/oauth2/token',
+            [
+                'grant_type' => 'password',
+                'username' => $user->email,
+                'password' => 'ineedashower!'
+            ]
         );
 
         $response->assertStatus(401);
-        $response->assertJson(['status' => 'account-suspended']);
+        $response->assertJson(['error' => 'account-suspended']);
     }
-
 
     /**
      * test for a wrong password.
@@ -65,12 +69,16 @@ class AuthControllerTest extends TestCase
         $user = Person::factory()->create();
 
         $response = $this->json(
-            'POST', 'auth/login',
-            ['identification' => $user->email, 'password' => 'ineedashower! maybe']
+            'POST', 'auth/oauth2/token',
+            [
+                'grant_type' => 'password',
+                'username' => $user->email,
+                'password' => 'ineedashower! maybe'
+            ]
         );
 
         $response->assertStatus(401);
-        $response->assertJson(['status' => 'invalid-credentials']);
+        $response->assertJson(['error' => 'invalid-credentials']);
     }
 
     /**

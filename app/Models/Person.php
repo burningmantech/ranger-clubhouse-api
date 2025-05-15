@@ -34,9 +34,8 @@ use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\HasApiTokens;
 use Normalizer;
 use NumberFormatter;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class Person extends ApiModel implements AuthenticatableContract, AuthorizableContract, JWTSubject
+class Person extends ApiModel implements AuthenticatableContract, AuthorizableContract
 {
     use Authenticatable, Authorizable, HasApiTokens, Notifiable;
 
@@ -552,28 +551,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             // Photos require a bit of extra work.
             PersonPhoto::deleteAllForPerson($personId);
         });
-    }
-
-    /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     *
-     * @return int
-     */
-
-    public function getJWTIdentifier(): int
-    {
-        return $this->getKey();
-    }
-
-    /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     *
-     * @return array
-     */
-
-    public function getJWTCustomClaims(): array
-    {
-        return [];
     }
 
     public function person_position(): HasMany

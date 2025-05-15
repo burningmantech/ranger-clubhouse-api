@@ -136,7 +136,6 @@ db_init() {
         --env="RANGER_DB_DATABASE_NAME=${db_database}"    \
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
-        --env="JWT_SECRET=deadbeef"                       \
         --env="APP_KEY=base64:ko1L+Qbmd3ygR7OXPwy8h8TPa95hONlaAkFAbEO3mL0=" \
         --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \
@@ -178,7 +177,6 @@ start_api_container() {
         --env="RANGER_DB_DATABASE_NAME=${db_database}"    \
         --env="RANGER_DB_USER_NAME=${db_user}"            \
         --env="RANGER_DB_PASSWORD=${db_password}"         \
-        --env="JWT_SECRET=deadbeef"                       \
         --env="APP_KEY=base64:ko1L+Qbmd3ygR7OXPwy8h8TPa95hONlaAkFAbEO3mL0=" \
         --env="MYSQL_HOME=/var/www/application/database"  \
         --link="${db_container_name}"                     \

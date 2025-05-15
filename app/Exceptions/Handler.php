@@ -13,8 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
 use Symfony\Component\Console\Exception\RuntimeException as CommandRuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -77,23 +75,13 @@ class Handler
      */
     public static function render(Throwable $e, $request): JsonResponse
     {
-        /*
-         * Handle JWT exceptions.
-         */
-
-        if ($e instanceof TokenExpiredException) {
-            return response()->json(['token_expired'], 401);
-        } elseif ($e instanceof TokenInvalidException) {
-            return response()->json(['token_invalid'], 401);
-        }
-
         // Record not found
         if ($e instanceof ModelNotFoundException) {
             $className = last(explode('\\', $e->getModel()));
             return response()->json(['error' => "$className was not found"], 404);
         }
 
-        // Required parameters not present and/or do not pass validation.
+        // request parameters do not pass validation.
         if ($e instanceof ValidationException) {
             return RestApi::error(response(), 422, $e->validator->getMessageBag());
         }

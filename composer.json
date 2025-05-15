@@ -36,7 +36,6 @@
         "league/flysystem-aws-s3-v3": "^3.5.0",
         "league/fractal": "^0.20",
         "orhanerday/open-ai": "^5.2",
-        "php-open-source-saver/jwt-auth": "^2.2",
         "twilio/sdk": "^8.3.9"
     },
     "require-dev": {
