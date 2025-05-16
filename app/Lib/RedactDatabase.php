@@ -37,7 +37,6 @@ class RedactDatabase
             'has_note_on_file' => false,
             'lms_id' => '',
             'lms_username' => '',
-            'message' => '',
             'on_site' => false,
             'sfuid' => '',
             'sms_off_playa' => '',
