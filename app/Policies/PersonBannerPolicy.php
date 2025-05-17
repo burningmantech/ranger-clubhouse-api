@@ -32,7 +32,11 @@ class PersonBannerPolicy
 
     public function indexForPerson(Person $user): bool
     {
-        return $user->hasRole(Role::EVENT_MANAGEMENT);
+        return $user->hasRole([
+            Role::EVENT_MANAGEMENT,
+            Role::MENTOR,
+            Role::TRAINER,
+        ]);
     }
 
     public function store(Person $user, PersonBanner $person_banner): bool

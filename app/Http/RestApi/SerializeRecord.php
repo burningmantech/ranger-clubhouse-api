@@ -10,7 +10,7 @@ class SerializeRecord
     {
     }
 
-    /*
+    /**
      * Construct a REST API response representing the given record.
      * if $authorizedUser argument is present this means a column filter
      * is to be consulted on which columns are to be allowed based
@@ -18,7 +18,7 @@ class SerializeRecord
      *
      * The filter to be used is from \App\Http\Filters\<ModelName>Filter
      *
-     * @var Model (optional) $authorizedUser the person to filter against
+     * @param Model|null $authorizedUser
      * @return array a REST API record
      */
 

@@ -22,12 +22,10 @@ class PersonFilter
 
     const array ACCOUNT_FIELDS = [
         'created_at',
-        'date_verified',
-        'employee_id',
+        'has_bpguid',
         'is_bouncing',
         'last_seen_at',
         'logged_in_at',
-        'sfuid',
         'updated_at',
         'vintage',
     ];
@@ -98,8 +96,10 @@ class PersonFilter
         'on_site',
     ];
 
-    const array BPGUID_FIELD = [
+    const array EXTERNAL_IDS_FIELDS = [
         'bpguid',
+        'employee_id',
+        'sfuid',
     ];
 
     // Learning Management System fields
@@ -160,7 +160,7 @@ class PersonFilter
         [self::HQ_INFO, true, [Role::EVENT_MANAGEMENT, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS],
         [self::EVENT_FIELDS, true, [Role::EVENT_MANAGEMENT]],
-        [self::BPGUID_FIELD, true, [Role::VIEW_PII, Role::EVENT_MANAGEMENT, Role::VC, Role::MENTOR, Role::EDIT_BMIDS]],
+        [self::EXTERNAL_IDS_FIELDS, false, [Role::ADMIN]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         // Note: self is not allowed to see mentor notes
         [self::INTAKE_FIELDS, false, [Role::MENTOR, Role::TRAINER, Role::VC, Role::INTAKE]],
@@ -183,7 +183,7 @@ class PersonFilter
         [self::HQ_INFO, true, [Role::EVENT_MANAGEMENT, Role::VIEW_PII, Role::VC]],
         [self::AGREEMENT_FIELDS, true, [Role::ADMIN]],
         [self::EVENT_FIELDS, false, [Role::SHIFT_MANAGEMENT]],
-        [self::BPGUID_FIELD, true, [Role::EDIT_BMIDS]],
+        [self::EXTERNAL_IDS_FIELDS, true, [Role::ADMIN]],
         [self::LMS_FIELDS, false, [Role::ADMIN]],
         [self::INTAKE_FIELDS, false, [Role::INTAKE, Role::VC]],
         [self::SMS_FIELDS, true, [Role::ADMIN]],
