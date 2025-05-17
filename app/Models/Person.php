@@ -232,7 +232,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             'behavioral_agreement' => 'boolean',
             'callsign_approved' => 'boolean',
             'created_at' => 'datetime',
-            'date_verified' => 'date',
+            'has_bpguid' => 'boolean',
             'has_note_on_file' => 'boolean',
             'last_seen_at' => 'datetime',
             'logged_in_at' => 'datetime',
@@ -270,7 +270,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'camp_location',
         'city',
         'country',
-        'date_verified',
         'email',
         'emergency_contact',
         'employee_id',
@@ -317,8 +316,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'zip',
     ];
 
+    protected $appends = [
+        'has_bpguid'
+    ];
+
     protected $virtualColumns = [
-        'has_reviewed_pi'
+        'has_bpguid',
+        'has_reviewed_pi',
     ];
 
     // Various associated person tables
@@ -1197,6 +1201,18 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         return Attribute::make(
             get: fn() => $this->pi_reviewed_for_dashboard_at && $this->pi_reviewed_for_dashboard_at->year == current_year(),
             set: fn($value) => $this->has_reviewed_pi = $value
+        );
+    }
+
+    /**
+     * Is there a BPGUID on file? Helps avoids sending back the BPGUID.
+     *
+     * @return Attribute
+     */
+    public function hasBpguid() : Attribute
+    {
+        return Attribute::make(
+            get: fn() => !empty($this->bpguid),
         );
     }
 
