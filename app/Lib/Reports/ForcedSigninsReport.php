@@ -30,18 +30,18 @@ class ForcedSigninsReport
             $log = $tsLogs->get($row->id);
             $untrained = null;
             if (!$log) {
-                $reason = 'unknown';
+                $blockers = 'unknown';
             } else {
                 $log = $log[0];
                 $data = $log->data;
                 $forced = $data['forced'];
                 $reason = $forced['reason'] ?? 'unknown';
-                $reason = Position::UNQUALIFIED_MESSAGES[$reason] ?? $reason;
+                $blockers = Position::UNQUALIFIED_MESSAGES[$reason] ?? $reason;
                 $positionId = $forced['position_id'] ?? null;
                 if ($positionId) {
                     $untrained = Position::find($positionId);
                     if ($untrained) {
-                        $reason .= " ({$untrained->title})";
+                        $blockers .= " ({$untrained->title})";
                     }
                 }
             }
@@ -52,9 +52,10 @@ class ForcedSigninsReport
                 'on_duty' => (string)$row->on_duty,
                 'position_title' => $row->position->title,
                 'position_id' => $row->position_id,
-                'reason' => $reason,
-                'forced_by_id' => $log->create_person_id,
-                'forced_by_callsign' => $log->creator->callsign,
+                'blockers' => $blockers,
+                'forced_by_id' => $log?->create_person_id,
+                'forced_by_callsign' => $log?->creator?->callsign,
+                'signin_force_reason' => $row->signin_force_reason,
             ];
 
             $results[] = $result;

@@ -77,6 +77,7 @@ class Timesheet extends ApiModel
         'review_status',
         'reviewed_at',
         'reviewer_person_id',
+        'signin_force_reason',
         'slot_id',
         'suppress_duration_warning',
         'timesheet_confirmed',
@@ -889,41 +890,12 @@ class Timesheet extends ApiModel
     }
 
     /**
-     * Set the off duty time to now
-     */
-
-    public function setOffDutyToNow(): void
-    {
-        $this->off_duty = now();
-    }
-
-    /**
-     * Set the off duty to null and save the record. Cannot use $model->off_duty = null because
-     * Eloquent will insist on using Carbon::parse(null) which yields the current time. Sigh.
-     */
-
-    public function setOffDutyToNullAndSave(string $reason): void
-    {
-        $oldValue = (string)$this->off_duty;
-        DB::update("UPDATE timesheet SET off_duty=NULL WHERE id=?", [$this->id]);
-        ActionLog::record(Auth::user(), 'timesheet-update', $reason, [
-            'id' => $this->id,
-            'off_duty' => [$oldValue, null]
-        ], $this->person_id);
-
-        $this->refresh();
-        $this->loadRelationships();
-    }
-
-    /**
      * Return the position subtype for the timesheet entry.
-     *
-     * @return string|null
-     */
+     **/
 
-    public function getPositionSubtypeAttribute(): string|null
+    public function positionSubtype(): Attribute
     {
-        return $this->position->subtype;
+        return Attribute::make(get: fn() => $this->position->subtype);
     }
 
     /**
@@ -969,19 +941,25 @@ class Timesheet extends ApiModel
         $this->additionalWranglerNotes = $value;
     }
 
-    public function getPhotoUrlAttribute(): ?string
+    public function photoUrl(): Attribute
     {
-        return $this->photo_url;
+        return Attribute::make(
+            get: fn() => $this->photo_url
+        );
     }
 
-    public function getTimeWarningsAttribute(): ?array
+    public function timeWarnings(): Attribute
     {
-        return $this->time_warnings;
+        return Attribute::make(
+            get: fn() => $this->time_warnings,
+        );
     }
 
-    public function getDesiredWarningsAttribute(): ?array
+    public function desiredWarnings(): Attribute
     {
-        return $this->desired_warnings;
+        return Attribute::make(
+            get: fn() => $this->desired_warnings,
+        );
     }
 
     public function desiredOnDuty(): Attribute
@@ -995,6 +973,11 @@ class Timesheet extends ApiModel
     }
 
     public function desiredPositionId(): Attribute
+    {
+        return NullIfEmptyAttribute::make();
+    }
+
+    public function signinForceReason(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

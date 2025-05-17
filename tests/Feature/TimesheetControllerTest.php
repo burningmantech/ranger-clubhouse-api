@@ -19,7 +19,6 @@ use App\Models\TraineeStatus;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 
@@ -412,18 +411,19 @@ class TimesheetControllerTest extends TestCase
     }
 
     /*
-     * Force an admin shift sign in for an untrained person.
+     * Force an shift sign in for an untrained person.
      */
 
-    public function testForceAdminSigninForPerson()
+    public function testForceSigninForPerson()
     {
         $this->createTrainingSession(false);
-        $this->addRole(Role::ADMIN);
+        $this->addRole([Role::SHIFT_MANAGEMENT, Role::CAN_FORCE_SHIFT]);
         $targetPersonId = $this->targetPerson->id;
 
         $response = $this->json('POST', 'timesheet/signin', [
             'person_id' => $targetPersonId,
             'position_id' => Position::DIRT,
+            'signin_force_reason' => 'For services rendered.'
         ]);
 
         $response->assertJson([
@@ -450,12 +450,31 @@ class TimesheetControllerTest extends TestCase
     }
 
     /*
+     * Try to force a shift without a reason
+     */
+
+    public function testForceWithoutReason()
+    {
+        $this->createTrainingSession(false);
+        $this->addRole([Role::SHIFT_MANAGEMENT, Role::CAN_FORCE_SHIFT]);
+
+        $response = $this->json('POST', 'timesheet/signin', [
+            'person_id' => $this->targetPerson->id,
+            'position_id' => Position::DIRT,
+        ]);
+
+        $response->assertJson([
+            'status' => 'missing-force-reason',
+        ]);
+    }
+
+    /*
      * Fail a sign in for a position that's set to be ineligible to be signed in to.
      */
 
     public function testSigninPreventionForIneligiblePosition()
     {
-        $this->addRole(Role::SHIFT_MANAGEMENT);
+        $this->addRole([Role::SHIFT_MANAGEMENT, Role::CAN_FORCE_SHIFT]);
         $this->createTrainingSession(true);
         $targetPersonId = $this->targetPerson->id;
         $this->addPosition(Position::TRAINING, $this->targetPerson);

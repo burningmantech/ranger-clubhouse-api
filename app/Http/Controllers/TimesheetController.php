@@ -397,6 +397,7 @@ class TimesheetController extends ApiController
             'person_id' => 'required|integer|exists:person,id',
             'position_id' => 'required|integer|exists:position,id',
             'slot_id' => 'sometimes|integer|exists:slot,id',
+            'signin_force_reason' => 'sometimes|string',
         ]);
 
         $personId = $params['person_id'];
@@ -421,6 +422,10 @@ class TimesheetController extends ApiController
         $result = null;
         if (!TimesheetManagement::checkWorkAuthorization($person, $positionId, $requiredPositionId, $result, $signonForced, $unqualifiedReason)) {
             return response()->json($result);
+        }
+
+        if ($signonForced && empty($params['signin_force_reason'])) {
+            return response()->json(['status' => 'missing-force-reason']);
         }
 
         $timesheet = new Timesheet($params);
@@ -459,14 +464,14 @@ class TimesheetController extends ApiController
             return response()->json(['status' => 'already-signed-off', 'timesheet' => $timesheet]);
         }
 
-        $timesheet->setOffDutyToNow();
+        $timesheet->off_duty = now();
         $timesheet->auditReason = 'signout';
         $timesheet->saveOrThrow();
-        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
         $timesheet->log(TimesheetLog::SIGNOFF, [
             'position_id' => $timesheet->position_id,
             'off_duty' => (string)$timesheet->off_duty,
         ]);
+        $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
 
         TimesheetManagement::unconfirmTimesheet($timesheet, 'signoff');
 
@@ -538,8 +543,9 @@ class TimesheetController extends ApiController
         }
 
         $offDuty = $timesheet->off_duty;
-        // GRR: Cannot use $timesheet->off_duty = null because it will be cast to Carbon::parse(null). Sigh.
-        $timesheet->setOffDutyToNullAndSave('re-signin');
+        $timesheet->off_duty = null;
+        $timesheet->auditReason = 're-signin';
+        $timesheet->save();
         $timesheet->log(TimesheetLog::UPDATE, ['off_duty' => [(string)$offDuty, 're-signin']]);
         TimesheetManagement::unconfirmTimesheet($timesheet, 're-signin');
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
