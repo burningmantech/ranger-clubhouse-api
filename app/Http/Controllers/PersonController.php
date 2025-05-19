@@ -28,6 +28,7 @@ use App\Models\Role;
 use App\Models\TeamRole;
 use App\Models\Timesheet;
 use App\Models\Training;
+use App\Validators\StateForCountry;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
@@ -614,7 +615,7 @@ class PersonController extends ApiController
             'person.street2' => 'sometimes|string',
             'person.apt' => 'sometimes|string',
             'person.city' => 'required|string',
-            'person.state' => 'required|string',
+            'person.state' => [new StateForCountry()],
             'person.zip' => 'required|string',
             'person.country' => 'required|string',
             'person.status' => 'required|string',
