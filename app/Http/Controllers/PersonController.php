@@ -27,7 +27,6 @@ use App\Models\PositionRole;
 use App\Models\Role;
 use App\Models\TeamRole;
 use App\Models\Timesheet;
-use App\Models\Training;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
@@ -288,26 +287,20 @@ class PersonController extends ApiController
 
     public function positions(Person $person): JsonResponse
     {
-        $params = request()->validate([
-            'include_training' => 'sometimes|boolean',
-            'include_mentee' => 'sometimes|boolean',
-            'explicit' => 'sometimes|boolean',
-            'year' => 'required_if:include_training,true|integer'
-        ]);
-
         $this->authorize('view', $person);
 
-        $includeTraining = $params['include_training'] ?? false;
-        $includeMentee = $params['include_mentee'] ?? false;
-        $explicit = $params['explicit'] ?? false;
+        $params = request()->validate([
+            'include_eligibility' => 'sometimes|boolean',
+            'include_past_grants' => 'sometimes|boolean',
+            'exclude_trainee' => 'sometimes|boolean',
+        ]);
 
-        if ($includeTraining) {
-            $positions = Training::findPositionsWithTraining($person, $params['year']);
-        } else {
-            $positions = PersonPosition::findForPerson($person->id, $includeMentee, $explicit);
-        }
-
-        return response()->json(['positions' => $positions]);
+        $includeEligibility = $params['include_eligibility'] ?? false;
+        $includePastGrants = $params['include_past_grants'] ?? false;
+        $excludeTrainee = $params['exclude_trainee'] ?? false;
+        return response()->json([
+            'positions' => PersonPosition::retrieveAllForPerson($person, $includePastGrants, $includeEligibility, $excludeTrainee),
+        ]);
     }
 
     /**
@@ -330,17 +323,16 @@ class PersonController extends ApiController
             'revoke_ids.*' => 'sometimes|integer',
         ]);
 
-        $personId = $person->id;
         Membership::updatePositionsForPerson(
             $this->user->id,
-            $person->id,
+            $person,
             $params['position_ids'] ?? null,
             $params['grant_ids'] ?? null,
             $params['revoke_ids'] ?? null,
             'person update',
             $this->userHasRole(Role::ADMIN)
         );
-        return response()->json(['positions' => PersonPosition::findForPerson($personId)]);
+        return response()->json(['positions' => PersonPosition::retrieveAllForPerson($person)]);
     }
 
     /**
@@ -433,7 +425,7 @@ class PersonController extends ApiController
     public function membership(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
-        return response()->json(['membership' => Membership::retrieveForPerson($person->id)]);
+        return response()->json(['membership' => Membership::retrieveForPerson($person)]);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Lib\SignInBlocker;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -100,45 +101,71 @@ class PersonPosition extends ApiModel
     /**
      * Find all held positions for a person
      *
-     * @param int $personId
-     * @param false $includeMentee include Mentee positions even if the person no longer holds them
-     * @return mixed
+     * @param Person $person
+     * @param false $includePastGrants include this years past's grants, includes Mentees
+     * @param bool $includeEligibility
+     * @param bool $excludeTraineePositions
+     * @return Collection
      */
 
-    public static function findForPerson(int $personId, bool $includeMentee = false): mixed
+    public static function retrieveAllForPerson(Person $person,
+                                                bool   $includePastGrants = false,
+                                                bool   $includeEligibility = false,
+                                                bool   $excludeTraineePositions = false): Collection
     {
-        $rows = DB::table('person_position')
-            ->select(
-                'position.id',
-                'position.title',
-                'position.training_position_id',
-                'position.active',
-                'position.type',
-                'position.all_rangers',
-                'position.team_id',
-                'position.no_training_required',
-                'position.not_timesheet_eligible'
-            )->join('position', 'position.id', 'person_position.position_id')
-            ->where('person_id', $personId)
-            ->orderBy('position.title')
-            ->get();
+        $columns = [
+            'position.id',
+            'position.active',
+            'position.all_rangers',
+            'position.no_training_required',
+            'position.not_timesheet_eligible',
+            'position.team_id',
+            'position.title',
+            'position.training_position_id',
+            'position.type',
+        ];
 
-        if ($includeMentee) {
-            // Find mentee and alpha positions
-            $sql = Position::select(
-                'id', 'title', 'training_position_id', 'active', 'type', 'all_rangers', 'team_id', 'no_training_required',
-                'not_timesheet_eligible'
-            )->where('title', 'like', '%mentee%');
+        $personId = $person->id;
+        $sql = Position::select($columns)
+            ->join('person_position', 'position.id', 'person_position.position_id')
+            ->where('active', true)
+            ->where('person_id', $personId);
 
-            if (Timesheet::hasAlphaEntry($personId)) {
-                $sql->orWhere('id', Position::ALPHA);
-            }
-
-            $other = $sql->get();
-            $rows = $rows->merge($other);
+        if ($excludeTraineePositions) {
+            $sql->where(function ($w) {
+                $w->where('type', '!=', Position::TYPE_TRAINING);
+                $w->orWhere('title', 'like', '%Trainer%');
+            });
         }
 
-        return $rows->unique('id')->sortBy('title')->values();
+        $rows = $sql->get();
+
+        if ($includePastGrants) {
+            $sql = Position::select($columns)
+                ->join('person_position_log', 'position.id', 'person_position_log.position_id')
+                ->where('person_position_log.person_id', $personId)
+                ->whereYear('person_position_log.left_on', now()->year)
+                ->where('active', true);
+
+            if ($excludeTraineePositions) {
+                $sql->where(function ($w) {
+                    $w->where('type', '!=', Position::TYPE_TRAINING);
+                    $w->orWhere('title', 'like', '%Trainer%');
+                });
+            }
+
+            $pastGrants = $sql->get();
+            $rows = $rows->merge($pastGrants)->unique('id');
+        }
+
+        $rows = $rows->sortBy('title')->values();
+        if ($includeEligibility) {
+            foreach ($rows as $row) {
+                $row->blockers = SignInBlocker::check($person, $row);
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -148,6 +175,7 @@ class PersonPosition extends ApiModel
      * @param int $personId person id to change the roles
      * @param string $reason reason for reset
      * @param string $action
+     * @throws AuthorizationException
      */
 
     public static function resetPositions(int $personId, string $reason, string $action): void
@@ -220,7 +248,7 @@ class PersonPosition extends ApiModel
      * @param ?string $reason reason for removal
      */
 
-    public static function removeIdsFromPerson(int $personId, array $ids, ?string $reason)
+    public static function removeIdsFromPerson(int $personId, array $ids, ?string $reason): void
     {
         if (empty($ids)) {
             return;

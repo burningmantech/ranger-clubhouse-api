@@ -356,10 +356,10 @@ class Setting extends ApiModel
             'default' => 'false',
         ],
 
-        'SandmanRequirePerimeterExperience' => [
-            'description' => 'Require a Sandman to have worked a Burn Perimeter or Sandman positions within the last few years',
-            'type' => self::TYPE_BOOL,
-            'default' => 'false',
+        'SandmanRequirePerimeterExpWithinYears' => [
+            'description' => 'Require a Sandman to have worked a Burn Perimeter or Sandman positions within X years. Leave blank to skip this check.',
+            'type' => self::TYPE_INTEGER,
+            'default' => 5,
         ],
 
         'SFEnableWritebacks' => [
@@ -416,6 +416,18 @@ class Setting extends ApiModel
         'ShiftSignupFromEmail' => [
             'description' => 'From email address for shift sign up messages',
             'type' => self::TYPE_EMAIL,
+        ],
+
+        'ShiftCheckInEarlyPeriod' => [
+            'description' => 'How soon, in minutes, is the person allowed to check into a shift. Set to blank to disable the check.',
+            'type' => self::TYPE_INTEGER,
+            'default' => 30
+        ],
+
+        'ShiftCheckInLatePeriod' => [
+            'description' => 'How late, in minutes, is the person allowed to check into a shift. Set to blank to disable the check.',
+            'type' => self::TYPE_INTEGER,
+            'default' => 15,
         ],
 
         'ShirtLongSleeveHoursThreshold' => [

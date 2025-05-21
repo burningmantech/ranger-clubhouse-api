@@ -246,23 +246,6 @@ class Position extends ApiModel
         Position::HOT_SPRINGS_PATROL_DRIVER => 15,
     ];
 
-    // Person has not signed the Sandman affidavit (all wanna be Sandmen)
-    const string UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT = 'unsigned-sandman-affidavit';
-    // Person has no Burn Perimeter experience (all wanna be Sandmen)
-    const string UNQUALIFIED_NO_BURN_PERIMETER_EXP = 'no-burn-perimeter-exp';
-    // Person has not completed dirt training or ART as required by the position
-    const string UNQUALIFIED_UNTRAINED = 'untrained';
-
-    // Person is retired is attempting to work a shift before walking a cheetah cub shift.
-    const string UNQUALIFIED_IS_RETIRED = 'is-retired';
-
-    const array UNQUALIFIED_MESSAGES = [
-        self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT => 'Sandman Affidavit not signed',
-        self::UNQUALIFIED_NO_BURN_PERIMETER_EXP => 'No Burn Perimeter, nor Sandman, shift has been worked within the last ' . self::SANDMAN_YEAR_CUTOFF . ' years',
-        self::UNQUALIFIED_UNTRAINED => 'Training not completed.',
-        self::UNQUALIFIED_IS_RETIRED => 'Person is retired and and must complete a Cheetah Cub shift first before being allowed to being allowed to check into a non-training shift.',
-    ];
-
     const array SANDMAN_QUALIFIED_POSITIONS = [
         Position::BURN_COMMAND_TEAM,
         Position::BURN_PERIMETER,
@@ -665,34 +648,6 @@ class Position extends ApiModel
         }
 
         return $sql->orderBy('position.title')->get();
-    }
-
-    /**
-     * Is the person qualified to work a Sandman position?
-     *
-     * @param Person $person
-     * @param $reason
-     * @return bool true if the person is qualified
-     */
-
-    public static function isSandmanQualified(Person $person, &$reason): bool
-    {
-        if (setting('SandmanRequireAffidavit')) {
-            $event = PersonEvent::findForPersonYear($person->id, current_year());
-            if (!$event || !$event->sandman_affidavit) {
-                $reason = self::UNQUALIFIED_UNSIGNED_SANDMAN_AFFIDAVIT;
-                return false;
-            }
-        }
-
-        if (setting('SandmanRequirePerimeterExperience')) {
-            if (!Timesheet::didPersonWorkPosition($person->id, self::SANDMAN_YEAR_CUTOFF, self::SANDMAN_QUALIFIED_POSITIONS)) {
-                $reason = self::UNQUALIFIED_NO_BURN_PERIMETER_EXP;
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**

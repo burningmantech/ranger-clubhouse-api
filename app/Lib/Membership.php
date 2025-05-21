@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
 use App\Models\PersonTeam;
@@ -17,15 +18,16 @@ class Membership
     /**
      * Retrieve the assigned team and positions for a given person
      *
-     * @param int $personId
+     * @param Person $person
      * @return array
      */
 
-    public static function retrieveForPerson(int $personId): array
+    public static function retrieveForPerson(Person $person): array
     {
+        $personId = $person->id;
         $teams = PersonTeam::findAllTeamsForPerson($personId);
         $teamsById = $teams->keyBy('id');
-        $positions = PersonPosition::findForPerson($personId);
+        $positions = PersonPosition::retrieveAllForPerson($person);
         $management = TeamManager::retrieveTeamsForPerson($personId);
 
         $notMember = [];
@@ -61,14 +63,15 @@ class Membership
      */
 
     public static function updatePositionsForPerson(int    $userId,
-                                                    int    $personId,
+                                                    Person $person,
                                                     ?array $positionIds,
                                                     ?array $grantIds,
                                                     ?array $revokeIds,
                                                     string $reason,
                                                     bool   $isAdmin): void
     {
-        $positions = PersonPosition::findForPerson($personId);
+        $personId = $person->id;
+        $positions = PersonPosition::retrieveAllForPerson($person);
 
         if (!$isAdmin) {
             $manageIds = TeamManager::retrieveTeamIdsForPerson($userId);

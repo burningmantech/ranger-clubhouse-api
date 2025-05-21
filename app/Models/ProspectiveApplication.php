@@ -336,7 +336,7 @@ class ProspectiveApplication extends ApiModel
     public function qualifiedEvents(): array
     {
         $events = $this->allEvents();
-        $year = current_year() - 10;
+        $year = current_year() - 11;
         return array_filter($events, fn($e) => ($e != 2020 && $e != 2021 && $e >= $year));
     }
 
