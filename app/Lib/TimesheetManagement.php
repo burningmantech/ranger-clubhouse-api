@@ -6,12 +6,12 @@ use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
 use App\Models\Position;
-use App\Models\Role;
+use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use App\Models\Training;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TimesheetManagement
 {
@@ -43,116 +43,20 @@ class TimesheetManagement
     }
 
     /**
-     * Is the person allowed to work the given position?
-     *
-     * @param Person $person
-     * @param int $positionId
-     * @param int $requiredPositionId
-     * @param $response
-     * @param bool $signonForced
-     * @param $unqualifiedReason
-     * @return bool
-     */
-
-    public static function checkWorkAuthorization(Person $person,
-                                                  int    $positionId,
-                                                  int    &$requiredPositionId,
-                                                         &$response,
-                                                  bool   &$signonForced,
-                                                         &$unqualifiedReason): bool
-    {
-        $canForceSignon = Auth::user()?->hasRole([Role::ADMIN, Role::CAN_FORCE_SHIFT]);
-
-        $personId = $person->id;
-
-        // Confirm the person is allowed to sign in to the position
-        if (!PersonPosition::havePosition($personId, $positionId)) {
-            $response = ['status' => 'position-not-held'];
-            return false;
-        }
-
-        $position = Position::find($positionId);
-        if ($position->not_timesheet_eligible) {
-            $response = ['status' => 'position-not-eligible'];
-            return false;
-        }
-
-        if ($person->status == Person::RETIRED
-            && $position->type != Position::TYPE_TRAINING
-            && $position->id != Position::CHEETAH_CUB) {
-            if (!$canForceSignon) {
-                $response = ['status' => 'is-retired'];
-                return false;
-            }
-
-            $signonForced = true;
-            $unqualifiedReason = Position::UNQUALIFIED_IS_RETIRED;
-        }
-
-
-        // Are they trained for this position?
-        if (!$position->no_training_required && !Training::isPersonTrained($person, $positionId, current_year(), $requiredPositionId)) {
-            $positionRequired = Position::retrieveTitle($requiredPositionId);
-            if ($canForceSignon) {
-                $signonForced = true;
-                $unqualifiedReason = Position::UNQUALIFIED_UNTRAINED;
-            } else {
-                $response = [
-                    'status' => 'not-trained',
-                    'position_title' => $positionRequired,
-                    'position_id' => $requiredPositionId
-                ];
-                return false;
-            }
-        }
-
-        /**
-         * A person must have an employee id if working a paid position. For international volunteers who may worked
-         * but not get paid, a dummy code of "0" is fine.
-         */
-
-        // can't use empty() because "0" is treated as empty. feh.
-        if ($position->paycode && is_null($person->employee_id)) {
-            $response = [
-                'status' => 'no-employee-id',
-            ];
-            return false;
-        }
-
-        // Sandman blocker - must be qualified
-        if ($positionId == Position::SANDMAN && !Position::isSandmanQualified($person, $unqualifiedReason)) {
-            if ($canForceSignon) {
-                $signonForced = true;
-            } else {
-                $response = [
-                    'status' => 'not-qualified',
-                    'unqualified_reason' => $unqualifiedReason,
-                    'unqualified_message' => Position::UNQUALIFIED_MESSAGES[$unqualifiedReason],
-                ];
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * Return response for a timesheet sign-in or creation.
      *
      * @param string $action
      * @param Timesheet $timesheet
-     * @param bool $signonForced
-     * @param int $requiredPositionId
-     * @param $unqualifiedReason
+     * @param bool $signInForced
+     * @param array $blockers
      * @param $log
      * @return JsonResponse
      */
 
     public static function reportSignIn(string    $action,
                                         Timesheet $timesheet,
-                                        bool      $signonForced,
-                                        int       $requiredPositionId,
-                                                  $unqualifiedReason,
+                                        bool      $signInForced,
+                                        array     $blockers,
                                                   $log): JsonResponse
     {
         $response = [
@@ -163,18 +67,10 @@ class TimesheetManagement
             'position_title' => $timesheet->position->title,
         ];
 
-        if ($signonForced) {
+        if ($signInForced) {
             $response['forced'] = true;
-            $response['unqualified_reason'] = $unqualifiedReason;
-            $response['unqualified_message'] = Position::UNQUALIFIED_MESSAGES[$unqualifiedReason];
-            if ($requiredPositionId) {
-                $response['required_training'] = Position::retrieveTitle($requiredPositionId);
-            }
-
-            $log['forced'] = ['reason' => $unqualifiedReason];
-            if ($unqualifiedReason == Position::UNQUALIFIED_UNTRAINED) {
-                $log['forced']['position_id'] = $requiredPositionId;
-            }
+            $log['forced'] = true;
+            $log['blockers'] = $blockers;
         }
 
         $timesheet->log($action, $log);

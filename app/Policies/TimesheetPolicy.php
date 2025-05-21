@@ -11,7 +11,7 @@ class TimesheetPolicy
 {
     use HandlesAuthorization;
 
-    public function before(Person $user) : ?true
+    public function before(Person $user): ?true
     {
         if ($user->hasRole([Role::TIMESHEET_MANAGEMENT, Role::ADMIN])) {
             return true;
@@ -97,9 +97,13 @@ class TimesheetPolicy
      * Can user sign in the person?
      */
 
-    public function signin(Person $user): bool
+    public function signin(Person $user, int $personId): bool
     {
-        return $user->hasRole([Role::SHIFT_MANAGEMENT, Role::SHIFT_MANAGEMENT_SELF]);
+        if ($user->hasRole(Role::SHIFT_MANAGEMENT)) {
+            return true;
+        }
+
+        return $user->hasRole(Role::SHIFT_MANAGEMENT_SELF) && $user->id == $personId;
     }
 
     /**

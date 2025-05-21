@@ -520,7 +520,7 @@ class PersonControllerTest extends TestCase
         ]);
 
         $response = $this->json('GET', "person/{$personId}/positions", [
-            'include_training' => true,
+            'include_eligibility' => true,
             'year' => current_year()
         ]);
 
@@ -529,7 +529,11 @@ class PersonControllerTest extends TestCase
         $response->assertJson([
             'positions' => [[
                 'id' => Position::DIRT,
-                'is_untrained' => true
+                'blockers' => [
+                    [
+                        'blocker' => Timesheet::BLOCKED_NOT_TRAINED
+                    ]
+                ]
             ]]
         ]);
     }
@@ -663,7 +667,7 @@ class PersonControllerTest extends TestCase
         );
 
         $newPosition = Position::factory()->create();
-
+        $this->withoutExceptionHandling();
         $response = $this->json(
             'POST',
             "person/$personId/positions",

@@ -25,12 +25,14 @@ use App\Lib\Reports\TimesheetSanityCheckReport;
 use App\Lib\Reports\TimesheetTotalsReport;
 use App\Lib\Reports\TopHourEarnersReport;
 use App\Lib\ShiftDropReport;
+use App\Lib\SignInBlocker;
 use App\Lib\TimesheetManagement;
 use App\Lib\TimesheetSlotAssocRepair;
 use App\Mail\AutomaticActiveConversionMail;
 use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonEvent;
+use App\Models\PersonPosition;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
@@ -326,47 +328,6 @@ class TimesheetController extends ApiController
     }
 
     /**
-     * Update an on duty Timesheet to the new position.
-     *
-     * @param Timesheet $timesheet
-     * @return JsonResponse
-     * @throws AuthorizationException|ValidationException|UnacceptableConditionException
-     */
-
-    public function updatePosition(Timesheet $timesheet): JsonResponse
-    {
-        $this->authorize('updatePosition', $timesheet);
-        $params = request()->validate(['position_id' => 'required|integer|exists:position,id']);
-
-        if ($timesheet->off_duty) {
-            throw new UnacceptableConditionException('Timesheet entry is not off duty.');
-        }
-
-        $positionId = $params['position_id'];
-        $person = $timesheet->person;
-
-        $requiredPositionId = 0;
-        $unqualifiedReason = null;
-        $result = null;
-        $signonForced = false;
-
-        if (!TimesheetManagement::checkWorkAuthorization($person, $positionId, $requiredPositionId, $result, $signonForced, $unqualifiedReason)) {
-            return response()->json($result);
-        }
-
-        $oldPositionId = $timesheet->position_id;
-        $timesheet->position_id = $positionId;
-        $timesheet->auditReason = 'position update while on duty';
-        $timesheet->saveOrThrow();
-
-        $log = [
-            'position_id' => [$oldPositionId, $timesheet->position_id],
-        ];
-
-        return TimesheetManagement::reportSignIn(TimesheetLog::UPDATE, $timesheet, $signonForced, $requiredPositionId, $unqualifiedReason, $log);
-    }
-
-    /**
      * Delete a timesheet entry
      *
      * @param Timesheet $timesheet
@@ -391,19 +352,20 @@ class TimesheetController extends ApiController
 
     public function signin(): JsonResponse
     {
-        $this->authorize('signin', Timesheet::class);
 
         $params = request()->validate([
             'person_id' => 'required|integer|exists:person,id',
             'position_id' => 'required|integer|exists:position,id',
             'slot_id' => 'sometimes|integer|exists:slot,id',
+            'force_sign_in' => 'sometimes|boolean',
             'signin_force_reason' => 'sometimes|string',
         ]);
 
         $personId = $params['person_id'];
         $positionId = $params['position_id'];
+        $this->authorize('signin', [Timesheet::class, $personId]);
 
-        // they cannot be already on duty
+        // they cannot be on duty
         $onDuty = Timesheet::findPersonOnDuty($personId);
         if ($onDuty) {
             return response()->json([
@@ -412,26 +374,40 @@ class TimesheetController extends ApiController
             ]);
         }
 
-        // confirm person exists
-        $person = Person::findOrFail($personId);
+        $person = Person::find($personId);
+        $position = Position::find($positionId);
 
-        $signonForced = false;
-        $unqualifiedReason = null;
-        $requiredPositionId = 0;
-
-        $result = null;
-        if (!TimesheetManagement::checkWorkAuthorization($person, $positionId, $requiredPositionId, $result, $signonForced, $unqualifiedReason)) {
-            return response()->json($result);
+        // Confirm the person is allowed to sign in to the position
+        if (!PersonPosition::havePosition($personId, $positionId)) {
+            // Punt immediately.
+            return response()->json(['status' => 'position-not-held']);
         }
 
-        if ($signonForced && empty($params['signin_force_reason'])) {
-            return response()->json(['status' => 'missing-force-reason']);
+        if ($position->not_timesheet_eligible) {
+            // Punt immediately
+            return response()->json(['status' => 'position-not-eligible']);
+        }
+
+        $blockers = SignInBlocker::check($person, $position, true);
+        $wasForced = false;
+
+        if (!empty($blockers)) {
+            if (!($params['force_sign_in'] ?? false)) {
+                return response()->json(['status' => 'blocked', 'blockers' => $blockers]);
+            }
+
+            Gate::allowIf(fn($user) => $user->hasRole([Role::ADMIN, Role::CAN_FORCE_SHIFT]));
+
+            if (empty($params['signin_force_reason'])) {
+                return response()->json(['status' => 'missing-force-reason']);
+            }
+            $wasForced = true;
         }
 
         $timesheet = new Timesheet($params);
         $timesheet->on_duty = now();
         $timesheet->auditReason = 'sign in';
-        $timesheet->was_signin_forced = $signonForced;
+        $timesheet->was_signin_forced = $wasForced;
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
         }
@@ -444,9 +420,81 @@ class TimesheetController extends ApiController
             'on_duty' => (string)$timesheet->on_duty
         ];
 
-        return TimesheetManagement::reportSignIn(TimesheetLog::SIGNON, $timesheet, $signonForced, $requiredPositionId, $unqualifiedReason, $log);
+        if ($wasForced) {
+            $log['signin_force_reason'] = $timesheet->signin_force_reason;
+        }
+
+        return TimesheetManagement::reportSignIn(TimesheetLog::SIGNON, $timesheet, $wasForced, $blockers, $log);
     }
 
+    /**
+     * Update on duty Timesheet to the new position.
+     *
+     * @param Timesheet $timesheet
+     * @return JsonResponse
+     * @throws AuthorizationException|ValidationException|UnacceptableConditionException
+     */
+
+    public function updatePosition(Timesheet $timesheet): JsonResponse
+    {
+        $this->authorize('updatePosition', $timesheet);
+        $params = request()->validate([
+            'position_id' => 'required|integer|exists:position,id',
+            'force_sign_in' => 'sometimes|boolean',
+            'signin_force_reason' => 'sometimes|string',
+        ]);
+
+        if ($timesheet->off_duty) {
+            throw new UnacceptableConditionException('Timesheet entry is not off duty.');
+        }
+
+        $positionId = $params['position_id'];
+        $person = $timesheet->person;
+        $position = Position::find($positionId);
+
+        // Confirm the person is allowed to sign in to the position
+        if (!PersonPosition::havePosition($person->id, $positionId)) {
+            // Punt immediately.
+            return response()->json(['status' => 'position-not-held']);
+        }
+
+        if ($position->not_timesheet_eligible) {
+            // Punt immediately
+            return response()->json(['status' => 'position-not-eligible']);
+        }
+
+        $blockers = SignInBlocker::check($person, $position, true);
+        $wasForced = false;
+
+        if (!empty($blockers)) {
+            if (!($params['force_sign_in'] ?? false)) {
+                return response()->json(['status' => 'blocked', 'blockers' => $blockers]);
+            }
+
+            Gate::allowIf(fn($user) => $user->hasRole([Role::ADMIN, Role::CAN_FORCE_SHIFT]));
+
+            if (empty($params['signin_force_reason'])) {
+                return response()->json(['status' => 'missing-force-reason']);
+            }
+            $wasForced = true;
+        }
+
+        $log = [
+            'position_id' => [$timesheet->position_id, $positionId],
+        ];
+
+        $timesheet->position_id = $positionId;
+        if ($wasForced) {
+            $reason = $params['signin_force_reason'];
+            $timesheet->was_signin_forced = true;
+            $timesheet->signin_force_reason = $reason;
+            $log['signin_force_reason'] = $reason;
+        }
+        $timesheet->auditReason = 'position update while on duty';
+        $timesheet->saveOrThrow();
+
+        return TimesheetManagement::reportSignIn(TimesheetLog::UPDATE, $timesheet, $wasForced, $blockers, $log);
+    }
 
     /**
      * End a shift

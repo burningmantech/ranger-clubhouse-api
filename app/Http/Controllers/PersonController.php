@@ -27,7 +27,6 @@ use App\Models\PositionRole;
 use App\Models\Role;
 use App\Models\TeamRole;
 use App\Models\Timesheet;
-use App\Models\Training;
 use App\Validators\StateForCountry;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -289,24 +288,19 @@ class PersonController extends ApiController
 
     public function positions(Person $person): JsonResponse
     {
+        $this->authorize('view', $person);
         $params = request()->validate([
-            'include_training' => 'sometimes|boolean',
-            'include_mentee' => 'sometimes|boolean',
-            'explicit' => 'sometimes|boolean',
-            'year' => 'required_if:include_training,true|integer'
+            'include_eligibility' => 'sometimes|boolean',
+            'exclude_trainee' => 'sometimes|boolean',
+            'include_past_grants' => 'sometimes|boolean',
         ]);
 
-        $this->authorize('view', $person);
 
-        $includeTraining = $params['include_training'] ?? false;
-        $includeMentee = $params['include_mentee'] ?? false;
-        $explicit = $params['explicit'] ?? false;
+        $includePastGrants = $params['include_past_grants'] ?? false;
+        $includeEligibility = $params['include_eligibility'] ?? false;
+        $excludeTrainee = $params['exclude_trainee'] ?? false;
 
-        if ($includeTraining) {
-            $positions = Training::findPositionsWithTraining($person, $params['year']);
-        } else {
-            $positions = PersonPosition::findForPerson($person->id, $includeMentee, $explicit);
-        }
+        $positions = PersonPosition::retrieveAllForPerson($person, $includePastGrants, $includeEligibility, $excludeTrainee);
 
         return response()->json(['positions' => $positions]);
     }
@@ -331,17 +325,16 @@ class PersonController extends ApiController
             'revoke_ids.*' => 'sometimes|integer',
         ]);
 
-        $personId = $person->id;
         Membership::updatePositionsForPerson(
             $this->user->id,
-            $person->id,
+            $person,
             $params['position_ids'] ?? null,
             $params['grant_ids'] ?? null,
             $params['revoke_ids'] ?? null,
             'person update',
             $this->userHasRole(Role::ADMIN)
         );
-        return response()->json(['positions' => PersonPosition::findForPerson($personId)]);
+        return response()->json(['positions' => PersonPosition::retrieveAllForPerson($person)]);
     }
 
     /**

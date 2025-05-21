@@ -536,9 +536,10 @@ class Schedule
         $upcoming = [];
         $imminent = [];
 
+        $earlyTime = (int)setting('ShiftCheckInEarlyPeriod');
         foreach ($rows as $row) {
             $slot = $row->slot;
-            $start = $slot->begins->clone()->subMinutes(self::MAY_START_SHIFT_WITHIN);
+            $start = $slot->begins->clone()->subMinutes($earlyTime);
             $withinStart = $start->lte($now);
             $shift = [
                 'slot_id' => $row->slot_id,
@@ -548,7 +549,7 @@ class Schedule
                 'slot_begins' => (string)$slot->begins,
                 'slot_ends' => (string)$slot->ends,
                 'slot_url' => $slot->url,
-                'is_within_start_time' => $withinStart,
+                'is_within_start_time' => $earlyTime ? $withinStart : true,
             ];
 
             if (!$withinStart) {

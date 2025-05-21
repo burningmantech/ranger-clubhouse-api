@@ -58,6 +58,14 @@ class Timesheet extends ApiModel
     const string YEARS_AS_CONTRIBUTOR = 'as-contributor'; // All the years worked as a contributor / non-ranger
     const string YEARS_ALL = 'all';
 
+    const string BLOCKED_IS_RETIRED = 'is-retired'; // Person is retired, and trying to work a non-cheetah cub shift.
+    const string BLOCKED_NOT_TRAINED = 'not-trained'; // Person is not trained. Either In-Person or ART.
+    const string BLOCKED_NO_BURN_PERIMETER_EXP = 'no-burn-perimeter-exp'; // Person has no burn perimeter experience
+    const string BLOCKED_NO_EMPLOYEE_ID = 'no-employee-id'; // Position is paid -- person does not have employee id on file.
+    const string BLOCKED_TOO_EARLY = 'too-early'; // Person is trying to sign in to a shift too early.
+    const string BLOCKED_TOO_LATE = 'too-late'; // Person is trying to sign in to a shift too late.
+    const string BLOCKED_UNSIGNED_SANDMAN_AFFIDAVIT = 'unsigned-sandman-affidavit'; // The Sandman Affidavit has not been signed.
+
     const array EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
         Position::TRAINING,
@@ -735,6 +743,24 @@ class Timesheet extends ApiModel
     }
 
     /**
+     * Find last worked positions.
+     *
+     */
+
+    public static function personLastWorkedAnyPosition(int $personId, $positionIds): ?array
+    {
+        $row = DB::table('timesheet')
+            ->select('position_id', DB::raw('YEAR(on_duty) as year'), 'position.title')
+            ->join('position', 'timesheet.position_id', '=', 'position.id')
+            ->where('person_id', $personId)
+            ->whereIn('position_id', $positionIds)
+            ->orderBy('on_duty', 'desc')
+            ->first();
+
+        return $row ? ['id' => $row->position_id, 'title' => $row->title, 'year' => $row->year] : null;
+    }
+
+    /**
      * Did the given person work (or walked an Alpha shift) in a given year?
      *
      * @param int $personId
@@ -849,13 +875,11 @@ class Timesheet extends ApiModel
 
     /**
      * Return the position title (if record was joined with the position table)
-     *
-     * @return string
      */
 
-    public function getPositionTitleAttribute(): string
+    public function positionTitle(): Attribute
     {
-        return $this->attributes['position_title'] ?? '';
+        return Attribute::make(get: fn() => $this->attributes['position_title'] ?? '');
     }
 
     /**
