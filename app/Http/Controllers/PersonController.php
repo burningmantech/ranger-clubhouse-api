@@ -427,7 +427,7 @@ class PersonController extends ApiController
     public function membership(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
-        return response()->json(['membership' => Membership::retrieveForPerson($person->id)]);
+        return response()->json(['membership' => Membership::retrieveForPerson($person)]);
     }
 
     /**
