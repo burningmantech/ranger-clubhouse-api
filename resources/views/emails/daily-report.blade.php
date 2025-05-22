@@ -202,7 +202,7 @@
                     <td>
                         @if ($log->event == 'person-role-add')
                             ADDED:
-                            @if ($log->roles->isEmpty())
+                            @if (!$log->roles || $log->roles->isEmpty())
                                 (deleted roles) {{json_encode($log->data['role_ids'])}}
                             @else
                                 {{$log->roles->implode('title', ', ')}}
@@ -210,10 +210,10 @@
                         @endif
                         @if ($log->event == 'person-role-remove')
                             REMOVED:
-                            @if ($log->roles->isEmpty())
+                            @if (!$log->roles || $log->roles->isEmpty())
                                 (deleted roles) {{json_encode($log->data['role_ids'])}}
                             @else
-                                {{$log->roles->implode('title', ', ')}}
+                                {{$log->roles?->implode('title', ', ')}}
                             @endif
 
                         @endif
