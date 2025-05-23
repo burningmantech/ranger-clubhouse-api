@@ -62,13 +62,14 @@ class ScheduleByCallsignReport
         $people = array_values($people);
         usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
-        $slotResults = $slots->map(fn ($slot) => [
+        $slotResults = $slots->map(fn($slot) => [
             'id' => $slot->id,
-            'begins' => (string) $slot->begins,
-            'ends' => (string) $slot->ends,
+            'begins' => (string)$slot->begins,
+            'ends' => (string)$slot->ends,
             'duration' => $slot->duration,
-            'description' =>$slot->description,
-            'tz' => $slot->timezone_abbr,
+            'description' => $slot->description,
+            'timezone' => $slot->timezone,
+            'timezone_abbr' => $slot->timezone_abbr,
             'position_id' => $slot->position_id
         ])->values();
 
