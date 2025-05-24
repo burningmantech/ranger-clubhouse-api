@@ -16,6 +16,10 @@ class SurveyQuestion extends ApiModel
     protected bool $auditModel = true;
     public $timestamps = true;
 
+    const string TYPE_RATING = 'rating';
+    const string TYPE_OPTIONS = 'options';
+    const string TYPE_TEXT = 'text';
+
     protected $fillable = [
         'survey_id',
         'survey_group_id',
@@ -50,9 +54,6 @@ class SurveyQuestion extends ApiModel
 
     private $_optionLabels;
 
-    const string RATING = 'rating';
-    const string OPTIONS = 'options';
-    const string TEXT = 'text';
 
     public static function boot(): void
     {

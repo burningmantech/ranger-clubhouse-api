@@ -474,24 +474,24 @@ class Survey extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function getPositionTitleAttribute(): ?string
+    public function positionTitle(): Attribute
     {
-        return $this->position?->title;
+        return Attribute::make(get: fn () => $this->position?->title);
     }
 
-    public function getMentoringPositionTitleAttribute(): ?string
+    public function mentoringPositionTitle(): Attribute
     {
-        return $this->mentoring_position_id ? $this->mentoring_position?->title : '';
+        return Attribute::make(get: fn() => $this->mentoring_position?->title ?? '');
     }
 
     public function canManageSurvey(Person $user): bool
     {
-        return $user->isAdmin() || self::canManageSurveys($user, $this->position_id);
+        return self::canManageSurveys($user, $this->position_id);
     }
 
     public static function canManageSurveys(Person $user, int $positionId): bool
     {
-        return $user->isAdmin() || self::hasRoleForPosition($user, Role::SURVEY_MANAGEMENT_TRAINING, Role::SURVEY_MANAGEMENT_BASE, $positionId);
+        return self::hasRoleForPosition($user, Role::SURVEY_MANAGEMENT_TRAINING, Role::SURVEY_MANAGEMENT_BASE, $positionId);
     }
 
     public function isTrainerForSurvey(Person $user): bool

@@ -6,7 +6,6 @@ use App\Exceptions\UnacceptableConditionException;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use App\Models\Position;
-use App\Models\Role;
 use App\Models\Slot;
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
@@ -15,7 +14,7 @@ use App\Models\SurveyQuestion;
 use App\Models\Timesheet;
 use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class SurveyReports
@@ -25,12 +24,14 @@ class SurveyReports
      *
      * @param string $type
      * @param int $slotId
-     * @param int $personId
+     * @param Person $person
      * @return array
+     * @throws UnacceptableConditionException
      */
 
-    public static function retrieveSlotSurveyTrainers(string $type, int $slotId, int $personId): array
+    public static function retrieveSlotSurveyTrainers(string $type, int $slotId, Person $person): array
     {
+        $personId = $person->id;
         $slot = Slot::findOrFail($slotId);
 
         $survey = Survey::findForTypePositionYear($type, $slot->position_id, $slot->begins->year);
@@ -46,7 +47,7 @@ class SurveyReports
                     'callsign' => $p->callsign,
                     'position_id' => $t->trainer_slot->position_id,
                     'position_title' => $t->trainer_slot->position->title ?? "Position #{$t->trainer_slot->position_id}",
-                    'photo_url' => $p->person_photo->image_url ?? null,
+                    'photo_url' => $p->approvedPhoto(),
                 ];
             })->sortBy('callsign')
             ->values();
@@ -78,12 +79,13 @@ class SurveyReports
      * Retrieve the slot record, the survey for the type, position & year and the attending trainers
      *
      * @param int $year
-     * @param int $personId
+     * @param Person $person
      * @return array
      */
 
-    public static function retrieveAlphaSurvey(int $year, int $personId): array
+    public static function retrieveAlphaSurvey(int $year, Person $person): array
     {
+        $personId = $person->id;
         if (!Timesheet::hasAlphaEntry($personId, $year)) {
             throw new InvalidArgumentException("Person was not an alpha in the given year");
         }
@@ -98,7 +100,7 @@ class SurveyReports
                 return (object)[
                     'id' => $p->id,
                     'callsign' => $p->callsign,
-                    'photo_url' => $p->person_photo->image_url ?? null,
+                    'photo_url' => $p->approvedPhoto(),
                 ];
             })->sortBy('callsign')
             ->values();
@@ -111,11 +113,11 @@ class SurveyReports
      *
      * @param string $type
      * @param int $slotId
-     * @param int $personId
+     * @param Person $person
      * @return array
      */
 
-    public static function retrieveMentoringSurvey(string $type, int $slotId, int $personId): array
+    public static function retrieveMentoringSurvey(string $type, int $slotId, Person $person): array
     {
         $slot = Slot::findOrFail($slotId);
         $survey = Survey::findForTypePositionYear($type, $slot->position_id, $slot->begins->year);
@@ -131,7 +133,7 @@ class SurveyReports
                     'callsign' => $p->callsign,
                     'position_id' => $t->position_id,
                     'position_title' => $t->position->title ?? "Position #{$t->position_id}",
-                    'photo_url' => $p->person_photo->image_url ?? null,
+                    'photo_url' => $p->approvedPhoto(),
                 ];
             })->sortBy('callsign')->values();
 
@@ -148,14 +150,13 @@ class SurveyReports
      * 2) A student-on-trainer survey group (survey_group.type='trainer') thru all group questions with each trainer
      *
      * @param Survey $survey
-     * @param int|null $trainerId (optional) if set report only on the trainer
+     * @param int|null $trainerId (optional) if set, report only on the trainer
+     * @param bool $includePerson
      * @return array
      */
 
-    public static function buildSurveyReports(Survey $survey, int|null $trainerId = null): array
+    public static function buildSurveyReports(Survey $survey, int|null $trainerId = null, bool $includePerson = false): array
     {
-        $includePerson = Auth::user() ? Auth::user()->hasRole(Role::SURVEY_MANAGEMENT_TRAINING) : true;
-
         $slots = $survey->retrieveSlots();
         $surveyGroups = SurveyGroup::findAllForSurvey($survey->id);
         $questions = SurveyQuestion::findAllForSurvey($survey->id);
@@ -297,7 +298,7 @@ class SurveyReports
                 continue;
             }
             $slotResponses = [];
-            $isRating = ($question->type == SurveyQuestion::RATING) || $question->summarize_rating;
+            $isRating = ($question->type == SurveyQuestion::TYPE_RATING) || $question->summarize_rating;
             $overallRatings = [];
 
             if ($isAlpha) {
@@ -306,7 +307,7 @@ class SurveyReports
                     if ($isRating) {
                         $overallRatings[] = (int)$answer->response;
                     } else if (!$question->summarize_rating) {
-                        $alphaResponses[] = self::buildAnswer($answer, $question, $includePerson);
+                        $alphaResponses[] = self::buildAnswer($answer, $includePerson);
                     }
                 }
             } else {
@@ -326,7 +327,7 @@ class SurveyReports
                             if ($isRating) {
                                 $overallRatings[] = $ratings[] = (int)$answer->response;
                             } else if (!$question->summarize_rating) {
-                                $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                                $responses[] = self::buildAnswer($answer, $includePerson);
                             }
                         }
                     }
@@ -433,21 +434,22 @@ class SurveyReports
 
         $isAlpha = $survey->type == Survey::ALPHA;
         foreach ($trainers as $trainer) {
-            $report = [
-                'trainer_id' => $trainer->id,
-                'callsign' => $trainer->callsign,
-                'photo_url' => $trainer->person_photo->image_url ?? null
-            ];
-
             $answers = $answersByTrainerId->get($trainer->id);
             if (!$answers) {
                 continue;
             }
+
+            $report = [
+                'trainer_id' => $trainer->id,
+                'callsign' => $trainer->callsign,
+                'photo_url' => $trainer->approvedPhoto(),
+            ];
+
             $answersForTrainerGroupByQuestion = $answers->groupBy('survey_question_id');
 
             foreach ($questions as $question) {
                 $slotResponses = [];
-                $isRating = ($question->type == SurveyQuestion::RATING) || $question->summarize_rating;
+                $isRating = ($question->type == SurveyQuestion::TYPE_RATING) || $question->summarize_rating;
                 $overallRatings = [];
                 $answersForQuestion = $answersForTrainerGroupByQuestion->get($question->id);
 
@@ -464,7 +466,7 @@ class SurveyReports
                         } else if ($question->summarize_rating) {
                             continue;
                         }
-                        $alphaResponses[] = self::buildAnswer($answer, $question, $includePerson);
+                        $alphaResponses[] = self::buildAnswer($answer, $includePerson);
                     }
                 } else {
                     $answersGroupBySlot = $answersForQuestion->groupBy('slot_id');
@@ -482,7 +484,7 @@ class SurveyReports
                                 continue;
                             }
 
-                            $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                            $responses[] = self::buildAnswer($answer, $includePerson);
                         }
 
                         $slotResponse = [
@@ -575,12 +577,12 @@ class SurveyReports
 
             $ratings = [];
             $responses = [];
-            $isRating = ($question->type == SurveyQuestion::RATING);
+            $isRating = ($question->type == SurveyQuestion::TYPE_RATING);
             foreach ($answers as $answer) {
                 if ($isRating) {
                     $ratings[] = (int)$answer->response;
                 } else {
-                    $responses[] = self::buildAnswer($answer, $question, $includePerson);
+                    $responses[] = self::buildAnswer($answer, $includePerson);
                 }
             }
 
@@ -653,19 +655,18 @@ class SurveyReports
      * Build the answer with the respondent's name (optional).
      *
      * Answers imported into the Clubhouse for surveys 2019 and earlier, there may not
-     * an actually person id, the callsign field on the survey form was not validated.
+     * an actual person id, the callsign field on the survey form was not validated.
      * In the case where person_id is 0, it means the callsign could not be associated with
      * a Clubhouse account.
      *
      * @param SurveyAnswer $answer
-     * @param SurveyQuestion $question
      * @param bool $includePerson
      * @return array
      */
 
-    public static function buildAnswer(SurveyAnswer $answer, SurveyQuestion $question, bool $includePerson): array
+    public static function buildAnswer(SurveyAnswer $answer, bool $includePerson): array
     {
-        if ($includePerson || $answer->can_share_name) {
+        if ($includePerson) {
             if ($answer->person_id && $answer->person) {
                 $person = [
                     'id' => $answer->person->id,
@@ -709,7 +710,7 @@ class SurveyReports
                 'title' => $survey->title,
                 'position_id' => $survey->position_id,
                 'position_title' => $survey->position->title,
-                'reports' => SurveyReports::buildSurveyReports($survey, $trainerId)
+                'reports' => SurveyReports::buildSurveyReports($survey, $trainerId, false)
             ];
         }
 
@@ -738,8 +739,8 @@ class SurveyReports
             $trainers[] = [
                 'id' => $trainer->trainer_id,
                 'callsign' => $trainer->callsign,
-                'photo_url' => $trainer->trainer->person_photo->image_url ?? null,
-                'report' => SurveyReports::buildSurveyReports($survey, $trainer->trainer_id)[0] ?? [],
+                'photo_url' => $trainer->trainer->approvedPhoto(),
+                'report' => SurveyReports::buildSurveyReports($survey, $trainer->trainer_id, true)[0] ?? [],
             ];
         }
 

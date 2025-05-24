@@ -227,16 +227,16 @@ class SurveyController extends ApiController
         $type = $params['type'];
         switch ($type) {
             case Survey::ALPHA:
-                list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user->id);
+                list ($survey, $trainers) = SurveyReports::retrieveAlphaSurvey($params['year'], $this->user);
                 return response()->json(['survey' => $survey, 'trainers' => $trainers]);
 
             case Survey::MENTOR_FOR_MENTEES:
             case Survey::MENTEES_FOR_MENTOR:
-                [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $this->user->id);
+                [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $this->user);
                 break;
 
             default:
-                [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $this->user->id);
+                [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $this->user);
                 break;
         }
 
@@ -282,16 +282,17 @@ class SurveyController extends ApiController
         $type = $params['type'];
 
         $year = $params['year'] ?? null;
-        $personId = $this->user->id;
+        $user = $this->user;
+        $personId = $user->id;
 
         if ($type == Survey::ALPHA) {
-            [$survey, $trainers] = SurveyReports::retrieveAlphaSurvey($year, $personId);
+            [$survey, $trainers] = SurveyReports::retrieveAlphaSurvey($year, $user);
             $slotId = null;
         } else if ($type == Survey::MENTOR_FOR_MENTEES || $type == Survey::MENTEES_FOR_MENTOR) {
-            [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $personId);
+            [$slot, $survey, $trainers] = SurveyReports::retrieveMentoringSurvey($type, $params['slot_id'], $user);
             $slotId = $slot->id;
         } else {
-            [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $personId);
+            [$slot, $survey, $trainers] = SurveyReports::retrieveSlotSurveyTrainers($type, $params['slot_id'], $user);
             $slotId = $slot->id;
         }
 
@@ -422,7 +423,7 @@ class SurveyController extends ApiController
     public function report(Survey $survey): JsonResponse
     {
         $this->authorize('report', $survey);
-        return response()->json(['reports' => SurveyReports::buildSurveyReports($survey)]);
+        return response()->json(['reports' => SurveyReports::buildSurveyReports($survey, null, true)]);
     }
 
 }

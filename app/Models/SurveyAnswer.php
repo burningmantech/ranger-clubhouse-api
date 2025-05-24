@@ -76,7 +76,7 @@ class SurveyAnswer extends ApiModel
     }
 
     /**
-     * Delete all answer from a person for a slot
+     * Delete all answers from a person for a slot
      *
      * @param int $surveyId
      * @param int $personId
@@ -94,7 +94,7 @@ class SurveyAnswer extends ApiModel
 
     /**
      * Is a response required for an Alpha survey? (there's only one to answer per year, don't need to worry about
-     * multiple surveys of the same time as the Trainer surveys where multiple sessions are possible)
+     * multiple surveys at the same time as the Trainer surveys where multiple sessions are possible)
      *
      * @param int $personId
      * @param int $year
@@ -112,7 +112,7 @@ class SurveyAnswer extends ApiModel
     }
 
     /**
-     * Delete all survey answer for a person
+     * Delete all survey answers for a person
      *
      * @param int $surveyId
      * @param int $personId
