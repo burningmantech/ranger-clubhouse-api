@@ -16,6 +16,8 @@ class AwardPolicy
         if ($user->hasRole(Role::ADMIN)) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -102,6 +104,22 @@ class AwardPolicy
     public function bulkGrantAward(Person $user): bool
     {
         return false;
+    }
+
+    /**
+     * Determine if the user can run the service years award report
+     *
+     * @param Person $user
+     * @return bool
+     */
+
+    public function serviceYearsReport(Person $user): bool
+    {
+        if ($user->hasRole([Role::QUARTERMASTER, Role::ADMIN])) {
+            return true;
+        }
+
+        return null;
     }
 
 }
