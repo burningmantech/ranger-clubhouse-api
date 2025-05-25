@@ -20,14 +20,14 @@ class TimesheetByCallsignReport
 
     public static function execute(int $year): array
     {
-        $now = now();
         $user = Auth::user();
 
         $sql = Timesheet::whereYear('on_duty', $year)
-            ->select([
-                '*',
-                DB::raw("(UNIX_TIMESTAMP(IFNULL(off_duty, '$now')) - UNIX_TIMESTAMP(on_duty)) AS duration"),
-            ]);
+            ->with([
+                'person:id,callsign,status',
+                'position:id,title,type,count_hours,active',
+                'slot'
+            ])->orderBy('on_duty');
 
         if (!$user->isAdmin()) {
             // Need to filter based on what cadre / delegations (not teams) the person belongs to
@@ -52,11 +52,7 @@ class TimesheetByCallsignReport
             $sql->whereIn('position_id', $positionIds);
         }
 
-        $rows = $sql->with([
-            'person:id,callsign,status',
-            'position:id,title,type,count_hours,active'
-        ])->orderBy('on_duty')
-            ->get();
+        $rows = $sql->get();
 
         if (!$rows->isEmpty()) {
             PositionCredit::warmYearCache($year, array_unique($rows->pluck('position_id')->toArray()));
@@ -74,11 +70,23 @@ class TimesheetByCallsignReport
 
                 'total_credits' => $group->pluck('credits')->sum(),
                 'total_duration' => $group->pluck('duration')->sum(),
-                'total_appreciation_duration' => $group->filter(function ($t) {
-                    return $t->position ? $t->position->count_hours : false;
-                })->pluck('duration')->sum(),
+                'total_appreciation_duration' => $group->filter(fn($t) => $t->position?->count_hours ?? false)
+                    ->pluck('duration')->sum(),
 
                 'timesheet' => $group->map(function ($t) {
+                    if ($t->slot_id && $t->slot) {
+                        $assoc = $t->slot;
+                        $slot = [
+                            'id' => $t->slot_id,
+                            'description' => $assoc->description,
+                            'begins' => (string)$assoc->begins,
+                            'duration' => $assoc->duration,
+                            'timezone' => $assoc->timezone,
+                            'timezone_abbr' => $assoc->timezone_abbr,
+                        ];
+                    } else {
+                        $slot = null;
+                    }
                     return [
                         'id' => $t->id,
                         'position_id' => $t->position_id,
@@ -86,6 +94,7 @@ class TimesheetByCallsignReport
                         'off_duty' => (string)$t->off_duty,
                         'duration' => $t->duration,
                         'credits' => $t->credits,
+                        'slot' => $slot
                     ];
                 })->values()
             ];

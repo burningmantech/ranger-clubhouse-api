@@ -4,7 +4,6 @@ namespace App\Lib\Reports;
 
 use App\Models\PersonTeam;
 use App\Models\PositionCredit;
-use App\Models\Team;
 use App\Models\TeamManager;
 use App\Models\Timesheet;
 use Illuminate\Support\Facades\Auth;
@@ -24,12 +23,8 @@ class TimesheetByPositionReport
 
     public static function execute(int $year, bool $includeEmail = false): array
     {
-        $now = now();
         $sql = Timesheet::whereYear('on_duty', $year)
-            ->select(
-                '*',
-                DB::raw("(UNIX_TIMESTAMP(IFNULL(off_duty, '$now')) - UNIX_TIMESTAMP(on_duty)) AS duration")
-            )->with(['person:id,callsign,status,email', 'position:id,title,active'])
+            ->with(['person:id,callsign,status,email', 'position:id,title,active', 'slot'])
             ->orderBy('on_duty');
 
         $user = Auth::user();
@@ -82,6 +77,20 @@ class TimesheetByPositionReport
                         $people[$r->person_id]['email'] ??= $person->email ?? '';
                     }
 
+                    if ($r->slot_id && $r->slot) {
+                        $assoc = $r->slot;
+                        $slot = [
+                            'id' => $r->slot_id,
+                            'description' => $assoc->description,
+                            'begins' =>(string) $assoc->begins,
+                            'duration' => $assoc->duration,
+                            'timezone' => $assoc->timezone,
+                            'timezone_abbr' => $assoc->timezone_abbr,
+                        ];
+                    } else {
+                        $slot = null;
+                    }
+
                     return [
                         'id' => $r->id,
                         'on_duty' => (string)$r->on_duty,
@@ -89,6 +98,7 @@ class TimesheetByPositionReport
                         'duration' => $r->duration,
                         'person_id' => $r->person_id,
                         'credits' => $r->credits,
+                        'slot' => $slot,
                     ];
                 })
             ];
