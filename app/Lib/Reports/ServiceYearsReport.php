@@ -1,20 +1,15 @@
 <?php
 
-
 namespace App\Lib\Reports;
 
-
 use App\Models\Person;
-use App\Models\Position;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class ServiceYearsReport
 {
     /**
      * Build a Service Years report
      *
-     * @param bool $showAll false if only report on active status rangers, otherwise everyone.
      * @return array|Collection
      */
 
