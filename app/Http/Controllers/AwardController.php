@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\BulkGrantAward;
+use App\Lib\Reports\ServiceYearsReport;
 use App\Models\Award;
 use App\Models\PersonAward;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -131,4 +132,20 @@ class AwardController extends ApiController
             'people' => BulkGrantAward::grantServiceYearsAward($params['award_id'], $params['service_years'], $params['commit'] ?? false)
         ]);
     }
+
+    /**
+     * Service Years report
+     *
+     * @return JsonResponse
+     * throws AuthorizationException
+     */
+
+     public function serviceYearsReport(): JsonResponse
+     {
+        $this->authorize('serviceYearsReport', [Award::class]);
+
+        return response()->json([
+            'serviceYears' => ServiceYearsReport::execute()
+        ]);
+     }
 }

@@ -157,6 +157,7 @@ Route::middleware('api')->group(function () {
 
     Route::post('award/bulk-grant-award', [AwardController::class, 'bulkGrantAward']);
     Route::post('award/bulk-grant-service-years-award', [AwardController::class, 'bulkGrantServiceYearsAward']);
+    Route::get('award/service-years', [AwardController::class, 'serviceYearsReport']);
     Route::resource('award', AwardController::class);
 
     Route::resource('clubhouse1-log', Clubhouse1LogController::class)->only('index');
