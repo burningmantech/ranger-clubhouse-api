@@ -152,12 +152,28 @@ class TimesheetLog extends ApiModel
             // New 2025 blocker format
             return $data;
         } else if ($forced) {
-            $positionId = $forced->position_id ?? null;
-            if ($positionId) {
-                $forced->position_title = Position::retrieveTitle($positionId);
+            // Rewrite to the new blocker format
+            // Old blocker format -- convert to new.
+            $forced = $data->forced;
+            $reason = Timesheet::OLD_BLOCKERS[$forced->reason ?? 'unknown'] ?? 'unknown';
+            $blocker = [
+                'blocker' => $reason,
+            ];
+
+            if ($reason == Timesheet::BLOCKED_NO_BURN_PERIMETER_EXP) {
+                $blocker['within_years'] = 5;
             }
 
-            $forced->message = Timesheet::OLD_UNQUALIFIED_MESSAGES[$forced->reason] ?? "Unknown reason [{$forced->reason}]";
+            $positionId = $forced['position_id'] ?? null;
+            if ($positionId) {
+                $blocker['position'] = [
+                    'id' => $positionId,
+                    'title' => Position::retrieveTitle($positionId)
+                ];
+            }
+
+            $data->forced = true;
+            $data->blockers = [$blocker];
         }
 
         return $data;

@@ -68,11 +68,11 @@ class Timesheet extends ApiModel
 
 
     // Old blockers -- retained for pre-2025 Timesheet Audit Log
-    const array OLD_UNQUALIFIED_MESSAGES = [
-        'unsigned-sandman-affidavit' => 'Sandman Affidavit not signed',
-        'no-burn-perimeter-exp' => 'No Burn Perimeter, nor Sandman, shift has been worked within the last 5 years',
-        'untrained' => 'Training not completed.',
-        'is-retired' => 'Person is retired and and must complete a Cheetah Cub shift first before being allowed to being allowed to check into a non-training shift.',
+    const array OLD_BLOCKERS = [
+        'unsigned-sandman-affidavit' => self::BLOCKED_UNSIGNED_SANDMAN_AFFIDAVIT,
+        'no-burn-perimeter-exp' => self::BLOCKED_NO_BURN_PERIMETER_EXP,
+        'untrained' => self::BLOCKED_NOT_TRAINED,
+        'is-retired' => self::BLOCKED_IS_RETIRED,
     ];
 
     const array EXCLUDE_POSITIONS_FOR_YEARS = [

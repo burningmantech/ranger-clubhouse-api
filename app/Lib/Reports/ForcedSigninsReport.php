@@ -40,18 +40,26 @@ class ForcedSigninsReport
                     // New blocker format
                     $blockers = $data['blockers'];
                 } else {
-                    // Old blocker format
+                    // Old blocker format -- convert to new.
                     $forced = $data['forced'];
                     $reason = $forced['reason'] ?? 'unknown';
-                    $blockers = Timesheet::OLD_UNQUALIFIED_MESSAGES[$reason] ?? $reason;
+                    $blocker = [
+                        'blocker' => Timesheet::OLD_BLOCKERS[$reason] ?? 'unknown',
+                    ];
+
+                    if ($reason == Timesheet::BLOCKED_NO_BURN_PERIMETER_EXP) {
+                        $blocker['within_years'] = 5;
+                    }
+
                     $positionId = $forced['position_id'] ?? null;
                     if ($positionId) {
-                        $untrained = Position::find($positionId);
-                        if ($untrained) {
-                            $blockers .= " ({$untrained->title})";
-                        }
-
+                        $blocker['position'] = [
+                            'id' => $positionId,
+                            'title' => Position::retrieveTitle($positionId)
+                        ];
                     }
+
+                    $blockers = [$blocker];
                 }
             }
 
