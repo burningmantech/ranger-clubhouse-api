@@ -11,22 +11,22 @@ use Illuminate\Support\Facades\DB;
 
 class PersonSearch
 {
-    const FIELD_CALLSIGN = 'callsign';
-    const FIELD_EMAIL = 'email';
-    const FIELD_OLD_EMAIL = 'old-email';
-    const FIELD_FKA = 'fka';
-    const FIELD_ID = 'id';
-    const FIELD_NAME = 'name';
-    const FIELD_LAST_NAME = 'last';
+    const string FIELD_CALLSIGN = 'callsign';
+    const string FIELD_EMAIL = 'email';
+    const string FIELD_OLD_EMAIL = 'old-email';
+    const string FIELD_FKA = 'fka';
+    const string FIELD_ID = 'id';
+    const string FIELD_NAME = 'name';
+    const string FIELD_LAST_NAME = 'last';
 
     /*
      * Pseudo status - find any one who is signed up for a Cheetah Cub shift. Useful for when a HQ Window Worker
      * is handling a retired Ranger returning back.
      */
 
-    const CHEETAH_CUB_STATUS = 'cheetahcub';
+    const string CHEETAH_CUB_STATUS = 'cheetahcub';
 
-    const BASE_COLUMNS = [
+    const array BASE_COLUMNS = [
         'person.id',
         'person.callsign',
         'person.status',
@@ -35,7 +35,7 @@ class PersonSearch
         'person.preferred_name',
     ];
 
-    const STATUS_GROUPS = [
+    const array STATUS_GROUPS = [
         [
             'title' => 'Active/Current',
             'statuses' => [

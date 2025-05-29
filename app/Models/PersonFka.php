@@ -17,7 +17,8 @@ class PersonFka extends ApiModel
         'fka'
     ];
 
-    const string IRRELEVANT_REGEXP = '/\d{2,4}[B]?(\(NR\))?$/';
+    // Don't search on past prospective or auditor callsign formats.
+    const string IRRELEVANT_REGEXP = '/(\S\d{2,4}|\d{2,4}B|\(NR\))$/';
 
     public $rules = [
         'fka' => 'required|string|max:255',
@@ -66,7 +67,7 @@ class PersonFka extends ApiModel
      * Update the FKA callsign list.
      */
 
-    public static function addFkaToPerson(int $personId, ?string $oldCallsign): void
+    public static function addFkaToPerson(int $personId, ?string $oldCallsign, ?bool $irrelevant): void
     {
         if (empty($oldCallsign)) {
             return;
@@ -80,6 +81,11 @@ class PersonFka extends ApiModel
         $row = new PersonFka;
         $row->fka = $oldCallsign;
         $row->person_id = $personId;
+        if ($irrelevant !== null) {
+            $row->is_irrelevant = $irrelevant;
+        } else {
+            $row->is_irrelevant = (bool)preg_match(self::IRRELEVANT_REGEXP, $oldCallsign);
+        }
         $row->saveWithoutValidation();
     }
 
@@ -98,7 +104,6 @@ class PersonFka extends ApiModel
 
         $this->attributes['fka'] = $value;
         $this->fka_normalized = Person::normalizeCallsign($value);
-        $this->is_irrelevant = (bool)preg_match(self::IRRELEVANT_REGEXP, $value);
         $this->attributes['fka_soundex'] = metaphone(Person::spellOutNumbers($this->fka_normalized));
     }
 
