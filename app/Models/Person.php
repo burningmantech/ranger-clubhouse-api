@@ -539,7 +539,27 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             // Update the callsign FKA if the callsign did actually change.
             $callsign = $model->getChangedValues()['callsign'] ?? null;
             if ($callsign) {
-                PersonFka::addFkaToPerson($model->id, $callsign[0]);
+                $status = $model->getChangedValues()['status'] ?? null;
+
+                $irrelevant = null;
+                if ($status) {
+                    // Determine if the old callsign is to be searchable
+                    $oldStatus = $status[0];
+                    $newStatus = $status[1];
+
+                    if ($oldStatus == Person::AUDITOR) {
+                        // Don't search on past auditor callsigns.
+                        $irrelevant = true;
+                    } else if (in_array($oldStatus, [Person::PROSPECTIVE, Person::ALPHA, Person::BONKED]) && $newStatus == Person::PAST_PROSPECTIVE) {
+                        // Keep the PNV callsign searchable
+                        $irrelevant = false;
+                    }
+                } else if (in_array($model->status,Person::ACTIVE_STATUSES)) {
+                    // Looks like a callsign update -- keep it searchable
+                    $irrelevant = false;
+                } // else -- let PersonFka determine if the cold callsign will be searchable
+
+                PersonFka::addFkaToPerson($model->id, $callsign[0], $irrelevant);
             }
         });
 
@@ -1209,7 +1229,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      *
      * @return Attribute
      */
-    public function hasBpguid() : Attribute
+    public function hasBpguid(): Attribute
     {
         return Attribute::make(
             get: fn() => !empty($this->bpguid),
