@@ -148,13 +148,16 @@ class TimesheetLog extends ApiModel
         }
 
         $forced = $data->forced ?? null;
-        if ($forced) {
+        if ($forced === true) {
+            // New 2025 blocker format
+            return $data;
+        } else if ($forced) {
             $positionId = $forced->position_id ?? null;
             if ($positionId) {
                 $forced->position_title = Position::retrieveTitle($positionId);
             }
 
-            $forced->message = Position::UNQUALIFIED_MESSAGES[$forced->reason] ?? "Unknown reason [{$forced->reason}]";
+            $forced->message = Timesheet::OLD_UNQUALIFIED_MESSAGES[$forced->reason] ?? "Unknown reason [{$forced->reason}]";
         }
 
         return $data;

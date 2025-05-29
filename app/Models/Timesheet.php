@@ -66,6 +66,15 @@ class Timesheet extends ApiModel
     const string BLOCKED_TOO_LATE = 'too-late'; // Person is trying to sign in to a shift too late.
     const string BLOCKED_UNSIGNED_SANDMAN_AFFIDAVIT = 'unsigned-sandman-affidavit'; // The Sandman Affidavit has not been signed.
 
+
+    // Old blockers -- retained for pre-2025 Timesheet Audit Log
+    const array OLD_UNQUALIFIED_MESSAGES = [
+        'unsigned-sandman-affidavit' => 'Sandman Affidavit not signed',
+        'no-burn-perimeter-exp' => 'No Burn Perimeter, nor Sandman, shift has been worked within the last 5 years',
+        'untrained' => 'Training not completed.',
+        'is-retired' => 'Person is retired and and must complete a Cheetah Cub shift first before being allowed to being allowed to check into a non-training shift.',
+    ];
+
     const array EXCLUDE_POSITIONS_FOR_YEARS = [
         Position::ALPHA,
         Position::TRAINING,
