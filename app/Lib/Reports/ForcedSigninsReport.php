@@ -29,20 +29,37 @@ class ForcedSigninsReport
         foreach ($rows as $row) {
             $log = $tsLogs->get($row->id);
             $untrained = null;
+            $positionId = null;
+
             if (!$log) {
                 $blockers = 'unknown';
             } else {
                 $log = $log[0];
                 $data = $log->data;
-                $forced = $data['forced'];
-                $reason = $forced['reason'] ?? 'unknown';
-                $blockers = Position::UNQUALIFIED_MESSAGES[$reason] ?? $reason;
-                $positionId = $forced['position_id'] ?? null;
-                if ($positionId) {
-                    $untrained = Position::find($positionId);
-                    if ($untrained) {
-                        $blockers .= " ({$untrained->title})";
+                if (is_bool($data['forced'])) {
+                    // New blocker format
+                    $blockers = $data['blockers'];
+                } else {
+                    // Old blocker format -- convert to new.
+                    $forced = $data['forced'];
+                    $reason = $forced['reason'] ?? 'unknown';
+                    $blocker = [
+                        'blocker' => Timesheet::OLD_BLOCKERS[$reason] ?? 'unknown',
+                    ];
+
+                    if ($reason == Timesheet::BLOCKED_NO_BURN_PERIMETER_EXP) {
+                        $blocker['within_years'] = 5;
                     }
+
+                    $positionId = $forced['position_id'] ?? null;
+                    if ($positionId) {
+                        $blocker['position'] = [
+                            'id' => $positionId,
+                            'title' => Position::retrieveTitle($positionId)
+                        ];
+                    }
+
+                    $blockers = [$blocker];
                 }
             }
 
@@ -61,14 +78,7 @@ class ForcedSigninsReport
             $results[] = $result;
         }
 
-        usort($results, function ($a, $b) {
-            $cmp = strcasecmp($a['callsign'], $b['callsign']);
-            if ($cmp) {
-                return $cmp;
-            }
-
-            return strcmp($a['on_duty'], $b['on_duty']);
-        });
+        usort($results, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']) ?: strcmp($a['on_duty'], $b['on_duty']));
         return ['entries' => $results];
     }
 }
