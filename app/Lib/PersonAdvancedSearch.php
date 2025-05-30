@@ -64,7 +64,7 @@ class PersonAdvancedSearch
             $personStatus = DB::table('person_status')
                 ->distinct('person_status.person_id')
                 ->whereIn('new_status', $statuses)
-                ->whereYear('created_at', $statusYear)
+                ->whereYear('person_status.created_at', $statusYear)
                 ->get();
 
             if ($personStatus->isEmpty()) {
@@ -109,9 +109,9 @@ class PersonAdvancedSearch
         if ($yearCreated) {
             if ($yearCreated == 1) {
                 // Special-case, some accounts created prior to 2008 do not have a create date.
-                $sql->whereNull('created_at');
+                $sql->whereNull('person.created_at');
             } else {
-                $sql->whereYear('created_at', $yearCreated);
+                $sql->whereYear('person.created_at', $yearCreated);
             }
         }
 
