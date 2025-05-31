@@ -7,7 +7,6 @@ use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
 use App\Models\PersonMentor;
 use App\Models\PersonPhoto;
-use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\PersonStatus;
 use App\Models\Position;
@@ -24,7 +23,8 @@ class Alpha
         'person.person_photo',
         'person.tshirt',
         'person.tshirt_secondary',
-        'person.long_sleeve'
+        'person.long_sleeve',
+        'person.person_fka',
     ];
 
     /**
@@ -91,8 +91,14 @@ class Alpha
         $potentialIds = $sql->get()->groupBy('person_id')->keys();
 
         $sql = Person::whereIntegerInRaw('id', $potentialIds)
-            ->with('person_photo')
-            ->orderBy('callsign');
+            ->with([
+                'person_photo',
+                'tshirt',
+                'tshirt_secondary',
+                'long_sleeve',
+                'person_fka'
+            ])->orderBy('callsign');
+
         if ($haveTraining) {
             $sql->whereRaw("EXISTS
                 (SELECT 1 FROM person_slot JOIN slot ON person_slot.slot_id=slot.id
@@ -213,7 +219,7 @@ class Alpha
         $photoApproved = $person->person_photo && $person->person_photo->status == PersonPhoto::APPROVED;
 
         if (!$allHistories) {
-            $allHistories = PersonMentor::retrieveBulkMentorHistory([ $personId ]);
+            $allHistories = PersonMentor::retrieveBulkMentorHistory([$personId]);
         }
 
         $potential = (object)[
@@ -317,15 +323,12 @@ class Alpha
 
     public static function retrieveAllAlphas(): array
     {
-        $rows = PersonPosition::where('position_id', Position::ALPHA)
-            ->with(self::ALPHA_RELATIONSHIPS)
-            ->get()
-            ->filter(fn($r) => $r->person != null)
-            ->sortBy('person.callsign', SORT_NATURAL | SORT_FLAG_CASE)
-            ->pluck('person')
-            ->values();
+        $alphas = Person::where('status', Person::ALPHA)
+            ->with('person_photo')
+            ->orderBy('callsign')
+            ->get();
 
-        return self::buildAlphaInformation($rows, current_year());
+        return self::buildAlphaInformation($alphas, current_year());
     }
 
     /**
@@ -404,5 +407,98 @@ class Alpha
             'last_name' => $p->last_name,
             'mentor_status' => $p->mentor_status,
         ])->values();
+    }
+
+    /**
+     * Create or update the mentor assignments for the given Alphas.
+     *
+     * @param int $year
+     * @param array $alphas
+     * @return array
+     */
+
+    public static function mentorAssignments(int $year, array $alphas): array
+    {
+        $ids = array_column($alphas, 'person_id');
+
+        $people = Person::findOrFail($ids)->keyBy('id');
+        $allMentors = PersonMentor::whereIntegerInRaw('person_id', $ids)
+            ->where('mentor_year', $year)
+            ->get()
+            ->groupBy('person_id');
+
+        $results = [];
+        foreach ($alphas as $alpha) {
+            $personId = $alpha['person_id'];
+            $person = $people[$personId];
+            $status = $alpha['status'];
+            $desiredMentorIds = $alpha['mentor_ids'];
+
+            if (isset($allMentors[$personId])) {
+                $currentMentors = $allMentors[$personId]->pluck('mentor_id')->toArray();
+            } else {
+                $currentMentors = [];
+            }
+
+            $mentorCount = 0;
+            foreach ($desiredMentorIds as $mentorId) {
+                if (in_array($mentorId, $currentMentors)) {
+                    $mentorCount++;
+                }
+            }
+
+            $mentors = [];
+            $mentorIds = [];
+            if ($mentorCount == count($desiredMentorIds) && $mentorCount == count($currentMentors)) {
+                // Simple status update
+                $rows = PersonMentor::where('person_id', $personId)
+                    ->where('mentor_year', $year)
+                    ->get();
+
+                foreach ($rows as $row) {
+                    $row->status = $status;
+                    $row->auditReason = 'mentor status change';
+                    $row->save();
+                }
+
+                foreach ($allMentors[$personId] as $mentor) {
+                    $mentorIds[] = $mentor->mentor_id;
+                    $mentors[] = [
+                        'person_mentor_id' => $mentor->id,
+                        'mentor_id' => $mentor->mentor_id
+                    ];
+                }
+            } else {
+                // Rebuild the mentors
+                PersonMentor::where('person_id', $personId)->where('mentor_year', $year)->delete();
+                foreach ($alpha['mentor_ids'] as $mentorId) {
+                    $mentor = PersonMentor::create([
+                        'person_id' => $person->id,
+                        'mentor_id' => $mentorId,
+                        'status' => $status,
+                        'mentor_year' => $year
+                    ]);
+                    $mentorIds[] = $mentor->mentor_id;
+                    $mentors[] = [
+                        'person_mentor_id' => $mentor->id,
+                        'mentor_id' => $mentor->mentor_id
+                    ];
+                }
+            }
+
+            $callsigns = Person::select('id', 'callsign')
+                ->whereIntegerInRaw('id', $mentorIds)
+                ->get()
+                ->keyBy('id');
+            usort($mentors, fn($a, $b) => strcasecmp($callsigns[$a['mentor_id']]->callsign, $callsigns[$b['mentor_id']]->callsign));
+
+            $results[] = [
+                'person_id' => $person->id,
+                'mentors' => $mentors,
+                'status' => $status
+            ];
+        }
+
+        return $results;
     }
 }

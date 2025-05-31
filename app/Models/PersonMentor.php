@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class PersonMentor extends ApiModel
 {
     protected $table = 'person_mentor';
-    public bool $auditModel = true;
+    protected bool $auditModel = true;
 
     protected $fillable = [
         'person_id',

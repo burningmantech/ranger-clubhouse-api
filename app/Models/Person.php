@@ -1493,7 +1493,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function approvedPhoto(): ?PersonPhoto
     {
-        if (!$this->person_photo) {
+        if (!$this->person_photo_id) {
             // Null here means a photo was never submitted.
             return null;
         }
