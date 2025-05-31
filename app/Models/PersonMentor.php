@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 class PersonMentor extends ApiModel
 {
     protected $table = 'person_mentor';
+    public bool $auditModel = true;
 
     protected $fillable = [
         'person_id',
@@ -17,10 +18,10 @@ class PersonMentor extends ApiModel
         'notes'
     ];
 
-    const PASS = 'pass';
-    const BONK = 'bonk';
-    const SELF_BONK = 'self-bonk';
-    const PENDING = 'pending';
+    const string PASS = 'pass';
+    const string BONK = 'bonk';
+    const string SELF_BONK = 'self-bonk';
+    const string PENDING = 'pending';
 
     public function mentor(): BelongsTo
     {
@@ -34,7 +35,7 @@ class PersonMentor extends ApiModel
 
     public static function haveMentees($personId): bool
     {
-        return self::where('mentor_id', $personId)->limit(1)->exists();
+        return self::where('mentor_id', $personId)->exists();
     }
 
     /**
@@ -233,97 +234,9 @@ class PersonMentor extends ApiModel
             ->groupBy('person_id');
     }
 
-    /**
-     * Find all possible mentees for year
-     */
-
-    public static function findMenteesForYear($year, $includeEmail): array
-    {
-        $personColumns = 'person:id,callsign,first_name,last_name,status';
-        if ($includeEmail) {
-            $personColumns .= ',email';
-        }
-
-        $personGroups = PersonMentor::where('mentor_year', $year)
-            ->with([$personColumns, 'mentor:id,callsign'])
-            ->get()
-            ->groupBy('person_id');
-
-        $people = [];
-        foreach ($personGroups as $personId => $group) {
-            $first = $group[0];
-            if ($first->person == null) {
-                $first->person = (object)[
-                    'callsign' => "!Deleted #{$first->person_id}",
-                    'first_name' => 'n/a',
-                    'last_name' => 'n/a',
-                    'status' => 'deleted',
-                ];
-            }
-
-            $mentors = $group->map(fn($row) => [
-                'id' => $row->mentor->id,
-                'callsign' => $row->mentor->callsign,
-            ])->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
-
-
-            $person = [
-                'id' => $first->person_id,
-                'callsign' => $first->person->callsign,
-                'first_name' => $first->person->first_name,
-                'last_name' => $first->person->last_name,
-                'status' => $first->person->status,
-                'mentor_status' => $first->status,
-                'mentors' => $mentors
-            ];
-
-            if ($includeEmail) {
-                $person['email'] = $first->person->email;
-            }
-
-            $people[] = $person;
-        }
-
-        usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
-
-        return $people;
-    }
 
     /**
-     * Find the year a person passed
-     *
-     * @param int $personId
-     * @return int|null
-     */
-
-    public static function retrieveYearPassed(int $personId): ?int
-    {
-        $row = DB::table('person_mentor')
-            ->where('person_id', $personId)
-            ->where('status', self::PASS)
-            ->orderBy('mentor_year', 'desc')
-            ->first();
-
-        return $row?->mentor_year;
-    }
-
-    /**
-     * Did the person pass in a given year?
-     *
-     * @param int $personId
-     * @param int $year
-     * @return bool
-     */
-
-    public static function didPersonPass(int $personId, int $year): bool
-    {
-        return DB::table('person_mentor')
-            ->where(['person_id' => $personId, 'status' => self::PASS, 'mentor_year' => $year])
-            ->exists();
-    }
-
-    /**
-     *  Bulk retrieve the entire mentor history upto and including the given year
+     *  Bulk retrieve the entire mentor history up to and including the given year
      *
      * @param array $peopleIds people to find their mentor history
      * @param integer $year mentor years to find up to and including
@@ -356,7 +269,7 @@ class PersonMentor extends ApiModel
                 }
                 $mentorsByYear[$year]['mentors'][] = [
                     'id' => $mentor->mentor_id,
-                    'callsign' => $pm ? $pm->callsign : "Deleted #{$mentor->mentor_id}"
+                    'callsign' => $pm?->callsign ?? "Deleted #{$mentor->mentor_id}"
                 ];
             }
 

@@ -133,13 +133,14 @@ class MentorController extends ApiController
                 Rule::in([PersonMentor::PASS, PersonMentor::PENDING, PersonMentor::BONK, PersonMentor::SELF_BONK])
             ],
             'assignments.*.mentor_ids' => 'present|array',
-            'assignments.*.mentor_ids.*' => 'present|integer|exists:person,id'
+            'assignments.*.mentor_ids.*' => 'present|integer|exists:person,id',
+            'year' => 'sometimes|integer',
         ]);
 
         $alphas = $params['assignments'];
 
         $ids = array_column($alphas, 'person_id');
-        $year = current_year();
+        $year = $params['year'] ?? current_year();
 
         $people = Person::findOrFail($ids)->keyBy('id');
         $allMentors = PersonMentor::whereIntegerInRaw('person_id', $ids)->where('mentor_year', $year)->get()->groupBy('person_id');
