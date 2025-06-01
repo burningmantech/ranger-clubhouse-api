@@ -195,7 +195,8 @@ class MentorControllerTest extends TestCase
                     'status' => PersonMentor::BONK,
                     'mentor_ids' => [ $mentor1->id, $mentor2->id ]
                 ]
-            ]
+            ],
+            'year' => $year
         ]);
         $response->assertStatus(200);
 
