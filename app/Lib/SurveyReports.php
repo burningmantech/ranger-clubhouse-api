@@ -47,7 +47,7 @@ class SurveyReports
                     'callsign' => $p->callsign,
                     'position_id' => $t->trainer_slot->position_id,
                     'position_title' => $t->trainer_slot->position->title ?? "Position #{$t->trainer_slot->position_id}",
-                    'photo_url' => $p->approvedPhoto(),
+                    'photo_url' => $p->approvedProfileUrl(),
                 ];
             })->sortBy('callsign')
             ->values();
@@ -100,7 +100,7 @@ class SurveyReports
                 return (object)[
                     'id' => $p->id,
                     'callsign' => $p->callsign,
-                    'photo_url' => $p->approvedPhoto(),
+                    'photo_url' => $p->approvedProfileUrl(),
                 ];
             })->sortBy('callsign')
             ->values();
@@ -133,7 +133,7 @@ class SurveyReports
                     'callsign' => $p->callsign,
                     'position_id' => $t->position_id,
                     'position_title' => $t->position->title ?? "Position #{$t->position_id}",
-                    'photo_url' => $p->approvedPhoto(),
+                    'photo_url' => $p->approvedProfileUrl(),
                 ];
             })->sortBy('callsign')->values();
 
@@ -442,7 +442,7 @@ class SurveyReports
             $report = [
                 'trainer_id' => $trainer->id,
                 'callsign' => $trainer->callsign,
-                'photo_url' => $trainer->approvedPhoto(),
+                'photo_url' => $trainer->approvedProfileUrl(),
             ];
 
             $answersForTrainerGroupByQuestion = $answers->groupBy('survey_question_id');
@@ -739,7 +739,7 @@ class SurveyReports
             $trainers[] = [
                 'id' => $trainer->trainer_id,
                 'callsign' => $trainer->callsign,
-                'photo_url' => $trainer->trainer->approvedPhoto(),
+                'photo_url' => $trainer->trainer->approvedProfileUrl(),
                 'report' => SurveyReports::buildSurveyReports($survey, $trainer->trainer_id, true)[0] ?? [],
             ];
         }
