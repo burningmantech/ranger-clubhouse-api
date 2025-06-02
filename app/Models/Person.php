@@ -1507,6 +1507,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         return PersonPhoto::retrieveMostRecentApproved($this->id);
     }
 
+    public function approvedProfileUrl(): ?string
+    {
+        if ($this->person_photo?->isApproved()) {
+            return $this->person_photo->profile_url;
+        }
+
+        return PersonPhoto::retrieveMostRecentApproved($this->id)?->profile_url;
+    }
+
     public function hasApprovedPhoto(): bool
     {
         if (!$this->person_photo) {

@@ -53,7 +53,7 @@ class DirectoryReport
                 'members' => $team->members->map(fn($member): array => [
                     'id' => $member->id,
                     'callsign' => $member->callsign,
-                    'profile_url' => $member->person_photo?->profileUrlApproved(),
+                    'profile_url' => $member->approvedProfileUrl(),
                     'overseer_positions' => $overseerPositions
                         ->get($member->id)
                         ?->map(fn($position) => [

@@ -208,7 +208,7 @@ class PersonMentor extends ApiModel
                 $people[] = [
                     'id' => $mentor->mentor_id,
                     'callsign' => $mentor->mentor->callsign,
-                    'profile_url' => $mentor->mentor->person_photo?->profile_url,
+                    'profile_url' => $mentor->mentor->approvedProfileUrl(),
                     'person_mentor_id' => $mentor->id
                 ];
             }
