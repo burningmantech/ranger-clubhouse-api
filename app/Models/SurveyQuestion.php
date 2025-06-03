@@ -63,12 +63,17 @@ class SurveyQuestion extends ApiModel
         });
     }
 
-    public function survey() : BelongsTo
+    public function survey(): BelongsTo
     {
         return $this->belongsTo(Survey::class);
     }
 
-    public function survey_answers() : HasMany
+    public function survey_group(): BelongsTo
+    {
+        return $this->belongsTo(SurveyGroup::class);
+    }
+
+    public function survey_answers(): HasMany
     {
         return $this->hasMany(SurveyAnswer::class);
     }
@@ -76,8 +81,10 @@ class SurveyQuestion extends ApiModel
     public static function findAllForSurvey(int $surveyId): Collection
     {
         return self::where('survey_id', $surveyId)
-            ->orderBy('sort_index')
-            ->get();
+            ->with('survey_group:id,sort_index')
+            ->get()
+            ->sort(fn($a, $b) => $a->survey_group->sort_index - $b->survey_group->sort_index ?: $a->sort_index - $b->sort_index)
+            ->values();
     }
 
     public static function findAllForSurveyGroup(int $surveyGroup): Collection
