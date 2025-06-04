@@ -130,6 +130,7 @@ class AccessDocument extends ApiModel
     const string DELIVERY_POSTAL = 'postal';
     const string DELIVERY_EMAIL = 'email';
     const string DELIVERY_WILL_CALL = 'will_call';
+    const string DELIVERY_PRIORITY = 'priority';
 
     protected $fillable = [
         'access_any_time',
@@ -174,7 +175,7 @@ class AccessDocument extends ApiModel
     ];
 
     protected $attributes = [
-        'delivery_method' => 'none',
+        'delivery_method' => self::DELIVERY_NONE,
         'street1' => '',
         'street2' => '',
         'city' => '',
@@ -221,6 +222,13 @@ class AccessDocument extends ApiModel
 
                 case self::STAFF_CREDENTIAL:
                     $model->delivery_method = self::DELIVERY_WILL_CALL;
+                    break;
+
+                case self::GIFT:
+                case self::VEHICLE_PASS_GIFT:
+                    if ($model->status == self::QUALIFIED) {
+                        $model->delivery_method = self::DELIVERY_NONE;
+                    }
                     break;
 
                 case self::LSD:

@@ -49,6 +49,8 @@ class TicketingController extends ApiController
             'TAS_SubmitDate',
             'TAS_Ticket_FAQ',
             'TAS_VP_FAQ',
+            'TicketMailPriorityPrice',
+            'TicketMailStandardPrice',
             'TicketVendorEmail',
             'TicketVendorName',
             'TicketingPeriod',
@@ -84,6 +86,9 @@ class TicketingController extends ApiController
 
                 'spt_cost' => $settings['TAS_Special_Price_Ticket_Cost'],
                 'sp_vp_cost' => $settings['TAS_Special_Price_Vehicle_Pass_Cost'],
+
+                'mail_standard_price' => $settings['TicketMailStandardPrice'],
+                'mail_priority_price' => $settings['TicketMailPriorityPrice'],
 
                 'faqs' => [
                     'ticketing' => $settings['TAS_Ticket_FAQ'],
@@ -199,28 +204,34 @@ class TicketingController extends ApiController
             'special_document_id' => 'sometimes|integer|exists:access_document,id'
         ]);
 
-        $specialTicketId = $params['special_ticket_id'] ?? null;
+        $specialTicketId = $params['special_document_id'] ?? null;
         if ($specialTicketId) {
             $specialTicket = AccessDocument::findOrFail($specialTicketId);
             $this->authorize('deliverySpecialDocument', $specialTicket);
-            if ($specialTicket->isSpecialDocument()) {
+            if (!$specialTicket->isSpecialDocument()) {
                 throw new UnacceptableConditionException("Access document is not a Special Type document");
             }
-            if ($specialTicket->status != AccessDocument::QUALIFIED && $specialTicketId->status != AccessDocument::CLAIMED) {
+            if ($specialTicket->status != AccessDocument::QUALIFIED && $specialTicket->status != AccessDocument::CLAIMED) {
                 throw new UnacceptableConditionException("Access document is not qualified nor claimed.");
             }
+            $specialTicket->fill($params);
+            $specialTicket->auditReason = 'Delivery update';
+            $specialTicket->save();
             $tickets = [$specialTicket];
-            unset($params['special_document_id']);
         } else {
             $this->authorize('delivery', [AccessDocument::class, $person->id]);
             $tickets = AccessDocument::findAllAvailableDeliverablesForPerson($person->id);
+            foreach ($tickets as $ticket) {
+                if ($ticket->isSpecialDocument()) {
+                    // Don't touch special tickets -- that's handle above.
+                    continue;
+                }
+                $ticket->fill($params);
+                $ticket->auditReason = 'Delivery update';
+                $ticket->save();
+            }
         }
 
-        foreach ($tickets as $ticket) {
-            $ticket->fill($params);
-            $ticket->auditReason = 'Delivery update';
-            $ticket->save();
-        }
 
         return $this->success($tickets, null, 'access_document');
     }
