@@ -453,6 +453,20 @@ class BulkUploader
 
         $callsign = Auth::user()?->callsign ?? "unknown";
 
+        $saps = AccessDocument::where(function ($w) {
+            // Find any SAPs, or SC's with an access specification.
+            $w->where('type', AccessDocument::WAP);
+            $w->orWhere(function ($sc) {
+                $sc->where('type', AccessDocument::STAFF_CREDENTIAL);
+                $sc->where(function ($access) {
+                    $access->where('access_any_time', true);
+                    $access->orWhereNotNull('access_date');
+                });
+            });
+        })->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+            ->get()
+            ->groupBy('person_id');
+
         foreach ($records as $record) {
             $person = $record->person;
             if (!$person) {
@@ -586,18 +600,42 @@ class BulkUploader
                 }
             }
 
+
             $uploadDate = date('n/j/y G:i:s');
 
-            $ad = new AccessDocument(
-                [
-                    'person_id' => $person->id,
-                    'type' => $type,
-                    'source_year' => $sourceYear,
-                    'expiry_date' => $expiryYear,
-                    'comments' => "$uploadDate {$callsign}: $reason",
-                    'status' => AccessDocument::QUALIFIED,
-                ]
-            );
+            if ($type == AccessDocument::WAP) {
+                // Ensure the SAP's date does not attempt to replace a SC/WAP with any earlier access date.
+                $ads = $saps->get($person->id);
+                if ($ads) {
+                    $sap = AccessDocument::wapCandidate($ads);
+                    if ($sap) {
+                        if ($sap->type == AccessDocument::STAFF_CREDENTIAL) {
+                            if ($sap->access_any_time) {
+                                $record->status = self::STATUS_FAILED;
+                                $record->details = "Staff Credential RAD-{$sap->id} status {$sap->status} exists with any time access";
+                                continue;
+                            } else if ($sap->access_date->lt($accessDate)) {
+                                $record->status = self::STATUS_FAILED;
+                                $record->details = "Staff Credential RAD-{$sap->id} status {$sap->status} has an early access date of ".((string) $sap->access_date);
+                                continue;
+                            }
+                        } else if ($sap->access_date->lt($accessDate)) {
+                            $record->status = self::STATUS_FAILED;
+                            $record->details = "SAP RAD-{$sap->id} status {$sap->status} has an early access date of ".((string) $sap->access_date);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            $ad = new AccessDocument([
+                'person_id' => $person->id,
+                'type' => $type,
+                'source_year' => $sourceYear,
+                'expiry_date' => $expiryYear,
+                'comments' => "$uploadDate {$callsign}: $reason",
+                'status' => AccessDocument::QUALIFIED,
+            ]);
 
             if ($accessDate != null) {
                 $ad->access_date = $accessDateCleaned;
