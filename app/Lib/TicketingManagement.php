@@ -137,9 +137,8 @@ class TicketingManagement
                                 $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
                             } else if ($deliveryType == AccessDocument::DELIVERY_NONE) {
                                 $errors[] = 'missing delivery method';
-                            } else if ($deliveryType == AccessDocument::DELIVERY_POSTAL) {
-                                $deliveryType = AccessDocument::DELIVERY_POSTAL;
-                            } else {
+                            } else if ($deliveryType != AccessDocument::DELIVERY_POSTAL
+                                && $deliveryType != AccessDocument::DELIVERY_PRIORITY) {
                                 $deliveryType = AccessDocument::DELIVERY_WILL_CALL;
                             }
                             break;

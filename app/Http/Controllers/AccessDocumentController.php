@@ -282,8 +282,10 @@ class AccessDocumentController extends ApiController
                 break;
 
             case AccessDocument::CLAIMED:
-                if ($adStatus != AccessDocument::QUALIFIED && $adStatus != AccessDocument::BANKED) {
-                    throw new UnacceptableConditionException('Document is not banked nor qualified');
+                if ($adStatus != AccessDocument::QUALIFIED
+                    && $adStatus != AccessDocument::BANKED
+                    && $adStatus != AccessDocument::CLAIMED) {
+                    throw new UnacceptableConditionException('Document is not banked, claimed, or qualified');
                 }
                 if ($ad->isRegularTicket()) {
                     // Bank the other tickets
@@ -764,7 +766,7 @@ class AccessDocumentController extends ApiController
      * @throws AuthorizationException
      */
 
-    public function earlyArrivalReport() : JsonResponse
+    public function earlyArrivalReport(): JsonResponse
     {
         $this->authorize('earlyArrivalReport', AccessDocument::class);
 

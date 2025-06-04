@@ -350,6 +350,16 @@ class Setting extends ApiModel
             'type' => self::TYPE_FLOAT,
         ],
 
+        'TicketMailPriorityPrice' => [
+            'description' => 'The price to ship SPTs and Gift Tickets via USPS priority shipping',
+            'type' => self::TYPE_FLOAT,
+        ],
+
+        'TicketMailStandardPrice' => [
+          'description' => 'The price to ship SPTs and Gift Tickets via standard USPS standard shipping',
+            'type' => self::TYPE_FLOAT,
+        ],
+
         'SandmanRequireAffidavit' => [
             'description' => 'Require the Sandman Affidavit be signed in order to work a Sandman shift',
             'type' => self::TYPE_BOOL,
