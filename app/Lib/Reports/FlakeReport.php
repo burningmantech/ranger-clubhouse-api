@@ -7,6 +7,8 @@ namespace App\Lib\Reports;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class FlakeReport
 {
@@ -19,17 +21,18 @@ class FlakeReport
      * - Worked and may have overlapped into another shift
      *
      * @param string $datetime
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
 
-    public static function execute(string $datetime)
+    public static function execute(string $datetime): Collection
     {
-        $positions = Slot::where('begins', '<=', $datetime)
+        $positions = Slot::where('begins_year', Carbon::parse($datetime)->year)
+            ->where('begins', '<=', $datetime)
             ->where('ends', '>=', $datetime)
-            ->with(['position:id,title', 'person_slot.person' => function ($query) {
-                $query->select('id', 'callsign');
-                $query->orderBy('callsign');
-            }])
+            ->with([
+                'position:id,title',
+                'person_slot.person' => fn($query) => $query->select('id', 'callsign')->orderBy('callsign')
+            ])
             ->orderBy('begins')
             ->get()
             ->groupBy('position_id');
@@ -43,15 +46,22 @@ class FlakeReport
                 'slots' => $slots->map(function ($slot) {
                     $begins = $slot->begins;
                     $ends = $slot->ends;
-                    $people = $slot->person_slot->map(function ($row) use ($slot, $begins, $ends) {
-                        $timesheets = Timesheet::where('person_id', $row->person_id)
+                    if ($slot->person_slot->isNotEmpty()) {
+                        $timesheetsByPerson = Timesheet::whereIn('person_id', $slot->person_slot->pluck('person_id'))
+                            ->with('position:id,title')
                             ->where(function ($q) use ($begins, $ends) {
                                 $q->orWhereRaw('NOT (off_duty < ? OR on_duty > ?)', [$begins->clone()->addHours(-1), $ends]);
                             })->orderBy('on_duty')
                             ->get();
+                    } else {
+                        $timesheetsByPerson = null;
+                    }
+
+                    $people = $slot->person_slot->map(function ($row) use ($slot, $timesheetsByPerson) {
+                        $timesheets = $timesheetsByPerson->get($row->person_id);
 
                         $timesheet = null;
-                        if (!$timesheets->isEmpty()) {
+                        if ($timesheets) {
                             foreach ($timesheets as $entry) {
                                 if ($entry->position_id == $slot->position_id) {
                                     $timesheet = $entry;
@@ -78,7 +88,7 @@ class FlakeReport
                             ];
 
                             if ($timesheet->position_id != $slot->id) {
-                                $person->timesheet->position_title = Position::retrieveTitle($timesheet->position_id);
+                                $person->timesheet->position_title = $timesheet->position->title;
                             }
                         }
 
@@ -95,7 +105,6 @@ class FlakeReport
                     })->values();
 
                     // Look for rogues - those who are on shift without signing up first.
-
                     $rogues = Timesheet::with(['person:id,callsign'])
                         ->where('position_id', $slot->position_id)
                         ->where(function ($q) use ($begins, $ends) {
