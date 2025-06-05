@@ -795,7 +795,7 @@ class BulkUploader
             if ($isMeals) {
                 $existing = Provision::findAvailableMealsForPerson($personId, $isAllocated, $preMeals, $eventMeals, $postMeals);
             } else {
-                $existing = Provision::findAvailableTypeForPerson($personId, $existingType);
+                $existing = Provision::findAvailableTypeForPerson($personId, $existingType, $isAllocated);
             }
             if ($existing && !$commit) {
                 $record->status = self::STATUS_WARNING;
