@@ -616,12 +616,12 @@ class BulkUploader
                                 continue;
                             } else if ($sap->access_date->lt($accessDate)) {
                                 $record->status = self::STATUS_FAILED;
-                                $record->details = "Staff Credential RAD-{$sap->id} status {$sap->status} has an early access date of ".((string) $sap->access_date);
+                                $record->details = "Staff Credential RAD-{$sap->id} status {$sap->status} has an early access date of " . ((string)$sap->access_date);
                                 continue;
                             }
                         } else if ($sap->access_date->lt($accessDate)) {
                             $record->status = self::STATUS_FAILED;
-                            $record->details = "SAP RAD-{$sap->id} status {$sap->status} has an early access date of ".((string) $sap->access_date);
+                            $record->details = "SAP RAD-{$sap->id} status {$sap->status} has an early access date of " . ((string)$sap->access_date);
                             continue;
                         }
                     }
@@ -719,6 +719,17 @@ class BulkUploader
                 } else {
                     $accessDate = $accessDateCleaned;
                     $accessAnyTime = false;
+                    if ($wap->type === AccessDocument::STAFF_CREDENTIAL && $wap->access_any_time) {
+                        $record->status = self::STATUS_FAILED;
+                        $record->details = "Staff Credential RAD-{$wap->id} status {$wap->status} will be cleared of access any time.";
+                        continue;
+                    }
+
+                    if ($wap->access_date?->lt($accessDateCleaned)) {
+                        $record->status = self::STATUS_FAILED;
+                        $record->details = "SAP RAD-{$wap->id} will access date {$wap->access_date->format('Y-m-d')} be updated with a later access date {$wap->access_date->format('Y-m-d')}";
+                        continue;
+                    }
                 }
                 if ($commit) {
                     AccessDocument::updateSAPsForPerson($person->id, $accessDate, $accessAnyTime, 'set via bulk uploader');
