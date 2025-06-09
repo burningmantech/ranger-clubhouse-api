@@ -194,6 +194,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     const string GENDER_TWO_SPIRIT = 'two-spirit';
 
     /**
+     * Current password encryption prefix
+     */
+
+    const string PASSWORD_ENCRYPTION = PASSWORD_ARGON2ID;
+    const string PASSWORD_ENCRYPTION_PREFIX = '$argon2id';
+
+    /**
      * The database table name.
      * @var string
      */
@@ -404,6 +411,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'mi' => '',
         'alt_phone' => '',
         'gender_identity' => self::GENDER_NONE,
+        'password' => '',
         'preferred_name' => '',
         'years_as_contributor' => '[]',
         'years_as_ranger' => '[]',
@@ -554,7 +562,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                         // Keep the PNV callsign searchable
                         $irrelevant = false;
                     }
-                } else if (in_array($model->status,Person::ACTIVE_STATUSES)) {
+                } else if (in_array($model->status, Person::ACTIVE_STATUSES)) {
                     // Looks like a callsign update -- keep it searchable
                     $irrelevant = false;
                 } // else -- let PersonFka determine if the cold callsign will be searchable
@@ -870,15 +878,37 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function isValidPassword(string $password): bool
     {
-        $encyptedPw = $this->password;
-        if (!str_contains($encyptedPw, ':')) {
+        $encryptedPw = $this->password;
+        if (str_starts_with($encryptedPw, self::PASSWORD_ENCRYPTION_PREFIX)) {
+            // For 2025, new password encoding
+            return password_verify($password, $encryptedPw);
+        }
+
+        if (!str_contains($encryptedPw, ':')) {
             return false;
         }
 
-        list($salt, $sha) = explode(':', $encyptedPw);
+        list($salt, $sha) = explode(':', $encryptedPw);
         $hashedPw = sha1($salt . $password);
 
         return ($hashedPw == $sha);
+    }
+
+    /**
+     * Update the password encryption if need be.
+     *
+     * @param string $password
+     * @return void
+     */
+
+    public function updatePasswordEncryption(string $password): void
+    {
+        if (str_starts_with($password, self::PASSWORD_ENCRYPTION_PREFIX) !== false) {
+            // Good to go
+            return;
+        }
+
+        $this->changePassword($password);
     }
 
     /**
@@ -890,11 +920,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function changePassword(string $password): bool
     {
-        $salt = self::generateRandomString();
-        $sha = sha1($salt . $password);
-
-        $this->password = "$salt:$sha";
-
+        $this->password = password_hash($password, self::PASSWORD_ENCRYPTION);
         // Clear out the temporary login token
         $this->tpassword = '';
         $this->tpassword_expire = 0;

@@ -25,6 +25,8 @@ class UserAuthentication
             return self::errorResponse('invalid-credentials');
         }
 
+        $person->updatePasswordEncryption($password);
+
         return self::loginUser($person, $actionData);
     }
 
