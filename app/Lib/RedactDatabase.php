@@ -48,9 +48,7 @@ class RedactDatabase
         ]);
 
         if ($superRedact) {
-            $salt = Person::generateRandomString();
-            $sha = sha1($salt . "abcdef");
-            DB::table('person')->update(['password' => "$salt:$sha"]);
+            DB::table('person')->update(['password' => password_hash('abcdef', Person::PASSWORD_ENCRYPTION)]);
         }
 
         DB::table('person')->where('status', Person::ACTIVE)
