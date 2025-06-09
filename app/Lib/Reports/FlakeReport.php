@@ -4,7 +4,6 @@
 namespace App\Lib\Reports;
 
 
-use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use Carbon\Carbon;
@@ -49,29 +48,20 @@ class FlakeReport
                     if ($slot->person_slot->isNotEmpty()) {
                         $timesheetsByPerson = Timesheet::whereIn('person_id', $slot->person_slot->pluck('person_id'))
                             ->with('position:id,title')
-                            ->where(function ($q) use ($begins, $ends) {
-                                $q->orWhereRaw('NOT (off_duty < ? OR on_duty > ?)', [$begins->clone()->addHours(-1), $ends]);
-                            })->orderBy('on_duty')
-                            ->get();
+                            ->whereRaw('NOT (off_duty < ? OR on_duty > ?)', [$begins->clone()->addHours(-1), $ends])
+                            ->orderBy('on_duty')
+                            ->get()
+                            ->groupBy('person_id');
                     } else {
                         $timesheetsByPerson = null;
                     }
 
                     $people = $slot->person_slot->map(function ($row) use ($slot, $timesheetsByPerson) {
-                        $timesheets = $timesheetsByPerson->get($row->person_id);
+                        $timesheets = $timesheetsByPerson?->get($row->person_id);
 
-                        $timesheet = null;
-                        if ($timesheets) {
-                            foreach ($timesheets as $entry) {
-                                if ($entry->position_id == $slot->position_id) {
-                                    $timesheet = $entry;
-                                    break;
-                                }
-                            }
-
-                            if ($timesheet == null) {
-                                $timesheet = $timesheets[0];
-                            }
+                        $timesheet = $timesheets?->firstWhere('position_id', $slot->position_id);
+                        if (!$timesheet) {
+                            $timesheet = $timesheets[0] ?? null;
                         }
 
                         $person = (object)[
@@ -115,14 +105,12 @@ class FlakeReport
                         $rogues->whereNotIn('person_id', $slot->person_slot->pluck('person_id'));
                     }
 
-                    $rogues = $rogues->get()->map(function ($row) {
-                        return [
-                            'id' => $row->person_id,
-                            'callsign' => $row->person ? $row->person->callsign : 'Person #' . $row->person_id,
-                            'on_duty' => (string)$row->on_duty,
-                            'off_duty' => (string)$row->off_duty,
-                        ];
-                    })->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
+                    $rogues = $rogues->get()->map(fn($row) => [
+                        'id' => $row->person_id,
+                        'callsign' => $row->person?->callsign ?? 'Person #' . $row->person_id,
+                        'on_duty' => (string)$row->on_duty,
+                        'off_duty' => (string)$row->off_duty,
+                    ])->sortBy('callsign', SORT_NATURAL | SORT_FLAG_CASE)->values();
 
                     return [
                         'id' => $slot->id,
