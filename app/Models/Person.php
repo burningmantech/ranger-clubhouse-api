@@ -411,6 +411,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'mi' => '',
         'alt_phone' => '',
         'gender_identity' => self::GENDER_NONE,
+        'password' => '',
         'preferred_name' => '',
         'years_as_contributor' => '[]',
         'years_as_ranger' => '[]',
