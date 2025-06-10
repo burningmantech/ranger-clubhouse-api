@@ -203,7 +203,7 @@ class IntakeController extends ApiController
             default => Role::INTAKE,
         };
 
-        if (!$this->userHasRole($role)) {
+        if (!$this->userHasRole([Role::ADMIN, $role])) {
             $this->notPermitted("Not authorized");
         }
     }
