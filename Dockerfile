@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
-FROM ghcr.io/burningmantech/php-nginx:8.4.6-alpine3.21 as php
+FROM ghcr.io/burningmantech/php-nginx:8.4.8-alpine3.21 as php
 
 # Create runtime directories
 RUN install -d -o www-data -g www-data -m 775  \
@@ -37,7 +37,7 @@ COPY ["./artisan", "./composer.json", "./composer.lock", "./phpunit.xml", "./ser
 FROM php as build
 
 # Install Composer
-COPY --from=composer:2.8.4 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8.9 /usr/bin/composer /usr/bin/composer
 
 # Copy the application source from the source container
 COPY --from=source /var/www/application /var/www/application
