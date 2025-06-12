@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -324,6 +325,12 @@ class Timesheet extends ApiModel
     public function timesheet_log(): HasMany
     {
         return $this->hasMany(TimesheetLog::class);
+    }
+
+    public function created_log(): HasOne
+    {
+        return $this->hasOne(TimesheetLog::class)
+            ->where('action', TimesheetLog::CREATED);
     }
 
     public function save($options = []): bool
@@ -1013,6 +1020,16 @@ class Timesheet extends ApiModel
     public function signinForceReason(): Attribute
     {
         return NullIfEmptyAttribute::make();
+    }
+
+    public function createdVia() : ?string
+    {
+        $log = $this->created_log;
+        if (!$log) {
+            return null;
+        }
+
+        return $log->data['via'] ?? null;
     }
 
 }

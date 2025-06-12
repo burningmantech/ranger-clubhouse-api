@@ -33,7 +33,7 @@ class EarlyLateCheckInReport
         $this->slotsByPositionAsc = $slots->groupBy('position_id');
         $this->slotsByPositionDesc = $slots->sortByDesc('begins_time')->values()->groupBy('position_id');
         $this->timesheets = Timesheet::whereYear('on_duty', $year)
-            ->with(['person:id,callsign,status', 'position:id,title'])
+            ->with(['person:id,callsign,status', 'position:id,title', 'created_log'])
             ->orderBy('on_duty')
             ->get();
         $this->timesheetsByPerson = $this->timesheets->groupBy('person_id');
@@ -168,6 +168,7 @@ class EarlyLateCheckInReport
             'timesheet' => [
                 'id' => $entry->id,
                 'on_duty' => (string)$entry->on_duty,
+                'via' => $entry->createdVia(),
             ],
             'person' => [
                 'id' => $entry->person_id,
