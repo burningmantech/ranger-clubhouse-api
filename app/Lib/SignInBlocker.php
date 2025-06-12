@@ -189,6 +189,11 @@ class SignInBlocker
             return;
         }
 
+        if (self::havePreviousShift($personId)) {
+            // Previous shift -- don't worry about it.
+            return;
+        }
+
         /*
          * When the person might be too late for the current shift and too early for the upcoming one,
          * report it as too early if it's 2 hours before, otherwise report it as too late.
@@ -201,8 +206,7 @@ class SignInBlocker
 
         // Too early, and/or too late. Figure out the one to use.
         if ($isEarly && $isLate) {
-            if (($timestamp - $inProgress->begins_time) < (2 * 3600)
-                && !self::havePreviousShift($personId)) {
+            if (($timestamp - $inProgress->begins_time) < (2 * 3600)) {
                 // Two hours late!
                 $blockers[] = self::buildCheckInTimeBlocker(
                     Timesheet::BLOCKED_TOO_LATE, $inProgress, $timestamp, $lateCheckIn);
@@ -210,14 +214,14 @@ class SignInBlocker
                 // Two hours before is considered too EARLY!
                 $blockers[] = self::buildCheckInTimeBlocker(
                     Timesheet::BLOCKED_TOO_EARLY, $upcoming, $timestamp, $earlyCheckIn);
-            } else if (!self::havePreviousShift($personId)) {
+            } else {
                 $blockers[] = self::buildCheckInTimeBlocker(
                     Timesheet::BLOCKED_TOO_LATE, $inProgress, $timestamp, $lateCheckIn);
             }
         } else if ($isEarly) {
             $blockers[] = self::buildCheckInTimeBlocker(
                 Timesheet::BLOCKED_TOO_EARLY, $upcoming, $timestamp, $earlyCheckIn);
-        } else if (!self::havePreviousShift($personId)) {
+        } else {
             $blockers[] = self::buildCheckInTimeBlocker(
                 Timesheet::BLOCKED_TOO_LATE, $inProgress, $timestamp, $lateCheckIn);
         }

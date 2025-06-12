@@ -512,6 +512,7 @@ Route::middleware('api')->group(function () {
     Route::get('timesheet/correction-requests', [TimesheetController::class, 'correctionRequests']);
     Route::get('timesheet/correction-statistics', [TimesheetController::class, 'correctionStatistics']);
     Route::post('timesheet/confirm', [TimesheetController::class, 'confirm']);
+    Route::get('timesheet/early-late-checkins', [TimesheetController::class, 'earlyLateCheckins']);
     Route::get('timesheet/event-stats', [TimesheetController::class, 'eventStatsReport']);
     Route::get('timesheet/freaking-years', [TimesheetController::class, 'freakingYearsReport']);
     Route::get('timesheet/forced-signins-report', [TimesheetController::class, 'forcedSigninsReport']);

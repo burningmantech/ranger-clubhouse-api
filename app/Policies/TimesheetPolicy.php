@@ -310,4 +310,9 @@ class TimesheetPolicy
     {
         return $user->hasRole(Role::EVENT_MANAGEMENT) || $personId == $user->id;
     }
+
+    public function earlyLateCheckins(Person $user): bool
+    {
+        return $user->hasRole(Role::TIMESHEET_MANAGEMENT);
+    }
 }

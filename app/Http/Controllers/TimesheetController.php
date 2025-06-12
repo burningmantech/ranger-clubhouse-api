@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
+use App\Lib\Reports\EarlyLateCheckInReport;
 use App\Lib\Reports\EventStats;
 use App\Lib\Reports\ForcedSigninsReport;
 use App\Lib\Reports\FreakingYearsReport;
@@ -1128,5 +1129,17 @@ class TimesheetController extends ApiController
         ])->values();
 
         return response()->json(['status' => 'overlap', 'timesheets' => $results]);
+    }
+
+    /**
+     * Report on people who may have gone on duty either early or late.
+     *
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function earlyLateCheckins(): JsonResponse
+    {
+        $this->authorize('earlyLateCheckins', Timesheet::class);
+        return response()->json(EarlyLateCheckInReport::execute($this->getYear()));
     }
 }
