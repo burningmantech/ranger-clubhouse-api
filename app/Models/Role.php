@@ -52,6 +52,8 @@ class Role extends ApiModel
 
     const int AWARD_MANAGEMENT = 127; // Allows a person to grant or revoke service awards.
 
+    const int FULL_REPORT_ACCESS = 128; // Allows a person to see all teams and positions on reports like Timesheet By Callsign.
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     const int POSITION_MASK = 0x0fff;
