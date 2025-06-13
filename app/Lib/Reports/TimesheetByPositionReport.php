@@ -4,6 +4,7 @@ namespace App\Lib\Reports;
 
 use App\Models\PersonTeam;
 use App\Models\PositionCredit;
+use App\Models\Role;
 use App\Models\TeamManager;
 use App\Models\Timesheet;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,7 @@ class TimesheetByPositionReport
             ->orderBy('on_duty');
 
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (!$user->hasRole([Role::ADMIN, Role::FULL_REPORT_ACCESS])) {
             // Need to filter based on what cadre / delegations (not teams) the person belongs to
             // and what teams they are a Clubhouse Team Manager for.
             $opsMemberIds = PersonTeam::retrieveCadreMembershipIds($user->id);
@@ -82,7 +83,7 @@ class TimesheetByPositionReport
                         $slot = [
                             'id' => $r->slot_id,
                             'description' => $assoc->description,
-                            'begins' =>(string) $assoc->begins,
+                            'begins' => (string)$assoc->begins,
                             'duration' => $assoc->duration,
                             'timezone' => $assoc->timezone,
                             'timezone_abbr' => $assoc->timezone_abbr,
@@ -107,7 +108,7 @@ class TimesheetByPositionReport
         usort($positions, fn($a, $b) => strcasecmp($a['title'], $b['title']));
 
         return [
-            'status' => $user->isAdmin() ? 'full-report' : 'partial-report',
+            'status' => $user->hasRole([Role::ADMIN, Role::FULL_REPORT_ACCESS]) ? 'full-report' : 'partial-report',
             'positions' => $positions,
             'people' => $people,
         ];
