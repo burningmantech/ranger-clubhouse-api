@@ -8,6 +8,7 @@ use App\Lib\Reports\TrainedNoWorkReport;
 use App\Lib\Reports\TrainerAttendanceReport;
 use App\Lib\Reports\TrainingCompletedReport;
 use App\Lib\Reports\TrainingMultipleEnrollmentReport;
+use App\Lib\Reports\TrainingNotesReport;
 use App\Lib\Reports\TrainingSlotCapacityReport;
 use App\Lib\Reports\TrainingUntrainedPeopleReport;
 use App\Models\Person;
@@ -173,5 +174,23 @@ class TrainingController extends ApiController
         PersonPosition::removeIdsFromPerson($person->id, $positionIds, "ART mentee position revoke");
 
         return $this->success();
+    }
+
+    /**
+     * Collect an event's training notes into one report
+     *
+     * @param Training $training
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function trainingNotes(Training $training): JsonResponse
+    {
+        $this->authorize('trainingNotes', $training);
+        $year = $this->getYear();
+
+        return response()->json([
+            'people' => TrainingNotesReport::execute($training->id, $year)
+        ]);
     }
 }

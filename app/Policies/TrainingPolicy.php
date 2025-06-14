@@ -90,4 +90,13 @@ class TrainingPolicy
         }
         return $user->hasRole(Role::ART_GRADUATE_BASE | $training->id);
     }
+
+    public function trainingNotes(Person $user, Training $training): bool
+    {
+        if (!$training->is_art) {
+            return false;
+        }
+
+        return $user->hasRole(Role::ART_TRAINER_BASE | $training->id);
+    }
 }

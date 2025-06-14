@@ -494,6 +494,7 @@ Route::middleware('api')->group(function () {
     Route::get('training/{training}/mentees', [TrainingController::class, 'mentees']);
     Route::get('training/{training}/multiple-enrollments', [TrainingController::class, 'multipleEnrollmentsReport']);
     Route::get('training/{training}/people-training-completed', [TrainingController::class, 'peopleTrainingCompleted']);
+    Route::get('training/{training}/notes', [TrainingController::class, 'trainingNotes']);
     Route::post('training/{training}/revoke-mentee-positions/{person}', [TrainingController::class, 'revokeMenteePositions']);
     Route::get('training/{training}/trained-no-work', [TrainingController::class, 'trainedNoWorkReport']);
     Route::get('training/{training}/trainer-attendance', [TrainingController::class, 'trainerAttendanceReport']);
