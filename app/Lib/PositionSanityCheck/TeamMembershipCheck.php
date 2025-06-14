@@ -36,6 +36,15 @@ class TeamMembershipCheck extends SanityCheck
         $rows = self::retrieveMissingTeams($peopleIds);
         $results = [];
         $teams = $options[0];
+
+        $teamMembership = PersonTeam::whereIn('person_id', $peopleIds)->get();
+
+        $members = [];
+        foreach ($teamMembership as $member) {
+            $members[$member->person_id] ??= [];
+            $members[$member->person_id][$member->person_team] = true;
+        }
+
         foreach ($rows as $person) {
             $personId = $person->id;
             $teamIds = $teams[$personId] ?? null;
@@ -43,8 +52,12 @@ class TeamMembershipCheck extends SanityCheck
                 throw new UnacceptableConditionException("Person #{$personId} was not found in the options");
             }
             foreach ($teamIds as $tid) {
+                if (isset($members[$personId][$tid])) {
+                    continue;
+                }
                 PersonTeam::addPerson($tid, $personId, 'position sanity checker repair - add missing team');
                 $results[] = ['id' => $personId, 'team_id' => $tid];
+                $members[$personId][$tid] = true;
             }
         }
 
@@ -92,7 +105,6 @@ class TeamMembershipCheck extends SanityCheck
                     $j->where('person_team.team_id', $team->id);
                 })
                 ->whereNotIn('person.status', Person::DEACTIVATED_STATUSES)
-                ->whereNotNull('position.team_id')
                 ->whereIn('person_position.position_id', $positionIds)
                 ->whereNull('person_team.person_id');
 
