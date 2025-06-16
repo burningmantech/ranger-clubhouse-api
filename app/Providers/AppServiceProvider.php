@@ -93,11 +93,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('isIntake', function (Person $user) {
-            return $user->hasRole(Role::INTAKE);
+            return $user->hasRole([Role::ADMIN, Role::INTAKE]);
         });
 
         Gate::define('isVC', function (Person $user) {
-            return $user->hasRole(Role::VC);
+            return $user->hasRole([Role::ADMIN, Role::VC]);
         });
 
         Gate::define('isTimesheetManager', function (Person $user) {
