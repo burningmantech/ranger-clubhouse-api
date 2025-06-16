@@ -59,7 +59,7 @@ class IntakeController extends ApiController
 
     public function history(Person $person): JsonResponse
     {
-        Gate::allowIf(fn(Person $user) => $user->hasRole([Role::INTAKE, Role::REGIONAL_MANAGEMENT]));
+        Gate::allowIf(fn(Person $user) => $user->hasRole([Role::ADMIN, Role::INTAKE, Role::REGIONAL_MANAGEMENT]));
 
         $year = $this->getYear();
 
