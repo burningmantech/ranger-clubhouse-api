@@ -155,6 +155,9 @@ class BulkGrantAward
             $serviceYear = strtolower($columns[3]);
             if ($serviceYear != 'y' && $serviceYear != 'n') {
                 $record->error = 'Award year indicator "' . $serviceYear . '" is neither y nor n';
+                $grantServiceYear = false;
+            } else {
+                $grantServiceYear = $serviceYear == 'y';
             }
 
             $serviceAwards = [];
@@ -217,6 +220,7 @@ class BulkGrantAward
                         'award_id' => $awardId,
                         'team_id' => $teamId,
                         'position_id' => $positionId,
+                        'awards_grants_service_year' => $grantServiceYear,
                         'year' => $year,
                         'notes' => 'bulk granted by ' . Auth::user()?->callsign,
                     ]);
