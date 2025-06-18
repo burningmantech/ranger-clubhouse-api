@@ -11,7 +11,7 @@ class AwardPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user) : ?bool
     {
         if ($user->hasRole(Role::ADMIN)) {
             return true;
@@ -83,30 +83,6 @@ class AwardPolicy
     }
 
     /**
-     * Determine if the user can bulk grant awards based on service years
-     *
-     * @param Person $user
-     * @return bool
-     */
-
-    public function bulkGrantServiceYearsAward(Person $user): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine if the user can bulk grant awards
-     *
-     * @param Person $user
-     * @return bool
-     */
-
-    public function bulkGrantAward(Person $user): bool
-    {
-        return false;
-    }
-
-    /**
      * Determine if the user can run the service years award report
      *
      * @param Person $user
@@ -119,7 +95,7 @@ class AwardPolicy
             return true;
         }
 
-        return null;
+        return false;
     }
 
 }
