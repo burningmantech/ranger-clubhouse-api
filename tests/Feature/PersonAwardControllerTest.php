@@ -261,28 +261,13 @@ class PersonAwardControllerTest extends TestCase
             'commit' => false
         ]);
 
-        /*
-        'awards' => [],
-                'callsign' => $callsign,
-                'columns' => $columns,
-                'error' => null,
-                'title' => '',
-                'type' => '',
-                'year' => [],
-        */
-
         $response->assertStatus(200);
         $response->assertJson([
             'records' => [
                 [
                     'callsign' => $this->user->callsign,
-                    'awards' => [
-                        [
-                            'person_id' => $this->user->id,
-                            'position_id' => Position::DIRT,
-                            'year' => 2025,
-                        ]
-                    ]
+                    'title' => 'Dirt',
+                    'is_service_year' => true
                 ]
             ]
         ]);

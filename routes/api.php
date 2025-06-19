@@ -155,8 +155,6 @@ Route::middleware('api')->group(function () {
 
     Route::resource('alert', AlertController::class);
 
-    Route::post('award/bulk-grant-award', [AwardController::class, 'bulkGrantAward']);
-    Route::post('award/bulk-grant-service-years-award', [AwardController::class, 'bulkGrantServiceYearsAward']);
     Route::get('award/service-years', [AwardController::class, 'serviceYearsReport']);
     Route::resource('award', AwardController::class);
 

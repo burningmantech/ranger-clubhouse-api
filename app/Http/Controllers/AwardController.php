@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Lib\BulkGrantAward;
 use App\Lib\Reports\ServiceYearsReport;
 use App\Models\Award;
-use App\Models\PersonAward;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class AwardController extends ApiController
 {
@@ -25,7 +24,7 @@ class AwardController extends ApiController
      * Create an award
      *
      * @return JsonResponse
-     * @throws AuthorizationException|\Illuminate\Validation\ValidationException
+     * @throws AuthorizationException|ValidationException
      */
 
     public function store(): JsonResponse
@@ -89,63 +88,21 @@ class AwardController extends ApiController
         return $this->restDeleteSuccess();
     }
 
-    /**
-     * Grant bulk grant a specific award
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function bulkGrantAward() : JsonResponse
-    {
-        $this->authorize('bulkGrantAward', Award::class);
-
-        $params = request()->validate([
-            'commit' => 'sometimes|boolean',
-            'award_id' => 'required|integer|exists:award,id',
-            'callsigns' => 'required|string'
-        ]);
-
-        return response()->json([
-            'people' => BulkGrantAward::bulkGrant($params['award_id'], $params['callsigns'], $params['commit'] ?? false)
-        ]);
-    }
-
-    /**
-     * Grant an award based on the service years.
-     *
-     * @return JsonResponse
-     * @throws AuthorizationException
-     */
-
-    public function bulkGrantServiceYearsAward() : JsonResponse
-    {
-        $this->authorize('bulkGrantServiceYearsAward', Award::class);
-
-        $params = request()->validate([
-            'commit' => 'sometimes|boolean',
-            'award_id' => 'required|integer|exists:award,id',
-            'service_years' => 'required|integer'
-        ]);
-
-        return response()->json([
-            'people' => BulkGrantAward::grantServiceYearsAward($params['award_id'], $params['service_years'], $params['commit'] ?? false)
-        ]);
-    }
 
     /**
      * Service Years report
      *
      * @return JsonResponse
      * throws AuthorizationException
+     * @throws AuthorizationException
      */
 
-     public function serviceYearsReport(): JsonResponse
-     {
+    public function serviceYearsReport(): JsonResponse
+    {
         $this->authorize('serviceYearsReport', [Award::class]);
 
         return response()->json([
             'serviceYears' => ServiceYearsReport::execute()
         ]);
-     }
+    }
 }
