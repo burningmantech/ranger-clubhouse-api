@@ -160,6 +160,8 @@ class BulkGrantAward
                 $grantServiceYear = $serviceYear == 'y';
             }
 
+            $record->is_service_year = $grantServiceYear;
+
             $serviceAwards = [];
             for ($idx = 4; $idx < count($columns); $idx++) {
                 $years = $columns[$idx] ?? null;
@@ -228,8 +230,6 @@ class BulkGrantAward
                     $serviceAwards[] = $serviceAward;
                 }
             }
-
-            $record->awards = $serviceAwards;
 
             if (empty($serviceAwards)) {
                 // Should never happen.

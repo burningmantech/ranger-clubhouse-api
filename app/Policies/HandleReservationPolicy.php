@@ -11,11 +11,13 @@ class HandleReservationPolicy
 {
     use HandlesAuthorization;
 
-    public function before($user)
+    public function before($user): ?bool
     {
-        if ($user->hasRole(Role::ADMIN) || $user->hasRole(Role::VC)) {
+        if ($user->hasRole([Role::ADMIN, Role::VC])) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -80,7 +82,7 @@ class HandleReservationPolicy
      * Determine if the user can bulk upload handles
      */
 
-    public function upload(Person $user) : false
+    public function upload(Person $user): false
     {
         return false;
     }
@@ -89,7 +91,7 @@ class HandleReservationPolicy
      * Determine if the user can expire the handles
      */
 
-    public function expire(Person $user) : false
+    public function expire(Person $user): false
     {
         return false;
     }
@@ -101,7 +103,7 @@ class HandleReservationPolicy
      * @return false
      */
 
-    public function handles(Person $user) : false
+    public function handles(Person $user): false
     {
         return false;
     }
