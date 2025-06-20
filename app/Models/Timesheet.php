@@ -581,7 +581,18 @@ class Timesheet extends ApiModel
                 DB::raw('YEAR(on_duty) as year'),
                 DB::raw('SUM(TIMESTAMPDIFF(HOUR, on_duty, off_duty)) AS total_hours')
             )->where('person_id', $personId)
-                ->whereNotIn("position_id", self::EXCLUDE_POSITIONS_FOR_YEARS)
+                ->where(function ($w) use ($personId) {
+                    // Don't include the year when the Alpha was bonked.
+                    $w->where('position_id', '!=', Position::ALPHA)
+                        ->orWhereExists(function ($sql) use ($personId) {
+                            $sql->select(DB::raw(1))
+                                ->from('person_mentor')
+                                ->where('person_mentor.person_id', $personId)
+                                ->where('mentor_year', '=', DB::raw('YEAR(on_duty)'))
+                                ->where('person_mentor.status', PersonMentor::PASS)
+                                ->limit(1);
+                        });
+                })->whereNotIn('position_id', self::EXCLUDE_POSITIONS_FOR_YEARS)
                 ->groupByRaw('YEAR(on_duty)');
 
             if ($type == self::YEARS_AS_CONTRIBUTOR) {
@@ -1022,7 +1033,7 @@ class Timesheet extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function createdVia() : ?string
+    public function createdVia(): ?string
     {
         $log = $this->created_log;
         if (!$log) {
