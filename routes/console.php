@@ -81,7 +81,7 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server(
     Schedule::command('clubhouse:delete-bmid-exports --post-event')->yearlyOn(9, 15, '05:30')->onOneServer();
 
     // Rebuild the granted awards
-    Schedule::job(new AwardsRebuildJob())->weeklyOn(0, '04:00')->onOneServer();
+    //Schedule::job(new AwardsRebuildJob())->weeklyOn(0, '04:00')->onOneServer();
 
     if (config('telescope.enabled')) {
         // Purge Laravel Telescope logs
