@@ -97,15 +97,11 @@ class PersonAward extends ApiModel
         });
 
         self::saved(function (PersonAward $model) {
-            if (!$model->bulkUpdate) {
-                YearsManagement::updateYearsOfAwards($model->person_id);
-            }
+            YearsManagement::updateYearsOfAwards($model->person_id);
         });
 
         self::deleted(function (PersonAward $model) {
-            if (!$model->bulkUpdate) {
-                YearsManagement::updateYearsOfAwards($model->person_id);
-            }
+            YearsManagement::updateYearsOfAwards($model->person_id);
         });
     }
 
