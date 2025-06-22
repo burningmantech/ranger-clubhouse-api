@@ -97,6 +97,5 @@ class ClubhouseDailyReportCommand extends Command
                 $unknownPhones
             ));
 
-        return true;
     }
 }
