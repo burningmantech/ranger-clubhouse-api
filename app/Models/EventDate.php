@@ -117,9 +117,9 @@ class EventDate extends ApiModel
     public static function retrieveBurnWeekendPeriod(): array
     {
         $year = current_year();
-        $laborDay = new Carbon("September $year first monday");
+        $laborDay = new Carbon("First Monday of September $year");
         // Burn weekend is Friday @ 18:00 til Monday @ 00:00 (late Sunday night)
-        $start = $laborDay->clone()->subDays(3)->setTime(18, 0, 0);
+        $start = $laborDay->clone()->subDays(3)->setTime(18, 0);
         $end = $laborDay->clone()->setTime(0, 0, 0);
 
         return [$start, $end];
