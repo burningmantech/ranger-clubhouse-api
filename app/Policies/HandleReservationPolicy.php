@@ -13,7 +13,8 @@ class HandleReservationPolicy
 
     public function before($user): ?bool
     {
-        if ($user->hasRole([Role::ADMIN, Role::VC])) {
+        error_log("* POLICY ?" . json_encode($user->hasRole(Role::EDIT_HANDLE_RESERVATIONS)));
+        if ($user->hasRole([Role::ADMIN, Role::EDIT_HANDLE_RESERVATIONS])) {
             return true;
         }
 
@@ -21,14 +22,14 @@ class HandleReservationPolicy
     }
 
     /**
-     * Determine whether the user can view any models.
+     * Determine whether the user can view all the records
      *
      * @param Person $user
      * @return bool
      */
-    public function viewAny(Person $user): false
+    public function index(Person $user): bool
     {
-        return false;
+        return $user->hasRole(Role::VC);
     }
 
     /**
@@ -38,9 +39,10 @@ class HandleReservationPolicy
      * @param HandleReservation $handleReservation
      * @return bool
      */
-    public function view(Person $user, HandleReservation $handleReservation): false
+
+    public function show(Person $user, HandleReservation $handleReservation): bool
     {
-        return false;
+        return $user->hasRole(Role::VC);
     }
 
     /**
@@ -49,7 +51,7 @@ class HandleReservationPolicy
      * @param Person $user
      * @return bool
      */
-    public function create(Person $user): false
+    public function store(Person $user): false
     {
         return false;
     }
@@ -73,7 +75,7 @@ class HandleReservationPolicy
      * @param HandleReservation $handleReservation
      * @return bool
      */
-    public function delete(Person $user, HandleReservation $handleReservation): false
+    public function destroy(Person $user, HandleReservation $handleReservation): false
     {
         return false;
     }
@@ -105,6 +107,6 @@ class HandleReservationPolicy
 
     public function handles(Person $user): false
     {
-        return false;
+        return $user->hasRole(Role::VC);
     }
 }
