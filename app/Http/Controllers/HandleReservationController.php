@@ -22,7 +22,7 @@ class HandleReservationController extends ApiController
      */
     public function index(): JsonResponse
     {
-        $this->authorize('viewAny', HandleReservation::class);
+        $this->authorize('index', HandleReservation::class);
         $params = request()->validate([
             'active' => 'sometimes|boolean',
             'reservation_type' => 'sometimes|string',
@@ -40,7 +40,7 @@ class HandleReservationController extends ApiController
      */
     public function store(): JsonResponse
     {
-        $this->authorize('create', HandleReservation::class);
+        $this->authorize('store', HandleReservation::class);
         $handleReservation = new HandleReservation;
         $this->fromRest($handleReservation);
 
@@ -60,7 +60,7 @@ class HandleReservationController extends ApiController
      */
     public function show(HandleReservation $handleReservation): JsonResponse
     {
-        $this->authorize('view', HandleReservation::class);
+        $this->authorize('show', $handleReservation);
         return $this->success($handleReservation);
     }
 
@@ -69,11 +69,11 @@ class HandleReservationController extends ApiController
      *
      * @param HandleReservation $handleReservation
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
     public function update(HandleReservation $handleReservation): JsonResponse
     {
-        $this->authorize('update', HandleReservation::class);
+        $this->authorize('update', $handleReservation);
         $this->fromRest($handleReservation);
 
         if ($handleReservation->save()) {
@@ -92,7 +92,8 @@ class HandleReservationController extends ApiController
      */
     public function destroy(HandleReservation $handleReservation): JsonResponse
     {
-        $this->authorize('delete', HandleReservation::class);
+     error_log("*** GOT HERE");
+        $this->authorize('destroy', $handleReservation);
         $handleReservation->delete();
         return $this->restDeleteSuccess();
     }
@@ -196,7 +197,7 @@ class HandleReservationController extends ApiController
         return response()->json(['handles' => $result]);
     }
 
-    private function buildHandle(string $name, string $entityType, ?string $reason, array $person = null): array
+    private function buildHandle(string $name, string $entityType, ?string $reason, ?array $person = null): array
     {
         $result = ['name' => $name, 'entityType' => $entityType];
         if (!empty($reason)) {

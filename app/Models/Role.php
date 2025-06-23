@@ -54,6 +54,8 @@ class Role extends ApiModel
 
     const int FULL_REPORT_ACCESS = 128; // Allows a person to see all teams and positions on reports like Timesheet By Callsign.
 
+    const int EDIT_HANDLE_RESERVATIONS = 129; // Can manage the handle reservations list.
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     const int POSITION_MASK = 0x0fff;
