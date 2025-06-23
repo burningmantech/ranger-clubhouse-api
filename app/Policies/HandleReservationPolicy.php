@@ -13,7 +13,6 @@ class HandleReservationPolicy
 
     public function before($user): ?bool
     {
-        error_log("* POLICY ?" . json_encode($user->hasRole(Role::EDIT_HANDLE_RESERVATIONS)));
         if ($user->hasRole([Role::ADMIN, Role::EDIT_HANDLE_RESERVATIONS])) {
             return true;
         }
@@ -105,7 +104,7 @@ class HandleReservationPolicy
      * @return false
      */
 
-    public function handles(Person $user): false
+    public function handles(Person $user): bool
     {
         return $user->hasRole(Role::VC);
     }
