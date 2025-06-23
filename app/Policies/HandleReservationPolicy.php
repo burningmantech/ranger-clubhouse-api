@@ -105,7 +105,7 @@ class HandleReservationPolicy
      * @return false
      */
 
-    public function handles(Person $user): false
+    public function handles(Person $user): bool
     {
         return $user->hasRole(Role::VC);
     }
