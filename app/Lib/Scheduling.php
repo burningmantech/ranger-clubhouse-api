@@ -178,5 +178,4 @@ class Scheduling
 
         return !Schedule::hasSignupInPeriod($person->id, $start, $end);
     }
-
 }

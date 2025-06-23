@@ -92,7 +92,6 @@ class HandleReservationController extends ApiController
      */
     public function destroy(HandleReservation $handleReservation): JsonResponse
     {
-     error_log("*** GOT HERE");
         $this->authorize('destroy', $handleReservation);
         $handleReservation->delete();
         return $this->restDeleteSuccess();
