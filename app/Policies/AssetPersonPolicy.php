@@ -62,7 +62,7 @@ class AssetPersonPolicy
      * Can the user run the radio checkout report?
      */
 
-    public function radioCheckoutReport(Person $user): false
+Fixe    public function radioCheckoutReport(Person $user): bool
     {
         return $user->hasRole(Role::EVENT_MANAGEMENT);
     }
