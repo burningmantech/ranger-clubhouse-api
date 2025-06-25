@@ -43,10 +43,12 @@ class YearsManagement
     public static function updateYearsOfAwards(int $personId): void
     {
         $person = Person::find($personId);
-        $person->years_of_awards = PersonAward::where('person_id', $personId)
+        $person->years_of_awards = DB::table('person_award')
+            ->where('person_id', $personId)
             ->distinct()
             ->where('awards_grants_service_year', true)
-            ->orderBy('person_award.year')
+            ->orderBy('year')
+            ->get(['year'])
             ->pluck('year')
             ->toArray();
 
