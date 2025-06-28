@@ -24,6 +24,7 @@ class PersonEventInfo extends ApihouseResult
     public bool $signed_motorpool_agreement = false;
     public int $radio_max = 0;
     public mixed $trainings;
+    public bool $in_person_training_passed = false;
     public mixed $vehicles;
     public ?array $meals = null;
 
@@ -58,6 +59,10 @@ class PersonEventInfo extends ApihouseResult
 
         usort($info->trainings, fn($a, $b) => strcasecmp($a->position_title, $b->position_title));
 
+        $info->in_person_training_passed = array_any($info->trainings,
+            fn($t) => ($t->position_id === Position::TRAINING && $t->status === 'pass')
+        );
+
         $info->radio_info_available = setting('RadioInfoAvailable');
         if ($info->radio_info_available) {
             $package = Provision::buildPackage(Provision::retrieveUsableForPersonIds([$personId]));
@@ -69,13 +74,8 @@ class PersonEventInfo extends ApihouseResult
 
         $bmid = Bmid::findForPersonManage($personId, $year);
 
-        if ($bmid) {
-            $info->meals = $bmid->meals_granted;
-            $info->showers = $bmid->showers_granted;
-        } else {
-            $info->meals = '';
-            $info->showers = false;
-        }
+        $info->meals = $bmid->meals_granted;
+        $info->showers = $bmid->showers_granted;
 
         $info->event_period = EventDate::retrieveEventOpsPeriod();
 
