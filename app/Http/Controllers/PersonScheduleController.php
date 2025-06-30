@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ScheduleSignUpException;
+use App\Exceptions\UnacceptableConditionException;
 use App\Jobs\TrainingSignupEmailJob;
 use App\Lib\Agreements;
 use App\Lib\MVR;
@@ -76,6 +78,7 @@ class PersonScheduleController extends ApiController
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws UnacceptableConditionException
      */
 
     public function store(Person $person): JsonResponse
@@ -89,25 +92,30 @@ class PersonScheduleController extends ApiController
 
         $slotId = $params['slot_id'];
 
-        $slot = Slot::findOrFail($slotId);
+        $slot = Slot::find($slotId);
+
+        if (!$slot) {
+            // Ah, an outdated schedule listing, or someone is screwing around.
+            return response()->json(['status' => Schedule::SLOT_NOT_FOUND]);
+        }
+
         $position = $slot->position;
 
-        // Slot must be activated in order to allow signups
+        // Slot must be activated to allow signups
         if (!$slot->active) {
-            return response()->json([
-                'status' => Schedule::NOT_ACTIVE,
-                'signed_up' => $slot->signed_up,
-            ]);
+            return response()->json(['status' => Schedule::NOT_ACTIVE]);
         }
+
+        $wantToForce = $params['force'] ?? false;
 
         // You must hold the position
         if (!PersonPosition::havePosition($person->id, $slot->position_id)) {
             return response()->json([
                 'status' => Schedule::NO_POSITION,
-                'signed_up' => $slot->signed_up,
                 'position_title' => Position::retrieveTitle($slot->position_id)
             ]);
         }
+
 
         $trainerForced = false;
         $enrollments = null;
@@ -118,9 +126,17 @@ class PersonScheduleController extends ApiController
         list($canForce, $isTrainer) = $this->canForceScheduleChange($slot, true);
 
         if ($canForce) {
-            $confirmForce = $params['force'] ?? false;
+            $confirmForce = $wantToForce;
         } else {
             $confirmForce = false;
+        }
+
+        // A paid position? An employee id must be on file.
+        if ($position->paycode && is_null($person->employee_id) && !$confirmForce) {
+            return response()->json([
+                'status' => Schedule::NO_EMPLOYEE_ID,
+                'may_force' => $canForce,
+            ]);
         }
 
         $permission = Scheduling::retrieveSignUpPermission($person, current_year());
@@ -133,7 +149,6 @@ class PersonScheduleController extends ApiController
             if (!$permission[$isTraining ? 'training_signups_allowed' : 'all_signups_allowed'] ?? false) {
                 return response()->json([
                     'status' => Schedule::MISSING_REQUIREMENTS,
-                    'signed_up' => $slot->signed_up,
                     'may_force' => $canForce,
                     'requirements' => $permission['requirements'],
                     'training_signups_allowed' => $permission['training_signups_allowed'] ?? false,
@@ -165,7 +180,6 @@ class PersonScheduleController extends ApiController
             $result = [
                 'status' => Schedule::MULTIPLE_ENROLLMENT,
                 'slots' => $enrollments,
-                'signed_up' => $slot->signed_up,
             ];
 
             if ($canForce) {
@@ -184,7 +198,6 @@ class PersonScheduleController extends ApiController
             if (!$didSignSandmanAffidavit && !$confirmForce) {
                 return response()->json([
                     'status' => Schedule::MISSING_REQUIREMENTS,
-                    'signed_up' => $slot->signed_up,
                     'may_force' => $canForce,
                     'requirements' => ['unsigned-sandman-affidavit'],
                     'training_signups_allowed' => $permission['training_signups_allowed'] ?? false,
@@ -204,12 +217,11 @@ class PersonScheduleController extends ApiController
         // Go try to add the person to the slot/session
         $result = Schedule::addToSchedule($person->id, $slot, $confirmForce ? $canForce : false);
         $status = $result['status'];
+        $response = $result;
 
         if ($status != Schedule::SUCCESS) {
-            $response = ['status' => $status, 'signed_up' => $result['signed_up']];
-
             if (in_array($status, Schedule::MAY_FORCE_STATUSES) && $canForce) {
-                // Let the user know the sign up can be forced.
+                // Let the user know the signup can be forced.
                 $response['may_force'] = true;
             }
 
@@ -228,7 +240,7 @@ class PersonScheduleController extends ApiController
             $logData['multiple_enrollment'] = true;
         }
 
-        if ($result['overcapacity']) {
+        if ($result['is_full']) {
             $forcedReasons[] = 'overcapacity';
             $logData['overcapacity'] = true;
         }
@@ -266,12 +278,7 @@ class PersonScheduleController extends ApiController
             mail_send(new TrainingSessionFullMail($slot, $signedUp, $position->contact_email));
         }
 
-
-        $response = [
-            'status' => 'success',
-            'signed_up' => $signedUp,
-            'recommend_burn_weekend_shift' => Scheduling::recommendBurnWeekendShift($person),
-        ];
+        $response['recommend_burn_weekend_shift'] = Scheduling::recommendBurnWeekendShift($person);
 
         if ($position->mvr_signup_eligible && !$isMVREligible) {
             // Has become MVR eligible.
@@ -280,10 +287,6 @@ class PersonScheduleController extends ApiController
             $response['mvr_deadline'] = $deadline;
             $response['is_past_mvr_deadline'] = $pastDeadline;
             $response['signed_motorpool_agreement'] = $personEvent?->signed_motorpool_agreement;
-        }
-
-        if ($result['overcapacity']) {
-            $response['overcapacity'] = true;
         }
 
         if ($slot->has_started) {
@@ -299,7 +302,6 @@ class PersonScheduleController extends ApiController
         }
 
         return response()->json($response);
-
     }
 
     /**
@@ -308,33 +310,40 @@ class PersonScheduleController extends ApiController
      * @param Person $person
      * @param int $slotId to delete
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|ScheduleSignUpException
      */
 
     public function destroy(Person $person, int $slotId): JsonResponse
     {
         $this->authorize('delete', [Schedule::class, $person]);
 
-        $slot = Slot::findOrFail($slotId);
+        $slot = Slot::find($slotId);
+        if (!$slot) {
+            return response()->json(['status' => Schedule::SLOT_NOT_FOUND]);
+        }
+
         $now = now();
 
         list($canForce, $isTrainer) = $this->canForceScheduleChange($slot, false);
 
         $forced = false;
-        if ($now->gt($slot->begins)) {
+        if ($now->timestamp >= $slot->begins_time) {
             // Not allowed to delete anything from the schedule unless you have permission to do so.
             if (!$canForce) {
+                list ($signUps, $isFull, $becameFull, $linkedSlots) = Schedule::computeSignups($slot, Schedule::OP_QUERY);
+
                 return response()->json([
-                    'status' => 'has-started',
-                    'signed_up' => $slot->signed_up
+                    'status' => $slot->has_ended ? Schedule::HAS_ENDED : Schedule::HAS_STARTED,
+                    'signed_up' => $signUps,
+                    'linked_slots' => $linkedSlots,
                 ]);
             } else {
                 $forced = true;
             }
         }
 
-        $result = Schedule::deleteFromSchedule($person->id, $slot);
-        if ($result['status'] == 'success') {
+        $result = Schedule::deleteFromSchedule($person->id, $slot, $forced);
+        if ($result['status'] == Schedule::SUCCESS) {
             $data = ['slot_id' => $slotId];
             if ($forced) {
                 $data['forced'] = true;
@@ -366,7 +375,7 @@ class PersonScheduleController extends ApiController
     /**
      * Shift recommendations for a person (currently recommend Burn Weekend shift only)
      *
-     * (use primarily by the HQ interface)
+     * (used primarily by the HQ interface)
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
@@ -458,6 +467,7 @@ class PersonScheduleController extends ApiController
      * @param Person $person
      * @return JsonResponse
      * @throws AuthorizationException
+     * @throws InvalidArgumentException
      */
 
     public function scheduleSummary(Person $person): JsonResponse
