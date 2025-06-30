@@ -470,7 +470,7 @@ class Schedule
             }
         }
 
-        return [$finalSignUps, $isFull, $becameFull, $linkedSlots, $slot->parent_signup_slot?->max ?? $slot->max];
+        return [$finalSignUps, $isFull, $becameFull, $linkedSlots, $slot->parent_signup_slot?->max ?? $max];
     }
 
 
