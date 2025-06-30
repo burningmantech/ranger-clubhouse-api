@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Psr\SimpleCache\InvalidArgumentException;
 
 /**
@@ -43,8 +42,6 @@ class Slot extends ApiModel
         'position:id,title,type,contact_email,prevent_multiple_enrollments,alert_when_becomes_empty,alert_when_no_trainers,paycode,mvr_signup_eligible',
         'trainer_slot',
         'trainer_slot.position:id,title',
-        'parent_signup_slot',
-        'parent_signup_slot.position:id,title',
     ];
 
 
@@ -381,7 +378,7 @@ class Slot extends ApiModel
                     ->get();
 
                 $childCount = $childSlot->signed_up;
-                if (($signedUp +$childCount) >= $slot->max) {
+                if (($signedUp + $childCount) >= $slot->max) {
                     $signedUp = $slot->max;
                     $childCount = $childSlot->max;
                 } else {
