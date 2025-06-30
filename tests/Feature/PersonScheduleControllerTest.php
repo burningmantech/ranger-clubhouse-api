@@ -13,6 +13,7 @@ use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\Schedule;
 use App\Models\Slot;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -284,7 +285,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -321,7 +322,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -364,7 +365,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         Mail::assertQueued(TrainingSessionFullMail::class, 1);
     }
@@ -390,7 +391,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'no-position']);
+        $response->assertJson(['status' => Schedule::NO_POSITION]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -424,7 +425,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'full']);
+        $response->assertJson(['status' => Schedule::FULL]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -457,7 +458,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'has-started']);
+        $response->assertJson(['status' => Schedule::HAS_STARTED]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -490,7 +491,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -525,7 +526,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'has-started']);
+        $response->assertJson(['status' => Schedule::HAS_STARTED]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -555,7 +556,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -590,7 +591,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'full', 'may_force' => true]);
+        $response->assertJson(['status' => Schedule::FULL, 'may_force' => true]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -626,7 +627,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success', 'overcapacity' => true]);
+        $response->assertJson(['status' => Schedule::SUCCESS, 'overcapacity' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -669,7 +670,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'multiple-enrollment']);
+        $response->assertJson(['status' => Schedule::MULTIPLE_ENROLLMENT]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -720,7 +721,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -767,7 +768,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success', 'multiple_enrollment' => true]);
+        $response->assertJson(['status' => Schedule::SUCCESS, 'multiple_enrollment' => true]);
 
         $this->assertDatabaseHas(
             'person_slot',
@@ -810,7 +811,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'multiple-enrollment']);
+        $response->assertJson(['status' => Schedule::MULTIPLE_ENROLLMENT]);
 
         $this->assertDatabaseMissing(
             'person_slot',
@@ -861,7 +862,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'has-started']);
+        $response->assertJson(['status' => Schedule::HAS_STARTED]);
         $this->assertDatabaseHas('person_slot', $personSlot);
     }
 
@@ -886,7 +887,7 @@ class PersonScheduleControllerTest extends TestCase
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
         $this->assertDatabaseMissing('person_slot', $personSlot);
     }
 
@@ -901,7 +902,8 @@ class PersonScheduleControllerTest extends TestCase
         $personId = $this->user->id;
 
         $response = $this->json('DELETE', "person/{$personId}/schedule/{$shift->id}");
-        $response->assertStatus(404);
+        $response->assertStatus(200);
+        $response->assertJson(['status' => Schedule::MISSING_SIGNUP]);
     }
 
     /*
@@ -1079,7 +1081,7 @@ class PersonScheduleControllerTest extends TestCase
         );
 
         $response->assertStatus(200);
-        $response->assertJson(['status' => 'success']);
+        $response->assertJson(['status' => Schedule::SUCCESS]);
 
         $this->assertDatabaseHas(
             'person_slot',

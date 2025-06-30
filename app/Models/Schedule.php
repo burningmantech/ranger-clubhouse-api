@@ -46,19 +46,26 @@ class Schedule
     const int MAY_START_SHIFT_WITHIN = 25; // For HQ Window Interface: most shifts are only to be signed in to within X minutes of the start time.
 
     /*
-     * Sign up statuses
+     * Signup statuses
      */
 
     const string SUCCESS = 'success'; // person was successfully signed up for a slot
     const string FULL = 'full'; // slot is at capacity
     const string MULTIPLE_ENROLLMENT = 'multiple-enrollment'; // person is already enrolled in another slot with same position (i.e. training)
-    const string NOT_ACTIVE = 'not-active'; // slot has not been activated
+    const string NOT_ACTIVE = 'not-active'; // shift has not been activated
     const string NO_POSITION = 'no-position'; // person does not hold the position the slot is associated with
-    const string NO_SLOT = 'no-slot'; // slot does not exist
-    const string HAS_STARTED = 'has-started'; // slot has already started
+    const string HAS_ENDED = 'has-ended'; // shift has ended -- go home!
+    const string HAS_STARTED = 'has-started'; // shift has already started
     const string EXISTS = 'exists'; // person is already signed up for the slot.
+    const string MISSING_SIGNUP = 'missing-signup'; // person is not signed up for the shift
     const string MISSING_REQUIREMENTS = 'missing-requirements'; // person has not met all the requirements to sign up
-    const string NO_EMPLOYEE_ID = 'no-employee-id'; // person attempt to signed up for a paid shift, and no employee id is on file.
+    const string NO_EMPLOYEE_ID = 'no-employee-id'; // Paid position, must have an employee id on file.
+    const string SLOT_NOT_FOUND = 'slot-not-found';
+
+    // Operations for computeSignups()
+    const string OP_QUERY = 'query'; // Query what the effective signup counts are
+    const string OP_ADD = 'add';    // Adjust the effective signup counts when attempting to add a person
+    const string OP_REMOVE = 'remove'; // Adjust the effective signup counts when attempting to remove a person
 
     /*
      * Failed sign up statuses that are allowed to be forced if the user has the appropriate
@@ -73,8 +80,10 @@ class Schedule
      * Find slots in the given year the person may potentially sign up for and/or what slots
      * the person is already signed up for.
      *
-     * NOTE: A slot may be returned where the person no longer holds the position. E.g., Alpha, ART mentees,
-     * or is no longer part of a special team.
+     * NOTE: A slot may be returned where the person no longer holds the position yet still has the shift signup.
+     * E.g., Alpha, ART mentees, or is no longer part of a special team.
+     * Signups are retained for historical purposes, so past schedules can be viewed, work histories built up,
+     * and the ability to submit Alpha & mentee timesheet corrections after the person has graduated.
      *
      * @param int $personId
      * @param int $year
@@ -90,7 +99,7 @@ class Schedule
         $keepPositionsById = $query['positions_by_id'] ?? false;
 
         // Find all slots the person is eligible for AND all slots the person is already signed up for
-        // Note: a person may be signed up for a position they no longer hold. e.g., Alpha, Green Dot Mentee, etc.
+        // Note: a person may be signed up for a position they no longer hold. E.g., Alpha, Green Dot Mentee, etc.
 
         $sql = Slot::select('slot.*', 'trainer_slot.signed_up as trainer_count')
             ->leftJoin('slot as trainer_slot', 'trainer_slot.id', '=', 'slot.trainer_slot_id')
@@ -137,6 +146,23 @@ class Schedule
             PositionCredit::warmYearCache($year, array_keys($positionsById));
         }
 
+        // Adjust the signup counts for parent/child slots
+        foreach ($rows as $row) {
+            $child = $row->child_signup_slot;
+            if ($child) {
+                $found = $rows->find($child->id);
+                if (!$found) {
+                    continue;
+                }
+                if (($row->signed_up + $child->signed_up) >= $row->max || $row->signed_up >= $row->max) {
+                    $found->signed_up = $found->max;
+                    $row->signed_up = $row->max;
+                } else {
+                    $row->signed_up = $row->signed_up + $found->signed_up;
+                }
+            }
+        }
+
         foreach ($rows as $row) {
             if ($remaining && $row->has_ended) {
                 continue;
@@ -169,11 +195,8 @@ class Schedule
 
             // Compute some values
             $entry->slot_max = ($entry->trainer_slot_id ? $entry->trainer_count * $entry->slot_max_potential : $entry->slot_max_potential);
-            $entry->slot_signed_up = $row->signed_up;
 
-            if ($row->child_signup_slot) {
-                $entry->slot_signed_up += $row->child_signup_slot->signed_up;
-            }
+            $entry->slot_signed_up = $row->signed_up;
         }
 
         PositionCredit::bulkComputeCredits($slots, $year, 'slot_begins_time', 'slot_ends_time');
@@ -222,79 +245,42 @@ class Schedule
      * @param Slot $slot slot to add to
      * @param bool $force set true if to ignore the signup limit
      * @return array
+     * @throws Exception
      */
 
     public static function addToSchedule(int $personId, Slot $slot, bool $force = false): array
     {
+        // Query the current signups in case the existing and shift started checks are triggered.
+        list ($signUps, $isFull, $becameFull, $linkedSlots, $combinedMax) = self::computeSignups($slot, self::OP_QUERY);
+
         if (PersonSlot::haveSlot($personId, $slot->id)) {
-            return ['status' => self::EXISTS, 'signed_up' => $slot->signed_up];
+            return [
+                'status' => self::EXISTS,
+                'signed_up' => $signUps,
+                'linked_slots' => $linkedSlots,
+                'combined_max' => $combinedMax,
+            ];
         }
 
         if ($slot->has_started && !$force) {
-            // Shift has already started, don't allow a sign-up
-            return ['status' => self::HAS_STARTED, 'signed_up' => $slot->signed_up];
+            // Shift has already started, don't allow signups
+            return [
+                'status' => $slot->has_ended ? self::HAS_ENDED : self::HAS_STARTED,
+                'signed_up' => $signUps,
+                'linked_slots' => $linkedSlots,
+                'combined_max' => $combinedMax,
+            ];
         }
 
-        $signUps = 0;
         try {
-            $isOvercapacity = false;
-
             DB::beginTransaction();
+            // Recompute the signups this time with the intention of adding a signup.
+            list ($signUps, $isFull, $becameFull, $linkedSlots, $combinedMax) = self::computeSignups($slot, self::OP_ADD, $force);
             // Re-read the slot for update.
-            $updateSlot = Slot::where('id', $slot->id)
-                ->lockForUpdate()
-                ->with(['parent_signup_slot', 'child_signup_slot'])
-                ->first();
-
-            if (!$updateSlot) {
-                // shouldn't happen but ya never know...
-                throw new ScheduleSignUpException(self::NO_SLOT);
-            }
-
-            /*
-             * Sign up limitations
-             *
-             * - a child slot cannot exceed its own max count in addition to
-             *   not exceeding parent's max count for the combined parent and child signups
-             * - a parent slot cannot have the combined parent and child signups exceed the parent's max count
-             */
-
-            $signUps = $updateSlot->signed_up;
-            if ($updateSlot->parent_signup_slot) {
-                if ($signUps >= $updateSlot->max) {
-                    if (!$force) {
-                        throw new ScheduleSignUpException(self::FULL);
-                    }
-                    $isOvercapacity = true;
-                } else if (($signUps + $updateSlot->parent_signup_slot->signed_up) >= $updateSlot->parent_signup_slot->max) {
-                    if (!$force) {
-                        throw new ScheduleSignUpException(self::FULL);
-                    }
-                    $isOvercapacity = true;
-                }
-            } else {
-                if ($updateSlot->child_signup_slot) {
-                    $signUps += $updateSlot->child_signup_slot->signed_up;
-                    $max = $updateSlot->max;
-                } else if ($slot->trainer_slot_id) {
-                    $max = $updateSlot->max * PersonSlot::where('slot_id', $slot->trainer_slot_id)->count();
-                } else {
-                    $max = $updateSlot->max;
-                }
-                // Cannot exceed sign up limit unless it is forced.
-                if ($signUps >= $max) {
-                    if (!$force) {
-                        throw new ScheduleSignUpException(self::FULL);
-                    }
-
-                    $isOvercapacity = true;
-                }
-            }
-
+            $updateSlot = Slot::where('id', $slot->id)->lockForUpdate()->first();
 
             // Sign up the person
             PersonSlot::create(['person_id' => $personId, 'slot_id' => $updateSlot->id]);
-
             $updateSlot->signed_up += 1;
             $updateSlot->save();
 
@@ -302,36 +288,58 @@ class Schedule
 
             return [
                 'status' => self::SUCCESS,
-                'signed_up' => $signUps + 1,
-                'overcapacity' => $isOvercapacity,
+                'signed_up' => $signUps,
+                'is_full' => $isFull,
+                'overcapacity' => $isFull,  // TODO: remove this when all clients are up to date.
+                'became_full' => $becameFull,
+                'linked_slots' => $linkedSlots,
+                'combined_max' => $combinedMax,
             ];
-        } catch (ScheduleSignUpException $e) {
-            DB::rollback();
-            return ['status' => $e->getMessage(), 'signed_up' => $signUps];
+        } catch (Exception $e) {
+            DB::rollBack();
+            if ($e instanceof ScheduleSignUpException) {
+                return [
+                    'status' => $e->getMessage(),
+                    'signed_up' => $e->signUps,
+                    'linked_slots' => $e->linkedSlots,
+                    'combined_max' => $e->combinedMax,
+                ];
+            }
+            // Most likely the database crapped itself
+            throw $e;
         }
     }
 
     /**
-     * Remove a sign-up for a person
+     * Remove a signup for a person
      *
      * @throws Exception
      */
 
     public static function deleteFromSchedule(int $personId, Slot $slot, ?string $reason = null): array
     {
-        $personSlot = PersonSlot::where([
-            ['person_id', $personId],
-            ['slot_id', $slot->id]
-        ])->firstOrFail();
-
         try {
+            list ($signUps, $isFull, $becameFull, $linkedSlots) = self::computeSignups($slot, self::OP_REMOVE);
             DB::beginTransaction();
+            $personSlot = PersonSlot::where([
+                ['person_id', $personId],
+                ['slot_id', $slot->id]
+            ])->lockForUpdate()->first();
+
+            if (!$personSlot) {
+                DB::rollback();
+                return [
+                    'status' => self::MISSING_SIGNUP,
+                    'signed_up' => $signUps,
+                    'linked_slots' => $linkedSlots,
+                ];
+            }
+
             if ($reason) {
                 $personSlot->auditReason = $reason;
             }
             $personSlot->delete();
-            $signedUp = DB::table('person_slot')->where('slot_id', $slot->id)->count();
-            $slot->signed_up = $signedUp;
+            $slot->signed_up = DB::table('person_slot')->where('slot_id', $slot->id)->count();
             $slot->saveWithoutValidation();
             DB::commit();
         } catch (Exception $e) {
@@ -339,7 +347,7 @@ class Schedule
             throw $e;
         }
 
-        if (!$signedUp) {
+        if (!$signUps) {
             if ($slot->position->alert_when_no_trainers) {
                 $traineeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
                 if ($traineeSlot && $traineeSlot->signed_up > 0) {
@@ -352,8 +360,119 @@ class Schedule
             }
         }
 
-        return ['status' => self::SUCCESS, 'signed_up' => $signedUp];
+        return [
+            'status' => self::SUCCESS,
+            'signed_up' => $signUps,
+            'is_full' => $isFull,
+            'overcapacity' => $isFull,  // TODO: remove this when all clients are up to date.
+            'linked_slots' => $linkedSlots
+        ];
     }
+
+    public static function computeSignups(Slot $slot, string $op, bool $force = false): array
+    {
+        /*
+         * Sign up limitations
+         *
+         * - a child slot cannot exceed its own max count in addition to
+         *   not exceeding parent's max count for the combined parent and child signups
+         * - a parent slot cannot have the combined parent and child signups exceed the parent's max count
+         */
+
+        $signUps = $slot->signed_up;
+        $finalSignUps = $signUps;
+        $linkedSlots = [];
+        $isFull = false;
+        $becameFull = false; // Only for parent/child shifts. So the frontend can alert the user to what's going on.
+        $max = $slot->max;
+
+        $countAdjustment = match ($op) {
+            self::OP_QUERY => 0,
+            self::OP_ADD => 1,
+            self::OP_REMOVE => -1,
+            default => throw new Exception('Unknown op: ' . $op),
+        };
+
+        $parentSlot = $slot->parent_signup_slot;
+        if ($parentSlot) {
+            $parentSignups = $parentSlot->signed_up;
+            $combined = $signUps + $parentSignups;
+            $adjustedCombined = $combined + $countAdjustment;
+            $finalSignUps = $signUps + $countAdjustment;
+
+            if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $parentSlot->max)) {
+                throw new ScheduleSignUpException(self::FULL, $max, [
+                    ['slot_id' => $parentSlot->id, 'signed_up' => $combined],
+                ], $parentSlot->max);
+            }
+
+            if ($finalSignUps >= $max || $adjustedCombined >= $parentSlot->max) {
+                $isFull = true;
+                $finalSignUps = $max;
+                $adjustedCombined = $parentSlot->max;
+            }
+
+            $linkedSlots[] = [
+                'slot_id' => $parentSlot->id,
+                'signed_up' => $adjustedCombined,
+                'max' => $parentSlot->max,
+                'position_title' => $parentSlot->position->title,
+            ];
+
+            if (self::OP_ADD && ($combined + 1) == $parentSlot->max) {
+                $becameFull = true;
+            }
+        } else {
+            $childSlot = $slot->child_signup_slot;
+            if ($childSlot) {
+                $childSignups = $childSlot->signed_up;
+                $combined = $signUps + $childSignups;
+                $adjustedCombined = $combined + $countAdjustment;
+                $finalSignUps = $adjustedCombined;
+
+                if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $max)) {
+                    throw new ScheduleSignUpException(self::FULL, $max, [
+                        ['slot_id' => $childSlot->id, 'signed_up' => $childSlot->max]
+                    ],
+                    $slot->max);
+                }
+
+                if ($finalSignUps >= $max || ($signUps + $countAdjustment) >= $max) {
+                    $isFull = true;
+                    $finalSignUps = $max;
+                    $childSignups = $childSlot->max;
+                }
+
+                $linkedSlots[] = [
+                    'slot_id' => $childSlot->id,
+                    'signed_up' => $childSignups,
+                    'max' => $childSlot->max,
+                    'position_title' => $childSlot->position->title,
+                ];
+
+                if (self::OP_ADD && ($combined + 1) == $slot->max) {
+                    $becameFull = true;
+                }
+            } else {
+                if ($slot->trainer_slot_id) {
+                    $max = $max * $slot->trainer_slot->signed_up;
+                }
+
+                // Cannot exceed the signup limit unless it is forced.
+                if ($op == self::OP_ADD && $signUps >= $max) {
+                    if (!$force) {
+                        throw new ScheduleSignUpException(self::FULL, $signUps, [], $slot->max);
+                    }
+
+                    $isFull = true;
+                }
+                $finalSignUps += $countAdjustment;
+            }
+        }
+
+        return [$finalSignUps, $isFull, $becameFull, $linkedSlots, $slot->parent_signup_slot?->max ?? $slot->max];
+    }
+
 
     /**
      * Remove all future signups for a person.
@@ -553,7 +672,7 @@ class Schedule
             ];
 
             if (!$withinStart) {
-                $shift['can_start_in'] = (int) $now->diffInMinutes($start);
+                $shift['can_start_in'] = (int)$now->diffInMinutes($start);
                 if ($shift['can_start_in'] == 0) {
                     $shift['can_start_in'] = 1;
                 }
@@ -577,7 +696,7 @@ class Schedule
     /**
      * Find the (probable) slot  sign up for a person based on the position and time.
      *
-     * NOTE: This assumes the slots inspected are in the same timezone as the event.
+     * NOTE: This assumes the slots inspected are in the same time zone as the event.
      * @param integer $personId the person in question
      * @param integer $positionId the position to search for
      * @param string|Carbon $begins the time to look for.
@@ -659,6 +778,7 @@ class Schedule
      *
      * @param Person $person
      * @return array
+     * @throws InvalidArgumentException
      */
 
     public static function summarizeShiftSignups(Person $person): array
@@ -722,6 +842,7 @@ class Schedule
      * @param int $year
      * @param bool $remaining
      * @return object
+     * @throws InvalidArgumentException
      */
 
     public static function scheduleSummaryForPersonYear(int $personId, int $year, bool $remaining = false): object
@@ -769,7 +890,7 @@ class Schedule
 
         foreach ($rows as $row) {
             if ($remaining && $row->slot_begins->lt($now)) {
-                // Truncate any shifts which have started
+                // Truncate any shifts that have started
                 $row->slot_begins = $now;
                 $row->slot_begins_time = $now->timestamp;
             }

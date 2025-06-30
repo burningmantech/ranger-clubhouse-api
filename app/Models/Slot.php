@@ -145,7 +145,7 @@ class Slot extends ApiModel
 
     public function child_signup_slot(): HasOne
     {
-        return $this->HasOne(Slot::class, 'parent_signup_slot_id');
+        return $this->hasOne(Slot::class, 'parent_signup_slot_id');
     }
 
 
@@ -206,7 +206,6 @@ class Slot extends ApiModel
      *
      * @param $options
      * @return bool
-     * @throws ValidationException
      */
 
     public function save($options = []): bool
@@ -334,16 +333,21 @@ class Slot extends ApiModel
             ->orderBy('person.callsign', 'asc')
             ->get();
 
-        $results = ['people' => $rows, 'signed_up' => $slot->signed_up, 'max' => $slot->max];
+        $results = ['people' => $rows, 'max' => $slot->max];
 
+        $signedUp = $slot->signed_up;
+        $combinedMax = $slot->max;
         if (!$includeOnDuty) {
             $slot->load([
+                'parent_signup_slot',
                 'parent_signup_slot.position:id,title',
-                'child_signup_slot.position:id,title'
+                'child_signup_slot',
+                'child_signup_slot.position:id,title',
             ]);
 
-            if ($slot->parent_signup_slot) {
-                $parentSlot = $slot->parent_signup_slot;
+            $parentSlot = $slot->parent_signup_slot;
+            if ($parentSlot) {
+                $combinedMax = $parentSlot->max;
                 $parentPeople = DB::table('person_slot')
                     ->select('person.id', 'person.callsign')
                     ->join('person', 'person.id', '=', 'person_slot.person_id')
@@ -351,11 +355,21 @@ class Slot extends ApiModel
                     ->orderBy('person.callsign', 'asc')
                     ->get();
 
+                $parentCount = $parentSlot->signed_up;
+                if (($parentCount + $slot->signed_up) >= $parentSlot->max) {
+                    $parentCount = $parentSlot->max;
+                    $signedUp = $slot->max;
+                } else {
+                    $parentCount += $signedUp;
+                }
+
                 $results['parent'] = [
                     'slot_id' => $parentSlot->id,
                     'position_id' => $parentSlot->position_id,
                     'position_title' => $parentSlot->position->title,
-                    'people' => $parentPeople
+                    'people' => $parentPeople,
+                    'signed_up' => $parentCount,
+                    'max' => $parentSlot->max,
                 ];
             } else if ($slot->child_signup_slot) {
                 $childSlot = $slot->child_signup_slot;
@@ -366,13 +380,26 @@ class Slot extends ApiModel
                     ->orderBy('person.callsign', 'asc')
                     ->get();
 
+                $childCount = $childSlot->signed_up;
+                if (($signedUp +$childCount) >= $slot->max) {
+                    $signedUp = $slot->max;
+                    $childCount = $childSlot->max;
+                } else {
+                    $signedUp += $childCount;
+                }
+
                 $results['child'] = [
                     'slot_id' => $childSlot->id,
                     'position_id' => $childSlot->position_id,
                     'position_title' => $childSlot->position->title,
-                    'people' => $childPeople
+                    'people' => $childPeople,
+                    'signed_up' => $childCount,
+                    'max' => $childSlot->max,
                 ];
             }
+
+            $results['signed_up'] = $signedUp;
+            $results['combined_max'] = $combinedMax;
 
             $positions = PositionLineup::retrieveAssociatedPositions($slot->position_id);
             if (!$positions) {
@@ -408,6 +435,8 @@ class Slot extends ApiModel
             $results['assoc_signups'] = $assocSignUps;
             return $results;
         }
+
+        $results['signed_ups'] = $signedUp;
 
         if ($rows->isEmpty()) {
             return $results;
