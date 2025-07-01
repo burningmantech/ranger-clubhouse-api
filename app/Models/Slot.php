@@ -393,6 +393,12 @@ class Slot extends ApiModel
                     'signed_up' => $childCount,
                     'max' => $childSlot->max,
                 ];
+            } else {
+                $max = $slot->max;
+                if ($slot->trainer_slot_id) {
+                    $max = $max * $slot->trainer_slot->signed_up;
+                }
+                $results['max'] = $max;
             }
 
             $results['signed_up'] = $signedUp;
