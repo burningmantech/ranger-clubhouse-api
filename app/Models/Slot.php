@@ -394,11 +394,11 @@ class Slot extends ApiModel
                     'max' => $childSlot->max,
                 ];
             } else {
+                $max = $slot->max;
                 if ($slot->trainer_slot_id) {
-                    $max = $slot->max * $slot->trainer_slot->signed_up;
+                    $max = $max * $slot->trainer_slot->signed_up;
                 }
                 $results['max'] = $max;
-                $combinedMax = $max;
             }
 
             $results['signed_up'] = $signedUp;
