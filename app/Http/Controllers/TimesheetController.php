@@ -360,6 +360,7 @@ class TimesheetController extends ApiController
             'slot_id' => 'sometimes|integer|exists:slot,id',
             'force_sign_in' => 'sometimes|boolean',
             'signin_force_reason' => 'sometimes|string',
+            'start_time' => 'sometimes|date_format:H:i',
         ]);
 
         $personId = $params['person_id'];
@@ -389,12 +390,29 @@ class TimesheetController extends ApiController
             return response()->json(['status' => 'position-not-eligible']);
         }
 
-        $blockers = SignInBlocker::check($person, $position, true);
+        $now = now();
+
+        $startTime = $params['start_time'] ?? null;
+        if ($startTime) {
+            list($hour, $minute) = explode(':', $startTime);
+            $onDuty = $now->clone()->setHour((int)$hour)->setMinute((int)$minute);
+            if ($onDuty->gt($now)) {
+                throw ValidationException::withMessages([
+                    'start_time' => ['Start time is in the future']
+                ]);
+            }
+
+            $log['set_time'] = true;
+        } else {
+            $onDuty = $now;
+        }
+
+        $blockers = SignInBlocker::check($person, $position, true, $onDuty);
         $wasForced = false;
 
         if (!empty($blockers)) {
             if (!($params['force_sign_in'] ?? false)) {
-                return response()->json(['status' => 'blocked', 'blockers' => $blockers]);
+                return response()->json(['status' => 'blocked', 'blockers' => $blockers, 'start_time' => $onDuty]);
             }
 
             Gate::allowIf(fn($user) => $user->hasRole([Role::ADMIN, Role::CAN_FORCE_SHIFT]));
@@ -405,8 +423,9 @@ class TimesheetController extends ApiController
             $wasForced = true;
         }
 
+
         $timesheet = new Timesheet($params);
-        $timesheet->on_duty = now();
+        $timesheet->on_duty = $onDuty;
         $timesheet->auditReason = 'sign in';
         $timesheet->was_signin_forced = $wasForced;
         if (!$timesheet->save()) {

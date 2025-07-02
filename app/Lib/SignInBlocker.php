@@ -8,6 +8,7 @@ use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Timesheet;
 use App\Models\Training;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SignInBlocker
@@ -18,11 +19,14 @@ class SignInBlocker
      * @param Person $person
      * @param Position $position
      * @param bool $checkTimes - if true check
+     * @param Carbon|null $relativeTo
      * @return array
      */
 
-    public static function check(Person $person, Position $position, bool $checkTimes = false): array
+    public static function check(Person $person, Position $position, bool $checkTimes = false, ?Carbon $relativeTo = null): array
     {
+        $relativeTo ??= now();
+
         $personId = $person->id;
         $positionId = $position->id;
 
@@ -39,7 +43,7 @@ class SignInBlocker
         self::checkForTraining($person, $position, $blockers);
 
         if ($checkTimes) {
-            self::checkSlots($personId, $positionId, $blockers);
+            self::checkSlots($personId, $positionId, $blockers, $relativeTo);
         }
 
         /**
@@ -85,7 +89,7 @@ class SignInBlocker
      * @param int $personId
      * @return bool
      */
-    public static function havePreviousShift(int $personId): bool
+    public static function havePreviousShift(int $personId, Carbon $relativeTo): bool
     {
         return DB::table('timesheet')
             ->where('person_id', $personId)
@@ -139,11 +143,10 @@ class SignInBlocker
         ];
     }
 
-    public static function checkSlots(int $personId, int $positionId, array &$blockers): void
+    public static function checkSlots(int $personId, int $positionId, array &$blockers, Carbon $relativeTo): void
     {
-        $now = now();
-        $timestamp = $now->timestamp;
-        $year = $now->year;
+        $timestamp = $relativeTo->timestamp;
+        $year = $relativeTo->year;
 
         $earlyCheckIn = setting('ShiftCheckInEarlyPeriod') * 60;
         $lateCheckIn = setting('ShiftCheckInLatePeriod') * 60;
@@ -189,7 +192,7 @@ class SignInBlocker
             return;
         }
 
-        if (self::havePreviousShift($personId)) {
+        if (self::havePreviousShift($personId, $relativeTo)) {
             // Previous shift -- don't worry about it.
             return;
         }
