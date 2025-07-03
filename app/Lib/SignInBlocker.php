@@ -117,8 +117,12 @@ class SignInBlocker
             return;
         }
 
+        if ($position->allow_echelon && $person->status == Person::ECHELON) {
+            return;
+        }
+
         // The person has to have passed dirt training
-        if ($person->status != Person::ECHELON && !Training::didPersonPassForYear($person, Position::TRAINING, $year)) {
+        if (!Training::didPersonPassForYear($person, Position::TRAINING, $year)) {
             $blockers[] = [
                 'blocker' => Timesheet::BLOCKED_NOT_TRAINED,
                 'position' => [
