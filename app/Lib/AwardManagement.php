@@ -17,48 +17,55 @@ class AwardManagement
 
     public static function rebuildAll(): void
     {
-        $positionIds = self::retrievePositionIds();
-        $teamsByPerson = self::retrieveTeamLogs(null)->groupBy('person_id');
-        $awardsByPerson = PersonAward::all()->groupBy('person_id');
+        /*
+         TODO: Revisit when ready for automated grants. Existing awards might be getting zapped.
 
-        if ($positionIds) {
-            $taughtYears = self::retrieveTrainerRecords(null, $positionIds)->groupBy('person_id');
-            $timesheetsByPerson = Timesheet::select('person_id', 'on_duty', 'position_id')
-                ->whereIn('position_id', $positionIds)
-                ->with('position:id,awards_grants_service_year')
-                ->get()
-                ->groupBy('person_id');
-        } else {
-            $taughtYears = null;
-            $timesheetsByPerson = null;
-        }
+             $positionIds = self::retrievePositionIds();
+              $teamsByPerson = self::retrieveTeamLogs(null)->groupBy('person_id');
+              $awardsByPerson = PersonAward::all()->groupBy('person_id');
 
-        $personIds = $teamsByPerson->keys()->toArray();
-        $personIds = array_merge($personIds, $awardsByPerson->keys()->toArray());
-        if ($taughtYears) {
-            $personIds = array_merge($personIds, $taughtYears->keys()->toArray());
-        }
+              if ($positionIds) {
+                  $taughtYears = self::retrieveTrainerRecords(null, $positionIds)->groupBy('person_id');
+                  $timesheetsByPerson = Timesheet::select('person_id', 'on_duty', 'position_id')
+                      ->whereIn('position_id', $positionIds)
+                      ->with('position:id,awards_grants_service_year')
+                      ->get()
+                      ->groupBy('person_id');
+              } else {
+                  $taughtYears = null;
+                  $timesheetsByPerson = null;
+              }
 
-        $personIds = array_unique($personIds);
+              $personIds = $teamsByPerson->keys()->toArray();
+              $personIds = array_merge($personIds, $awardsByPerson->keys()->toArray());
+              if ($taughtYears) {
+                  $personIds = array_merge($personIds, $taughtYears->keys()->toArray());
+              }
 
-        $people = Person::whereIn('status', Person::ACTIVE_STATUSES)
-            ->whereIntegerInRaw('id', $personIds)
-            ->get();
 
-        foreach ($people as $person) {
-            $personId = $person->id;
-            self::reconstructAwards($person,
-                $awardsByPerson->get($personId) ?: collect([]),
-                $positionIds,
-                $taughtYears?->get($personId),
-                $teamsByPerson->get($personId),
-                $timesheetsByPerson?->get($personId)
-            );
-        }
+              $personIds = array_unique($personIds);
+
+              $people = Person::whereIn('status', Person::ACTIVE_STATUSES)
+                  ->whereIntegerInRaw('id', $personIds)
+                  ->get();
+
+              foreach ($people as $person) {
+                  $personId = $person->id;
+                  self::reconstructAwards($person,
+                      $awardsByPerson->get($personId) ?: collect([]),
+                      $positionIds,
+                      $taughtYears?->get($personId),
+                      $teamsByPerson->get($personId),
+                      $timesheetsByPerson?->get($personId)
+                  );
+              }
+       */
     }
 
     public static function rebuildForPersonId(int $personId, bool $savePerson = true): void
     {
+        /*
+         TODO: Revisit when ready for automated grants. Existing awards might be getting zapped.
         $person = Person::find($personId);
         $awards = PersonAward::where('person_id', $personId)->get();
         $positionIds = self::retrievePositionIds();
@@ -78,6 +85,7 @@ class AwardManagement
         }
 
         self::reconstructAwards($person, $awards, $positionIds, $taughtYears, $teams, $timesheets, $savePerson);
+        */
     }
 
     public static function reconstructAwards(
