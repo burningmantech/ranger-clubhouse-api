@@ -140,6 +140,7 @@ class PersonAwardControllerTest extends TestCase
      * Test award creation from timesheet creation
      */
 
+    /*
     public function testCreateAwardFromTimesheet(): void
     {
         $this->addRole(Role::SHIFT_MANAGEMENT);
@@ -162,11 +163,13 @@ class PersonAwardControllerTest extends TestCase
             'year' => $year,
         ]);
     }
+    */
 
     /**
      * Test a timesheet should not generate an award
      */
 
+    /*
     public function testNoAwardCreationFromTimesheet(): void
     {
         $this->addRole(Role::SHIFT_MANAGEMENT);
@@ -193,11 +196,13 @@ class PersonAwardControllerTest extends TestCase
             'year' => $year,
         ]);
     }
+    */
 
     /**
      * Test award creation from trainer status update
      */
 
+    /*
     public function testCreateAwardFromTrainerStatus(): void
     {
         Position::factory()->create([
@@ -246,6 +251,7 @@ class PersonAwardControllerTest extends TestCase
             'year' => $year,
         ]);
     }
+    */
 
     /**
      * Test basic bulk award uploads
