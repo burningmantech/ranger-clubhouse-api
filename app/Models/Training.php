@@ -175,6 +175,7 @@ class Training extends Position
             'location' => null,
             'position_id' => $trainingPositionId,
             'position_title' => $position->title,
+            'has_online_course' => $position->has_online_course,
         ];
 
         $trainings = TraineeStatus::findForPersonYear($personId, $year, $trainingPositionId);

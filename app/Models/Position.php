@@ -50,6 +50,7 @@ class Position extends ApiModel
     const int SANCTUARY_MENTEE = 123;
 
     const int HQ_FULL_TRAINING = 31;
+    const int HQ_LEADS_SHORTS_TRAINING = 198;
     const int HQ_LEAD = 32;
     const int HQ_LEAD_PRE_EVENT = 118;
     const int HQ_REFRESHER_TRAINING = 49;
@@ -61,6 +62,7 @@ class Position extends ApiModel
     const int HQ_WINDOW_PRE_EVENT = 117;
     const int HQ_WINDOW_SANDMAN = 104;
     const int HQ_TOD = 103;
+
     const int DOUBLE_OH_7 = 21;
     const int DOUBLE_OH_7_STANDBY = 110;
 
@@ -298,6 +300,7 @@ class Position extends ApiModel
         'count_hours',
         'cruise_direction',
         'deselect_on_team_join',
+        'has_online_course',
         'max',
         'min',
         'mvr_eligible',         // dashboard prompt will always appear
@@ -338,6 +341,7 @@ class Position extends ApiModel
             'awards_grants_service_year' => 'bool',
             'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
+            'has_online_course' => 'bool',
             'mvr_eligible' => 'bool',
             'mvr_signup_eligible' => 'bool',
             'new_user_eligible' => 'bool',
