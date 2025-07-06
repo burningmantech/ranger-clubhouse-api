@@ -122,7 +122,7 @@ class GroundHogDay
         foreach ($trueSettings as $name) {
             $setting = Setting::find($name);
             $setting->value = 'true';
-            $setting->update();
+            $setting->saveWithoutValidation();
         }
 
         Setting::find('DashboardPeriod')->update(['value' => 'event']);
