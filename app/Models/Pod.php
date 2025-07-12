@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class Pod extends ApiModel
 {
@@ -80,11 +80,16 @@ class Pod extends ApiModel
             ->leftJoin('position', 'position.id', 'timesheet.position_id')
             ->whereNull('person_pod.removed_at')
             ->select(
-                'person.id', 'person.callsign', 'person.status',
-                'person_pod.is_lead', 'person_pod.sort_index',
-                'timesheet.on_duty', 'timesheet.position_id',
-                'position.title as position_title')
-            ->orderBy('person_pod.sort_index')
+                'person.id',
+                'person.callsign',
+                'person.status',
+                'person_pod.is_lead',
+                'person_pod.sort_index',
+                'timesheet.on_duty',
+                'timesheet.position_id',
+                'position.title as position_title',
+                DB::raw("EXISTS(select 1 from person_mentor where person_mentor.person_id = person.id and person_mentor.status IN (\"bonk\", \"self-bonk\")) as prior_bonk")
+            )->orderBy('person_pod.sort_index')
             ->orderBy('person.callsign');
     }
 
@@ -151,10 +156,9 @@ class Pod extends ApiModel
     public function loadPhotos(): void
     {
         foreach ($this->people as $person) {
-            $person->photo_url = PersonPhoto::retrieveProfileUrlForPerson($person->id);
+            $person->photo_url = PersonPhoto::retrieveMostRecentApproved($person->id);
         }
     }
-
 
     /**
      * Handle the case where a person is in a pod, and has gone off duty. Indicate the
@@ -162,8 +166,6 @@ class Pod extends ApiModel
      *
      * @param int $personId
      * @param int $timesheetId
-     * @return void
-     * @throws ValidationException
      */
 
     public static function shiftEnded(int $personId, int $timesheetId): void
@@ -206,7 +208,7 @@ class Pod extends ApiModel
      * @return Attribute
      */
 
-    public function location() : Attribute
+    public function location(): Attribute
     {
         return NullIfEmptyAttribute::make();
     }

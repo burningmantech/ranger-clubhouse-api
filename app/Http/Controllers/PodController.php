@@ -236,7 +236,7 @@ class PodController extends ApiController
             throw new UnacceptableConditionException("Person is not in the pod");
         }
 
-        if (isset($params['is_lead'])) {
+        if ($pod->type != Pod::TYPE_ALPHA && isset($params['is_lead'])) {
             $personPod->is_lead = $params['is_lead'];
         }
 

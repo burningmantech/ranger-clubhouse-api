@@ -6,16 +6,12 @@ use App\Models\Person;
 use App\Models\PersonIntake;
 use App\Models\PersonIntakeNote;
 use App\Models\PersonMentor;
-use App\Models\PersonOnlineCourse;
-use App\Models\PersonPhoto;
-use App\Models\PersonSlot;
 use App\Models\PersonStatus;
 use App\Models\Position;
-use App\Models\Slot;
 use App\Models\Timesheet;
-use App\Models\TraineeStatus;
 use App\Models\Training;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Intake
 {
@@ -93,6 +89,18 @@ class Intake
             ->with('person_fka')
             ->get();
 
+        $alphaSignups = DB::table('person_slot')
+            ->select('person_id', 'slot.begins_year')
+            ->join('slot', 'person_slot.slot_id', '=', 'slot.id')
+            ->where('slot.position_id', Position::ALPHA)
+            ->whereIn('person_id', $pnvIds)
+            ->get()
+            ->groupBy('begins_year');
+
+        $alphaSignups = $alphaSignups->map(function ($signupYear) {
+            return $signupYear->keyBy('person_id');
+        });
+
         $pnvs = [];
         foreach ($people as $person) {
             $haveFlag = false;
@@ -122,8 +130,8 @@ class Intake
             }
 
             /*
-             * Build up the PNV mentor history
-             */
+            * Build up the PNV mentor history
+            */
 
             $pnvHistory = [];
             if (isset($mentors[$personId])) {
@@ -133,8 +141,9 @@ class Intake
                         'mentor_status' => $mentorship['status'] ?? 'none',
                         'mentors' => $mentorship['mentors'],
                         'training_status' => 'none',
-                        'have_alpha_shift' => false
+                        'have_alpha_shift' => $mentorYear == $year && $alphaSignups->has($personId),
                     ];
+
 
                     if ($status == PersonMentor::BONK || $status == PersonMentor::SELF_BONK) {
                         $haveFlag = true;
@@ -155,7 +164,6 @@ class Intake
                         $pnvHistory[$trainYear] = (object)[
                             'training_status' => 'none',
                             'mentor_status' => 'none',
-                            'have_alpha_shift' => false
                         ];
                         // See if the person was an auditor that year
                         if (isset($personStatuses[$personId]) && self::wasAuditorInYear($personStatuses[$personId], $trainYear)) {
@@ -176,6 +184,8 @@ class Intake
                             $history->training_status = 'pending';
                         }
                     }
+                    error_log("Checking year {$trainYear} for {$person->callsign} = " . json_encode($alphaSignups->get($trainYear)?->has($personId)));
+                    $history->have_alpha_shift = $alphaSignups->get($trainYear)?->has($personId);
                 }
             } else {
                 $pnv['trainings'] = [];
