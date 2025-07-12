@@ -48,7 +48,9 @@ class EarlyArrivalReport
             $radioCount = 0;
             if ($allowedRadios) {
                 foreach ($allowedRadios as $radio) {
-                    $radioCount += $radio->item_count;
+                    if ($radio->item_count > $radioCount) {
+                        $radioCount = $radio->item_count;
+                    }
                 }
             }
 
@@ -74,7 +76,7 @@ class EarlyArrivalReport
                 'on_site' => $person->on_site,
                 'radios_allowed' => $radioCount,
                 'radios' => $issuedRadios,
-                'sap_date' => $sap->access_date->format('Y-m-d'),
+                'sap_date' => $sap->access_any_time ? 'any' : $sap->access_date->format('Y-m-d'),
                 'bmid_status' => $bmids->get($person->id)?->status ?? 'no-bmid',
             ];
         }
