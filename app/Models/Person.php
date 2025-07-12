@@ -229,7 +229,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'password',
         'tpassword',
         'tpassword_expire',
-
+        'laravel_through_key',
         'pivot' // Exclude pivot table references when building JSON response
     ];
 
@@ -323,12 +323,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'zip',
     ];
 
-    protected $appends = [
-        'has_bpguid'
-    ];
-
     protected $virtualColumns = [
-        'has_bpguid',
         'has_reviewed_pi',
     ];
 
@@ -762,6 +757,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $callsign = $query['callsign'] ?? null;
         $statuses = $query['statuses'] ?? null;
         $excludeStatuses = $query['exclude_statuses'] ?? null;
+        $includeHasBpguid = $query['include_has_bpguid'] ?? null;
 
         if ($callsign) {
             $sql->where('callsign_normalized', self::normalizeCallsign($callsign));
@@ -775,7 +771,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             $sql->whereNotIn('status', explode(',', $excludeStatuses));
         }
 
-
         $total = $sql->count();
 
         $limit = $query['limit'] ?? 50;
@@ -786,8 +781,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             $sql = $sql->offset($offset);
         }
 
+        $people = $sql->get();
+        if ($includeHasBpguid) {
+            foreach ($people as $person) {
+                $person->appends('has_bpguid');
+            }
+        }
+
         return [
-            'people' => $sql->get(),
+            'people' => $people,
             'total' => $total,
             'limit' => $limit
         ];
@@ -1701,7 +1703,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     {
         return BlankIfEmptyAttribute::make();
     }
-
 
     /**
      * Spell out all the numbers in a string.

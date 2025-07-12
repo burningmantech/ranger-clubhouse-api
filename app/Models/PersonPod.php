@@ -50,6 +50,7 @@ class PersonPod extends ApiModel
         self::creating(function ($model) {
             $model->joined_at = now();
         });
+
     }
 
     /**

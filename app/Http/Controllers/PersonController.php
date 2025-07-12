@@ -54,6 +54,7 @@ class PersonController extends ApiController
             'offset' => 'sometimes|integer',
         ]);
 
+        $params['include_has_bpguid'] = true;
         $results = Person::findForQuery($params);
 
         return $this->toRestFiltered($results['people'], ['limit' => $results['limit'], 'total' => $results['total']], 'person');
@@ -153,6 +154,8 @@ class PersonController extends ApiController
             return $this->restError($person);
         }
 
+        $person->append('has_bpguid');
+
         return $this->success($person);
     }
 
@@ -167,8 +170,7 @@ class PersonController extends ApiController
     public function show(Person $person): JsonResponse
     {
         $this->authorize('view', $person);
-        $personId = $person->id;
-
+        $person->append('has_bpguid');
         return $this->toRestFiltered($person);
     }
 
@@ -200,6 +202,7 @@ class PersonController extends ApiController
             return $this->restError($person);
         }
 
+        $person->append('has_bpguid');
         return $this->toRestFiltered($person);
     }
 
