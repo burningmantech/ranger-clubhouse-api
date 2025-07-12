@@ -442,9 +442,13 @@ class AccessDocument extends ApiModel
     public static function retrieveSAPsPriorTo(Carbon $priorTo): array
     {
         $waps = self::whereIn('type', [self::STAFF_CREDENTIAL, self::WAP])
-            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED, self::USED])
-            ->whereYear('access_date', $priorTo->year)
-            ->where('access_date', '<', $priorTo)
+            ->whereIn('status', [self::QUALIFIED, self::CLAIMED, self::SUBMITTED])
+            ->where(function ($w) use ($priorTo) {
+                $w->where(function ($date) use ($priorTo) {
+                    $date->whereNotNull('access_date');
+                    $date->where('access_date', '<', $priorTo);
+                })->orWhere('access_any_time', true);
+            })
             ->with('person:id,callsign,status,on_site')
             ->orderBy('source_year')
             ->get()
