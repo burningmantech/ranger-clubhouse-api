@@ -784,7 +784,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $people = $sql->get();
         if ($includeHasBpguid) {
             foreach ($people as $person) {
-                $person->appends('has_bpguid');
+                $person->append('has_bpguid');
             }
         }
 
