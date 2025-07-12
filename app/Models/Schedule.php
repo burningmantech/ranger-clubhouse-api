@@ -73,7 +73,7 @@ class Schedule
      */
 
     const array MAY_FORCE_STATUSES = [
-        self::FULL, self::HAS_STARTED, self::MULTIPLE_ENROLLMENT
+        self::FULL, self::HAS_STARTED, self::HAS_ENDED, self::MULTIPLE_ENROLLMENT
     ];
 
     /**
@@ -434,7 +434,7 @@ class Schedule
                     throw new ScheduleSignUpException(self::FULL, $max, [
                         ['slot_id' => $childSlot->id, 'signed_up' => $childSlot->max]
                     ],
-                    $slot->max);
+                        $slot->max);
                 }
 
                 if ($finalSignUps >= $max || ($signUps + $countAdjustment) >= $max) {
