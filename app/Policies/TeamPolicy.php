@@ -117,4 +117,13 @@ class TeamPolicy
     {
         return in_array($user->status, Person::ACTIVE_STATUSES);
     }
+
+    /**
+     * Can the user retrieve a person's Cadre / Delegation memberships?
+     */
+
+    public function opsMembership(Person $user, Person $person): bool
+    {
+        return $user->id == $person->id;
+    }
 }

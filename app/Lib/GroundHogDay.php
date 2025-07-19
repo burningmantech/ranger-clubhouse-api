@@ -328,7 +328,6 @@ class GroundHogDay
     {
         $person = Person::findByEmail($email);
         if (!$person) {
-            error_log("* Cannot find " . $email . " to change the password");
             return;
         }
         $person->changePassword($password);

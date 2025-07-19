@@ -59,7 +59,7 @@ class PersonMessagePolicy
 
     public function store(Person $user): bool
     {
-        return $user->hasRole(Role::EVENT_MANAGEMENT);
+        return in_array($user->status, Person::ACTIVE_STATUSES);
     }
 
     /**
@@ -85,6 +85,6 @@ class PersonMessagePolicy
 
     public function markread(Person $user, PersonMessage $person_message): bool
     {
-        return ($this->isEventManagementAccessAllowed($user) || $user->id == $person_message->person_id);
+        return $this->isEventManagementAccessAllowed($user) || ($user->id == $person_message->person_id);
     }
 }

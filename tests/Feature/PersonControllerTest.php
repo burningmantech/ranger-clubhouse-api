@@ -940,17 +940,33 @@ class PersonControllerTest extends TestCase
 
     public function testUnreadMessageCountSuccess()
     {
-        for ($i = 0; $i < 3; $i++) {
-            $m = PersonMessage::factory()->create(
-                [
-                    'recipient_callsign' => $this->user->callsign,
-                ]
-            );
-        }
+        // this message should not be counted since it's from me.
+        PersonMessage::factory()->create(
+            [
+                'subject' => 'Test your crap',
+                'sender_type' => PersonMessage::SENDER_TYPE_PERSON,
+                'message_type' => PersonMessage::MESSAGE_TYPE_NORMAL,
+                'message_from' => $this->user->callsign,
+                'recipient_callsign' => $this->user->callsign,
+                'body' => 'Whatssaapp up!',
+            ]
+        );
+
+        // This one should be counted.
+        $m = PersonMessage::factory()->create(
+            [
+                'subject' => 'Test your crap',
+                'sender_type' => PersonMessage::SENDER_TYPE_RBS,
+                'message_type' => PersonMessage::MESSAGE_TYPE_NORMAL,
+                'message_from' => 'RBS',
+                'recipient_callsign' => $this->user->callsign,
+                'body' => 'Whatssaapp up!',
+            ]
+        );
 
         $response = $this->json('GET', "person/{$this->user->id}/unread-message-count");
         $response->assertStatus(200);
-        $response->assertJson(['unread_message_count' => 3]);
+        $response->assertJson(['unread_message_count' => 1]);
     }
 
 

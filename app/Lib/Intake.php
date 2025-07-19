@@ -184,7 +184,6 @@ class Intake
                             $history->training_status = 'pending';
                         }
                     }
-                    error_log("Checking year {$trainYear} for {$person->callsign} = " . json_encode($alphaSignups->get($trainYear)?->has($personId)));
                     $history->have_alpha_shift = $alphaSignups->get($trainYear)?->has($personId);
                 }
             } else {

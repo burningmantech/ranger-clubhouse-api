@@ -482,6 +482,7 @@ class RBS
                 $pm->forceFill([
                     'person_id' => $person->id,
                     'message_from' => $from,
+                    'sender_type' => PersonMessage::SENDER_TYPE_RBS,
                     'creator_person_id' => $senderId,
                     'subject' => $subject,
                     'body' => $message,
@@ -841,7 +842,7 @@ class RBS
      * @param string $message message body
      */
 
-    public static function clubhouseMessageNotify($person, $senderId, $from, $subject, $message)
+    public static function clubhouseMessageNotify($person, $senderId, $from, $subject, $message, ?string $msgType = null)
     {
         if (!setting('BroadcastClubhouseNotify')) {
             // Not doing this right now
@@ -858,15 +859,24 @@ class RBS
 
         // Figure out which Alert Pref to use based on if the event is running or not
         $duringEvent = self::isDuringEvent();
-        $alertId = $duringEvent ? Alert::CLUBHOUSE_NOTIFY_ON_PLAYA : Alert::CLUBHOUSE_NOTIFY_PRE_EVENT;
+        $smsColumn = 'sms_on_playa';
+        if ($msgType == PersonMessage::MESSAGE_TYPE_CONTACT) {
+            $alertId = Alert::RANGER_CONTACT;
+        } else if ($msgType == PersonMessage::MESSAGE_TYPE_MENTOR) {
+            $alertId = Alert::MENTOR_CONTACT;
+        } else {
+            $alertId = $duringEvent ? Alert::CLUBHOUSE_NOTIFY_ON_PLAYA : Alert::CLUBHOUSE_NOTIFY_PRE_EVENT;
+            if (!$duringEvent) {
+                $smsColumn = 'sms_off_playa';
+            }
+        }
         $alert = AlertPerson::findAlertForPerson($alertId, $person->id);
 
-        $smsColumn = $duringEvent ? 'sms_on_playa' : 'sms_off_playa';
         $phoneNumber = $person->$smsColumn;
 
         // Can SMS be used?
-        if (($alert == null || $alert->use_sms == true)
-            && ($phoneNumber != '' && $person->{$smsColumn . '_verified'} == true && $person->{$smsColumn . '_stopped'} == false)
+        if (($alert == null || $alert->use_sms)
+            && ($phoneNumber != '' && $person->{$smsColumn . '_verified'} && !$person->{$smsColumn . '_stopped'})
         ) {
             $sendSMS = true;
         } else {

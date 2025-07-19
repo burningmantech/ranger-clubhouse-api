@@ -6,6 +6,8 @@ use App\Lib\BulkTeamGrantRevoke;
 use App\Lib\Reports\DirectoryReport;
 use App\Lib\Reports\PeopleByTeamsReport;
 use App\Lib\Reports\TeamMembershipReport;
+use App\Models\Person;
+use App\Models\PersonTeam;
 use App\Models\Role;
 use App\Models\Team;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -161,6 +163,20 @@ class TeamController extends ApiController
         $this->authorize('membership', $team);
 
         return response()->json(TeamMembershipReport::execute($team));
+    }
+
+    /**
+     * Retrieve what Cadres and Delegations the person is a member of.
+     *
+     * @param Person $person
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+
+    public function opsMembership(Person $person): JsonResponse
+    {
+        $this->authorize('opsMembership', $person);
+        return response()->json(PersonTeam::retrieveOpsMembershipForPerson($person->id));
     }
 
     /**

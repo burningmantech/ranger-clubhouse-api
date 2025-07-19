@@ -4,6 +4,7 @@ namespace App\Lib;
 
 use App\Helpers\SqlHelper;
 use App\Models\Person;
+use App\Models\PersonPhoto;
 use App\Models\Position;
 use Closure;
 use Illuminate\Database\Query\Builder;
@@ -127,6 +128,71 @@ class PersonSearch
         }
     }
 
+    public static function searchCallsignsForMessaging(string $callsign, string $type): array
+    {
+        $isContact = $type == 'contact';
+        $query = [
+            'limit' => $isContact ? 5 : 10,
+        ];
+
+        if ($isContact) {
+            $query['statuses'] = implode(',', [
+                Person::ACTIVE,
+                Person::ECHELON,
+                Person::INACTIVE,
+                Person::INACTIVE_EXTENSION,
+            ]);
+            $fields = [self::FIELD_CALLSIGN];
+            $query['match_prefix'] = true;
+        } else {
+            $searchName = str_starts_with($callsign, 'name:');
+            if ($searchName) {
+                $callsign = trim(substr($callsign, 5));
+                if (strlen($callsign) < 2) {
+                    return [];
+                }
+            }
+            if ($type == 'message') {
+                $query['exclude_statuses'] = implode(',', Person::NO_MESSAGES_STATUSES);
+                $fields = [$searchName ? self::FIELD_NAME : self::FIELD_CALLSIGN];
+            } else if ($searchName) {
+                $fields = [self::FIELD_NAME];
+            } else {
+                $fields = [
+                    self::FIELD_CALLSIGN,
+                    self::FIELD_NAME,
+                ];
+            }
+        }
+
+        $query['search_fields'] = implode(',', $fields);
+
+        $people = self::executeQuery($callsign, $query, false)[0]['people'] ?? [];
+
+        $results = [];
+        foreach ($people as $person) {
+            $result = [
+                'id' => $person['id'],
+                'callsign' => $person['callsign'],
+                'profile_url' => PersonPhoto::retrieveMostRecentApproved($person['id'])->profile_url ?? null,
+                // Future proofing here - In case the above status queries will be updated
+                'mail_permitted' => !in_array($person['status'], Person::NO_MESSAGES_STATUSES),
+            ];
+
+            if ($isContact && $result['mail_permitted']) {
+                $result['status'] = $person['status'];
+            }
+
+            if (!$isContact) {
+                $result['status'] = $person['status'];
+                $result['name'] = (!empty($person['preferred_name']) ? $person['preferred_name'] : $person['first_name']) . ' ' . $person['last_name'];
+            }
+
+            $results[] = $result;
+        }
+        return $results;
+    }
+
     public static function executeSearchStatusGroups(string $q, array $query, bool $canViewEmail): array
     {
         $resultGroups = [];
@@ -165,7 +231,7 @@ class PersonSearch
             foreach (explode(',', $searchFields) as $field) {
                 switch ($field) {
                     case self::FIELD_CALLSIGN:
-                        $search->searchCallsign();
+                        $search->searchCallsign($query['match_prefix'] ?? false);
                         break;
 
                     case self::FIELD_FKA:
@@ -190,18 +256,22 @@ class PersonSearch
      * Search for Callsigns
      */
 
-    public function searchCallsign(): void
+    public function searchCallsign(bool $matchPrefix = false): void
     {
         $callsign = $this->query;
         $sql = $this->baseSql();
         $normalized = Person::normalizeCallsign($callsign);
         $metaphone = metaphone(Person::spellOutNumbers($callsign));
 
-        $sql->where(function ($q) use ($normalized, $metaphone) {
+        $sql->where(function ($q) use ($normalized, $metaphone, $matchPrefix) {
             $q->orWhere('callsign_normalized', $normalized);
-            $q->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
             $q->orWhere('callsign_soundex', $metaphone);
-            $q->orWhere('callsign_soundex', 'like', $metaphone . '%');
+            if ($matchPrefix) {
+                $q->orWhere('callsign_normalized', 'like', $normalized . '%');
+            } else {
+                $q->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
+                $q->orWhere('callsign_soundex', 'like', $metaphone . '%');
+            }
         });
 
         /*
@@ -218,10 +288,14 @@ class PersonSearch
         $orderBy = "CASE";
         $orderBy .= " WHEN callsign_normalized=" . SqlHelper::quote($normalized) . " THEN CONCAT('01', callsign)";
         $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote($normalized . '%') . " THEN CONCAT('02', callsign)";
-        $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
+        if (!$matchPrefix) {
+            $orderBy .= " WHEN callsign_normalized like " . SqlHelper::quote('%' . $normalized . '%') . " THEN CONCAT('03', callsign)";
+        }
         $orderBy .= " WHEN callsign_soundex=" . SqlHelper::quote($metaphone) . " THEN CONCAT('04', callsign)";
         $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote($metaphone . '%') . " THEN CONCAT('05', callsign)";
-        $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
+        if (!$matchPrefix) {
+            $orderBy .= " WHEN callsign_soundex like " . SqlHelper::quote('%' . $metaphone . '%') . " THEN CONCAT('06', callsign)";
+        }
         $orderBy .= " ELSE CONCAT('99', callsign) END";
         $sql->orderBy(DB::raw($orderBy));
 
@@ -298,7 +372,7 @@ class PersonSearch
 
         $result = $this->runSql($sql, self::FIELD_FKA, function ($person, &$result) use ($normalized, $metaphone) {
             if (stripos($person->fka_normalized, $normalized) !== false
-            || stripos($person->fka_soundex, $metaphone) !== false) {
+                || stripos($person->fka_soundex, $metaphone) !== false) {
                 $result['fka_match'] = $person->fka;
             }
         });

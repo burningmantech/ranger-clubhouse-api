@@ -249,4 +249,22 @@ class PersonTeam extends ApiModel
             self::removePerson($team->id, $personId, $reason);
         }
     }
+
+    /**
+     * Retrieve which Cadres & Delegation the person is a member of.
+     *
+     * @param int $personId
+     * @return Collection
+     */
+
+    public static function retrieveOpsMembershipForPerson(int $personId): Collection
+    {
+        return PersonTeam::select('team.id', 'team.title')
+            ->join('team', 'person_team.team_id', '=', 'team.id')
+            ->where('person_id', $personId)
+            ->where('team.type', '!=', Team::TYPE_TEAM)
+            ->where('team.active', true)
+            ->orderBy('team.title')
+            ->get();
+    }
 }
