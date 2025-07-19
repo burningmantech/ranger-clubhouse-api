@@ -220,9 +220,11 @@ class Agreements
     public static function isDocumentVisible(string $tag, $doc, PersonEvent $personEvent, Person $person): bool
     {
         if ($tag == Document::SANDMAN_AFFIDAVIT_TAG) {
-            // Document become visible when the Sandman schedule has been published.
-            return (Slot::haveActiveForPosition(Position::SANDMAN_TRAINING)
-                || Slot::haveActiveForPosition(Position::SANDMAN));
+            // Document becomes visible when the Sandman schedule has been published, and if the person is
+            // a Ranger.
+            return (in_array($person->status, Person::ACTIVE_STATUSES)
+                && (Slot::haveActiveForPosition(Position::SANDMAN_TRAINING)
+                    || Slot::haveActiveForPosition(Position::SANDMAN)));
         } else if ($tag == Document::PERSONAL_VEHICLE_AGREEMENT_TAG) {
             return PVR::isEligible($person->id, $personEvent, current_year()) && $personEvent->org_vehicle_insurance;
         }
