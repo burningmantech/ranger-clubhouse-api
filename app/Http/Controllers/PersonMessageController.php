@@ -6,7 +6,6 @@ use App\Lib\RBS;
 use App\Models\PersonMessage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
 
 class PersonMessageController extends ApiController
 {
@@ -34,32 +33,31 @@ class PersonMessageController extends ApiController
      * Store a newly created resource in storage.
      *
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
 
     public function store(): JsonResponse
     {
         $this->authorize('store', PersonMessage::class);
-
         $person_message = new PersonMessage;
         $this->fromRest($person_message);
 
-        $personId = $this->user->id;
         if ($person_message->reply_to_id) {
             $replyTo = PersonMessage::find($person_message->reply_to_id);
             if (!$replyTo) {
-                $person_message->addError('reply_to_id', 'Invalid person message id');
+                $person_message->addError('reply_to_id', 'Invalid reply to message id');
                 return $this->restError($person_message);
             }
         }
 
-        // Message created by logged in user
-        $person_message->creator_person_id = $personId;
-
         if ($person_message->save()) {
             $person = $person_message->person;
-            RBS::clubhouseMessageNotify($person, $this->user->id,
-                $person_message->message_from, $person_message->subject, $person_message->body);
+            RBS::clubhouseMessageNotify($person,
+                $this->user->id,
+                $person_message->message_from,
+                $person_message->subject,
+                $person_message->body,
+                $person_message->message_type);
             return $this->success($person_message);
         }
 
@@ -77,33 +75,36 @@ class PersonMessageController extends ApiController
     public function destroy(PersonMessage $person_message): JsonResponse
     {
         $this->authorize('delete', $person_message);
+        $person_message->load('replies');
+        foreach ($person_message->replies as $reply) {
+            $reply->delete();
+        }
         $person_message->delete();
 
         return $this->restDeleteSuccess();
     }
 
     /**
-     * Mark message as read.
+     * Mark a message as read.
      *
      * @param PersonMessage $person_message
      * @return JsonResponse
-     * @throws AuthorizationException|ValidationException
+     * @throws AuthorizationException
      */
 
     public function markread(PersonMessage $person_message): JsonResponse
     {
-        $this->authorize('markread', $person_message);
-
         $params = request()->validate([
-            'delivered' => 'required|boolean'
+            'delivered' => 'required|boolean',
+            'person_id' => 'required|integer',
         ]);
 
+        $personId = $params['person_id'];
+        $this->authorize('markread', [$person_message, $personId]);
+
         $person_message->delivered = $params['delivered'];
-        if (!$person_message->save()) {
-            return $this->restError($person_message);
-        }
+        $person_message->saveWithoutValidation();
 
-        return $this->success();
+        return $this->success($person_message);
     }
-
 }

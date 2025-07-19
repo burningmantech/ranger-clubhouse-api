@@ -110,8 +110,8 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     ];
 
     /*
-     * Locked status are those which the account cannot be allowed
-     * to logged into (either temporarily or permanently), and which
+     * Locked statuses are those accounts that cannot be allowed
+     * to log into (either temporarily or permanently), and which
      * should not receive messages.
      */
 
@@ -124,11 +124,12 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     ];
 
     /*
-     * No messages status are those that should not receive any messages
+     * No messages statuses are those that should not receive any messages
      * either Clubhouse Messages or from the RBS
      */
 
     const array NO_MESSAGES_STATUSES = [
+        Person::AUDITOR,
         Person::BONKED,
         Person::DECEASED,
         Person::DISMISSED,
@@ -819,56 +820,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     {
         $value = preg_replace('/©/', '@', $value);
         return preg_replace('/[\x{0300}-\x{036f}]/u', '', Normalizer::normalize($value, Normalizer::FORM_D));
-    }
-
-    /**
-     * Search for callsign types
-     *
-     * @param string $query string to match against callsigns
-     * @param string $type callsign search type
-     * @param int $limit
-     * @return mixed person id & callsigns which match
-     */
-
-    public static function searchCallsigns(string $query, string $type, int $limit): mixed
-    {
-        $like = '%' . $query . '%';
-
-        $normalized = self::normalizeCallsign($query);
-        $metaphone = metaphone(self::spellOutNumbers($normalized));
-        $quoted = SqlHelper::quote($normalized);
-        $orderBy = "CASE WHEN callsign_normalized=$quoted THEN CONCAT('01', callsign)";
-        $quoted = SqlHelper::quote($metaphone);
-        $orderBy .= " WHEN callsign_soundex=$quoted THEN CONCAT('02', callsign)";
-        $orderBy .= " ELSE CONCAT('03', callsign) END";
-
-        $sql = DB::table('person')
-            ->where(function ($q) use ($query, $like, $normalized, $metaphone) {
-                $q->orWhere('callsign_soundex', $metaphone);
-                $q->orWhere('callsign_normalized', $normalized);
-                $q->orWhere('callsign_normalized', 'like', '%' . $normalized . '%');
-            })->limit($limit)
-            ->orderBy(DB::raw($orderBy));
-
-        switch ($type) {
-            case 'contact':
-                return $sql->select('person.id', 'callsign', DB::raw('IF(person.status="inactive", true,false) as is_inactive'), DB::raw('IFNULL(alert_person.use_email,1) as allow_contact'))
-                    ->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
-                    ->leftJoin('alert_person', function ($join) {
-                        $join->whereRaw('alert_person.person_id=person.id');
-                        $join->where('alert_person.alert_id', '=', Alert::RANGER_CONTACT);
-                    })->get()->toArray();
-
-            // Trying to send a clubhouse message
-            case 'message':
-                return $sql->whereIn('status', [Person::ACTIVE, Person::INACTIVE, Person::ALPHA])->get(['id', 'callsign']);
-
-            // Search all users
-            case 'all':
-                return $sql->get(['id', 'callsign']);
-        }
-
-        throw new UnacceptableConditionException("Unknown type [$type]");
     }
 
     /**

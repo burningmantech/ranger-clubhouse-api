@@ -477,7 +477,7 @@ class PersonController extends ApiController
 
     /**
      * /**
-     * Return the count of  unread messages
+     * Return the count of  unread messages and the most recent unread message.
      *
      * @param Person $person
      * @return JsonResponse
@@ -488,7 +488,12 @@ class PersonController extends ApiController
     {
         $this->authorize('view', $person);
 
-        return response()->json(['unread_message_count' => PersonMessage::countUnread($person->id)]);
+        $result = [
+            'unread_message_count' => PersonMessage::countUnread($person->id),
+            'message' => PersonMessage::mostRecentUnreadMessage($person->id)
+        ];
+
+        return response()->json($result);
     }
 
     /**

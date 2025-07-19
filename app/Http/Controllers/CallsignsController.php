@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Lib\PersonSearch;
 use App\Models\Person;
+use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use App\Exceptions\UnacceptableConditionException;
 
 class CallsignsController extends ApiController
 {
@@ -23,17 +25,24 @@ class CallsignsController extends ApiController
             'query' => 'required|string',
             'type' => [
                 'required',
-                Rule::in(['message', 'contact', 'all'])
+                Rule::in(['contact', 'message', 'all'])
             ],
-            'limit' => 'required|integer'
         ]);
 
         $type = $params['type'];
 
         if ($type == 'all') {
             $this->authorize('isAdmin');
+        } else {
+            if ($type == 'contact') {
+                Gate::denyIf(in_array($this->user->status, Person::NO_MESSAGES_STATUSES), 'You are not permitted to search for callsigns');
+            } else {
+                Gate::allowIf($this->user->hasRole(Role::EVENT_MANAGEMENT), 'You are not permitted to search for callsigns');
+            }
         }
 
-        return response()->json(['callsigns' => Person::searchCallsigns($params['query'], $type, $params['limit'])]);
+        return response()->json([
+            'callsigns' => PersonSearch::searchCallsignsForMessaging($params['query'], $type)
+        ]);
     }
 }
