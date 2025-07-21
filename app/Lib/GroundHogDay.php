@@ -104,6 +104,8 @@ class GroundHogDay
             'for_rangers' => true,
             'for_pnvs' => true,
             'for_auditors' => true,
+            'created_at' => "$year-08-1 12:00:00",
+            'updated_at' => "$year-08-1 12:00:01",
             'expires_at' => '2099-09-01 12:00:00'
         ]);
 
