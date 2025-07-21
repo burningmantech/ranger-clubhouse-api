@@ -23,7 +23,7 @@ class SurveyPolicy
 
     public function indexForPosition(Person $user, int $positionId): bool
     {
-         return Survey::canManageSurveys($user, $positionId);
+        return Survey::canManageSurveys($user, $positionId);
     }
 
     public function indexForAll(Person $user): bool
@@ -89,6 +89,15 @@ class SurveyPolicy
         }
 
         return $survey->isTrainerForSurvey($user);
+    }
+
+    /**
+     * Double check the user is allowed to submit surveys
+     */
+
+    public function submit(Person $user): bool
+    {
+        return !in_array($user->status, Person::DEACTIVATED_STATUSES);
     }
 
     /**
