@@ -253,6 +253,7 @@ class SurveyController extends ApiController
 
     public function submit(): JsonResponse
     {
+        $this->authorize('submit', Survey::class);
         $params = request()->validate([
             'type' => [
                 'required',
