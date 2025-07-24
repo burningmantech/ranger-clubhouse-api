@@ -301,6 +301,7 @@ class Position extends ApiModel
         'cruise_direction',
         'deselect_on_team_join',
         'has_online_course',
+        'ignore_time_check',
         'max',
         'min',
         'mvr_eligible',         // dashboard prompt will always appear
@@ -342,6 +343,7 @@ class Position extends ApiModel
             'cruise_direction' => 'bool',
             'deselect_on_team_join' => 'bool',
             'has_online_course' => 'bool',
+            'ignore_time_check' => 'bool',
             'mvr_eligible' => 'bool',
             'mvr_signup_eligible' => 'bool',
             'new_user_eligible' => 'bool',
