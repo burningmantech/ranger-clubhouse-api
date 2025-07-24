@@ -14,8 +14,6 @@ namespace App\Models;
 use App\Attributes\BlankIfEmptyAttribute;
 use App\Attributes\NullIfEmptyAttribute;
 use App\Attributes\PhoneAttribute;
-use App\Exceptions\UnacceptableConditionException;
-use App\Helpers\SqlHelper;
 use App\Jobs\OnlineCourseSyncPersonJob;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Validators\StateForCountry;
@@ -199,7 +197,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      */
 
     const string PASSWORD_ENCRYPTION = PASSWORD_ARGON2ID;
-    const string PASSWORD_ENCRYPTION_PREFIX = '$argon2id';
+    const int PASSWORD_MEMORY_COST = (8 * 1024);
 
     /**
      * The database table name.
@@ -832,19 +830,15 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
     public function isValidPassword(string $password): bool
     {
         $encryptedPw = $this->password;
-        if (str_starts_with($encryptedPw, self::PASSWORD_ENCRYPTION_PREFIX)) {
-            // For 2025, new password encoding
+        $info = password_get_info($encryptedPw);
+
+        if ($info['algo'] == null) {
+            list($salt, $sha) = explode(':', $encryptedPw);
+            $hashedPw = sha1($salt . $password);
+            return ($hashedPw == $sha);
+        } else {
             return password_verify($password, $encryptedPw);
         }
-
-        if (!str_contains($encryptedPw, ':')) {
-            return false;
-        }
-
-        list($salt, $sha) = explode(':', $encryptedPw);
-        $hashedPw = sha1($salt . $password);
-
-        return ($hashedPw == $sha);
     }
 
     /**
@@ -856,12 +850,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function updatePasswordEncryption(string $password): void
     {
-        if (str_starts_with($password, self::PASSWORD_ENCRYPTION_PREFIX) !== false) {
-            // Good to go
-            return;
-        }
+        $info = password_get_info($this->password);
 
-        $this->changePassword($password);
+        if ($info['algo'] == null
+            || ($info['algo'] == self::PASSWORD_ENCRYPTION
+                && $info['options']['memory_cost'] > self::PASSWORD_MEMORY_COST)) {
+            $this->changePassword($password);
+        }
     }
 
     /**
@@ -873,7 +868,10 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public function changePassword(string $password): bool
     {
-        $this->password = password_hash($password, self::PASSWORD_ENCRYPTION);
+        $this->password = password_hash($password,
+            self::PASSWORD_ENCRYPTION,
+            ['memory_cost' => self::PASSWORD_MEMORY_COST]);
+
         // Clear out the temporary login token
         $this->tpassword = '';
         $this->tpassword_expire = 0;
