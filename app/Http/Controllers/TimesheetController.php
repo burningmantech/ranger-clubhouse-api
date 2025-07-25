@@ -548,7 +548,7 @@ class TimesheetController extends ApiController
         $timesheet->load('position:id,title,type');
         $person = $timesheet->person;
         $status = $person->status;
-        if (($status == Person::INACTIVE || $status == Person::INACTIVE_EXTENSION)
+        if ($status == Person::INACTIVE
             && $timesheet->position->type != Position::TYPE_TRAINING
             && $timesheet->position_id != Position::CHEETAH_CUB) {
             $person->status = Person::ACTIVE;

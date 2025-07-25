@@ -59,7 +59,7 @@ class Timesheet extends ApiModel
     const string YEARS_AS_CONTRIBUTOR = 'as-contributor'; // All the years worked as a contributor / non-ranger
     const string YEARS_ALL = 'all';
 
-    const string BLOCKED_IS_RETIRED = 'is-retired'; // Person is retired, and trying to work a non-cheetah cub shift.
+    const string BLOCKED_NOT_CHEETAH_CUB = 'not-cheetah-cub';  // Person is retired or inactive extension and trying to sign into a non-Cheetah Cub shift.
     const string BLOCKED_NOT_TRAINED = 'not-trained'; // Person is not trained. Either In-Person or ART.
     const string BLOCKED_NO_BURN_PERIMETER_EXP = 'no-burn-perimeter-exp'; // Person has no burn perimeter experience
     const string BLOCKED_NO_EMPLOYEE_ID = 'no-employee-id'; // Position is paid -- person does not have employee id on file.
@@ -69,6 +69,7 @@ class Timesheet extends ApiModel
 
 
     // Old blockers -- retained for pre-2025 Timesheet Audit Log
+    const string BLOCKED_IS_RETIRED = 'is-retired'; // Person is retired, and trying to work a non-cheetah cub shift.
     const array OLD_BLOCKERS = [
         'unsigned-sandman-affidavit' => self::BLOCKED_UNSIGNED_SANDMAN_AFFIDAVIT,
         'no-burn-perimeter-exp' => self::BLOCKED_NO_BURN_PERIMETER_EXP,
