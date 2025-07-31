@@ -168,7 +168,7 @@ start_api_container() {
 
     trap cleanup_api_container EXIT;
 
-    echo "Starting API application container: ${api_container_name}...";
+    echo "Starting API application container (${api_image_name}): ${api_container_name}...";
 
     docker run                                            \
         --rm --detach                                     \
