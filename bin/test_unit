@@ -102,12 +102,17 @@ cleanup_db_container() {
 ##
 
 test_unit() {
-    echo "Running unit tests...";
+    echo "Running unit tests...${api_image_name}";
 
+
+    platform=''
+    if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+     platform='--platform=linux/amd64 '
+    fi
     # Build a container with the application plus phpunit
     copy="$(grep "COPY --from=composer" "${wd}/Dockerfile" | head -1)";
     docker build --tag="${image_repo}_test" - << EOF
-from ${api_image_name} as unit
+FROM ${platform}${api_image_name} AS unit
 ${copy}
 EOF
 
