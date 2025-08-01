@@ -12,12 +12,13 @@ class ConfigController extends Controller
      * any credentials or secrets. These should not be exposed to the user.
      */
 
-    const CLIENT_CONFIGS = [
+    const array CLIENT_CONFIGS = [
         'AdminEmail',
         'AuditorRegistrationDisabled',
+        'EventManagementOnPlayaEnabled',
+        'GoogleAnalyticsID',
         'HQWindowInterfaceEnabled',
         'JoiningRangerSpecialTeamsUrl',
-        'EventManagementOnPlayaEnabled',
         'MealDates',
         'MealInfoAvailable',
         'MentorEmail',
@@ -25,8 +26,8 @@ class ConfigController extends Controller
         'RangerFeedbackFormUrl',
         'RangerManualUrl',
         'RangerPoliciesUrl',
-        'SpTicketThreshold',
         'ScTicketThreshold',
+        'SpTicketThreshold',
         'TrainingAcademyEmail',
         'VCEmail',
     ];
