@@ -150,6 +150,11 @@ class Setting extends ApiModel
             'type' => self::TYPE_URL
         ],
 
+        'GoogleAnalyticsID' => [
+            'description' => 'The Google Analytics property ID',
+            'type' => self::TYPE_STRING,
+        ],
+
         'HQWindowInterfaceEnabled' => [
             'description' => 'Enable the HQ Window Interface (normally enabled during the event)',
             'type' => self::TYPE_BOOL,
