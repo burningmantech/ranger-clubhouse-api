@@ -231,7 +231,7 @@ class EarlyLateCheckInReport
 
         $hourBefore = $onDuty->clone()->subHour();
         foreach ($timesheets as $t) {
-            if ($t->off_duty->gte($hourBefore) && $t->off_duty->lte($onDuty)) {
+            if ($t->off_duty?->gte($hourBefore) && $t->off_duty?->lte($onDuty)) {
                 return true;
             }
         }
