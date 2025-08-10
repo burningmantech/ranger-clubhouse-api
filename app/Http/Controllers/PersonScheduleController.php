@@ -131,6 +131,7 @@ class PersonScheduleController extends ApiController
             $confirmForce = false;
         }
 
+        /*
         // A paid position? An employee id must be on file.
         if ($position->paycode && is_null($person->employee_id) && !$confirmForce) {
             return response()->json([
@@ -138,6 +139,7 @@ class PersonScheduleController extends ApiController
                 'may_force' => $canForce,
             ]);
         }
+        */
 
         $permission = Scheduling::retrieveSignUpPermission($person, current_year());
 
