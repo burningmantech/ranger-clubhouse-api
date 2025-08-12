@@ -339,7 +339,7 @@
         <tr>
             <td>Photo Uploading</td>
             <td>
-                {!! ($settings['PhotoUploadEnable'] ?? false) ? "Enabled (normal)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
+                {{($settings['PhotoUploadEnable'] ?? false) ? "Enabled" : "Disabled"}}
             </td>
         </tr>
         <tr>
