@@ -168,7 +168,7 @@ class PersonFilter
         [self::SMS_ADMIN_FIELDS, true, [Role::ADMIN]],
         [self::RANGER_ADMIN_FIELDS],
         [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
-        [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
+        [self::EMERGENCY_CONTACT, true, [Role::EDIT_EMERGENCY_CONTACT, Role::VIEW_PII, Role::VC], true],
         [self::YEAR_FIELDS, true, [Role::EVENT_MANAGEMENT, Role::TRAINER]],
     ];
 
@@ -190,7 +190,7 @@ class PersonFilter
         [self::SMS_ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::PERSONNEL_FIELDS, false, [Role::ADMIN]],
         [self::RANGER_ADMIN_FIELDS, false, [Role::ADMIN]],
-        [self::EMERGENCY_CONTACT, true, [Role::VIEW_PII, Role::VC], true],
+        [self::EMERGENCY_CONTACT, true, [Role::EDIT_EMERGENCY_CONTACT, Role::VIEW_PII, Role::VC], true],
     ];
 
     public function buildFields(array $fieldGroups, $authorizedUser): array
