@@ -371,7 +371,7 @@
             </td>
         </tr>
         <tr>
-            <td>Login Mgmt On Playa</td>
+            <td>Event Mgmt On Playa</td>
             <td>
                 @if ($dashboardPeriod == 'event')
                     {!! ($settings['EventManagementOnPlayaEnabled'] ?? false) ? "Enabled (normal for event)" : '<b style="color: red">DISABLED (NOT NORMAL)</b>' !!}
