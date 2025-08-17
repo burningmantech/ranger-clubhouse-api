@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: docker
 
@@ -124,7 +124,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: docker
 
@@ -155,7 +155,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: docker
 
