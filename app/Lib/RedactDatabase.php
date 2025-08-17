@@ -51,12 +51,12 @@ class RedactDatabase
             DB::table('person')->update(['password' => password_hash('abcdef', Person::PASSWORD_ENCRYPTION)]);
         }
 
-        DB::table('person')->where('status', Person::ACTIVE)
+        DB::table('person')->whereIn('status', [Person::ACTIVE, Person::INACTIVE])
             ->update([
                 'email' => DB::raw("concat(substring(callsign_normalized, 1, 38), '@nomail.none')"),
             ]);
 
-        DB::table('person')->where('status', '!=', Person::ACTIVE)
+        DB::table('person')->whereNotIn('status', [Person::ACTIVE, Person::INACTIVE])
             ->update([
                 'email' => DB::raw("concat(substring(callsign_normalized, 1, 34), '-', id, '@nomail.none')"),
             ]);
