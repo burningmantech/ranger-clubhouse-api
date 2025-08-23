@@ -684,7 +684,7 @@ class RBS
         if ($attending) {
             $sql->join('person_slot as attending_signup', 'attending_signup.person_id', 'person.id');
             $sql->join('slot as attending_slot', function ($j) use ($year) {
-                $j->on('attending_slot', 'attending_slot.id', 'attending_signup.slot_id');
+                $j->on('attending_slot.id', 'attending_signup.slot_id');
                 $j->where('attending_slot.begins_year', $year);
             });
         }
