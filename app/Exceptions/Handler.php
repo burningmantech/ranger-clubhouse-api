@@ -33,7 +33,6 @@ class Handler
         CommandRuntimeException::class,
         InvalidArgumentException::class,
         ModelNotFoundException::class,
-        TokenExpiredException::class,
         UnacceptableConditionException::class,
         ValidationException::class,
     ];
