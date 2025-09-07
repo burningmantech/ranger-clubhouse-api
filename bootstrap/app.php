@@ -2,6 +2,7 @@
 
 use App\Exceptions\Handler;
 use App\Http\Middleware\AccountGuard;
+use App\Http\Middleware\AuthenticatedCheckMiddleware;
 use App\Http\Middleware\RequestLoggerMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -36,8 +37,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'bindings' => SubstituteBindings::class,
         ]);
+
+        $middleware->alias([
+            'authenticate' => AuthenticatedCheckMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
+            return true;
+        });
         $exceptions->dontReport(Handler::NO_REPORTING);
         $exceptions->report(fn(Throwable $e) => Handler::report($e));
         $exceptions->render(fn(Throwable $e, Request $request) => Handler::render($e, $request));
