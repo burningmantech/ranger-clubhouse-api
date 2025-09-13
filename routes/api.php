@@ -123,7 +123,7 @@ Route::middleware('api')->group(function () {
  * API which require an authorized user
  */
 
-Route::middleware('api')->group(function () {
+Route::middleware(['authenticate', 'api'])->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
 
     Route::get('auth/oauth2/grant-code', [OAuth2Controller::class, 'grantOAuthCode']);
