@@ -586,14 +586,16 @@ class Timesheet extends ApiModel
                     // Don't include the year when the Alpha was bonked.
                     $w->where('position_id', '!=', Position::ALPHA)
                         ->orWhereExists(function ($sql) use ($personId) {
+                            // Only consider Alpha timesheets for 2025 and later.
                             $sql->select(DB::raw(1))
                                 ->from('person_mentor')
                                 ->where('person_mentor.person_id', $personId)
                                 ->where('mentor_year', '=', DB::raw('YEAR(on_duty)'))
+                                ->where('mentor_year', '>=',2025)
                                 ->where('person_mentor.status', PersonMentor::PASS)
                                 ->limit(1);
                         });
-                })->whereNotIn('position_id', self::EXCLUDE_POSITIONS_FOR_YEARS)
+                })->whereNotIn('position_id', [Position::TRAINING])
                 ->groupByRaw('YEAR(on_duty)');
 
             if ($type == self::YEARS_AS_CONTRIBUTOR) {

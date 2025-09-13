@@ -62,7 +62,7 @@ class SignInBlocker
         if ($positionId == Position::SANDMAN) {
             if (setting('SandmanRequireAffidavit')) {
                 $event = PersonEvent::findForPersonYear($person->id, current_year());
-                if ($event?->sandman_affidavit) {
+                if (!$event?->sandman_affidavit) {
                     $blockers[] = ['blocker' => Timesheet::BLOCKED_UNSIGNED_SANDMAN_AFFIDAVIT];
                 }
             }
