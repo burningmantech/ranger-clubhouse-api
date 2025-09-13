@@ -593,7 +593,7 @@ class Timesheet extends ApiModel
                                 ->where('person_mentor.status', PersonMentor::PASS)
                                 ->limit(1);
                         });
-                })->whereNotIn('position_id', self::EXCLUDE_POSITIONS_FOR_YEARS)
+                })->whereNotIn('position_id', [Position::TRAINING])
                 ->groupByRaw('YEAR(on_duty)');
 
             if ($type == self::YEARS_AS_CONTRIBUTOR) {
