@@ -17,19 +17,6 @@ defaults:
   run:
     shell: bash
 
-
-env:
-  AWS_DEPLOY_ROLE: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ranger-gha-deploy"
-  AWS_ECR_IMAGE_PREFIX: "/${{ vars.DEPARTMENT_ID }}/"
-  AWS_ECR_IMAGE_NAME: "${{ vars.PROJECT_ID }}"
-  AWS_ECS_CLUSTER: ${{ vars.DEPARTMENT_ID }}
-  AWS_ECS_CONTAINER_NAME: ${{ vars.PROJECT_ID }}
-  AWS_ECS_SERVICE_STAGING: ${{ vars.PROJECT_ID }}-staging-fg
-  AWS_ECS_TASK_DEFINITION_ARN_STAGING: "arn:aws:ecs:us-west-2:${{ secrets.AWS_ACCOUNT_ID }}:task-definition/${{ vars.PROJECT_ID }}-staging-fg"
-  AWS_ECS_TASK_DEFINITION_FAMILY_STAGING: ${{ vars.PROJECT_ID }}-staging-fg
-  AWS_REGION: us-west-2
-
-
 jobs:
 
   check-syntax:
