@@ -2,35 +2,8 @@
 
 
 name: Deploy to production
-run-name: Deploy to production by @${{ github.actor }}
 
 on: workflow_dispatch
-
-
-defaults:
-  run:
-    shell: bash
-
-
-env:
-  AWS_DEPLOY_ROLE: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ranger-gha-deploy"
-  AWS_ECR_IMAGE_PREFIX: "/${{ vars.DEPARTMENT_ID }}/"
-  AWS_ECR_IMAGE_NAME: "${{ vars.PROJECT_ID }}"
-  AWS_ECS_CLUSTER: ${{ vars.DEPARTMENT_ID }}
-  AWS_ECS_CONTAINER_NAME: ${{ vars.PROJECT_ID }}
-  AWS_ECS_SERVICE_STAGING: ${{ vars.PROJECT_ID }}-staging-fg
-  AWS_ECS_TASK_DEFINITION_ARN_STAGING: "arn:aws:ecs:us-west-2:${{ secrets.AWS_ACCOUNT_ID }}:task-definition/${{ vars.PROJECT_ID }}-staging-fg"
-  AWS_ECS_TASK_DEFINITION_FAMILY_STAGING: ${{ vars.PROJECT_ID }}-staging-fg
-  AWS_REGION: us-west-2
-
-env:
-  AWS_ECR_IMAGE_NAME: "/rangers/${{ vars.PROJECT_ID }}"
-  AWS_ECS_CLUSTER: rangers
-  AWS_ECS_CONTAINER_NAME: ${{ vars.PROJECT_ID }}
-  AWS_ECS_SERVICE_PRODUCTION: ${{ vars.PROJECT_ID }}-production-fg
-  AWS_ECS_TASK_DEFINITION_ARN_PRODUCTION: "arn:aws:ecs:us-west-2:${{ secrets.AWS_ACCOUNT_ID }}:task-definition/${{ vars.PROJECT_ID }}-production-fg"
-  AWS_ECS_TASK_DEFINITION_FAMILY_PRODUCTION: ${{ vars.PROJECT_ID }}-production-fg
-  AWS_REGION: us-west-2
 
 jobs:
 
@@ -38,19 +11,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-
     steps:
 
       - name: Harden CI
         uses: step-security/harden-runner@v2.13.2
         with:
-          disable-sudo: true
-          egress-policy: block
-          allowed-endpoints: >
-            *.amazonaws.com:443
-            *.docker.io:443
+          egress-policy: audit
 
       - name: Check user
         if: ${{ ! contains('["wsanchez", "mikeburg", "plapsley", "techxorcist", "srabraham"]', github.actor) }}
@@ -59,63 +25,84 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.AWS_DEPLOY_ROLE }}
-          role-session-name: ranger-gha-${{ github.repository_id }}-${{ github.job }}-${{ github.run_id }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Login to AWS ECR
-        id: aws-login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Checkout source code
+        uses: actions/checkout@v5
 
-      - name: Push docker image to Amazon ECR
-        run: |
-          image_repository="${{ steps.aws-login-ecr.outputs.registry }}${{ env.AWS_ECR_IMAGE_NAME }}"
-          docker login
-          # Push SHA tag
-          docker pull "${image_repository}:staging"
-          docker tag "${image_repository}:staging" "${image_repository}:${{ github.sha }}"
-          docker push "${image_repository}:${{ github.sha }}"
-          # Push production rollback tag
-          if docker pull "${image_repository}:production"; then
-            echo "Pushing rollback tag for production"
-            docker tag "${image_repository}:production" "${image_repository}:production_rollback"
-            docker push "${image_repository}:production_rollback"
-          fi
-          # Push production tag
-          echo "Pushing production tag"
-          docker tag "${image_repository}:staging" "${image_repository}:production"
-          docker push "${image_repository}:production"
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date "+%Y-%m-%dT%H:%M:%S")" >> "${GITHUB_OUTPUT}"
-
-      - name: Fetch and update current task definition
-        id: new-task-definition
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      - name: Install Python
+        uses: actions/setup-python@v6
         with:
-          task-definition-arn: "${{ env.AWS_ECS_TASK_DEFINITION_ARN_PRODUCTION }}"
-          task-definition-family: "${{ env.AWS_ECS_TASK_DEFINITION_FAMILY_PRODUCTION }}"
-          container-name: "${{ env.AWS_ECS_CONTAINER_NAME }}"
-          image: "${{ steps.aws-login-ecr.outputs.registry }}${{ env.AWS_ECR_IMAGE_NAME }}:${{ github.sha }}"
-          environment-variables: |
-            GHA_ACTOR_ID=${{ github.actor_id }}
-            GHA_ACTOR=${{ github.actor }}
-            GHA_EVENT_NAME=${{ github.event_name }}
-            GHA_JOB=${{ github.job }}
-            GHA_REF=${{ github.ref }}
-            GHA_RUN_ATTEMPT=${{ github.run_attempt }}
-            GHA_RUN_ID=${{ github.run_id }}
-            GHA_RUN_NUMBER=${{ github.run_number }}
-            GHA_TRIGGERING_ACTOR=${{ github.triggering_actor }}
-            GHA_WORKFLOW=${{ github.workflow }}
-            GIT_SHA=${{ github.sha }}
-            TASK_UPDATED=${{ steps.date.outputs.date }}
+          python-version: "3.12"
 
-      - name: Update task definition and ECS service
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      - name: Deploy to production
+        run: ./bin/deploy production
+        env:
+          # https://github.com/burningmantech/ranger-ims-server/settings/secrets
+          AWS_ECR_IMAGE_NAME: ${{ secrets.AWS_ECR_IMAGE_NAME }}
+          AWS_ECS_CLUSTER_STAGING: rangers
+          AWS_ECS_SERVICE_STAGING: ${{ secrets.AWS_ECS_SERVICE_STAGING }}
+          AWS_ECS_CLUSTER_PRODUCTION: rangers
+          AWS_ECS_SERVICE_PRODUCTION: ${{ secrets.AWS_ECS_SERVICE_PRODUCTION }}
+          NOTIFY_SMTP_HOST: ${{ secrets.NOTIFY_SMTP_HOST }}
+          NOTIFY_SMTP_USER: ${{ secrets.NOTIFY_SMTP_USER }}
+          NOTIFY_SMTP_PASSWORD: ${{ secrets.NOTIFY_SMTP_PASSWORD }}
+          NOTIFY_EMAIL_RECIPIENT: ${{ secrets.NOTIFY_EMAIL_RECIPIENT }}
+          NOTIFY_EMAIL_SENDER: ${{ secrets.NOTIFY_EMAIL_SENDER }}
+          CI: true
+          PROJECT_NAME: Ranger Secret Clubhouse API Service
+          REPOSITORY_ID: ${{ github.repository }}
+          BUILD_NUMBER: 0
+          BUILD_URL: https://github.com/burningmantech/ranger-ims-server/commit/${{ github.sha }}/checks
+
+  push-to-training:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Harden CI
+        uses: step-security/harden-runner@v2.13.2
         with:
-          task-definition: "${{ steps.new-task-definition.outputs.task-definition }}"
-          service: "${{ env.AWS_ECS_SERVICE_PRODUCTION }}"
-          cluster: "${{ env.AWS_ECS_CLUSTER }}"
-          wait-for-service-stability: true
+          egress-policy: audit
+
+      - name: Check user
+        if: ${{ ! contains('["wsanchez", "mikeburg", "plapsley", "techxorcist", "srabraham"]', github.actor) }}
+        run: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Deploy to training
+        run: ./bin/deploy production
+        env:
+          # https://github.com/burningmantech/ranger-ims-server/settings/secrets
+          AWS_ECR_IMAGE_NAME: ${{ secrets.AWS_ECR_IMAGE_NAME }}
+          AWS_ECS_CLUSTER_STAGING: rangers
+          AWS_ECS_SERVICE_STAGING: ${{ secrets.AWS_ECS_SERVICE_STAGING }}
+          AWS_ECS_CLUSTER_PRODUCTION: rangers
+          AWS_ECS_SERVICE_PRODUCTION: ${{ secrets.AWS_ECS_SERVICE_TRAINING }}
+          NOTIFY_SMTP_HOST: ${{ secrets.NOTIFY_SMTP_HOST }}
+          NOTIFY_SMTP_USER: ${{ secrets.NOTIFY_SMTP_USER }}
+          NOTIFY_SMTP_PASSWORD: ${{ secrets.NOTIFY_SMTP_PASSWORD }}
+          NOTIFY_EMAIL_RECIPIENT: ${{ secrets.NOTIFY_EMAIL_RECIPIENT }}
+          NOTIFY_EMAIL_SENDER: ${{ secrets.NOTIFY_EMAIL_SENDER }}
+          CI: true
+          PROJECT_NAME: Ranger Secret Clubhouse API Service
+          REPOSITORY_ID: ${{ github.repository }}
+          BUILD_NUMBER: 0
+          BUILD_URL: https://github.com/burningmantech/ranger-ims-server/commit/${{ github.sha }}/checks
