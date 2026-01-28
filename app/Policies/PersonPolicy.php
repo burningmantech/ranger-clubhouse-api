@@ -110,7 +110,7 @@ class PersonPolicy
 
     public function delete(Person $user, Person $person): bool
     {
-        return $user->isAdmin();
+        return $user->hasRole(Role::TECH_NINJA);
     }
 
     /**
