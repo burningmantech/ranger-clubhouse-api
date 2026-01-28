@@ -335,7 +335,7 @@ class PersonControllerTest extends TestCase
 
     public function testPersonDelete()
     {
-        $this->addRole(Role::ADMIN);
+        $this->addRole(Role::TECH_NINJA);
         $person = Person::factory()->create();
 
         $response = $this->json('DELETE', "person/{$person->id}");
