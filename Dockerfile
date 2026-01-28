@@ -45,7 +45,6 @@ COPY ["./artisan", "./phpunit.xml", "./server.php", "./.env.testing", "./"]
 
 RUN /usr/bin/composer dump-autoload --optimize
 
-#
 # -----------------------------------------------------------------------------
 # This stage builds the application container.
 # -----------------------------------------------------------------------------
