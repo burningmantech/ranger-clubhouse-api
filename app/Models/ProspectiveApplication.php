@@ -134,6 +134,7 @@ class ProspectiveApplication extends ApiModel
             'reviewed_at' => 'datetime',
             'updated_at' => 'datetime',
             'updated_by_person_at' => 'datetime',
+            'problem_handles' => 'array',
         ];
     }
 
