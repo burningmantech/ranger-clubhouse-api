@@ -68,7 +68,7 @@ class Setting extends ApiModel
             'type' => self::TYPE_EMAIL,
         ],
 
-        'AllowSignupsWithoutPhoto' => [
+          'AllowSignupsWithoutPhoto' => [
             'description' => 'Allow shift signups without requiring an approved photo',
             'type' => self::TYPE_BOOL,
         ],
@@ -110,11 +110,6 @@ class Setting extends ApiModel
             'type' => self::TYPE_BOOL,
         ],
 
-        'ChatGPTToken' => [
-            'description' => 'ChatGPT token used to process freeform text (handle extraction, etc)',
-            'type' => self::TYPE_STRING,
-            'is_credential' => true,
-        ],
 
         'DailyReportEmail' => [
             'description' => 'Email address to send the Clubhouse Daily Report',
@@ -148,6 +143,18 @@ class Setting extends ApiModel
         'EditorUrl' => [
             'description' => 'The script URL of the WYSIWYG editor (currently TinyMCE)',
             'type' => self::TYPE_URL
+        ],
+
+        'GeminiAPIKey' => [
+            'description' => 'Gemini API Key',
+            'type' => self::TYPE_STRING,
+            'is_credential' => true,
+        ],
+
+        'GeminiModel' => [
+            'description' => 'Gemini Model to use',
+            'type' => self::TYPE_STRING,
+            'default' => 'gemini-2.5'
         ],
 
         'GoogleAnalyticsID' => [
