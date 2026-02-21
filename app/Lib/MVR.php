@@ -34,7 +34,12 @@ class MVR
      */
 
     public static function retrieveDeadline() :array {
-        $deadline = current_year()."-" . setting('MVRDeadline') . " 23:59:59";
+        $date = setting('MVRDeadline');
+        if (empty($date)) {
+            return [ null, false ];
+        }
+
+        $deadline = current_year()."-{$date} 23:59:59";
         return [$deadline , now()->gt(Carbon::parse($deadline))];
     }
 }
