@@ -155,7 +155,7 @@ class EventDate extends ApiModel
 
         $july15 = new Carbon("July 15 $year");
         if ($july15->gte($now)) {
-            return self::BEFORE_EVENT;
+            return self::PRE_EVENT_OPS;
         }
 
         $gateOpen = $laborDay->subDays(8);
