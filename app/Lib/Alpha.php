@@ -239,7 +239,6 @@ class Alpha
             'gender_custom' => $person->gender_custom,
             'mentor_history' => PersonMentor::retrieveMentorHistory($person->id, $allHistories),
             'photo_approved' => $photoApproved,
-            'has_note_on_file' => $person->has_note_on_file,
             'city' => $person->city,
             'state' => $person->state,
             'country' => $person->country,

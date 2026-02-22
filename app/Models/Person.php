@@ -239,7 +239,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             'callsign_approved' => 'boolean',
             'created_at' => 'datetime',
             'has_bpguid' => 'boolean',
-            'has_note_on_file' => 'boolean',
             'last_seen_at' => 'datetime',
             'logged_in_at' => 'datetime',
             'on_site' => 'boolean',
@@ -282,7 +281,6 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         'first_name',
         'gender_custom',
         'gender_identity',
-        'has_note_on_file',
         'has_reviewed_pi',  // Pseudo field
         'home_phone',
         'is_bouncing',
