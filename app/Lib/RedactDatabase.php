@@ -34,7 +34,6 @@ class RedactDatabase
             'home_phone' => '123-456-7890',
             'known_pnvs' => '',
             'known_rangers' => '',
-            'has_note_on_file' => false,
             'lms_id' => '',
             'lms_username' => '',
             'on_site' => false,
