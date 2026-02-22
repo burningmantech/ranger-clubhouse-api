@@ -12,22 +12,35 @@ use App\Models\Role;
 
 class VehicleFilter
 {
-    const REVIEW_FIELDS = [
+    const array REVIEW_FIELDS = [
         'status',
         'sticker_number',
     ];
 
-    const ADMIN_FIELDS = [
+    const array ADMIN_FIELDS = [
         'notes'
     ];
 
-    const VEHICLE_FIELDS = [
+    const array VEHICLE_FIELDS = [
         'type',
         'person',       // eager loaded table
         'callsign',
         'person_id',
         'event_year',
         'team_assignment',
+        'driving_sticker',
+        'fuel_chit',
+        'ranger_logo',
+        'amber_light',
+        'response',
+        'request_comment'
+    ];
+
+    const array VEHICLE_MAINTENANCE_FIELDS = [
+        'driving_sticker'
+    ];
+
+    const array VEHICLE_INFO_FIELDS = [
         'vehicle_class',
         'vehicle_year',
         'vehicle_make',
@@ -37,20 +50,10 @@ class VehicleFilter
         'rental_number',
         'license_state',
         'license_number',
-        'driving_sticker',
-        'fuel_chit',
-        'ranger_logo',
-        'amber_light',
-        'response',
-        'request_comment'
-    ];
-
-    const VEHICLE_MAINTENANCE_FIELDS = [
-        'driving_sticker'
     ];
 
     // Pseudo fields, read only - pulled from person_event
-    const PAPERWORK_FIELDS = [
+    const array PAPERWORK_FIELDS = [
         'org_vehicle_insurance',
         'signed_motorpool_agreement'
     ];
@@ -62,29 +65,31 @@ class VehicleFilter
     // 2: which roles are allowed the field (if null, allow any)
     //
 
-    const FIELDS_SERIALIZE = [
+    const array FIELDS_SERIALIZE = [
         [self::VEHICLE_FIELDS],
         [self::REVIEW_FIELDS],
         [self::PAPERWORK_FIELDS],
+        [self::VEHICLE_INFO_FIELDS],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
         [self::VEHICLE_MAINTENANCE_FIELDS, true, [Role::ADMIN, Role::EVENT_MANAGEMENT]],
     ];
 
-    const FIELDS_DESERIALIZE = [
+    const array FIELDS_DESERIALIZE = [
         [self::VEHICLE_FIELDS, true, [Role::ADMIN]],
         [self::REVIEW_FIELDS, false, [Role::ADMIN]],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
+        [self::VEHICLE_INFO_FIELDS, false, [Role::ADMIN, Role::VEHICLE_INFO_UPDATE]],
         [self::VEHICLE_MAINTENANCE_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT]],
     ];
 
-    protected $record;
+    protected ?Vehicle $record = null;
 
     public function __construct(Vehicle $record)
     {
         $this->record = $record;
     }
 
-    public function serialize(Person $authorizedUser = null): array
+    public function serialize(?Person $authorizedUser = null): array
     {
         return $this->buildFields(self::FIELDS_SERIALIZE, $authorizedUser);
     }
@@ -129,7 +134,7 @@ class VehicleFilter
         return $fields;
     }
 
-    public function deserialize(Person $authorizedUser = null): array
+    public function deserialize(?Person $authorizedUser = null): array
     {
         return $this->buildFields(self::FIELDS_DESERIALIZE, $authorizedUser);
     }
