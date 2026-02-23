@@ -58,6 +58,8 @@ class Role extends ApiModel
 
     const int EDIT_EMERGENCY_CONTACT = 130; // Can edit / view Emergency Contact Info even if EMOP is disabled.
 
+    const int VEHICLE_INFO_UPDATE = 131; // Can edit existing vehicle records' identifying info.
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     const int POSITION_MASK = 0x0fff;
