@@ -31,7 +31,7 @@ class VehiclePolicy
 
     public function index(Person $user): bool
     {
-        return $user->hasRole(Role::EVENT_MANAGEMENT);
+        return $user->hasRole([Role::EVENT_MANAGEMENT, Role::VEHICLE_INFO_UPDATE]);
     }
 
     /**
@@ -44,7 +44,7 @@ class VehiclePolicy
 
     public function indexForPerson(Person $user, $personId): bool
     {
-        return $user->hasRole(Role::EVENT_MANAGEMENT) || ($user->id == $personId);
+        return $user->hasRole([Role::EVENT_MANAGEMENT, Role::VEHICLE_INFO_UPDATE]) || ($user->id == $personId);
     }
 
     /**
@@ -57,7 +57,7 @@ class VehiclePolicy
 
     public function show(Person $user, Vehicle $vehicle): bool
     {
-        return $vehicle->person_id == $user->id || $user->hasRole([Role::EVENT_MANAGEMENT, Role::VIEW_PII]);
+        return $vehicle->person_id == $user->id || $user->hasRole([Role::EVENT_MANAGEMENT, Role::VEHICLE_INFO_UPDATE, Role::VIEW_PII]);
     }
 
     /**
@@ -94,7 +94,7 @@ class VehiclePolicy
      */
     public function update(Person $user, Vehicle $vehicle): bool
     {
-        return ($vehicle->person_id == $user->id) || $user->hasRole(Role::EVENT_MANAGEMENT);
+        return ($vehicle->person_id == $user->id) || $user->hasRole([Role::EVENT_MANAGEMENT, Role::VEHICLE_INFO_UPDATE]);
     }
 
     /**
@@ -118,7 +118,7 @@ class VehiclePolicy
 
     public function paperwork(Person $user): bool
     {
-        return $user->hasRole([Role::ADMIN, Role::EVENT_MANAGEMENT]);
+        return $user->hasRole([Role::EVENT_MANAGEMENT, Role::VEHICLE_INFO_UPDATE]);
     }
 
     /**
@@ -131,7 +131,7 @@ class VehiclePolicy
 
     public function info(Person $user, Person $person): bool
     {
-        return $user->hasRole([Role::VEHICLE_MANAGEMENT, Role::EVENT_MANAGEMENT]) || $user->id == $person->id;
+        return $user->hasRole([Role::VEHICLE_MANAGEMENT, Role::VEHICLE_INFO_UPDATE, Role::EVENT_MANAGEMENT]) || $user->id == $person->id;
     }
 
     /**
