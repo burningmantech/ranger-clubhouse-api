@@ -255,7 +255,7 @@ class MarcatoExport
 
     public static function buildPhotoName($person): string
     {
-        return strtoupper($person->first_name . ' ' . $person->last_name) . '_rangers.jpg';
+        return strtoupper($person->first_name . ' ' . $person->last_name) .'_'.$person->id.'_rangers.jpg';
     }
 
     /**
