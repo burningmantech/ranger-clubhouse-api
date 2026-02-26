@@ -947,6 +947,8 @@ class Schedule
                         'slot_id' => $slotId,
                         'slot_description' => $slot->description,
                         'slot_begins' => (string)$slot->begins,
+                        'slot_ends' => (string)$slot->ends,
+                        'duration' => $slot->duration,
                         'position_id' => $slot->position_id,
                         'position_title' => $slot->position->title ?? 'Deleted #' . $slot->position_id,
                     ];
