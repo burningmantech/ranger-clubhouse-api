@@ -7,6 +7,10 @@ use App\Models\Asset;
 use App\Models\AssetPerson;
 use App\Models\Bmid;
 use App\Models\EventDate;
+use App\Models\Person;
+use App\Models\PersonEvent;
+use App\Models\PersonSlot;
+use App\Models\Position;
 use App\Models\Provision;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
@@ -15,7 +19,6 @@ use Illuminate\Support\Arr;
  * Report on people who arrive prior to Thursday before gate opening weekend.
  * Used to build arrival packets for SITE Setup individuals.
  */
-
 class EarlyArrivalReport
 {
     public static function execute(int $year): array
@@ -25,26 +28,47 @@ class EarlyArrivalReport
             return ['status' => 'no-event-dates'];
         }
 
-        $priorTo = Carbon::parse($eventDate->event_start->format('Y-m-d') . ' last Thursday');
-        $priorToFormatted = $priorTo->format('Y-m-d');
-        $saps = AccessDocument::retrieveSAPsPriorTo($priorTo);
+        $preEventEnd = Carbon::parse($eventDate->event_start->format('Y-m-d') . ' last Thursday');
+        $preEventEndFormatted = $preEventEnd->format('Y-m-d');
+        $saps = AccessDocument::retrieveSAPsPriorTo($preEventEnd);
+        $preEventStart = $preEventEnd->clone()->subDays(5);
 
-        if (empty($saps)) {
+        $workingShifts = PersonSlot::select('person_slot.*')
+            ->join('slot', 'slot.id', '=', 'person_slot.slot_id')
+            ->join('position', 'position.id', '=', 'slot.position_id')
+            ->where('slot.begins_year', $year)
+            ->where('position.type', '!=', Position::TYPE_TRAINING)
+            ->whereBetween('slot.begins', [$preEventStart, $preEventEnd])
+            ->with('slot', 'slot.position')
+            ->orderBy('slot.begins')
+            ->get();
+        $workingPeople = $workingShifts->pluck('person_id')->unique();
+
+        if (empty($saps) && $workingPeople->isEmpty()) {
             return [
                 'status' => 'no-arrivals',
                 'arrivals' => [],
-                'date' => $priorToFormatted,
+                'pre_event_start' => $preEventStart->format('Y-m-d'),
+                'pre_event_end' => $preEventEndFormatted,
             ];
         }
 
+        $workingShifts = $workingShifts->groupBy('person_id');
 
         $arrivals = [];
         $personIds = Arr::pluck($saps, 'person_id');
+        $personIds = $workingPeople->merge($personIds)->unique()->toArray();
         $bmids = Bmid::findForPersonIds($year, $personIds)->keyBy('person_id');
         $radiosForPeople = Provision::retrieveTypeForPersonIds(Provision::EVENT_RADIO, $personIds);
         $checkedOutRadios = AssetPerson::retrieveTypeForPersonIds(Asset::TYPE_RADIO, $personIds);
-        foreach ($saps as $sap) {
-            $allowedRadios = $radiosForPeople->get($sap->person_id);
+        $sapsById = collect($saps)->keyBy('person_id');
+        $peopleEvent = PersonEvent::where('year', $year)->whereIn('person_id', $personIds)->get()->keyBy('person_id');
+
+        $people = Person::whereIn('id', $personIds)->get()->keyBy('id');
+
+        foreach ($personIds as $personId) {
+            $sap = $sapsById->get($personId);
+            $allowedRadios = $radiosForPeople->get($personId);
             $radioCount = 0;
             if ($allowedRadios) {
                 foreach ($allowedRadios as $radio) {
@@ -54,7 +78,7 @@ class EarlyArrivalReport
                 }
             }
 
-            $radios = $checkedOutRadios->get($sap->person_id);
+            $radios = $checkedOutRadios->get($personId);
             $issuedRadios = [];
             if ($radios) {
                 foreach ($radios as $radio) {
@@ -68,16 +92,31 @@ class EarlyArrivalReport
                 usort($issuedRadios, fn($a, $b) => strcmp($a['barcode'], $b['barcode']));
             }
 
-            $person = $sap->person;
+            $person = $people->get($personId);
+            $shifts = $workingShifts->get($personId);
+
+            $firstShift = null;
+            if ($shifts) {
+                $signup = $shifts->first();
+                $slot = $signup->slot;
+                $firstShift = [
+                    'begins' => (string) $slot->begins,
+                    'description' => $slot->description,
+                    'position_title' => $slot->position->title,
+                ];
+            }
+
             $arrivals[] = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
                 'on_site' => $person->on_site,
+                'radio_agreement' => $peopleEvent->get($personId)?->asset_authorized ?? false,
                 'radios_allowed' => $radioCount,
                 'radios' => $issuedRadios,
-                'sap_date' => $sap->access_any_time ? 'any' : $sap->access_date->format('Y-m-d'),
+                'sap_date' => ($sap ? ($sap->access_any_time ? 'any' : $sap->access_date->format('Y-m-d')) : 'no-sap'),
                 'bmid_status' => $bmids->get($person->id)?->status ?? 'no-bmid',
+                'first_shift' => $firstShift,
             ];
         }
 
@@ -85,7 +124,8 @@ class EarlyArrivalReport
         return [
             'status' => 'success',
             'arrivals' => $arrivals,
-            'date' => $priorToFormatted,
+            'pre_event_start' => $preEventStart->format('Y-m-d'),
+            'pre_event_end' => $preEventEndFormatted,
         ];
     }
 }

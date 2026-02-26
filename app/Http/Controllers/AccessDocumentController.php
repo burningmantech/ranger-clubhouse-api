@@ -769,7 +769,7 @@ class AccessDocumentController extends ApiController
     public function earlyArrivalReport(): JsonResponse
     {
         $this->authorize('earlyArrivalReport', AccessDocument::class);
-
-        return response()->json(EarlyArrivalReport::execute(current_year()));
+        $params = request()->validate(['year' => 'sometimes|digits:4']);
+        return response()->json(EarlyArrivalReport::execute($params['year'] ?? current_year()));
     }
 }
