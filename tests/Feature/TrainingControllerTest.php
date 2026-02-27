@@ -7,11 +7,13 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
+use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Role;
 use App\Models\Slot;
+use App\Models\TraineeStatus;
 use App\Models\TrainerStatus;
 
 class TrainingControllerTest extends TestCase
@@ -125,6 +127,91 @@ class TrainingControllerTest extends TestCase
                     ]
                 ]
             ]
+        ]);
+    }
+
+    /*
+     * Test People Training Completed report includes trainers
+     */
+
+    public function testPeopleTrainingCompleted()
+    {
+        $this->addRole(Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING);
+
+        Position::factory()->create([
+            'id' => Position::GREEN_DOT_TRAINER,
+            'title' => 'Green Dot Trainer',
+        ]);
+
+        Position::factory()->create([
+            'id' => Position::GREEN_DOT_TRAINING,
+            'title' => 'Green Dot Training',
+            'type' => 'Training',
+        ]);
+
+        $trainingSlot = Slot::factory()->create([
+            'begins' => date('Y-07-20 11:00:00'),
+            'ends' => date('Y-07-20 12:00:00'),
+            'position_id' => Position::GREEN_DOT_TRAINING,
+            'description' => 'GD Training',
+        ]);
+
+        $trainerSlot = Slot::factory()->create([
+            'begins' => date('Y-07-20 11:00:00'),
+            'ends' => date('Y-07-20 12:00:00'),
+            'position_id' => Position::GREEN_DOT_TRAINER,
+            'description' => 'GD Training',
+        ]);
+
+        $trainee = Person::factory()->create();
+        $trainer = Person::factory()->create();
+        $pendingTrainer = Person::factory()->create();
+
+        TraineeStatus::factory()->create([
+            'person_id' => $trainee->id,
+            'slot_id' => $trainingSlot->id,
+            'passed' => true,
+        ]);
+
+        TrainerStatus::factory()->create([
+            'person_id' => $trainer->id,
+            'slot_id' => $trainingSlot->id,
+            'trainer_slot_id' => $trainerSlot->id,
+            'status' => TrainerStatus::ATTENDED,
+        ]);
+
+        TrainerStatus::factory()->create([
+            'person_id' => $pendingTrainer->id,
+            'slot_id' => $trainingSlot->id,
+            'trainer_slot_id' => $trainerSlot->id,
+            'status' => TrainerStatus::PENDING,
+        ]);
+
+        $response = $this->json('GET', 'training/' . Position::GREEN_DOT_TRAINING . '/people-training-completed', ['year' => current_year()]);
+        $response->assertStatus(200);
+
+        $response->assertJsonCount(1, 'slots');
+        $response->assertJsonCount(1, 'slots.0.people');
+        $response->assertJsonCount(1, 'slots.0.trainers');
+
+        $response->assertJson([
+            'slots' => [
+                [
+                    'slot_id' => $trainingSlot->id,
+                    'people' => [
+                        [
+                            'id' => $trainee->id,
+                            'callsign' => $trainee->callsign,
+                        ],
+                    ],
+                    'trainers' => [
+                        [
+                            'id' => $trainer->id,
+                            'callsign' => $trainer->callsign,
+                        ],
+                    ],
+                ],
+            ],
         ]);
     }
 }
