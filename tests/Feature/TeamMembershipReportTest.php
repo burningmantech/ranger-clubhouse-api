@@ -24,7 +24,7 @@ class TeamMembershipReportTest extends TestCase
     }
 
     /**
-     * Test that position grants include joined_on and left_on from person_position_log.
+     * Test that position grants include joined_on from person_position_log.
      */
     public function testPositionGrantIncludesJoinedOnFromLog(): void
     {
@@ -42,7 +42,6 @@ class TeamMembershipReportTest extends TestCase
             'person_id' => $member->id,
             'position_id' => $position->id,
             'joined_on' => '2024-06-15',
-            'left_on' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -57,11 +56,10 @@ class TeamMembershipReportTest extends TestCase
         $positionData = collect($person['positions'])->firstWhere('id', $position->id);
         $this->assertNotNull($positionData);
         $this->assertEquals('2024-06-15', $positionData['joined_on']);
-        $this->assertNull($positionData['left_on']);
     }
 
     /**
-     * Test that position grants without a log record have null joined_on and left_on.
+     * Test that position grants without a log record have null joined_on
      */
     public function testPositionGrantWithoutLogHasNullDates(): void
     {
@@ -85,6 +83,5 @@ class TeamMembershipReportTest extends TestCase
         $positionData = collect($person['positions'])->firstWhere('id', $position->id);
         $this->assertNotNull($positionData);
         $this->assertNull($positionData['joined_on']);
-        $this->assertNull($positionData['left_on']);
     }
 }
