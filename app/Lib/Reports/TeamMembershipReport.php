@@ -125,6 +125,14 @@ class TeamMembershipReport
                 $isTraining = false;
             }
 
+            $positionLogs = DB::table('person_position_log')
+                ->select('person_id', 'joined_on', 'left_on')
+                ->where('position_id', $position->id)
+                ->whereIntegerInRaw('person_id', $personIds)
+                ->whereNull('left_on')
+                ->get()
+                ->keyBy('person_id');
+
             foreach ($grants as $person) {
                 if ($excludePublicOnly && !isset($peopleIds[$person->id])) {
                     continue;
@@ -142,7 +150,10 @@ class TeamMembershipReport
                 } else {
                     $worked = $lastWorked->get($person->id)?->on_duty;
                 }
-                $pInfo['worked_on'] = $worked;
+                $pInfo['worked_on'] = $worked ? (string) $worked : null;
+                $log = $positionLogs->get($person->id);
+                $joinedOn = $log?->joined_on;
+                $pInfo['joined_on'] = $joinedOn ? (string) $joinedOn : null;
                 $peopleIds[$person->id]['positions'][] = $pInfo;
             }
         }
