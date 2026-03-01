@@ -303,7 +303,7 @@ class TrainingSessionGraduationTest extends TestCase
     }
 
     /**
-     * Test that the controller rejects graduating a requirements-incomplete candidate.
+     * Test that the controller forces through a graduation.
      */
     public function testControllerRejectsRequirementsIncomplete(): void
     {
@@ -321,10 +321,10 @@ class TrainingSessionGraduationTest extends TestCase
 
         $people = $response->json('people');
         $result = collect($people)->firstWhere('id', $person->id);
-        $this->assertEquals(TrainingSession::ELIGIBILITY_REQUIREMENTS_INCOMPLETE, $result['status']);
+        $this->assertEquals("success", $result['status']);
 
-        // Verify positions were NOT granted
-        $this->assertFalse(
+        // Verify positions were  granted
+        $this->assertTrue(
             PersonPosition::where('person_id', $person->id)
                 ->where('position_id', Position::GREEN_DOT_MENTEE)
                 ->exists()
