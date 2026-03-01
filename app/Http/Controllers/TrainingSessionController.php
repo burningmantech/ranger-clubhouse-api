@@ -231,14 +231,14 @@ class TrainingSessionController extends ApiController
 
         $result = $training_session->graduationCandidates();
         if (!$result) {
-            return response()->json(['status' => 'no-positions ']);
+            return response()->json(['status' => 'no-positions']);
         }
 
         return response()->json($result);
     }
 
     /**
-     * Retrieve graduation candidates
+     * Graduate candidates
      *
      * @param TrainingSession $training_session
      * @return JsonResponse
@@ -279,12 +279,14 @@ class TrainingSessionController extends ApiController
                 continue;
             }
 
-            $status = $candidate['status'];
-            if ($status !== 'candidate') {
+            $eligibility = $candidate['eligibility'];
+
+            if ($eligibility !== TrainingSession::ELIGIBILITY_CANDIDATE && $eligibility !== TrainingSession::ELIGIBILITY_REQUIREMENTS_INCOMPLETE) {
                 $results[] = [
                     'id' => $id,
-                    'status' => $status
+                    'status' => $eligibility
                 ];
+                continue;
             }
 
             PersonPosition::addIdsToPerson($id, $positionIds, 'granted via graduate trainee');

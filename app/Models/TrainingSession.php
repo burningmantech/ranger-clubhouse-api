@@ -9,11 +9,20 @@ namespace App\Models;
  */
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class TrainingSession extends Slot
 {
     // don't calculate slot credits
     protected $hidden = ['credits'];
+
+    const string ELIGIBILITY_AUDITOR = 'auditor';
+    const string ELIGIBILITY_FULLY_GRADUATED = 'fully-graduated';
+    const string ELIGIBILITY_GRADUATED = 'graduated';
+    const string ELIGIBILITY_CANDIDATE = 'candidate';
+    const string ELIGIBILITY_NOT_PASSED = 'not-passed';
+    const string ELIGIBILITY_REQUIREMENTS_INCOMPLETE = 'requirements-incomplete';
+
 
     /**
      * Find all the training sessions (slots) for a training (position) and year
@@ -129,7 +138,7 @@ class TrainingSession extends Slot
                 'team_short_titles' => $position_short_titles,
                 'notes' => $traineeNotesByIds[$person->id] ?? [],
                 'fkas' => $person->formerlyKnownAsArray(true),
-                'signed_up_at' => (string) $row->created_at,
+                'signed_up_at' => (string)$row->created_at,
             ];
 
             if (in_array($person->id, $personnelIssues)) {
@@ -278,7 +287,8 @@ class TrainingSession extends Slot
      * @return array
      */
 
-    public function retrieveTeamNameLegend(): array {
+    public function retrieveTeamNameLegend(): array
+    {
         return Position::where('on_trainer_report', true)
             ->select('title', 'short_title')
             ->orderBy('title')
@@ -307,36 +317,49 @@ class TrainingSession extends Slot
         $people = [];
         $traineeStatusByIds = TraineeStatus::where('slot_id', $this->id)->get()->keyBy('person_id');
 
-        foreach ($students as $student) {
-            $person = $student->person;
-            if ($person->status == Person::AUDITOR) {
-                $status = 'auditor';
-            } else {
-                $positionsGranted = $person->person_position;
-                if ($fullyGraduatedPosition && $positionsGranted->firstWhere('position_id', $fullyGraduatedPosition)) {
-                    $status = 'fully-graduated';
-                } else if ($positionsGranted->contains(fn ($p) => in_array($p->position_id, $positions))) {
-                    $status = 'graduated';
-                } else if ($traineeStatusByIds->has($person->id)) {
-                    $status = 'candidate';
-                } else {
-                    $status = 'not-passed';
-                }
-            }
+        $menteeRequirements = $graduate['mentee_requirements'] ?? null;
 
-            $people[] = [
+        foreach ($students as $student) {
+
+            $person = $student->person;
+            $info = [
                 'id' => $person->id,
                 'callsign' => $person->callsign,
                 'status' => $person->status,
-                'eligibility' => $status,
             ];
+
+            if ($person->status == Person::AUDITOR) {
+                $eligibility = self::ELIGIBILITY_AUDITOR;
+            } else {
+                $positionsGranted = $person->person_position;
+                if ($fullyGraduatedPosition && $positionsGranted->firstWhere('position_id', $fullyGraduatedPosition)) {
+                    $eligibility = self::ELIGIBILITY_FULLY_GRADUATED;
+                } else if ($positionsGranted->contains(fn($p) => in_array($p->position_id, $positions))) {
+                    $eligibility = self::ELIGIBILITY_GRADUATED;
+                } else if ($traineeStatusByIds->has($person->id)) {
+                    if ($menteeRequirements) {
+                        if ($this->applyMenteeRequirements($person, $menteeRequirements, $info)) {
+                            $eligibility = self::ELIGIBILITY_CANDIDATE;
+                        } else {
+                            $eligibility = self::ELIGIBILITY_REQUIREMENTS_INCOMPLETE;
+                        }
+                    } else {
+                        $eligibility = self::ELIGIBILITY_CANDIDATE;
+                    }
+                } else {
+                    $eligibility = self::ELIGIBILITY_NOT_PASSED;
+                }
+            }
+
+            $info['eligibility'] = $eligibility;
+            $people[] = $info;
         }
 
 
         $result = [
             'status' => 'success',
             'people' => $people,
-            'positions' => array_map(fn($p) => [ 'id' => $p, 'title' => Position::retrieveTitle($p)], $positions)
+            'positions' => array_map(fn($p) => ['id' => $p, 'title' => Position::retrieveTitle($p)], $positions)
         ];
 
         if ($fullyGraduatedPosition) {
@@ -347,6 +370,62 @@ class TrainingSession extends Slot
         }
 
         return $result;
+    }
+
+    /**
+     * Check mentee requirements for graduation candidates.
+     * Candidates must have sufficient recent volunteer shifts and hours to graduate.
+     *
+     * @param Person $person
+     * @param array $requirements
+     * @param array $info
+     * @return bool
+     */
+
+    private function applyMenteeRequirements(Person $person, array $requirements, array &$info): bool
+    {
+        $sql = DB::table('timesheet')
+            ->join('position', 'position.id', '=', 'timesheet.position_id')
+            ->where('timesheet.person_id', $person->id)
+            ->groupBy('timesheet.person_id')
+            ->select(
+                'timesheet.person_id',
+                DB::raw('COUNT(*) as shift_count'),
+                DB::raw('SUM(TIMESTAMPDIFF(SECOND, timesheet.on_duty, COALESCE(timesheet.off_duty, NOW()))) as total_seconds')
+            );
+        $positions = $requirements['positions'] ?? null;
+        if ($positions) {
+            $sql->whereIn('position.id', $positions);
+        }
+
+        $stats = $sql->first();
+
+        $requiredShifts = $requirements['shift_count'];
+        $requiredHours = $requirements['hour_count'];
+
+        $shiftCount = $stats?->shift_count ?? 0;
+        $totalHours = ($stats?->total_seconds ?? 0) / 3600;
+
+        $eventCount = $requirements['event_count'] ?? 0;
+        if ($eventCount) {
+            $thisYear = current_year();
+            $years = array_filter($person->years_as_ranger, fn($year) => $year != $thisYear);
+            $totalEvents = count($years);
+        } else {
+            $totalEvents = 0;
+        }
+
+        if ($shiftCount < $requiredShifts || $totalHours < $requiredHours || $totalEvents < $eventCount) {
+            $info['shifts'] = $shiftCount;
+            $info['hours'] = $totalHours;
+            $info['events'] = $totalEvents;
+            $info['req_hours'] = $requiredHours;
+            $info['req_shifts'] = $requiredShifts;
+            $info['req_events'] = $eventCount;
+            return false;
+        }
+
+        return true;
     }
 
     public function getTrainersAttribute(): array
