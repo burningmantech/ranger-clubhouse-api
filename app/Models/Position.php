@@ -281,6 +281,12 @@ class Position extends ApiModel
             'veteran' => self::DIRT_GREEN_DOT,
             'positions' => [self::GREEN_DOT_MENTEE, self::SANCTUARY_MENTEE],
             'has_mentees' => true,
+            'mentee_requirements' => [
+                'shift_count' => 3,
+                'hour_count' => 18,
+                'event_count' => 1,
+                'positions' => [Position::DIRT, Position::DIRT_SHINY_PENNY, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT],
+            ]
         ],
     ];
 
@@ -384,11 +390,11 @@ class Position extends ApiModel
         parent::boot();
 
         self::saving(function ($model) {
-           if (!$model->awards_eligible) {
-               // Ensure the other flags are cleared.
-               $model->awards_auto_grant = false;
-               $model->awards_grants_service_year = false;
-           }
+            if (!$model->awards_eligible) {
+                // Ensure the other flags are cleared.
+                $model->awards_auto_grant = false;
+                $model->awards_grants_service_year = false;
+            }
         });
 
         self::saved(function ($model) {

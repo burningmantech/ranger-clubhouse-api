@@ -279,12 +279,21 @@ class TrainingSessionController extends ApiController
                 continue;
             }
 
-            $status = $candidate['status'];
-            if ($status !== 'candidate') {
+            $eligibility = $candidate['eligibility'];
+            if ($eligibility === TrainingSession::ELIGIBILITY_REQUIREMENTS_INCOMPLETE) {
                 $results[] = [
                     'id' => $id,
-                    'status' => $status
+                    'status' => $eligibility
                 ];
+                continue;
+            }
+
+            if ($eligibility !== TrainingSession::ELIGIBILITY_CANDIDATE) {
+                $results[] = [
+                    'id' => $id,
+                    'status' => $eligibility
+                ];
+                continue;
             }
 
             PersonPosition::addIdsToPerson($id, $positionIds, 'granted via graduate trainee');

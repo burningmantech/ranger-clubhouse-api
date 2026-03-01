@@ -4,7 +4,6 @@ namespace App\Lib\Reports;
 
 use App\Lib\SummarizeGender;
 use App\Models\Certification;
-use App\Models\Person;
 use App\Models\PersonCertification;
 use App\Models\Position;
 use App\Models\Slot;
@@ -15,11 +14,15 @@ use Illuminate\Support\Facades\DB;
 
 class ShiftLeadReport
 {
-    const NON_DIRT = 'non-dirt';
-    const COMMAND = 'command';
-    const DIRT_AND_GREEN_DOT = 'dirt+green';
+    const string NON_DIRT = 'non-dirt';
+    const string COMMAND = 'command';
+    const string DIRT_AND_GREEN_DOT = 'dirt+green';
 
-    const DIRT_AND_GREEN_DOT_POSITIONS = [
+    const array GREEN_DOT_SHIFT_POSITIONS = [
+        Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR,
+    ];
+
+    const array DIRT_AND_GREEN_DOT_POSITIONS = [
         Position::DIRT, Position::DIRT_PRE_EVENT, Position::DIRT_POST_EVENT, Position::DIRT_SHINY_PENNY,
         Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR, Position::GREEN_DOT_MENTEE,
     ];
@@ -166,7 +169,7 @@ class ShiftLeadReport
         $sql->orderBy('callsign');
         $rows = $sql->get();
 
-        if ($rows->count() == 0) {
+        if ($rows->isEmpty()) {
             return [];
         }
 
@@ -238,21 +241,15 @@ class ShiftLeadReport
             $positionId = $row->position_id;
 
             // GD Mentees are not considered to be on a proper GD shift.
-            $ranger->is_greendot_shift = (
-                $positionId == Position::DIRT_GREEN_DOT
-                || $positionId == Position::GREEN_DOT_MENTOR
-            );
+            $ranger->is_greendot_shift = in_array($positionId, self::GREEN_DOT_SHIFT_POSITIONS);
 
             if ($havePositions) {
-                $ranger->is_troubleshooter = $havePositions->where('position_id', Position::TROUBLESHOOTER)->count() != 0;
-                $ranger->is_rsl = $havePositions->where('position_id', Position::RSC_SHIFT_LEAD)->count() != 0;
+                $ranger->is_troubleshooter = $havePositions->contains('position_id', Position::TROUBLESHOOTER);
+                $ranger->is_rsl = $havePositions->contains('position_id', Position::RSC_SHIFT_LEAD);
                 $ranger->is_ood = $havePositions->contains('position_id', Position::OOD);
 
                 // Determine if the person is a GD AND if they have been trained this year.
-                $haveGDPosition = $havePositions->contains(function ($pos) {
-                    $pid = $pos->position_id;
-                    return ($pid == Position::DIRT_GREEN_DOT || $pid == Position::GREEN_DOT_MENTOR);
-                });
+                $haveGDPosition = $havePositions->contains(fn($pos) => in_array($pos->position_id, self::GREEN_DOT_SHIFT_POSITIONS));
 
                 // The check for the mentee shift is a hack to prevent past years from showing
                 // a GD Mentee as a qualified GD.
@@ -261,10 +258,7 @@ class ShiftLeadReport
                     if (!$ranger->is_greendot || ($positionId == Position::GREEN_DOT_MENTEE)) {
                         $ranger->is_greendot = false; // just in case
                         // Not trained - remove the GD positions
-                        $havePositions = $havePositions->filter(function ($pos) {
-                            $pid = $pos->position_id;
-                            return ($pid != Position::DIRT_GREEN_DOT && $pid != Position::GREEN_DOT_MENTOR);
-                        });
+                        $havePositions = $havePositions->filter(fn($pos) => !in_array($pos->position_id, self::GREEN_DOT_SHIFT_POSITIONS));
                     }
                 }
 
@@ -289,7 +283,7 @@ class ShiftLeadReport
             ->select('person.id', 'person.gender_identity', 'person.gender_custom')
             ->join('person_slot', 'person_slot.slot_id', 'slot.id')
             ->join('person', 'person.id', 'person_slot.person_id')
-            ->whereIn('slot.position_id', [Position::DIRT_GREEN_DOT, Position::GREEN_DOT_MENTOR]);
+            ->whereIn('slot.position_id', self::GREEN_DOT_SHIFT_POSITIONS);
 
         self::buildShiftRange($sql, $shiftStart, $shiftEnd, 90);
 
