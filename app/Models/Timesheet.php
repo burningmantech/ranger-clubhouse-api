@@ -580,7 +580,7 @@ class Timesheet extends ApiModel
         } else {
             $subQuery = self::select(
                 DB::raw('YEAR(on_duty) as year'),
-                DB::raw('SUM(TIMESTAMPDIFF(HOUR, on_duty, off_duty)) AS total_hours')
+                DB::raw('SUM(TIMESTAMPDIFF(SECOND, on_duty, off_duty)) AS total_seconds')
             )->where('person_id', $personId)
                 ->where(function ($w) use ($personId) {
                     // Don't include the year when the Alpha was bonked.
@@ -605,7 +605,7 @@ class Timesheet extends ApiModel
             }
 
             $sql = DB::query()->fromSub($subQuery, 'year_summary')
-                ->where(fn($q) => $q->where('year', '<', 2025)->orWhere('total_hours', '>=', 6))
+                ->where(fn($q) => $q->where('year', '<', 2025)->orWhere('total_seconds', '>=', 21600))
                 ->orderBy('year');
         }
 
