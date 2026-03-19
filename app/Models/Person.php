@@ -831,7 +831,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $info = password_get_info($encryptedPw);
 
         if ($info['algo'] == null) {
-            if (!strpos($password, ':')) {
+            if (!strpos($encryptedPw, ':')) {
                 // Either the account is locked, or folks trying to
                 // bypass login into the Clubhouse for the first time yet trying to log into the Online Course.
                 return false;
