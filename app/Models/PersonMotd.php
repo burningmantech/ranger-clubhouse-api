@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonMotd extends ApiModel
 {
+    use HasCompositePrimaryKey;
+
     protected $table = 'person_motd';
+    protected $primaryKey = ['person_id', 'motd_id'];
+
     protected $guarded = [];    // table is not directly accessible, allow anything
 
     public function person(): BelongsTo
