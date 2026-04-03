@@ -818,10 +818,10 @@ class TimesheetControllerTest extends TestCase
     }
 
     /*
-     * The freaking years report
+     * The events rangered report
      */
 
-    public function testFreakingYearsReport()
+    public function testEventsRangeredReport()
     {
         $prevYear = $this->year - 1;
         $person = $this->targetPerson;
@@ -834,11 +834,11 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $this->addRole(Role::ADMIN);
-        $response = $this->json('GET', 'timesheet/freaking-years', ['year' => $this->year]);
+        $response = $this->json('GET', 'timesheet/events-rangered', ['year' => $this->year]);
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json()['freaking']);
+        $this->assertCount(1, $response->json()['events_rangered']);
         $response->assertJson([
-            'freaking' => [
+            'events_rangered' => [
                 [
                     'years' => 2,
                     'people' => [[

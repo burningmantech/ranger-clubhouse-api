@@ -8,7 +8,7 @@ use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
 use App\Lib\Reports\EarlyLateCheckInReport;
 use App\Lib\Reports\EventStats;
 use App\Lib\Reports\ForcedSigninsReport;
-use App\Lib\Reports\FreakingYearsReport;
+use App\Lib\Reports\EventsRangeredReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\NoShowReport;
 use App\Lib\Reports\OnDutyReport;
@@ -737,15 +737,15 @@ class TimesheetController extends ApiController
 
 
     /**
-     * Freaking years report!
+     * Events Rangered report
      *
      * @return JsonResponse
      * @throws AuthorizationException
      */
 
-    public function freakingYearsReport(): JsonResponse
+    public function eventsRangeredReport(): JsonResponse
     {
-        $this->authorize('freakingYearsReport', [Timesheet::class]);
+        $this->authorize('eventsRangeredReport', [Timesheet::class]);
 
         $params = request()->validate([
             'include_all' => 'sometimes|boolean'
@@ -753,7 +753,7 @@ class TimesheetController extends ApiController
 
         $intendToWorkYear = current_year();
         return response()->json([
-            'freaking' => FreakingYearsReport::execute($params['include_all'] ?? false, $intendToWorkYear),
+            'events_rangered' => EventsRangeredReport::execute($params['include_all'] ?? false, $intendToWorkYear),
             'signed_up_year' => $intendToWorkYear
         ]);
     }

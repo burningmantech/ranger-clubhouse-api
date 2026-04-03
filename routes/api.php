@@ -513,7 +513,7 @@ Route::middleware(['authenticate', 'api'])->group(function () {
     Route::post('timesheet/confirm', [TimesheetController::class, 'confirm']);
     Route::get('timesheet/early-late-checkins', [TimesheetController::class, 'earlyLateCheckins']);
     Route::get('timesheet/event-stats', [TimesheetController::class, 'eventStatsReport']);
-    Route::get('timesheet/freaking-years', [TimesheetController::class, 'freakingYearsReport']);
+    Route::get('timesheet/events-rangered', [TimesheetController::class, 'eventsRangeredReport']);
     Route::get('timesheet/forced-signins-report', [TimesheetController::class, 'forcedSigninsReport']);
     Route::get('timesheet/hours-credits', [TimesheetController::class, 'hoursCreditsReport']);
     Route::get('timesheet/info', [TimesheetController::class, 'info']);
