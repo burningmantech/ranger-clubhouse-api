@@ -9,10 +9,10 @@ use App\Models\Position;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class FreakingYearsReport
+class EventsRangeredReport
 {
     /**
-     * Build a Freaking Years report - how long a person has rangered, the first year rangered, the last year to ranger,
+     * Build an Events Rangered report - how long a person has rangered, the first year rangered, the last year to ranger,
      * and if the person intends to ranger in the intended year (usually the current year)
      *
      * Non Ranger work entries (i.e. a person who worked as Non Ranger status volunteer) are excluded.

@@ -161,10 +161,10 @@ class TimesheetPolicy
     }
 
     /**
-     * Can the user run a freaking years report?
+     * Can the user run an events rangered report?
      */
 
-    public function freakingYearsReport(Person $user): bool
+    public function eventsRangeredReport(Person $user): bool
     {
         return $user->hasRole(Role::QUARTERMASTER);
     }
