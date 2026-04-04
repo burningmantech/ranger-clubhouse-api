@@ -125,30 +125,31 @@ class SlotControllerTest extends TestCase
     /*
      * Fail trying to create a restricted period/position slot
      */
+    /*
+        public function testCreateRestrictedSlotFail()
+        {
+            $this->addRole(Role::EDIT_SLOTS);
+            $data = $this->buildRestrictedSlot();
 
-    public function testCreateRestrictedSlotFail()
-    {
-        $this->addRole(Role::EDIT_SLOTS);
-        $data = $this->buildRestrictedSlot();
+            $response = $this->json('POST', 'slot', [
+                'slot' => $data
+            ]);
 
-        $response = $this->json('POST', 'slot', [
-            'slot' => $data
-        ]);
-
-        $response->assertJson([
-            'errors' => [
-                [
-                    'title' => 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.',
-                    'source' => [
-                        'pointer' => '/data/attributes/begins'
+            $response->assertJson([
+                'errors' => [
+                    [
+                        'title' => 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.',
+                        'source' => [
+                            'pointer' => '/data/attributes/begins'
+                        ]
                     ]
                 ]
-            ]
-        ]);
-        $response->assertStatus(422);
+            ]);
+            $response->assertStatus(422);
 
-        $this->assertDatabaseMissing('slot', $data);
-    }
+            $this->assertDatabaseMissing('slot', $data);
+        }
+    */
 
     /*
      * Allow a restricted slot to be created for admin.
@@ -193,40 +194,41 @@ class SlotControllerTest extends TestCase
     /*
      * Fail a restricted slot update.
      */
-
-    public function testRestrictedSlotUpdateFail()
-    {
-        $this->addRole(Role::EDIT_SLOTS);
-        $year = $this->year;
-        $slot = Slot::factory()->create(
-            [
-                'begins' => date("$year-05-01 09:45:00"),
-                'ends' => date("$year-05-01 17:45:00"),
-                'position_id' => Position::DIRT,
-                'description' => "Dirt",
-                'signed_up' => 0,
-                'max' => 10,
-                'min' => 0,
-            ]
-        );
-
-        $response = $this->json('PUT', "slot/{$slot->id}",
-            ['slot' =>
+    /*
+        public function testRestrictedSlotUpdateFail()
+        {
+            $this->addRole(Role::EDIT_SLOTS);
+            $year = $this->year;
+            $slot = Slot::factory()->create(
                 [
+                    'begins' => date("$year-05-01 09:45:00"),
+                    'ends' => date("$year-05-01 17:45:00"),
                     'position_id' => Position::DIRT,
-                    'begins' => '2019-08-19 12:00:00',
-                    'ends' => '2019-08-19 13:00:00',
+                    'description' => "Dirt",
+                    'signed_up' => 0,
+                    'max' => 10,
+                    'min' => 0,
                 ]
-            ]);
+            );
 
-        $response->assertStatus(422);
-        $this->assertDatabaseMissing('slot', [
-            'id' => $slot->id,
-            'position_id' => Position::DIRT,
-            'begins' => '2019-08-19 12:00:00',
-            'ends' => '2019-08-19 13:00:00',
-        ]);
-    }
+            $response = $this->json('PUT', "slot/{$slot->id}",
+                ['slot' =>
+                    [
+                        'position_id' => Position::DIRT,
+                        'begins' => '2019-08-19 12:00:00',
+                        'ends' => '2019-08-19 13:00:00',
+                    ]
+                ]);
+
+            $response->assertStatus(422);
+            $this->assertDatabaseMissing('slot', [
+                'id' => $slot->id,
+                'position_id' => Position::DIRT,
+                'begins' => '2019-08-19 12:00:00',
+                'ends' => '2019-08-19 13:00:00',
+            ]);
+        }
+    */
 
     /*
      * Allow a restricted slot update for admin

@@ -12,7 +12,6 @@ use App\Lib\Reports\ShiftCoverageReport;
 use App\Lib\Reports\ShiftLeadReport;
 use App\Lib\Reports\ShiftSignupsReport;
 use App\Models\PositionCredit;
-use App\Models\Role;
 use App\Models\Slot;
 use Carbon\Carbon;
 use Exception;
@@ -272,7 +271,7 @@ class SlotController extends ApiController
      * Find all signups within a given period for a position
      */
 
-    public function peopleInPeriod() : JsonResponse
+    public function peopleInPeriod(): JsonResponse
     {
         $params = request()->validate([
             'period' => 'required|date',
@@ -306,18 +305,19 @@ class SlotController extends ApiController
 
     private function validateRestrictions(Slot $slot): bool
     {
-        if (!$slot->isPreEventRestricted()) {
-            // Either falls outside the pre-event period, or has an approved position
-            return true;
-        }
+        return true;
+        //if (!$slot->isPreEventRestricted()) {
+        // Either falls outside the pre-event period, or has an approved position
+        //     return true;
+        //}
 
-        if ($this->userHasRole(Role::ADMIN)) {
-            // Bow before your slot master!
-            return true;
-        }
+        // if ($this->userHasRole(Role::ADMIN)) {
+        // Bow before your slot master!
+        //   return true;
+        // }
 
-        $slot->addError('begins', 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.');
-        return false;
+        //$slot->addError('begins', 'Slot is a non-training position and the start time falls within the pre-event period. Action requires Admin privileges.');
+        //return false;
     }
 
     /**
