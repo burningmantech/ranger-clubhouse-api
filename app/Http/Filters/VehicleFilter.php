@@ -78,7 +78,7 @@ class VehicleFilter
         [self::VEHICLE_FIELDS, true, [Role::ADMIN]],
         [self::REVIEW_FIELDS, false, [Role::ADMIN]],
         [self::ADMIN_FIELDS, false, [Role::ADMIN]],
-        [self::VEHICLE_INFO_FIELDS, false, [Role::ADMIN, Role::VEHICLE_INFO_UPDATE]],
+        [self::VEHICLE_INFO_FIELDS, true, [Role::ADMIN, Role::VEHICLE_INFO_UPDATE]],
         [self::VEHICLE_MAINTENANCE_FIELDS, false, [Role::ADMIN, Role::EVENT_MANAGEMENT]],
     ];
 
