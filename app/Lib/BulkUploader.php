@@ -1144,7 +1144,7 @@ class BulkUploader
     {
         $now = now();
         if ($now->month >= 9) {
-            return [$now->year, $now->year + ($isProvision ? 3 : 4)];
+            return [$now->year, $now->year + 4];
         } else {
             return [$now->year - 1, $now->year + 3];
         }
