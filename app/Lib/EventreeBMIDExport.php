@@ -12,25 +12,25 @@ use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 use ZipArchive;
 
-class MarcatoExport
+class EventreeBMIDExport
 {
     const string BUDGET_CODE = 'Rangers 660';
 
-    const CSV_HEADERS = [
-        'Name',
+    const array CSV_HEADERS = [
+        'First name',
+        'Last name',
         'Email',
-        'Playa Name/Radio Handle',
-        'Company',
+        'Playa Name',
         'Position',
+        'Department',
         'Supervisor',
         'Arrival Date',
-        'Notes',
-        'Shower Access For Entire Event - Shower - Wed7',
-        'Period Catering Bundle - BMID Catering  - Pre-Event',
-        'Period Catering Bundle - BMID Catering  - During Event',
-        'Period Catering Bundle - BMID Catering  - Post Event',
-        'title2',
-        'title3'
+        'Shower Access For Entire Event',
+        'Pre-Event Meals',
+        'During Event Meals',
+        'Post Event Meals',
+        'Title 2',
+        'Title 3'
     ];
 
     public string|null $exportFile = null;
@@ -39,7 +39,7 @@ class MarcatoExport
     public string|null $datestamp = null;
 
     /**
-     * Export BMIDs for upload into Marcato.
+     * Export BMIDs for upload into Eventree.
      *
      * The following actions are taken:
      *
@@ -53,49 +53,52 @@ class MarcatoExport
      * @param $bmids - BMIDs to export
      * @param $batchInfo - The export batch information
      * @return string - The url to the newly created exported file
-     * @throws Exception
+     *
+     * @throws UnacceptableConditionException
      */
 
-    public static function export($bmids, string|null $batchInfo): string
+    public static function export($bmids, string|null $batchInfo, bool $exportPhotos = false): string
     {
-        $marcato = new self($bmids, $batchInfo);
+        $export = new self($bmids, $batchInfo, $exportPhotos);
 
-        foreach ($marcato->bmids as $bmid) {
-            $bmid->load('person.person_photo');
-            $photo = $bmid->person->approvedPhoto();
-            if (!$photo) {
-                throw new UnacceptableConditionException("{$bmid->person->callsign} does not have a photo record");
-            }
+        if ($exportPhotos) {
+            foreach ($export->bmids as $bmid) {
+                $bmid->load('person.person_photo');
+                $photo = $bmid->person->approvedPhoto();
+                if (!$photo) {
+                    throw new UnacceptableConditionException("{$bmid->person->callsign} does not have a photo record");
+                }
 
-            if (!$photo->imageExists()) {
-                throw new UnacceptableConditionException("{$bmid->person->callsign} has photo record but image file is missing.");
+                if (!$photo->imageExists()) {
+                    throw new UnacceptableConditionException("{$bmid->person->callsign} has photo record but image file is missing.");
+                }
             }
         }
 
         try {
-            $marcato->createExportFile();
+            $export->createExportFile();
         } catch (Exception $e) {
-            $marcato->teardown();
+            $export->teardown();
             throw $e;
         }
 
-        $marcato->teardown();
-        $marcato->markSubmitted();
+        $export->teardown();
+        $export->markSubmitted();
 
-        $file = $marcato->exportFile;
+        $file = $export->exportFile;
 
-        $export = new BmidExport;
-        $export->person_id = Auth::id();
-        $export->batch_info = $batchInfo;
-        $export->storeExport(basename($file), file_get_contents($file));
-        $export->person_ids = $marcato->bmids->pluck('person_id')->toArray();
-        $export->created_at = now();
-        $export->save();
+        $bmidExport = new BmidExport;
+        $bmidExport->person_id = Auth::id();
+        $bmidExport->batch_info = $batchInfo;
+        $bmidExport->storeExport(basename($file), file_get_contents($file));
+        $bmidExport->person_ids = $export->bmids->pluck('person_id')->toArray();
+        $bmidExport->created_at = now();
+        $bmidExport->save();
 
-        return $export->filename_url;
+        return $bmidExport->filename_url;
     }
 
-    private function __construct(public $bmids, public $batchInfo)
+    private function __construct(public $bmids, public $batchInfo, public bool $exportPhotos = false)
     {
         $this->datestamp = date('Y-m-d-H:i:s');
     }
@@ -104,7 +107,7 @@ class MarcatoExport
      * Cleanup any temporary files created
      */
 
-    public function teardown()
+    public function teardown(): void
     {
         if ($this->csvFile) {
             unlink($this->csvFile);
@@ -134,15 +137,24 @@ class MarcatoExport
     }
 
     /**
-     * Create the main ZIP archive which will be downloaded by the user.
+     * Create the main export file. When photos are included, a ZIP archive is created
+     * containing the CSV and a ZIP of photos. When photos are excluded, only the CSV
+     * file is produced.
      */
-    public function createExportFile()
+    public function createExportFile(): void
     {
         $this->csvFile = self::tempFile('export.csv');
-        $this->photoZip = self::tempFile('photos.zip');
-        $this->exportFile = sys_get_temp_dir() . '/' . $this->datestamp . '-marcato.zip';
-
         $this->createCSV();
+
+        if (!$this->exportPhotos) {
+            $this->exportFile = sys_get_temp_dir() . '/ranger-bmids-' . date('Y-m-d-H-i') . '.csv';
+            copy($this->csvFile, $this->exportFile);
+            return;
+        }
+
+        $this->photoZip = self::tempFile('photos.zip');
+        $this->exportFile = sys_get_temp_dir() . '/' . $this->datestamp . '-eventree.zip';
+
         $this->createPhotoZipfile();
 
         $zip = new ZipArchive();
@@ -227,18 +239,18 @@ class MarcatoExport
 
         $meals = $bmid->meals_granted;
         return [
-            $person->first_name . ' ' . $person->last_name,
+            $person->first_name ,
+            $person->last_name,
             $person->email,
             $person->callsign,
-            self::BUDGET_CODE,
             $bmid->title1 ?? '',
+            self::BUDGET_CODE,
             '',                     // Supervisor is not required.
             $arrivalDate,
-            self::buildPhotoName($person),
-            $bmid->showers_granted ? '100' : '',
-            $meals['pre'] ? 1 : 0,
-            $meals['event'] ? 1 : 0,
-            $meals['post'] ? 1 : 0,
+            $bmid->showers_granted ? 'Yes' : 'No',
+            $meals['pre'] ? 'Yes': 'No',
+            $meals['event'] ?'Yes' :'No',
+            $meals['post'] ? 'Yes' : 'No',
             $bmid->title2 ?? '',
             $bmid->title3 ?? ''
         ];

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BMIDManagement;
-use App\Lib\MarcatoExport;
+use App\Lib\EventreeBMIDExport;
 use App\Models\Bmid;
 use App\Models\BmidExport;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
-use App\Exceptions\UnacceptableConditionException;
 
 class BmidController extends ApiController
 {
@@ -75,10 +75,10 @@ class BmidController extends ApiController
     }
 
     /**
-     * Export BMIDs to Marcato
+     * Export BMIDs to Eventree
      *
      * @returns JsonResponse
-     * @throws AuthorizationException
+     * @throws AuthorizationException|UnacceptableConditionException
      */
 
     public function export(): JsonResponse
@@ -90,9 +90,11 @@ class BmidController extends ApiController
             'person_ids' => 'required|array',
             'person_ids.*' => 'required|integer',
             'batch_info' => 'sometimes|string',
+            'with_photos' => 'sometimes|boolean',
         ]);
 
         $bmids = Bmid::findForPersonIds($params['year'], $params['person_ids']);
+        $withPhotos = $params['with_photos'] ?? false;
 
         if ($bmids->isEmpty()) {
             throw new UnacceptableConditionException('No BMIDs were found');
@@ -106,7 +108,7 @@ class BmidController extends ApiController
         }
 
         $batchInfo = $params['batch_info'] ?? '';
-        $exportUrl = MarcatoExport::export($filterBmids, $batchInfo);
+        $exportUrl = EventreeBMIDExport::export($filterBmids, $batchInfo, $withPhotos);
 
         return response()->json(['export_url' => $exportUrl, 'bmids' => $filterBmids]);
     }

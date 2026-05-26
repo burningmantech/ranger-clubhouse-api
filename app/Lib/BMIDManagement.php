@@ -310,7 +310,7 @@ class BMIDManagement
 
                 $slotIds = DB::table('slot')
                     ->where('begins_year', $year)
-                    ->whereIn('position_id', [ Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
+                    ->whereIn('position_id', [Position::TRAINING, Position::TRAINER, Position::TRAINER_ASSOCIATE, Position::TRAINER_UBER])
                     ->where('active', true)
                     ->pluck('id')
                     ->toArray();
@@ -421,13 +421,14 @@ class BMIDManagement
                         AccessDocument::QUALIFIED,
                         AccessDocument::CLAIMED,
                         AccessDocument::SUBMITTED
-                    ])->where(function ($q) use ($wapDate) {
+                    ])->where(function ($q) use ($wapDate, $year) {
                         // Any AD where the person can get in at any time
                         //   OR
                         // The access date is lte WAP access
                         $q->where('access_any_time', 1);
-                        $q->orWhere(function ($q) use ($wapDate) {
+                        $q->orWhere(function ($q) use ($wapDate, $year) {
                             $q->whereNotNull('access_date');
+                            $q->whereYear('access_date', $year);
                             $q->where('access_date', '<', "$wapDate 00:00:00");
                         });
                     })
@@ -436,7 +437,7 @@ class BMIDManagement
                     ->pluck('person_id')
                     ->toArray();
 
-                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT,Provision::MEALS])
+                $provisionIds = Provision::whereIn('type', [Provision::WET_SPOT, Provision::MEALS])
                     ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
                     ->distinct('person_id')
                     ->get(['person_id'])

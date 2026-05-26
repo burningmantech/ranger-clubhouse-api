@@ -489,10 +489,10 @@ class BmidControllerTest extends TestCase
     }
 
     /**
-     * Test exporting to Marcato
+     * Test exporting to Eventree
      */
 
-    public function testExportMarcato()
+    public function testExportEventreeWithPhotos()
     {
         $photoStorage = config('clubhouse.PhotoStorage');
         $exportStorage = config('clubhouse.BmidExportStorage');
@@ -512,6 +512,66 @@ class BmidControllerTest extends TestCase
 
         $person->person_photo_id = $photo->id;
         $person->saveWithoutValidation();
+
+        $bmid = Bmid::factory()->create([
+            'year' => $this->year,
+            'person_id' => $person->id,
+            'title1' => 'Lord Of The Flies',
+            'title2' => 'Head Supreme',
+            'title3' => 'Keeper of Puns',
+            'status' => Bmid::READY_TO_PRINT,
+        ]);
+
+        $meals = Provision::factory()->create([
+            'person_id' => $person->id,
+            'type' => Provision::MEALS,
+            'pre_event_meals' => true,
+            'event_week_meals' => true,
+            'post_event_meals' => true,
+            'status' => Provision::CLAIMED,
+            'source_year' => $this->year,
+            'expires_on' => $this->year
+        ]);
+
+        $response = $this->json('POST', 'bmid/export', [
+            'year' => $this->year,
+            'person_ids' => [$person->id],
+            'batch_info' => 'Big Batch',
+            'with_photos' => 1,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'bmids' => [[
+                'person_id' => $person->id,
+                'status' => Bmid::SUBMITTED,
+                'batch' => 'Big Batch'
+            ]]
+        ]);
+
+        $this->assertDatabaseHas('provision', [
+            'id' => $meals->id,
+            'status' => Provision::SUBMITTED
+        ]);
+
+        $this->assertDatabaseHas('bmid_export', ['batch_info' => 'Big Batch']);
+        $export = BmidExport::firstOrFail();
+
+        Storage::disk($exportStorage)->assertExists(BmidExport::storagePath($export->filename));
+    }
+
+    /**
+     * Test exporting to Eventree
+     */
+
+    public function testExportEventreeNoPhotos()
+    {
+        $photoStorage = config('clubhouse.PhotoStorage');
+        $exportStorage = config('clubhouse.BmidExportStorage');
+        Storage::fake($exportStorage);
+        Storage::fake($photoStorage);
+
+        $person = Person::factory()->create();
 
         $bmid = Bmid::factory()->create([
             'year' => $this->year,
