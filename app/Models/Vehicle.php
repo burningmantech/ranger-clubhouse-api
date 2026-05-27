@@ -73,7 +73,8 @@ class Vehicle extends ApiModel
 
     protected $appends = [
         'org_vehicle_insurance',
-        'signed_motorpool_agreement'
+        'signed_motorpool_agreement',
+        'arrival_date'
     ];
 
     protected $rules = [
@@ -176,7 +177,28 @@ class Vehicle extends ApiModel
         }
 
 
-        return $sql->get();
+        $rows = $sql->get();
+
+        // Only Lookup the SAPs for the current year.
+        if ($eventYear == current_year() && $rows->isNotEmpty()) {
+            $waps = AccessDocument::findWAPForPersonIds($rows->pluck('person_id')->toArray());
+
+            foreach ($rows as $row) {
+                $wap = $waps[$row->person_id] ?? null;
+                $arrival = null;
+                if ($wap) {
+                    if ($wap->access_any_time) {
+                        $arrival = 'any';
+                    } else if ($wap->access_date) {
+                        $arrival = (string)$wap->access_date;
+                    }
+                }
+
+                $row->arrival_date = $arrival;
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -186,7 +208,8 @@ class Vehicle extends ApiModel
      * @param int $year Event year to look in
      * @return Vehicle[]|Collection
      */
-    public static function findForPersonYear(int $personId, int $year)
+
+    public static function findForPersonYear(int $personId, int $year): Collection|array
     {
         return self::select(
             'vehicle.*',
@@ -204,10 +227,10 @@ class Vehicle extends ApiModel
     /**
      * Find all personal vehicle requests queued for review in the current year
      *
-     * @return Vehicle[]|Collection
+     * @return \Illuminate\Support\Collection
      */
 
-    public static function findAllPending()
+    public static function findAllPending(): \Illuminate\Support\Collection
     {
         return self::where('status', self::PENDING)
             ->where('type', self::PERSONAL)
@@ -218,16 +241,36 @@ class Vehicle extends ApiModel
             ->values();
     }
 
-    public function loadRelationships()
+    public function loadRelationships(): void
     {
-        $this->load('person:id,callsign');
-        $pv = PersonEvent::findForPersonYear($this->person_id, $this->event_year);
+
+        $pv = $this->person_id ? PersonEvent::findForPersonYear($this->person_id, $this->event_year) : null;
         if ($pv) {
             $this->signed_motorpool_agreement = $pv->signed_motorpool_agreement;
             $this->org_vehicle_insurance = $pv->org_vehicle_insurance;
         } else {
             $this->signed_motorpool_agreement = false;
             $this->org_vehicle_insurance = false;
+        }
+
+        if ($this->person_id) {
+            $this->load('person:id,callsign');
+
+            $wap = AccessDocument::findWAPForPerson($this->person_id);
+            if ($wap) {
+                if ($wap->access_any_time) {
+                    $this->arrival_date = 'any';
+                } else if ($wap->access_date) {
+                    $this->arrival_date = (string)$wap->access_date;
+                } else {
+                    $this->arrival_date = null;
+                }
+            } else {
+                $this->arrival_date = null;
+            }
+        } else {
+            $this->person = null;
+            $this->arrival_date = null;
         }
     }
 
@@ -351,5 +394,15 @@ class Vehicle extends ApiModel
     public function getSignedMotorpoolAgreementAttribute()
     {
         return $this->attributes['signed_motorpool_agreement'] ?? false;
+    }
+
+    public function setArrivalDateAttribute($value)
+    {
+        $this->attributes['arrival_date'] = $value;
+    }
+
+    public function getArrivalDateAttribute()
+    {
+        return $this->attributes['arrival_date'] ?? false;
     }
 }

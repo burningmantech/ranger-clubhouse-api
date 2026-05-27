@@ -33,7 +33,8 @@ class VehicleFilter
         'ranger_logo',
         'amber_light',
         'response',
-        'request_comment'
+        'request_comment',
+        'arrival_date'
     ];
 
     const array VEHICLE_MAINTENANCE_FIELDS = [
