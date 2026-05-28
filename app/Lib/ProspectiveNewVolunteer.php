@@ -18,11 +18,14 @@ class ProspectiveNewVolunteer
 
     public static function retrievePotentialAlphas(): array
     {
+        $year = current_year();
         $prospectives = Person::where('status', Person::PROSPECTIVE)->get();
-        $trained = self::retrieveTrainedProspectives($prospectives);
-        $people = Alpha::buildAlphaInformation(collect($trained), current_year());
+        $trained = self::retrieveTrainedProspectives($prospectives, $year);
+        $people = Alpha::buildAlphaInformation(collect($trained), $year);
         $potentials = [];
         foreach ($people as $person) {
+            // Alpha::buildAlphaInformation re-derives `trained` from Training history, which can
+            // disagree with trainee_status (different source). Keep only rows it also marks trained.
             if ($person->trained) {
                 $potentials[] = $person;
             }
@@ -36,47 +39,56 @@ class ProspectiveNewVolunteer
      *
      * @param array $ids
      * @return array
+     * @throws \Throwable
      */
 
     public static function convertProspectivesToAlphas(array $ids): array
     {
-        $people = Person::where('status', Person::PROSPECTIVE)
-            ->whereIntegerInRaw('id', $ids)
-            ->orderBy('callsign')
-            ->get();
+        $year = current_year();
 
-        if ($people->isEmpty()) {
-            return [];
-        }
+        return DB::transaction(function () use ($ids, $year): array {
+            $people = Person::where('status', Person::PROSPECTIVE)
+                ->whereIntegerInRaw('id', $ids)
+                ->orderBy('callsign')
+                ->lockForUpdate()
+                ->get();
 
-        $potentialAlphas = self::retrieveTrainedProspectives($people);
+            if ($people->isEmpty()) {
+                return [];
+            }
 
-        $alphaIds = [];
-        foreach ($potentialAlphas as $potentialAlpha) {
-            $potentialAlpha->status = Person::ALPHA;
-            $potentialAlpha->auditReason = 'Mentor bulk convert';
-            $potentialAlpha->saveWithoutValidation();
-            $alphaIds[] = $potentialAlpha->id;
-        }
+            $potentialAlphas = self::retrieveTrainedProspectives($people, $year);
 
-        return $alphaIds;
+            $alphaIds = [];
+            foreach ($potentialAlphas as $potentialAlpha) {
+                $potentialAlpha->status = Person::ALPHA;
+                $potentialAlpha->auditReason = 'Mentor bulk convert';
+                $potentialAlpha->saveWithoutValidation();
+                $alphaIds[] = $potentialAlpha->id;
+            }
+
+            return $alphaIds;
+        });
     }
 
     /**
      * Find the prospectives who have been trained.
      *
      * @param Collection $people
+     * @param int|null $year Training year to check; defaults to current_year().
      * @return array
      */
 
-    public static function retrieveTrainedProspectives(Collection $people): array
+    public static function retrieveTrainedProspectives(Collection $people, ?int $year = null): array
     {
         if ($people->isEmpty()) {
             return [];
         }
 
+        $year ??= current_year();
+
         $slotIds = Slot::where('position_id', Position::TRAINING)
-            ->where('begins_year', current_year())
+            ->where('begins_year', $year)
             ->pluck('id')
             ->toArray();
 

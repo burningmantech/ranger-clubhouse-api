@@ -35,12 +35,10 @@ class Alpha
         'person.person_fka',
     ];
 
-    /** Back-compat alias for prior external references. */
-    const array ALPHA_RELATIONSHIPS = self::ALPHA_SLOT_RELATIONSHIPS;
-
-    /**
+     /**
      * Find all mentors and indicate if they are on duty.
      */
+
     public static function retrieveMentors(): Collection
     {
         return self::retrieveMentorType(Position::MENTOR);
@@ -474,7 +472,9 @@ class Alpha
      * Reconcile the stored mentor set for a person with the desired set.
      *
      * @return array<int, array{person_mentor_id:int, mentor_id:int}>
+     * @throws \Throwable
      */
+
     private static function syncMentors(
         Person $person,
         int $year,

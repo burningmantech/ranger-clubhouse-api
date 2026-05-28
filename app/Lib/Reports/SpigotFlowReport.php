@@ -13,241 +13,326 @@ use App\Models\ProspectiveApplication;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class SpigotFlowReport
 {
-    public array $dates = [];
-
     /**
-     * Build up the counts for a given year and day.
-     * @param int $year
-     * @return array
+     * Prior to this year the SoR for PNV applications was Salesforce; the Clubhouse only
+     * saw approved accounts, so the 'imported' and 'created' counts are identical.
      */
+    private const int SALESFORCE_CUTOVER_YEAR = 2025;
+
+    /** Bucket key used for photo approvals dated outside the reporting year. */
+    private const string PREVIOUS_YEAR_KEY = '0';
+
+    private Carbon $yearStart;
+    private Carbon $yearEnd;
+
+    /** @var array<string, array<string, array<int, int|string>>> */
+    private array $dates = [];
+
+    /** @var array<int, Carbon> personId => imported_at timestamp */
+    private array $pnvImportedAt = [];
+
+    /** @var int[] */
+    private array $pnvIds = [];
+
+    /** @var array<int, string> personId => callsign */
+    private array $personMap = [];
 
     public static function execute(int $year): array
     {
-        $spigot = new SpigotFlowReport;
+        return (new self())->build($year);
+    }
 
-        $rawQueryData = [];
+    private function build(int $year): array
+    {
+        $this->yearStart = Carbon::create($year, 1, 1);
+        $this->yearEnd = Carbon::create($year + 1, 1, 1);
 
-        // for years prior to 2025, SOR for pnv applications came was Salesforce, so both the import and created column
-        // will be the same since we don’t know how many total applications were received. The applications were vetted
-        // in SF, and only those approved were retrieve to create Clubhouse accounts with (aka imported). The actual
-        // application was not stored in the Clubhouse.
-        if ($year < 2025) {
-            // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
-            $query = PersonStatus::select('person_id', 'created_at')
-                ->whereYear('created_at', $year)
-                ->where('new_status', Person::PROSPECTIVE)
-                ->orderBy('created_at')
-                ->get()
-                ->groupBy('person_id');
-            // just grab the first record from each group-by array
-            foreach ($query as $personId => $rows) {
-                $rawQueryData[] = $rows[0];
-            }
-        } else { // year >= 2025
-          // For 2025 and beyond, the import column will reflect the prospective_application total record count for the
-          // year. Not all applications will be turned into prospective accounts. The reasons an account may not be
-          // created are: the application was pre-bonked (problematic behavior reported by the community, etc.), a
-          // duplicate application was submitted, a returning Shiny Penny thought they had to submit a new
-          // application, etc.
-            $query = ProspectiveApplication::select('person_id', 'created_at', 'status')
-                ->whereYear('created_at', $year)
-                ->orderBy('created_at')
-                ->get();
-
-            // can't put into an associative array of person_id -> data because person_id can be null
-            foreach ($query as $data) {
-                $rawQueryData[] = $data;
-            }
+        if (!$this->loadProspectives($year)) {
+            return [];
         }
 
-        if (!$rawQueryData) {
-            // Too soon?
-            return $spigot->dates;
-        }
+        $this->hydratePersonMap();
+        $this->loadFirstLogins();
+        $this->loadDroppedStatuses();
+        $this->loadApprovedPhotos();
+        $this->loadOnlineTraining($year);
+        $this->loadTrainingActivity($year);
+        $this->loadAlphaSignups($year);
 
-        $pnvStatus = []; // associative array of personId -> data
-        $pnvIds = []; // array of personIds
+        return $this->formatDays();
+    }
 
-        if ($year < 2025) {
-            foreach ($rawQueryData as $data) {
-                $spigot->setSpigotDate('imported', $data->created_at, $data->person);
-                $spigot->setSpigotDate('created', $data->created_at, $data->person);
-                $pnvStatus[$data->person_id] = $data;
-                $pnvIds[] = $data->person_id;
-            }
-        } else {
-            // all records will have a created_at, which signifies their 'imported' date
-            // however, sometimes personId will be null if the prospective application was not accepted,
-            // so only a subset have a 'created' date
-            foreach ($rawQueryData as $data) {
-                $spigot->setSpigotDate('imported', $data->created_at, null); // not all imported have person-details
-                if ($data->status == ProspectiveApplication::STATUS_CREATED) {
-                    $spigot->setSpigotDate('created', $data->created_at, $data->person);
-                    $pnvStatus[$data->person_id] = $data;
-                    $pnvIds[] = $data->person_id;
-                }
-            }
-        }
+    private function loadProspectives(int $year): bool
+    {
+        return $year < self::SALESFORCE_CUTOVER_YEAR
+            ? $this->loadProspectivesFromPersonStatus()
+            : $this->loadProspectivesFromApplications();
+    }
 
-        $loggedIn = ActionLog::select('person_id', 'created_at')
-            ->whereIn('person_id', $pnvIds)
-            ->whereYear('created_at', $year)
-            ->where('event', 'auth-login')
-            ->with('person:id,callsign')
+    /**
+     * Pre-2025: only approved accounts existed in the Clubhouse, so imported == created.
+     * groupBy guards against rare duplicate conversions producing repeat rows.
+     */
+    private function loadProspectivesFromPersonStatus(): bool
+    {
+        $grouped = PersonStatus::select('person_id', 'created_at')
+            ->whereBetween('created_at', [$this->yearStart, $this->yearEnd])
+            ->where('new_status', Person::PROSPECTIVE)
+            ->orderBy('created_at')
             ->get()
             ->groupBy('person_id');
 
-        foreach ($loggedIn as $personId => $logins) {
-            $import = $pnvStatus[$personId]->created_at;
-            foreach ($logins as $login) {
-                if ($login->created_at->gte($import)) {
-                    $spigot->setSpigotDate('first_login', $login->created_at, $login->person);
+        if ($grouped->isEmpty()) {
+            return false;
+        }
+
+        foreach ($grouped as $personId => $rows) {
+            $first = $rows[0];
+            $this->recordDate('imported', $first->created_at, $personId);
+            $this->recordDate('created', $first->created_at, $personId);
+            $this->pnvImportedAt[$personId] = $first->created_at;
+            $this->pnvIds[] = $personId;
+        }
+        return true;
+    }
+
+    /**
+     * 2025+: every application is stored. 'imported' counts all submissions; 'created'
+     * counts only those that actually became Clubhouse accounts (rejected, duplicate,
+     * or returning Shiny Penny applications are filtered out).
+     */
+    private function loadProspectivesFromApplications(): bool
+    {
+        $applications = ProspectiveApplication::select('person_id', 'created_at', 'status')
+            ->whereBetween('created_at', [$this->yearStart, $this->yearEnd])
+            ->orderBy('created_at')
+            ->get();
+
+        if ($applications->isEmpty()) {
+            return false;
+        }
+
+        foreach ($applications as $application) {
+            $this->recordDate('imported', $application->created_at, $application->person_id);
+            if ($application->status === ProspectiveApplication::STATUS_CREATED) {
+                $this->recordDate('created', $application->created_at, $application->person_id);
+                $this->pnvImportedAt[$application->person_id] = $application->created_at;
+                $this->pnvIds[] = $application->person_id;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Build the id => callsign lookup for the year's PNV cohort once, so per-stage
+     * loaders can skip ->with('person:...') and avoid rehydrating Person models.
+     */
+    private function hydratePersonMap(): void
+    {
+        $this->personMap = Person::whereIntegerInRaw('id', $this->pnvIds)
+            ->pluck('callsign', 'id')
+            ->all();
+    }
+
+    /**
+     * Pull the first auth-login per PNV directly via MIN() rather than dragging every
+     * login event into PHP. The fallback covers the rare case where the earliest in-year
+     * login predates the (re)import — for those we need the full ordered list.
+     */
+    private function loadFirstLogins(): void
+    {
+        $aggregates = ActionLog::selectRaw('person_id, MIN(created_at) as first_login')
+            ->whereIntegerInRaw('person_id', $this->pnvIds)
+            ->whereBetween('created_at', [$this->yearStart, $this->yearEnd])
+            ->where('event', 'auth-login')
+            ->groupBy('person_id')
+            ->get();
+
+        $fallbackIds = [];
+        foreach ($aggregates as $row) {
+            $importedAt = $this->pnvImportedAt[$row->person_id];
+            $first = Carbon::parse($row->first_login);
+            if ($first->gte($importedAt)) {
+                $this->recordDate('first_login', $first, $row->person_id);
+            } else {
+                $fallbackIds[] = $row->person_id;
+            }
+        }
+
+        if (empty($fallbackIds)) {
+            return;
+        }
+
+        $followup = ActionLog::select('person_id', 'created_at')
+            ->whereIntegerInRaw('person_id', $fallbackIds)
+            ->whereBetween('created_at', [$this->yearStart, $this->yearEnd])
+            ->where('event', 'auth-login')
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('person_id');
+
+        foreach ($followup as $personId => $rows) {
+            $importedAt = $this->pnvImportedAt[$personId];
+            foreach ($rows as $login) {
+                if ($login->created_at->gte($importedAt)) {
+                    $this->recordDate('first_login', $login->created_at, $personId);
                     break;
                 }
             }
         }
+    }
 
-        // need to handle the situation where multiple accidental conversions happened, hence the groupBy().
-        $droppedStatus = PersonStatus::select('person_id', 'created_at', 'new_status')
-            ->whereYear('created_at', $year)
+    private function loadDroppedStatuses(): void
+    {
+        $grouped = PersonStatus::select('person_id', 'created_at', 'new_status')
+            ->whereBetween('created_at', [$this->yearStart, $this->yearEnd])
             ->where('new_status', Person::PAST_PROSPECTIVE)
-            ->whereIntegerInRaw('person_id', $pnvIds)
+            ->whereIntegerInRaw('person_id', $this->pnvIds)
             ->orderBy('created_at')
-            ->with('person:id,callsign')
             ->get()
             ->groupBy('person_id');
 
-        foreach ($droppedStatus as $personId => $rows) {
-            $spigot->setSpigotDate('dropped', $rows[0]->created_at, $rows[0]->person);
-        }
+        $this->recordFirstPerPerson('dropped', $grouped, fn($row) => $row->created_at);
+    }
 
-        // Retrieve photo approval
-        $photos = PersonPhoto::select('person_id', 'uploaded_at', 'reviewed_at')
+    private function loadApprovedPhotos(): void
+    {
+        $photos = PersonPhoto::select('person_photo.id', 'person_photo.person_id', 'person_photo.uploaded_at', 'person_photo.reviewed_at')
             ->where('person_photo.status', PersonPhoto::APPROVED)
             ->join('person', 'person.person_photo_id', 'person_photo.id')
-            ->whereIntegerInRaw('person_photo.person_id', $pnvIds)
-            ->with('person:id,callsign')
+            ->whereIntegerInRaw('person_photo.person_id', $this->pnvIds)
             ->get();
 
         foreach ($photos as $photo) {
-            // photos prior to 2020 will not have a review_at date because the information could not be
-            // gotten out of Lambase.
+            // Photos prior to 2020 have no reviewed_at — Lambase didn't expose it.
             $date = $photo->reviewed_at ?? $photo->uploaded_at;
-            $photoYear = $date?->year;
-            $spigot->setSpigotDate('photo_approved', ($photoYear == $year ? $date : 'previous'), $photo->person);
+            if ($date !== null && $date->gte($this->yearStart) && $date->lt($this->yearEnd)) {
+                $this->recordDate('photo_approved', $date, $photo->person_id);
+            } else {
+                $this->recordInPreviousBucket('photo_approved', $photo->person_id);
+            }
         }
+    }
 
-        $onlineCourse = PersonOnlineCourse::whereIntegerInRaw('person_id', $pnvIds)
+    private function loadOnlineTraining(int $year): void
+    {
+        $completions = PersonOnlineCourse::select('person_id', 'completed_at')
+            ->whereIntegerInRaw('person_id', $this->pnvIds)
             ->where('year', $year)
             ->where('position_id', Position::TRAINING)
             ->whereNotNull('completed_at')
-            ->with('person:id,callsign')
             ->get();
 
-        foreach ($onlineCourse as $poc) {
-            $spigot->setSpigotDate('online_trained', $poc->completed_at, $poc->person);
+        foreach ($completions as $completion) {
+            $this->recordDate('online_trained', $completion->completed_at, $completion->person_id);
+        }
+    }
+
+    private function loadTrainingActivity(int $year): void
+    {
+        $slotIds = $this->slotIdsFor(Position::TRAINING, $year);
+        if (empty($slotIds)) {
+            return;
         }
 
-        // Grab the training slots
-        $trainingSlotIds = Slot::select('id')
-            ->where('position_id', Position::TRAINING)
-            ->where('begins_year', $year)
+        $signups = PersonSlot::whereIntegerInRaw('person_id', $this->pnvIds)
+            ->whereIntegerInRaw('slot_id', $slotIds)
             ->get()
+            ->groupBy('person_id');
+        $this->recordFirstPerPerson('training_signups', $signups, fn($row) => $row->created_at);
+
+        $passes = TraineeStatus::select('trainee_status.*', 'slot.begins')
+            ->join('slot', 'slot.id', 'trainee_status.slot_id')
+            ->whereIntegerInRaw('person_id', $this->pnvIds)
+            ->whereIntegerInRaw('slot_id', $slotIds)
+            ->where('passed', true)
+            ->get()
+            ->groupBy('person_id');
+        $this->recordFirstPerPerson('training_passed', $passes, fn($row) => $row->begins);
+    }
+
+    private function loadAlphaSignups(int $year): void
+    {
+        $slotIds = $this->slotIdsFor(Position::ALPHA, $year);
+        if (empty($slotIds)) {
+            return;
+        }
+
+        $signups = PersonSlot::whereIntegerInRaw('person_id', $this->pnvIds)
+            ->whereIntegerInRaw('slot_id', $slotIds)
+            ->get()
+            ->groupBy('person_id');
+        $this->recordFirstPerPerson('alpha_signups', $signups, fn($row) => $row->created_at);
+    }
+
+    /** @return int[] */
+    private function slotIdsFor(int $positionId, int $year): array
+    {
+        return Slot::where('position_id', $positionId)
+            ->where('begins_year', $year)
             ->pluck('id')
             ->toArray();
+    }
 
-        if (!empty($trainingSlotIds)) {
-            $trainingSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
-                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
-                ->with('person:id,callsign')
-                ->get()
-                ->groupBy('person_id');
-
-            foreach ($trainingSignups as $personId => $rows) {
-                $spigot->setSpigotDate('training_signups', $rows[0]->created_at, $rows[0]->person);
-            }
-
-            // Grab the passing PNVs
-            $trainingPass = TraineeStatus::select('trainee_status.*', 'slot.begins')
-                ->join('slot', 'slot.id', 'trainee_status.slot_id')
-                ->whereIntegerInRaw('person_id', $pnvIds)
-                ->whereIntegerInRaw('slot_id', $trainingSlotIds)
-                ->where('passed', true)
-                ->with('person:id,callsign')
-                ->get()
-                ->groupBy('person_id');
-
-            foreach ($trainingPass as $personId => $rows) {
-                $spigot->setSpigotDate('training_passed', $rows[0]->begins, $rows[0]->person);
-            }
+    private function recordFirstPerPerson(string $stage, Collection $grouped, callable $dateAccessor): void
+    {
+        foreach ($grouped as $personId => $rows) {
+            $first = $rows[0];
+            $this->recordDate($stage, $dateAccessor($first), $personId);
         }
+    }
 
-        // Grab the Alpha slots
-        $alphaSlotIds = Slot::select('id')
-            ->where('position_id', Position::ALPHA)
-            ->where('begins_year', $year)
-            ->get()
-            ->pluck('id')
-            ->toArray();
+    private function recordDate(string $stage, mixed $date, int|string|null $personId): void
+    {
+        $this->dates[$this->normalizeDay($date)][$stage][] = $personId ?? '';
+    }
 
-        if (!empty($alphaSlotIds)) {
-            $alphaSignups = PersonSlot::whereIntegerInRaw('person_id', $pnvIds)
-                ->whereIntegerInRaw('slot_id', $alphaSlotIds)
-                ->with('person:id,callsign')
-                ->get()
-                ->groupBy('person_id');
+    private function recordInPreviousBucket(string $stage, int|string|null $personId): void
+    {
+        $this->dates[self::PREVIOUS_YEAR_KEY][$stage][] = $personId ?? '';
+    }
 
-            foreach ($alphaSignups as $personId => $rows) {
-                $spigot->setSpigotDate('alpha_signups', $rows[0]->created_at, $rows[0]->person);
-            }
+    private function normalizeDay(mixed $date): string
+    {
+        if ($date instanceof Carbon) {
+            return $date->format('Y-m-d');
         }
+        if (is_numeric($date)) {
+            return (new Carbon($date))->format('Y-m-d');
+        }
+        return Carbon::parse((string) $date)->format('Y-m-d');
+    }
 
+    /** @return array{id: int|string, callsign: string} */
+    private function describePerson(int|string $personId): array
+    {
+        // Deleted account, rejected application, or id outside the cohort — keep the slot but blank the identity.
+        if ($personId === '' || !isset($this->personMap[$personId])) {
+            return ['id' => '', 'callsign' => ''];
+        }
+        return ['id' => $personId, 'callsign' => $this->personMap[$personId]];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function formatDays(): array
+    {
         $days = [];
-        foreach ($spigot->dates as $day => $stats) {
-            $stats['day'] = $day;
-            $days[] = $stats;
-        }
-
-        foreach ($days as &$row) {
-            foreach ($row as $key => &$people) {
-                if ($key == 'day') {
-                    continue;
-                }
+        foreach ($this->dates as $day => $stages) {
+            $resolved = [];
+            foreach ($stages as $stage => $personIds) {
+                $people = array_map(fn($id) => $this->describePerson($id), $personIds);
                 usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+                $resolved[$stage] = $people;
             }
-            unset($people);
+            $resolved['day'] = $day;
+            $days[] = $resolved;
         }
 
         usort($days, fn($a, $b) => strcmp($a['day'], $b['day']));
-
         return $days;
-    }
-
-    public function setSpigotDate(string $type, $date, $person): void
-    {
-        if ($date != 'previous') {
-            if (is_numeric($date)) {
-                $date = new Carbon($date);
-            } else if (is_string($date)) {
-                $date = Carbon::parse($date);
-            }
-
-            $day = $date->format('Y-m-d');
-        } else {
-            $day = '0';
-        }
-
-        if (!isset($this->dates[$day][$type])) {
-            $this->dates[$day][$type] = [];
-        }
-
-        if (!$person) { // Deleted account, or rejected application
-            $this->dates[$day][$type][] = ['id' => '', 'callsign' => ''];
-        } else {
-            $this->dates[$day][$type][] = ['id' => $person->id, 'callsign' => $person->callsign];
-        }
     }
 }

@@ -836,6 +836,32 @@ class Schedule
     }
 
     /**
+     * Is the person signed up for an active training-related slot in the given year?
+     *
+     * @param int $personId
+     * @param int $year
+     * @return bool
+     */
+
+    public static function hasTrainingSignup(int $personId, int $year): bool
+    {
+        return DB::table('slot')
+            ->join('person_slot', function ($j) use ($personId) {
+                $j->on('person_slot.slot_id', 'slot.id')
+                    ->where('person_slot.person_id', $personId);
+            })
+            ->where('slot.begins_year', $year)
+            ->whereIn('slot.position_id', [
+                Position::TRAINING,
+                Position::TRAINER,
+                Position::TRAINER_ASSOCIATE,
+                Position::TRAINER_UBER,
+            ])
+            ->where('slot.active', true)
+            ->exists();
+    }
+
+    /**
      * Build a schedule summary (credit / hour break down into pre-event, event, post-event, other)
      *
      * @param int $personId

@@ -521,5 +521,20 @@ class Bmid extends ApiModel
         $this->notes = "$date $callsign: $notes\n{$this->notes}";
     }
 
+    /**
+     * Does the person have a BMID in progress (in prep, ready to print, or submitted) for the given year?
+     *
+     * @param int $personId
+     * @param int $year
+     * @return bool
+     */
 
+    public static function hasInProgress(int $personId, int $year): bool
+    {
+        return self::query()
+            ->where('year', $year)
+            ->where('person_id', $personId)
+            ->whereIn('status', [self::IN_PREP, self::READY_TO_PRINT, self::SUBMITTED])
+            ->exists();
+    }
 }
