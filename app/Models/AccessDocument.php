@@ -789,4 +789,20 @@ class AccessDocument extends ApiModel
     {
         return in_array($this->type, self::EXPIRE_THIS_YEAR_TYPES);
     }
+
+    /**
+     * Does the person hold a claimed or submitted SPT/staff credential/WAP?
+     *
+     * @param int $personId
+     * @return bool
+     */
+
+    public static function hasActiveTicket(int $personId): bool
+    {
+        return self::query()
+            ->where('person_id', $personId)
+            ->whereIn('type', [self::SPT, self::STAFF_CREDENTIAL, self::WAP])
+            ->whereIn('status', [self::CLAIMED, self::SUBMITTED])
+            ->exists();
+    }
 }
