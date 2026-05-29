@@ -351,7 +351,7 @@ class BmidControllerTest extends TestCase
         ]);
 
         $json = json_decode($response->getContent(), true);
-        $this->assertEquals(false, isset($json['bmid']['id']));
+        $this->assertArrayNotHasKey('id', $json['bmid']);
     }
 
     /*

@@ -298,7 +298,7 @@ class SlotControllerTest extends TestCase
      * Verify HQ Check In/Out Forecast Report
      */
 
-    public function testHQForestcastReport()
+    public function testHQForecastReport()
     {
         $this->addRole(Role::EVENT_MANAGEMENT);
 

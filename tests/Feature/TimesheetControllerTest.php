@@ -499,7 +499,7 @@ class TimesheetControllerTest extends TestCase
         ]);
 
         $timesheet->refresh();
-        $this->assertFalse(!$timesheet->off_duty);
+        $this->assertNotNull($timesheet->off_duty);
 
         $this->assertDatabaseHas('timesheet_log', [
             'timesheet_id' => $timesheet->id,
@@ -1247,7 +1247,6 @@ class TimesheetControllerTest extends TestCase
             'off_duty' => date("$year-m-d 02:00:00"),
         ]);
 
-        $this->addRole(Role::ADMIN);
         $response = $this->json('GET', 'timesheet/thank-you', ['year' => $year, 'password' => $password]);
         $response->assertStatus(200);
 

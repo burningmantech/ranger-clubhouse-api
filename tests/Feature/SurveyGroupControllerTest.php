@@ -18,8 +18,7 @@ class SurveyGroupControllerTest extends TestCase
     public function setUp() : void
     {
         parent::setUp();
-        $this->signInUser();
-        $this->addAdminRole();
+        $this->signInAsAdmin();
         $this->surveyPosition = Position::factory()->create([
             'id' => Position::GREEN_DOT_TRAINING,
             'title' => 'Green Dot Training'

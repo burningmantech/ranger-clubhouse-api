@@ -194,7 +194,7 @@ class PersonScheduleControllerTest extends TestCase
 
     private function setupPhotoStatus($status, $person = null): void
     {
-        if ($person == null) {
+        if ($person === null) {
             $person = $this->user;
         }
 
@@ -337,7 +337,7 @@ class PersonScheduleControllerTest extends TestCase
 
         Queue::assertPushed(TrainingSignupEmailJob::class,
             function ($job) use ($personId, $shift) {
-                return $job->person->id == $personId && $job->slot->id = $shift->id;
+                return $job->person->id == $personId && $job->slot->id == $shift->id;
             }
         );
     }
@@ -482,7 +482,7 @@ class PersonScheduleControllerTest extends TestCase
         $person = Person::factory()->create();
         $this->addPosition(Position::DIRT, $person);
         $shift = $this->dirtSlots[0];
-        $err = $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
+        $shift->update(['signed_up' => 1, 'max' => 1, 'begins' => date('2000-08-25 12:00:00')]);
 
         $response = $this->json(
             'POST',

@@ -259,8 +259,8 @@ class AccessDocumentControllerTest extends TestCase
 
         // Person should not be granted a second WAP.
         $noWap = Person::factory()->create(['callsign' => 'No Wap']);
-        $timesheet = Timesheet::factory()->create([
-            'person_id' => $active->id,
+        $noWapTimesheet = Timesheet::factory()->create([
+            'person_id' => $noWap->id,
             'position_id' => Position::DIRT,
             'on_duty' => date("$year-08-25 12:00:00"),
             'off_duty' => date("$year-08-25 13:00:00")

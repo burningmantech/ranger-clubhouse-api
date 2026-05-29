@@ -13,9 +13,12 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
+use Tests\Concerns\InteractsWithApi;
 
 abstract class TestCase extends BaseTestCase
 {
+    use InteractsWithApi;
+
     public $user;
 
     const TEST_DATE = 'Y-01-01 12:34:56';
@@ -29,7 +32,14 @@ abstract class TestCase extends BaseTestCase
         // Set the time to the beginning of the year
         Carbon::setTestNow(date(self::TEST_DATE));
 
-        config('sanctum.expiration', null);
+        config(['sanctum.expiration' => null]);
+    }
+
+    public function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     public function createUser(): void
@@ -66,7 +76,7 @@ abstract class TestCase extends BaseTestCase
     }
 
 
-    public function addPosition($positions, $user = null)
+    public function addPosition($positions, $user = null): void
     {
         if (!$user) {
             $user = $this->user;
@@ -86,12 +96,12 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
-    public function addAdminRole($user = null)
+    public function addAdminRole($user = null): void
     {
         $this->addRole(Role::ADMIN, $user);
     }
 
-    public function setting($name, $value)
+    public function setting($name, $value): void
     {
         Setting::where('name', $name)->delete();
         Setting::insert(['name' => $name, 'value' => $value]);
