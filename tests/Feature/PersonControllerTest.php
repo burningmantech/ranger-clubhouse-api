@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use APp\Mail\AccountCreationMail;
+use App\Mail\AccountCreationMail;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Models\Person;
 use App\Models\PersonMentor;
@@ -908,7 +908,7 @@ class PersonControllerTest extends TestCase
         ]);
 
         $response = $this->json('GET', "person/$personId/user-info");
-        $response->status(200);
+        $response->assertStatus(200);
         $response->assertJson([
             'user_info' => [
                 'years_as_ranger' => [2010, 2011, 2012],
@@ -926,7 +926,7 @@ class PersonControllerTest extends TestCase
     {
         $personId = $this->user->id;
         $response = $this->json('GET', "person/$personId/user-info");
-        $response->status(200);
+        $response->assertStatus(200);
         $response->assertJson(['user_info' => [
             'years_as_ranger' => [],
             'years_as_contributor' => [],

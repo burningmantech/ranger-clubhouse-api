@@ -19,7 +19,7 @@ class SurveyQuestionController extends ApiController
     public function index(): JsonResponse
     {
         $params = request()->validate([
-            'survey_id' => 'required|integer:exists:survey_group,id'
+            'survey_id' => 'required|integer|exists:survey,id'
         ]);
 
         $survey = Survey::findOrFail($params['survey_id']);

@@ -19,8 +19,7 @@ class MaintenanceControllerTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->signInUser();
-        $this->addRole(Role::ADMIN);
+        $this->signInAsAdmin();
     }
 
     /*

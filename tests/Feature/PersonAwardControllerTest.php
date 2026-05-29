@@ -351,8 +351,6 @@ class PersonAwardControllerTest extends TestCase
                 'year' => [],
         */
 
-        DB::table('person_award')->delete();
-
         $response->assertStatus(200);
         $response->assertJson([
             'records' => [
@@ -384,6 +382,8 @@ class PersonAwardControllerTest extends TestCase
             ]
         ]);
 
-        $this->assertDatabaseCount('person_award', 0);
+        // No new awards should have been created; only the single fixture award
+        // built in setUp() should remain (every input line above is an error).
+        $this->assertDatabaseCount('person_award', 1);
     }
 }

@@ -6,13 +6,11 @@ use App\Models\Person;
 use App\Models\PersonLanguage;
 use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class PersonLanguageControllerTest extends TestCase
 {
     use RefreshDatabase;
-    use WithFaker;
 
     /*
      * have each test have a fresh user that is logged in.

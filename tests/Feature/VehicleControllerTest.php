@@ -17,8 +17,7 @@ class VehicleControllerTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->signInUser();
-        $this->addAdminRole();
+        $this->signInAsAdmin();
     }
 
     /*

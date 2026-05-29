@@ -24,8 +24,7 @@ class TrainingSessionGraduationTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->signInUser();
-        $this->addAdminRole();
+        $this->signInAsAdmin();
     }
 
     private function createGreenDotTrainingSession(): Slot
@@ -303,9 +302,10 @@ class TrainingSessionGraduationTest extends TestCase
     }
 
     /**
-     * Test that the controller forces through a graduation.
+     * Test that the controller forces a graduation through even when the
+     * candidate has not met the requirements.
      */
-    public function testControllerRejectsRequirementsIncomplete(): void
+    public function testControllerForcesGraduationDespiteIncompleteRequirements(): void
     {
         $slot = $this->createGreenDotTrainingSession();
 
