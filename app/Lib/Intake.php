@@ -20,7 +20,7 @@ class Intake
     const int BELOW_AVERAGE = 3;
     const int FLAG = 4;
 
-    const array AUDITOR_LIKE_STATUSES = [
+    const array INTAKE_STATUSES = [
         Person::AUDITOR,
         Person::PROSPECTIVE,
         Person::ALPHA,
@@ -81,7 +81,7 @@ class Intake
             ->groupBy('person_id');
 
         $statuses = PersonStatus::whereIntegerInRaw('person_id', $pnvIds)
-            ->whereIn('new_status', self::AUDITOR_LIKE_STATUSES)
+            ->whereIn('new_status', self::INTAKE_STATUSES)
             ->whereYear('created_at', '<=', $year)
             ->orderBy('person_id')
             ->orderBy('created_at')

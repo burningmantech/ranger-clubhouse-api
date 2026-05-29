@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AccessDocument;
+use App\Models\ActionLog;
 use App\Models\Bmid;
 use App\Models\Person;
 use App\Models\PersonEvent;
@@ -466,6 +467,126 @@ class BulkUploadControllerTest extends TestCase
     /*
      * Test setting WAP dates
      */
+
+    /*
+     * Regression: the reason supplied with a BMID-submitted bulk upload must be
+     * passed through to the action_log message, not overwritten with null.
+     */
+
+    public function testBmidSubmittedPreservesAuditReason()
+    {
+        $callsign = $this->user->callsign;
+        $year = date('Y');
+        $reason = 'mailing list to printer 2026-05';
+
+        Bmid::factory()->create([
+            'person_id' => $this->user->id,
+            'year' => $year,
+            'status' => Bmid::READY_TO_PRINT,
+        ]);
+
+        $response = $this->json('POST', 'bulk-upload', [
+            'action' => 'bmidsubmitted',
+            'records' => $callsign,
+            'commit' => 1,
+            'reason' => $reason,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('action_logs', [
+            'event' => 'bmid-update',
+            'target_person_id' => $this->user->id,
+            'message' => $reason,
+        ]);
+    }
+
+    /*
+     * Regression: when the SAP record list is empty, processSAPs must stop
+     * processing the row instead of falling through to $data[0].
+     */
+
+    public function testWapWithoutDataFailsCleanly()
+    {
+        $callsign = $this->user->callsign;
+        $this->setting('TAS_SAPDateRange', '5-26');
+
+        AccessDocument::factory()->create([
+            'person_id' => $this->user->id,
+            'type' => AccessDocument::WAP,
+        ]);
+
+        $response = $this->json('POST', 'bulk-upload', [
+            'action' => 'wap',
+            'records' => $callsign,
+            'commit' => 1,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['results' => [
+            [
+                'callsign' => $callsign,
+                'status' => 'failed',
+                'details' => 'missing access type',
+            ]
+        ]]);
+    }
+
+    /*
+     * Regression: SAP later-date failure message must reference both the
+     * existing date and the proposed date.
+     */
+
+    public function testWapLaterDateFailureMessageIncludesProposedDate()
+    {
+        $callsign = $this->user->callsign;
+        $year = (int)date('Y');
+        $this->setting('TAS_SAPDateRange', '5-26');
+
+        AccessDocument::factory()->create([
+            'person_id' => $this->user->id,
+            'type' => AccessDocument::WAP,
+            'access_date' => "$year-08-10",
+        ]);
+
+        $response = $this->json('POST', 'bulk-upload', [
+            'action' => 'wap',
+            'records' => "$callsign,$year-08-20",
+            'commit' => 1,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['results' => [
+            [
+                'callsign' => $callsign,
+                'status' => 'failed',
+            ]
+        ]]);
+
+        $details = $response->json('results.0.details');
+        $this->assertStringContainsString("$year-08-10", $details);
+        $this->assertStringContainsString("$year-08-20", $details);
+    }
+
+    /*
+     * Regression: the dispatcher used to leave $records undefined when every
+     * input line was empty. With initialization it must return [].
+     */
+
+    public function testAllEmptyLinesReturnsEmptyResults()
+    {
+        $response = $this->json('POST', 'bulk-upload', [
+            'action' => 'prospective',
+            'records' => "callsign\n,extra,fields",
+            'commit' => 1,
+        ]);
+
+        // The first line "callsign" has no comma; treated as bare callsign-not-found.
+        // The second line starts with empty callsign and is skipped.
+        // The point of this test: no PHP warning / no undefined variable.
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('results'));
+    }
 
     public function testSetMaxRadiosWithCommit()
     {

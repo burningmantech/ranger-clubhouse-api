@@ -4,273 +4,351 @@ namespace App\Lib;
 
 use App\Models\Bmid;
 use App\Models\Provision;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ProvisionMaintenance
 {
-    /**
-     * Expire all non-allocated provisions with status banked, claimed, or available.
-     *
-     * @return array
-     */
+    private const string REASON_EXPIRED        = 'marked as expired via maintenance function';
+    private const string REASON_USED           = 'marked as used via maintenance function';
+    private const string REASON_BANKED         = 'marked as banked via bank maintenance function';
+    private const string REASON_AVAILABLE      = 'marked as available via maintenance function';
+    private const string REASON_RADIO_EXPIRED  = 'unclaimed event radio marked as expired via bank maintenance function';
+    private const string REASON_UNBANK         = 'maintenance - unbank provisions';
+    private const string REASON_CLEAN_EXPIRED  = 'expired via clean maintenance function';
+    private const string REASON_RADIO_UNUSED   = 'was not banked, did not work, and did not check out an event radio. expired via clean provision maintenance function.';
+    private const string REASON_UNSUBMIT       = 'un-submit maintenance function';
 
+    private const array UNALLOCATED_LIVE_STATUSES = [
+        Provision::BANKED, Provision::CLAIMED, Provision::AVAILABLE,
+    ];
+
+    private const array CONSUMABLE_STATUSES = [
+        Provision::SUBMITTED, Provision::CLAIMED,
+    ];
+
+    /**
+     * Expire all non-allocated provisions with status banked, claimed, or available
+     * whose expiry date has passed.
+     *
+     * @return array<int, array<string, mixed>>
+     */
     public static function expire(): array
     {
-        $user = Auth::user()->callsign;
+        $actor = self::actorCallsign();
 
-        $rows = Provision::whereIn('status', [Provision::BANKED, Provision::CLAIMED, Provision::AVAILABLE])
-            ->where('is_allocated', false)
-            ->where('expires_on', '<=', now())
-            ->with('person:id,callsign,status,email')
-            ->get();
+        return DB::transaction(function () use ($actor) {
+            $rows = self::baseQuery()
+                ->whereIn('status', self::UNALLOCATED_LIVE_STATUSES)
+                ->where('is_allocated', false)
+                ->where('expires_on', '<=', now())
+                ->get();
 
-        $provisions = [];
-        foreach ($rows as $p) {
-            $p->status = Provision::EXPIRED;
-            $p->addComment('marked as expired via maintenance function', $user);
-            self::saveProvision($p, $provisions, true);
-        }
+            $results = $rows->map(function (Provision $p) use ($actor) {
+                $p->status = Provision::EXPIRED;
+                $p->auditReason = self::REASON_EXPIRED;
+                $p->addComment(self::REASON_EXPIRED, $actor);
+                return self::saveAndDescribe($p, includeEmail: true);
+            })->all();
 
-        self::sortProvisions($provisions);
-
-        return $provisions;
+            return self::sortByCallsign($results);
+        });
     }
 
     /**
-     * Unbank all provisions
+     * Unbank all currently banked provisions, returning them to available status.
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
-
     public static function unbankProvisions(): array
     {
-        $user = Auth::user()->callsign;
-        $rows = Provision::where('status', Provision::BANKED)
-            ->with('person:id,callsign,status')
-            ->get();
+        $actor = self::actorCallsign();
 
-        $provisions = [];
-        foreach ($rows as $row) {
-            $row->auditReason = 'maintenance - unbank provisions';
-            $row->status = Provision::AVAILABLE;
-            $row->addComment('marked as available via maintenance function', $user);
-            $row->saveWithoutValidation();
-            self::saveProvision($row, $provisions, true);
-        }
+        return DB::transaction(function () use ($actor) {
+            $rows = self::baseQuery()
+                ->where('status', Provision::BANKED)
+                ->get();
 
-        self::sortProvisions($provisions);
+            $results = $rows->map(function (Provision $row) use ($actor) {
+                $row->status = Provision::AVAILABLE;
+                $row->auditReason = self::REASON_UNBANK;
+                $row->addComment(self::REASON_AVAILABLE, $actor);
+                return self::saveAndDescribe($row, includeEmail: true, withoutValidation: true);
+            })->all();
 
-        return $provisions;
+            return self::sortByCallsign($results);
+        });
     }
 
     /**
-     * Bank the provisions
+     * Bank all unallocated available provisions. Unclaimed event radios are expired instead.
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
-
     public static function bankProvisions(): array
     {
-        $user = Auth::user()->callsign;
+        $actor = self::actorCallsign();
 
-        $rows = Provision::where('status', Provision::AVAILABLE)
-            ->where('is_allocated', false)
-            ->with('person:id,callsign,status')
-            ->get();
+        return DB::transaction(function () use ($actor) {
+            $rows = self::baseQuery()
+                ->where('status', Provision::AVAILABLE)
+                ->where('is_allocated', false)
+                ->get();
 
-        $provisions = [];
-        foreach ($rows as $p) {
-            if ($p->type == Provision::EVENT_RADIO) {
-                $p->status = Provision::EXPIRED;
-                $p->addComment('unclaimed event radio marked as expired via bank maintenance function', $user);
-            } else {
-                $p->status = Provision::BANKED;
-                $p->addComment('marked as banked via bank maintenance function', $user);
-            }
-            self::saveProvision($p, $provisions);
-        }
+            $results = $rows->map(function (Provision $p) use ($actor) {
+                if ($p->type === Provision::EVENT_RADIO) {
+                    $p->status = Provision::EXPIRED;
+                    $p->addComment(self::REASON_RADIO_EXPIRED, $actor);
+                } else {
+                    $p->status = Provision::BANKED;
+                    $p->addComment(self::REASON_BANKED, $actor);
+                }
+                return self::saveAndDescribe($p);
+            })->all();
 
-        self::sortProvisions($provisions);
-
-        return $provisions;
+            return self::sortByCallsign($results);
+        });
     }
 
     /**
-     * Clean / consume provisions from prior event.
+     * Consume or expire provisions from the prior event.
      *
-     * Anyone who worked will have the provisions consumed.
-     *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
-
     public static function cleanProvisionsFromPriorEvent(): array
     {
-        $user = Auth::user()->callsign;
-        $maintenanceYear = maintenance_year();
+        $actor = self::actorCallsign();
+        $year = maintenance_year();
 
-        $rows = Provision::where('is_allocated', false)
+        return DB::transaction(function () use ($actor, $year) {
+            $results = array_merge(
+                self::cleanUnallocatedProvisions($actor, $year),
+                self::cleanAllocatedProvisions($actor, $year),
+            );
+            return self::sortByCallsign($results);
+        });
+    }
+
+    /**
+     * Move non-allocated claimed/submitted provisions back to available for the given people.
+     *
+     * @param int[] $peopleIds
+     */
+    public static function unsubmitProvisions(array $peopleIds): void
+    {
+        if (empty($peopleIds)) {
+            return;
+        }
+
+        DB::transaction(function () use ($peopleIds) {
+            Provision::whereIntegerInRaw('person_id', $peopleIds)
+                ->whereIn('status', self::CONSUMABLE_STATUSES)
+                ->where('is_allocated', false)
+                ->get()
+                ->each(function (Provision $p) {
+                    $p->status = Provision::AVAILABLE;
+                    $p->auditReason = self::REASON_UNSUBMIT;
+                    $p->additional_comments = self::REASON_UNSUBMIT;
+                    $p->save();
+                });
+        });
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function cleanUnallocatedProvisions(string $actor, int $year): array
+    {
+        $rows = self::baseQuery()
+            ->where('is_allocated', false)
             ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED])
-            ->with('person:id,callsign,status')
             ->get();
 
         if ($rows->isEmpty()) {
-            $timesheets = null;
-            $radios = null;
-        } else {
-            $peopleIds = $rows->pluck('person_id')->unique()->toArray();
-            $timesheets = DB::table('timesheet')
-                ->whereIntegerInRaw('person_id', $peopleIds)
-                ->whereYear('on_duty', $maintenanceYear)
-                ->distinct('person_id')
-                ->get()
-                ->keyBy('person_id');
-
-            $radios = DB::table('asset_person')
-                ->join('asset', 'asset.id', 'asset_person.asset_id')
-                ->whereIntegerInRaw('person_id', $peopleIds)
-                ->whereYear('checked_out', $maintenanceYear)
-                ->where('asset.description', 'Radio')
-                ->distinct('person_id')
-                ->get()
-                ->keyBy('person_id');
+            return [];
         }
 
-        $provisions = [];
+        $hasAvailableRadios = $rows->contains(
+            fn(Provision $p) => $p->status === Provision::AVAILABLE && $p->type === Provision::EVENT_RADIO,
+        );
+        $work = $hasAvailableRadios
+            ? self::loadWorkActivity($rows->pluck('person_id')->unique()->all(), $year)
+            : null;
 
-        $reasonExpired = 'marked as expired via maintenance function';
-        $reasonUsed = 'marked as used via maintenance function';
-
+        $results = [];
         foreach ($rows as $prov) {
-            if ($prov->status == Provision::AVAILABLE) {
-                if ($prov->type != Provision::EVENT_RADIO) {
-                    // Other available provisions can be rolled over to the next event.
-                    continue;
-                }
+            $entry = self::consumeOrExpireUnallocated($prov, $actor, $year, $work);
+            if ($entry !== null) {
+                $results[] = $entry;
+            }
+        }
+        return $results;
+    }
 
-                $reasons = [];
-                if ($timesheets->has($prov->person_id)) {
-                    $reasons[] = 'person worked';
-                }
+    /**
+     * @param array{timesheets: Collection, radios: Collection}|null $work
+     * @return array<string, mixed>|null
+     */
+    private static function consumeOrExpireUnallocated(
+        Provision $prov,
+        string $actor,
+        int $year,
+        ?array $work,
+    ): ?array {
+        $reason = self::REASON_USED;
 
-                if ($radios->has($prov->person_id)) {
-                    $reasons[] = 'checked out radio';
-                }
-
-                if (empty($reasons)) {
-                    // Person did not work and/or checked out a radio.
-                    $prov->status = Provision::EXPIRED;
-                    $prov->addComment('was not banked, did not work and/or did not check out an event radio. expired via clean provision maintenance function.', $user);
-                    $prov->auditReason = 'expired via clean maintenance function';
-                    self::saveProvision($prov, $provisions);
-                    continue;
-                }
-                $reason = $reasonUsed . ' - reason ' . join(', ', $reasons);
-            } else {
-                $reason = $reasonUsed;
+        if ($prov->status === Provision::AVAILABLE) {
+            if ($prov->type !== Provision::EVENT_RADIO) {
+                // Other available provisions can be rolled over to the next event.
+                return null;
             }
 
-            $prov->status = Provision::USED;
-            $prov->consumed_year = $maintenanceYear;
-            $prov->addComment($reason, $user);
-            $prov->auditReason = $reason;
-            self::saveProvision($prov, $provisions);
+            $reasons = [];
+            if ($work !== null && $work['timesheets']->has($prov->person_id)) {
+                $reasons[] = 'person worked';
+            }
+            if ($work !== null && $work['radios']->has($prov->person_id)) {
+                $reasons[] = 'checked out radio';
+            }
+
+            if (empty($reasons)) {
+                $prov->status = Provision::EXPIRED;
+                $prov->auditReason = self::REASON_CLEAN_EXPIRED;
+                $prov->addComment(self::REASON_RADIO_UNUSED, $actor);
+                return self::saveAndDescribe($prov);
+            }
+
+            $reason = self::REASON_USED . ' - reason ' . implode(', ', $reasons);
         }
 
-        // Expire or use all job provisions.
-        $rows = Provision::where('is_allocated', true)
-            ->whereIn('status', [Provision::AVAILABLE, Provision::CLAIMED, Provision::SUBMITTED, Provision::BANKED])
-            ->with('person:id,callsign,status')
-            ->get();
+        $prov->status = Provision::USED;
+        $prov->consumed_year = $year;
+        $prov->auditReason = $reason;
+        $prov->addComment($reason, $actor);
+        return self::saveAndDescribe($prov);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function cleanAllocatedProvisions(string $actor, int $year): array
+    {
+        $rows = self::baseQuery()
+            ->where('is_allocated', true)
+            ->whereIn('status', [
+                Provision::AVAILABLE,
+                Provision::CLAIMED,
+                Provision::SUBMITTED,
+                Provision::BANKED,
+            ])->get();
 
         if ($rows->isEmpty()) {
-            return $provisions;
+            return [];
         }
 
-        $bmids = Bmid::whereIntegerInRaw('person_id', $rows->pluck('person_id')->unique())
-            ->where('year', $maintenanceYear)
+        $submittedBmids = Bmid::whereIntegerInRaw('person_id', $rows->pluck('person_id')->unique())
+            ->where('year', $year)
             ->where('status', Bmid::SUBMITTED)
             ->get()
             ->keyBy('person_id');
 
-        foreach ($rows as $row) {
-            if ($bmids->has($row->person_id) || $row->status == Provision::SUBMITTED || $row->status == Provision::CLAIMED) {
+        return $rows->map(function (Provision $row) use ($actor, $year, $submittedBmids) {
+            $consumed = $submittedBmids->has($row->person_id)
+                || in_array($row->status, self::CONSUMABLE_STATUSES, true);
+
+            if ($consumed) {
                 $row->status = Provision::USED;
-                $row->consumed_year = $maintenanceYear;
-                $row->addComment($reasonUsed, $user);
-                $row->auditReason = $reasonUsed;
+                $row->consumed_year = $year;
+                $row->auditReason = self::REASON_USED;
+                $row->addComment(self::REASON_USED, $actor);
             } else {
                 $row->status = Provision::EXPIRED;
-                $row->addComment($reasonExpired, $user);
-                $row->auditReason = $reasonExpired;
+                $row->auditReason = self::REASON_EXPIRED;
+                $row->addComment(self::REASON_EXPIRED, $actor);
             }
-            self::saveProvision($row, $provisions);
-        }
-
-        self::sortProvisions($provisions);
-
-        return $provisions;
+            return self::saveAndDescribe($row);
+        })->all();
     }
 
     /**
-     * Unsubmit (set as available) all non-allocated claimed & submitted provisions.
-     *
-     * @param array $peopleIds
-     * @return void
+     * @param int[] $personIds
+     * @return array{timesheets: Collection, radios: Collection}
      */
-
-    public static function unsubmitProvisions(array $peopleIds): void
+    private static function loadWorkActivity(array $personIds, int $year): array
     {
-        foreach ($peopleIds as $personId) {
-            $provisions = Provision::where('person_id', $personId)
-                ->whereIn('status', [Provision::CLAIMED, Provision::SUBMITTED])
-                ->where('is_allocated', false)
-                ->get();
+        $timesheets = DB::table('timesheet')
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->whereYear('on_duty', $year)
+            ->distinct('person_id')
+            ->get()
+            ->keyBy('person_id');
 
-            foreach ($provisions as $provision) {
-                $provision->status = Provision::AVAILABLE;
-                $provision->auditReason = 'un-submit maintenance function';
-                $provision->additional_comments = 'un-submit maintenance function';
-                $provision->save();
-            }
-        }
+        $radios = DB::table('asset_person')
+            ->join('asset', 'asset.id', 'asset_person.asset_id')
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->whereYear('checked_out', $year)
+            ->where('asset.description', 'Radio')
+            ->distinct('person_id')
+            ->get()
+            ->keyBy('person_id');
+
+        return compact('timesheets', 'radios');
     }
 
+    private static function baseQuery(): Builder
+    {
+        return Provision::query()->with('person:id,callsign,status,email');
+    }
 
     /**
-     * Save the provision, log the changes, and build a response.
+     * Save the provision and return a response shape for the maintenance result.
      *
-     * @param Provision $p
-     * @param $provisions
-     * @param bool $includeEmail
+     * @return array<string, mixed>
      */
-
-    public static function saveProvision(Provision $p, &$provisions, bool $includeEmail = false): void
-    {
-        $p->save();
+    private static function saveAndDescribe(
+        Provision $p,
+        bool $includeEmail = false,
+        bool $withoutValidation = false,
+    ): array {
+        $withoutValidation ? $p->saveWithoutValidation() : $p->save();
 
         $person = $p->person;
         $result = [
-            'id' => $p->id,
-            'type' => $p->type,
-            'status' => $p->status,
+            'id'          => $p->id,
+            'type'        => $p->type,
+            'status'      => $p->status,
             'source_year' => $p->source_year,
             'person' => [
-                'id' => $p->person_id,
-                'callsign' => $person->callsign ?? ('Person #' . $p->person_id),
-                'status' => $person->status ?? 'unknown',
-            ]
+                'id'       => $p->person_id,
+                'callsign' => $person?->callsign ?? ('Person #' . $p->person_id),
+                'status'   => $person?->status ?? 'unknown',
+            ],
         ];
 
         if ($includeEmail && $person) {
             $result['person']['email'] = $person->email;
         }
 
-        $provisions[] = $result;
+        return $result;
     }
 
-    public static function sortProvisions(array &$provisions): void
+    /**
+     * @param array<int, array<string, mixed>> $provisions
+     * @return array<int, array<string, mixed>>
+     */
+    private static function sortByCallsign(array $provisions): array
     {
-        usort($provisions, fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']));
+        usort(
+            $provisions,
+            fn($a, $b) => strcasecmp($a['person']['callsign'], $b['person']['callsign']),
+        );
+        return $provisions;
+    }
+
+    private static function actorCallsign(): string
+    {
+        return Auth::user()?->callsign ?? 'system';
     }
 }
