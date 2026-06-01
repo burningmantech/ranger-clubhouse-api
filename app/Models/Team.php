@@ -92,7 +92,7 @@ class Team extends ApiModel
 
         self::deleted(function ($model) {
             $awardId = $model->id;
-            PersonAward::where('id', $awardId)->deleteWithReason(self::DELETE_REASON);
+            PersonAward::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
             PersonTeam::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
             PersonTeamLog::where('team_id', $awardId)->deleteWithReason(self::DELETE_REASON);
             Position::where('team_id', $awardId)->update(['team_id' => null]);
@@ -201,7 +201,7 @@ class Team extends ApiModel
         if ($includeRoles) {
             $rows->load('team_roles');
             foreach ($rows as $row) {
-                $row->loadRoles();
+                $row->appendRoleIds();
             }
         }
 
@@ -215,12 +215,20 @@ class Team extends ApiModel
     }
 
     /**
-     * Load the roles associated with the team, and set the pseudo column role_ids
+     * Project the team_roles relationship into the role_ids pseudo column for JSON output.
+     *
+     * The team_roles relationship must be eager-loaded (via with() or load()) before calling
+     * this; otherwise role_ids would silently serialize as an empty array.
+     *
      * @return void
      */
 
-    public function loadRoles(): void
+    public function appendRoleIds(): void
     {
+        if (!$this->relationLoaded('team_roles')) {
+            throw new \LogicException('team_roles must be eager-loaded before calling appendRoleIds()');
+        }
+
         $this->role_ids = $this->team_roles->pluck('role_id')->toArray();
         $this->append('role_ids');
     }

@@ -22,7 +22,7 @@ class TeamMembershipReport
         $peopleIds = [];
 
         foreach ($roster as $member) {
-            self::buildPerson($member, $peopleIds);
+            self::ensurePersonInPeopleIds($member, $peopleIds);
             $peopleIds[$member->id]['is_member'] = true;
         }
 
@@ -44,7 +44,7 @@ class TeamMembershipReport
         ];
     }
 
-    public static function buildPerson($person, array &$peopleIds): void
+    public static function ensurePersonInPeopleIds($person, array &$peopleIds): void
     {
         if (isset($peopleIds[$person->id])) {
             return;
@@ -83,14 +83,8 @@ class TeamMembershipReport
                 ->keyBy('person_id');
 
             if ($position->type == Position::TYPE_TRAINING) {
-                // Is this a trainer's position?
-                $isTrainer = false;
-                foreach (Position::TRAINERS as $pos => $trainers) {
-                    if (in_array($position->id, $trainers)) {
-                        $isTrainer = true;
-                        break;
-                    }
-                }
+                $trainerPositionIds = array_merge(...array_values(Position::TRAINERS));
+                $isTrainer = in_array($position->id, $trainerPositionIds);
 
                 if ($isTrainer) {
                     $lastTaught = DB::table('slot')
@@ -137,7 +131,7 @@ class TeamMembershipReport
                 if ($excludePublicOnly && !isset($peopleIds[$person->id])) {
                     continue;
                 }
-                self::buildPerson($person, $peopleIds);
+                self::ensurePersonInPeopleIds($person, $peopleIds);
                 $pInfo = [
                     'id' => $position->id,
                 ];

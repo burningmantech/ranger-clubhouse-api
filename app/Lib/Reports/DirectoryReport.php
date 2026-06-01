@@ -13,10 +13,12 @@ class DirectoryReport
      * @return array
      */
 
-    const int COUNCIL_CADRE = 6;    // Hate hardcoding values.
+    const string COUNCIL_TITLE = 'Council';
 
     public static function execute(): array
     {
+        $councilId = Team::where('title', self::COUNCIL_TITLE)->value('id');
+
         $teams = Team::whereIn('team.type', [Team::TYPE_CADRE, Team::TYPE_DELEGATION])
             ->where('team.active', true)
             ->orderBy('team.title')
@@ -63,7 +65,7 @@ class DirectoryReport
                 ])->toArray(),
             ];
 
-            if ($team->id == self::COUNCIL_CADRE) {
+            if ($councilId !== null && $team->id == $councilId) {
                 $council = $cadre;
             } else {
                 $directory[] = $cadre;
