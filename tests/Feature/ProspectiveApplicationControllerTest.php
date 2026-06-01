@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Lib\ProspectiveClubhouseAccountFromApplication;
 use App\Mail\ProspectiveApplication\RejectUnqualifiedMail;
+use App\Mail\WelcomeMail;
+use App\Models\Person;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationNote;
 use App\Models\Role;
@@ -271,6 +273,128 @@ class ProspectiveApplicationControllerTest extends TestCase
                 ]
             ]
         ]);
+    }
+
+    /**
+     * Committing an approved application creates a prospective account, flips the
+     * application to created, and sends the welcome email.
+     */
+
+    public function testCommitCreatesProspectiveAccount()
+    {
+        Mail::fake();
+        $this->setting('SendWelcomeEmail', true);
+
+        $app = ProspectiveApplication::factory()->create([
+            'status' => ProspectiveApplication::STATUS_APPROVED,
+            'approved_handle' => 'Hubcap',
+            'email' => 'newpnv@example.com',
+        ]);
+
+        $prospective = new ProspectiveClubhouseAccountFromApplication($app, [], false, null);
+        $this->assertTrue($prospective->verifyRequiredFields());
+        $prospective->checkForExisting();
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_READY, $prospective->status);
+
+        $prospective->createAccount();
+
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_CREATED, $prospective->status);
+        $this->assertNotNull($prospective->person_id);
+
+        $this->assertDatabaseHas('person', [
+            'id' => $prospective->person_id,
+            'callsign' => 'Hubcap',
+            'email' => 'newpnv@example.com',
+            'status' => Person::PROSPECTIVE,
+        ]);
+
+        $app->refresh();
+        $this->assertEquals(ProspectiveApplication::STATUS_CREATED, $app->status);
+        $this->assertEquals($prospective->person_id, $app->person_id);
+
+        Mail::assertQueued(WelcomeMail::class);
+    }
+
+    /**
+     * A retired account's callsign is reassigned to the incoming applicant.
+     */
+
+    public function testCommitReassignsRetiredCallsign()
+    {
+        $this->setting('SendWelcomeEmail', false);
+
+        $retired = Person::factory()->create([
+            'callsign' => 'Hubcap',
+            'status' => Person::RETIRED,
+        ]);
+
+        $app = ProspectiveApplication::factory()->create([
+            'status' => ProspectiveApplication::STATUS_APPROVED,
+            'approved_handle' => 'Hubcap',
+        ]);
+
+        $prospective = new ProspectiveClubhouseAccountFromApplication($app, [], false, null);
+        $this->assertTrue($prospective->verifyRequiredFields());
+        $prospective->checkForExisting();
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_READY, $prospective->status);
+        $this->assertNotNull($prospective->reassign_callsign);
+
+        $prospective->createAccount();
+
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_CREATED, $prospective->status);
+        $this->assertNotEquals($retired->id, $prospective->person_id);
+
+        // The new account holds the callsign.
+        $this->assertDatabaseHas('person', [
+            'id' => $prospective->person_id,
+            'callsign' => 'Hubcap',
+        ]);
+
+        // The retired account no longer holds it.
+        $retired->refresh();
+        $this->assertNotEquals('Hubcap', $retired->callsign);
+    }
+
+    /**
+     * A failed account save rolls back the already-reassigned callsign and leaves
+     * the application untouched.
+     */
+
+    public function testRollsBackReassignedCallsignWhenSaveFails()
+    {
+        $this->setting('SendWelcomeEmail', false);
+
+        $retired = Person::factory()->create([
+            'callsign' => 'Hubcap',
+            'status' => Person::RETIRED,
+        ]);
+
+        // A first name beyond Person's max:25 rule forces the new-account save to fail.
+        $app = ProspectiveApplication::factory()->create([
+            'status' => ProspectiveApplication::STATUS_APPROVED,
+            'approved_handle' => 'Hubcap',
+            'first_name' => str_repeat('a', 40),
+        ]);
+
+        $prospective = new ProspectiveClubhouseAccountFromApplication($app, [], false, null);
+        $prospective->verifyRequiredFields();
+        $prospective->checkForExisting();
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_READY, $prospective->status);
+
+        $prospective->createAccount();
+
+        $this->assertEquals(ProspectiveClubhouseAccountFromApplication::STATUS_CREATE_FAILED, $prospective->status);
+
+        // The reassigned callsign was rolled back: the retired person keeps it.
+        $this->assertDatabaseHas('person', [
+            'id' => $retired->id,
+            'callsign' => 'Hubcap',
+        ]);
+
+        // The application was not flipped to created.
+        $app->refresh();
+        $this->assertEquals(ProspectiveApplication::STATUS_APPROVED, $app->status);
+        $this->assertNull($app->person_id);
     }
 
     /**
