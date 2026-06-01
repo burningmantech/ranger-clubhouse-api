@@ -216,9 +216,8 @@ class Vehicle extends ApiModel
 
                 $row->arrival_date = $arrival;
 
-                $row->pvr_teams = $teamsByPersonId->get($row->person_id)?->sortBy('title')->toArray() ?? [];
-                $row->pvr_positions = $positionsByPersonId->get($row->person_id)?->sortBy('title')->toArray() ?? [];
-                error_log("Person ".$row->person->callsign." ".json_encode($row->pvr_teams ));
+                $row->pvr_teams = $teamsByPersonId->get($row->person_id)?->sortBy('title')->values()->toArray() ?? [];
+                $row->pvr_positions = $positionsByPersonId->get($row->person_id)?->sortBy('title')->values()->toArray() ?? [];
             }
 
         }
