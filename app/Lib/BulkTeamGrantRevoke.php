@@ -16,7 +16,8 @@ class BulkTeamGrantRevoke
      * @param int $teamId Team ID to grant or revoke
      * @param bool $grant true=grant the position, false=revoke it
      * @param bool $commit true=commit the changes, false=verify the callsigns & position changes
-     * @return array
+     * @return array<int, array{id?: int, callsign: string, errors?: string, success?: bool}> one entry per
+     *     processed callsign; a row carries either an `errors` message or `success` => true
      */
 
     public static function execute(string $callsigns, int $teamId, bool $grant, bool $commit): array
@@ -69,7 +70,7 @@ class BulkTeamGrantRevoke
                     if ($commit) {
                         PersonTeam::addPerson($teamId, $person->id, $reason);
                         if (!empty($positionIds)) {
-                            PersonPosition::addIdsToPerson($person->id, $positionIds, 'bulk team grant');
+                            PersonPosition::addIdsToPerson($person->id, $positionIds, $reason);
                         }
                     }
                     $result['success'] = true;
@@ -80,7 +81,7 @@ class BulkTeamGrantRevoke
                 if ($commit) {
                     PersonTeam::removePerson($teamId, $person->id, $reason);
                     if (!empty($positionIds)) {
-                        PersonPosition::removeIdsFromPerson($person->id, $positionIds, 'bulk team grant');
+                        PersonPosition::removeIdsFromPerson($person->id, $positionIds, $reason);
                     }
                 }
                 $result['success'] = true;

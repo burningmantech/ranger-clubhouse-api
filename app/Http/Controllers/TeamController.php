@@ -48,12 +48,7 @@ class TeamController extends ApiController
         $team = new Team;
         $this->fromRest($team);
 
-        if ($team->save()) {
-            $team->loadRoles();
-            return $this->success($team);
-        }
-
-        return $this->restError($team);
+        return $this->saveAndRespond($team);
     }
 
     /**
@@ -61,11 +56,16 @@ class TeamController extends ApiController
      *
      * @param Team $team
      * @return JsonResponse
+     * @throws AuthorizationException
      */
 
     public function show(Team $team): JsonResponse
     {
-        $team->loadRoles();
+        $this->authorize('view', $team);
+
+        $team->load('team_roles');
+        $team->appendRoleIds();
+
         return $this->success($team);
     }
 
@@ -82,12 +82,7 @@ class TeamController extends ApiController
         $this->authorize('update', $team);
         $this->fromRest($team);
 
-        if ($team->save()) {
-            $team->loadRoles();
-            return $this->success($team);
-        }
-
-        return $this->restError($team);
+        return $this->saveAndRespond($team);
     }
 
     /**
@@ -136,8 +131,8 @@ class TeamController extends ApiController
             'commit' => 'boolean|sometimes',
         ]);
 
-        if ($params['grant'] && $team->team_roles->first(fn($pr) => $pr->role_id == Role::ADMIN || $pr->role_id == Role::TECH_NINJA)) {
-            throw new AuthorizationException("The team has either the Admin or Tech Ninja Role associated and cannot be granted through this interface.");
+        if ($team->team_roles()->whereIn('role_id', [Role::ADMIN, Role::TECH_NINJA])->exists()) {
+            throw new AuthorizationException("Cannot grant or revoke membership for a team that has the Admin or Tech Ninja Role associated. Use the appropriate administrative interface instead.");
         }
 
         return response()->json([
@@ -191,5 +186,26 @@ class TeamController extends ApiController
         $this->authorize('directory', Team::class);
 
         return response()->json(['teams' => DirectoryReport::execute()]);
+    }
+
+    /**
+     * Persist a team, project its role_ids for the response, and shape the REST result.
+     *
+     * Extracted from store() and update() to remove the duplicated save / append / error block.
+     *
+     * @param Team $team
+     * @return JsonResponse
+     */
+
+    private function saveAndRespond(Team $team): JsonResponse
+    {
+        if (!$team->save()) {
+            return $this->restError($team);
+        }
+
+        $team->load('team_roles');
+        $team->appendRoleIds();
+
+        return $this->success($team);
     }
 }

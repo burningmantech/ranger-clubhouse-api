@@ -224,10 +224,21 @@ class PersonTeam extends ApiModel
      * @param $personId
      * @param $reason
      * @return void
+     * @throws AuthorizationException
      */
 
     public static function removePerson($teamId, $personId, $reason): void
     {
+        $hasTechNinja = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::TECH_NINJA])->exists();
+        if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
+            throw new AuthorizationException("No authorization to revoke membership for a team with the Tech Ninja permission associated.");
+        }
+
+        $hasAdmin = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::ADMIN])->exists();
+        if ($hasAdmin && !Auth::user()?->isAdmin()) {
+            throw new AuthorizationException("No authorization to revoke membership for a team with the Admin permission associated.");
+        }
+
         self::where(['team_id' => $teamId, 'person_id' => $personId])->delete();
         PersonTeamLog::removePerson($teamId, $personId);
         ActionLog::record(Auth::user(), 'person-team-remove', $reason, ['team_id' => $teamId], $personId);
