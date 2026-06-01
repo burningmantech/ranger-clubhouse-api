@@ -2,16 +2,36 @@
 
 namespace App\Lib\Reports;
 
+use App\Exceptions\UnacceptableConditionException;
 use App\Models\Position;
 use App\Models\Slot;
 use Carbon\Carbon;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use App\Exceptions\UnacceptableConditionException;
 
 class ShiftCoverageReport
 {
     const COUNT_ONLY = true;
+
+    /**
+     * Number of minutes the global report window is trimmed at each end before the
+     * coarse SQL pre-fetch in {@see self::getSignUps()}.
+     *
+     * NOTE: This trim is intentionally larger than EPOCH_ROUND_MINUTES so it absorbs
+     * the per-period rounding skew in the interior of the report. It does mean the SQL
+     * pre-fetch is NOT a strict superset of what the per-period PHP filter can match at
+     * the extreme first/last edges of the whole report window; that long-standing
+     * behavior is preserved deliberately (see class history).
+     */
+    const PERIOD_TRIM_MINUTES = 90;
+
+    /**
+     * Minutes added before truncating to the hour, used to bucket ragged shift start/end
+     * times into hourly coverage periods (i.e. round to the nearest hour: +30 then floor).
+     */
+    const EPOCH_ROUND_MINUTES = 30;
 
     const PRE_EVENT = [
         [Position::OOD, 'OOD'],
@@ -162,80 +182,91 @@ class ShiftCoverageReport
         'troubleshooter' => [[Position::TROUBLESHOOTER, Position::TROUBLESHOOTER_PRE_EVENT], self::TROUBLESHOOTERS]
     ];
 
+    /**
+     * Build the coverage report payload for a coverage type and year.
+     *
+     * @param int $year the schedule year to report on
+     * @param string $type one of the keys in {@see self::COVERAGE_TYPES}
+     * @return array{columns: array<int, array{position_id: int|array, short_title: string}>, periods: array<int, array<string, mixed>>}
+     * @throws UnacceptableConditionException when $type is not a known coverage type
+     */
     public static function execute(int $year, string $type): array
     {
         if (!isset(self::COVERAGE_TYPES[$type])) {
             throw new UnacceptableConditionException("Unknown type $type");
         }
 
-        list($basePositionId, $coverage) = self::COVERAGE_TYPES[$type];
+        [$basePositionId, $coverageDefinition] = self::COVERAGE_TYPES[$type];
+
+        /** @var CoveragePost[] $posts */
+        $posts = array_map(
+            fn (array $definition): CoveragePost => CoveragePost::fromTuple($definition),
+            $coverageDefinition
+        );
 
         $shifts = self::getShiftsByPosition($year, $basePositionId);
 
         $periods = [];
         if ($shifts->isNotEmpty()) {
-            $startTime = $shifts[0]->begins_epoch;
-            $endTime = $shifts[count($shifts) - 1]->ends_epoch;
+            $startTime = $shifts->first()->begins_epoch;
+            $endTime = $shifts->last()->ends_epoch;
 
-            $signups = [];
-            foreach ($coverage as $post) {
-                $signups[] = self::getSignUps($post[0], $startTime, $endTime, $post[2] ?? false);
+            $signupsByPost = [];
+            foreach ($posts as $post) {
+                $signupsByPost[] = self::getSignUps($post->positionId, $startTime, $endTime, $post->countOnly);
             }
 
             foreach ($shifts as $shift) {
                 $positions = [];
-                $idx = 0;
-                foreach ($coverage as $post) {
-                    $isCount = $post[2] ?? false;
-
+                foreach ($posts as $idx => $post) {
                     $positions[] = [
-                        'position_id' => $post[0],
-                        'type' => ($isCount ? 'count' : 'people'),
-                        'shifts' => self::retrievePeriodSignups($shift, $signups[$idx], $post, $isCount)
+                        'position_id' => $post->positionId,
+                        'type' => $post->countOnly ? 'count' : 'people',
+                        'shifts' => self::retrievePeriodSignups($shift, $signupsByPost[$idx], $post, $post->countOnly),
                     ];
-                    $idx++;
                 }
 
                 $periods[] = [
-                    'begins' => (string)$shift->begins_epoch,
-                    'ends' => (string)$shift->ends_epoch,
-                    'date' => (string)$shift->begins_epoch,
+                    'begins' => (string) $shift->begins_epoch,
+                    'ends' => (string) $shift->ends_epoch,
+                    'date' => (string) $shift->begins_epoch,
                     'positions' => $positions,
                 ];
             }
         }
 
         $columns = [];
-        foreach ($coverage as $post) {
+        foreach ($posts as $post) {
             $columns[] = [
-                'position_id' => $post[0],
-                'short_title' => $post[1]
+                'position_id' => $post->positionId,
+                'short_title' => $post->shortTitle,
             ];
         }
 
         return [
             'columns' => $columns,
-            'periods' => $periods
+            'periods' => $periods,
         ];
     }
 
     /**
-     * Get shifts by position for a given year.
+     * Get shifts (slots) for the given position(s) within a schedule year, ordered by start time.
      *
-     * @param $year
-     * @param $positionId
-     * @return Collection
+     * Each row is decorated with begins_epoch / ends_epoch: the start/end rounded to the nearest
+     * hour to bucket ragged shift times into hourly coverage periods.
+     *
+     * @param int $year schedule year to filter on (slot.begins_year)
+     * @param int|array<int, int> $positionId a single position id or a list of position ids
+     * @return Collection<int, Slot>
      */
-
-    public static function getShiftsByPosition($year, $positionId): Collection
+    public static function getShiftsByPosition(int $year, int|array $positionId): Collection
     {
-        $sql = Slot::select('slot.*',
-            DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
-            DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
-        )->withCasts([
-            'begins_epoch' => 'datetime',
-            'ends_epoch' => 'datetime'
-        ])->where('begins_year', $year);
+        $sql = Slot::select('slot.*', ...self::epochSelects())
+            ->withCasts([
+                'begins_epoch' => 'datetime',
+                'ends_epoch' => 'datetime',
+            ])
+            ->where('begins_year', $year);
 
         if (is_array($positionId)) {
             $sql->whereIn('position_id', $positionId);
@@ -247,49 +278,35 @@ class ShiftCoverageReport
     }
 
     /**
-     * Return list of Rangers scheduled for a given position and time range.
+     * Return the list of Rangers (or signed-up counts) scheduled for the given position(s)
+     * over a time range.
      *
-     * @param $positionId
-     * @param $begins
-     * @param $ends
-     * @param $isCount
-     * @return array
+     * This is a coarse pre-fetch across the whole report window; {@see self::retrievePeriodSignups()}
+     * buckets the result into individual periods.
+     *
+     * NOTE: The window is trimmed by PERIOD_TRIM_MINUTES at each end. This long-standing behavior
+     * is preserved; it is not a strict superset of the per-period filter at the extreme report edges.
+     * NOTE: begins_year is derived from the trimmed start; preserved as-is. A window crossing a
+     * calendar-year boundary would only query one year.
+     *
+     * @param int|array<int, int> $positionId a single position id or a list of position ids
+     * @param string|Carbon $begins inclusive window start
+     * @param string|Carbon $ends inclusive window end
+     * @param bool $isCount when true, return signed-up counts instead of joined person rows
+     * @return array<int, \stdClass> signup rows decorated with *_time / *_epoch_time unix timestamps
      */
-
-    public static function getSignUps($positionId, $begins, $ends, $isCount): array
+    public static function getSignUps(int|array $positionId, string|Carbon $begins, string|Carbon $ends, bool $isCount): array
     {
-        $begins = Carbon::parse($begins)->addMinutes(90);
-        $ends = Carbon::parse($ends)->subMinutes(90);
+        $begins = Carbon::parse($begins)->addMinutes(self::PERIOD_TRIM_MINUTES);
+        $ends = Carbon::parse($ends)->subMinutes(self::PERIOD_TRIM_MINUTES);
 
         $sql = DB::table('slot')
             ->select(
                 'slot.id', 'position_id', 'begins', 'ends',
-                DB::raw("DATE_FORMAT(DATE_ADD(begins, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as begins_epoch"),
-                DB::raw("DATE_FORMAT(DATE_ADD(ends, INTERVAL 30 MINUTE),'%Y-%m-%d %H:00:00') as ends_epoch")
-            )->where('slot.begins_year', $begins->year)
-            // Shift spans the entire period
-            ->where(function ($w) use ($begins, $ends) {
-                $w->where(function ($q) use ($begins, $ends) {
-                    $q->where('slot.begins', '<=', $begins);
-                    $q->where('slot.ends', '>=', $ends);
-                })
-                    // Shift happens within the period
-                    ->orWhere(function ($q) use ($begins, $ends) {
-                        $q->where('slot.begins', '>=', $begins);
-                        $q->where('slot.ends', '<=', $ends);
-                    })
-                    // Shift ends within the period
-                    ->orWhere(function ($q) use ($begins, $ends) {
-                        $q->where('slot.ends', '>', $begins);
-                        $q->where('slot.ends', '<=', $ends);
-                    })
-                    // Shift begins within the period
-                    ->orWhere(function ($q) use ($begins, $ends) {
-                        $q->where('slot.begins', '>=', $begins);
-                        $q->where('slot.begins', '<', $ends);
-                    });
-            });
-
+                ...self::epochSelects()
+            )
+            ->where('slot.begins_year', $begins->year)
+            ->where(fn (QueryBuilder $q) => self::applyOverlapPredicate($q, $begins, $ends));
 
         if (is_array($positionId)) {
             $sql->whereIn('slot.position_id', $positionId);
@@ -307,53 +324,43 @@ class ShiftCoverageReport
                 ->orderBy('person.callsign');
         }
 
-        $shifts = $sql->get();
+        $rows = $sql->get();
 
-        foreach ($shifts as $shift) {
-            $shift->begins_time = Carbon::parse($shift->begins)->timestamp;
-            $shift->ends_time = Carbon::parse($shift->ends)->timestamp;
-            $shift->begins_epoch_time = Carbon::parse($shift->begins_epoch)->timestamp;
-            $shift->ends_epoch_time = Carbon::parse($shift->ends_epoch)->timestamp;
+        foreach ($rows as $row) {
+            $row->begins_time = Carbon::parse($row->begins)->timestamp;
+            $row->ends_time = Carbon::parse($row->ends)->timestamp;
+            $row->begins_epoch_time = Carbon::parse($row->begins_epoch)->timestamp;
+            $row->ends_epoch_time = Carbon::parse($row->ends_epoch)->timestamp;
         }
 
-        return $shifts->toArray();
+        return $rows->toArray();
     }
 
     /**
-     * Retrieve all the signs up (either callsign list or count) for a given period.
+     * Retrieve all the sign-ups (either a count or a grouped callsign list) overlapping a single period.
      *
-     * @param $shift
-     * @param $signups
-     * @param $post
-     * @param $isCount
-     * @return array|int
+     * @param Slot|object $shift the period (carries begins_epoch / ends_epoch Carbon instances)
+     * @param array<int, \stdClass> $signups pre-fetched candidate rows from {@see self::getSignUps()}
+     * @param CoveragePost $post the coverage post definition
+     * @param bool $isCount when true return an int count, otherwise a grouped people array
+     * @return array<int, array<string, mixed>>|int
      */
-
-    public static function retrievePeriodSignups($shift, $signups, $post, $isCount): array|int
+    public static function retrievePeriodSignups(object $shift, array $signups, CoveragePost $post, bool $isCount): array|int
     {
-        $parenthetical = $post[3] ?? [];
+        $parenthetical = $post->parenthetical;
 
-        $begins = $shift->begins_epoch->timestamp;
-        $ends = $shift->ends_epoch->timestamp;
+        $periodBegins = $shift->begins_epoch->timestamp;
+        $periodEnds = $shift->ends_epoch->timestamp;
 
-        $periodSignsUp = array_filter($signups, function ($row) use ($begins, $ends) {
-            if ($row->begins_epoch_time <= $begins && $row->ends_epoch_time >= $ends) {
-                return true;
-            }
-
-            if ($row->begins_epoch_time >= $begins && $row->ends_epoch_time <= $ends) {
-                return true;
-            }
-
-            if ($row->ends_epoch_time > $begins && $row->ends_epoch_time <= $ends) {
-                return true;
-            }
-
-            if ($row->begins_epoch_time >= $begins && $row->begins_epoch_time < $ends) {
-                return true;
-            }
-            return false;
-        });
+        $periodSignsUp = array_filter(
+            $signups,
+            fn ($row): bool => self::epochOverlaps(
+                $row->begins_epoch_time,
+                $row->ends_epoch_time,
+                $periodBegins,
+                $periodEnds
+            )
+        );
 
         if ($isCount) {
             $people = 0;
@@ -370,30 +377,31 @@ class ShiftCoverageReport
                 // No signups in the slot, skip it.
                 continue;
             }
-            $begins = $signup->begins;
-            if (!isset($shifts[$begins])) {
-                $shifts[$begins] = [
+
+            $signupBegins = $signup->begins;
+            if (!isset($shifts[$signupBegins])) {
+                $shifts[$signupBegins] = [
                     'people' => [],
-                    'begins' => $begins,
+                    'begins' => $signupBegins,
                     'ends' => $signup->ends,
                 ];
             }
 
-            $p = [
+            $person = [
                 'id' => $signup->person_id,
                 'callsign' => $signup->callsign,
             ];
 
             $parens = $parenthetical[$signup->position_id] ?? null;
             if ($parens) {
-                $p['parenthetical'] = $parens;
+                $person['parenthetical'] = $parens;
             }
 
             if (!empty($signup->callsign_pronounce)) {
-                $p['callsign_pronounce'] = $signup->callsign_pronounce;
+                $person['callsign_pronounce'] = $signup->callsign_pronounce;
             }
 
-            $shifts[$begins]['people'][] = $p;
+            $shifts[$signupBegins]['people'][] = $person;
         }
 
         ksort($shifts);
@@ -401,9 +409,83 @@ class ShiftCoverageReport
         $shifts = array_values($shifts);
 
         foreach ($shifts as &$s) {
-            usort($s['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+            usort($s['people'], fn ($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
         }
 
         return $shifts;
+    }
+
+    /**
+     * The pair of raw SELECT expressions that round begins/ends to the nearest hour
+     * (add EPOCH_ROUND_MINUTES, then truncate to the hour) and alias them as the epoch columns.
+     *
+     * @return array<int, Expression> [begins_epoch expression, ends_epoch expression]
+     */
+    private static function epochSelects(): array
+    {
+        return [
+            self::epochExpression('begins', 'begins_epoch'),
+            self::epochExpression('ends', 'ends_epoch'),
+        ];
+    }
+
+    /**
+     * Build a single hourly-bucket epoch SELECT expression for the given source column.
+     */
+    private static function epochExpression(string $column, string $alias): Expression
+    {
+        $round = self::EPOCH_ROUND_MINUTES;
+
+        return DB::raw("DATE_FORMAT(DATE_ADD($column, INTERVAL $round MINUTE),'%Y-%m-%d %H:00:00') as $alias");
+    }
+
+    /**
+     * Apply the four-case interval-overlap predicate to a query builder.
+     *
+     * A row matches when its [begins, ends] interval overlaps the [$begins, $ends] window:
+     * it spans the whole window, sits within it, ends within it, or begins within it.
+     */
+    private static function applyOverlapPredicate(QueryBuilder $where, Carbon $begins, Carbon $ends): void
+    {
+        // Shift spans the entire period
+        $where->where(function (QueryBuilder $q) use ($begins, $ends) {
+            $q->where('slot.begins', '<=', $begins);
+            $q->where('slot.ends', '>=', $ends);
+        })
+            // Shift happens within the period
+            ->orWhere(function (QueryBuilder $q) use ($begins, $ends) {
+                $q->where('slot.begins', '>=', $begins);
+                $q->where('slot.ends', '<=', $ends);
+            })
+            // Shift ends within the period
+            ->orWhere(function (QueryBuilder $q) use ($begins, $ends) {
+                $q->where('slot.ends', '>', $begins);
+                $q->where('slot.ends', '<=', $ends);
+            })
+            // Shift begins within the period
+            ->orWhere(function (QueryBuilder $q) use ($begins, $ends) {
+                $q->where('slot.begins', '>=', $begins);
+                $q->where('slot.begins', '<', $ends);
+            });
+    }
+
+    /**
+     * The PHP equivalent of {@see self::applyOverlapPredicate()}: does the row interval
+     * [$rowBegins, $rowEnds] overlap the period [$periodBegins, $periodEnds]?
+     *
+     * NOTE: As in the original code, this compares the hour-rounded epoch timestamps,
+     * whereas the SQL pre-fetch compares the raw begins/ends columns. That difference in
+     * operands is preserved deliberately.
+     */
+    private static function epochOverlaps(int $rowBegins, int $rowEnds, int $periodBegins, int $periodEnds): bool
+    {
+        // Row spans the entire period
+        return ($rowBegins <= $periodBegins && $rowEnds >= $periodEnds)
+            // Row happens within the period
+            || ($rowBegins >= $periodBegins && $rowEnds <= $periodEnds)
+            // Row ends within the period
+            || ($rowEnds > $periodBegins && $rowEnds <= $periodEnds)
+            // Row begins within the period
+            || ($rowBegins >= $periodBegins && $rowBegins < $periodEnds);
     }
 }
