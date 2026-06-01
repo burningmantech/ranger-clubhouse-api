@@ -56,7 +56,9 @@ class VehicleFilter
     // Pseudo fields, read only - pulled from person_event
     const array PAPERWORK_FIELDS = [
         'org_vehicle_insurance',
-        'signed_motorpool_agreement'
+        'pvr_positions',
+        'pvr_teams',
+        'signed_motorpool_agreement',
     ];
 
     //

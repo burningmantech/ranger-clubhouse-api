@@ -74,7 +74,9 @@ class Vehicle extends ApiModel
     protected $appends = [
         'org_vehicle_insurance',
         'signed_motorpool_agreement',
-        'arrival_date'
+        'arrival_date',
+        'pvr_teams',
+        'pvr_positions'
     ];
 
     protected $rules = [
@@ -128,6 +130,7 @@ class Vehicle extends ApiModel
      * Find all vehicles for the given criteria
      *
      * @param array $query
+     * @return mixed
      */
 
     public static function findForQuery(array $query)
@@ -179,9 +182,26 @@ class Vehicle extends ApiModel
 
         $rows = $sql->get();
 
-        // Only Lookup the SAPs for the current year.
-        if ($eventYear == current_year() && $rows->isNotEmpty()) {
-            $waps = AccessDocument::findWAPForPersonIds($rows->pluck('person_id')->toArray());
+        // Only Lookup the SAPs & PVR teams / positions for the current year.
+        $personIds = $rows->filter(fn ($r) => $r->person_id)->pluck('person_id')->toArray();
+        if ($eventYear == current_year() && !empty($personIds)) {
+            $waps = AccessDocument::findWAPForPersonIds($personIds);
+
+            $teamsByPersonId = Team::where('pvr_eligible', true)
+                ->where('team.active', true)
+                ->select('team.id', 'team.title', 'person_team.person_id')
+                ->join('person_team', 'person_team.team_id', '=', 'team.id')
+                ->whereIn('person_team.person_id', $personIds)
+                ->get()
+                ->groupBy('person_id');
+
+            $positionsByPersonId = Position::where('pvr_eligible', true)
+                ->select('position.id', 'position.title', 'person_position.person_id')
+                ->join('person_position', 'person_position.position_id', '=', 'position.id')
+                ->where('position.active', true)
+                ->whereIn('person_position.person_id', $personIds)
+                ->get()
+                ->groupBy('person_id');
 
             foreach ($rows as $row) {
                 $wap = $waps[$row->person_id] ?? null;
@@ -195,7 +215,12 @@ class Vehicle extends ApiModel
                 }
 
                 $row->arrival_date = $arrival;
+
+                $row->pvr_teams = $teamsByPersonId->get($row->person_id)?->sortBy('title')->toArray() ?? [];
+                $row->pvr_positions = $positionsByPersonId->get($row->person_id)?->sortBy('title')->toArray() ?? [];
+                error_log("Person ".$row->person->callsign." ".json_encode($row->pvr_teams ));
             }
+
         }
 
         return $rows;
@@ -243,7 +268,6 @@ class Vehicle extends ApiModel
 
     public function loadRelationships(): void
     {
-
         $pv = $this->person_id ? PersonEvent::findForPersonYear($this->person_id, $this->event_year) : null;
         if ($pv) {
             $this->signed_motorpool_agreement = $pv->signed_motorpool_agreement;
@@ -398,11 +422,32 @@ class Vehicle extends ApiModel
 
     public function setArrivalDateAttribute($value)
     {
+        error_log("GOT TO ARRIVAL");
         $this->attributes['arrival_date'] = $value;
     }
 
     public function getArrivalDateAttribute()
     {
         return $this->attributes['arrival_date'] ?? false;
+    }
+
+    public function setPvrTeamsAttribute($value)
+    {
+        $this->attributes['pvr_teams'] = $value;
+    }
+
+    public function getPvrTeamsAttribute()
+    {
+        return $this->attributes['pvr_teams'] ?? [];
+    }
+
+    public function setPvrPositionsAttribute($value)
+    {
+        $this->attributes['pvr_positions'] = $value;
+    }
+
+    public function getPvrPositionsAttribute()
+    {
+        return $this->attributes['pvr_positions'] ?? [];
     }
 }
