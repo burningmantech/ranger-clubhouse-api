@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Person;
+use App\Models\Position;
 use App\Models\Role;
 use App\Models\Timesheet;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -21,12 +22,15 @@ class TimesheetPolicy
     }
 
     /*
-     * Determine whether the user can view the timesheet.
+     * Determine whether the user can view the timesheet. If $trainingID is present, check if the user can
+     * graduate trainees (e.g., grant Green Dot Mentee)
      */
 
-    public function index(Person $user, $personId): bool
+    public function index(Person $user, $personId, int $trainingID = null): bool
     {
-        return $user->hasRole(Role::EVENT_MANAGEMENT) || ($user->id == $personId);
+        return $user->hasRole(Role::EVENT_MANAGEMENT)
+            || ($trainingID && $user->hasRole(Role::ART_GRADUATE_BASE | $trainingID))
+            || ($user->id == $personId);
     }
 
     /*
