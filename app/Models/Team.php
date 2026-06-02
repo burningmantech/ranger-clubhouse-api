@@ -39,6 +39,7 @@ class Team extends ApiModel
         'email',
         'mvr_eligible',
         'pvr_eligible',
+        'resource_tag',
         'title',
         'type',
         'role_ids'

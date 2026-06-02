@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\Document;
 use App\Models\Person;
 use App\Models\PersonPosition;
 use App\Models\PersonRole;
@@ -12,6 +13,7 @@ use App\Models\Team;
 use App\Models\TeamManager;
 use App\Models\TeamRole;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
 
 class Membership
 {
@@ -34,6 +36,20 @@ class Membership
         foreach ($positions as $position) {
             if ($position->team_id && !$teamsById->has($position->team_id)) {
                 $notMember[$position->team_id] = true;
+            }
+        }
+
+        $isMe = $person->id == Auth::id();
+        foreach ($teams as $team) {
+            if (!$team->resource_tag) {
+                continue;
+            }
+            $document = Document::findIdOrTag($team->resource_tag);
+            if ($document) {
+                $team->document_tag = $team->resource_tag;
+                if ($isMe) {
+                    $team['document_body'] = $document->body;
+                }
             }
         }
 
