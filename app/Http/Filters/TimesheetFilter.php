@@ -35,6 +35,22 @@ class TimesheetFilter
         'suppress_duration_warning'
     ];
 
+    const array WORK_HISTORY_FIELDS = [
+        'credits',
+        'duration',
+        'is_echelon',
+        'off_duty',
+        'on_duty',
+        'position',
+        'position_id',
+    ];
+
+    // Only used for work history returns
+    public function serialize(?Person $user = null): array
+    {
+        return self::WORK_HISTORY_FIELDS;
+    }
+
     public function deserialize(?Person $user = null): array
     {
         $fields = [self::USER_FIELDS];

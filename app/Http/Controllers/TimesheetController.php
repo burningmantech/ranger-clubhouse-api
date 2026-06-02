@@ -70,9 +70,12 @@ class TimesheetController extends ApiController
             'include_photo' => 'sometimes|boolean',
             'include_admin_notes' => 'sometimes|boolean',
             'check_times' => 'sometimes|boolean',
+            'wh_training_id' => 'sometimes|integer',
         ]);
 
-        $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null]);
+        $whTrainingId = $params['wh_training_id'] ?? null;
+
+        $this->authorize('index', [Timesheet::class, $params['person_id'] ?? null, $whTrainingId]);
 
         if ($params['include_admin_notes'] ?? false) {
             Gate::authorize('isTimesheetManager');
@@ -94,7 +97,7 @@ class TimesheetController extends ApiController
 
         PositionCredit::warmBulkYearCache($years);
 
-        return $this->success($rows, null, 'timesheet');
+        return $whTrainingId ? $this->toRestFiltered($rows, null, 'timesheet') : $this->success($rows, null, 'timesheet');
     }
 
     /**
@@ -107,7 +110,7 @@ class TimesheetController extends ApiController
 
     public function show(Timesheet $timesheet): JsonResponse
     {
-        $this->authorize('index', [Timesheet::class, $timesheet->person_id]);
+        $this->authorize('index', [Timesheet::class, $timesheet->person_id, null]);
         $timesheet->loadRelationships(Gate::allows('isTimesheetManager'));
         $timesheet->checkTimes();
         return $this->success($timesheet);
