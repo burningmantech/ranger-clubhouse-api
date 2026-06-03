@@ -436,6 +436,73 @@ class SlotControllerTest extends TestCase
     }
 
     /*
+     * An out-of-range interval must be rejected before it reaches the report,
+     * where interval=0 would otherwise divide by zero in SQL and build a
+     * zero-length DatePeriod.
+     */
+
+    public function testHQForecastReportRejectsInvalidInterval()
+    {
+        $this->addRole(Role::EVENT_MANAGEMENT);
+
+        foreach ([0, -5, 1441] as $interval) {
+            $response = $this->json('GET', 'slot/hq-forecast-report', [
+                'year' => $this->year,
+                'interval' => $interval,
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonFragment([
+                'source' => ['pointer' => '/data/attributes/interval'],
+            ]);
+        }
+    }
+
+    /*
+     * A check-out whose interval bucket lands exactly on the rounded closing
+     * boundary must still appear in the forecast (previously dropped because
+     * DatePeriod excluded the closing instant).
+     */
+
+    public function testHQForecastReportIncludesBoundaryAlignedCheckout()
+    {
+        $this->addRole(Role::EVENT_MANAGEMENT);
+
+        $year = $this->year;
+
+        // Latest HQ shift ends exactly on a one-hour boundary, so the rounded
+        // closing time is 05:00:00 itself.
+        Slot::factory()->create([
+            'begins' => date("$year-08-25 02:00:00"),
+            'ends' => date("$year-08-25 05:00:00"),
+            'position_id' => Position::HQ_LEAD,
+            'description' => 'HQ Lead',
+            'signed_up' => 3,
+            'max' => 3,
+            'min' => 1,
+        ]);
+
+        // A non-HQ shift whose check-out buckets onto that same 05:00 boundary.
+        Slot::factory()->create([
+            'begins' => date("$year-08-25 02:00:00"),
+            'ends' => date("$year-08-25 05:00:00"),
+            'position_id' => Position::DIRT,
+            'description' => 'Dirt',
+            'signed_up' => 7,
+            'max' => 10,
+            'min' => 1,
+        ]);
+
+        $response = $this->json('GET', 'slot/hq-forecast-report', ['year' => $year, 'interval' => 60]);
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment([
+            'checkout' => 7,
+            'period' => "$year-08-25 05:00:00",
+        ]);
+    }
+
+    /*
      * Test Schedule By Position report
      */
 
