@@ -69,7 +69,7 @@ class AssetController extends ApiController
 
     public function show(Asset $asset): JsonResponse
     {
-        $this->authorize('show', $asset);
+        $this->authorize('view', $asset);
         return $this->success($asset);
     }
 
@@ -222,7 +222,7 @@ class AssetController extends ApiController
         $asset_person->check_in_person_id = $this->user->id;
 
         if (!$asset_person->save()) {
-            return $this->restError($asset);
+            return $this->restError($asset_person);
         }
 
         return response()->json(['status' => 'success', 'checked_in' => (string)$asset_person->checked_in]);
