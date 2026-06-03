@@ -139,7 +139,7 @@ class AssetPerson extends ApiModel
     public static function retrieveHistory($assetId): Collection|array
     {
         return self::where('asset_id', $assetId)
-            ->with(['person:id,callsign', 'attachment', 'check_out_person', 'check_in_person'])
+            ->with(['person:id,callsign', 'attachment', 'check_out_person:id,callsign', 'check_in_person:id,callsign'])
             ->get();
     }
 
