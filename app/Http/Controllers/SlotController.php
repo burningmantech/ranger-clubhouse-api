@@ -416,7 +416,7 @@ class SlotController extends ApiController
 
         $params = request()->validate([
             'year' => 'required|integer',
-            'interval' => 'required|integer',
+            'interval' => 'required|integer|min:1|max:1440',
         ]);
 
         return response()->json(HQWindowCheckInOutForecastReport::execute($params['year'], $params['interval']));
