@@ -51,6 +51,7 @@ class Position extends ApiModel
 
     const int HQ_FULL_TRAINING = 31;
     const int HQ_LEADS_SHORTS_TRAINING = 198;
+    const int HQ_LEADS_SHORTS_TRAINER = 233;
     const int HQ_LEAD = 32;
     const int HQ_LEAD_PRE_EVENT = 118;
     const int HQ_REFRESHER_TRAINING = 49;
@@ -225,7 +226,8 @@ class Position extends ApiModel
         ],
         Position::GREEN_DOT_TRAINING => [Position::GREEN_DOT_TRAINER],
         Position::HQ_FULL_TRAINING => [Position::HQ_TRAINER],
-        Position::HQ_REFRESHER_TRAINING => [Position::HQ_TRAINER],
+        Position::HQ_LEADS_SHORTS_TRAINING => [Position::HQ_TRAINER],
+        Position::HQ_REFRESHER_TRAINING => [Position::HQ_LEADS_SHORTS_TRAINER],
         Position::SANDMAN_TRAINING => [Position::SANDMAN_TRAINER],
         Position::TOW_TRUCK_TRAINING => [Position::TOW_TRUCK_TRAINER],
         Position::TRAINING_RADIO_PRACTICE => [Position::TRAINER_RADIO_PRACTICE],
@@ -322,6 +324,7 @@ class Position extends ApiModel
         'paycode',
         'prevent_multiple_enrollments',
         'pvr_eligible',
+        //'require_signin_for_roles',
         'require_training_for_roles',
         'resource_tag',
         'role_ids',
@@ -360,6 +363,7 @@ class Position extends ApiModel
             'on_trainer_report' => 'bool',
             'prevent_multiple_enrollments' => 'bool',
             'pvr_eligible' => 'bool',
+           // 'require_signin_for_roles' => 'bool',
             'require_training_for_roles' => 'bool',
             'sign_out_hour_cap' => 'float',
         ];
