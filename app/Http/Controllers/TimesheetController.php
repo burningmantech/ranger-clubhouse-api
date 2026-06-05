@@ -6,9 +6,9 @@ use App\Exceptions\UnacceptableConditionException;
 use App\Lib\BulkSignInOut;
 use App\Lib\Reports\CombinedTimesheetCorrectionRequestsReport;
 use App\Lib\Reports\EarlyLateCheckInReport;
+use App\Lib\Reports\EventsRangeredReport;
 use App\Lib\Reports\EventStats;
 use App\Lib\Reports\ForcedSigninsReport;
-use App\Lib\Reports\EventsRangeredReport;
 use App\Lib\Reports\HoursCreditsReport;
 use App\Lib\Reports\NoShowReport;
 use App\Lib\Reports\OnDutyReport;
@@ -34,6 +34,7 @@ use App\Models\ActionLog;
 use App\Models\Person;
 use App\Models\PersonEvent;
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\Position;
 use App\Models\PositionCredit;
 use App\Models\Role;
@@ -356,7 +357,6 @@ class TimesheetController extends ApiController
 
     public function signin(): JsonResponse
     {
-
         $params = request()->validate([
             'person_id' => 'required|integer|exists:person,id',
             'position_id' => 'required|integer|exists:position,id',
@@ -368,7 +368,9 @@ class TimesheetController extends ApiController
 
         $personId = $params['person_id'];
         $positionId = $params['position_id'];
-        $this->authorize('signin', [Timesheet::class, $personId]);
+        $position = Position::find($positionId);
+
+        $this->authorize('signin', [Timesheet::class, $personId, $position]);
 
         // they cannot be on duty
         $onDuty = Timesheet::findPersonOnDuty($personId);
@@ -380,7 +382,6 @@ class TimesheetController extends ApiController
         }
 
         $person = Person::find($personId);
-        $position = Position::find($positionId);
 
         // Confirm the person is allowed to sign in to the position
         if (!PersonPosition::havePosition($personId, $positionId)) {
@@ -433,6 +434,10 @@ class TimesheetController extends ApiController
         $timesheet->was_signin_forced = $wasForced;
         if (!$timesheet->save()) {
             return $this->restError($timesheet);
+        }
+
+        if ($position->require_signin_for_roles) {
+            PersonRole::clearCache($personId);
         }
 
         TimesheetManagement::unconfirmTimesheet($timesheet, 'new entry - signed in');
@@ -516,6 +521,10 @@ class TimesheetController extends ApiController
         $timesheet->auditReason = 'position update while on duty';
         $timesheet->saveOrThrow();
 
+        if ($position->require_signin_for_roles) {
+            PersonRole::clearCache($person->id);
+        }
+
         return TimesheetManagement::reportSignIn(TimesheetLog::UPDATE, $timesheet, $wasForced, $blockers, $log);
     }
 
@@ -561,6 +570,10 @@ class TimesheetController extends ApiController
             mail_send(new AutomaticActiveConversionMail($person, $status, $timesheet->position->title, $this->user->callsign));
         }
 
+        if ($timesheet->position->require_signin_for_roles) {
+            PersonRole::clearCache($person->id);
+        }
+
         return response()->json($response);
     }
 
@@ -585,6 +598,10 @@ class TimesheetController extends ApiController
         $timesheet->delete();
 
         $timesheet->log(TimesheetLog::DELETE_MISTAKE, ['position_id' => $timesheet->position_id,]);
+
+        if ($timesheet->position->require_signin_for_roles) {
+            PersonRole::clearCache($timesheet->person->id);
+        }
 
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
     }
@@ -619,6 +636,11 @@ class TimesheetController extends ApiController
         $timesheet->save();
         $timesheet->log(TimesheetLog::UPDATE, ['off_duty' => [(string)$offDuty, 're-signin']]);
         TimesheetManagement::unconfirmTimesheet($timesheet, 're-signin');
+
+        if ($timesheet->position->require_signin_for_roles) {
+            PersonRole::clearCache($timesheet->person->id);
+        }
+
         return response()->json(['status' => 'success', 'timesheet' => $timesheet]);
     }
 

@@ -5,11 +5,13 @@ namespace App\Lib;
 use App\Lib\BulkSignInOut\ShiftAction;
 use App\Models\Person;
 use App\Models\PersonPosition;
+use App\Models\PersonRole;
 use App\Models\Position;
 use App\Models\Timesheet;
 use App\Models\TimesheetLog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Parse and verify Bulk Sign In/Out lines.
@@ -116,15 +118,15 @@ class BulkSignInOut
         $errors = array_merge($errors, $positionErrors);
 
         return (object)[
-            'person_id'    => $personId,
-            'callsign'     => $callsign,
-            'action'       => $action->value,
+            'person_id' => $personId,
+            'callsign' => $callsign,
+            'action' => $action->value,
             'timesheet_id' => $timesheetId,
-            'position'     => $positionName,
-            'position_id'  => $positionId,
-            'signin'       => $signin !== null ? date(self::DATETIME_FORMAT, $signin) : null,
-            'signout'      => $signout !== null ? date(self::DATETIME_FORMAT, $signout) : null,
-            'errors'       => $errors,
+            'position' => $positionName,
+            'position_id' => $positionId,
+            'signin' => $signin !== null ? date(self::DATETIME_FORMAT, $signin) : null,
+            'signout' => $signout !== null ? date(self::DATETIME_FORMAT, $signout) : null,
+            'errors' => $errors,
         ];
     }
 
@@ -235,11 +237,12 @@ class BulkSignInOut
      * @return array{0: ?Timesheet, 1: ?int, 2: array<string>}
      */
     private static function validateTimesheetState(
-        int $personId,
+        int         $personId,
         ShiftAction $action,
-        ?int $signin,
-        ?int $signout,
-    ): array {
+        ?int        $signin,
+        ?int        $signout,
+    ): array
+    {
         $errors = [];
         $timesheet = Timesheet::findPersonOnDuty($personId);
 
@@ -281,11 +284,12 @@ class BulkSignInOut
      * @return array{0: ?int, 1: ?string, 2: array<string>}
      */
     private static function resolvePosition(
-        ?string $position,
+        ?string    $position,
         Collection $positionTitles,
-        ?int $personId,
+        ?int       $personId,
         ?Timesheet $timesheet,
-    ): array {
+    ): array
+    {
         $errors = [];
 
         if ($position !== null && $position !== '') {
@@ -403,7 +407,7 @@ class BulkSignInOut
      *
      * @param array<object> $entries
      * @return bool true if any persistence error occurred
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public static function process(array $entries, int $userId): bool
     {
@@ -493,6 +497,9 @@ class BulkSignInOut
 
         $data['via'] = TimesheetLog::VIA_BULK_UPLOAD;
         $timesheet->log($event, $data);
+
+        PersonRole::clearCache($personId);
+
         return true;
     }
 }

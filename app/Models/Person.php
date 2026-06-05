@@ -440,6 +440,13 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
     public ?array $rawRolesById = [];
 
+    /**
+     * For those positions requiring training for the roles to be activated.
+     */
+
+    public ?array $rolesRequireTraining = [];
+    public ?array $positionsRequireSignin = [];
+
     public function tshirt(): BelongsTo
     {
         return $this->belongsTo(Swag::class, 'tshirt_swag_id');
@@ -943,29 +950,44 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
 
         // Find the granted roles via assigned positions
         $positionRoles = DB::table('person_position')
-            ->select('role_id', 'require_training_for_roles', 'position.id', 'position.training_position_id')
+            ->select('role_id', 'require_training_for_roles', 'require_signin_for_roles', 'position.id', 'position.training_position_id')
             ->join('position_role', 'position_role.position_id', 'person_position.position_id')
             ->join('position', 'position.id', 'person_position.position_id')
+            ->where('position.active', true)
             ->where('person_id', $this->id)
             ->get();
 
         $roleIds = [];
         $year = current_year();
-        $trainedPositions = [];
+
+        $this->rolesRequireTraining = [];
+        $this->positionsRequireSignin = [];
+
         foreach ($positionRoles as $pos) {
             if ($pos->require_training_for_roles) {
                 if (!$pos->training_position_id) {
                     continue;
                 }
-                if (!isset($trainedPositions[$pos->training_position_id])) {
-                    $trainedPositions[$pos->training_position_id] = Training::didPersonPassForYear($this, $pos->training_position_id, $year);
+
+                if (!isset($this->rolesRequireTraining[$pos->training_position_id])) {
+                    $this->rolesRequireTraining[$pos->training_position_id] = Training::didPersonPassForYear($this, $pos->training_position_id, $year);
                 }
-                if ($trainedPositions[$pos->training_position_id]) {
-                    // Person has passed the appropriate ART, grant the roles.
-                    $roleIds[] = $pos->role_id;
+
+                if ($this->rolesRequireTraining[$pos->training_position_id]) {
+                    if (!$pos->require_signin_for_roles) {
+                        $roleIds[] = $pos->role_id;
+                    } else if (Timesheet::findPersonOnDuty($this->id)?->position_id == $pos->id) {
+                        $roleIds[] = $pos->role_id;
+                    } else {
+                        $this->positionsRequireSignin[$pos->id][] = $pos->role_id;
+                    }
                 }
-            } else {
+            } else if (!$pos->require_signin_for_roles) {
                 $roleIds[] = $pos->role_id;
+            } else if (Timesheet::findPersonOnDuty($this->id)?->position_id == $pos->id) {
+                $roleIds[] = $pos->role_id;
+            } else {
+                $this->positionsRequireSignin[$pos->id][] = $pos->role_id;
             }
         }
 
@@ -1021,24 +1043,41 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 $this->rolesById = [];
                 $this->trueRolesById = [];
                 $this->trueRoles = [];
+                $this->rolesRequireTraining = [];
+                $this->positionsRequireSignin = [];
                 $noCache = true;
             }
         }
 
         $this->roles = array_keys($this->rolesById);
         if (!$noCache) {
-            PersonRole::putCache($this->id, [$this->roles, $this->trueRoles, $this->rawRolesById]);
+            foreach ($this->positionsRequireSignin as $pid => $posRoles) {
+               if (array_all($posRoles, fn ($roleId) => in_array($roleId, $this->roles))) {
+                    unset($this->positionsRequireSignin[$pid]);
+                }
+            }
+
+            PersonRole::putCache($this->id,
+                [
+                    $this->roles,
+                    $this->trueRoles,
+                    $this->rawRolesById,
+                    $this->rolesRequireTraining,
+                    $this->positionsRequireSignin,
+                ]);
         }
     }
 
     public function setCachedRoles(array $cachedRoles): void
     {
-        list ($effectiveRoles, $trueRoles, $rawRolesById) = $cachedRoles;
+        list ($effectiveRoles, $trueRoles, $rawRolesById, $rolesRequireTraining, $positionsRequireSignin) = $cachedRoles;
         $this->roles = $effectiveRoles;
         $this->rolesById = array_fill_keys($this->roles, true);
         $this->trueRoles = $trueRoles;
         $this->trueRolesById = array_fill_keys($this->trueRoles, true);
         $this->rawRolesById = $rawRolesById;
+        $this->rolesRequireTraining = array_fill_keys($rolesRequireTraining, true);
+        $this->positionsRequireSignin = $positionsRequireSignin;
     }
 
     /**
@@ -1083,13 +1122,8 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             return isset($this->trueRolesById[$role]);
         }
 
-        foreach ($role as $r) {
-            if (isset($this->trueRolesById[$r])) {
-                return true;
-            }
-        }
+        return array_any($role, fn($r) => isset($this->trueRolesById[$r]));
 
-        return false;
     }
 
     /**
@@ -1109,13 +1143,8 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             return isset($this->rawRolesById[$role]);
         }
 
-        foreach ($role as $r) {
-            if (isset($this->rawRolesById[$r])) {
-                return true;
-            }
-        }
+        return array_any($role, fn($r) => isset($this->rawRolesById[$r]));
 
-        return false;
     }
 
     /**

@@ -324,7 +324,7 @@ class Position extends ApiModel
         'paycode',
         'prevent_multiple_enrollments',
         'pvr_eligible',
-        //'require_signin_for_roles',
+        'require_signin_for_roles',
         'require_training_for_roles',
         'resource_tag',
         'role_ids',
@@ -363,7 +363,7 @@ class Position extends ApiModel
             'on_trainer_report' => 'bool',
             'prevent_multiple_enrollments' => 'bool',
             'pvr_eligible' => 'bool',
-           // 'require_signin_for_roles' => 'bool',
+            'require_signin_for_roles' => 'bool',
             'require_training_for_roles' => 'bool',
             'sign_out_hour_cap' => 'float',
         ];

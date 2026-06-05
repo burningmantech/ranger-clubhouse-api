@@ -41,6 +41,17 @@ class UserInfo
             }
         }
 
+        if (!empty($person->positionsRequireSignin)) {
+            $positions = Position::find(array_unique(array_keys($person->positionsRequireSignin)));
+            $positions = $positions->sortBy('title');
+            $signinPositions = $positions->map(fn($pos) => [
+                'id' => $pos->id,
+                'title' => $pos->title
+            ])->values()->toArray();
+        } else {
+            $signinPositions = [];
+        }
+
         $data = [
             'id' => $personId,
             'callsign' => $person->callsign,
@@ -48,8 +59,13 @@ class UserInfo
             'status' => $person->status,
             'bpguid' => $person->bpguid,
             'employee_id' => $person->employee_id,
+
             'roles' => $person->roles,
             'true_roles' => $person->trueRoles,
+            'roles_require_training' => $person->rolesRequireTraining,
+            'roles_require_signin' => $person->positionsRequireSignin,
+            'role_signin_positions' => $signinPositions,
+
             'teacher' => [
                 'is_trainer' => $person->hasRole([Role::ADMIN, Role::TRAINER]),
                 'is_mentor' => $person->hasRole([Role::ADMIN, Role::MENTOR]),
