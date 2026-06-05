@@ -101,11 +101,20 @@ class TimesheetPolicy
      * Can user sign in the person?
      */
 
-    public function signin(Person $user, int $personId): bool
+    public function signin(Person $user, int $personId, Position $position): bool
     {
         if ($user->hasRole(Role::SHIFT_MANAGEMENT)) {
             return true;
         }
+
+        if ($position->require_signin_for_roles && $position->position_roles->contains('role_id', Role::SHIFT_MANAGEMENT)) {
+            if ($position->require_training_for_roles) {
+                return $user->rolesRequireTraining[$position->id] ?? false;
+            } else {
+                return true;
+            }
+        }
+
 
         return $user->hasRole(Role::SHIFT_MANAGEMENT_SELF) && $user->id == $personId;
     }
