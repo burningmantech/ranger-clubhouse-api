@@ -257,7 +257,9 @@ Route::middleware(['authenticate', 'api'])->group(function () {
     Route::get('mail-log', [MailLogController::class, 'index']);
 
     Route::patch('messages/{person_message}/markread', [PersonMessageController::class, 'markread']);
-    Route::resource('messages', PersonMessageController::class)->only('index', 'store', 'destroy');
+    Route::resource('messages', PersonMessageController::class)
+        ->only('index', 'store', 'destroy')
+        ->parameters(['messages' => 'person_message']);
 
     Route::get('mentor/alphas', [MentorController::class, 'alphas']);
     Route::get('mentor/alpha-schedule', [MentorController::class, 'alphaSchedule']);

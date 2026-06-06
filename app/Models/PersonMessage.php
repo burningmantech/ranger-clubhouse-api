@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Lib\PersonMessageCreator;
+use App\Lib\PersonMessageThreadQuery;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class PersonMessage extends ApiModel
 {
@@ -109,22 +110,50 @@ class PersonMessage extends ApiModel
         return $this->belongsTo(Person::class);
     }
 
-    public function creator_person(): belongsTo
+    /**
+     * The person who created the message via the Clubhouse.
+     *
+     * NOTE: snake_case relationship method names below are load-bearing -- they are
+     * the eager-load keys and JSON serialization keys consumed by the frontend, so
+     * they cannot be renamed without a coordinated frontend change.
+     *
+     * @return BelongsTo
+     */
+
+    public function creator_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function sender_person(): belongsTo
+    /**
+     * The person the message is attributed to (the displayed sender).
+     *
+     * @return BelongsTo
+     */
+
+    public function sender_person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
-    public function sender_team(): belongsTo
+    /**
+     * The team the message is attributed to.
+     *
+     * @return BelongsTo
+     */
+
+    public function sender_team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
 
-    public function recipient_team(): belongsTo
+    /**
+     * The team the message is addressed to.
+     *
+     * @return BelongsTo
+     */
+
+    public function recipient_team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
@@ -145,7 +174,7 @@ class PersonMessage extends ApiModel
     }
 
     /**
-     * Find all messages for a person
+     * Find all message threads for a person, enriched and sorted for display.
      *
      * @param int $personId
      * @return Collection
@@ -153,55 +182,7 @@ class PersonMessage extends ApiModel
 
     public static function findForPerson(int $personId): Collection
     {
-        $rows = self::where(function ($w) use ($personId) {
-            $w->where('person_id', $personId);
-            $w->orWhere('sender_person_id', $personId);
-        })->whereNull('reply_to_id')
-            ->with([
-                'person:id,callsign',
-                'creator_person:id,callsign',
-                'creator_position:id,title',
-                'sender_team:id,title,email',
-                'sender_person:id,callsign',
-                'replies',
-                'replies.creator_person:id,callsign',
-                'replies.creator_position:id,title',
-                'replies.sender_team:id,title,email',
-                'replies.sender_person:id,callsign',
-                'replies.person:id,callsign',
-            ])->orderBy('person_message.created_at', 'desc')
-            ->get();
-
-
-        foreach ($rows as $row) {
-            $recent = $row->replies->last();
-            if ($recent) {
-                $delivered = true;
-                foreach ($row->replies as $reply) {
-                    if ($reply->person_id == $personId && !$reply->delivered) {
-                        $delivered = false;
-                        break;
-                    }
-                }
-
-                $row->recentDelivered = $delivered;
-                $row->recentTimestamp = $recent->created_at->timestamp;
-            } else {
-                $row->recentDelivered = ($row->sender_person_id == $personId) ? true : $row->delivered;
-                $row->recentTimestamp = $row->created_at->timestamp;
-            }
-        }
-
-        return $rows->sort(function ($a, $b) {
-            $delivered = $a->recentDelivered - $b->recentDelivered;
-            return !$delivered ? $b->recentTimestamp - $a->recentTimestamp : $delivered;
-        })->values();
-    }
-
-    private static function saveMarked(PersonMessage $message, bool $delivered): void
-    {
-        $message->delivered = $delivered;
-        $message->saveWithoutValidation();
+        return (new PersonMessageThreadQuery())->forPerson($personId);
     }
 
     /**
@@ -233,145 +214,48 @@ class PersonMessage extends ApiModel
 
     public static function countUnread(int $personId): int
     {
-        return DB::table('person_message')
-            ->where(function ($w) use ($personId) {
-                $w->whereNull('sender_person_id');
-                $w->orWhere('sender_person_id', '!=', $personId);
-            })
-            ->where('person_id', $personId)
-            ->where('delivered', false)
-            ->count();
+        return self::unreadInboundFor($personId)->count();
     }
 
     public static function mostRecentUnreadMessage(int $personId): ?PersonMessage
     {
-        return PersonMessage::where(function ($w) use ($personId) {
-            $w->whereNull('sender_person_id');
-            $w->orWhere('sender_person_id', '!=', $personId);
-        })->where('person_id', $personId)
-            ->where('delivered', false)
+        return self::unreadInboundFor($personId)
             ->orderBy('created_at', 'desc')
             ->first();
     }
 
     /**
-     * validate does triple duty here.
-     * - validate the required columns are present
-     * - make sure the recipient & sender callsigns are present
-     * - setup appropriate fields based on the callsigns
+     * Single source of truth for "undelivered message addressed to this person",
+     * excluding copies the person sent to themselves.
+     *
+     * @param int $personId
+     * @return Builder
+     */
+
+    private static function unreadInboundFor(int $personId): Builder
+    {
+        return self::query()
+            ->where('person_id', $personId)
+            ->where('delivered', false)
+            ->where(function ($w) use ($personId) {
+                $w->whereNull('sender_person_id')
+                    ->orWhere('sender_person_id', '!=', $personId);
+            });
+    }
+
+    /**
+     * For new records, delegate create-time authorization, validation, and field
+     * derivation to PersonMessageCreator before persisting. Returns false (with errors
+     * attached) when preparation fails.
      *
      * @param array $options
-     * @return bool  true if the model is valid
+     * @return bool true if the model was persisted
      */
 
     public function save($options = []): bool
     {
-        if (!$this->exists) {
-            if (empty($this->sender_type)) {
-                $this->addError('sender_type', 'Sender type is missing');
-                return false;
-            }
-
-            $userId = Auth::id();
-            // Message created by logged-in user
-            $this->creator_person_id = $userId;
-
-            if ($this->message_type !== self::MESSAGE_TYPE_CONTACT && $userId) {
-                $this->creator_position_id = DB::table('timesheet')
-                    ->where('person_id', $userId)
-                    ->whereNull('off_duty')
-                    ->value('position_id');
-            }
-
-            switch ($this->sender_type) {
-                case self::SENDER_TYPE_PERSON:
-                    $callsign = $this->message_from;
-                    if (empty($callsign)) {
-                        $this->addError('message_from', 'Missing from callsign');
-                        return false;
-                    }
-                    $person = Person::findByCallsign($callsign);
-                    if (!$person) {
-                        $this->addError('message_from', 'Callsign not found ' . $callsign);
-                        return false;
-                    }
-
-                    $this->sender_person_id = $person->id;
-                    $this->message_from = $person->callsign;
-                    break;
-
-                case self::SENDER_TYPE_TEAM:
-                    if (!$this->validateTeam('sender_team_id')) {
-                        return false;
-                    }
-                    break;
-
-                case self::SENDER_TYPE_OTHER:
-                case self::SENDER_TYPE_RBS:
-                    break;
-                default:
-                    $this->addError('sender_type', 'Unknown sender type ' . $this->sender_type);
-                    return false;
-            }
-
-            if (empty($this->recipient_callsign)) {
-                $this->addError('recipient_callsign', 'Missing recipient callsign');
-                return false;
-            }
-
-            $recipient = Person::findByCallsign($this->recipient_callsign);
-            if (!$recipient) {
-                $this->addError('recipient_callsign', 'Recipient callsign not found ' . $this->recipient_callsign);
-                return false;
-            }
-
-            if (in_array($recipient->status, Person::NO_MESSAGES_STATUSES)) {
-                $this->addError('recipient_callsign', "Person has a status that does not allow messages.");
-                return false;
-            }
-
-
-            switch ($this->message_type) {
-                case self::MESSAGE_TYPE_MENTOR:
-                case self::MESSAGE_TYPE_CONTACT:
-                    if (!in_array($recipient->status, [Person::ACTIVE, Person::INACTIVE, Person::INACTIVE_EXTENSION])) {
-                        $this->addError('recipient_callsign', "Person has a status that does not allow messages.");
-                        return false;
-                    }
-                    break;
-                case self::MESSAGE_TYPE_NORMAL:
-                    // most status allowed.
-                    break;
-                default:
-                    $this->addError('message_type', "Unknown message type [{$this->message_type}]");
-                    return false;
-            }
-
-            $this->person_id = $recipient->id;
-
-            if ($this->sender_person_id == $this->person_id) {
-                $this->delivered = true;
-            }
-
-            // TODO: Implement team recipients
-            if ($this->recipient_team_id && !$this->validateTeam('recipient_team_id')) {
-                $this->addError('recipient_team_id', 'Team message delivery is not implemented yet.');
-                return false;
-            }
-
-            if ($this->reply_to_id) {
-                $reply = $this->reply_to;
-                if (!$reply) {
-                    $this->addError('reply_to_id', 'Original message not found');
-                    return false;
-                }
-
-                if ($reply->sender_type != self::SENDER_TYPE_PERSON) {
-                    $this->addError('reply_to_id', 'The original message cannot be replied to as it was not from a person.');
-                    return false;
-                }
-            }
-            $this->created_at = now();
+        if (!$this->exists && !(new PersonMessageCreator())->prepareForCreate($this)) {
+            return false;
         }
 
         return parent::save($options);
