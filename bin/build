@@ -6,6 +6,16 @@
 
 . "$(dirname "$0")/.common.sh";
 
+#
+# Pass COMPOSER_AUTH as a build secret when present (never written to an image
+# layer). The Dockerfile mount is optional, so builds work without it too.
+#
+composer_auth_secret="";
+if [ -n "${COMPOSER_AUTH:-}" ]; then
+    composer_auth_secret="--secret id=composer_auth,env=COMPOSER_AUTH";
+fi
+
 docker build \
     --target=application --tag="${api_image_name}" \
+    ${composer_auth_secret} \
     "${wd}";

@@ -1,3 +1,9 @@
+# syntax=docker/dockerfile:1
+# -----------------------------------------------------------------------------
+# Requires BuildKit (DOCKER_BUILDKIT=1 or `docker buildx`) for the cache and
+# secret mounts below. Runtime behavior is identical to the pre-BuildKit version.
+# -----------------------------------------------------------------------------
+
 # -----------------------------------------------------------------------------
 # This stage builds add required extensions to the base PHP image.
 # -----------------------------------------------------------------------------
@@ -22,15 +28,25 @@ COPY --from=composer:2.8.9 /usr/bin/composer /usr/bin/composer
 # Set working directory to application directory
 WORKDIR /var/www/application
 
-# Set composer cache directory
+# Set composer cache directory (backed by a BuildKit cache mount below so it
+# persists across builds instead of being discarded when the layer is rebuilt).
 ENV COMPOSER_CACHE_DIR=/var/www/composer_cache
 
+# Copy only the dependency manifests first so the expensive install layer is
+# cached independently of application source changes.
 COPY ./composer.* ./
-# Run composer to get dependencies
-# Optimize for production and don't install development dependencies
-ARG COMPOSER_AUTH
-ENV COMPOSER_AUTH $COMPOSER_AUTH
-RUN  /usr/bin/composer install --no-plugins --no-scripts --no-dev --no-autoloader
+
+# Run composer to get dependencies.
+# Optimize for production and don't install development dependencies.
+#   --mount=type=cache  : persists downloaded package zips across builds; only
+#                         changed packages are re-downloaded on a lock change.
+#   --mount=type=secret : COMPOSER_AUTH is read at build time and NEVER written
+#                         to any image layer (replaces the old ENV credential).
+RUN --mount=type=cache,target=/var/www/composer_cache \
+    --mount=type=secret,id=composer_auth,env=COMPOSER_AUTH,required=false \
+    /usr/bin/composer install \
+      --no-interaction --no-progress --prefer-dist \
+      --no-plugins --no-scripts --no-dev --no-autoloader
 
 COPY ./app/           ./app/
 COPY ./bootstrap/     ./bootstrap/
