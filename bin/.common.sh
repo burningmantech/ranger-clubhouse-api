@@ -1,5 +1,8 @@
 set -eu
 
+# Enable BuildKit so the Dockerfile's cache and secret mounts work.
+export DOCKER_BUILDKIT=1;
+
 wd="$(cd "$(dirname "$0")/.." && pwd)";
 
 image_repo="ranger-clubhouse-api";

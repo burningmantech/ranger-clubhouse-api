@@ -1,8 +1,6 @@
 .env
 .git
 bootstrap/cache/*
-node_modules
-public/dist/*
 storage/app/*
 storage/framework/cache/*
 storage/framework/sessions/*
