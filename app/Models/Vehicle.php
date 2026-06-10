@@ -419,9 +419,8 @@ class Vehicle extends ApiModel
         return $this->attributes['signed_motorpool_agreement'] ?? false;
     }
 
-    public function setArrivalDateAttribute($value)
+    public function setArrivalDateAttribute($value) : void
     {
-        error_log("GOT TO ARRIVAL");
         $this->attributes['arrival_date'] = $value;
     }
 

@@ -530,7 +530,7 @@ class PersonScheduleController extends ApiController
                     }
                 }
 
-                $roleCanForce = Role::ART_TRAINER_BASE | $positionId;
+                $roleCanForce = Role::ART_INTERFACE_BASE | $positionId;
                 $isTrainer = true;
             } else if ($isSignup) {
                 /*

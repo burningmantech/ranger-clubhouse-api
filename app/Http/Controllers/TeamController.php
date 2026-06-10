@@ -26,6 +26,7 @@ class TeamController extends ApiController
     {
         $params = request()->validate([
             'can_manage' => 'sometimes|bool',
+            'can_edit_resources' => 'sometimes|bool',
             'include_roles' => 'sometimes|bool',
             'include_managers' => 'sometimes|bool',
             'awards_eligible' => 'sometimes|bool',

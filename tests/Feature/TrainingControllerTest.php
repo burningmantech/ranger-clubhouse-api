@@ -38,7 +38,7 @@ class TrainingControllerTest extends TestCase
 
     public function testTrainerAttendanceReport()
     {
-        $this->addRole(Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING);
+        $this->addRole(Role::ART_INTERFACE_BASE | Position::GREEN_DOT_TRAINING);
         $personId = $this->user->id;
 
         Position::factory()->create([
@@ -136,7 +136,7 @@ class TrainingControllerTest extends TestCase
 
     public function testPeopleTrainingCompleted()
     {
-        $this->addRole(Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING);
+        $this->addRole(Role::ART_INTERFACE_BASE | Position::GREEN_DOT_TRAINING);
 
         Position::factory()->create([
             'id' => Position::GREEN_DOT_TRAINER,

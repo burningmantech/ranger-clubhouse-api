@@ -25,7 +25,7 @@ class Role extends ApiModel
     const int MENTOR = 101; // Mentor - access mentor section
     const int TRAINER = 102; // Trainer
     const int VC = 103; // Volunteer Coordinator -
-    const int ART_TRAINER = 104; // replaced by ART_TRAINER_BASE
+    const int ART_TRAINER = 104; // replaced by ART_INTERFACE_BASE
     const int MEGAPHONE = 105; // RBS access
     const int TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
     const int SURVEY_MANAGEMENT_TRAINING = 107; // Allow to create/edit/delete surveys, and view responders identity.
@@ -60,24 +60,29 @@ class Role extends ApiModel
 
     const int VEHICLE_INFO_UPDATE = 131; // Can edit existing vehicle records' identifying info.
 
+    const int TEAM_RESOURCE_MANAGEMENT = 132; # For team resources, not position
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
 
     const int POSITION_MASK = 0x0fff;
 
     /**
-     * ART_TRAINER_BASE and SURVEY_MANAGE_BASE are combined (aka bit or'ed) with a training positions
+     * ART_INTERFACE_BASE and SURVEY_MANAGE_BASE are combined (aka bit or'ed) with a training positions
      * (e.g., Green Dot Training, Sandman Training) to create a permission specific to that given position.
      */
 
     const int ROLE_BASE_MASK = 0x7f000000;
-    const int ART_TRAINER_BASE = 0x1000000;
+    const int ART_INTERFACE_BASE = 0x1000000;
     const int SURVEY_MANAGEMENT_BASE = 0x2000000;
     const int ART_GRADUATE_BASE = 0x30000000;
+    const int TRAINER_RESOURCE_MANAGEMENT_BASE = 0x40000000; # For trainers
+
 
     const array ART_ROLE_SUFFIXES = [
         self::ART_GRADUATE_BASE => 'Graduate',
-        self::ART_TRAINER_BASE => 'Interface',
+        self::ART_INTERFACE_BASE => 'Interface',
         self::SURVEY_MANAGEMENT_BASE => 'Survey Mgmt',
+        self::TRAINER_RESOURCE_MANAGEMENT_BASE => 'Resrc Mgmt', # This is both an In-Person & ART interface role.
     ];
 
     protected $appends = [
@@ -177,27 +182,31 @@ class Role extends ApiModel
         $added = [];
         $existing = [];
         foreach (self::ART_ROLE_SUFFIXES as $base => $suffix) {
-            $role = $base | $positionId;
-            if ($existingRole = Role::find($role)) {
-                $existing[] = [
-                    'id' => $role,
-                    'title' => $existingRole->title,
-                ];
-                continue;
-            }
-
-            $newRole = new Role;
-            $newRole->id = $role;
-            $newRole->title = 'ART '.$title.' '.$suffix;
-            $newRole->new_user_eligible = false;
-            $newRole->save();
-            $added[] = [
-                'id' => $newRole->id,
-                'title' => $newRole->title,
-            ];
+            self::setupRole($base | $positionId, 'ART '.$title.' '.$suffix, $existing, $added);
         }
 
         return [ $added, $existing ];
+    }
+
+    private static function setupRole($role, $title, &$existing, &$added) : void
+    {
+        if ($existingRole = Role::find($role)) {
+            $existing[] = [
+                'id' => $role,
+                'title' => $existingRole->title,
+            ];
+            return;
+        }
+
+        $newRole = new Role;
+        $newRole->id = $role;
+        $newRole->title = $title;
+        $newRole->new_user_eligible = false;
+        $newRole->save();
+        $added[] = [
+            'id' => $newRole->id,
+            'title' => $newRole->title,
+        ];
     }
 
     public function getArtPositionTitleAttribute(): ?string
