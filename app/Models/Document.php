@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class Document extends ApiModel
 {
@@ -32,7 +31,14 @@ class Document extends ApiModel
         'body',
         'description',
         'refresh_time',
+        'resource_type',
+        'resource_entity_id',
         'tag',
+    ];
+
+    protected $appends = [
+        'resource_type',
+        'resource_entity_id'
     ];
 
     protected $rules = [
@@ -40,7 +46,11 @@ class Document extends ApiModel
         'description' => 'required|string',
         'body' => 'required|string',
         'refresh_time' => 'sometimes|nullable|integer',
+        'resource_type' => 'sometimes|string',
     ];
+
+    public ?string $resource_type = null;
+    public ?int $resource_entity_id = null;
 
     public function person_create(): BelongsTo
     {
@@ -66,13 +76,11 @@ class Document extends ApiModel
             return false;
         }
 
-        if (!$this->exists || $this->isDirty('tag')) {
-            $this->rules['tag'] = [
-                'required',
-                'string',
-                'unique:document,tag'
-            ];
-        }
+         $this->rules['tag'] = [
+            'required',
+            'string',
+            'unique:document,tag' . ($this->exists ? ',' . $this->id : '')
+        ];
 
         return parent::save($options);
     }
@@ -125,13 +133,38 @@ class Document extends ApiModel
      * @return string
      */
 
-    public static function contentsByTag(string $tag) : string
+    public static function contentsByTag(string $tag): string
     {
         return self::where('tag', $tag)->first()?->body ?? '';
+    }
+
+    public function tag() : Attribute
+    {
+        return NullIfEmptyAttribute::make();
     }
 
     public function refreshTime(): Attribute
     {
         return NullIfEmptyAttribute::make();
+    }
+
+    public function getResourceTypeAttribute(): ?string
+    {
+        return $this->resource_type;
+    }
+
+    public function setResourceTypeAttribute(?string $value): void
+    {
+        $this->resource_type = $value;
+    }
+
+    public function getResourceEntityIdAttribute(): ?int
+    {
+        return $this->resource_entity_id;
+    }
+
+    public function setResourceEntityIdAttribute(?string $value): void
+    {
+        $this->resource_entity_id = $value;
     }
 }

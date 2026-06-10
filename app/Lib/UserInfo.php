@@ -32,7 +32,7 @@ class UserInfo
 
         $arts = [];
         foreach ($person->roles as $role) {
-            if (($role & Role::ROLE_BASE_MASK) == Role::ART_TRAINER_BASE) {
+            if (($role & Role::ROLE_BASE_MASK) == Role::ART_INTERFACE_BASE) {
                 $positionId = $role & Role::POSITION_MASK;
                 $arts[] = [
                     'id' => $positionId,

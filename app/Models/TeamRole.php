@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Lib\ClubhouseCache;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,11 @@ class TeamRole extends ApiModel
     public function team() : BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function role() : HasMany
+    {
+        return $this->hasMany(Role::class);
     }
 
     /**

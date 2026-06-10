@@ -976,7 +976,7 @@ class PersonControllerTest extends TestCase
 
     public function testUserInfoForTeacherSuccess()
     {
-        $this->addRole([Role::TRAINER, Role::MENTOR, (Role::ART_TRAINER_BASE | Position::GREEN_DOT_TRAINING)]);
+        $this->addRole([Role::TRAINER, Role::MENTOR, (Role::ART_INTERFACE_BASE | Position::GREEN_DOT_TRAINING)]);
         PersonMentor::factory()->create(
             [
                 'mentor_id' => $this->user->id,

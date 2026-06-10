@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use LogicException;
 
 /**
  * @property boolean $active
@@ -160,6 +162,11 @@ class Team extends ApiModel
         return self::where('title', $title)->first();
     }
 
+    public static function findByResourceTag(string $resourceTag): ?Team
+    {
+        return self::where('resource_tag', $resourceTag)->first();
+    }
+
     /**
      * @param array $query
      * @param ?int $personId
@@ -227,7 +234,7 @@ class Team extends ApiModel
     public function appendRoleIds(): void
     {
         if (!$this->relationLoaded('team_roles')) {
-            throw new \LogicException('team_roles must be eager-loaded before calling appendRoleIds()');
+            throw new LogicException('team_roles must be eager-loaded before calling appendRoleIds()');
         }
 
         $this->role_ids = $this->team_roles->pluck('role_id')->toArray();
@@ -270,5 +277,36 @@ class Team extends ApiModel
     public function description(): Attribute
     {
         return NullIfEmptyAttribute::make();
+    }
+
+    public function buildResourceTag(): string
+    {
+        $tag = strtolower($this->title);
+
+        if (!$this->hasTeamSuffix()) {
+            $tag .= '-' . $this->type;
+        }
+
+        $tag = Str::kebab($tag);
+        $tag .= '-info';
+
+        return $tag;
+    }
+
+    public function hasTeamSuffix(): bool
+    {
+        $name = strtolower($this->title);
+        return str_contains($name, 'team') || str_contains($name, 'cadre') || str_contains($name, 'delegation');
+    }
+
+    public function buildResourceTitle(): string
+    {
+        $title = $this->title;
+
+        if (!$this->hasTeamSuffix()) {
+            $title .= ' ' . ucfirst($this->type);
+        }
+
+        return $title . ' Document';
     }
 }

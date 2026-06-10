@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Position extends ApiModel
 {
@@ -778,4 +779,13 @@ class Position extends ApiModel
     {
         return BlankIfEmptyAttribute::make();
     }
+
+    public function buildResourceTitle() : string {
+        return $this->title . ' Position Document';
+    }
+
+    public function buildResourceTag() : string {
+        return Str::kebab($this->title) . '-resource';
+    }
 }
+

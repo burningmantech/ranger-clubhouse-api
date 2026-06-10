@@ -31,7 +31,7 @@ class TrainingPolicy
     private function canView(Person $user, Training $training): bool
     {
         if ($training->is_art) {
-            return $user->hasRole(Role::ART_TRAINER_BASE | $training->id);
+            return $user->hasRole(Role::ART_INTERFACE_BASE | $training->id);
         } else if ($user->hasRole([Role::TRAINER, Role::MENTOR, Role::VC])) {
             return true;
         } else {
@@ -45,7 +45,7 @@ class TrainingPolicy
             return false;
         }
 
-        return $user->hasRole(Role::ART_TRAINER_BASE | $training->id);
+        return $user->hasRole(Role::ART_INTERFACE_BASE | $training->id);
     }
 
     public function multipleEnrollmentsReport(Person $user, Training $training): bool
@@ -97,6 +97,6 @@ class TrainingPolicy
             return false;
         }
 
-        return $user->hasRole(Role::ART_TRAINER_BASE | $training->id);
+        return $user->hasRole(Role::ART_INTERFACE_BASE | $training->id);
     }
 }
