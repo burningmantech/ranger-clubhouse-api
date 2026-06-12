@@ -51,7 +51,6 @@ class DocumentController extends ApiController
 
     public function store(): JsonResponse
     {
-        $this->authorize('store', [Document::class]);
         $personId = $this->user->id;
 
         $document = new Document;
@@ -59,9 +58,12 @@ class DocumentController extends ApiController
 
         $entity = null;
         if (!empty($document->resource_type)) {
+            // Authorization happens thru entity retrieval
             $entity = $this->retrieveResourceEntity($document->resource_type, $document->resource_entity_id);
             $document->tag = $entity->buildResourceTag();
             $document->description = $entity->buildResourceTitle();
+        } else {
+            $this->authorize('store', [Document::class]);
         }
 
         $document->person_create_id = $personId;

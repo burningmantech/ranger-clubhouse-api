@@ -188,7 +188,7 @@ class Role extends ApiModel
         return [ $added, $existing ];
     }
 
-    private static function setupRole($role, $title, &$existing, &$added) : void
+    public static function setupRole($role, $title, &$existing, &$added) : void
     {
         if ($existingRole = Role::find($role)) {
             $existing[] = [
