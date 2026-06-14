@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Exceptions\UnacceptableConditionException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\Gate;
 
 class Role extends ApiModel
 {
@@ -63,6 +65,14 @@ class Role extends ApiModel
     const int TEAM_RESOURCE_MANAGEMENT = 132; # For team resources, not position
 
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
+
+    /**
+     * Protected roles confer godlike power. Per CONTEXT.md, a protected role may only be
+     * granted or revoked by someone who already holds it: an Admin cannot confer Tech Ninja,
+     * and a Tech Ninja cannot confer Admin.
+     */
+
+    const array PROTECTED = [self::ADMIN, self::TECH_NINJA];
 
     const int POSITION_MASK = 0x0fff;
 
@@ -136,6 +146,55 @@ class Role extends ApiModel
             Position::class,
             PositionRole::class, 'role_id', 'id', 'id', 'position_id'
         )->orderBy('position.title');
+    }
+
+    /**
+     * May the current actor confer (grant or revoke) the given role?
+     *
+     * Non-protected roles are unrestricted here; protected roles require the actor to
+     * already hold that same role. This is the single rule every role-conferring path
+     * (positions, teams, direct role edits) consults.
+     *
+     * @param int $roleId
+     * @return bool
+     */
+
+    public static function actorMayConfer(int $roleId): bool
+    {
+        return Gate::allows('confer-role', $roleId);
+    }
+
+    /**
+     * Assert the current actor may confer every protected role in the given set.
+     * Non-protected roles are ignored.
+     *
+     * @param int[] $roleIds the roles a position, team, or grant would confer
+     * @throws AuthorizationException
+     */
+
+    public static function assertActorMayConfer(array $roleIds): void
+    {
+        foreach (array_intersect($roleIds, self::PROTECTED) as $roleId) {
+            if (!self::actorMayConfer($roleId)) {
+                throw new AuthorizationException('Not authorized to grant or revoke the ' . self::label($roleId) . ' role.');
+            }
+        }
+    }
+
+    /**
+     * Human-readable label for a protected role, used in authorization messages.
+     *
+     * @param int $roleId
+     * @return string
+     */
+
+    private static function label(int $roleId): string
+    {
+        return match ($roleId) {
+            self::ADMIN => 'Admin',
+            self::TECH_NINJA => 'Tech Ninja',
+            default => "role #$roleId",
+        };
     }
 
     /**

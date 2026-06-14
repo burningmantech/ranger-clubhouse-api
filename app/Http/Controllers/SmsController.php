@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Lib\RBS;
+use App\Lib\SmsGateway;
 use App\Lib\SMSException;
 use App\Lib\SMSService;
 use App\Models\Broadcast;
@@ -114,13 +115,13 @@ class SmsController extends ApiController
 
         // Check to see either number is a text capable device.
         if ($onPlayaChanged && $onPlaya != '' && !$person->sms_on_playa_verified) {
-            if (!SMSService::isSMSCapable($onPlaya)) {
+            if (!app(SmsGateway::class)->isSMSCapable($onPlaya)) {
                 throw new UnacceptableConditionException("Sorry, $onPlaya does not appear to be a cellphone.");
             }
         }
 
         if ($offPlayaChanged && $offPlaya != '' && $onPlaya != $offPlaya && !$person->sms_off_playa_verified) {
-            if (!SMSService::isSMSCapable($offPlaya)) {
+            if (!app(SmsGateway::class)->isSMSCapable($offPlaya)) {
                 throw new UnacceptableConditionException("Sorry, $offPlaya does not appear to be a cellphone.");
             }
         }
@@ -531,7 +532,7 @@ class SmsController extends ApiController
 
         $message = "Your verification code is: $code";
         try {
-            SMSService::broadcast([$phone], $message);
+            app(SmsGateway::class)->broadcast([$phone], $message);
         } catch (SMSException $e) {
             ErrorLog::recordException($e, 'sms-exception', [
                 'type' => 'sms-verify',

@@ -191,6 +191,18 @@ class PersonTeam extends ApiModel
     }
 
     /**
+     * The role ids a team confers on its members.
+     *
+     * @param int $teamId
+     * @return int[]
+     */
+
+    private static function roleIdsForTeam(int $teamId): array
+    {
+        return DB::table('team_role')->where('team_id', $teamId)->pluck('role_id')->toArray();
+    }
+
+    /**
      * Add a person to a team. Log the addition.
      *
      * @param int $teamId
@@ -202,15 +214,7 @@ class PersonTeam extends ApiModel
 
     public static function addPerson(int $teamId, int $personId, ?string $reason): void
     {
-        $hasTechNinja = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::TECH_NINJA])->exists();
-        if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
-            throw new AuthorizationException("No authorization to grant membership for a team with the Tech Ninja permission associated.");
-        }
-
-        $hasAdmin = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::ADMIN])->exists();
-        if ($hasAdmin && !Auth::user()?->isAdmin()) {
-            throw new AuthorizationException("No authorization to grant membership for a team with the Admin permission associated.");
-        }
+        Role::assertActorMayConfer(self::roleIdsForTeam($teamId));
 
         self::create(['team_id' => $teamId, 'person_id' => $personId]);
         PersonTeamLog::addPerson($teamId, $personId);
@@ -229,15 +233,7 @@ class PersonTeam extends ApiModel
 
     public static function removePerson($teamId, $personId, $reason): void
     {
-        $hasTechNinja = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::TECH_NINJA])->exists();
-        if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
-            throw new AuthorizationException("No authorization to revoke membership for a team with the Tech Ninja permission associated.");
-        }
-
-        $hasAdmin = DB::table('team_role')->where(['team_id' => $teamId, 'role_id' => Role::ADMIN])->exists();
-        if ($hasAdmin && !Auth::user()?->isAdmin()) {
-            throw new AuthorizationException("No authorization to revoke membership for a team with the Admin permission associated.");
-        }
+        Role::assertActorMayConfer(self::roleIdsForTeam($teamId));
 
         self::where(['team_id' => $teamId, 'person_id' => $personId])->delete();
         PersonTeamLog::removePerson($teamId, $personId);
