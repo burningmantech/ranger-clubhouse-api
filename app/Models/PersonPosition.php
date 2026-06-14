@@ -212,15 +212,9 @@ class PersonPosition extends ApiModel
     {
         $addIds = [];
         foreach ($ids as $id) {
-            $hasTechNinja = DB::table('position_role')->where(['position_id' => $id, 'role_id' => Role::TECH_NINJA])->exists();
-            if ($hasTechNinja && !Auth::user()?->hasRole(Role::TECH_NINJA)) {
-                throw new AuthorizationException("No authorization to grant a position with the Tech Ninja permission associated.");
-            }
-
-            $hasAdmin = DB::table('position_role')->where(['position_id' => $id, 'role_id' => Role::ADMIN])->exists();
-            if ($hasAdmin && !Auth::user()?->isAdmin()) {
-                throw new AuthorizationException("No authorization to grant a position with the Admin permission associated.");
-            }
+            Role::assertActorMayConfer(
+                DB::table('position_role')->where('position_id', $id)->pluck('role_id')->toArray()
+            );
 
             // Don't worry if there is a duplicate record.
             if (DB::table('person_position')->insertOrIgnore(['person_id' => $personId, 'position_id' => $id]) == 1) {

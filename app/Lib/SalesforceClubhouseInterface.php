@@ -111,7 +111,7 @@ class SalesforceClubhouseInterface
 
     public function __construct($sf = null)
     {
-        $this->sf = $sf ?? new SalesforceConnector();
+        $this->sf = $sf ?? app(SalesforceConnector::class);
     }
 
     /**

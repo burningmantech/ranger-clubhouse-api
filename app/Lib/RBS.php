@@ -199,7 +199,7 @@ class RBS
 
             if (!setting('BroadcastSMSSandbox')) {
                 try {
-                    $status = SMSService::broadcast($phoneNumbers, $message);
+                    $status = app(SmsGateway::class)->broadcast($phoneNumbers, $message);
                     if ($status == Broadcast::STATUS_SENT) {
                         $sent++;
                     } else {
@@ -336,7 +336,7 @@ class RBS
             $phoneNumbers = $sms->pluck('address')->toArray();
             try {
                 // Try to annoy people again.
-                SMSService::broadcast($phoneNumbers, $broadcast->sms_message);
+                app(SmsGateway::class)->broadcast($phoneNumbers, $broadcast->sms_message);
                 foreach ($sms as $message) {
                     $message->update(['status' => Broadcast::STATUS_SENT]);
                 }
@@ -906,7 +906,7 @@ class RBS
 
             try {
                 if (!$smsSandboxed) {
-                    $status = SMSService::broadcast([$phoneNumber], $smsMessage);
+                    $status = app(SmsGateway::class)->broadcast([$phoneNumber], $smsMessage);
                 } else {
                     $status = Broadcast::STATUS_SENT;
                 }

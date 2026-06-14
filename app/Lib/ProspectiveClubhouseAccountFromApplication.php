@@ -171,7 +171,7 @@ class ProspectiveClubhouseAccountFromApplication
     {
         $sf = null;
         if ($commit) {
-            $sf = new SalesforceConnector();
+            $sf = app(SalesforceConnector::class);
             if (!$sf->auth()) {
                 return false;
             }
