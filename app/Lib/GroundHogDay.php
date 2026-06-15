@@ -129,18 +129,25 @@ class GroundHogDay
 
         Setting::find('DashboardPeriod')->update(['value' => 'event']);
 
-        self::passHQTraining("hqworkertest@nomail.none", $year);
-        self::passHQTraining("hqshorttest@nomail.none", $year);
-        self::passHQTraining("hqleadtest@nomail.none", $year);
+        self::passHQTraining("hqworkertest@nomail.none", $year, [Position::HQ_FULL_TRAINING]);
+        self::passHQTraining("hqshorttest@nomail.none", $year, [Position::HQ_FULL_TRAINING, Position::HQ_LEADS_SHORTS_TRAINING]);
+        self::passHQTraining("hqleadtest@nomail.none", $year, [Position::HQ_FULL_TRAINING, Position::HQ_LEADS_SHORTS_TRAINING]);
+        self::clearRequireSignInPositions([Position::HQ_WINDOW, Position::HQ_SHORT, Position::HQ_LEAD]);
+
+        self::hqSlotInfo($year);
 
         $hqPassword = env('RANGER_CLUBHOUSE_HQ_TRAINING_PASSWORD');
         if (!empty($hqPassword)) {
-            self::setPassword("hqworkertest@nomail.none", $hqPassword);
-            self::setPassword("hqshorttest@nomail.none", $hqPassword);
-            self::setPassword("hqleadtest@nomail.none", $hqPassword);
+            self::setPassword("hqworkertest@nomail.none", $hqPassword, false);
+            self::setPassword("hqshorttest@nomail.none", $hqPassword, true);
+            self::setPassword("hqleadtest@nomail.none", $hqPassword, true);
         }
     }
 
+    public static function hqSlotInfo(int $year) : void {
+        Slot::where('begins_year', $year)->whereIn('position_id',
+            [Position::HQ_LEAD,Position::HQ_SHORT,Position::HQ_WINDOW, Position::HQ_WINDOW_PRE_EVENT])->update([ 'url' => '']);
+    }
     /**
      * Build the training database dump name.
      *
@@ -158,7 +165,7 @@ class GroundHogDay
      * Setup to an account has passed HQ Training
      */
 
-    public static function passHQTraining(string $email, int $year): void
+    public static function passHQTraining(string $email, int $year, array $trainingPositionIds): void
     {
         $person = Person::findByEmail($email);
 
@@ -167,16 +174,33 @@ class GroundHogDay
             return;
         }
 
-        $slot = Slot::where('position_id', Position::HQ_FULL_TRAINING)->where('active', true)->where('begins_year', $year)->first();
-        if (!$slot) {
-            Log::error("Cannot find HQ training slot");
-            return;
+        foreach ($trainingPositionIds as $id) {
+            $slot = Slot::where('position_id', $id)->where('active', true)->where('begins_year', $year)->first();
+            if (!$slot) {
+                Log::error("Cannot find HQ training slot");
+                return;
+            }
+
+            PersonSlot::insert(['slot_id' => $slot->id, 'person_id' => $person->id]);
+            $ts = TraineeStatus::firstOrNewForSession($person->id, $slot->id);
+            $ts->passed = true;
+            $ts->saveWithoutValidation();
         }
 
-        PersonSlot::insert(['slot_id' => $slot->id, 'person_id' => $person->id]);
-        $ts = TraineeStatus::firstOrNewForSession($person->id, $slot->id);
-        $ts->passed = true;
-        $ts->saveWithoutValidation();
+    }
+
+    public static function clearRequireSignInPositions(array $positionIds): void
+    {
+        foreach ($positionIds as $id) {
+            $position = Position::find($id);
+            if (!$position) {
+                Log::error("Cannot find HQ training position");
+                return;
+            }
+
+            $position->require_signin_for_roles = false;
+            $position->saveWithoutValidation();
+        }
     }
 
     /**

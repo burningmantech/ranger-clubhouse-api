@@ -8,20 +8,11 @@
 
 namespace App\Lib;
 
-use Exception;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
 use RuntimeException;
-use Twilio\Exceptions\ConfigurationException;
-use Twilio\Exceptions\RestException;
-use Twilio\Exceptions\TwilioException;
-use Twilio\Rest\Client;
 use Twilio\TwiML\MessagingResponse;
-
-class SMSException extends Exception
-{
-}
 
 class SMSService
 {
@@ -48,94 +39,11 @@ class SMSService
     }
 
     /*
-     * Broadcast a message to set of phones.
-     *
-     * @param array $phoneNumbers list of phone numbers to spam
-     * @param string $message Text to send.
-     * @throw SMSException if Twilio experienced an error.
+     * Outbound SMS (broadcast) and carrier lookup (isSMSCapable) now live behind the
+     * SmsGateway seam. Resolve with app(SmsGateway::class). Adapters: TwilioSmsGateway
+     * (production), Tests\Support\FakeSmsGateway (tests). The pure helpers below — token
+     * lookup, phone normalization, incoming/response shaping — stay here.
      */
-
-    /**
-     * @throws SMSException
-     */
-    public static function broadcast($phoneNumbers, $message): string
-    {
-        list ($accountSid, $authToken) = SMSService::getTokens();
-
-        $serviceIds = setting('TwilioServiceId');
-        if (empty($serviceIds)) {
-            throw new RuntimeException('TwilioServiceId is not configured');
-        }
-        $serviceIds = explode(',', $serviceIds);
-
-        $bindings = [];
-        // Build up request - normalize the numbers
-        foreach ($phoneNumbers as $phone) {
-            $bindings[] = json_encode([
-                'binding_type' => 'sms',
-                'address' => self::normalizePhone($phone)
-            ]);
-        }
-
-        $serviceCount = count($serviceIds);
-        $chunkSize = intval((count($bindings) + ($serviceCount - 1)) / $serviceCount);
-        $bindingChunks = array_chunk($bindings, $chunkSize);
-
-        foreach ($serviceIds as $idx => $serviceId) {
-            try {
-                // The Twilio notify API will not produce an error when
-                // an invalid phone number is given.
-                $twilio = new Client($accountSid, $authToken);
-                $notification = $twilio->notify->v1->services($serviceId)->notifications;
-                $params = [
-                    'body' => $message,
-                    'toBinding' => $bindingChunks[$idx],
-                ];
-                $response = $notification->create($params);
-            } catch (TwilioException $e) {
-                throw new SMSException($e->getMessage());
-            }
-        }
-
-        return 'sent';
-    }
-
-    /**
-     * Try to find out if a phone number can text, maybe.
-     *
-     * Note this may only work for US numbers.
-     *
-     * https://support.twilio.com/hc/en-us/articles/360004563433
-     *
-     * @param string $phoneNumber number to look up in E.164 format
-     * @return bool true if the phone can text.
-     * @throws RestException
-     * @throws TwilioException
-     * @throws ConfigurationException
-     */
-
-    public static function isSMSCapable($phoneNumber): bool
-    {
-        list ($accountSid, $authToken) = SMSService::getTokens();
-
-        $twilio = new Client($accountSid, $authToken);
-
-        try {
-            $info = $twilio->lookups->v1->phoneNumbers($phoneNumber)
-                ->fetch(["type" => "carrier"]);
-        } catch (RestException $e) {
-            if ($e->getStatusCode() == 404) {
-                return false; // Not a valid phone number
-            }
-
-            throw $e; // Not sure what's going on.
-        }
-
-        $type = $info->carrier['type'];
-        // In case there's no line type, allow it to pass. The verification
-        // stage will flush that out.
-        return ($type == 'mobile' || $type == 'voip' || $type == '');
-    }
 
     /*
      * Process an incoming messages into a common format.

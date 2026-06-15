@@ -496,7 +496,7 @@ class Survey extends ApiModel
 
     public function isTrainerForSurvey(Person $user): bool
     {
-        return self::hasRoleForPosition($user, Role::TRAINER, Role::ART_TRAINER_BASE, $this->position_id);
+        return self::hasRoleForPosition($user, Role::TRAINER, Role::ART_INTERFACE_BASE, $this->position_id);
     }
 
     public static function hasRoleForPosition(Person $user, int $trainerRole, int $base, ?int $positionId): bool

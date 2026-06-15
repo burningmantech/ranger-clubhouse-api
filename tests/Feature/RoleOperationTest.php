@@ -16,6 +16,7 @@ use App\Models\Slot;
 use App\Models\Team;
 use App\Models\TeamRole;
 use App\Models\TraineeStatus;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
@@ -190,5 +191,129 @@ class RoleOperationTest extends TestCase
         Cache::flush();
         $user->retrieveRoles();
         $this->assertContains(Role::MENTOR, $user->roles);
+    }
+
+    /**
+     * A position conferring only ordinary roles may be granted by anyone.
+     *
+     * @return void
+     */
+
+    public function test_grants_non_protected_position_without_special_role(): void
+    {
+        $position = Position::factory()->create();
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::MENTOR]);
+        $target = Person::factory()->create();
+
+        PersonPosition::addIdsToPerson($target->id, [$position->id], 'test');
+
+        $this->assertDatabaseHas('person_position', ['person_id' => $target->id, 'position_id' => $position->id]);
+    }
+
+    /**
+     * A position conferring the Tech Ninja role may only be granted by a Tech Ninja.
+     *
+     * @return void
+     */
+
+    public function test_cannot_grant_tech_ninja_position_without_tech_ninja(): void
+    {
+        $position = Position::factory()->create();
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::TECH_NINJA]);
+        $target = Person::factory()->create();
+
+        $this->expectException(AuthorizationException::class);
+        PersonPosition::addIdsToPerson($target->id, [$position->id], 'test');
+    }
+
+    /**
+     * A Tech Ninja may grant a position conferring the Tech Ninja role.
+     *
+     * @return void
+     */
+
+    public function test_tech_ninja_can_grant_tech_ninja_position(): void
+    {
+        $this->addRole(Role::TECH_NINJA);
+        $position = Position::factory()->create();
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::TECH_NINJA]);
+        $target = Person::factory()->create();
+
+        PersonPosition::addIdsToPerson($target->id, [$position->id], 'test');
+
+        $this->assertDatabaseHas('person_position', ['person_id' => $target->id, 'position_id' => $position->id]);
+    }
+
+    /**
+     * Tech Ninja does not stand in for Admin: an Admin-conferring position still requires Admin.
+     *
+     * @return void
+     */
+
+    public function test_admin_position_requires_admin_not_tech_ninja(): void
+    {
+        $this->addRole(Role::TECH_NINJA); // godlike, but not an Admin
+        $position = Position::factory()->create();
+        PositionRole::factory()->create(['position_id' => $position->id, 'role_id' => Role::ADMIN]);
+        $target = Person::factory()->create();
+
+        $this->expectException(AuthorizationException::class);
+        PersonPosition::addIdsToPerson($target->id, [$position->id], 'test');
+    }
+
+    /**
+     * A team conferring the Tech Ninja role may only be granted by a Tech Ninja.
+     *
+     * @return void
+     */
+
+    public function test_cannot_grant_tech_ninja_team_without_tech_ninja(): void
+    {
+        $team = Team::factory()->create();
+        TeamRole::factory()->create(['team_id' => $team->id, 'role_id' => Role::TECH_NINJA]);
+        $target = Person::factory()->create();
+
+        $this->expectException(AuthorizationException::class);
+        PersonTeam::addPerson($team->id, $target->id, 'test');
+    }
+
+    /**
+     * The role editor silently ignores a Tech Ninja grant attempted by a non-Tech-Ninja admin,
+     * while still applying ordinary roles.
+     *
+     * @return void
+     */
+
+    public function test_update_roles_ignores_tech_ninja_grant_by_non_tech_ninja_admin(): void
+    {
+        $this->addRole(Role::ADMIN); // can reach the role editor, but is not a Tech Ninja
+        $target = Person::factory()->create();
+
+        $response = $this->json('POST', "person/{$target->id}/roles", [
+            'role_ids' => [Role::MENTOR, Role::TECH_NINJA],
+        ]);
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('person_role', ['person_id' => $target->id, 'role_id' => Role::MENTOR]);
+        $this->assertDatabaseMissing('person_role', ['person_id' => $target->id, 'role_id' => Role::TECH_NINJA]);
+    }
+
+    /**
+     * An Admin may grant the Admin role through the role editor (behavior preserved).
+     *
+     * @return void
+     */
+
+    public function test_update_roles_allows_admin_to_grant_admin_role(): void
+    {
+        $this->addRole(Role::ADMIN);
+        $target = Person::factory()->create();
+
+        $response = $this->json('POST', "person/{$target->id}/roles", [
+            'role_ids' => [Role::ADMIN],
+        ]);
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('person_role', ['person_id' => $target->id, 'role_id' => Role::ADMIN]);
     }
 }

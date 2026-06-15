@@ -77,7 +77,7 @@ class TrainingSessionPolicy
     private function isAllowedForSession(Person $user, TrainingSession $training_session, bool $inTakeAllow = false): bool
     {
         if ($training_session->isArt()) {
-            return $user->hasRole(Role::ART_TRAINER_BASE | $training_session->position_id);
+            return $user->hasRole(Role::ART_INTERFACE_BASE | $training_session->position_id);
         }
 
         if ($inTakeAllow && $user->hasRole([Role::MENTOR, Role::VC])) {

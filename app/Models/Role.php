@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Exceptions\UnacceptableConditionException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\Gate;
 
 class Role extends ApiModel
 {
@@ -25,7 +27,7 @@ class Role extends ApiModel
     const int MENTOR = 101; // Mentor - access mentor section
     const int TRAINER = 102; // Trainer
     const int VC = 103; // Volunteer Coordinator -
-    const int ART_TRAINER = 104; // replaced by ART_TRAINER_BASE
+    const int ART_TRAINER = 104; // replaced by ART_INTERFACE_BASE
     const int MEGAPHONE = 105; // RBS access
     const int TIMESHEET_MANAGEMENT = 106; // Create, edit, correct, verify timesheets
     const int SURVEY_MANAGEMENT_TRAINING = 107; // Allow to create/edit/delete surveys, and view responders identity.
@@ -60,24 +62,37 @@ class Role extends ApiModel
 
     const int VEHICLE_INFO_UPDATE = 131; // Can edit existing vehicle records' identifying info.
 
+    const int TEAM_RESOURCE_MANAGEMENT = 132; # For team resources, not position
+
     const int TECH_NINJA = 1000;    // godlike powers granted - access to dangerous maintenance functions, raw database access.
+
+    /**
+     * Protected roles confer godlike power. Per CONTEXT.md, a protected role may only be
+     * granted or revoked by someone who already holds it: an Admin cannot confer Tech Ninja,
+     * and a Tech Ninja cannot confer Admin.
+     */
+
+    const array PROTECTED = [self::ADMIN, self::TECH_NINJA];
 
     const int POSITION_MASK = 0x0fff;
 
     /**
-     * ART_TRAINER_BASE and SURVEY_MANAGE_BASE are combined (aka bit or'ed) with a training positions
+     * ART_INTERFACE_BASE and SURVEY_MANAGE_BASE are combined (aka bit or'ed) with a training positions
      * (e.g., Green Dot Training, Sandman Training) to create a permission specific to that given position.
      */
 
     const int ROLE_BASE_MASK = 0x7f000000;
-    const int ART_TRAINER_BASE = 0x1000000;
+    const int ART_INTERFACE_BASE = 0x1000000;
     const int SURVEY_MANAGEMENT_BASE = 0x2000000;
     const int ART_GRADUATE_BASE = 0x30000000;
+    const int TRAINER_RESOURCE_MANAGEMENT_BASE = 0x40000000; # For trainers
+
 
     const array ART_ROLE_SUFFIXES = [
         self::ART_GRADUATE_BASE => 'Graduate',
-        self::ART_TRAINER_BASE => 'Interface',
+        self::ART_INTERFACE_BASE => 'Interface',
         self::SURVEY_MANAGEMENT_BASE => 'Survey Mgmt',
+        self::TRAINER_RESOURCE_MANAGEMENT_BASE => 'Resrc Mgmt', # This is both an In-Person & ART interface role.
     ];
 
     protected $appends = [
@@ -134,6 +149,55 @@ class Role extends ApiModel
     }
 
     /**
+     * May the current actor confer (grant or revoke) the given role?
+     *
+     * Non-protected roles are unrestricted here; protected roles require the actor to
+     * already hold that same role. This is the single rule every role-conferring path
+     * (positions, teams, direct role edits) consults.
+     *
+     * @param int $roleId
+     * @return bool
+     */
+
+    public static function actorMayConfer(int $roleId): bool
+    {
+        return Gate::allows('confer-role', $roleId);
+    }
+
+    /**
+     * Assert the current actor may confer every protected role in the given set.
+     * Non-protected roles are ignored.
+     *
+     * @param int[] $roleIds the roles a position, team, or grant would confer
+     * @throws AuthorizationException
+     */
+
+    public static function assertActorMayConfer(array $roleIds): void
+    {
+        foreach (array_intersect($roleIds, self::PROTECTED) as $roleId) {
+            if (!self::actorMayConfer($roleId)) {
+                throw new AuthorizationException('Not authorized to grant or revoke the ' . self::label($roleId) . ' role.');
+            }
+        }
+    }
+
+    /**
+     * Human-readable label for a protected role, used in authorization messages.
+     *
+     * @param int $roleId
+     * @return string
+     */
+
+    private static function label(int $roleId): string
+    {
+        return match ($roleId) {
+            self::ADMIN => 'Admin',
+            self::TECH_NINJA => 'Tech Ninja',
+            default => "role #$roleId",
+        };
+    }
+
+    /**
      * Find all the roles and any associated teams and/or positions
      *
      * @param array $query <string,mixed>
@@ -177,27 +241,31 @@ class Role extends ApiModel
         $added = [];
         $existing = [];
         foreach (self::ART_ROLE_SUFFIXES as $base => $suffix) {
-            $role = $base | $positionId;
-            if ($existingRole = Role::find($role)) {
-                $existing[] = [
-                    'id' => $role,
-                    'title' => $existingRole->title,
-                ];
-                continue;
-            }
-
-            $newRole = new Role;
-            $newRole->id = $role;
-            $newRole->title = 'ART '.$title.' '.$suffix;
-            $newRole->new_user_eligible = false;
-            $newRole->save();
-            $added[] = [
-                'id' => $newRole->id,
-                'title' => $newRole->title,
-            ];
+            self::setupRole($base | $positionId, 'ART '.$title.' '.$suffix, $existing, $added);
         }
 
         return [ $added, $existing ];
+    }
+
+    public static function setupRole($role, $title, &$existing, &$added) : void
+    {
+        if ($existingRole = Role::find($role)) {
+            $existing[] = [
+                'id' => $role,
+                'title' => $existingRole->title,
+            ];
+            return;
+        }
+
+        $newRole = new Role;
+        $newRole->id = $role;
+        $newRole->title = $title;
+        $newRole->new_user_eligible = false;
+        $newRole->save();
+        $added[] = [
+            'id' => $newRole->id,
+            'title' => $newRole->title,
+        ];
     }
 
     public function getArtPositionTitleAttribute(): ?string

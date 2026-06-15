@@ -365,7 +365,8 @@ class PersonController extends ApiController
     }
 
     /**
-     * Update the roles held. The Tech Ninja and Admin roles may only be alerted by Tech Ninja role holders.
+     * Update the roles held. Protected roles (Admin, Tech Ninja) may only be granted or revoked by
+     * an actor who already holds that same role; other attempts are silently ignored.
      *
      * @param Person $person
      * @return JsonResponse
@@ -389,20 +390,20 @@ class PersonController extends ApiController
         $newIds = [];
         $deleteIds = [];
 
-        // Only tech ninjas may grant/revoke the tech ninja roles. Ignore attempts to alter the roles by
-        // mere mortals.
-        $isTechNinja = $this->userHasRole(Role::TECH_NINJA);
+        // Protected roles (Admin, Tech Ninja) may only be granted or revoked by someone who holds them.
+        // Silently ignore attempts to alter a protected role the actor does not hold, so editing a person
+        // never strips roles the editor cannot manage.
 
         // Find the new ids to be added
         foreach ($roleIds as $id) {
-            if (!in_array($id, $existingRoles) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $existingRoles) && Role::actorMayConfer($id)) {
                 $newIds[] = $id;
             }
         }
 
         // Find the ids to be deleted
         foreach ($existingRoles as $id) {
-            if (!in_array($id, $roleIds) && ($id != Role::TECH_NINJA || $isTechNinja)) {
+            if (!in_array($id, $roleIds) && Role::actorMayConfer($id)) {
                 $deleteIds[] = $id;
             }
         }

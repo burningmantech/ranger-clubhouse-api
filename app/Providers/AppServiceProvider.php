@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Http\Middleware\RequestLoggerMiddleware;
+use App\Lib\SmsGateway;
+use App\Lib\TwilioSmsGateway;
 use App\Models\Bmid;
 use App\Models\Document;
 use App\Models\Help;
@@ -76,6 +78,9 @@ class AppServiceProvider extends ServiceProvider
         // The logger needs to stay instantiated between handle() and terminate()
         $this->app->singleton(RequestLoggerMiddleware::class);
 
+        // Outbound SMS goes through a seam so tests can substitute a fake for the Twilio SDK.
+        $this->app->bind(SmsGateway::class, TwilioSmsGateway::class);
+
         if (config('telescope.enabled')) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);
@@ -103,6 +108,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('isTimesheetManager', function (Person $user) {
             return $user->hasRole([Role::ADMIN, Role::TIMESHEET_MANAGEMENT]);
         });
+
+        // A protected role (Admin, Tech Ninja) may only be conferred by someone who already holds it.
+        Gate::define('confer-role', function (Person $actor, int $roleId): bool {
+            return !in_array($roleId, Role::PROTECTED, true) || $actor->hasRole($roleId);
+        });
+
         Gate::resource('person', 'PersonPolicy');
     }
 

@@ -96,7 +96,7 @@ class ProspectiveApplicationImport
 
     public function __construct()
     {
-        $this->sf = new SalesforceConnector();
+        $this->sf = app(SalesforceConnector::class);
     }
 
     /**

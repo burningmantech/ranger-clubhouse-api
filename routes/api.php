@@ -189,6 +189,8 @@ Route::middleware(['authenticate', 'api'])->group(function () {
     Route::get('bulk-upload/actions', [BulkUploadController::class, 'actions']);
     Route::post('bulk-upload', [BulkUploadController::class, 'process']);
 
+    Route::get('document/resource-edit', [DocumentController::class, 'resourceEdit']);
+    Route::delete('document/resource-delete', [DocumentController::class, 'resourceDelete']);
     Route::resource('document', DocumentController::class);
 
     Route::get('callsigns', [CallsignsController::class, 'index']);
