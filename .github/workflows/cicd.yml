@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Harden CI
-        uses: step-security/harden-runner@v2.13.2
+        uses: step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
 
@@ -45,7 +45,7 @@ jobs:
     steps:
 
       - name: Harden CI
-        uses: step-security/harden-runner@v2.13.2
+        uses: step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
 
@@ -56,7 +56,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: application
@@ -72,7 +72,7 @@ jobs:
         run: docker image save ranger-clubhouse-api:dev | gzip -1 > docker_image.tgz
 
       - name: Upload Docker image artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: docker
           path: docker_image.tgz
@@ -88,7 +88,7 @@ jobs:
     steps:
 
       - name: Harden CI
-        uses: step-security/harden-runner@v2.13.2
+        uses: step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
 
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: docker
 
@@ -117,7 +117,7 @@ jobs:
     steps:
 
       - name: Harden CI
-        uses: step-security/harden-runner@v2.13.2
+        uses: step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
 
@@ -125,7 +125,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: docker
 
@@ -148,7 +148,7 @@ jobs:
     steps:
 
       - name: Harden CI
-        uses: step-security/harden-runner@v2.13.2
+        uses: step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
 
@@ -156,7 +156,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download Docker image artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: docker
 
