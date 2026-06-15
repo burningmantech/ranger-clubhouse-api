@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -136,8 +137,10 @@ class BmidExport extends ApiModel
         return self::STORAGE_DIR . $filename;
     }
 
-    public function getFilenameUrlAttribute(): string
+    protected function filenameUrl(): Attribute
     {
-        return self::storage()->url(self::storagePath($this->filename));
+        return Attribute::make(
+            get: fn () => self::storage()->url(self::storagePath($this->filename)),
+        );
     }
 }

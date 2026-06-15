@@ -718,44 +718,40 @@ class Position extends ApiModel
      * Return the "sub type" of the position - i.e. return an additional types
      * For mentoring positions, figure out if it's a mentor or mentee position (Alpha & Cheetah Cub)
      *
-     * @return string|null
+     * @return Attribute
      */
 
-    public function getSubtypeAttribute(): ?string
+    public function subtype(): Attribute
     {
-        $id = $this->id;
-
-        if ($this->type == self::TYPE_MENTORING) {
-            if ($id == Position::ALPHA || $id == Position::CHEETAH_CUB) {
-                return 'mentee';
-            }
-            return 'mentor';
-        } else {
-            return $this->type;
-        }
+        return Attribute::make(
+            get: function () {
+                if ($this->type == self::TYPE_MENTORING) {
+                    if ($this->id == Position::ALPHA || $this->id == Position::CHEETAH_CUB) {
+                        return 'mentee';
+                    }
+                    return 'mentor';
+                } else {
+                    return $this->type;
+                }
+            },
+        );
     }
 
     /**
      * Get the pseudo role_ids field
      *
-     * @return array|null
+     * @return Attribute
      */
 
-    public function getRoleIdsAttribute(): ?array
+    public function roleIds(): Attribute
     {
-        return $this->role_ids;
-    }
-
-    /**
-     * Set the pseudo role_ids field
-     *
-     * @param $value
-     * @return void
-     */
-
-    public function setRoleIdsAttribute($value): void
-    {
-        $this->role_ids = $value;
+        return Attribute::make(
+            get: fn () => $this->role_ids,
+            set: function ($value): array {
+                $this->role_ids = $value;
+                return [];
+            },
+        )->withoutObjectCaching();
     }
 
     /**

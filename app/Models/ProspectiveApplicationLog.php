@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -61,29 +62,33 @@ class ProspectiveApplicationLog extends ApiModel
         $log->save();
     }
 
-    public function getMetaAttribute(): mixed
+    public function meta(): Attribute
     {
-        if ($this->action != self::ACTION_UPDATED) {
-            return null;
-        }
+        return Attribute::make(
+            get: function (): mixed {
+                if ($this->action != self::ACTION_UPDATED) {
+                    return null;
+                }
 
-        $assigned = $this->data['assigned_person_id'] ?? null;
-        if (!$assigned) {
-            return null;
-        }
+                $assigned = $this->data['assigned_person_id'] ?? null;
+                if (!$assigned) {
+                    return null;
+                }
 
-        if ($assigned[0]) {
-            $from = DB::table('person')->where('id', $assigned[0])->value('callsign');
-        } else {
-            $from = null;
-        }
+                if ($assigned[0]) {
+                    $from = DB::table('person')->where('id', $assigned[0])->value('callsign');
+                } else {
+                    $from = null;
+                }
 
-        if ($assigned[1]) {
-            $to = DB::table('person')->where('id', $assigned[1])->value('callsign');
-        } else {
-            $to = null;
-        }
+                if ($assigned[1]) {
+                    $to = DB::table('person')->where('id', $assigned[1])->value('callsign');
+                } else {
+                    $to = null;
+                }
 
-        return ['assigned_person' => [$from, $to]];
+                return ['assigned_person' => [$from, $to]];
+            }
+        )->withoutObjectCaching();
     }
 }

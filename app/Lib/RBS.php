@@ -112,7 +112,7 @@ class RBS
         ],
 
         Broadcast::TYPE_EMERGENCY => [
-            'alert_id' => Alert::EMEREGENCY_BROADCAST,
+            'alert_id' => Alert::EMERGENCY_BROADCAST,
             'is_simple' => true,
         ],
     ];
@@ -155,7 +155,7 @@ class RBS
         $phoneNumbers = [];
         $recipients = [];
 
-        $isEmergency = ($alert->id == Alert::EMEREGENCY_BROADCAST);
+        $isEmergency = ($alert->id == Alert::EMERGENCY_BROADCAST);
 
         $fails = 0;
         $sent = 0;
@@ -254,7 +254,7 @@ class RBS
             $mailer = self::setupSMTP();
         }
 
-        $force = ($alert->id == Alert::EMEREGENCY_BROADCAST);
+        $force = ($alert->id == Alert::EMERGENCY_BROADCAST);
 
         $fails = 0;
         $sent = 0;

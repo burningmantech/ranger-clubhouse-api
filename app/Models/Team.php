@@ -242,31 +242,31 @@ class Team extends ApiModel
     }
 
     /**
-     * Get the pseudo column role_ids
+     * Bridge the role_ids pseudo column to the public $role_ids property.
      *
-     * @return array|null
+     * role_ids is not a real team column; it is captured on fill() and projected on serialization
+     * (see appendRoleIds()). The get closure reads the public property and the set closure writes
+     * it while returning an empty array so nothing leaks into the real attribute bag. Object caching
+     * is disabled because the public property is mutable during the instance's lifetime.
+     *
+     * @return Attribute<?array, ?array>
      */
 
-    public function getRoleIdsAttribute(): ?array
+    protected function roleIds(): Attribute
     {
-        return $this->role_ids;
+        return Attribute::make(
+            get: fn (): ?array => $this->role_ids,
+            set: function (?array $value): array {
+                $this->role_ids = $value;
+
+                return [];
+            },
+        )->withoutObjectCaching();
     }
 
     public function isAwardsEligible(): bool
     {
         return in_array($this->type, [self::TYPE_CADRE, self::TYPE_DELEGATION]) || $this->awards_eligible;
-    }
-
-    /**
-     * Set the pseudo column role_ids
-     *
-     * @param $value
-     * @return void
-     */
-
-    public function setRoleIdsAttribute($value): void
-    {
-        $this->role_ids = $value;
     }
 
     public function email(): Attribute

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attributes\BlankIfEmptyAttribute;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -358,94 +360,101 @@ class Vehicle extends ApiModel
         return parent::save($options);
     }
 
-    public function setCallsignAttribute($value)
+    /**
+     * Bridge the callsign pseudo field to the public $callsign property.
+     *
+     * callsign is not a real vehicle column; it is mass-assigned on creation and
+     * resolved to person_id during save(). Diverting it to the public property
+     * keeps it out of the Eloquent attribute bag, which would break the insert.
+     *
+     * @return Attribute
+     */
+
+    protected function callsign(): Attribute
     {
-        $this->callsign = $value;
+        return Attribute::make(set: function ($value): array {
+            $this->callsign = $value;
+
+            return [];
+        });
     }
 
-    public function setLicenseNumberAttribute($value)
+    protected function licenseNumber(): Attribute
     {
-        $this->attributes['license_number'] = preg_replace('/[\s\-]/', '', $value);
+        return Attribute::make(set: fn ($value) => preg_replace('/[\s\-]/', '', $value));
     }
 
-    public function setNotesAttribute($value)
+    protected function notes(): Attribute
     {
-        $this->attributes['notes'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setVehicleClassAtrribute($value)
+    protected function vehicleClass(): Attribute
     {
-        $this->attributes['vehicle_class'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setRentalNumberAttribute($value)
+    protected function rentalNumber(): Attribute
     {
-        $this->attributes['rental_number'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setPrepostStickerAttribute($value)
+    protected function prepostSticker(): Attribute
     {
-        $this->attributes['prepost_sticker'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setVehicleYearAttribute($value)
+    protected function vehicleYear(): Attribute
     {
-        $this->attributes['vehicle_year'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setTeamAssignmentAttribute($value)
+    protected function teamAssignment(): Attribute
     {
-        $this->attributes['team_assignment'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setDrivingStickerAttribute($value)
+    protected function drivingSticker(): Attribute
     {
-        $this->attributes['driving_sticker'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-    public function setRequestCommentAttribute($value)
+    protected function requestComment(): Attribute
     {
-        $this->attributes['request_comment'] = $value ?? '';
+        return BlankIfEmptyAttribute::make();
     }
 
-
-    public function getOrgVehicleInsuranceAttribute()
+    protected function orgVehicleInsurance(): Attribute
     {
-        return $this->attributes['org_vehicle_insurance'] ?? false;
+        return Attribute::make(get: fn () => $this->attributes['org_vehicle_insurance'] ?? false);
     }
 
-    public function getSignedMotorpoolAgreementAttribute()
+    protected function signedMotorpoolAgreement(): Attribute
     {
-        return $this->attributes['signed_motorpool_agreement'] ?? false;
+        return Attribute::make(get: fn () => $this->attributes['signed_motorpool_agreement'] ?? false);
     }
 
-    public function setArrivalDateAttribute($value) : void
+    protected function arrivalDate(): Attribute
     {
-        $this->attributes['arrival_date'] = $value;
+        return Attribute::make(
+            get: fn () => $this->attributes['arrival_date'] ?? false,
+            set: fn ($value) => ['arrival_date' => $value],
+        );
     }
 
-    public function getArrivalDateAttribute()
+    protected function pvrTeams(): Attribute
     {
-        return $this->attributes['arrival_date'] ?? false;
+        return Attribute::make(
+            get: fn () => $this->attributes['pvr_teams'] ?? [],
+            set: fn ($value) => ['pvr_teams' => $value],
+        )->withoutObjectCaching();
     }
 
-    public function setPvrTeamsAttribute($value)
+    protected function pvrPositions(): Attribute
     {
-        $this->attributes['pvr_teams'] = $value;
-    }
-
-    public function getPvrTeamsAttribute()
-    {
-        return $this->attributes['pvr_teams'] ?? [];
-    }
-
-    public function setPvrPositionsAttribute($value)
-    {
-        $this->attributes['pvr_positions'] = $value;
-    }
-
-    public function getPvrPositionsAttribute()
-    {
-        return $this->attributes['pvr_positions'] ?? [];
+        return Attribute::make(
+            get: fn () => $this->attributes['pvr_positions'] ?? [],
+            set: fn ($value) => ['pvr_positions' => $value],
+        )->withoutObjectCaching();
     }
 }

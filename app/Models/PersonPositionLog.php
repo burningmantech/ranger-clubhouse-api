@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -109,13 +110,12 @@ class PersonPositionLog extends ApiModel
 
     /**
      * Set the left_on column to null or a Carbon object.
-     *
-     * @param $date
-     * @return void
      */
 
-    public function setLeftOnAttribute($date)
+    protected function leftOn(): Attribute
     {
-        $this->attributes['left_on'] = empty($date) ? null : Carbon::parse($date);
+        return Attribute::make(
+            set: fn ($value) => empty($value) ? null : Carbon::parse($value),
+        );
     }
 }

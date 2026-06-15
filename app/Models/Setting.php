@@ -6,6 +6,7 @@ use App\Exceptions\UnacceptableConditionException;
 use App\Lib\ClubhouseCache;
 use Exception;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -862,23 +863,23 @@ class Setting extends ApiModel
         return (!is_numeric($value) && !is_bool($value) && empty($value));
     }
 
-    public function getTypeAttribute()
+    public function type(): Attribute
     {
-        return self::DESCRIPTIONS[$this->name]['type'] ?? null;
+        return Attribute::make(get: fn () => self::DESCRIPTIONS[$this->name]['type'] ?? null);
     }
 
-    public function getDescriptionAttribute()
+    public function description(): Attribute
     {
-        return self::DESCRIPTIONS[$this->name]['description'] ?? null;
+        return Attribute::make(get: fn () => self::DESCRIPTIONS[$this->name]['description'] ?? null);
     }
 
-    public function getOptionsAttribute()
+    public function options(): Attribute
     {
-        return self::DESCRIPTIONS[$this->name]['options'] ?? null;
+        return Attribute::make(get: fn () => self::DESCRIPTIONS[$this->name]['options'] ?? null)->withoutObjectCaching();
     }
 
-    public function getIsCredentialAttribute()
+    public function isCredential(): Attribute
     {
-        return self::DESCRIPTIONS[$this->name]['is_credential'] ?? false;
+        return Attribute::make(get: fn () => self::DESCRIPTIONS[$this->name]['is_credential'] ?? false);
     }
 }

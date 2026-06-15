@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -90,21 +91,27 @@ class PersonFka extends ApiModel
     }
 
     /**
-     * Set the fka, and update the normalized version.
-     * @param string|null $value
-     * @return void
+     * Set the fka, and update the normalized and soundex versions.
      */
-    public function setFkaAttribute(?string $value): void
+    public function fka(): Attribute
     {
-        if (empty($value)) {
-            $value = '';
-        } else {
-            $value = trim($value);
-        }
+        return Attribute::make(
+            set: function (?string $value) {
+                if (empty($value)) {
+                    $value = '';
+                } else {
+                    $value = trim($value);
+                }
 
-        $this->attributes['fka'] = $value;
-        $this->fka_normalized = Person::normalizeCallsign($value);
-        $this->attributes['fka_soundex'] = metaphone(Person::spellOutNumbers($this->fka_normalized));
+                $normalized = Person::normalizeCallsign($value);
+
+                return [
+                    'fka' => $value,
+                    'fka_normalized' => $normalized,
+                    'fka_soundex' => metaphone(Person::spellOutNumbers($normalized)),
+                ];
+            }
+        );
     }
 
     /**

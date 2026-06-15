@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -64,11 +65,12 @@ class Certification extends ApiModel
 
     /**
      * Get the total number of people who have this certification.
-     * @return int
      */
 
-    public function getTotalPeopleAttribute(): int
+    protected function totalPeople(): Attribute
     {
-        return PersonCertification::where('certification_id', $this->id)->count();
+        return Attribute::make(
+            get: fn () => PersonCertification::where('certification_id', $this->id)->count(),
+        );
     }
 }

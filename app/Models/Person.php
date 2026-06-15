@@ -1254,24 +1254,28 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * @return Carbon|null
      */
 
-    public function getCreatedAtAttribute(): ?Carbon
+    public function createdAt(): Attribute
     {
-        if ($this->attributes == null) {
-            return null;
-        }
+        return Attribute::make(
+            get: function ($value) {
+                if ($this->attributes == null) {
+                    return null;
+                }
 
-        $date = $this->attributes['created_at'] ?? null;
+                $date = $this->attributes['created_at'] ?? null;
 
-        if ($date == null) {
-            return null;
-        }
+                if ($date == null) {
+                    return null;
+                }
 
-        $date = Carbon::parse($date);
-        if ($date->year <= 0) {
-            return null;
-        }
+                $date = Carbon::parse($date);
+                if ($date->year <= 0) {
+                    return null;
+                }
 
-        return $date;
+                return $date;
+            }
+        )->withoutObjectCaching();
     }
 
     /**
@@ -1436,51 +1440,59 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
      * @param string $value
      */
 
-    public function setCallsignAttribute(string $value): void
+    public function callsign(): Attribute
     {
-        $value = trim($value);
-        // Convert microsoft special formatting to regular characters
-        $search = [
-            "\xC2\xAB",     // « (U+00AB) in UTF-8
-            "\xC2\xBB",     // » (U+00BB) in UTF-8
-            "\xE2\x80\x98", // ‘ (U+2018) in UTF-8
-            "\xE2\x80\x99", // ’ (U+2019) in UTF-8
-            "\xE2\x80\x9A", // ‚ (U+201A) in UTF-8
-            "\xE2\x80\x9B", // ‛ (U+201B) in UTF-8
-            "\xE2\x80\x9C", // “ (U+201C) in UTF-8
-            "\xE2\x80\x9D", // ” (U+201D) in UTF-8
-            "\xE2\x80\x9E", // „ (U+201E) in UTF-8
-            "\xE2\x80\x9F", // ‟ (U+201F) in UTF-8
-            "\xE2\x80\xB9", // ‹ (U+2039) in UTF-8
-            "\xE2\x80\xBA", // › (U+203A) in UTF-8
-            "\xE2\x80\x93", // – (U+2013) in UTF-8
-            "\xE2\x80\x94", // — (U+2014) in UTF-8
-            "\xE2\x80\xA6"  // … (U+2026) in UTF-8
-        ];
+        return Attribute::make(
+            set: function ($value) {
+                $value = trim($value);
+                // Convert microsoft special formatting to regular characters
+                $search = [
+                    "\xC2\xAB",     // « (U+00AB) in UTF-8
+                    "\xC2\xBB",     // » (U+00BB) in UTF-8
+                    "\xE2\x80\x98", // ‘ (U+2018) in UTF-8
+                    "\xE2\x80\x99", // ’ (U+2019) in UTF-8
+                    "\xE2\x80\x9A", // ‚ (U+201A) in UTF-8
+                    "\xE2\x80\x9B", // ‛ (U+201B) in UTF-8
+                    "\xE2\x80\x9C", // “ (U+201C) in UTF-8
+                    "\xE2\x80\x9D", // ” (U+201D) in UTF-8
+                    "\xE2\x80\x9E", // „ (U+201E) in UTF-8
+                    "\xE2\x80\x9F", // ‟ (U+201F) in UTF-8
+                    "\xE2\x80\xB9", // ‹ (U+2039) in UTF-8
+                    "\xE2\x80\xBA", // › (U+203A) in UTF-8
+                    "\xE2\x80\x93", // – (U+2013) in UTF-8
+                    "\xE2\x80\x94", // — (U+2014) in UTF-8
+                    "\xE2\x80\xA6"  // … (U+2026) in UTF-8
+                ];
 
-        $replacements = [
-            "<<",
-            ">>",
-            "'",
-            "'",
-            "'",
-            "'",
-            '"',
-            '"',
-            '"',
-            '"',
-            "<",
-            ">",
-            "-",
-            "-",
-            "..."
-        ];
+                $replacements = [
+                    "<<",
+                    ">>",
+                    "'",
+                    "'",
+                    "'",
+                    "'",
+                    '"',
+                    '"',
+                    '"',
+                    '"',
+                    "<",
+                    ">",
+                    "-",
+                    "-",
+                    "..."
+                ];
 
-        $value = str_replace($search, $replacements, $value);
+                $value = str_replace($search, $replacements, $value);
 
-        $this->attributes['callsign'] = $value;
-        $this->attributes['callsign_normalized'] = self::normalizeCallsign($value);
-        $this->attributes['callsign_soundex'] = metaphone(self::spellOutNumbers($this->attributes['callsign_normalized']));
+                $normalized = self::normalizeCallsign($value);
+
+                return [
+                    'callsign' => $value,
+                    'callsign_normalized' => $normalized,
+                    'callsign_soundex' => metaphone(self::spellOutNumbers($normalized)),
+                ];
+            }
+        );
     }
 
     /**

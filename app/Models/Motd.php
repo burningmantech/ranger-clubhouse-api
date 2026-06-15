@@ -192,13 +192,17 @@ class Motd extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function getHasReadAttribute()
+    protected function hasRead(): Attribute
     {
-        return (bool)($this->attributes['has_read'] ?? false);
+        return Attribute::make(
+            get: fn ($value, $attributes) => (bool)($attributes['has_read'] ?? false),
+        );
     }
 
-    public function getHasExpiredAttribute()
+    protected function hasExpired(): Attribute
     {
-        return $this->expires_at ? $this->expires_at->lt(now()) : false;
+        return Attribute::make(
+            get: fn () => $this->expires_at ? $this->expires_at->lt(now()) : false,
+        );
     }
 }

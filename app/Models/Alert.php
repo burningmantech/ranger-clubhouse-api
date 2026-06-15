@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
 class Alert extends ApiModel
 {
     protected $table = 'alert';
@@ -9,7 +11,7 @@ class Alert extends ApiModel
 
     const int SHIFT_CHANGE = 1;
     const int SHIFT_MUSTER = 2;
-    const int EMEREGENCY_BROADCAST = 3;
+    const int EMERGENCY_BROADCAST = 3;
     const int RANGER_SOCIALS = 4;
     const int TICKETING = 5;
     const int ON_SHIFT = 6;
@@ -64,18 +66,24 @@ class Alert extends ApiModel
         return self::orderBy('on_playa', 'desc', 'title', 'asc')->get();
     }
 
-    public function getSmsOnlyAttribute()
+    public function smsOnly(): Attribute
     {
-        return ($this->id == Alert::ON_SHIFT);
+        return Attribute::make(
+            get: fn () => ($this->id == Alert::ON_SHIFT),
+        );
     }
 
-    public function getEmailOnlyAttribute()
+    public function emailOnly(): Attribute
     {
-        return ($this->id == Alert::RANGER_CONTACT || $this->id == Alert::MENTOR_CONTACT);
+        return Attribute::make(
+            get: fn () => ($this->id == Alert::RANGER_CONTACT || $this->id == Alert::MENTOR_CONTACT),
+        );
     }
 
-    public function getNoOptOutAttribute()
+    public function noOptOut(): Attribute
     {
-        return ($this->id == Alert::EMEREGENCY_BROADCAST);
+        return Attribute::make(
+            get: fn () => ($this->id == Alert::EMERGENCY_BROADCAST),
+        );
     }
 }

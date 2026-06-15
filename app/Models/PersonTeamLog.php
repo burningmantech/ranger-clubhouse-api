@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -103,9 +104,11 @@ class PersonTeamLog extends ApiModel
         self::where(['person_id' => $personId, 'team_id' => $teamId])->first()?->update(['left_on' => now()]);
     }
 
-    public function setLeftOnAttribute($date)
+    protected function leftOn(): Attribute
     {
-        $this->attributes['left_on'] = empty($date) ? null : Carbon::parse($date);
+        return Attribute::make(
+            set: fn ($value) => empty($value) ? null : Carbon::parse($value),
+        );
     }
 }
 

@@ -148,23 +148,27 @@ class Document extends ApiModel
         return NullIfEmptyAttribute::make();
     }
 
-    public function getResourceTypeAttribute(): ?string
+    public function resourceType(): Attribute
     {
-        return $this->resource_type;
+        return Attribute::make(
+            get: fn (): ?string => $this->resource_type,
+            set: function ($value): array {
+                $this->resource_type = $value;
+
+                return [];
+            },
+        )->withoutObjectCaching();
     }
 
-    public function setResourceTypeAttribute(?string $value): void
+    public function resourceEntityId(): Attribute
     {
-        $this->resource_type = $value;
-    }
+        return Attribute::make(
+            get: fn (): ?int => $this->resource_entity_id,
+            set: function ($value): array {
+                $this->resource_entity_id = $value;
 
-    public function getResourceEntityIdAttribute(): ?int
-    {
-        return $this->resource_entity_id;
-    }
-
-    public function setResourceEntityIdAttribute(?string $value): void
-    {
-        $this->resource_entity_id = $value;
+                return [];
+            },
+        )->withoutObjectCaching();
     }
 }
