@@ -497,24 +497,24 @@ class ProspectiveApplication extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    public function getScreenedHandlesAttribute(): ?array
+    public function screenedHandles(): Attribute
     {
-        return $this->screened_handles;
+        return Attribute::make(get: fn () => $this->screened_handles)->withoutObjectCaching();
     }
 
-    public function getApiErrorAttribute(): ?string
+    public function apiError(): Attribute
     {
-        return $this->api_error;
+        return Attribute::make(get: fn () => $this->api_error);
     }
 
-    public function getApiErrorMessageAttribute(): ?string
+    public function apiErrorMessage(): Attribute
     {
-        return $this->api_error_message;
+        return Attribute::make(get: fn () => $this->api_error_message);
     }
 
-    public function getContactIdAttribute(): ?string
+    public function contactId(): Attribute
     {
-        return $this->contact_id;
+        return Attribute::make(get: fn () => $this->contact_id);
     }
 
     public function bulkScreenHandles($reservedHandles): void

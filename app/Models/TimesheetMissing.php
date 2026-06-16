@@ -248,32 +248,35 @@ class TimesheetMissing extends ApiModel
 
     /**
      * Get duration in seconds.
-     *
-     * @return int
      */
 
-    public function getDurationAttribute(): int
+    public function duration(): Attribute
     {
-        $on_duty = $this->getOriginal('on_duty');
-        $off_duty = $this->getOriginal('off_duty');
+        return Attribute::make(
+            get: function () {
+                $on_duty = $this->getOriginal('on_duty');
+                $off_duty = $this->getOriginal('off_duty');
 
-        return (int) Carbon::parse($on_duty)->diffInSeconds(Carbon::parse($off_duty));
+                return (int) Carbon::parse($on_duty)->diffInSeconds(Carbon::parse($off_duty));
+            }
+        );
     }
 
     /**
      * Calculate how many credits this entry might be worth.
      *
-     * @return float
      * @throws InvalidArgumentException
      */
 
-    public function getCreditsAttribute(): float
+    public function credits(): Attribute
     {
-        return PositionCredit::computeCredits(
-            $this->position_id,
-            $this->on_duty->timestamp,
-            $this->off_duty->timestamp,
-            $this->on_duty->year);
+        return Attribute::make(
+            get: fn (): float => PositionCredit::computeCredits(
+                $this->position_id,
+                $this->on_duty->timestamp,
+                $this->off_duty->timestamp,
+                $this->on_duty->year)
+        );
     }
 
     /**
@@ -303,56 +306,60 @@ class TimesheetMissing extends ApiModel
      * @return array|null
      */
 
-    public function getPartnerInfoAttribute(): ?array
+    public function partnerInfo(): Attribute
     {
-        $name = preg_quote($this->partner, '/');
-        if (empty($this->partner) || preg_grep("/^\s*{$name}\s*$/i", ['na', 'n/a', 'no partner', 'none'])) {
-            return null;
-        }
-
-        $people = preg_split("/(\band\b|\s*[&+|]\s*)/i", $this->partner);
-
-        $partners = [];
-
-        foreach ($people as $name) {
-            $name = trim($name);
-            $sql = Person::where('callsign', $name);
-            if (str_contains($name, ' ')) {
-                $sql = $sql->orWhere('callsign', str_replace(' ', '', $name));
-            }
-
-            $partner = $sql->get(['id', 'callsign'])->first();
-
-            if (!$partner) {
-                // Try metaphone lookup
-                $metaphone = metaphone($name);
-                $partner = Person::where('callsign_soundex', $metaphone)->get(['id', 'callsign'])->first();
-                if (!$partner) {
-                    $partners[] = ['callsign' => $name];
-                    continue;
+        return Attribute::make(
+            get: function (): ?array {
+                $name = preg_quote($this->partner, '/');
+                if (empty($this->partner) || preg_grep("/^\s*{$name}\s*$/i", ['na', 'n/a', 'no partner', 'none'])) {
+                    return null;
                 }
+
+                $people = preg_split("/(\band\b|\s*[&+|]\s*)/i", $this->partner);
+
+                $partners = [];
+
+                foreach ($people as $name) {
+                    $name = trim($name);
+                    $sql = Person::where('callsign', $name);
+                    if (str_contains($name, ' ')) {
+                        $sql = $sql->orWhere('callsign', str_replace(' ', '', $name));
+                    }
+
+                    $partner = $sql->get(['id', 'callsign'])->first();
+
+                    if (!$partner) {
+                        // Try metaphone lookup
+                        $metaphone = metaphone($name);
+                        $partner = Person::where('callsign_soundex', $metaphone)->get(['id', 'callsign'])->first();
+                        if (!$partner) {
+                            $partners[] = ['callsign' => $name];
+                            continue;
+                        }
+                    }
+
+                    $partnerShift = Timesheet::findShiftWithinMinutes($partner->id, $this->on_duty, self::PARTNER_SHIFT_STARTS_WITHIN);
+                    if ($partnerShift) {
+                        $info = [
+                            'timesheet_id' => $partnerShift->id,
+                            'position_title' => $partnerShift->position->title,
+                            'position_id' => $partnerShift->position_id,
+                            'on_duty' => (string)$partnerShift->on_duty,
+                            'off_duty' => (string)$partnerShift->off_duty
+                        ];
+                    } else {
+                        $info = [];
+                    }
+
+                    $info['callsign'] = $partner->callsign;
+                    $info['person_id'] = $partner->id;
+                    $info['name'] = $name;
+
+                    $partners[] = $info;
+                }
+                return $partners;
             }
-
-            $partnerShift = Timesheet::findShiftWithinMinutes($partner->id, $this->on_duty, self::PARTNER_SHIFT_STARTS_WITHIN);
-            if ($partnerShift) {
-                $info = [
-                    'timesheet_id' => $partnerShift->id,
-                    'position_title' => $partnerShift->position->title,
-                    'position_id' => $partnerShift->position_id,
-                    'on_duty' => (string)$partnerShift->on_duty,
-                    'off_duty' => (string)$partnerShift->off_duty
-                ];
-            } else {
-                $info = [];
-            }
-
-            $info['callsign'] = $partner->callsign;
-            $info['person_id'] = $partner->id;
-            $info['name'] = $name;
-
-            $partners[] = $info;
-        }
-        return $partners;
+        )->withoutObjectCaching();
     }
 
     /*
@@ -389,83 +396,123 @@ class TimesheetMissing extends ApiModel
     }
 
     /**
-     * Set the create entry pseudo-column
+     * Set the create entry pseudo-column.
      *
-     * @param $value
-     * @return void
+     * The value is captured on the public $create_entry property rather than a
+     * database column, so the set closure writes nothing back to the attributes array.
      */
 
-    public function setCreateEntryAttribute($value): void
+    public function createEntry(): Attribute
     {
-        $this->create_entry = $value;
+        return Attribute::make(
+            set: function ($value): array {
+                $this->create_entry = $value;
+                return [];
+            }
+        );
     }
 
     /**
-     * Set the new on duty pseudo-column
-     *
-     * @param $value
-     * @return void
+     * Set the new on duty pseudo-column.
      */
 
-    public function setNewOnDutyAttribute($value): void
+    public function newOnDuty(): Attribute
     {
-        $this->new_on_duty = $value;
+        return Attribute::make(
+            set: function ($value): array {
+                $this->new_on_duty = $value;
+                return [];
+            }
+        );
     }
 
     /**
-     * Set the new off duty pseudo-column
-     *
-     * @param $value
-     * @return void
+     * Set the new off duty pseudo-column.
      */
 
-    public function setNewOffDutyAttribute($value): void
+    public function newOffDuty(): Attribute
     {
-        $this->new_off_duty = $value;
+        return Attribute::make(
+            set: function ($value): array {
+                $this->new_off_duty = $value;
+                return [];
+            }
+        );
     }
 
     /**
-     * Set the new off position pseudo-column
-     *
-     * @param $value
-     * @return void
+     * Set the new position pseudo-column.
      */
 
-    public function setNewPositionIdAttribute($value): void
+    public function newPositionId(): Attribute
     {
-        $this->new_position_id = $value;
+        return Attribute::make(
+            set: function ($value): array {
+                $this->new_position_id = $value;
+                return [];
+            }
+        );
     }
 
-    public function setAdditionalNotesAttribute(?string $value): void
+    /**
+     * Capture the additional notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
-    public function setAdditionalAdminNotesAttribute(?string $value): void
+    /**
+     * Capture the additional admin notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalAdminNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalAdminNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalAdminNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
-    public function setAdditionalWranglerNotesAttribute(?string $value): void
+    /**
+     * Capture the additional wrangler notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalWranglerNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalWranglerNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalWranglerNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
-    public function getTimeWarningsAttribute(): ?array
+    public function timeWarnings(): Attribute
     {
-        return $this->time_warnings;
+        return Attribute::make(
+            get: fn (): ?array => $this->time_warnings,
+        )->withoutObjectCaching();
     }
 
 }

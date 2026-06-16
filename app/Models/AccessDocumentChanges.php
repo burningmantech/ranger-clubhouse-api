@@ -53,6 +53,11 @@ class AccessDocumentChanges extends Model
 
         $id ??= 0;
 
+        if (is_object($changes)) {
+            // Clone so unsetting the untracked column does not mutate the live model.
+            $changes = clone $changes;
+        }
+
         unset($changes['comments']); // Don't track comment changes
 
         if (empty($changes)) {

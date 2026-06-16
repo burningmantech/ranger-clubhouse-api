@@ -888,19 +888,22 @@ class Timesheet extends ApiModel
 
     /**
      * Return the total seconds on duty.
-     * @return int
      */
 
-    public function getDurationAttribute(): int
+    public function duration(): Attribute
     {
-        if (isset($this->attributes['duration'])) {
-            return $this->attributes['duration'];
-        }
+        return Attribute::make(
+            get: function (): int {
+                if (isset($this->attributes['duration'])) {
+                    return $this->attributes['duration'];
+                }
 
-        $offDuty = $this->off_duty ?: now();
-        $duration = (int)$this->on_duty->diffInSeconds($offDuty);
-        $this->attributes['duration'] = $duration;
-        return $duration;
+                $offDuty = $this->off_duty ?: now();
+                $duration = (int)$this->on_duty->diffInSeconds($offDuty);
+                $this->attributes['duration'] = $duration;
+                return $duration;
+            }
+        );
     }
 
     /**
@@ -915,32 +918,35 @@ class Timesheet extends ApiModel
     /**
      * Return the credits earned
      *
-     * @return float
      * @throws InvalidArgumentException
      */
 
-    public function getCreditsAttribute(): float
+    public function credits(): Attribute
     {
-        // Already computed?
-        if (isset($this->attributes['credits'])) {
-            return $this->attributes['credits'];
-        }
+        return Attribute::make(
+            get: function (): float {
+                // Already computed?
+                if (isset($this->attributes['credits'])) {
+                    return $this->attributes['credits'];
+                }
 
-        if (!$this->on_duty) {
-            return 0;
-        }
+                if (!$this->on_duty) {
+                    return 0;
+                }
 
-        // Go forth and get the tasty credits!
-        $credits = PositionCredit::computeCredits(
-            $this->position_id,
-            $this->on_duty->timestamp,
-            ($this->off_duty ?? now())->timestamp,
-            $this->on_duty->year
+                // Go forth and get the tasty credits!
+                $credits = PositionCredit::computeCredits(
+                    $this->position_id,
+                    $this->on_duty->timestamp,
+                    ($this->off_duty ?? now())->timestamp,
+                    $this->on_duty->year
+                );
+
+                $this->attributes['credits'] = $credits;
+
+                return $credits;
+            }
         );
-
-        $this->attributes['credits'] = $credits;
-
-        return $credits;
     }
 
     /**
@@ -968,31 +974,58 @@ class Timesheet extends ApiModel
         ];
     }
 
-    public function setAdditionalNotesAttribute(?string $value): void
+    /**
+     * Capture the additional notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
-    public function setAdditionalAdminNotesAttribute(?string $value): void
+    /**
+     * Capture the additional admin notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalAdminNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalAdminNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalAdminNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
-    public function setAdditionalWranglerNotesAttribute(?string $value): void
+    /**
+     * Capture the additional wrangler notes pseudo-column on its public property,
+     * trimming blanks to null. Recorded by the saved() hook, not a column.
+     */
+
+    public function additionalWranglerNotes(): Attribute
     {
-        if ($value) {
-            $value = trim($value);
-        }
-        $value = empty($value) ? null : $value;
-        $this->additionalWranglerNotes = $value;
+        return Attribute::make(
+            set: function (?string $value): array {
+                if ($value) {
+                    $value = trim($value);
+                }
+                $this->additionalWranglerNotes = empty($value) ? null : $value;
+                return [];
+            }
+        );
     }
 
     public function photoUrl(): Attribute

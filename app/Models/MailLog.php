@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -229,57 +230,53 @@ class MailLog extends ApiModel
     }
 
     /**
-     * Gzip up the body attribute
-     *
-     * @param $value
-     * @return void
+     * Get the subject attribute either from this record or the associated broadcast record.
      */
 
-    public function setBodyAttribute($value)
+    protected function subject(): Attribute
     {
-        $this->attributes['body'] = !empty($value) ? gzencode($value) : '';
-    }
+        return Attribute::make(
+            get: function ($value) {
+                if ($this->broadcast_id) {
+                    return $this->broadcast?->subject ?? '';
+                }
 
-    /**
-     * Get the subject attribute either from this record or the associated broadcast record
-     *
-     * @return string
-     */
-
-    public function getSubjectAttribute(): string
-    {
-        if ($this->broadcast_id) {
-            return $this->broadcast?->subject ?? '';
-        }
-
-        return $this->attributes['subject'];
-    }
-
-    /**
-     * Get the body attribute. Either return the associated broadcast record's
-     * body attribute, or return a gunzip'ed version. Decode the body is the original
-     * value was printable-encoded.
-     *
-     * @return string
-     */
-
-    public function getBodyAttribute(): string
-    {
-        if ($this->broadcast_id) {
-            $body = $this->broadcast?->email_message ?? '';
-        } else {
-
-            $body = $this->attributes['body'];
-            if (empty($body)) {
-                return '';
+                return $this->attributes['subject'];
             }
-            $body = gzdecode($body);
-        }
+        );
+    }
 
-        if (preg_match("/=3d/i", $body)) {
-            $body = quoted_printable_decode($body);
-        }
+    /**
+     * Get and set the body attribute.
+     *
+     * On set, gzip up the body attribute.
+     *
+     * On get, either return the associated broadcast record's body attribute, or
+     * return a gunzip'ed version. Decode the body if the original value was
+     * printable-encoded.
+     */
 
-        return $body;
+    protected function body(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if ($this->broadcast_id) {
+                    $body = $this->broadcast?->email_message ?? '';
+                } else {
+                    $body = $this->attributes['body'];
+                    if (empty($body)) {
+                        return '';
+                    }
+                    $body = gzdecode($body);
+                }
+
+                if (preg_match("/=3d/i", $body)) {
+                    $body = quoted_printable_decode($body);
+                }
+
+                return $body;
+            },
+            set: fn ($value) => ['body' => !empty($value) ? gzencode($value) : ''],
+        );
     }
 }

@@ -287,36 +287,55 @@ class PersonMessage extends ApiModel
         return true;
     }
 
-    public function setRecipientCallsignAttribute(?string $value): void
+    /**
+     * Bridge mass-assignment of the recipient callsign into the public
+     * $recipient_callsign property. This is NOT a database column, so the value
+     * must be written to the declared public property rather than the attribute
+     * bag (which the public property would otherwise shadow on read). Returning an
+     * empty array keeps the value out of the persisted attributes.
+     *
+     * @return Attribute
+     */
+
+    public function recipientCallsign(): Attribute
     {
-        $this->recipient_callsign = $value;
+        return Attribute::make(set: function (?string $value): array {
+            $this->recipient_callsign = $value;
+
+            return [];
+        });
     }
 
     /**
      * Retrieve the sender's approved mugshot.
      *
-     * @return string
+     * @return Attribute
      */
 
-    public function getSenderPhotoUrlAttribute(): string
+    public function senderPhotoUrl(): Attribute
     {
-        $id = $this->sender_person_id ?? null;
-        if (!$id) {
-            return '';
-        }
+        return Attribute::make(get: function (mixed $value, array $attributes) {
+            $id = $attributes['sender_person_id'] ?? null;
+            if (!$id) {
+                return '';
+            }
 
-        return PersonPhoto::retrieveProfileUrlForPerson($id);
+            return PersonPhoto::retrieveProfileUrlForPerson($id);
+        });
     }
 
     /**
      * Is this message from the RBS?
      *
-     * @return bool
+     * @return Attribute
      */
 
-    public function getIsRbsAttribute(): bool
+    public function isRbs(): Attribute
     {
-        return $this->broadcast_id || stripos($this->message_from ?? '', 'Ranger Broadcasting') !== false;
+        return Attribute::make(
+            get: fn(mixed $value, array $attributes) => ($attributes['broadcast_id'] ?? null)
+                || stripos($attributes['message_from'] ?? '', 'Ranger Broadcasting') !== false
+        );
     }
 
     /**

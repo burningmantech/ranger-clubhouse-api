@@ -433,20 +433,24 @@ class Provision extends ApiModel
 
     /**
      * additional_comments, when set, pre-appends to the comments column with
-     * a timestamp and current user's callsign.
-     *
-     * @param $value
+     * a timestamp and current user's callsign. Nothing is stored in
+     * additional_comments itself; the write is redirected to comments.
      */
 
-    public function setAdditionalCommentsAttribute($value): void
+    public function additionalComments(): Attribute
     {
-        if (empty($value)) {
-            return;
-        }
+        return Attribute::make(
+            set: function ($value): array {
+                if (empty($value)) {
+                    return [];
+                }
 
-        $date = date('n/j/y G:i:s');
-        $callsign = Auth::user()?->callsign ?? "(unknown)";
-        $this->comments = "$date $callsign: $value\n" . $this->comments;
+                $date = date('n/j/y G:i:s');
+                $callsign = Auth::user()?->callsign ?? "(unknown)";
+
+                return ['comments' => "$date $callsign: $value\n" . $this->comments];
+            }
+        );
     }
 
     public function getTypeLabel(): string

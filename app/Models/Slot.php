@@ -687,28 +687,34 @@ class Slot extends ApiModel
     /**
      * Retrieve the credits potential for the slot
      *
-     * @return float
+     * @return Attribute
      * @throws InvalidArgumentException
      */
 
-    public function getCreditsAttribute(): float
+    public function credits(): Attribute
     {
-        if ($this->position_id) {
-            return PositionCredit::computeCredits($this->position_id, $this->begins_time, $this->ends_time, $this->begins_year);
-        }
+        return Attribute::make(
+            get: function () {
+                if ($this->position_id) {
+                    return PositionCredit::computeCredits($this->position_id, $this->begins_time, $this->ends_time, $this->begins_year);
+                }
 
-        return 0.0;
+                return 0.0;
+            }
+        );
     }
 
     /**
      * Retrieve the position title for the slot.
      *
-     * @return string
+     * @return Attribute
      */
 
-    public function getPositionTitleAttribute(): string
+    public function positionTitle(): Attribute
     {
-        return $this->position ? $this->position->title : "Deleted #{$this->position_id}";
+        return Attribute::make(
+            get: fn() => $this->position ? $this->position->title : "Deleted #{$this->position_id}"
+        );
     }
 
     /**
@@ -725,45 +731,53 @@ class Slot extends ApiModel
     /**
      * Humanized the begins datetime  - for sending emails
      *
-     * @return string
+     * @return Attribute
      */
 
-    public function getBeginsHumanFormatAttribute(): string
+    public function beginsHumanFormat(): Attribute
     {
-        return $this->begins->format('l M d Y @ H:i');
+        return Attribute::make(
+            get: fn() => $this->begins->format('l M d Y @ H:i')
+        );
     }
 
     /**
      * Humanized the ends datetime  - for sending emails
      *
-     * @return string
+     * @return Attribute
      */
 
-    public function getEndsHumanFormatAttribute(): string
+    public function endsHumanFormat(): Attribute
     {
-        return $this->ends->format('l M d Y @ H:i');
+        return Attribute::make(
+            get: fn() => $this->ends->format('l M d Y @ H:i')
+        );
     }
 
     /**
      * Has the shift started?
      *
-     * @return bool
+     * @return Attribute
      */
 
-    public function getHasStartedAttribute(): bool
+    public function hasStarted(): Attribute
     {
-        return $this->begins_adjusted?->lt(now()) ?? false;
+        return Attribute::make(
+            get: fn() => $this->begins_adjusted?->lt(now()) ?? false
+        );
     }
 
     /**
      * Has the slot ended?
      *
-     * @return bool
+     * @return Attribute
      */
 
-    public function getHasEndedAttribute(): bool
+    public function hasEnded(): Attribute
     {
-        return $this->ends_adjusted?->lte(now()) ?? false;
+        return Attribute::make(
+            get: fn() => $this->ends_adjusted?->lte(now()) ?? false
+        );
     }
 
     /**
@@ -794,38 +808,48 @@ class Slot extends ApiModel
     /**
      * How many seconds remaining in this shift?
      *
-     * @return int
+     * @return Attribute
      */
 
-    public function getRemainingAttribute(): int
+    public function remaining(): Attribute
     {
-        return max(now()->timestamp - $this->ends_adjusted->timestamp, 0);
+        return Attribute::make(
+            get: fn() => max(now()->timestamp - $this->ends_adjusted->timestamp, 0)
+        );
     }
 
-    public function getBeginsAdjustedAttribute(): ?Carbon
+    public function beginsAdjusted(): Attribute
     {
-        return $this->adjustTimezone($this->begins);
+        return Attribute::make(
+            get: fn() => $this->adjustTimezone($this->begins)
+        )->withoutObjectCaching();
     }
 
-    public function getEndsAdjustedAttribute(): ?Carbon
+    public function endsAdjusted(): Attribute
     {
-        return $this->adjustTimezone($this->ends);
+        return Attribute::make(
+            get: fn() => $this->adjustTimezone($this->ends)
+        )->withoutObjectCaching();
     }
 
     /**
      * Is the slot past the day it ends on?
      *
-     * @return bool
+     * @return Attribute
      */
 
-    public function getHasDayEndedAttribute(): bool
+    public function hasDayEnded(): Attribute
     {
-        $ends = $this->ends_adjusted;
-        if (!$ends || $ends->isFuture()) {
-            return false;
-        }
+        return Attribute::make(
+            get: function () {
+                $ends = $this->ends_adjusted;
+                if (!$ends || $ends->isFuture()) {
+                    return false;
+                }
 
-        return !$ends->isSameDay(now()->tz($this->timezone));
+                return !$ends->isSameDay(now()->tz($this->timezone));
+            }
+        );
     }
 
     /**

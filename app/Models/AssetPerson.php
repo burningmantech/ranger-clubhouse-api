@@ -172,11 +172,13 @@ class AssetPerson extends ApiModel
     /**
      * Return the duration of how long the asset is/was checked out for.
      *
-     * @return int
+     * @return Attribute
      */
 
-    public function getDurationAttribute(): int
+    protected function duration(): Attribute
     {
-        return ($this->checked_out ?? now())->diffInSeconds($this->checked_in ?? now());
+        return Attribute::make(
+            get: fn (): int => ($this->checked_out ?? now())->diffInSeconds($this->checked_in ?? now()),
+        );
     }
 }

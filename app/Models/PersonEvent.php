@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasCompositePrimaryKey;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -179,13 +180,11 @@ class PersonEvent extends ApiModel
 
     /**
      * Get the pseudo-column id.
-     *
-     * @return string
      */
 
-    public function getIdAttribute(): string
+    public function id(): Attribute
     {
-        return $this->person_id . '-' . $this->year;
+        return Attribute::make(get: fn (): string => $this->person_id . '-' . $this->year);
     }
 
     /**

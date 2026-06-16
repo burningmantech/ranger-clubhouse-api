@@ -246,11 +246,18 @@ class HandleReservation extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    protected function setHandleAttribute(?string $value): void
+    protected function handle(): Attribute
     {
-        $value = trim($value ?: '');
-        $this->attributes['handle'] = $value;
-        $this->attributes['normalized_handle'] = Person::normalizeCallsign($value);
+        return Attribute::make(
+            set: function (?string $value): array {
+                $value = trim($value ?: '');
+
+                return [
+                    'handle' => $value,
+                    'normalized_handle' => Person::normalizeCallsign($value),
+                ];
+            },
+        );
     }
 
     protected function hasExpired(): Attribute

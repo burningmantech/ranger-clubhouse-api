@@ -631,43 +631,47 @@ class AccessDocument extends ApiModel
 
     /**
      * Return true if the document expired
-     *
-     * @return bool
      */
 
-    public function getPastExpireDateAttribute(): bool
+    public function pastExpireDate(): Attribute
     {
-        return ($this->expiry_date && $this->expiry_date->year < current_year());
+        return Attribute::make(
+            get: fn() => ($this->expiry_date && $this->expiry_date->year < current_year())
+        );
     }
 
     /**
      * Return true if the person claimed a SC for the year
-     *
-     * @return bool
      */
 
-    public function getHasStaffCredentialAttribute(): bool
+    public function hasStaffCredential(): Attribute
     {
-        return ($this->attributes['has_staff_credential'] ?? false);
+        return Attribute::make(
+            get: fn($value, $attributes) => ($attributes['has_staff_credential'] ?? false)
+        );
     }
 
     /**
      * additional_comments, when set, pre-appends to the comments column with
-     * a timestamp and current user's callsign.
-     *
-     * @param $value
+     * a timestamp and current user's callsign. Nothing is stored in
+     * additional_comments itself; the write is redirected to comments.
      */
 
-    public function setAdditionalCommentsAttribute($value)
+    public function additionalComments(): Attribute
     {
-        if (empty($value)) {
-            return;
-        }
+        return Attribute::make(
+            set: function ($value): array {
+                if (empty($value)) {
+                    return [];
+                }
 
-        $date = date('n/j/y G:i:s');
-        $user = Auth::user();
-        $callsign = $user ? $user->callsign : "(unknown)";
-        $this->comments = "$date $callsign: $value\n" . $this->comments;
+                $date = date('n/j/y G:i:s');
+                $user = Auth::user();
+                $callsign = $user ? $user->callsign : "(unknown)";
+
+                return ['comments' => "$date $callsign: $value\n" . $this->comments];
+            }
+        );
     }
 
     /**

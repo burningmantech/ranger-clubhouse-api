@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -127,25 +128,25 @@ class PositionLineup extends ApiModel
     }
 
     /**
-     * Get the pseudo position_ids field
+     * Get and set the pseudo position_ids field.
      *
-     * @return array|null
+     * This attribute is not a real database column; it is backed by the public
+     * $position_ids property. The setter diverts mass-assigned values onto that
+     * property (returning an empty array so nothing is written to the attribute
+     * bag, which would break save() since there is no position_ids column). The
+     * getter resolves the appended attribute during serialization and must read
+     * the live property value, so object caching is disabled.
      */
 
-    public function getPositionIdsAttribute(): ?array
+    protected function positionIds(): Attribute
     {
-        return $this->position_ids;
-    }
+        return Attribute::make(
+            get: fn () => $this->position_ids,
+            set: function ($value): array {
+                $this->position_ids = $value;
 
-    /**
-     * Set the pseudo position_ids field
-     *
-     * @param $value
-     * @return void
-     */
-
-    public function setPositionIdsAttribute($value): void
-    {
-        $this->position_ids = $value;
+                return [];
+            },
+        )->withoutObjectCaching();
     }
 }

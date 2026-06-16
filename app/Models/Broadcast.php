@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -150,8 +151,13 @@ class Broadcast extends ApiModel
         return $logs;
     }
 
-    public function getPeopleAttribute()
+    /**
+     * Bridge the appended `people` pseudo attribute to the public $people property,
+     * which is populated imperatively in findLogs(). Object caching is disabled
+     * because $people is mutable after instantiation.
+     */
+    protected function people(): Attribute
     {
-        return $this->people;
+        return Attribute::make(get: fn () => $this->people)->withoutObjectCaching();
     }
 }

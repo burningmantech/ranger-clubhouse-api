@@ -8,6 +8,7 @@ namespace App\Models;
  * Holds the training session information (aka a slot with extras).
  */
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Collection;
 
 class TrainingSession extends Slot
@@ -477,8 +478,10 @@ class TrainingSession extends Slot
         return true;
     }
 
-    public function getTrainersAttribute(): array
+    protected function trainers(): Attribute
     {
-        return $this->trainersCache ??= $this->retrieveTrainers();
+        return Attribute::make(
+            get: fn () => $this->trainersCache ??= $this->retrieveTrainers(),
+        )->withoutObjectCaching();
     }
 }

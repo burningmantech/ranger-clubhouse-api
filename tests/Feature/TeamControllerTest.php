@@ -81,6 +81,35 @@ class TeamControllerTest extends TestCase
     }
 
     /**
+     * Filling the role_ids pseudo column routes the value onto the public $role_ids property
+     * (it is not a real team column), and serialization projects it back out. This guards the
+     * Attribute get/set bridge against the magic-property shadowing of the public field.
+     */
+    public function testRoleIdsFillBridgesToPublicPropertyAndSerializes(): void
+    {
+        $team = new Team();
+        $team->fill(['role_ids' => [Role::EVENT_MANAGEMENT, Role::MENTOR]]);
+
+        $this->assertEqualsCanonicalizing(
+            [Role::EVENT_MANAGEMENT, Role::MENTOR],
+            $team->role_ids,
+            'fill() must populate the public $role_ids property via the mutator.'
+        );
+        $this->assertArrayNotHasKey(
+            'role_ids',
+            $team->getAttributes(),
+            'role_ids must not leak into the real attribute bag; it is a pseudo column.'
+        );
+
+        $team->append('role_ids');
+        $this->assertEqualsCanonicalizing(
+            [Role::EVENT_MANAGEMENT, Role::MENTOR],
+            $team->toArray()['role_ids'],
+            'Serialization must project the public $role_ids via the accessor.'
+        );
+    }
+
+    /**
      * Granting membership to a team carrying the Admin/Tech Ninja role is blocked.
      */
     public function testBulkGrantBlockedForRestrictedTeam(): void

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Exceptions\UnacceptableConditionException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -268,32 +269,40 @@ class Role extends ApiModel
         ];
     }
 
-    public function getArtPositionTitleAttribute(): ?string
+    public function artPositionTitle(): Attribute
     {
-        if (($this->id & self::ROLE_BASE_MASK) == 0) {
-            return null;
-        }
+        return Attribute::make(
+            get: function (): ?string {
+                if (($this->id & self::ROLE_BASE_MASK) == 0) {
+                    return null;
+                }
 
-        return Position::retrieveTitle($this->id & ~self::ROLE_BASE_MASK);
+                return Position::retrieveTitle($this->id & ~self::ROLE_BASE_MASK);
+            }
+        );
     }
 
-    public function getArtRoleTitleAttribute(): ?string
+    public function artRoleTitle(): Attribute
     {
-        $base = $this->id & self::ROLE_BASE_MASK;
-        if ($base == 0) {
-            return null;
-        }
+        return Attribute::make(
+            get: function (): ?string {
+                $base = $this->id & self::ROLE_BASE_MASK;
+                if ($base == 0) {
+                    return null;
+                }
 
-        $prefixes = self::ART_ROLE_SUFFIXES[$base] ?? null;
-        if ($prefixes === null) {
-            $title = "Unknown base {$base}";
-        } else if (is_array($prefixes)) {
-            $title = $prefixes[1];
-        } else {
-            $title = $prefixes;
-        }
+                $prefixes = self::ART_ROLE_SUFFIXES[$base] ?? null;
+                if ($prefixes === null) {
+                    $title = "Unknown base {$base}";
+                } else if (is_array($prefixes)) {
+                    $title = $prefixes[1];
+                } else {
+                    $title = $prefixes;
+                }
 
-        return $title;
+                return $title;
+            }
+        );
     }
 }
 

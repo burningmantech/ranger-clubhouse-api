@@ -702,86 +702,96 @@ class PersonPhoto extends ApiModel
         );
     }
 
-    public function getRejectLabelsAttribute(): ?array
+    public function rejectLabels(): Attribute
     {
-        $reasons = $this->reject_reasons;
-        if (empty($reasons)) {
-            return null;
-        }
+        return Attribute::make(
+            get: function () {
+                $reasons = $this->reject_reasons;
+                if (empty($reasons)) {
+                    return null;
+                }
 
-        return array_map(function ($r) {
-            if (isset(self::REJECTIONS[$r])) {
-                return self::REJECTIONS[$r]['label'];
+                return array_map(function ($r) {
+                    if (isset(self::REJECTIONS[$r])) {
+                        return self::REJECTIONS[$r]['label'];
+                    }
+                    return "Reason $r";
+                }, $reasons);
             }
-            return "Reason $r";
-        }, $this->reject_reasons);
+        )->withoutObjectCaching();
     }
 
-    public function getRejectHistoryAttribute()
+    public function rejectHistory(): Attribute
     {
-        return $this->reject_history;
+        return Attribute::make(
+            get: fn() => $this->reject_history
+        )->withoutObjectCaching();
     }
 
     /**
      * Get the AWS Rekognition analysis details
      *
-     * @return array|string[]
+     * @return Attribute
      */
 
-    public function getAnalysisDetailsAttribute(): array
+    public function analysisDetails(): Attribute
     {
-        $status = $this->analysis_status;
-        if ($status == 'failed') {
-            return ['status' => 'failed'];
-        }
+        return Attribute::make(
+            get: function () {
+                $status = $this->analysis_status;
+                if ($status == 'failed') {
+                    return ['status' => 'failed'];
+                }
 
-        if ($status == 'none' || empty($this->analysis_info)) {
-            return ['status' => 'no-data'];
-        }
+                if ($status == 'none' || empty($this->analysis_info)) {
+                    return ['status' => 'no-data'];
+                }
 
-        $data = json_decode($this->analysis_info);
+                $data = json_decode($this->analysis_info);
 
-        if ($data == null) {
-            return ['status' => 'no-data'];
-        }
+                if ($data == null) {
+                    return ['status' => 'no-data'];
+                }
 
-        if (empty($data->FaceDetails)) {
-            // No face was detected
-            return ['status' => 'success', 'issues' => ['no-face'], 'sharpness' => 0];
-        }
+                if (empty($data->FaceDetails)) {
+                    // No face was detected
+                    return ['status' => 'success', 'issues' => ['no-face'], 'sharpness' => 0];
+                }
 
-        $issues = [];
+                $issues = [];
 
-        if (count($data->FaceDetails) > 1) {
-            // Multiple people are in the image
-            $issues = ['multiple-people'];
-        }
+                if (count($data->FaceDetails) > 1) {
+                    // Multiple people are in the image
+                    $issues = ['multiple-people'];
+                }
 
-        $face = $data->FaceDetails[0];
-        if ($face->Sunglasses->Value && $face->Sunglasses->Confidence >= 0.9) {
-            // Wearing sunglasses.
-            $issues[] = 'sunglasses';
-        }
+                $face = $data->FaceDetails[0];
+                if ($face->Sunglasses->Value && $face->Sunglasses->Confidence >= 0.9) {
+                    // Wearing sunglasses.
+                    $issues[] = 'sunglasses';
+                }
 
-        if (!$face->EyesOpen->Value || $face->EyesOpen->Confidence < 0.9) {
-            // Their eyes are closed
-            $issues[] = 'eyes-closed';
-        }
+                if (!$face->EyesOpen->Value || $face->EyesOpen->Confidence < 0.9) {
+                    // Their eyes are closed
+                    $issues[] = 'eyes-closed';
+                }
 
-        $box = $face->BoundingBox;
+                $box = $face->BoundingBox;
 
-        return [
-            'status' => 'success',
-            'issues' => $issues,
-            'sharpness' => (int)$face->Quality->Sharpness,
-            'bounding' => [
-                // The face's location within the image
-                'height' => $box->Height,
-                'left' => $box->Left,
-                'top' => $box->Top,
-                'width' => $box->Width
-            ]
-        ];
+                return [
+                    'status' => 'success',
+                    'issues' => $issues,
+                    'sharpness' => (int)$face->Quality->Sharpness,
+                    'bounding' => [
+                        // The face's location within the image
+                        'height' => $box->Height,
+                        'left' => $box->Left,
+                        'top' => $box->Top,
+                        'width' => $box->Width
+                    ]
+                ];
+            }
+        )->withoutObjectCaching();
     }
 
     /**

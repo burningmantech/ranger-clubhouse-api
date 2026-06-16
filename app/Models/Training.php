@@ -494,63 +494,71 @@ class Training extends Position
 
     /**
      * Is this training an ART training?
-     *
-     * @return bool
      */
-    public function getIsArtAttribute(): bool
+    protected function isArt(): Attribute
     {
-        return ($this->id != Position::TRAINING);
+        return Attribute::make(
+            get: fn() => ($this->id != Position::TRAINING)
+        );
     }
 
     /**
-     * Convert the position title into a slug (lower cased, dasherized)
-     *
-     * @return string "dirt" or title slug
+     * Convert the position title into a slug (lower cased, dasherized) - "dirt" or title slug.
      */
-
-    public function getSlugAttribute(): string
+    protected function slug(): Attribute
     {
-        return ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title);
+        return Attribute::make(
+            get: fn() => ($this->id == Position::TRAINING) ? 'dirt' : Str::slug($this->title)
+        );
     }
 
     /**
-     * Obtain graduation information if any
-     *
-     * @return array|null
+     * Obtain graduation information if any.
      */
-
-    public function getGraduationInfoAttribute(): ?array
+    protected function graduationInfo(): Attribute
     {
-        $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->id] ?? null;
-        if (!$graduate) {
-            return null;
-        }
+        return Attribute::make(
+            get: function () {
+                $graduate = Position::ART_GRADUATE_TO_POSITIONS[$this->id] ?? null;
+                if (!$graduate) {
+                    return null;
+                }
 
-        $result = [
-            'positions' => array_map(fn($p) => ['id' => $p, 'title' => Position::retrieveTitle($p)], $graduate['positions'])
-        ];
+                $result = [
+                    'positions' => array_map(fn($p) => ['id' => $p, 'title' => Position::retrieveTitle($p)], $graduate['positions'])
+                ];
 
-        $fullyGraduatedPosition = $graduate['veteran'] ?? null;
-        if ($fullyGraduatedPosition) {
-            $result['fully_graduated_position'] = [
-                'id' => $fullyGraduatedPosition,
-                'title' => Position::retrieveTitle($fullyGraduatedPosition)
-            ];
-        }
+                $fullyGraduatedPosition = $graduate['veteran'] ?? null;
+                if ($fullyGraduatedPosition) {
+                    $result['fully_graduated_position'] = [
+                        'id' => $fullyGraduatedPosition,
+                        'title' => Position::retrieveTitle($fullyGraduatedPosition)
+                    ];
+                }
 
-        return $result;
+                return $result;
+            }
+        )->withoutObjectCaching();
     }
 
-    public function getMentorPositionIdAttribute(): ?int
+    protected function mentorPositionId(): Attribute
     {
-        $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
-        return $mentoring ? $mentoring[0] : null;
+        return Attribute::make(
+            get: function () {
+                $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
+                return $mentoring ? $mentoring[0] : null;
+            }
+        );
     }
 
-    public function getMenteePositionIdAttribute(): ?int
+    protected function menteePositionId(): Attribute
     {
-        $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
-        return $mentoring ? $mentoring[1] : null;
+        return Attribute::make(
+            get: function () {
+                $mentoring = self::MENTORING_POSITIONS[$this->id] ?? null;
+                return $mentoring ? $mentoring[1] : null;
+            }
+        );
     }
 
     public function hasMentees(): Attribute
