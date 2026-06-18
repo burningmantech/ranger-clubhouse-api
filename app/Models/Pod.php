@@ -156,7 +156,7 @@ class Pod extends ApiModel
     public function loadPhotos(): void
     {
         foreach ($this->people as $person) {
-            $person->photo_url = PersonPhoto::retrieveMostRecentApproved($person->id);
+            $person->photo_url = $person->approvedProfileUrl();
         }
     }
 
