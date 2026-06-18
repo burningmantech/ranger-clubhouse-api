@@ -353,7 +353,7 @@ class Alpha
         ];
 
         if ($photoApproved) {
-            $potential->photo_url = $person->person_photo->image_url ?? null;
+            $potential->photo_url = $person->approvedProfileUrl() ?? null;
         }
 
         $teamHistory = $intakeHistory[$personId] ?? null;
