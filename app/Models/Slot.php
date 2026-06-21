@@ -352,13 +352,10 @@ class Slot extends ApiModel
                     ->orderBy('person.callsign', 'asc')
                     ->get();
 
-                $parentCount = $parentSlot->signed_up;
-                if (($parentCount + $slot->signed_up) >= $parentSlot->max) {
-                    $parentCount = $parentSlot->max;
-                    $signedUp = $slot->max;
-                } else {
-                    $parentCount += $signedUp;
-                }
+                // The 'parent' entry shows the combined pool usage capped at the
+                // parent max. The child slot itself ($signedUp) keeps its own real
+                // count -- do not inflate it to the child max when the pool is full.
+                $parentCount = min($parentSlot->signed_up + $slot->signed_up, $parentSlot->max);
 
                 $results['parent'] = [
                     'slot_id' => $parentSlot->id,
@@ -377,13 +374,10 @@ class Slot extends ApiModel
                     ->orderBy('person.callsign', 'asc')
                     ->get();
 
+                // The parent slot ($signedUp) shows the combined pool usage capped
+                // at its max; the 'child' entry keeps its own real count.
                 $childCount = $childSlot->signed_up;
-                if (($signedUp + $childCount) >= $slot->max) {
-                    $signedUp = $slot->max;
-                    $childCount = $childSlot->max;
-                } else {
-                    $signedUp += $childCount;
-                }
+                $signedUp = min($slot->signed_up + $childCount, $slot->max);
 
                 $results['child'] = [
                     'slot_id' => $childSlot->id,
