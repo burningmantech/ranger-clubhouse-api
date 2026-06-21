@@ -164,8 +164,13 @@ class ParentChildSlotSignupTest extends TestCase
     {
         [, $child] = $this->makeLinked(pm: 10, cm: 1, ps: 0, cs: 1);
 
-        $this->expectException(ScheduleSignUpException::class);
-        Schedule::computeSignups($child, Schedule::OP_ADD);
+        try {
+            Schedule::computeSignups($child, Schedule::OP_ADD);
+            $this->fail('expected ScheduleSignUpException');
+        } catch (ScheduleSignUpException $e) {
+            // The child's own capacity is the one that is full.
+            $this->assertEquals('Mentee', $e->fullPositionTitle);
+        }
     }
 
     /** A6: Child blocked when shared pool is full even though child max not reached. */
@@ -174,8 +179,13 @@ class ParentChildSlotSignupTest extends TestCase
         // Pm=2 Cm=5, two parents already -> pool full.
         [, $child] = $this->makeLinked(pm: 2, cm: 5, ps: 2, cs: 0);
 
-        $this->expectException(ScheduleSignUpException::class);
-        Schedule::computeSignups($child, Schedule::OP_ADD);
+        try {
+            Schedule::computeSignups($child, Schedule::OP_ADD);
+            $this->fail('expected ScheduleSignUpException');
+        } catch (ScheduleSignUpException $e) {
+            // The shared parent pool is the one that is full, not the child.
+            $this->assertEquals('Ridealong', $e->fullPositionTitle);
+        }
     }
 
     /* ===================================================================

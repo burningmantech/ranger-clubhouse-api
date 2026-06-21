@@ -302,6 +302,7 @@ class Schedule
                     'signed_up' => $e->signUps,
                     'linked_slots' => $e->linkedSlots,
                     'combined_max' => $e->combinedMax,
+                    'full_position_title' => $e->fullPositionTitle,
                 ];
             }
             // Most likely the database crapped itself
@@ -400,9 +401,12 @@ class Schedule
             $finalSignUps = $signUps + $countAdjustment;
 
             if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $parentSlot->max)) {
+                // Name whichever shift is actually at capacity: the child's own
+                // max, or the shared parent pool.
+                $fullTitle = $signUps >= $max ? $slot->position->title : $parentSlot->position->title;
                 throw new ScheduleSignUpException(self::FULL, $max, [
                     ['slot_id' => $parentSlot->id, 'signed_up' => $combined],
-                ], $parentSlot->max);
+                ], $parentSlot->max, $fullTitle);
             }
 
             if ($finalSignUps >= $max || $adjustedCombined >= $parentSlot->max) {
@@ -431,10 +435,12 @@ class Schedule
                 $finalSignUps = $adjustedCombined;
 
                 if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $max)) {
+                    // The parent's own max is the shared pool limit, so the parent
+                    // shift is the one at capacity.
                     throw new ScheduleSignUpException(self::FULL, $max, [
                         ['slot_id' => $childSlot->id, 'signed_up' => $childSignups]
                     ],
-                        $slot->max);
+                        $slot->max, $slot->position->title);
                 }
 
                 if ($finalSignUps >= $max || ($signUps + $countAdjustment) >= $max) {
@@ -462,7 +468,7 @@ class Schedule
                 // Cannot exceed the signup limit unless it is forced.
                 if ($op == self::OP_ADD && $signUps >= $max) {
                     if (!$force) {
-                        throw new ScheduleSignUpException(self::FULL, $signUps, [], $slot->max);
+                        throw new ScheduleSignUpException(self::FULL, $signUps, [], $slot->max, $slot->position->title);
                     }
 
                     $isFull = true;
