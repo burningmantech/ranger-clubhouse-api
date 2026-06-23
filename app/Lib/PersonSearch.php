@@ -25,7 +25,7 @@ class PersonSearch
      * is handling a retired Ranger returning back.
      */
 
-    const string CHEETAH_CUB_STATUS = 'cheetahcub';
+    const string MENTOR_CHEETAH_CUB_STATUS = 'cheetahcub';
 
     const array BASE_COLUMNS = [
         'person.id',
@@ -421,14 +421,14 @@ class PersonSearch
         if ($addStatuses) {
             if ($this->statuses && $this->statuses != 'all') {
                 $statuses = explode(',', $this->statuses);
-                if (stripos($this->statuses, self::CHEETAH_CUB_STATUS) !== false) {
-                    $statuses = array_diff($statuses, [self::CHEETAH_CUB_STATUS]);
+                if (stripos($this->statuses, self::MENTOR_CHEETAH_CUB_STATUS) !== false) {
+                    $statuses = array_diff($statuses, [self::MENTOR_CHEETAH_CUB_STATUS]);
                     $sql->where(function ($w) use ($statuses) {
                         if (!empty($statuses)) {
                             $w->whereIn('status', $statuses);
                         }
                         $w->orWhereRaw("EXISTS (SELECT 1 FROM slot JOIN person_slot ON person_slot.person_id=person.id WHERE begins_year=? AND position_id=? AND person_slot.slot_id=slot.id LIMIT 1)",
-                            [current_year(), Position::CHEETAH_CUB]);
+                            [current_year(), Position::MENTOR_CHEETAH_CUB]);
                     });
                 } else {
                     $sql->whereIn('status', $statuses);
