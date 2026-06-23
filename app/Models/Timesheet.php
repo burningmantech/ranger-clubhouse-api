@@ -59,7 +59,7 @@ class Timesheet extends ApiModel
     const string YEARS_AS_CONTRIBUTOR = 'as-contributor'; // All the years worked as a contributor / non-ranger
     const string YEARS_ALL = 'all';
 
-    const string BLOCKED_NOT_CHEETAH_CUB = 'not-cheetah-cub';  // Person is retired or inactive extension and trying to sign into a non-Cheetah Cub shift.
+    const string BLOCKED_NOT_MENTOR_CHEETAH_CUB = 'not-cheetah-cub';  // Person is retired or inactive extension and trying to sign into a non-Cheetah Cub shift.
     const string BLOCKED_NOT_TRAINED = 'not-trained'; // Person is not trained. Either In-Person or ART.
     const string BLOCKED_NO_BURN_PERIMETER_EXP = 'no-burn-perimeter-exp'; // Person has no burn perimeter experience
     const string BLOCKED_NO_EMPLOYEE_ID = 'no-employee-id'; // Position is paid -- person does not have employee id on file.

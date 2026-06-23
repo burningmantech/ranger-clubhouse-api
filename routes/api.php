@@ -270,6 +270,7 @@ Route::middleware(['authenticate', 'api'])->group(function () {
     Route::get('mentor/mentees', [MentorController::class, 'mentees']);
     Route::get('mentor/mentors', [MentorController::class, 'mentors']);
     Route::post('mentor/mentor-assignment', [MentorController::class, 'mentorAssignment']);
+    Route::get('mentor/shift-report', [ MentorController::class, 'shiftReport']);
     Route::post('mentor/convert-alphas', [MentorController::class, 'convertAlphas']);
     Route::post('mentor/convert-prospectives', [MentorController::class, 'convertProspectives']);
     Route::post('mentor/setup-training-data', [MentorController::class, 'setupTrainingData']);

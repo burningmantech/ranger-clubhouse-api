@@ -6,6 +6,7 @@ use App\Lib\Alpha;
 use App\Lib\ClubhouseCache;
 use App\Lib\GroundHogDay;
 use App\Lib\ProspectiveNewVolunteer;
+use App\Lib\Reports\MentorShiftReport;
 use App\Models\Person;
 use App\Models\PersonMentor;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -13,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Psr\SimpleCache\InvalidArgumentException;
+use Throwable;
 
 class MentorController extends ApiController
 {
@@ -218,11 +220,23 @@ class MentorController extends ApiController
         return response()->json(['prospectives' => ProspectiveNewVolunteer::retrievePotentialAlphas()]);
     }
 
+    public function shiftReport(): JsonResponse
+    {
+        $this->authorize('isMentor');
+
+        $params = request()->validate([
+            'slot_id' => 'sometimes|integer|exists:slot,id|required_without:on_duty',
+            'on_duty' => 'sometimes|boolean|required_without:slot_id',
+        ]);
+
+        return response()->json(MentorShiftReport::execute($params['slot_id'] ?? null, (bool) ($params['on_duty'] ?? false)));
+    }
+
     /**
      * Find prospective accounts who are eligible to become Alphas
      *
      * @return JsonResponse
-     * @throws AuthorizationException
+     * @throws Throwable
      */
 
     public function convertProspectives(): JsonResponse

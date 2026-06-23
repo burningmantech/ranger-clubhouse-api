@@ -562,7 +562,7 @@ class TimesheetController extends ApiController
         $status = $person->status;
         if ($status == Person::INACTIVE
             && $timesheet->position->type != Position::TYPE_TRAINING
-            && $timesheet->position_id != Position::CHEETAH_CUB) {
+            && $timesheet->position_id != Position::MENTOR_CHEETAH_CUB) {
             $person->status = Person::ACTIVE;
             $person->auditReason = 'automatic status conversion';
             $person->saveWithoutValidation();
