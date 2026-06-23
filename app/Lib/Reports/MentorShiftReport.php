@@ -109,10 +109,23 @@ class MentorShiftReport
 
     public static function buildGroup(array $slotsByPosition, array $positionIds, string $title): array
     {
-        $grouped = array_filter($slotsByPosition, fn($positionId) => in_array($positionId, $positionIds), ARRAY_FILTER_USE_KEY);
-
         $positions = [];
-        foreach ($grouped as $positionId => $slots) {
+        foreach ($positionIds as $positionId) {
+            if (!in_array($positionId, $positionIds)) {
+                continue;
+            }
+
+            $slots = $slotsByPosition[$positionId] ?? null;
+            if (!$slots) {
+                $position = Position::find($positionId);
+                $positions[] = [
+                    'id' => $position->id,
+                    'title' => $position->title,
+                    'slots' => [],
+                ];
+                continue;
+            }
+
             $positionSlots = [];
             foreach ($slots as $slot) {
                 $people = [];
