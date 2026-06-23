@@ -30,7 +30,7 @@ jobs:
           php-version: '8.4'
 
       - name: Checkout source code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Check PHP Syntax
         run: ./bin/checkphpsyntax .
@@ -50,7 +50,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -93,7 +93,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v8
@@ -122,7 +122,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v8
@@ -153,7 +153,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Download Docker image artifacts
         uses: actions/download-artifact@v8
