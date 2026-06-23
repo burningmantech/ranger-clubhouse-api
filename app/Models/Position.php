@@ -34,9 +34,12 @@ class Position extends ApiModel
     const int MENTOR_MITTEN = 67;
     const int MENTOR_KHAKI = 86;
     const int MENTOR_RADIO_TRAINER = 72;
+    const int MENTOR_ALPHA_HOST = 193;
+    const int MENTOR_WHEEL_OF_MANY_WAYS = 172;
+    const int MENTOR_ADMIN = 214;
 
-    const int CHEETAH = 45;
-    const int CHEETAH_CUB = 46;
+    const int MENTOR_CHEETAH = 45;
+    const int MENTOR_CHEETAH_CUB = 46;
 
     const int DIRT_GREEN_DOT = 4;
     const int GREEN_DOT_LEAD = 14;
@@ -726,7 +729,7 @@ class Position extends ApiModel
         return Attribute::make(
             get: function () {
                 if ($this->type == self::TYPE_MENTORING) {
-                    if ($this->id == Position::ALPHA || $this->id == Position::CHEETAH_CUB) {
+                    if ($this->id == Position::ALPHA || $this->id == Position::MENTOR_CHEETAH_CUB) {
                         return 'mentee';
                     }
                     return 'mentor';
