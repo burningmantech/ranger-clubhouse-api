@@ -35,8 +35,8 @@ class SignInBlocker
         // Must do a cheetah cub shift first.
         if (($person->status == Person::INACTIVE_EXTENSION || $person->status == Person::RETIRED)
             && $position->type != Position::TYPE_TRAINING
-            && $position->id != Position::CHEETAH_CUB) {
-            $blockers[] = ['blocker' => Timesheet::BLOCKED_NOT_CHEETAH_CUB];
+            && $position->id != Position::MENTOR_CHEETAH_CUB) {
+            $blockers[] = ['blocker' => Timesheet::BLOCKED_NOT_MENTOR_CHEETAH_CUB];
         }
 
         // Are they trained for this position?
