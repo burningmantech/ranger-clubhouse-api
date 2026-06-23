@@ -154,12 +154,11 @@ class Schedule
                 if (!$found) {
                     continue;
                 }
-                if (($row->signed_up + $child->signed_up) >= $row->max || $row->signed_up >= $row->max) {
-                    $found->signed_up = $found->max;
-                    $row->signed_up = $row->max;
-                } else {
-                    $row->signed_up = $row->signed_up + $found->signed_up;
-                }
+                // The parent shift displays the combined pool usage (capped at its
+                // own max); the child shift keeps its own real sign-up count. Do NOT
+                // inflate the child to its max when the pool is full -- that makes a
+                // single sign-up appear to fill every child seat.
+                $row->signed_up = min($row->signed_up + $child->signed_up, $row->max);
             }
         }
 
@@ -303,6 +302,7 @@ class Schedule
                     'signed_up' => $e->signUps,
                     'linked_slots' => $e->linkedSlots,
                     'combined_max' => $e->combinedMax,
+                    'full_position_title' => $e->fullPositionTitle,
                 ];
             }
             // Most likely the database crapped itself
@@ -401,15 +401,19 @@ class Schedule
             $finalSignUps = $signUps + $countAdjustment;
 
             if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $parentSlot->max)) {
+                // Name whichever shift is actually at capacity: the child's own
+                // max, or the shared parent pool.
+                $fullTitle = $signUps >= $max ? $slot->position->title : $parentSlot->position->title;
                 throw new ScheduleSignUpException(self::FULL, $max, [
                     ['slot_id' => $parentSlot->id, 'signed_up' => $combined],
-                ], $parentSlot->max);
+                ], $parentSlot->max, $fullTitle);
             }
 
             if ($finalSignUps >= $max || $adjustedCombined >= $parentSlot->max) {
+                // The child slot is full -- either its own max is reached or the
+                // shared pool is. Flag it, but keep the real sign-up counts. Do not
+                // inflate the child count ($finalSignUps) to the child max.
                 $isFull = true;
-                $finalSignUps = $max;
-                $adjustedCombined = $parentSlot->max;
             }
 
             $linkedSlots[] = [
@@ -419,7 +423,7 @@ class Schedule
                 'position_title' => $parentSlot->position->title,
             ];
 
-            if (self::OP_ADD && ($combined + 1) == $parentSlot->max) {
+            if ($op == self::OP_ADD && ($combined + 1) == $parentSlot->max) {
                 $becameFull = true;
             }
         } else {
@@ -431,16 +435,19 @@ class Schedule
                 $finalSignUps = $adjustedCombined;
 
                 if ($op == self::OP_ADD && !$force && ($signUps >= $max || $combined >= $max)) {
+                    // The parent's own max is the shared pool limit, so the parent
+                    // shift is the one at capacity.
                     throw new ScheduleSignUpException(self::FULL, $max, [
-                        ['slot_id' => $childSlot->id, 'signed_up' => $childSlot->max]
+                        ['slot_id' => $childSlot->id, 'signed_up' => $childSignups]
                     ],
-                        $slot->max);
+                        $slot->max, $slot->position->title);
                 }
 
                 if ($finalSignUps >= $max || ($signUps + $countAdjustment) >= $max) {
+                    // Pool/parent is full; cap the parent's combined display at its
+                    // max, but keep the child's real count in the linked entry.
                     $isFull = true;
                     $finalSignUps = $max;
-                    $childSignups = $childSlot->max;
                 }
 
                 $linkedSlots[] = [
@@ -450,7 +457,7 @@ class Schedule
                     'position_title' => $childSlot->position->title,
                 ];
 
-                if (self::OP_ADD && ($combined + 1) == $slot->max) {
+                if ($op == self::OP_ADD && ($combined + 1) == $slot->max) {
                     $becameFull = true;
                 }
             } else {
@@ -461,7 +468,7 @@ class Schedule
                 // Cannot exceed the signup limit unless it is forced.
                 if ($op == self::OP_ADD && $signUps >= $max) {
                     if (!$force) {
-                        throw new ScheduleSignUpException(self::FULL, $signUps, [], $slot->max);
+                        throw new ScheduleSignUpException(self::FULL, $signUps, [], $slot->max, $slot->position->title);
                     }
 
                     $isFull = true;

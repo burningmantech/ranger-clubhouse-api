@@ -10,10 +10,11 @@ use Exception;
  */
 class ScheduleSignUpException extends Exception
 {
-    public function __construct(string        $message,
-                                public ?int   $signUps = null,
-                                public ?array $linkedSlots = null,
-                                public ?int   $combinedMax)
+    public function __construct(string         $message,
+                                public ?int    $signUps = null,
+                                public ?array  $linkedSlots = null,
+                                public ?int    $combinedMax = null,
+                                public ?string $fullPositionTitle = null)
     {
         parent::__construct($message);
     }
