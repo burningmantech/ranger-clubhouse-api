@@ -119,8 +119,8 @@ class MentorShiftReport
             if (!$slots) {
                 $position = Position::find($positionId);
                 $positions[] = [
-                    'id' => $position->id,
-                    'title' => $position->title,
+                    'id' => $positionId,
+                    'title' => $position?->title ?? "Position {$positionId}",
                     'slots' => [],
                 ];
                 continue;
