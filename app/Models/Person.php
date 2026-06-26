@@ -1519,7 +1519,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             return null;
         }
 
-        if ($this->person_photo->isApproved()) {
+        if ($this->person_photo?->isApproved()) {
             // The most recent photo submission was approved!
             return $this->person_photo;
         }

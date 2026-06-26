@@ -2,17 +2,13 @@
 
 namespace App\Lib\Reports;
 
+use App\Models\Person;
 use App\Models\Position;
 use App\Models\Timesheet;
-use Illuminate\Support\Collection;
 
 class ShiftCommandPhotoBoardReport
 {
     const array SHIFT_COMMAND_PERSONNEL = [
-        [
-            'title' => 'For Questions',
-            'positions' => [Position::ROC_STAR]
-        ],
         [
             'title' => 'Khakis',
             'positions' => [
@@ -48,59 +44,29 @@ class ShiftCommandPhotoBoardReport
         ]
     ];
 
-    public static function execute(?string $period): array
+    public static function execute(): array
     {
-        if (!$period) {
-            return self::executeForOnDuty();
-        }
-
-        return self::executeForPeriod($period);
-    }
-
-    public static function executeForOnDuty(): array
-    {
-        $positionsById = self::retrievePositions();
-
-        $onDuty = Timesheet::whereIn('position_id', $positionsById->keys()->all())
+        $onDuty = Timesheet::whereIn('position_id', self::positionIds())
             ->whereNull('off_duty')
             ->with(['position:id,title', 'person:id,callsign,person_photo_id', 'person.person_photo'])
             ->get()
             ->groupBy('position_id');
 
-        if ($onDuty->isEmpty()) {
-            return [];
-        }
-
         $groups = [];
         foreach (self::SHIFT_COMMAND_PERSONNEL as $positionGroup) {
             $people = [];
             foreach ($positionGroup['positions'] as $positionId) {
-                $position = $positionsById->get($positionId);
-                if (!$position) {
-                    continue;
-                }
-
                 $working = $onDuty->get($positionId);
                 if (!$working) {
                     continue;
                 }
 
                 foreach ($working as $entry) {
-                    $person = $entry->person;
-                    $position = $entry->position;
-                    $people[] = [
-                        'id' => $person->id,
-                        'callsign' => $person->callsign,
-                        'photo_url' => $person->approvedPhoto()?->image_url,
-                        'position' => [
-                            'id' => $position->id,
-                            'title' => $position->title,
-                        ]
-                    ];
+                    $people[] = self::personEntry($entry->person, $entry->position);
                 }
-
-                usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
             }
+
+            usort($people, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
 
             $groups[] = [
                 'title' => $positionGroup['title'],
@@ -108,20 +74,54 @@ class ShiftCommandPhotoBoardReport
             ];
         }
 
+        $hosts = [];
+        foreach ($onDuty->get(Position::ROC_STAR) ?? [] as $entry) {
+            $hosts[] = self::personEntry($entry->person);
+        }
+        usort($hosts, fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+
         return [
-            'now' => (string) now(),
+            'now' => (string)now(),
+            'hosts' => $hosts,
             'groups' => $groups
         ];
     }
 
-    public static function retrievePositions(): Collection
+    /**
+     * Build a person card for the board, optionally tagged with the position worked.
+     *
+     * @return array{id: int, callsign: string, photo_url: ?string, position?: array{id: int, title: string}}
+     */
+    private static function personEntry(Person $person, ?Position $position = null): array
     {
-        $ids = [];
+        $entry = [
+            'id' => $person->id,
+            'callsign' => $person->callsign,
+            'photo_url' => $person->approvedPhoto()?->image_url,
+        ];
+
+        if ($position) {
+            $entry['position'] = [
+                'id' => $position->id,
+                'title' => $position->title,
+            ];
+        }
+
+        return $entry;
+    }
+
+    /**
+     * Every position id that can appear on the board, including the ROC_STAR hosts.
+     *
+     * @return array<int>
+     */
+    private static function positionIds(): array
+    {
+        $ids = [Position::ROC_STAR];
         foreach (self::SHIFT_COMMAND_PERSONNEL as $group) {
             $ids = array_merge($ids, $group['positions']);
         }
 
-        return Position::whereIn('id', $ids)->get()->keyBy('id');
+        return $ids;
     }
-
 }
