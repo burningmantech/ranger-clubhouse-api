@@ -523,6 +523,6 @@ class SlotController extends ApiController
     {
         $this->authorize('report', Slot::class);
 
-        return response()->json(ShiftCommandPhotoBoardReport::executeForOnDuty());
+        return response()->json(ShiftCommandPhotoBoardReport::execute());
     }
 }
