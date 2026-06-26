@@ -101,6 +101,7 @@ class Position extends ApiModel
 
     const int RSC_SHIFT_LEAD = 12;
     const int RSC_SHIFT_LEAD_PRE_EVENT = 83;
+    const int ROC_STAR = 239;
 
     const int OPERATIONS_MANAGER = 37;
 

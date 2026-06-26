@@ -8,6 +8,7 @@ use App\Lib\Reports\FlakeReport;
 use App\Lib\Reports\HQWindowCheckInOutForecastReport;
 use App\Lib\Reports\ScheduleByCallsignReport;
 use App\Lib\Reports\ScheduleByPositionReport;
+use App\Lib\Reports\ShiftCommandPhotoBoardReport;
 use App\Lib\Reports\ShiftCoverageReport;
 use App\Lib\Reports\ShiftLeadReport;
 use App\Lib\Reports\ShiftSignupsReport;
@@ -512,4 +513,16 @@ class SlotController extends ApiController
         ]);
     }
 
+    /**
+     * Shift Command Photo Board
+     *
+     * @return JsonResponse
+     */
+
+    public function shiftCommandPhotoBoard() : JsonResponse
+    {
+        $this->authorize('report', Slot::class);
+
+        return response()->json(ShiftCommandPhotoBoardReport::executeForOnDuty());
+    }
 }

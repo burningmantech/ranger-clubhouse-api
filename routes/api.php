@@ -451,6 +451,7 @@ Route::middleware(['authenticate', 'api'])->group(function () {
     Route::get('slot/people-in-period', [SlotController::class, 'peopleInPeriod']);
     Route::get('slot/position-schedule-report', [SlotController::class, 'positionScheduleReport']);
     Route::get('slot/callsign-schedule-report', [SlotController::class, 'callsignScheduleReport']);
+    Route::get('slot/shift-command-photo-board', [SlotController::class, 'shiftCommandPhotoBoard']);
     Route::get('slot/years', [SlotController::class, 'years']);
 
     Route::get('slot/{slot}/people', [SlotController::class, 'people']);
