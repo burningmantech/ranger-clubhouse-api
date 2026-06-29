@@ -26,9 +26,12 @@ class RedactDatabase
         // No fruit-cup.. err.. Personal Information for you tonight!
         DB::table('person')->update([
             'alt_phone' => '123-456-7890',
+            'apt' => '',
             'behavioral_agreement' => false,
             'bpguid' => 'DEAD-BEEF',
             'camp_location' => 'D-Lot',
+            'city' => 'Springfield',
+            'country' => 'US',
             'emergency_contact' => 'On-playa: John Smith (father), camped at 3:45 and G. Off-playa: Jane Smith (mother), phone 123-456-7890, email jane@noemail.none',
             'employee_id' => '',
             'home_phone' => '123-456-7890',
@@ -36,14 +39,18 @@ class RedactDatabase
             'known_rangers' => '',
             'lms_id' => '',
             'lms_username' => '',
+            'mi' => '',
             'on_site' => false,
+            'preferred_name' => '',
             'sfuid' => '',
             'sms_off_playa' => '',
             'sms_on_playa' => '',
+            'state' => 'NT',
             'street1' => '123 Any St.',
             'street2' => '',
             'tpassword' => '',
-            'vehicle_blacklisted' => false
+            'vehicle_blacklisted' => false,
+            'zip' => '99999'
         ]);
 
         if ($superRedact) {
@@ -105,7 +112,6 @@ class RedactDatabase
             'telescope_entries',
             'telescope_entries_tags',
             'telescope_monitoring',
-            'timesheet_log',
             'timesheet_missing',
             'timesheet_missing_note',
             'trainee_note',

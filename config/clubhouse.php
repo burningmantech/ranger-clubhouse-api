@@ -15,6 +15,9 @@ return [
     // GroundhogDay Server (string) - if set will turn on
     'GroundhogDayTime'    => env('RANGER_CLUBHOUSE_GROUNDHOG_DAY_TIME', ''),
 
+    // Password to set on the GroundhogDay HQ training test accounts
+    'HQTrainingPassword' => env('RANGER_CLUBHOUSE_HQ_TRAINING_PASSWORD'),
+
     'RekognitionAccessKey' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_KEY', ''),
     'RekognitionAccessSecret' => env('RANGER_CLUBHOUSE_REKOGNITION_ACCESS_SECRET', ''),
 
