@@ -46,7 +46,12 @@ class GroundHogDay
         DB::table('timesheet')->where('off_duty', '>', $groundHogDay)->update(['off_duty' => null, 'review_status' => Timesheet::STATUS_UNVERIFIED]);
 
         // Remove any timesheet logs after groundhog day
-        DB::table('timesheet_log')->where('created_at', '>=', $groundHogDay)->delete();
+        DB::table('timesheet_log')
+            ->where('created_at', '>=', $groundHogDay)
+            ->whereRaw('json_extract(data, "$.forced") is not null')
+            ->delete();
+
+
         DB::table('timesheet_missing')->where('created_at', '>=', $groundHogDay)->delete();
 
         // Clear out all slots in future years
@@ -57,13 +62,13 @@ class GroundHogDay
         }
         DB::table('slot')->where('begins_year', '>', $year)->delete();
 
-        DB::table('position_credit')->whereYear('start_time', '>', $year);
+        DB::table('position_credit')->whereYear('start_time', '>', $year)->delete();
 
         // Remove all future training info
         DB::table('trainee_status')->whereIntegerInRaw('slot_id', $slotIds)->delete();
 
         // Kill all assets
-        DB::table('asset')->whereYear('created_at', '>', $year);
+        DB::table('asset')->whereYear('created_at', '>', $year)->delete();
 
         // Mark some assets as being checked out
         DB::table('asset_person')->where('checked_out', '>', $groundHogDay)->delete();
@@ -127,7 +132,9 @@ class GroundHogDay
             $setting->saveWithoutValidation();
         }
 
-        Setting::find('DashboardPeriod')->update(['value' => 'event']);
+        $dashboardPeriod = Setting::find('DashboardPeriod');
+        $dashboardPeriod->value = 'event';
+        $dashboardPeriod->saveWithoutValidation();
 
         self::passHQTraining("hqworkertest@nomail.none", $year, [Position::HQ_FULL_TRAINING]);
         self::passHQTraining("hqshorttest@nomail.none", $year, [Position::HQ_FULL_TRAINING, Position::HQ_LEADS_SHORTS_TRAINING]);
@@ -136,11 +143,11 @@ class GroundHogDay
 
         self::hqSlotInfo($year);
 
-        $hqPassword = env('RANGER_CLUBHOUSE_HQ_TRAINING_PASSWORD');
+        $hqPassword = config('clubhouse.HQTrainingPassword');
         if (!empty($hqPassword)) {
-            self::setPassword("hqworkertest@nomail.none", $hqPassword, false);
-            self::setPassword("hqshorttest@nomail.none", $hqPassword, true);
-            self::setPassword("hqleadtest@nomail.none", $hqPassword, true);
+            self::setPassword("hqworkertest@nomail.none", $hqPassword);
+            self::setPassword("hqshorttest@nomail.none", $hqPassword);
+            self::setPassword("hqleadtest@nomail.none", $hqPassword);
         }
     }
 
@@ -177,11 +184,11 @@ class GroundHogDay
         foreach ($trainingPositionIds as $id) {
             $slot = Slot::where('position_id', $id)->where('active', true)->where('begins_year', $year)->first();
             if (!$slot) {
-                Log::error("Cannot find HQ training slot");
-                return;
+                Log::error("Cannot find HQ training slot for position {$id}");
+                continue;
             }
 
-            PersonSlot::insert(['slot_id' => $slot->id, 'person_id' => $person->id]);
+            PersonSlot::insertOrIgnore(['slot_id' => $slot->id, 'person_id' => $person->id]);
             $ts = TraineeStatus::firstOrNewForSession($person->id, $slot->id);
             $ts->passed = true;
             $ts->saveWithoutValidation();
@@ -194,8 +201,8 @@ class GroundHogDay
         foreach ($positionIds as $id) {
             $position = Position::find($id);
             if (!$position) {
-                Log::error("Cannot find HQ training position");
-                return;
+                Log::error("Cannot find HQ training position {$id}");
+                continue;
             }
 
             $position->require_signin_for_roles = false;
@@ -286,12 +293,16 @@ class GroundHogDay
             }
         }
 
+        if (!$saturday) {
+            throw new RuntimeException("No Saturday Alpha slot found for {$year}");
+        }
+
         Timesheet::whereRaw('DATE(on_duty) != ?', [$saturday])
             ->whereYear('on_duty', $year)
             ->where('position_id', Position::ALPHA)
             ->delete();
 
-        Timesheet::where('person_id', $peopleIds)
+        Timesheet::whereIntegerInRaw('person_id', $peopleIds)
             ->whereNull('off_duty')
             ->delete();
 
@@ -312,13 +323,13 @@ class GroundHogDay
             $ts->saveWithoutValidation();
         }
 
-        $mentors = Timesheet::where('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
+        $mentors = Timesheet::whereIn('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
             ->whereDate('on_duty', $saturday)
             ->orderBy('on_duty')
             ->get()
             ->groupBy('person_id');
 
-        Timesheet::where('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
+        Timesheet::whereIn('position_id', [Position::MENTOR, Position::MENTOR_MITTEN])
             ->whereYear('on_duty', $year)
             ->whereRaw('DATE(on_duty) != ?', [$saturday])
             ->delete();
