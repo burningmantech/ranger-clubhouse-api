@@ -285,6 +285,7 @@ class GroundHogDay
                 $begins->day = $target->day;
                 $begins->hour = $target->hour;
                 $begins->minute = $target->minute;
+                $begins->second = 0;
                 $slot->begins = $begins;
                 $slot->ends = $begins->clone()->addHours(10);
                 $slot->saveWithoutValidation();
@@ -318,6 +319,7 @@ class GroundHogDay
             $onDuty->day = $target->day;
             $onDuty->hour = $target->hour;
             $onDuty->minute = $target->minute;
+            $onDuty->second = 0;
             $ts->on_duty = $onDuty;
             $ts->off_duty = null;
             $ts->saveWithoutValidation();
@@ -347,6 +349,7 @@ class GroundHogDay
             $onDuty->day = $target->day;
             $onDuty->hour = $target->hour;
             $onDuty->minute = $target->minute;
+            $onDuty->second = 0;
             $mentor->on_duty = $onDuty;
             $mentor->off_duty = null;
             $mentor->saveWithoutValidation();
