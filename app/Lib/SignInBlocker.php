@@ -42,7 +42,7 @@ class SignInBlocker
         // Are they trained for this position?
         self::checkForTraining($person, $position, $blockers);
 
-        if ($checkTimes && !$position->ignore_time_check) {
+        if ($checkTimes && $position->is_checkin_time_restricted) {
             self::checkSlots($personId, $positionId, $blockers, $relativeTo);
         }
 
