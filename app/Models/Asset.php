@@ -112,6 +112,7 @@ class Asset extends ApiModel
         $orderNumber = $query['order_number'] ?? null;
         $entityAssignment = $query['entity_assignment'] ?? null;
         $groupName = $query['group_name'] ?? null;
+        $includeCheckedOut = $query['include_checked_out'] ?? null;
 
         $sql = self::where('year', $year);
 
@@ -155,6 +156,10 @@ class Asset extends ApiModel
                 'asset_history.check_in_person:id,callsign',
                 'asset_history.attachment'
             ]);
+        }
+
+        if ($includeCheckedOut) {
+            $sql->with(['checked_out', 'checked_out.person:id,callsign']);
         }
 
         return $sql->orderBy('barcode')->get();

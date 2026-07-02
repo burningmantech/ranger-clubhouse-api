@@ -114,6 +114,8 @@ Route::middleware('api')->group(function () {
     if (app()->isLocal()) {
         // Serve up files in exports, photos, and staging
         Route::get('{file}', [FileController::class, 'serve'])->where('file', '(exports|photos|staging)/.*');
+
+        Route::post('auth/dev-login', [OAuth2Controller::class, 'devLogin']);
     }
 
     Route::get('.well-known/openid-configuration', [OAuth2Controller::class, 'openIdDiscovery']);

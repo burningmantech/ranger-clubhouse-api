@@ -241,6 +241,22 @@ class OAuth2Controller extends ApiController
     }
 
     /**
+     * Development-only: obtain a token for any person by callsign, bypassing password.
+     * Route only exists when app()->isLocal() - see routes/api.php.
+     *
+     * @return JsonResponse
+     */
+
+    public function devLogin(): JsonResponse
+    {
+        $params = request()->validate([
+            'callsign' => 'required|string'
+        ]);
+
+        return UserAuthentication::attemptDevLogin($params['callsign']);
+    }
+
+    /**
      * Return all issued tokens for a person
      */
 
