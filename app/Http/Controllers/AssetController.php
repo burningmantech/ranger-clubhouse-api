@@ -29,6 +29,7 @@ class AssetController extends ApiController
             'exclude' => 'sometimes|string',        // exclude a type (aka description)
             'group_name' => 'sometimes|string',
             'include_history' => 'sometimes|boolean',   // include checkout history
+            'include_checked_out' => 'sometimes|boolean', // include who currently has the asset checked out
             'order_number' => 'sometimes|string', // the vendor order number
             'type' => 'sometimes|string',    // find for a type (aka description)
             'year' => 'sometimes|integer',   // year to go searching in

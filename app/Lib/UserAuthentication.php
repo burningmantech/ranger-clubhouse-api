@@ -152,4 +152,27 @@ class UserAuthentication
     {
         return response()->json(['error' => $status], 401);
     }
+
+    /**
+     * Development-only: log in as any person by callsign, no password required.
+     * Only reachable when the /auth/dev-login route is registered (app()->isLocal()).
+     *
+     * @param string $callsign
+     * @return JsonResponse
+     */
+
+    public static function attemptDevLogin(string $callsign): JsonResponse
+    {
+        $actionData = self::buildLogInfo();
+        $actionData['via'] = 'dev-login';
+
+        $person = Person::findByCallsign($callsign);
+        if (!$person) {
+            $actionData['callsign'] = $callsign;
+            ActionLog::record(null, 'auth-failed', 'Dev login: callsign not found', $actionData);
+            return self::errorResponse('invalid-callsign');
+        }
+
+        return self::loginUser($person, $actionData);
+    }
 }
