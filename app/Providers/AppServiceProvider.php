@@ -32,20 +32,11 @@ class AppServiceProvider extends ServiceProvider
         if (env('APP_SQL_DEBUG')) {
             DB::listen(function ($query) {
                 $backtrace = collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))
-                    ->first(function ($frame) {
-                        // Skip internal framework files to locate your actual application code
-                        return isset($frame['file']) &&
-                            !str_contains($frame['file'], 'vendor/') &&
-                            !str_contains($frame['file'], 'app/Providers');
-                    });
+                    ->filter(// Skip internal framework files to locate your actual application code
+                    fn($frame) => isset($frame['file']) &&
+                        !str_contains($frame['file'], 'vendor/') &&
+                        !str_contains($frame['file'], 'app/Providers'))->values()->toArray();
 
-                if ($backtrace) {
-                    $file = $backtrace['file'];
-                    $line = $backtrace['line'];
-                 } else {
-                    $file = "UNKNOWN";
-                    $line = 0;
-                }
 
                 $placeholder = preg_quote('?', '/');
                 $sql = $query->sql;
@@ -62,7 +53,9 @@ class AppServiceProvider extends ServiceProvider
                 // replace all newlines with spaces except those in quotes
                 $sql = preg_replace('/\n(?![^"]*"(?:(?:[^"]*"){2})*[^"]*$)/i', ' ', $sql);
                 $sql = preg_replace('/\s{2,}/i', ' ', $sql);
-                Log::debug("$query->time ms: SQL $sql\nLocation: {$file}:{$line}");
+
+                $stack = implode("\n", array_map(fn ($b) => "{$b['file']}:{$b['line']}", $backtrace));
+                Log::debug("$query->time ms: SQL $sql\nLocation: {$stack}");
             });
         }
 
