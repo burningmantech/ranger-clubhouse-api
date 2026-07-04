@@ -963,6 +963,8 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
         $this->rolesRequireTraining = [];
         $this->positionsRequireSignin = [];
 
+        $onDutyPositionId = Timesheet::findPersonOnDuty($this->id)?->position_id;
+
         foreach ($positionRoles as $pos) {
             if ($pos->require_training_for_roles) {
                 if (!$pos->training_position_id) {
@@ -976,7 +978,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 if ($this->rolesRequireTraining[$pos->training_position_id]) {
                     if (!$pos->require_signin_for_roles) {
                         $roleIds[] = $pos->role_id;
-                    } else if (Timesheet::findPersonOnDuty($this->id)?->position_id == $pos->id) {
+                    } else if ($onDutyPositionId == $pos->id) {
                         $roleIds[] = $pos->role_id;
                     } else {
                         $this->positionsRequireSignin[$pos->id][] = $pos->role_id;
@@ -984,7 +986,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 }
             } else if (!$pos->require_signin_for_roles) {
                 $roleIds[] = $pos->role_id;
-            } else if (Timesheet::findPersonOnDuty($this->id)?->position_id == $pos->id) {
+            } else if ($onDutyPositionId == $pos->id) {
                 $roleIds[] = $pos->role_id;
             } else {
                 $this->positionsRequireSignin[$pos->id][] = $pos->role_id;
