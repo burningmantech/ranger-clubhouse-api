@@ -1361,11 +1361,14 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
             // fall thru
             case Person::AUDITOR:
             case Person::PROSPECTIVE:
-                // Remove all roles, and reset back to the default roles
-                PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
+                // For those who started as Echelon and wish to apply, preserve any existing permissions and positions.
+                if ($oldStatus != Person::ECHELON) {
+                    // Remove all roles, and reset back to the default roles
+                    PersonRole::resetRoles($personId, $changeReason, Person::ADD_NEW_USER);
 
-                // Remove all positions, and reset back to the default positions
-                PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
+                    // Remove all positions, and reset back to the default positions
+                    PersonPosition::resetPositions($personId, $changeReason, Person::ADD_NEW_USER);
+                }
                 break;
 
             case Person::PAST_PROSPECTIVE:
