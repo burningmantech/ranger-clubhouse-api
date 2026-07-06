@@ -68,12 +68,6 @@ class MentorShiftReport
             ]);
         }
 
-        if (!$slot->active) {
-            throw ValidationException::withMessages([
-                'slot_id' => ["The slot is not active"]
-            ]);
-        }
-
         $slotsByPosition = Slot::where('begins_year', $slot->begins_year)
             ->whereBetween('begins', [
                 $slot->begins->clone()->subHours(self::HOURS_PRIOR),
