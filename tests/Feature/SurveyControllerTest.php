@@ -327,4 +327,114 @@ class SurveyControllerTest extends TestCase
             'response' => 'a response'
         ]);
     }
+
+    /*
+     * A failed re-submission must not destroy the person's existing answers.
+     *
+     * The submit() handler deletes the prior answers before inserting the new ones. Both the
+     * delete and the inserts must run inside a single transaction so a mid-submission failure
+     * rolls the delete back, leaving the original answers intact.
+     */
+
+    public function testSubmitRollsBackDeleteOnFailure(): void
+    {
+        $this->buildVenueSurvey();
+
+        $venueG = $this->venueGroup;
+        $venueQ = $this->venueQuestion;
+
+        $firstResponse = $this->json('POST', 'survey/submit', [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING,
+            'survey' => [
+                [
+                    'survey_group_id' => $venueG->id,
+                    'answers' => [
+                        [
+                            'survey_question_id' => $venueQ->id,
+                            'response' => 'original response'
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+        $firstResponse->assertStatus(200);
+
+        $this->assertDatabaseHas('survey_answer', [
+            'person_id' => $this->user->id,
+            'slot_id' => $this->slot->id,
+            'survey_question_id' => $venueQ->id,
+            'response' => 'original response'
+        ]);
+
+        $otherSurvey = Survey::factory()->create(['year' => $this->year, 'position_id' => Position::TRAINING]);
+        $foreignGroup = SurveyGroup::factory()->create(['survey_id' => $otherSurvey->id]);
+        $foreignQuestion = SurveyQuestion::factory()->create([
+            'survey_id' => $otherSurvey->id,
+            'survey_group_id' => $foreignGroup->id
+        ]);
+
+        $failedResponse = $this->json('POST', 'survey/submit', [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING,
+            'survey' => [
+                [
+                    'survey_group_id' => $foreignGroup->id,
+                    'answers' => [
+                        [
+                            'survey_question_id' => $foreignQuestion->id,
+                            'response' => 'replacement response'
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+
+        $failedResponse->assertStatus(422);
+
+        $this->assertDatabaseHas('survey_answer', [
+            'person_id' => $this->user->id,
+            'slot_id' => $this->slot->id,
+            'survey_question_id' => $venueQ->id,
+            'response' => 'original response'
+        ]);
+    }
+
+    /*
+     * A forged trainer_id that the responder did not actually train under must be rejected
+     * and no answer attributed to that trainer may be persisted.
+     */
+
+    public function testSubmitRejectsUnauthorizedTrainerId(): void
+    {
+        $this->buildVenueSurvey();
+
+        $trainerG = $this->trainerGroup;
+        $trainerQ = $this->trainerQuestion;
+
+        $forgedTrainer = Person::factory()->create();
+
+        $response = $this->json('POST', 'survey/submit', [
+            'slot_id' => $this->slot->id,
+            'type' => Survey::TRAINING,
+            'survey' => [
+                [
+                    'survey_group_id' => $trainerG->id,
+                    'trainer_id' => $forgedTrainer->id,
+                    'answers' => [
+                        [
+                            'survey_question_id' => $trainerQ->id,
+                            'response' => 'a response'
+                        ]
+                    ]
+                ],
+            ]
+        ]);
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseMissing('survey_answer', [
+            'trainer_id' => $forgedTrainer->id
+        ]);
+    }
 }

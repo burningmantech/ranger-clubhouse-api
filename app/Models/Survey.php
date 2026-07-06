@@ -437,6 +437,7 @@ class Survey extends ApiModel
 
                 $targets = Timesheet::where('position_id', $m->mentoring_position_id)
                     ->whereRaw('on_duty BETWEEN DATE_SUB(?, INTERVAL 1 HOUR) AND DATE_ADD(?, INTERVAL 1 HOUR)', [$slot->begins, $slot->begins])
+                    ->with(['person:id,callsign'])
                     ->get();
 
                 if ($targets->isEmpty()) {

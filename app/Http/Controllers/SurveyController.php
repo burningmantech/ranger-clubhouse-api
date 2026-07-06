@@ -298,18 +298,19 @@ class SurveyController extends ApiController
         }
 
 
-        if ($type == Survey::ALPHA) {
-            SurveyAnswer::deleteAllForSurvey($survey->id, $personId);
-        } else {
-            SurveyAnswer::deleteAllForPersonSlot($survey->id, $personId, $slotId);
-
-        }
-
         $isTrainerSurvey = ($survey->type == Survey::TRAINER);
 
+        $authorizedTrainerIds = $this->authorizedTrainerIds($trainers);
 
         try {
             DB::beginTransaction();
+
+            if ($type == Survey::ALPHA) {
+                SurveyAnswer::deleteAllForSurvey($survey->id, $personId);
+            } else {
+                SurveyAnswer::deleteAllForPersonSlot($survey->id, $personId, $slotId);
+            }
+
             // Loop through each survey answer group
             foreach ($params['survey'] as $group) {
                 $surveyGroup = SurveyGroup::findOrFail($group['survey_group_id']);
@@ -325,6 +326,9 @@ class SurveyController extends ApiController
                 }
 
                 $trainerId = $group['trainer_id'] ?? null;
+                if ($trainerId !== null && !in_array((int)$trainerId, $authorizedTrainerIds, true)) {
+                    throw new UnacceptableConditionException("Trainer [{$trainerId}] is not part of this survey");
+                }
                 $answers = $group['answers'] ?? [];
 
                 foreach ($answers as $answer) {
@@ -348,6 +352,25 @@ class SurveyController extends ApiController
         }
 
         return $this->success();
+    }
+
+    /**
+     * Extract the set of trainer/target ids the responder is authorized to attribute answers to.
+     *
+     * The retrieve* helpers return either an Eloquent/Support collection (trainer & alpha surveys)
+     * or a plain array (mentoring surveys); both hold objects exposing an `id` property.
+     *
+     * @param iterable<object> $trainers
+     * @return array<int>
+     */
+    private function authorizedTrainerIds(iterable $trainers): array
+    {
+        $ids = [];
+        foreach ($trainers as $trainer) {
+            $ids[] = (int)$trainer->id;
+        }
+
+        return $ids;
     }
 
     /**

@@ -120,6 +120,14 @@ class SurveyReports
         $slot = Slot::findOrFail($slotId);
         $survey = Survey::findForTypePositionYear($type, $slot->position_id, $slot->begins->year);
 
+        $workedSlot = Timesheet::where('person_id', $person->id)
+            ->where('position_id', $survey->position_id)
+            ->where('slot_id', $slotId)
+            ->exists();
+        if (!$workedSlot) {
+            throw new UnacceptableConditionException('You did not work the mentoring session for this slot.');
+        }
+
         $windowStart = $slot->begins->copy()->subHours(self::MENTORING_WINDOW_HOURS);
         $windowEnd = $slot->begins->copy()->addHours(self::MENTORING_WINDOW_HOURS);
 
@@ -261,7 +269,9 @@ class SurveyReports
             $entries = $isAlpha ? $buckets['alphaResponses'] : $buckets['slotResponses'];
 
             if ($question->summarize_rating) {
-                if (!$isAlpha) {
+                if ($isAlpha) {
+                    $entries = self::computeStatistics($buckets['overallRatings']);
+                } else {
                     self::sortStatistics($entries);
                 }
                 $report->summarized_ratings[] = [
@@ -299,6 +309,7 @@ class SurveyReports
             ->filter(fn($answer) => $answer->trainer_id > 0)
             ->groupBy('trainer_id');
 
+        $report->summarized_ratings = [];
         $trainerReports = [];
         $questionSummaryRatings = [];
         $isAlpha = ($survey->type == Survey::ALPHA);
@@ -538,7 +549,7 @@ class SurveyReports
      */
     public static function buildAnswer(SurveyAnswer $answer, bool $includePerson): array
     {
-        if (!$includePerson) {
+        if (!$includePerson || !$answer->can_share_name) {
             return ['answer' => $answer->response];
         }
 

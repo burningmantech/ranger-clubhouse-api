@@ -10,9 +10,11 @@ use App\Lib\Reports\UnclaimedTicketsWithSignupsReport;
 use App\Lib\TicketingManagement;
 use App\Models\AccessDocument;
 use App\Models\Person;
+use App\Models\Role;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AccessDocumentController extends ApiController
@@ -187,6 +189,22 @@ class AccessDocumentController extends ApiController
         $this->authorize('update', $accessDocument);
         $this->fromRest($accessDocument);
 
+        /*
+         * A non-admin owner reaches this method (the policy grants update() to the row's owner).
+         * Prevent the owner from escalating privileges by self-claiming (status), forging
+         * credentials (type/source_year), extending expiry (expiry_date), or re-parenting the
+         * row (person_id). Status transitions are handled separately by updateStatus().
+         * Admins and EDIT_ACCESS_DOCS holders keep full access.
+         */
+        if (!$this->userHasRole([Role::ADMIN, Role::EDIT_ACCESS_DOCS])) {
+            $protectedFields = ['person_id', 'status', 'type', 'source_year', 'expiry_date'];
+            foreach ($protectedFields as $field) {
+                if ($accessDocument->isDirty($field)) {
+                    $this->notPermitted("Not allowed to change {$field}.");
+                }
+            }
+        }
+
         if (!$accessDocument->save()) {
             return $this->restError($accessDocument);
         }
@@ -274,6 +292,29 @@ class AccessDocumentController extends ApiController
         $status = $params['status'];
         $adType = $ad->type;
         $adStatus = $ad->status;
+
+        DB::transaction(function () use ($ad, $rows, $status, $adType, $adStatus, $personId) {
+            $this->applyStatusChange($ad, $rows, $status, $adType, $adStatus, $personId);
+        });
+
+        return $this->success($rows, null, 'access_document');
+    }
+
+    /**
+     * Apply a status change to an access document, banking/releasing related tickets and
+     * vehicle passes as needed. Intended to run within a database transaction.
+     *
+     * @param AccessDocument $ad
+     * @param \Illuminate\Database\Eloquent\Collection $rows
+     * @param string $status
+     * @param string $adType
+     * @param string $adStatus
+     * @param int $personId
+     * @throws UnacceptableConditionException
+     */
+
+    private function applyStatusChange(AccessDocument $ad, $rows, string $status, string $adType, string $adStatus, int $personId): void
+    {
         switch ($status) {
             case AccessDocument::BANKED:
                 if (!$ad->isRegularTicket() || !in_array($adStatus, AccessDocument::ACTIVE_STATUSES)) {
@@ -351,8 +392,6 @@ class AccessDocumentController extends ApiController
                 $vp->saveWithoutValidation();
             }
         }
-
-        return $this->success($rows, null, 'access_document');
     }
 
 
@@ -616,7 +655,15 @@ class AccessDocumentController extends ApiController
 
         $callsign = $this->user->callsign;
 
+        /*
+         * Only bump the ticket types whose expiry is not force-reset to the current year by the
+         * saving() hook (i.e. REGULAR_TICKET_TYPES: SPT & Staff Credential). Bumping the
+         * expire-this-year types would be silently reverted. Rows with a null expiry_date are
+         * skipped to avoid dereferencing null.
+         */
         $rows = AccessDocument::whereIn('status', [AccessDocument::BANKED, AccessDocument::QUALIFIED])
+            ->whereIn('type', AccessDocument::REGULAR_TICKET_TYPES)
+            ->whereNotNull('expiry_date')
             ->get();
 
         foreach ($rows as $row) {

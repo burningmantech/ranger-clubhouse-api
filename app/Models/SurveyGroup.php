@@ -89,7 +89,7 @@ class SurveyGroup extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    public function getReportId()
+    public function getReportId(): string|int
     {
         if ($this->type == self::TYPE_NORMAL) {
             return 'main';
@@ -98,7 +98,7 @@ class SurveyGroup extends ApiModel
         }
     }
 
-    public function getReportTitleDefault($surveyType)
+    public function getReportTitleDefault(string $surveyType): string
     {
          switch ($this->type) {
             case self::TYPE_NORMAL:

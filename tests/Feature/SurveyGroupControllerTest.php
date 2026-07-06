@@ -45,6 +45,21 @@ class SurveyGroupControllerTest extends TestCase
     }
 
     /*
+     * A non-existent survey_id should fail validation (422), not 404
+     */
+
+    public function testIndexSurveyGroupWithNonExistentSurveyId()
+    {
+        $response = $this->json('GET', 'survey-group', ['survey_id' => 999999]);
+        $response->assertStatus(422);
+        $response->assertJson([
+            'errors' => [
+                ['source' => ['pointer' => '/data/attributes/survey_id']],
+            ],
+        ]);
+    }
+
+    /*
      * Create a surveyGroup document
      */
 

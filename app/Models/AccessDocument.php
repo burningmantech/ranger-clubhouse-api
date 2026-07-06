@@ -607,6 +607,10 @@ class AccessDocument extends ApiModel
     {
         return Attribute::make(
             set: function (?string $date) {
+                if ($date === null || $date === '') {
+                    return null;
+                }
+
                 if (is_numeric($date)) {
                     $date = (string)$date;
                 }
