@@ -91,11 +91,37 @@ class AccessDocumentControllerTest extends TestCase
     }
 
     /*
-     * Update an access Document for allowed user
+     * Update an access Document for allowed user (non-protected field)
      */
 
     public function testAccessDocumentUpdateSuccess()
     {
+        $ad = AccessDocument::factory()->create([
+            'type' => AccessDocument::SPT,
+            'status' => AccessDocument::CLAIMED,
+            'person_id' => $this->user->id,
+            'source_year' => current_year(),
+            'delivery_method' => AccessDocument::DELIVERY_NONE,
+        ]);
+
+        $response = $this->json('PUT', "access-document/{$ad->id}", ['access_document' => [
+            'delivery_method' => AccessDocument::DELIVERY_POSTAL
+        ]]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('access_document', [
+            'id' => $ad->id,
+            'delivery_method' => AccessDocument::DELIVERY_POSTAL
+        ]);
+    }
+
+    /*
+     * An admin may change a protected field (status) via update().
+     */
+
+    public function testAccessDocumentUpdateStatusAsAdminSuccess()
+    {
+        $this->addAdminRole();
         $ad = $this->createAccessDocument();
 
         $response = $this->json('PUT', "access-document/{$ad->id}", ['access_document' => [
@@ -107,6 +133,38 @@ class AccessDocumentControllerTest extends TestCase
             'id' => $ad->id,
             'status' => AccessDocument::BANKED
         ]);
+    }
+
+    /*
+     * A non-admin owner must NOT be able to escalate privileges by changing protected
+     * fields (status, type, person_id, source_year) via update().
+     */
+
+    public function testAccessDocumentUpdateProtectedFieldsForbidden()
+    {
+        $other = Person::factory()->create();
+
+        foreach ([
+            'status' => AccessDocument::CLAIMED,
+            'type' => AccessDocument::GIFT,
+            'person_id' => $other->id,
+            'source_year' => current_year() + 1,
+            'expiry_date' => (current_year() + 5) . '-09-15',
+        ] as $field => $value) {
+            $ad = $this->createAccessDocument();
+
+            $response = $this->json('PUT', "access-document/{$ad->id}", ['access_document' => [
+                $field => $value
+            ]]);
+
+            $response->assertStatus(403);
+
+            $ad->refresh();
+            $this->assertEquals(AccessDocument::STAFF_CREDENTIAL, $ad->type);
+            $this->assertEquals(AccessDocument::QUALIFIED, $ad->status);
+            $this->assertEquals($this->user->id, $ad->person_id);
+            $this->assertEquals(current_year(), $ad->source_year);
+        }
     }
 
 
@@ -638,5 +696,102 @@ class AccessDocumentControllerTest extends TestCase
         $ad->refresh();
         $expireYear++;
         $this->assertEquals("$expireYear-09-15 00:00:00", (string)$ad->expiry_date);
+    }
+
+    /*
+     * bumpExpiration must ignore expire-this-year types (WAP / vehicle passes), whose expiry the
+     * saving() hook force-resets, and must not crash on a null expiry_date. The reported count
+     * should reflect only the rows actually bumped.
+     */
+
+    public function testBumpTicketExpirationIgnoresExpireThisYearAndNullExpiry()
+    {
+        $this->addAdminRole();
+        $person = Person::factory()->create();
+        $year = current_year();
+        $expireYear = $year + 3;
+
+        // Regular ticket - should be bumped.
+        $sc = AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'source_year' => $year,
+            'type' => AccessDocument::STAFF_CREDENTIAL,
+            'status' => AccessDocument::QUALIFIED,
+            'expiry_date' => "$expireYear-09-15"
+        ]);
+
+        // WAP - expire-this-year type, must be ignored (would be reverted to current year).
+        $wap = AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'source_year' => $year,
+            'type' => AccessDocument::WAP,
+            'status' => AccessDocument::QUALIFIED,
+        ]);
+
+        // Vehicle pass - expire-this-year type, must be ignored.
+        $vp = AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'source_year' => $year,
+            'type' => AccessDocument::VEHICLE_PASS_SP,
+            'status' => AccessDocument::QUALIFIED,
+        ]);
+
+        // Regular ticket with a null expiry_date - must not crash and must not be bumped.
+        $nullExpiry = AccessDocument::factory()->create([
+            'person_id' => $person->id,
+            'source_year' => $year,
+            'type' => AccessDocument::SPT,
+            'status' => AccessDocument::BANKED,
+            'expiry_date' => null,
+        ]);
+
+        $response = $this->json('POST', 'access-document/bump-expiration');
+        $response->assertStatus(200);
+        $response->assertJson(['count' => 1]);
+
+        $sc->refresh();
+        $bumped = $expireYear + 1;
+        $this->assertEquals("$bumped-09-15 00:00:00", (string)$sc->expiry_date);
+
+        // WAP & VP expiry force-reset to current year by the saving() hook, never bumped past it.
+        $wap->refresh();
+        $this->assertEquals($year, $wap->expiry_date->year);
+        $vp->refresh();
+        $this->assertEquals($year, $vp->expiry_date->year);
+
+        // Null-expiry row untouched.
+        $nullExpiry->refresh();
+        $this->assertNull($nullExpiry->expiry_date);
+    }
+
+    /*
+     * Deceased or dismissed ticket holders must be excluded entirely from the delivery payload.
+     */
+
+    public function testCurrentForDeliveryExcludesDeceasedAndDismissed()
+    {
+        $this->addAdminRole();
+
+        $alive = Person::factory()->create(['callsign' => 'Alive']);
+        $deceased = Person::factory()->create(['callsign' => 'Dead', 'status' => Person::DECEASED]);
+        $dismissed = Person::factory()->create(['callsign' => 'Gone', 'status' => Person::DISMISSED]);
+
+        foreach ([$alive, $deceased, $dismissed] as $person) {
+            AccessDocument::factory()->create([
+                'person_id' => $person->id,
+                'source_year' => current_year(),
+                'type' => AccessDocument::SPT,
+                'status' => AccessDocument::CLAIMED,
+                'delivery_method' => AccessDocument::DELIVERY_POSTAL,
+            ]);
+        }
+
+        $response = $this->json('GET', 'access-document/current', ['for_delivery' => 1]);
+        $response->assertStatus(200);
+
+        $ids = collect($response->json('documents.people'))->pluck('person.id')->all();
+        $this->assertContains($alive->id, $ids);
+        $this->assertNotContains($deceased->id, $ids);
+        $this->assertNotContains($dismissed->id, $ids);
     }
 }

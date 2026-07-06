@@ -62,8 +62,12 @@ class EventreeBMIDExport
         $export = new self($bmids, $batchInfo, $exportPhotos);
 
         if ($exportPhotos) {
+            // Force a reload rather than loadMissing(): bulkLoadRelationships() eager-loads
+            // person.person_photo with a trimmed column set (id, person_id, status) that omits
+            // image_filename. loadMissing() would treat the trimmed relation as already loaded
+            // and leave image_filename null, breaking imageExists()/readImage().
+            $export->bmids->load('person.person_photo');
             foreach ($export->bmids as $bmid) {
-                $bmid->load('person.person_photo');
                 $photo = $bmid->person->approvedPhoto();
                 if (!$photo) {
                     throw new UnacceptableConditionException("{$bmid->person->callsign} does not have a photo record");
@@ -233,6 +237,8 @@ class EventreeBMIDExport
 
         if ($bmid->access_any_time) {
             $arrivalDate = date('07/15/Y');
+        } elseif (empty($bmid->access_date)) {
+            $arrivalDate = '';
         } else {
             $arrivalDate = Carbon::parse($bmid->access_date)->format('m/d/Y');
         }

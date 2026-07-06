@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Lib\EventreeBMIDExport;
 use App\Models\AccessDocument;
 use App\Models\Bmid;
 use App\Models\BmidExport;
 use App\Models\Person;
+use App\Models\PersonEvent;
 use App\Models\PersonPhoto;
 use App\Models\PersonPosition;
 use App\Models\PersonSlot;
@@ -14,6 +16,7 @@ use App\Models\Provision;
 use App\Models\Role;
 use App\Models\Slot;
 use App\Models\TraineeStatus;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -617,5 +620,197 @@ class BmidControllerTest extends TestCase
         $export = BmidExport::firstOrFail();
 
         Storage::disk($exportStorage)->assertExists(BmidExport::storagePath($export->filename));
+    }
+
+    /*
+     * store() must return 422 (not 500) when person_id does not reference a real person.
+     * Regression: the person_id was not validated with exists:person,id, so a bogus id
+     * blew up downstream instead of failing validation.
+     */
+
+    public function testStoreReturns422ForNonexistentPerson()
+    {
+        $response = $this->json('POST', 'bmid', [
+            'bmid' => [
+                'person_id' => 999999,
+                'year' => $this->year,
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'errors' => [
+                ['title' => 'The selected bmid.person id is invalid.'],
+            ],
+        ]);
+        $this->assertDatabaseMissing('bmid', ['person_id' => 999999]);
+    }
+
+    /*
+     * update() must not reassign the badge identity: person_id and year are fixed and
+     * must remain unchanged even if the request tries to set different values.
+     */
+
+    public function testUpdateCannotChangePersonIdOrYear()
+    {
+        $owner = Person::factory()->create();
+        $other = Person::factory()->create();
+
+        $bmid = Bmid::factory()->create([
+            'person_id' => $owner->id,
+            'year' => $this->year,
+            'title1' => 'Original',
+        ]);
+
+        $response = $this->json('PUT', "bmid/{$bmid->id}", [
+            'bmid' => [
+                'person_id' => $other->id,
+                'year' => $this->year + 5,
+                'title1' => 'Renamed',
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $bmid->refresh();
+        $this->assertEquals($owner->id, $bmid->person_id);
+        $this->assertEquals($this->year, $bmid->year);
+        // The mutable field still updated.
+        $this->assertEquals('Renamed', $bmid->title1);
+
+        $this->assertDatabaseHas('bmid', [
+            'id' => $bmid->id,
+            'person_id' => $owner->id,
+            'year' => $this->year,
+        ]);
+        $this->assertDatabaseMissing('bmid', [
+            'id' => $bmid->id,
+            'person_id' => $other->id,
+        ]);
+    }
+
+    /*
+     * update() must return 422 (not 500) when handed an invalid status value.
+     */
+
+    public function testUpdateReturns422ForInvalidStatus()
+    {
+        $person = Person::factory()->create();
+        $bmid = Bmid::factory()->create([
+            'person_id' => $person->id,
+            'year' => $this->year,
+            'status' => Bmid::IN_PREP,
+        ]);
+
+        $response = $this->json('PUT', "bmid/{$bmid->id}", [
+            'bmid' => ['status' => 'not_a_real_status'],
+        ]);
+
+        $response->assertStatus(422);
+
+        $bmid->refresh();
+        $this->assertEquals(Bmid::IN_PREP, $bmid->status);
+    }
+
+    /*
+     * A printable BMID with no access document (no WAP) must export with a BLANK
+     * Arrival Date -- not stamped with today's date.
+     */
+
+    public function testExportBlanksArrivalDateWhenNoAccessDocument()
+    {
+        $person = Person::factory()->create();
+
+        $bmid = Bmid::factory()->create([
+            'person_id' => $person->id,
+            'year' => $this->year,
+            'status' => Bmid::READY_TO_PRINT,
+        ]);
+
+        // Load relationships the same way the export pipeline does; with no WAP,
+        // access_date stays null and access_any_time false.
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id], $bmid->year);
+
+        $this->assertNull($bmid->access_date);
+        $this->assertFalse($bmid->access_any_time);
+
+        $row = EventreeBMIDExport::buildExportRow($bmid);
+        $arrivalDate = $row[array_search('Arrival Date', EventreeBMIDExport::CSV_HEADERS)];
+
+        $this->assertSame('', $arrivalDate);
+        $this->assertNotEquals(date('m/d/Y'), $arrivalDate);
+    }
+
+    /*
+     * bulkLoadRelationships must compute has_signups / training_signed_up /
+     * org_vehicle_insurance for the REQUESTED year, not the current year.
+     * Signups, training, and org insurance are created in the current year only;
+     * querying a different year must yield all-false flags.
+     */
+
+    public function testBulkLoadRelationshipsIsYearCorrect()
+    {
+        $person = Person::factory()->create();
+        $currentYear = current_year();
+        $otherYear = $currentYear + 3;
+
+        // On-playa shift signup (has_signups) in the current year.
+        $shiftSlot = Slot::factory()->create([
+            'begins' => "$currentYear-08-20 00:00:00",
+            'ends' => "$currentYear-08-20 06:00:00",
+            'position_id' => Position::DIRT,
+            'active' => true,
+        ]);
+        PersonSlot::factory()->create(['person_id' => $person->id, 'slot_id' => $shiftSlot->id]);
+
+        // Training signup (training_signed_up) in the current year.
+        $trainingSlot = Slot::factory()->create([
+            'begins' => "$currentYear-07-20 09:45:00",
+            'ends' => "$currentYear-07-20 17:45:00",
+            'position_id' => Position::TRAINING,
+            'active' => true,
+        ]);
+        PersonSlot::factory()->create(['person_id' => $person->id, 'slot_id' => $trainingSlot->id]);
+
+        // Org vehicle insurance flag for the current year.
+        PersonEvent::factory()->create([
+            'person_id' => $person->id,
+            'year' => $currentYear,
+            'org_vehicle_insurance' => true,
+        ]);
+
+        // Sanity: for the current year, the flags are all true.
+        $currentBmid = new Bmid(['person_id' => $person->id, 'year' => $currentYear]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$currentBmid]), [$person->id], $currentYear);
+        $this->assertTrue($currentBmid->has_signups);
+        $this->assertTrue($currentBmid->training_signed_up);
+        $this->assertTrue($currentBmid->org_vehicle_insurance);
+
+        // For a different year, none of these apply.
+        $otherBmid = new Bmid(['person_id' => $person->id, 'year' => $otherYear]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$otherBmid]), [$person->id], $otherYear);
+        $this->assertFalse($otherBmid->has_signups);
+        $this->assertFalse($otherBmid->training_signed_up);
+        $this->assertFalse($otherBmid->org_vehicle_insurance);
+    }
+
+    /*
+     * An orphaned BMID -- a row whose person_id has no matching person -- must not
+     * cause a 500 on the index/manage path. bulkLoadRelationships filters null people
+     * and re-derives its working id set, so the orphan is simply dropped.
+     */
+
+    public function testOrphanedBmidDoesNotCrashIndex()
+    {
+        // A valid BMID that must still come through.
+        $person = Person::factory()->create();
+        Bmid::factory()->create(['person_id' => $person->id, 'year' => $this->year]);
+
+        // An orphaned BMID: person_id points at a person that does not exist.
+        Bmid::factory()->create(['person_id' => 987654, 'year' => $this->year]);
+
+        $response = $this->json('GET', 'bmid', ['year' => $this->year]);
+        $response->assertStatus(200);
+        $response->assertJsonFragment(['person_id' => $person->id]);
     }
 }

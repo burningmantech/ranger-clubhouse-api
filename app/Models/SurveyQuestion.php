@@ -52,7 +52,8 @@ class SurveyQuestion extends ApiModel
         'options' => ''
     ];
 
-    private $_optionLabels;
+    /** @var string[]|null */
+    private ?array $_optionLabels = null;
 
 
     public static function boot(): void
@@ -99,9 +100,13 @@ class SurveyQuestion extends ApiModel
         return BlankIfEmptyAttribute::make();
     }
 
-    public function responseToOptionLabel($value): ?string
+    public function responseToOptionLabel(mixed $value): ?string
     {
         if (empty($this->options)) {
+            return $value;
+        }
+
+        if (!is_numeric($value) || (int)$value < 1) {
             return $value;
         }
 
@@ -109,7 +114,7 @@ class SurveyQuestion extends ApiModel
             $this->_optionLabels = explode("\n", $this->options);
         }
 
-        return $this->_optionLabels[$value - 1] ?? $value;
+        return $this->_optionLabels[(int)$value - 1] ?? $value;
     }
 }
 

@@ -72,6 +72,7 @@ class Bmid extends ApiModel
     protected bool $has_signups = false;
     protected bool $org_vehicle_insurance = false;
 
+    protected bool $has_approved_photo = false;
     protected bool $has_ticket = false;
     protected bool $training_signed_up = false;
 
@@ -180,7 +181,7 @@ class Bmid extends ApiModel
 
     public function loadRelationships(): void
     {
-        self::bulkLoadRelationships(new EloquentCollection([$this]), [$this->person_id]);
+        self::bulkLoadRelationships(new EloquentCollection([$this]), [$this->person_id], $this->year);
     }
 
     public function setWap($wap): void
@@ -242,7 +243,7 @@ class Bmid extends ApiModel
             }
         }
 
-        self::bulkLoadRelationships($bmids, $personIds);
+        self::bulkLoadRelationships($bmids, $personIds, $year);
 
         return $bmids->sortBy(fn($bmid, $key) => $bmid->person->callsign, SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
@@ -253,12 +254,13 @@ class Bmid extends ApiModel
      *
      * @param $bmids
      * @param $personIds
+     * @param int|null $year the year to compute relationship flags for; defaults to the current year
      * @return void
      */
 
-    public static function bulkLoadRelationships($bmids, $personIds): void
+    public static function bulkLoadRelationships($bmids, $personIds, ?int $year = null): void
     {
-        $year = current_year();
+        $year ??= current_year();
 
         // Populate all the BMIDs with people..
         $bmids->load([
@@ -268,6 +270,10 @@ class Bmid extends ApiModel
 
         // Paranoia check - filter out any deleted accounts
         $bmids = $bmids->filter(fn($bmid) => $bmid->person != null);
+
+        // Re-derive the working id set from the surviving BMIDs so later loops
+        // don't index $bmidsByPerson with ids whose person was dropped above.
+        $personIds = $bmids->pluck('person_id')->all();
 
         // Load up the org insurance flags
         $personEvents = PersonEvent::findAllForIdsYear($personIds, $year)->keyBy('person_id');
@@ -330,11 +336,23 @@ class Bmid extends ApiModel
                 ->groupBy('person_id');
         }
 
+        // Precompute which people have ANY approved photo on file in one query
+        // to avoid an N+1 within the has_approved_photo accessor.
+        $approvedPhotoIds = DB::table('person_photo')
+            ->select('person_id')
+            ->whereIntegerInRaw('person_id', $personIds)
+            ->where('status', PersonPhoto::APPROVED)
+            ->distinct()
+            ->pluck('person_id')
+            ->flip();
+
         foreach ($bmids as $bmid) {
             // Don't send back the photo info.
             $bmid->person->makeHidden(['person_photo_id','person_photo']);
             $bmid->training_signed_up = $trainingIds?->has($bmid->person_id) ?? false;
             $bmid->has_ticket = $ticketIds->has($bmid->person_id);
+            $bmid->has_approved_photo = $bmid->person->person_photo != null
+                && $approvedPhotoIds->has($bmid->person_id);
         }
     }
 
@@ -372,7 +390,7 @@ class Bmid extends ApiModel
 
         $bmids = $sql->with(['person:id,callsign,email'])->get();
 
-        self::bulkLoadRelationships($bmids, $bmids->pluck('person_id')->toArray());
+        self::bulkLoadRelationships($bmids, $bmids->pluck('person_id')->toArray(), $year);
 
         return $bmids;
     }
@@ -461,7 +479,7 @@ class Bmid extends ApiModel
 
     public function hasApprovedPhoto(): Attribute
     {
-        return Attribute::make(get: fn() => $this->person->hasApprovedPhoto());
+        return Attribute::make(get: fn(): bool => $this->has_approved_photo);
     }
 
     public function hasTicket(): Attribute

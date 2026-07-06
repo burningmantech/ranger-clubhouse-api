@@ -66,18 +66,29 @@ class TicketingManagement
 
         $people = [];
 
+        $low = 5;
+        $high = 26;
         $dateRange = setting('TAS_SAPDateRange');
         if ($dateRange) {
-            list($low, $high) = explode("-", trim($dateRange));
-        } else {
-            $low = 5;
-            $high = 26;
+            $parts = explode("-", trim($dateRange));
+            if (count($parts) == 2 && is_numeric(trim($parts[0])) && is_numeric(trim($parts[1]))) {
+                $low = (int)trim($parts[0]);
+                $high = (int)trim($parts[1]);
+            }
         }
 
         foreach ($ticketHolders as $holder) {
             $personId = $holder->id;
             $tickets = $rows->get($personId);
             if (!$tickets) {
+                continue;
+            }
+
+            /*
+             * Exclude deceased or dismissed holders entirely. For for_delivery this is a physical
+             * shipping list, so these people must not appear in the payload at all.
+             */
+            if ($holder->status == Person::DECEASED || $holder->status == Person::DISMISSED) {
                 continue;
             }
 
@@ -88,9 +99,6 @@ class TicketingManagement
 
             foreach ($tickets as $row) {
                 $errors = [];
-                if ($holder->status == Person::DECEASED || $holder->status == Person::DISMISSED) {
-                    continue;
-                }
                 switch ($row->type) {
                     case AccessDocument::STAFF_CREDENTIAL:
                     case AccessDocument::WAP:

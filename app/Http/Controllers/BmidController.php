@@ -159,7 +159,7 @@ class BmidController extends ApiController
         $this->authorize('create', Bmid::class);
 
         $params = request()->validate([
-            'bmid.person_id' => 'required|integer',
+            'bmid.person_id' => 'required|integer|exists:person,id',
             'bmid.year' => 'required|integer',
         ]);
         $params = $params['bmid'];
@@ -172,7 +172,7 @@ class BmidController extends ApiController
             return $this->restError($bmid);
         }
 
-        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id], $bmid->year);
         return $this->success($bmid);
     }
 
@@ -188,7 +188,7 @@ class BmidController extends ApiController
     {
         $this->authorize('show', $bmid);
 
-        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id], $bmid->year);
 
         return $this->success($bmid);
     }
@@ -205,9 +205,37 @@ class BmidController extends ApiController
     {
         $this->authorize('update', $bmid);
 
+        request()->validate([
+            'bmid.status' => [
+                'sometimes',
+                'string',
+                Rule::in([
+                    Bmid::IN_PREP,
+                    Bmid::READY_TO_PRINT,
+                    Bmid::READY_TO_REPRINT_CHANGE,
+                    Bmid::READY_TO_REPRINT_LOST,
+                    Bmid::ISSUES,
+                    Bmid::DO_NOT_PRINT,
+                    Bmid::SUBMITTED,
+                ]),
+            ],
+            'bmid.meals' => [
+                'sometimes',
+                'nullable',
+                'string',
+                Rule::in(['all', 'pre', 'post', 'event', 'pre+event', 'event+post', 'pre+post']),
+            ],
+        ]);
+
         // load up additional info
-        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id]);
+        Bmid::bulkLoadRelationships(new EloquentCollection([$bmid]), [$bmid->person_id], $bmid->year);
+
+        // person_id and year identify the badge and must not be reassigned on update.
+        $personId = $bmid->person_id;
+        $year = $bmid->year;
         $this->fromRest($bmid);
+        $bmid->person_id = $personId;
+        $bmid->year = $year;
 
         if (!$bmid->save()) {
             return $this->restError($bmid);
