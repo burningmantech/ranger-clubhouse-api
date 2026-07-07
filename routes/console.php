@@ -49,8 +49,9 @@ if (config('clubhouse.DeploymentEnvironment') == 'Production' && !is_ghd_server(
     // Cleanup the mail log
     Schedule::command('clubhouse:cleanup-maillog')->dailyAt('03:30')->onOneServer();
 
-    // Cleanup oauth codes
-    Schedule::command('clubhouse:expire-oauth-codes')->dailyAt('03:00')->onOneServer();
+    // Cleanup oauth codes (codes expire after 120 seconds; run frequently so
+    // an "expired" code can't remain redeemable for up to a day)
+    Schedule::command('clubhouse:expire-oauth-codes')->everyFiveMinutes()->onOneServer();
 
     // Cleanup session tokens
     Schedule::command('sanctum:prune-expired --hours=24')->daily()->onOneServer();

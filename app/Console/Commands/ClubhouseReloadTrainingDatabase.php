@@ -49,9 +49,10 @@ class ClubhouseReloadTrainingDatabase extends Command
         putenv("MYSQL_PWD=$pwd");
 
         $this->info("Reloading database");
-        if (shell_exec("gunzip < $dumpFile | mysql -h $host -u $user $db")) {
+        exec("gunzip < $dumpFile | mysql -h $host -u $user $db", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Failed to reload database from $dumpFile.");
-            return 1;
+            return self::FAILURE;
         }
 
         ClubhouseCache::flush();

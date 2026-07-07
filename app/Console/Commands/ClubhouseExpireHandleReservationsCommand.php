@@ -34,7 +34,7 @@ class ClubhouseExpireHandleReservationsCommand extends Command
             'type' => $r->getTypeLabel(),
             'handle' => $r->handle,
             'reason' => $r->reason,
-            'expires_on' => (string)$r->expires_on,
+            'expires_on' => $r->expires_on->format('Y-m-d'),
         ])->toArray();
 
         if (empty($expired)) {

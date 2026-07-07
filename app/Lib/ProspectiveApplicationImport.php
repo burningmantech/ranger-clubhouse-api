@@ -3,11 +3,12 @@
 namespace App\Lib;
 
 use App\Models\ErrorLog;
+use App\Models\Person;
 use App\Models\ProspectiveApplication;
 use App\Models\ProspectiveApplicationLog;
 use App\Models\ProspectiveApplicationNote;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class ProspectiveApplicationImport
 {
@@ -168,25 +169,46 @@ class ProspectiveApplicationImport
     {
         $cols = [];
         foreach ($fields as $idx => $field) {
-            if (is_numeric($idx)) {
-                $cols[] = $field;
-            } else {
-                $cols[] = $idx;
-            }
+            $cols[] = is_numeric($idx) ? $field : $idx;
         }
 
         return implode(', ', $cols);
     }
 
-    public function queryContactRecord(string $id): mixed
+    /**
+     * Retrieve contact records for a batch of Ranger__c application Ids in a single query,
+     * instead of one round-trip per application. Uses WITH USER_MODE (via executeQuery) so
+     * that a record the running user cannot see is simply absent from the result -- and thus
+     * from the returned map -- matching the per-Id inaccessibility semantics callers relied on.
+     *
+     * A failed query (Salesforce error) degrades to an empty map rather than throwing, so
+     * every Id in the batch reads as inaccessible via `$map[$id] ?? false`.
+     *
+     * @param array<int, string> $ids Ranger__c record Ids to look up.
+     * @return array<string, mixed> Map of Ranger__c Id => its record object. Callers should
+     *                              use `$map[$id] ?? false` since a missing/inaccessible Id
+     *                              is simply absent from the map.
+     */
+
+    public function queryContactRecords(array $ids): array
     {
-        $sql = "SELECT Ranger_Info__r.Id, " . $this->buildFields(self::CONTACT_RECORD_FIELDS) . " FROM Ranger__c WHERE Id='" . $id . "'";
-        $results = $this->executeQuery($sql, 0, true);
-        if ($results === false) {
-            return false;
+        if (empty($ids)) {
+            return [];
         }
 
-        return $results->records[0];
+        $quotedIds = implode(',', array_map(fn (string $id): string => "'" . addslashes($id) . "'", $ids));
+        $sql = "SELECT Id, Ranger_Info__r.Id, " . $this->buildFields(self::CONTACT_RECORD_FIELDS) . " FROM Ranger__c WHERE Id IN ($quotedIds)";
+        $results = $this->executeQuery($sql, 0, true);
+        if ($results === false || empty($results->records)) {
+            return [];
+        }
+
+        $contactsById = [];
+        foreach ($results->records as $record) {
+            $contactsById[$record->Id] = $record;
+        }
+
+        return $contactsById;
     }
 
     /**
@@ -210,8 +232,7 @@ class ProspectiveApplicationImport
         }
 
         $r = $this->sf->soqlQuery($sql);
-        if (!$r
-            || (is_array($r) && $r[0]->message != "")) {
+        if (!$r) {
             if (!$enforceSecurity) {
                 $this->errorMessage = "Salesforce API query failed for $sql: {$this->sf->errorMessage}";
             }
@@ -231,23 +252,8 @@ class ProspectiveApplicationImport
 
     public function importForYear(int $year, bool $commit = false): array
     {
-        $offset = 0;
-        while (true) {
-            $rows = $this->queryApplicationsForYear($year, $offset);
-            if ($rows === false) {
-                break;
-            }
-
-            if (empty($rows->records)) {
-                break;
-            }
-
-            foreach ($rows->records as $id => $row) {
-                $this->importApplication($row, false, $commit);
-            }
-
-            $offset += count($rows->records);
-        }
+        $this->errorMessage = null;
+        $this->paginate(fn (int $offset): mixed => $this->queryApplicationsForYear($year, $offset), false, $commit);
 
         return [$this->newApplications, $this->existingApplications];
     }
@@ -261,9 +267,25 @@ class ProspectiveApplicationImport
 
     public function importUnprocessed(bool $commit): void
     {
+        $this->errorMessage = null;
+        $this->paginate(fn (int $offset): mixed => $this->queryUnprocessedApplications($offset), true, $commit);
+    }
+
+    /**
+     * Page through a Salesforce list query, batching the contact lookups for each page
+     * and importing every application row, until a page fails or comes back empty.
+     *
+     * @param callable $query Given an offset, returns the next page (mixed, per executeQuery()).
+     * @param bool $setEventYear
+     * @param bool $commit
+     * @return void
+     */
+
+    private function paginate(callable $query, bool $setEventYear, bool $commit): void
+    {
         $offset = 0;
         while (true) {
-            $rows = $this->queryUnprocessedApplications($offset);
+            $rows = $query($offset);
             if ($rows === false) {
                 break;
             }
@@ -272,8 +294,9 @@ class ProspectiveApplicationImport
                 break;
             }
 
-            foreach ($rows->records as $id => $row) {
-                $this->importApplication($row, true, $commit);
+            $contactsById = $this->queryContactRecords(array_column($rows->records, 'Id'));
+            foreach ($rows->records as $row) {
+                $this->importApplication($row, $contactsById[$row->Id] ?? false, $setEventYear, $commit);
             }
 
             $offset += count($rows->records);
@@ -306,11 +329,13 @@ class ProspectiveApplicationImport
      * Import an application
      *
      * @param mixed $sobj
+     * @param mixed $contactObj Pre-fetched contact record for this application's Id (or false
+     *                          if missing/inaccessible), as returned by queryContactRecords().
      * @param bool $setEventYear
      * @param bool $commit
      */
 
-    public function importApplication(mixed $sobj, bool $setEventYear = false, bool $commit = false): void
+    public function importApplication(mixed $sobj, mixed $contactObj, bool $setEventYear = false, bool $commit = false): void
     {
         $row = new ProspectiveApplication();
         $this->extractFields(self::APPLICATION_RECORD_FIELDS, $sobj, $row);
@@ -325,7 +350,6 @@ class ProspectiveApplicationImport
             return;
         }
 
-        $contactObj = $this->queryContactRecord($sobj->Id);
         if (!$contactObj) {
             $row->api_error = ProspectiveApplication::API_ERROR_CONTACT_INACCESSIBLE;
             $this->queryFailures[] = $row;
@@ -353,8 +377,10 @@ class ProspectiveApplicationImport
 
         if (empty($row->bpguid)) {
             if ($row->person_id) {
-                $bpguid = DB::table('person')->where('id', $row->person_id)->value('bpguid');
+                $bpguid = Person::whereKey($row->person_id)->value('bpguid');
                 if (empty($bpguid)) {
+                    $row->api_error = ProspectiveApplication::API_ERROR_MISSING_BPGUID;
+                    $this->queryFailures[] = $row;
                     return;
                 }
                 $row->bpguid = $bpguid;
@@ -402,8 +428,10 @@ class ProspectiveApplicationImport
         $experience = self::sanitizeField($sobj, 'Attended_Burning_Man_Twice__c');
         if (empty($experience)) {
             $row->experience = ProspectiveApplication::EXPERIENCE_NONE;
-        } else {
+        } else if (isset(self::EXPERIENCE_MAP[$experience])) {
             $row->experience = self::EXPERIENCE_MAP[$experience];
+        } else {
+            $row->experience = ProspectiveApplication::EXPERIENCE_NONE;
         }
 
         $row->is_over_18 = (self::sanitizeField($sobj, 'Ranger_Info_Over_18_Check__c') == "Yes");
@@ -434,61 +462,90 @@ class ProspectiveApplicationImport
         }
 
         try {
-            $success = $row->save();
-        } catch (QueryException $e) {
+            $validationFailed = DB::transaction(function () use ($row, $sobj, $status) {
+                if (!$row->save()) {
+                    $row->append('api_error_message');
+                    $message = "Fields failed to validate:\n";
+                    $errors = $row->getErrors();
+                    foreach ($errors as $column => $messages) {
+                        $message .= "$column: " . implode("\n", $messages) . "\n";
+                    }
+                    $row->api_error = ProspectiveApplication::API_ERROR_INVALID;
+                    $row->api_error_message = $message;
+                    $this->creationFailures[] = $row;
+                    ErrorLog::record('prospective-application-validation-failure', ['record' => $row, 'errors' => $errors]);
+                    return true;
+                }
+
+                ProspectiveApplicationLog::record($row->id,
+                    ProspectiveApplicationLog::ACTION_IMPORTED,
+                    [
+                        'salesforce_status' => $status,
+                        'salesforce_type' => self::sanitizeField($sobj, 'Ranger_Applicant_Type__c'),
+                    ]);
+
+                $comments = self::sanitizeField($sobj, 'VC_Comments__c');
+                if (!empty($comments)) {
+                    $this->insertNote($row->id, ProspectiveApplicationNote::TYPE_VC, $comments);
+                }
+
+                $why = self::sanitizeField($sobj, 'Why_Ranger_Comments__c');
+                if (!empty($why)) {
+                    $this->insertNote($row->id, ProspectiveApplicationNote::TYPE_VC_COMMENT, $why);
+                }
+
+                $this->newApplications[] = $row;
+
+                return false;
+            });
+        } catch (Throwable $e) {
             $row->api_error = ProspectiveApplication::API_ERROR_CREATE_FAILURE;
             $row->append('api_error_message');
             $row->api_error_message = $e->getMessage();
             $this->creationFailures[] = $row;
-            ErrorLog::recordException($e, 'prospective-application-create-failure', ['record' => $row]);
+
+            // error_logs is broadly readable, so persist only non-PII identifiers and a
+            // sanitized exception summary here; the full message stays in api_error_message
+            // above, for the VC/ADMIN caller who already owns this record's PII.
+            ErrorLog::recordException($e, 'prospective-application-create-failure', [
+                'record' => [
+                    'salesforce_id' => $row->salesforce_id,
+                    'salesforce_name' => $row->salesforce_name,
+                    'api_error' => $row->api_error,
+                ],
+                'exception' => [
+                    'message' => $e::class,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+            ]);
             return;
         }
 
-        if (!$success) {
-            $row->append('api_error_message');
-            $message = "Fields failed to validate:\n";
-            $errors = $row->getErrors();
-            foreach ($errors as $column => $messages) {
-                $message .= "$column: " . implode("\n", $messages) . "\n";
-            }
-            $row->api_error = ProspectiveApplication::API_ERROR_INVALID;
-            $row->api_error_message = $message;
-            $this->creationFailures[] = $row;
-            ErrorLog::record('prospective-application-validation-failure', ['record' => $row, 'errors' => $errors]);
+        if ($validationFailed) {
             return;
-        }
-
-        $this->newApplications[] = $row;
-
-        ProspectiveApplicationLog::record($row->id,
-            ProspectiveApplicationLog::ACTION_IMPORTED,
-            [
-                'salesforce_status' => $status,
-                'salesforce_type' => self::sanitizeField($sobj, 'Ranger_Applicant_Type__c'),
-            ]);
-
-        $comments = self::sanitizeField($sobj, 'VC_Comments__c');
-        if (!empty($comments)) {
-            ProspectiveApplicationNote::insert([
-                'type' => ProspectiveApplicationNote::TYPE_VC,
-                'prospective_application_id' => $row->id,
-                'note' => $comments,
-                'created_at' => now(),
-            ]);
-        }
-
-        $why = self::sanitizeField($sobj, 'Why_Ranger_Comments__c');
-        if (!empty($why)) {
-            ProspectiveApplicationNote::insert([
-                'type' => ProspectiveApplicationNote::TYPE_VC_COMMENT,
-                'prospective_application_id' => $row->id,
-                'note' => $why,
-                'created_at' => now(),
-            ]);
         }
     }
 
-    public static function sanitizeStreet($s): string
+    /**
+     * Create a note attached to a prospective application.
+     *
+     * @param int $applicationId
+     * @param string $type
+     * @param string $note
+     * @return void
+     */
+
+    private function insertNote(int $applicationId, string $type, string $note): void
+    {
+        ProspectiveApplicationNote::create([
+            'type' => $type,
+            'prospective_application_id' => $applicationId,
+            'note' => $note,
+        ]);
+    }
+
+    public static function sanitizeStreet(object $s): string
     {
         $s = $s->MailingStreet ?? '';
         $s = str_replace("\r", "", $s);
@@ -496,7 +553,7 @@ class ProspectiveApplicationImport
         return trim($s);
     }
 
-    public static function sanitizeField($obj, $name): string
+    public static function sanitizeField(object $obj, string $name): string
     {
         return trim($obj->{$name} ?? '');
     }

@@ -13,7 +13,7 @@ class WaitForDatabase extends Command
      *
      * @var string
      */
-    protected $signature = 'db:wait {--time=60: wait X seconds until database is ready}';
+    protected $signature = 'db:wait {--time=60 : wait X seconds until database is ready}';
 
     /**
      * The console command description.
@@ -39,7 +39,7 @@ class WaitForDatabase extends Command
      */
     public function handle(): void
     {
-        $time = $this->option('time');
+        $time = (int) $this->option('time');
         for ($i = 0; $i < $time; $i++) {
             try {
                 DB::connection()->getPdo();

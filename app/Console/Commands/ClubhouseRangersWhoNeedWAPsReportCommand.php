@@ -32,11 +32,11 @@ class ClubhouseRangersWhoNeedWAPsReportCommand extends Command
     {
         $email = setting('TAS_SAP_Report_Email');
         if (empty($email)) {
-            return true;
+            return Command::SUCCESS;
         }
 
         list ($people,$startYear) = GrantPasses::findRangersWhoNeedWAPs();
         mail_send(new RangersWhoNeedWorkAccessPassesMail($people,$startYear));
-        return true;
+        return Command::SUCCESS;
     }
 }

@@ -58,33 +58,43 @@ class ClubhouseGroundHogDayCommand extends Command
         $year = $groundHogDay->year;
         $dumpDate = $groundHogDay->format('Y-m-d');
 
+        $user = config('database.connections.mysql.username');
+        $pwd = config('database.connections.mysql.password');
+        $db = config('database.connections.mysql.database');
+
+        if ($ghdname === $db) {
+            $this->error("--tempdb ($ghdname) cannot be the same as the source database ($db).");
+            return self::FAILURE;
+        }
+
         // The current database is the Ground Hog Day database.
         // Create the groundhog day database
         DB::statement("DROP DATABASE IF EXISTS $ghdname");
         DB::statement("CREATE DATABASE $ghdname");
-        $user = config('database.connections.mysql.username');
-        $pwd = config('database.connections.mysql.password');
-        $db = config('database.connections.mysql.database');
         putenv("MYSQL_PWD=$pwd");
         $this->info("Creating groundhog day database from $db for day $groundHogDay");
         $this->info("Cloning $db to $ghdname");
 
-        if (shell_exec("mysqldump --ignore-table=$db.log --ignore-table=$db.mail_log --ignore-table=$db.action_logs -u $user $db > dump-tmp.sql")) {
+        exec("mysqldump --ignore-table=" . escapeshellarg($db) . ".log --ignore-table=" . escapeshellarg($db) . ".mail_log --ignore-table=" . escapeshellarg($db) . ".action_logs -u " . escapeshellarg($user) . " " . escapeshellarg($db) . " > dump-tmp.sql", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the ignore database.");
             return true;
         }
 
-        if (shell_exec("mysqldump --no-data  -u $user $db log mail_log >> dump-tmp.sql")) {
+        exec("mysqldump --no-data  -u " . escapeshellarg($user) . " " . escapeshellarg($db) . " log mail_log >> dump-tmp.sql", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the database structure for selected tables.");
             return true;
         }
 
-        if (shell_exec("mysqldump --where=\"event in ('person-slot-add', 'person-slot-remove')\" -u $user $db action_logs  >> dump-tmp.sql")) {
+        exec("mysqldump --where=\"event in ('person-slot-add', 'person-slot-remove')\" -u " . escapeshellarg($user) . " " . escapeshellarg($db) . " action_logs  >> dump-tmp.sql", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the database structure for selected tables.");
             return true;
         }
 
-        if (shell_exec("mysql -u $user $ghdname < dump-tmp.sql")) {
+        exec("mysql -u " . escapeshellarg($user) . " " . escapeshellarg($ghdname) . " < dump-tmp.sql", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Failed to load ghd database");
             return true;
         }
@@ -108,7 +118,8 @@ class ClubhouseGroundHogDayCommand extends Command
         $this->info("Creating mysql dump of groundhog database");
         $dump = $this->option('dumpfile') ?? "rangers-ghd-{$dumpDate}.sql";
 
-        if (shell_exec("mysqldump -u $user $ghdname > $dump")) {
+        exec("mysqldump -u " . escapeshellarg($user) . " " . escapeshellarg($ghdname) . " > " . escapeshellarg($dump), $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Failed to dump database - $ghdname has not been deleted.");
             return true;
         }

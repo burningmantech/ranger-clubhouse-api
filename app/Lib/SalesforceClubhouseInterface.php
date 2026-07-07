@@ -44,14 +44,11 @@ namespace App\Lib;
  * so we can make sure we're not dealing with a duplicate record.
  */
 
-use Illuminate\Support\Facades\Log;
-
 // ------------- SalesForceClubhouseInterface class -------------------
 
 class SalesforceClubhouseInterface
 {
-    public $sf;
-    private $debug = false;
+    public SalesforceConnector $sf;
 
     const SF_FIELDS = [
         'Id',
@@ -106,23 +103,12 @@ class SalesforceClubhouseInterface
     /**
      * If we're provided an SFConnector we'll use it, otherwise
      * we'll create one of our own.
-     * @param null $sf
+     * @param ?SalesforceConnector $sf
      */
 
-    public function __construct($sf = null)
+    public function __construct(?SalesforceConnector $sf = null)
     {
         $this->sf = $sf ?? app(SalesforceConnector::class);
-    }
-
-    /**
-     * Enable or disable debugging; this is just some echos
-     * around Saleforce writebacks.
-     * @param bool $d
-     */
-
-    public function setDebug(bool $d = true)
-    {
-        $this->debug = $d;
     }
 
     /**
@@ -169,8 +155,7 @@ class SalesforceClubhouseInterface
         }
 
         $r = $this->sf->soqlQuery($q);
-        if (!$r
-            || (is_array($r) && $r[0]->message != "")) {
+        if (!$r || !isset($r->records)) {
             $this->sf->errorMessage = "Salesforce API query failed for $q: {$this->sf->errorMessage}";
             return false;
         }
@@ -181,11 +166,11 @@ class SalesforceClubhouseInterface
     /**
      * Set the Clubhouse import status message in Salesforce for this account.
      *
-     * @param $pca
-     * @param $isNew
+     * @param PotentialClubhouseAccountFromSalesforce $pca
+     * @param bool $isNew
      */
 
-    public function updateSalesforceClubhouseImportStatusMessage($pca, $isNew): void
+    public function updateSalesforceClubhouseImportStatusMessage(PotentialClubhouseAccountFromSalesforce $pca, bool $isNew): void
     {
         $status = $pca->status;
         $message = $pca->message;
@@ -197,11 +182,13 @@ class SalesforceClubhouseInterface
         if ($message != "") {
             $m .= ": $message";
         }
-        $this->updateSalesforceField(
+        if (!$this->updateSalesforceField(
             $pca->salesforce_ranger_object_id,
             "CH_ImportStatusMessage__c",
             $m
-        );
+        )) {
+            $pca->message .= " [Warning: Salesforce writeback of import status message failed: {$this->sf->errorMessage}]";
+        }
     }
 
     /**
@@ -209,11 +196,11 @@ class SalesforceClubhouseInterface
      * either  "Clubhouse Record Created" or "Released to Upload"
      * depending on state of PCA status.
      *
-     * @param $pca
-     * @param $isNew
+     * @param PotentialClubhouseAccountFromSalesforce $pca
+     * @param bool $isNew
      */
 
-    public function updateSalesforceVCStatus($pca, $isNew): void
+    public function updateSalesforceVCStatus(PotentialClubhouseAccountFromSalesforce $pca, bool $isNew): void
     {
         switch ($pca->status) {
             case "succeeded":
@@ -228,50 +215,51 @@ class SalesforceClubhouseInterface
 
         $pca->vc_status = $vcStatus;
 
-        $this->updateSalesforceField(
+        if (!$this->updateSalesforceField(
             $pca->salesforce_ranger_object_id,
             "VC_Status__c",
             $vcStatus
-        );
+        )) {
+            $pca->message .= " [Warning: Salesforce writeback of VC status failed: {$this->sf->errorMessage}]";
+        }
     }
 
     /**
      * Set the Salesforce Clubhouse UID field.
      * (if the creation succeeded, that is).
-     * @param $pca
+     * @param PotentialClubhouseAccountFromSalesforce $pca
      */
 
-    public function updateSalesforceClubhouseUserID($pca): void
+    public function updateSalesforceClubhouseUserID(PotentialClubhouseAccountFromSalesforce $pca): void
     {
         if ($pca->status != "succeeded") {
             return;
         }
-        $this->updateSalesforceField(
+        if (!$this->updateSalesforceField(
             $pca->salesforce_ranger_object_id,
             "CH_UID__c",
             $pca->chuid
-        );
+        )) {
+            $pca->message .= " [Warning: Salesforce writeback of Clubhouse UID failed: {$this->sf->errorMessage}]";
+        }
     }
 
     /**
      * Update a given Salesforce field ("forcefield"?!) to a given value.
-     * @param $id
-     * @param $field
-     * @param $value
+     * Returns TRUE on success (or when writebacks are disabled), FALSE on failure.
+     *
+     * @param string $id
+     * @param string $field
+     * @param string $value
+     * @return bool
      */
 
-    public function updateSalesforceField($id, $field, $value): void
+    public function updateSalesforceField(string $id, string $field, string $value): bool
     {
         if (setting('SFEnableWritebacks')) {
-            $this->sf->objUpdate("Ranger__c", $id, [$field => $value]);
-            if ($this->debug) {
-                Log::debug("updateSalesforceField: updated $field for $id to $value");
-            }
-        } else {
-            // do nothing if writebacks are disabled
-            if ($this->debug) {
-                Log::debug("updateSalesforceField: would have updated $field for $id to $value");
-            }
+            return $this->sf->objUpdate("Ranger__c", $id, [$field => $value]);
         }
+
+        return true;
     }
 }

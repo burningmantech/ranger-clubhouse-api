@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use App\Models\Vehicle;
 use App\Mail\VehiclePendingMail;
 
@@ -29,7 +30,13 @@ class ClubhouseVehiclePendingCommand extends Command
      */
     public function handle()
     {
-        $pendingVehicles = Vehicle::findAllPending();
+        $pendingVehicles = Vehicle::findAllPending()->filter(function ($vehicle) {
+            if (!$vehicle->person) {
+                Log::warning('ClubhouseVehiclePendingCommand: skipping vehicle with no person relation', ['vehicle_id' => $vehicle->id]);
+                return false;
+            }
+            return true;
+        })->values();
 
         $email = setting('VehiclePendingEmail');
         if ($pendingVehicles->isNotEmpty() && !empty($email)) {

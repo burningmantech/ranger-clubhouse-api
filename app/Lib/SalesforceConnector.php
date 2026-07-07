@@ -10,62 +10,16 @@ use App\Models\ErrorLog;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\RequestOptions;
-use Illuminate\Support\Facades\Log;
 use JsonException;
 
 class SalesforceConnector
 {
 
-    // These are set via methods below
-    private $client_id;
-    private $client_secret;
-    private $security_token;
-    private $username;
-    private $password;
-    private $auth_url;
-
-    private $debug = 0;                 // Enables html output debugging
-
-    // This is set by the response from Salesforce at auth time
+    // These are set by the response from Salesforce at auth time
     private $instanceurl;
 
     private $access_token;
     public $errorMessage;
-
-    public function setClientID(string $id)
-    {
-        $this->client_id = $id;
-    }
-
-    public function setClientSecret(string $secret)
-    {
-        $this->client_secret = $secret;
-    }
-
-    public function setUsername(string $username)
-    {
-        $this->username = $username;
-    }
-
-    public function setPassword(string $password)
-    {
-        $this->password = $password;
-    }
-
-    public function setSecurityToken(string $token)
-    {
-        $this->security_token = $token;
-    }
-
-    public function setAuthURL($url)
-    {
-        $this->auth_url = $url;
-    }
-
-    public function setDebug($val)
-    {
-        $this->debug = $val;
-    }
 
     /**
      * Authenticate us with the Salesforce server.
@@ -83,26 +37,22 @@ class SalesforceConnector
             return false;
         }
 
-        $this->setClientID(setting("SFprdClientId"));
-        $this->setClientSecret(setting("SFprdClientSecret"));
-        $this->setUsername(setting("SFprdUsername"));
-        $this->setPassword(setting("SFprdPassword"));
-        $this->setAuthURL(setting("SFprdAuthUrl"));
+        $authUrl = setting("SFprdAuthUrl");
 
-        $client = new Client(['base_uri' => $this->auth_url]);
+        $client = new Client(['base_uri' => $authUrl]);
         try {
             $response = $client->request('POST', 'services/oauth2/token', [
                 RequestOptions::FORM_PARAMS => [
                     'grant_type' => 'password',
-                    'client_id' => $this->client_id,
-                    'client_secret' => $this->client_secret,
-                    'username' => $this->username,
-                    'password' => $this->password,
+                    'client_id' => setting("SFprdClientId"),
+                    'client_secret' => setting("SFprdClientSecret"),
+                    'username' => setting("SFprdUsername"),
+                    'password' => setting("SFprdPassword"),
                 ]
             ]);
         } catch (GuzzleException $e) {
             $this->errorMessage = "Failed to retrieve authentication token: " . $e->getMessage();
-            ErrorLog::recordException($e, 'salesforce-auth-exception', ['auth_url' => $this->auth_url]);
+            ErrorLog::recordException($e, 'salesforce-auth-exception', ['auth_url' => $authUrl]);
             return false;
         }
 
@@ -118,19 +68,11 @@ class SalesforceConnector
             ErrorLog::record('salesforce-request-exception', ['result' => $result]);
             $this->errorMessage = "Salesforce authentication failed: "
                 . $result->error . ": " . $result->error_description;
-            if ($this->debug) {
-                Log::debug("sf->auth failed: " . $this->errorMessage);
-            }
             return false;
         }
 
         $this->access_token = $result->access_token;
         $this->instanceurl = $result->instance_url;
-
-        if ($this->debug) {
-            Log::debug("sf->auth: access token = " . $this->access_token);
-            Log::debug("sf->auth: instanceurl = " . $this->instanceurl);
-        }
 
         return true;
     }
@@ -138,15 +80,11 @@ class SalesforceConnector
     /**
      * Execute a Salesforce query.  Return a decoded object on success, FALSE on failure.
      * @param string $q SOSQL to execute
-     * @return mixed
+     * @return object|false
      */
 
-    public function soqlQuery(string $q) : mixed
+    public function soqlQuery(string $q): object|false
     {
-        if ($this->debug) {
-            Log::debug("soqlQuery: q = " . $q);
-        }
-
         $client = new Client(['base_uri' => $this->instanceurl]);
 
         try {
@@ -188,13 +126,13 @@ class SalesforceConnector
      * Fields is an array of name -> value to be updated.
      * Returns TRUE on success, FALSE on error.
      *
-     * @param $objname
-     * @param $objid
-     * @param $fields
+     * @param string $objname
+     * @param string $objid
+     * @param array $fields
      * @return bool
      */
 
-    public function objUpdate($objname, $objid, $fields): bool
+    public function objUpdate(string $objname, string $objid, array $fields): bool
     {
         $client = new Client(['base_uri' => $this->instanceurl]);
         try {

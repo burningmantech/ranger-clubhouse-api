@@ -31,15 +31,22 @@ class ClubhouseRedactDatabaseCommand extends Command
     /**
      * Execute the console command.
      *
-     * @return void
+     * @return int
      */
-    public function handle(): void
+    public function handle(): int
     {
         $redactedName = $this->option('tempdb') ?? self::TEMP_DATABASE;
 
         $user = config('database.connections.mysql.username');
         $pwd = config('database.connections.mysql.password');
         $db = config('database.connections.mysql.database');
+        $host = config('database.connections.mysql.host');
+        $port = config('database.connections.mysql.port');
+
+        if ($redactedName === $db) {
+            $this->error("Temp database [$redactedName] cannot be the same as the source database [$db]");
+            return self::FAILURE;
+        }
 
         $this->info("Creating redacted database from $db");
 
@@ -50,8 +57,33 @@ class ClubhouseRedactDatabaseCommand extends Command
         putenv("MYSQL_PWD=$pwd");
 
         $this->info("Cloning $db to $redactedName");
-        if (shell_exec("mysqldump -u $user  $db | mysql -u $user $redactedName")) {
-            $this->fatal("Cannot clone database");
+        $cloneDump = "redact-clone-dump.sql";
+
+        exec(sprintf(
+            'mysqldump --host=%s --port=%s -u %s %s > %s',
+            escapeshellarg($host),
+            escapeshellarg($port),
+            escapeshellarg($user),
+            escapeshellarg($db),
+            escapeshellarg($cloneDump)
+        ), $out, $exitCode);
+        if ($exitCode !== 0) {
+            $this->error("Cannot clone database");
+            return self::FAILURE;
+        }
+
+        exec(sprintf(
+            'mysql --host=%s --port=%s -u %s %s < %s',
+            escapeshellarg($host),
+            escapeshellarg($port),
+            escapeshellarg($user),
+            escapeshellarg($redactedName),
+            escapeshellarg($cloneDump)
+        ), $out, $exitCode);
+        unlink($cloneDump);
+        if ($exitCode !== 0) {
+            $this->error("Cannot clone database");
+            return self::FAILURE;
         }
 
         // Switch databases
@@ -63,11 +95,22 @@ class ClubhouseRedactDatabaseCommand extends Command
         $this->info("Creating mysql redacted dump");
         $dump = $this->option('dumpfile') ?? "rangers-redacted-".date('Y-m-d').".sql";
 
-        if (shell_exec("mysqldump -u $user $redactedName > $dump")) {
+        exec(sprintf(
+            'mysqldump --host=%s --port=%s -u %s %s > %s',
+            escapeshellarg($host),
+            escapeshellarg($port),
+            escapeshellarg($user),
+            escapeshellarg($redactedName),
+            escapeshellarg($dump)
+        ), $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->info("Failed to dump database - $redactedName has not been deleted.");
-        } else {
-            DB::statement("DROP DATABASE IF EXISTS $redactedName");
-            $this->info("** Done! Database has been successfully created and dumped to $dump");
+            return self::FAILURE;
         }
+
+        DB::statement("DROP DATABASE IF EXISTS $redactedName");
+        $this->info("** Done! Database has been successfully created and dumped to $dump");
+
+        return self::SUCCESS;
     }
 }
