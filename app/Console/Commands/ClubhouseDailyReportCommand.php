@@ -36,7 +36,7 @@ class ClubhouseDailyReportCommand extends Command
     public function handle()
     {
         $failedBroadcasts = Broadcast::findLogs(['lastday' => true, 'failed' => true]);
-        $errorLogs = ErrorLog::findForQuery(['lastday' => true, 'page_size' => 20])['error_logs'];
+        $errorLogs = ErrorLog::findForQuery(['last_day' => true, 'page_size' => 20])['error_logs'];
 
         $roleLogs = ActionLog::findForQuery([
             'lastday' => 'true',

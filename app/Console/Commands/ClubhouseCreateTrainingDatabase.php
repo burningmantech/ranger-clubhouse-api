@@ -36,7 +36,7 @@ class ClubhouseCreateTrainingDatabase extends Command
     public function handle(): int
     {
         $ghdVar = GroundHogDay::ENVIRONMENT_VAR;
-        $groundHogDay = env($ghdVar);
+        $groundHogDay = config('clubhouse.GroundhogDayTime');
         if (empty($groundHogDay)) {
             $this->error("$ghdVar environment variable not set");
             return true;
@@ -61,20 +61,23 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS = 0;
 ");
         $this->info("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --single-transaction --skip-add-locks --quick --ignore-table=$cloneDb.log --ignore-table=$cloneDb.mail_log --ignore-table=$cloneDb.action_logs >> $cloneDump");
 
-        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --single-transaction --skip-add-locks --quick  --ignore-table=$cloneDb.person_message --ignore-table=$cloneDb.log --ignore-table=$cloneDb.mail_log --ignore-table=$cloneDb.action_logs $cloneDb >> $cloneDump")) {
+        exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --single-transaction --skip-add-locks --quick  --ignore-table=$cloneDb.person_message --ignore-table=$cloneDb.log --ignore-table=$cloneDb.mail_log --ignore-table=$cloneDb.action_logs $cloneDb >> $cloneDump", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the ignore database.");
             return true;
         }
 
         $this->info("Dumping partial schema");
 
-        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --no-data $cloneDb log mail_log person_message >> $cloneDump")) {
+        exec("mysqldump -h $cloneHost -u $cloneUser --add-drop-table --no-data $cloneDb log mail_log person_message >> $cloneDump", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the database structure for selected tables.");
             return true;
         }
 
         $this->info("Dumping selected action log events");
-        if (shell_exec("mysqldump -h $cloneHost -u $cloneUser   --single-transaction --skip-add-locks --quick --where=\"event in ('person-slot-add', 'person-slot-remove')\" $cloneDb action_logs  >> $cloneDump")) {
+        exec("mysqldump -h $cloneHost -u $cloneUser   --single-transaction --skip-add-locks --quick --where=\"event in ('person-slot-add', 'person-slot-remove')\" $cloneDb action_logs  >> $cloneDump", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Cannot dump the database structure for selected tables.");
             return true;
         }
@@ -93,7 +96,8 @@ COMMIT;
         $host = config('database.connections.mysql.host');
         putenv("MYSQL_PWD=$pwd");
         $this->info("Loading into $db");
-        if (shell_exec("mysql -h $host -u $user $db < $cloneDump")) {
+        exec("mysql -h $host -u $user $db < $cloneDump", $out, $exitCode);
+        if ($exitCode !== 0) {
             $this->error("Could not load database from production server");
             unlink($cloneDump);
             return 1;
@@ -108,7 +112,17 @@ COMMIT;
 
         $this->info("Dumping training database to $dumpFile");
         // password set above
-        if (shell_exec("mysqldump -h $host -u $user $db | gzip > $dumpFile")) {
+        $trainingDump = "training-dump.sql";
+        exec("mysqldump -h $host -u $user $db > $trainingDump", $out, $exitCode);
+        if ($exitCode !== 0) {
+            $this->error("Failed to dump training database");
+            unlink($trainingDump);
+            return 1;
+        }
+
+        exec("gzip -c $trainingDump > $dumpFile", $out, $exitCode);
+        unlink($trainingDump);
+        if ($exitCode !== 0) {
             $this->error("Failed to dump training database");
             unlink($dumpFile);
             return 1;
@@ -138,17 +152,20 @@ COMMIT;
         }
 
         // Grant everyone EMOP and pass training.
+        $signedUp = 0;
         DB::table('person')
             ->select('id')
             ->where('status', Person::ACTIVE)
             ->orderBy('id')
-            ->chunk(100, function ($rows) use ($slot) {
+            ->chunk(100, function ($rows) use ($slot, &$signedUp) {
                 foreach ($rows as $row) {
-                    DB::table('person_slot')->insertOrIgnore([ 'slot_id' => $slot->id, 'person_id' => $row->id ]);
+                    $signedUp += DB::table('person_slot')->insertOrIgnore([ 'slot_id' => $slot->id, 'person_id' => $row->id ]);
                     DB::table('trainee_status')
                         ->insertOrIgnore(['slot_id' => $slot->id, 'person_id' => $row->id, 'rank' => 2, 'passed' => 1, 'notes' => 'GHD passed']);
                     DB::table('person_role')->insertOrIgnore(['person_id' => $row->id, 'role_id' => Role::EVENT_MANAGEMENT_ON_PLAYA]);
                 }
             });
+
+        DB::table('slot')->where('id', $slot->id)->update(['signed_up' => $signedUp]);
     }
 }

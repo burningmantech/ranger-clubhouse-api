@@ -34,6 +34,8 @@ class TicketingManagement
 
         $rows = $sql->orderBy('source_year')->get();
 
+        $peopleHaveStaffCredentials = collect([]);
+
         if ($rows->isNotEmpty()) {
             $personIds = array_unique($rows->pluck('person_id')->toArray());
             $ticketHolders = DB::table('person')
@@ -50,15 +52,16 @@ class TicketingManagement
                 ->orderBy('callsign')
                 ->get();
 
-            $peopleHaveStaffCredentials = DB::table('access_document')
-                ->select('person_id')
-                ->whereIntegerInRaw('person_id', $personIds)
-                ->where('type', AccessDocument::STAFF_CREDENTIAL)
-                ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
-                ->get()
-                ->keyBy('person_id');
+            if ($forDelivery) {
+                $peopleHaveStaffCredentials = DB::table('access_document')
+                    ->select('person_id')
+                    ->whereIntegerInRaw('person_id', $personIds)
+                    ->where('type', AccessDocument::STAFF_CREDENTIAL)
+                    ->whereIn('status', [AccessDocument::CLAIMED, AccessDocument::SUBMITTED])
+                    ->get()
+                    ->keyBy('person_id');
+            }
         } else {
-            $peopleHaveStaffCredentials = collect([]);
             $ticketHolders = [];
         }
 
@@ -184,6 +187,7 @@ class TicketingManagement
             ->whereIn('status', [AccessDocument::QUALIFIED, AccessDocument::BANKED])
             ->whereYear('expiry_date', '<=', $year)
             ->with(['person:id,callsign,email,status'])
+            ->select(['id', 'person_id', 'type', 'status', 'expiry_date', 'source_year'])
             ->orderBy('source_year')
             ->get();
 

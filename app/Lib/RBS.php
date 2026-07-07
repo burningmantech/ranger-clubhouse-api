@@ -240,6 +240,7 @@ class RBS
      * @param array $people list to send to
      * @param string $subject email subject
      * @param string $message email body
+     * @param string|Carbon|null $expiresAt
      * @return array [ success count, failed count ]
      * @throws ReflectionException
      */
@@ -352,7 +353,7 @@ class RBS
         // Retry failed emails
         if (!$emails->isEmpty()) {
             $alert = Alert::find($broadcast->alert_id);
-            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert, $broadcast->expiresAt))->render();
+            $body = (new RBSMail($broadcast->subject, $broadcast->email_message, $alert, $broadcast->expires_at))->render();
 
             $mailer = self::setupSMTP();
 
@@ -442,7 +443,6 @@ class RBS
      * @param string|Address $to
      * @param string $subject
      * @param string $message
-     * @param string|Carbon|null $expiresAt
      * @return Email
      */
 
@@ -662,7 +662,7 @@ class RBS
             if ($sendEmail) {
                 $prefCond[] = 'IFNULL(alert_person.use_email, TRUE) IS TRUE';
             }
-            if (!empty($prefConf)) {
+            if (!empty($prefCond)) {
                 $prefCond = '(' . implode(' OR ', $prefCond) . ')';
                 $sql->whereRaw($prefCond);
             }
@@ -900,9 +900,7 @@ class RBS
         if ($sendSMS) {
             $smsMessage = "You have a new Ranger Clubhouse msg from $from. Subject: ";
             $limit = (RBS::SMS_LIMIT - (strlen($smsMessage) + 3));
-            $size = strlen($smsMessage);
-            $size = $size > $limit ? $limit : $size;
-            $smsMessage .= substr($subject, 0, $size) . '  ' . RBS::SMS_SUFFIX;
+            $smsMessage .= substr($subject, 0, $limit) . '  ' . RBS::SMS_SUFFIX;
 
             try {
                 if (!$smsSandboxed) {

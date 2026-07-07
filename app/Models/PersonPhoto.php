@@ -453,7 +453,10 @@ class PersonPhoto extends ApiModel
     {
         return PersonPhoto::select('person_photo.*')
             ->join('person', 'person.id', 'person_photo.person_id')
-            ->whereColumn('person.person_photo_id', '!=', 'person_photo.id')
+            ->where(function ($w) {
+                $w->whereColumn('person.person_photo_id', '!=', 'person_photo.id')
+                    ->orWhereNull('person.person_photo_id');
+            })
             ->where(function ($w) {
                 $w->whereIn('person.status', Person::DEACTIVATED_STATUSES)
                     ->orWhereExists(function ($sub) {
@@ -464,7 +467,7 @@ class PersonPhoto extends ApiModel
                             ->limit(1);
                     });
             })
-            ->where('person_photo.created_at', '<', now()->subMonths(self::EXPIRE_ARCHIVED_AFTER))
+            ->where('person_photo.created_at', '<', now()->subMonthsNoOverflow(self::EXPIRE_ARCHIVED_AFTER))
             ->with('person:id,callsign,status,person_photo_id')
             ->get();
     }

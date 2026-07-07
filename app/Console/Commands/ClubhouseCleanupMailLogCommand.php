@@ -28,7 +28,7 @@ class ClubhouseCleanupMailLogCommand extends Command
      */
     public function handle()
     {
-        $count = DB::table('mail_log')->where('created_at', '<', now()->subMonth(6))->delete();
+        $count = DB::table('mail_log')->where('created_at', '<', now()->subMonthsNoOverflow(6))->delete();
         $this->info("{$count} mail log records purged");
         return Command::SUCCESS;
     }

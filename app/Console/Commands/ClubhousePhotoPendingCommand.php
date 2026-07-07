@@ -31,7 +31,8 @@ class ClubhousePhotoPendingCommand extends Command
     {
         $pendingPhotos = PersonPhoto::findAllPending();
 
-        if ($pendingPhotos->isNotEmpty()){
+        $email = setting('PhotoPendingNotifyEmail');
+        if ($pendingPhotos->isNotEmpty() && !empty($email)) {
             mail_send(new PhotoPendingMail($pendingPhotos));
         }
     }

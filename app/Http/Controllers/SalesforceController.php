@@ -13,10 +13,11 @@ use App\Models\PersonRole;
 use App\Models\PersonStatus;
 use App\Models\Role;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 class SalesforceController extends ApiController
 {
@@ -101,25 +102,36 @@ class SalesforceController extends ApiController
 
         foreach ($r->records as $id => $obj) {
             $pca = new PotentialClubhouseAccountFromSalesforce;
-            $pca->convertFromSalesforceObject($obj);
-            if ($pca->status == "null") {
+
+            try {
+                $pca->convertFromSalesforceObject($obj);
+
+                if ($pca->status == "ready") {
+                    $pca->checkIfAlreadyExists();
+                }
+
+                // Only reset accounts if we're not doing anything else.
+                // Some of these checks are redundant w/ the above but we're
+                // being extra careful here 'cause the gun is loaded
+                if ($resetTestAccounts) {
+                    $pca->status = "reset";
+                    $sfch->updateSalesforceVCStatus($pca, false);
+                }
+
+                if (($pca->status == "ready" || $pca->status == 'existing' || $pca->status == 'existing-claim-callsign') && $createAccounts) {
+                    $this->importPerson($sfch, $pca, $updateSf);
+                }
+            } catch (Throwable $e) {
+                ErrorLog::recordException($e, 'salesforce-import-fail', [
+                    'salesforce_ranger_object_id' => $pca->salesforce_ranger_object_id
+                ]);
+                $accounts[] = [
+                    'status' => 'failed',
+                    'message' => "Import error: " . $e->getMessage(),
+                    'salesforce_ranger_object_id' => $pca->salesforce_ranger_object_id,
+                    'salesforce_ranger_object_name' => $pca->salesforce_ranger_object_name,
+                ];
                 continue;
-            }
-
-            if ($pca->status == "ready") {
-                $pca->checkIfAlreadyExists();
-            }
-
-            // Only reset accounts if we're not doing anything else.
-            // Some of these checks are redundant w/ the above but we're
-            // being extra careful here 'cause the gun is loaded
-            if ($resetTestAccounts) {
-                $pca->status = "reset";
-                $sfch->updateSalesforceVCStatus($pca, false);
-            }
-
-            if (($pca->status == "ready" || $pca->status == 'existing' || $pca->status == 'existing-claim-callsign') && $createAccounts) {
-                $this->importPerson($sfch, $pca, $updateSf);
             }
 
             $account = [
@@ -165,13 +177,13 @@ class SalesforceController extends ApiController
     /**
      * Import a SF Ranger record into the Clubhouse
      *
-     * @param $sfch
-     * @param $pca
-     * @param $updateSf
+     * @param SalesforceClubhouseInterface $sfch
+     * @param PotentialClubhouseAccountFromSalesforce $pca
+     * @param bool $updateSf
      * @return void
      */
 
-    private function importPerson($sfch, $pca, $updateSf): void
+    private function importPerson(SalesforceClubhouseInterface $sfch, PotentialClubhouseAccountFromSalesforce $pca, bool $updateSf): void
     {
         if ($pca->status == PotentialClubhouseAccountFromSalesforce::STATUS_EXISTING) {
             $person = $pca->existingPerson;
@@ -217,42 +229,52 @@ class SalesforceController extends ApiController
         $person->auditReason = 'salesforce import';
 
         try {
-            if (!$person->save()) {
-                $message = [];
-                foreach ($person->getErrors() as $column => $errors) {
-                    $message[] = "$column: " . implode(' & ', $errors);
+            $validationFailed = DB::transaction(function () use ($person, $pca, $isNew) {
+                if (!$person->save()) {
+                    $message = [];
+                    foreach ($person->getErrors() as $column => $errors) {
+                        $message[] = "$column: " . implode(' & ', $errors);
+                    }
+                    $pca->message = ($isNew ? 'Creation' : 'Update') . ' error: ' . implode(', ', $message);
+                    $pca->status = "failed";
+                    ErrorLog::record('salesforce-import-fail', [
+                        'person' => $person,
+                        'errors' => $person->getErrors()
+                    ]);
+                    return true;
                 }
-                $pca->message = ($isNew ? 'Creation' : 'Update') . ' error: ' . implode(', ', $message);
-                $pca->status = "failed";
-                ErrorLog::record('salesforce-import-fail', [
-                    'person' => $person,
-                    'errors' => $person->getErrors()
-                ]);
-                return;
-            }
-        } catch (QueryException $e) {
-            $pca->message = "SQL Error: " . $e->getMessage();
+
+                if ($isNew) {
+                    // Record the initial status for tracking through the Unified Flagging View
+                    PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
+                    // Setup the default roles & positions
+                    PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
+                    PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
+                }
+
+                if (!empty($pca->vc_comments)) {
+                    PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->vc_comments);
+                }
+
+                return false;
+            });
+        } catch (Throwable $e) {
+            $pca->message = "Import error: " . $e->getMessage();
             $pca->status = "failed";
             ErrorLog::recordException($e, 'salesforce-import-fail', ['person' => $person]);
             return;
         }
 
-        if ($isNew) {
-            // Record the initial status for tracking through the Unified Flagging View
-            PersonStatus::record($person->id, '', Person::PROSPECTIVE, 'salesforce import', Auth::id());
-            // Setup the default roles & positions
-            PersonRole::resetRoles($person->id, 'salesforce import', Person::ADD_NEW_USER);
-            PersonPosition::resetPositions($person->id, 'salesforce import', Person::ADD_NEW_USER);
-        }
-
-        if (!empty($pca->vc_comments)) {
-            PersonIntakeNote::record($person->id, current_year(), 'vc', $pca->vc_comments);
+        if ($validationFailed) {
+            return;
         }
 
         // Send a welcome email to the person if not an auditor
         if (setting('SendWelcomeEmail')) {
             $inviteToken = $person->createTemporaryLoginToken(Person::PNV_INVITATION_EXPIRE);
-            mail_send(new WelcomeMail($person, $inviteToken));
+            if (!mail_send(new WelcomeMail($person, $inviteToken))) {
+                $pca->message .= " [Warning: Welcome email failed to send]";
+            }
         }
 
         $pca->chuid = $person->id;

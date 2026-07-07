@@ -13,19 +13,16 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use stdClass;
 
 class Moodle
 {
-    public $domain;
-    public $token;
-    public $serviceName;
-    public $clientId;
-    public $clientSecret;
-    public $studentRoleId;
+    public ?string $domain;
+    public ?string $token;
+    public ?string $serviceName;
+    public ?int $studentRoleId;
 
     const LOGIN_URL = '/login/token.php';
     const WEB_SERVICE_URL = '/webservice/rest/server.php';
@@ -49,28 +46,6 @@ class Moodle
     }
 
     /**
-     * Attempt to get a login token to make Moodle web service requests.
-     *
-     * @return void
-     * @throws MoodleDownForMaintenanceException
-     */
-
-    public function retrieveAccessToken(): void
-    {
-        $query = [
-            'username' => $this->clientId,
-            'password' => $this->clientSecret,
-            'service' => $this->serviceName,
-        ];
-
-        $url = $this->domain . '/' . self::LOGIN_URL . '?' . http_build_query($query);
-        $request = Http::connectTimeout(10);
-        $response = $request->post($url);
-        $json = self::decodeResponse($response, $url);
-        $this->token = $json->token;
-    }
-
-    /**
      * Find all available courses.
      *
      * @return array
@@ -88,11 +63,11 @@ class Moodle
      * Retrieve a single course
      *
      * @param $courseId
-     * @return ?array
+     * @return ?stdClass
      * @throws MoodleDownForMaintenanceException
      */
 
-    public function retrieveCourseInfo($courseId): mixed
+    public function retrieveCourseInfo($courseId): ?stdClass
     {
         $result = $this->requestWebService('GET', self::WS_COURSE_AVAILABLE, [
             'options' => [
@@ -116,7 +91,7 @@ class Moodle
         $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, [
             'criteria' => [['key' => 'email', 'value' => self::normalizeEmail($query)]]
         ]);
-        return $result->users;
+        return $result->users ?? [];
     }
 
     /**
@@ -132,18 +107,18 @@ class Moodle
         $result = $this->requestWebService('GET', self::WS_SEARCH_USERS, [
             'criteria' => [['key' => 'id', 'value' => $id]]
         ]);
-        return $result->users[0] ?? null;
+        return ($result->users ?? [])[0] ?? null;
     }
 
     /**
      * Find everyone who is enrolled in a given course.
      *
      * @param int $courseId
-     * @return mixed
+     * @return array
      * @throws MoodleDownForMaintenanceException
      */
 
-    public function retrieveCourseEnrollment(int $courseId): mixed
+    public function retrieveCourseEnrollment(int $courseId): array
     {
         return $this->requestWebService('GET', self::WS_ENROLLED_USERS, ['courseid' => $courseId]);
     }
@@ -183,15 +158,7 @@ class Moodle
                 $idNumbers[$student->idnumber] = $student;
             }
 
-            $isStudent = false;
-            foreach ($student->roles as $role) {
-                if ($role->roleid == $this->studentRoleId) {
-                    $isStudent = true;
-                    break;
-                }
-            }
-
-            if (!$isStudent) {
+            if (!$this->isStudentRole($student)) {
                 $student->is_teacher = true;
                 continue;
             }
@@ -201,12 +168,7 @@ class Moodle
                 continue;
             }
 
-            $finished = 0;
-            foreach ($completion->completionstatus->completions as $c) {
-                if ($c->timecompleted > $finished) {
-                    $finished = $c->timecompleted;
-                }
-            }
+            $finished = self::latestCompletionTimestamp($completion->completionstatus);
 
             if ($finished) {
                 $student->completed_at = (string)Carbon::createFromTimestamp($finished)->tz('America/Phoenix');
@@ -232,7 +194,7 @@ class Moodle
                 return strcasecmp($a->person->callsign, $b->person->callsign);
             }
             if (isset($a->person)) {
-                return 1;
+                return -1;
             }
             if (isset($b->person)) {
                 return 1;
@@ -252,7 +214,10 @@ class Moodle
 
     public function updateUser(array $user): mixed
     {
-        return $this->requestWebService('POST', self::WS_UPDATE_USERS, ['users' => [$user]]);
+        $result = $this->requestWebService('POST', self::WS_UPDATE_USERS, ['users' => [$user]]);
+        self::checkForWarnings($result, self::WS_UPDATE_USERS);
+
+        return $result;
     }
 
     /**
@@ -294,15 +259,7 @@ class Moodle
                 continue;
             }
 
-            $isStudent = false;
-            foreach ($student->roles as $role) {
-                if ($role->roleid == $this->studentRoleId) {
-                    $isStudent = true;
-                    break;
-                }
-            }
-
-            if (!$isStudent) {
+            if (!$this->isStudentRole($student)) {
                 // Not a student, teachers are not marked as completed.
                 continue;
             }
@@ -312,12 +269,7 @@ class Moodle
                 continue;
             }
 
-            $finished = 0;
-            foreach ($result->completionstatus->completions as $c) {
-                if ($c->timecompleted > $finished) {
-                    $finished = $c->timecompleted;
-                }
-            }
+            $finished = self::latestCompletionTimestamp($result->completionstatus);
 
             if ($finished) {
                 $completed = Carbon::createFromTimestamp($finished)->tz('America/Phoenix');
@@ -334,16 +286,44 @@ class Moodle
             $poc->completed_at = $completed;
             $poc->auditReason = 'course completion';
             $poc->saveWithoutValidation();
-
-            /*
-             * Uncomment when a better solution to preventing spamming from multiple servers (aka the on playa server
-             * fired up during the off season) is found.
-            if (!in_array($person->status, Person::LOCKED_STATUSES)
-                && !in_array($person->status, Person::NO_MESSAGES_STATUSES)) {
-                mail_send(new OnlineCourseCompletedMail($person));
-            }
-            */
         }
+    }
+
+    /**
+     * Check if a Moodle enrollment roster entry holds the configured student role.
+     *
+     * @param stdClass $student
+     * @return bool
+     */
+
+    private function isStudentRole(stdClass $student): bool
+    {
+        foreach ($student->roles as $role) {
+            if ($role->roleid == $this->studentRoleId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the latest (max) timecompleted timestamp among a course completion status's completions.
+     *
+     * @param stdClass $completionStatus
+     * @return int
+     */
+
+    private static function latestCompletionTimestamp(stdClass $completionStatus): int
+    {
+        $finished = 0;
+        foreach ($completionStatus->completions as $c) {
+            if ($c->timecompleted > $finished) {
+                $finished = $c->timecompleted;
+            }
+        }
+
+        return $finished;
     }
 
     /**
@@ -366,8 +346,9 @@ class Moodle
             return [];
         }
 
-        $peopleById = DB::table('person')
+        $peopleById = Person::query()
             ->select('person.id', 'person.callsign', 'person.status', 'person.email', 'person.lms_id')
+            ->whereIntegerInRaw('id', $ids)
             ->get()
             ->keyBy('id');
 
@@ -416,9 +397,13 @@ class Moodle
 
     /**
      * Generate a password based off the user's real name.
-     * <LastName><First Initial>!<3 random numbers>
+     * <LastName><First Initial>!<6 random numbers>
      *
-     * The generated password will be padded out to 8 characters with random letters.
+     * The generated password will be padded out to 10 characters with random letters.
+     *
+     * The random portions are generated with a cryptographically secure source
+     * (random_int()) rather than rand()/str_shuffle(), since this password is used
+     * for real Moodle account creation and password resets.
      *
      * @param Person $person
      * @return string
@@ -430,15 +415,18 @@ class Moodle
         $lastName = ucfirst(strtolower(Person::convertDiacritics($person->last_name)));
         $firstName = Person::convertDiacritics($person->desired_first_name());
         $password = ucfirst(preg_replace('/[^\w]/', '', $lastName) . ucfirst(substr($firstName, 0, 1))) . '!';
-        $password .= (rand(0, 9) . rand(0, 9) . rand(0, 9));
+
+        for ($i = 0; $i < 6; $i++) {
+            $password .= random_int(0, 9);
+        }
 
         while (strlen($password) < 10) {
-            $password .= substr(str_shuffle($letters), 0, 1);
+            $password .= $letters[random_int(0, strlen($letters) - 1)];
         }
 
         // Ensure at least one lower case letter appears.
         if (!preg_match("/[a-z]/", $password)) {
-            $password .= substr(str_shuffle($letters), 0, 1);
+            $password .= $letters[random_int(0, strlen($letters) - 1)];
         }
 
         return $password;
@@ -486,6 +474,11 @@ class Moodle
                 ]]
             ]
         );
+        if (empty($result[0]->id)) {
+            ErrorLog::record('lms-request-failure', ['service' => self::WS_CREATE_USERS, 'result' => $result]);
+            throw new RuntimeException('LMS create user response missing id');
+        }
+
         $person->lms_username = $username;
         $person->lms_id = $result[0]->id;
         $person->auditReason = 'moodle account creation';
@@ -514,7 +507,7 @@ class Moodle
             return;
         }
 
-        $this->requestWebService('POST', self::WS_ENROLL_USERS, [
+        $result = $this->requestWebService('POST', self::WS_ENROLL_USERS, [
             'enrolments' => [
                 [
                     'userid' => $person->lms_id,
@@ -523,6 +516,7 @@ class Moodle
                 ]
             ]
         ]);
+        self::checkForWarnings($result, self::WS_ENROLL_USERS);
 
         $poc->online_course_id = $course->id;
         $poc->enrolled_at = now();
@@ -543,19 +537,31 @@ class Moodle
     {
         $students = $this->retrieveCourseEnrollment($courseId);
 
+        $ids = [];
+        $emails = [];
+        foreach ($students as $student) {
+            if (!empty($student->idnumber)) {
+                $ids[] = (int)$student->idnumber;
+            }
+            $emails[] = $student->email;
+        }
+
+        $peopleById = Person::query()->whereIntegerInRaw('id', $ids)->get()->keyBy('id');
+        $peopleByEmail = Person::query()->whereIn('email', $emails)->get()->keyBy('email');
+
         $notFound = [];
         $updated = [];
 
         foreach ($students as $student) {
             if (!empty($student->idnumber)) {
-                $person = Person::find($student->idnumber);
+                $person = $peopleById[(int)$student->idnumber] ?? null;
                 if ($person && $person->lms_id == $student->id && $person->lms_username == $student->username) {
                     // Looks good!
                     continue;
                 }
             }
 
-            $person = Person::findByEmail($student->email);
+            $person = $peopleByEmail[$student->email] ?? null;
             if (!$person) {
                 $notFound[] = $student;
                 continue;
@@ -638,7 +644,8 @@ class Moodle
         ];
 
         $url = $this->domain . self::WEB_SERVICE_URL . '?' . http_build_query($query);
-        $client = Http::connectTimeout(10);
+        $requestPath = $this->domain . self::WEB_SERVICE_URL;
+        $client = Http::connectTimeout(10)->timeout(30);
         try {
             $response = match ($method) {
                 'GET' => $client->get($url),
@@ -649,25 +656,25 @@ class Moodle
             $message = $exception->getMessage();
             ErrorLog::record('moodle-connect-failure', [
                 'message' => $message,
-                'url' => $url,
-                'query' => $query
+                'url' => $requestPath,
+                'query' => self::redactSensitiveData($query)
             ]);
             throw new MoodleConnectFailureException($message);
         }
 
-        return self::decodeResponse($response, $url);
+        return self::decodeResponse($response, $requestPath);
     }
 
     /**
      * Decode the response from Moodle server and return a json object.
      *
      * @param $response
-     * @param $url
+     * @param string $requestPath the request path (domain + endpoint) for logging, without the querystring
      * @return mixed
      * @throws MoodleDownForMaintenanceException
      */
 
-    public static function decodeResponse($response, $url): mixed
+    public static function decodeResponse($response, string $requestPath): mixed
     {
         if ($response->failed()) {
             $body = $response->body();
@@ -680,7 +687,7 @@ class Moodle
             ErrorLog::record('lms-request-failure', [
                 'status' => $status,
                 'body' => $body,
-                'url' => $url,
+                'url' => $requestPath,
             ]);
             throw new RuntimeException('HTTP LMS request status error status=' . $status);
         }
@@ -691,17 +698,58 @@ class Moodle
         } catch (Exception $e) {
             ErrorLog::recordException($e, 'lms-decode-exception', [
                 'body' => $response->body(),
-                'url' => $url,
+                'url' => $requestPath,
             ]);
             throw new RuntimeException('LMS JSON decode exception');
         }
 
         if (isset($json->exception)) {
-            ErrorLog::record('lms-request-failure', ['json' => $json, 'url' => $url]);
+            ErrorLog::record('lms-request-failure', ['json' => $json, 'url' => $requestPath]);
             throw new RuntimeException('LMS request exception ' . $json->exception);
         }
 
         return $json;
+    }
+
+    /**
+     * Check a decoded Moodle write response for a non-empty top-level "warnings"
+     * array. Moodle write services can return HTTP 200 with no top-level
+     * "exception" but a populated "warnings" array, meaning the operation was
+     * actually skipped/rejected server-side.
+     *
+     * @param mixed $result the decoded Moodle response
+     * @param string $service the wsfunction name, for logging
+     * @return void
+     */
+
+    private static function checkForWarnings(mixed $result, string $service): void
+    {
+        $warnings = is_object($result) ? ($result->warnings ?? []) : [];
+        if (empty($warnings)) {
+            return;
+        }
+
+        ErrorLog::record('lms-request-warning', ['service' => $service, 'warnings' => $warnings]);
+        throw new RuntimeException('LMS request warning for ' . $service);
+    }
+
+    /**
+     * Redact sensitive keys (wstoken, password) from a request payload before
+     * it is written to the error log.
+     *
+     * @param array $data
+     * @return array
+     */
+
+    public static function redactSensitiveData(array $data): array
+    {
+        foreach (['wstoken', 'password'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = '[REDACTED]';
+            }
+        }
+
+        return $data;
     }
 
     /**

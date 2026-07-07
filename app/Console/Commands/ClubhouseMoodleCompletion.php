@@ -5,9 +5,11 @@ namespace App\Console\Commands;
 use App\Exceptions\MoodleConnectFailureException;
 use App\Exceptions\MoodleDownForMaintenanceException;
 use App\Lib\Moodle;
+use App\Models\ErrorLog;
 use App\Models\OnlineCourse;
 use Illuminate\Console\Command;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class ClubhouseMoodleCompletion extends Command
 {
@@ -51,6 +53,12 @@ class ClubhouseMoodleCompletion extends Command
                 return;
             } catch (MoodleConnectFailureException $e) {
                 $this->error("Failed to connect to Moodle server ".$e->getMessage());
+                // A connect failure is server-wide, not per-course; stop scanning
+                // instead of retrying (and re-timing-out) for every remaining course.
+                break;
+            } catch (RuntimeException $e) {
+                $this->error("Failed to process course id #{$course->id}: ".$e->getMessage());
+                ErrorLog::recordException($e, 'moodle-completion-course-failure', ['course_id' => $course->id]);
             }
         }
     }

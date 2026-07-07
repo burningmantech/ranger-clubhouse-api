@@ -18,6 +18,7 @@ class Swag extends ApiModel
     const TYPE_DEPT_PIN = 'dept-pin';
     const TYPE_DEPT_SHIRT = 'dept-shirt';
     const TYPE_ORG_PATCH = 'org-patch';
+    const TYPE_ORG_PIN = 'org-pin';
     const TYPE_OTHER = 'other';
 
     const SHIRT_T_SHIRT = 't-shirt';
