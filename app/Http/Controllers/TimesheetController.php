@@ -1048,8 +1048,8 @@ class TimesheetController extends ApiController
         $params = request()->validate([
             'start_time' => 'required|date|before:end_time',
             'end_time' => 'required|date|after:start_time',
-            'break_duration' => 'required|integer',
-            'break_after' => 'sometimes|integer',
+            'break_duration' => 'required|integer|min:0',
+            'break_after' => 'sometimes|integer|min:0',
             'position_ids' => 'required|array',
             'position_ids.*' => 'integer|exists:position,id'
         ]);
