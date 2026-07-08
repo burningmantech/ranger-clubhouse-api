@@ -24,23 +24,9 @@ class PayrollReport
                 'position:id,title,paycode,no_payroll_hours_adjustment'
             ])
             ->whereIn('timesheet.position_id', $positionIds)
-            ->where(function ($w) use ($startTime, $endTime) {
-                $w->where(function ($q) use ($startTime, $endTime) {
-                    $q->where('timesheet.on_duty', '<=', $startTime);
-                    $q->where('timesheet.off_duty', '>=', $endTime);
-                })->orWhere(function ($q) use ($startTime, $endTime) {
-                    // Shift happens within the period
-                    $q->where('timesheet.on_duty', '>=', $startTime);
-                    $q->where('timesheet.off_duty', '<=', $endTime);
-                })->orWhere(function ($q) use ($startTime, $endTime) {
-                    // Shift ends within the period
-                    $q->where('timesheet.off_duty', '>', $startTime);
-                    $q->where('timesheet.off_duty', '<=', $endTime);
-                })->orWhere(function ($q) use ($startTime, $endTime) {
-                    // Shift begins within the period
-                    $q->where('timesheet.on_duty', '>=', $startTime);
-                    $q->where('timesheet.on_duty', '<', $endTime);
-                });
+            ->where('timesheet.on_duty', '<', $endTime)
+            ->where(function ($q) use ($startTime) {
+                $q->whereNull('timesheet.off_duty')->orWhere('timesheet.off_duty', '>', $startTime);
             })->orderBy('timesheet.on_duty')
             ->get()
             ->groupBy('person_id');
@@ -77,9 +63,6 @@ class PayrollReport
                 if (!$entry->off_duty) {
                     $shift['still_on_duty'] = true;
                     $notes[] = 'Still on duty';
-                    $offDuty = now();
-                } else {
-                    $offDuty = $entry->off_duty;
                 }
 
                 if ($startTime->gt($onDuty)) {
@@ -96,8 +79,7 @@ class PayrollReport
                 if ($durationSeconds < 60) {
                     // Either the entry was less than a minute, or spanned two pay periods and the second half was less
                     // than a minute
-                    // TODO: alert the end user this is happening.
-                    continue;
+                    array_unshift($notes, 'Entry duration within the report window is under a minute.');
                 }
 
                 $shift['duration'] = $durationSeconds;
@@ -114,7 +96,13 @@ class PayrollReport
                     } else {
                         $hoursRoundedDown = (int)floor($durationSeconds / 3600);
                         if ($hoursRoundedDown > $breakAfterHours) {
-                            $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $durationSeconds, $breakAfterHours, $breakDuration);
+                            if (($durationSeconds - ($breakAfterHours * 3600) - ($breakDuration * 60)) > 0) {
+                                $shift['meal_adjusted'] = self::computeMealBreak($onDuty, $durationSeconds, $breakAfterHours, $breakDuration);
+                            } else {
+                                $notes[] = 'Duration is not long enough to fit both work segments plus the meal break. No meal break inserted.';
+                            }
+                        } else {
+                            $notes[] = 'Duration did not exceed the break-after threshold by a full hour. No meal break inserted.';
                         }
                     }
                 }
@@ -175,7 +163,7 @@ class PayrollReport
 
     public static function formatDt(Carbon $dt): string
     {
-        return $dt->format('Y-m-d G:i');
+        return $dt->format('Y-m-d H:i');
     }
 
     public static function formatShiftTime(Carbon $dt): string
