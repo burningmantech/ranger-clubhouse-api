@@ -81,11 +81,11 @@ class Alpha
         $statusQuery = PersonStatus::whereIn('new_status', [Person::ALPHA, Person::PROSPECTIVE])
             ->whereYear('created_at', $year);
 
-        if ($noBonks) {
+        if ($noBonks || $haveTraining) {
             $statusQuery->whereRaw(
                 'NOT EXISTS (SELECT 1 FROM person_status ps WHERE ps.person_id=person_status.person_id'
-                . ' AND YEAR(created_at)=? AND new_status=? LIMIT 1)',
-                [$year, Person::BONKED]
+                . ' AND YEAR(created_at)=? AND new_status IN ('.implode(",", array_map(fn ($s) => "'{$s}'",[Person::PAST_PROSPECTIVE, Person::BONKED, Person::UBERBONKED])).') LIMIT 1)',
+                [$year]
             );
         }
 
@@ -346,8 +346,7 @@ class Alpha
             'trained' => false,
             'trainings' => $trainings[$personId] ?? [],
             'on_alpha_shift' => $signedIn->get($personId),
-            'alpha_status_eligible' => false,
-            'alpha_position_eligible' => false,
+            'is_alpha' => false,
             'have_mentor_flags' => false,
             'personnel_issue' => false,
         ];
@@ -456,16 +455,7 @@ class Alpha
             }
         }
 
-        $isProspectiveReady = $potential->status == Person::PROSPECTIVE
-            && $potential->callsign_approved
-            && $photoApproved;
-
-        $potential->alpha_status_eligible = $isProspectiveReady
-            || $potential->status == Person::ALPHA;
-
-        $potential->alpha_position_eligible = $potential->trained
-            && $potential->callsign_approved
-            && $photoApproved;
+        $potential->is_alpha =  $potential->status == Person::ALPHA;
     }
 
     /**
