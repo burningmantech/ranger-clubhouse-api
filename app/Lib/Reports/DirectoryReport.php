@@ -19,8 +19,10 @@ class DirectoryReport
     {
         $councilId = Team::where('title', self::COUNCIL_TITLE)->value('id');
 
-        $teams = Team::whereIn('team.type', [Team::TYPE_CADRE, Team::TYPE_DELEGATION])
-            ->where('team.active', true)
+        $teams = Team::where(function ($w) {
+            $w->whereIn('team.type', [Team::TYPE_CADRE, Team::TYPE_DELEGATION]);
+            $w->orWhere('team.include_in_directory', true);
+        })->where('team.active', true)
             ->orderBy('team.title')
             ->with(['members', 'members.person_photo'])
             ->get();
