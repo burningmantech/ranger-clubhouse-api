@@ -39,6 +39,7 @@ class Team extends ApiModel
         'awards_eligible',
         'description',
         'email',
+        'include_in_directory',
         'mvr_eligible',
         'pvr_eligible',
         'resource_tag',
@@ -52,6 +53,7 @@ class Team extends ApiModel
         return [
             'active' => 'boolean',
             'awards_eligible' => 'boolean',
+            'include_in_directory' => 'boolean',
             'mvr_eligible' => 'boolean',
             'pvr_eligible' => 'boolean',
         ];
