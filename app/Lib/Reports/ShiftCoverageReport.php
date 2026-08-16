@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 
 class ShiftCoverageReport
 {
@@ -89,9 +90,8 @@ class ShiftCoverageReport
 
     const INTERCEPT = [
         [Position::INTERCEPT_DISPATCH, 'Dispatch'],
-        // Intercept Operator position deprecated in favor of Operator shifts matching Intercept hours
-        [[Position::INTERCEPT_OPERATOR, Position::OPERATOR], 'Operator'],
         [Position::INTERCEPT, 'Interceptors', self::COUNT_ONLY],
+        [Position::INTERCEPT_DRIVER, 'Int. Drivers', self::COUNT_ONLY],
         [Position::INTERCEPT, 'Count', self::COUNT_ONLY],
     ];
 
@@ -200,7 +200,7 @@ class ShiftCoverageReport
 
         /** @var CoveragePost[] $posts */
         $posts = array_map(
-            fn (array $definition): CoveragePost => CoveragePost::fromTuple($definition),
+            fn(array $definition): CoveragePost => CoveragePost::fromTuple($definition),
             $coverageDefinition
         );
 
@@ -227,9 +227,9 @@ class ShiftCoverageReport
                 }
 
                 $periods[] = [
-                    'begins' => (string) $shift->begins_epoch,
-                    'ends' => (string) $shift->ends_epoch,
-                    'date' => (string) $shift->begins_epoch,
+                    'begins' => (string)$shift->begins_epoch,
+                    'ends' => (string)$shift->ends_epoch,
+                    'date' => (string)$shift->begins_epoch,
                     'positions' => $positions,
                 ];
             }
@@ -293,7 +293,7 @@ class ShiftCoverageReport
      * @param string|Carbon $begins inclusive window start
      * @param string|Carbon $ends inclusive window end
      * @param bool $isCount when true, return signed-up counts instead of joined person rows
-     * @return array<int, \stdClass> signup rows decorated with *_time / *_epoch_time unix timestamps
+     * @return array<int, stdClass> signup rows decorated with *_time / *_epoch_time unix timestamps
      */
     public static function getSignUps(int|array $positionId, string|Carbon $begins, string|Carbon $ends, bool $isCount): array
     {
@@ -306,7 +306,7 @@ class ShiftCoverageReport
                 ...self::epochSelects()
             )
             ->where('slot.begins_year', $begins->year)
-            ->where(fn (QueryBuilder $q) => self::applyOverlapPredicate($q, $begins, $ends));
+            ->where(fn(QueryBuilder $q) => self::applyOverlapPredicate($q, $begins, $ends));
 
         if (is_array($positionId)) {
             $sql->whereIn('slot.position_id', $positionId);
@@ -340,7 +340,7 @@ class ShiftCoverageReport
      * Retrieve all the sign-ups (either a count or a grouped callsign list) overlapping a single period.
      *
      * @param Slot|object $shift the period (carries begins_epoch / ends_epoch Carbon instances)
-     * @param array<int, \stdClass> $signups pre-fetched candidate rows from {@see self::getSignUps()}
+     * @param array<int, stdClass> $signups pre-fetched candidate rows from {@see self::getSignUps()}
      * @param CoveragePost $post the coverage post definition
      * @param bool $isCount when true return an int count, otherwise a grouped people array
      * @return array<int, array<string, mixed>>|int
@@ -354,7 +354,7 @@ class ShiftCoverageReport
 
         $periodSignsUp = array_filter(
             $signups,
-            fn ($row): bool => self::epochOverlaps(
+            fn($row): bool => self::epochOverlaps(
                 $row->begins_epoch_time,
                 $row->ends_epoch_time,
                 $periodBegins,
@@ -409,7 +409,7 @@ class ShiftCoverageReport
         $shifts = array_values($shifts);
 
         foreach ($shifts as &$s) {
-            usort($s['people'], fn ($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
+            usort($s['people'], fn($a, $b) => strcasecmp($a['callsign'], $b['callsign']));
         }
 
         return $shifts;
