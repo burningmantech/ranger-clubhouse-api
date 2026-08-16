@@ -162,6 +162,7 @@ class Position extends ApiModel
     const int INTERCEPT = 5;
     const int INTERCEPT_DISPATCH = 6;
     const int INTERCEPT_OPERATOR = 66;
+    const int INTERCEPT_DRIVER = 229;
 
     const int OPERATOR = 56;
     const int OPERATOR_SMOOTH = 142;
