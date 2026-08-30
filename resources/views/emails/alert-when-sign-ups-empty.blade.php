@@ -8,6 +8,7 @@
         @if ($traineeSignups)
             <b>Trainee / Mentee Signups:</b> {{$traineeSignups}}<br>
         @endif
+        <b>Person who dropped:</b> {{$person?->callsign ?? "Unknown"}}
     </p>
     <p>
         Your humble servant,<br>

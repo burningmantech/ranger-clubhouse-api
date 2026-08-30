@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Person;
 use App\Models\Position;
 use App\Models\Slot;
 use Illuminate\Bus\Queueable;
@@ -13,8 +14,11 @@ class AlertWhenSignUpsEmptyMail extends ClubhouseMailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Position $position, public Slot $slot, public $traineeSignups)
+    public ?Person $person = null;
+
+    public function __construct(public Position $position, public Slot $slot, public ?int $personId, public $traineeSignups)
     {
+        $this->person = Person::find($this->personId);
         parent::__construct();
     }
 
