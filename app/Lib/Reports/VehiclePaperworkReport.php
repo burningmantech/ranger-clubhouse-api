@@ -31,7 +31,7 @@ class VehiclePaperworkReport
             $teamsByPeople = collect([]);
         }
 
-        list ($peopleByMVRPositions, $mvrPositionsById) = self::retrievePositionSignups('mvr_eligible');
+        list ($peopleByMVRPositions, $mvrPositionsById) = self::retrieveMVRPositionGrants();
         list ($peopleByPVRPositions, $pvrPositionsById) = self::retrievePositionSignups('pvr_eligible');
         list ($peopleByMVRSignups, $mvrSignupsById) = self::retrievePositionSignups('mvr_signup_eligible');
 
@@ -158,6 +158,29 @@ class VehiclePaperworkReport
         return [$peopleByPositions, $positionsById];
     }
 
+    public static function retrieveMVRPositionGrants() : array
+    {
+        $positions = DB::table('position')
+            ->where('mvr_eligible', true)
+            ->where('active', true)
+            ->orderBy('title')
+            ->get();
+
+        if ($positions->isNotEmpty()) {
+            $positionsById = $positions->keyBy('id');
+            $peopleByPositions = DB::table('person_position')
+                ->select('person_position.person_id', 'person_position.position_id', 'position.title as position_title')
+                ->join('position', 'person_position.position_id', 'position.id')
+                ->where('position.active', true)
+                ->get()
+                ->groupBy('person_id');
+
+            return [$peopleByPositions, $positionsById];
+        } else {
+            return [collect(), collect()];
+        }
+    }
+
     /**
      * Build up a list of positions the person is a part of
      *
@@ -174,6 +197,9 @@ class VehiclePaperworkReport
         if ($personPositions) {
             foreach ($personPositions as $pp) {
                 $position = $positionsById->get($pp->position_id);
+                if (!$position) {
+                    continue;
+                }
                 $pInfo = [
                     'id' => $position->id,
                     'title' => $position->title,
