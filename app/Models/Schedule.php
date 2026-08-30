@@ -351,12 +351,12 @@ class Schedule
             if ($slot->position->alert_when_no_trainers) {
                 $traineeSlot = Slot::where('trainer_slot_id', $slot->id)->first();
                 if ($traineeSlot && $traineeSlot->signed_up > 0) {
-                    AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $traineeSlot)->delay(now()->addMinutes(5));
+                    AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $personId, $traineeSlot)->delay(now()->addMinutes(5));
                 }
             }
 
             if ($slot->position->alert_when_becomes_empty && setting('EventManagementOnPlayaEnabled')) {
-                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot)->delay(now()->addMinutes(5));
+                AlertWhenSignUpsEmptyJob::dispatch($slot->position, $slot, $personId)->delay(now()->addMinutes(0));
             }
         }
 

@@ -20,7 +20,7 @@ class AlertWhenSignUpsEmptyJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(public Position $position, public Slot $slot, public ?Slot $traineeSlot = null)
+    public function __construct(public Position $position, public Slot $slot, public int $personId, public ?Slot $traineeSlot = null)
     {
     }
 
@@ -46,6 +46,6 @@ class AlertWhenSignUpsEmptyJob implements ShouldQueue
             return;
         }
 
-        mail_send(new AlertWhenSignUpsEmptyMail($this->position, $this->slot, $this->traineeSlot ? $this->traineeSlot->signed_up : 0));
+        mail_send(new AlertWhenSignUpsEmptyMail($this->position, $this->slot, $this->personId, $this->traineeSlot ? $this->traineeSlot->signed_up : 0));
     }
 }
