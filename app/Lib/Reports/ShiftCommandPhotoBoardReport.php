@@ -36,6 +36,12 @@ class ShiftCommandPhotoBoardReport
             ]
         ],
         [
+            'title' => 'Green Dot Leads',
+            'positions' => [
+                Position::GREEN_DOT_LEAD
+            ]
+        ],
+        [
             'title' => 'OODs',
             'positions' => [
                 Position::OOD,

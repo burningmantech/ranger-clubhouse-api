@@ -82,7 +82,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
         $response = $this->json('GET', self::ROUTE)->assertStatus(200);
 
         $this->assertSame(
-            ['Khakis', 'Troubleshooters', 'Operators', 'OODs'],
+            ['Khakis', 'Troubleshooters', 'Operators', 'Green Dot Leads', 'OODs'],
             array_column($response->json('groups'), 'title')
         );
 
@@ -93,7 +93,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
             'position' => ['id' => Position::RSC_SHIFT_LEAD, 'title' => 'Shift Lead'],
         ], $response->json('groups.0.people.0'));
 
-        $this->assertSame('Chief', $response->json('groups.3.people.0.callsign'));
+        $this->assertSame('Chief', $response->json('groups.4.people.0.callsign'));
         $this->assertSame([], $response->json('groups.1.people'));
     }
 
@@ -125,7 +125,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
 
         $response->assertJsonStructure(['now', 'hosts', 'groups' => [['title', 'people']]]);
         $this->assertSame([], $response->json('hosts'));
-        $this->assertCount(4, $response->json('groups'));
+        $this->assertCount(5, $response->json('groups'));
         $this->assertSame([], $response->json('groups.0.people'));
     }
 
@@ -146,7 +146,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
 
         $this->assertSame(
             [],
-            $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.3.people')
+            $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.4.people')
         );
     }
 
@@ -187,7 +187,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
         $withoutPhoto = Person::factory()->create(['callsign' => 'Bare']);
         $this->putOnDuty($withoutPhoto, Position::OOD);
 
-        $people = $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.3.people');
+        $people = $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.4.people');
 
         $this->assertNull($people[0]['photo_url']);
         $this->assertNotEmpty($people[1]['photo_url']);
@@ -206,7 +206,7 @@ class ShiftCommandPhotoBoardReportTest extends TestCase
         $this->putOnDuty($person, Position::OOD);
 
         $this->assertNull(
-            $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.3.people.0.photo_url')
+            $this->json('GET', self::ROUTE)->assertStatus(200)->json('groups.4.people.0.photo_url')
         );
     }
 }
