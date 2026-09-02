@@ -36,7 +36,7 @@ class ShiftCommandPhotoBoardReport
             ]
         ],
         [
-            'title' => 'Green Dots',
+            'title' => 'Green Dot Leads',
             'positions' => [
                 Position::GREEN_DOT_LEAD
             ]
