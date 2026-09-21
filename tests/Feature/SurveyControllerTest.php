@@ -11,6 +11,7 @@ use App\Models\PersonSlot;
 use App\Models\Position;
 use App\Models\Slot;
 use App\Models\Survey;
+use App\Models\SurveyAnswer;
 use App\Models\SurveyGroup;
 use App\Models\SurveyQuestion;
 use App\Models\TraineeStatus;
@@ -436,5 +437,83 @@ class SurveyControllerTest extends TestCase
         $this->assertDatabaseMissing('survey_answer', [
             'trainer_id' => $forgedTrainer->id
         ]);
+    }
+
+    /*
+     * The all-trainers report for a trainer-for-trainer survey must return each trainer's
+     * feedback, which lives in normal (not trainer-type) groups.
+     */
+
+    public function testAllTrainersReport(): void
+    {
+        $year = (int) date('Y');
+        $survey = Survey::factory()->create([
+            'type' => Survey::TRAINER,
+            'position_id' => $this->surveyPosition->id,
+            'year' => $year,
+        ]);
+
+        $slot = Slot::factory()->create([
+            'position_id' => $this->surveyPosition->id,
+            'begins' => "$year-06-01 09:00:00",
+            'ends' => "$year-06-01 17:00:00",
+        ]);
+
+        $group = SurveyGroup::factory()->create([
+            'survey_id' => $survey->id,
+            'type' => SurveyGroup::TYPE_NORMAL,
+        ]);
+
+        $question = SurveyQuestion::factory()->create([
+            'survey_id' => $survey->id,
+            'survey_group_id' => $group->id,
+            'type' => SurveyQuestion::TYPE_TEXT,
+        ]);
+
+        $alpha = Person::factory()->create(['callsign' => 'Alpha Trainer']);
+        $bravo = Person::factory()->create(['callsign' => 'Bravo Trainer']);
+        $reviewer = Person::factory()->create();
+
+        SurveyAnswer::create([
+            'survey_id' => $survey->id,
+            'survey_group_id' => $group->id,
+            'survey_question_id' => $question->id,
+            'slot_id' => $slot->id,
+            'trainer_id' => $alpha->id,
+            'person_id' => $reviewer->id,
+            'response' => 'Feedback for alpha',
+            'can_share_name' => true,
+        ]);
+
+        SurveyAnswer::create([
+            'survey_id' => $survey->id,
+            'survey_group_id' => $group->id,
+            'survey_question_id' => $question->id,
+            'slot_id' => $slot->id,
+            'trainer_id' => $bravo->id,
+            'person_id' => $reviewer->id,
+            'response' => 'Feedback for bravo',
+            'can_share_name' => true,
+        ]);
+
+        $response = $this->json('GET', "survey/{$survey->id}/all-trainers-report");
+        $response->assertStatus(200);
+
+        $trainers = $response->json('trainers');
+        $this->assertCount(2, $trainers);
+
+        $this->assertEquals($alpha->id, $trainers[0]['id']);
+        $this->assertEquals('main', $trainers[0]['report']['id']);
+        $this->assertEquals($question->id, $trainers[0]['report']['questions'][0]['id']);
+        $alphaResponses = $trainers[0]['report']['questions'][0]['slots'][0]['responses'];
+        $this->assertCount(1, $alphaResponses);
+        $this->assertEquals('Feedback for alpha', $alphaResponses[0]['answer']);
+
+        $this->assertEquals($bravo->id, $trainers[1]['id']);
+        $this->assertEquals('main', $trainers[1]['report']['id']);
+        $this->assertEquals($question->id, $trainers[1]['report']['questions'][0]['id']);
+        $bravoResponses = $trainers[1]['report']['questions'][0]['slots'][0]['responses'];
+        $this->assertCount(1, $bravoResponses);
+        $this->assertEquals('Feedback for bravo', $bravoResponses[0]['answer']);
     }
 }
