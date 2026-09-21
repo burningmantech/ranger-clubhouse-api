@@ -597,20 +597,13 @@ class SurveyReports
 
         $trainers = [];
         foreach ($foundTrainers as $trainer) {
-            $reports = self::buildSurveyReports($survey, $trainer->trainer_id, true);
-            $trainerReport = null;
-            foreach ($reports as $candidate) {
-                if ($candidate->type == SurveyGroup::TYPE_TRAINER) {
-                    $trainerReport = $candidate;
-                    break;
-                }
-            }
-
+            // Trainer-for-trainer surveys use normal groups (answers already carry trainer_id),
+            // so the per-trainer feedback lives in the first (main) report, not a trainer-type group.
             $trainers[] = [
                 'id' => $trainer->trainer_id,
                 'callsign' => $trainer->callsign,
                 'photo_url' => $trainer->trainer->approvedProfileUrl(),
-                'report' => $trainerReport ?? [],
+                'report' => self::buildSurveyReports($survey, $trainer->trainer_id, true)[0] ?? [],
             ];
         }
 
