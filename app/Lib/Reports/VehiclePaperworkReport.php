@@ -172,6 +172,7 @@ class VehiclePaperworkReport
                 ->select('person_position.person_id', 'person_position.position_id', 'position.title as position_title')
                 ->join('position', 'person_position.position_id', 'position.id')
                 ->where('position.active', true)
+                ->where('position.mvr_eligible', true)
                 ->get()
                 ->groupBy('person_id');
 
