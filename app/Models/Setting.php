@@ -163,6 +163,23 @@ class Setting extends ApiModel
             'type' => self::TYPE_STRING,
         ],
 
+        'GoogleGroupsAdminEmail' => [
+            'description' => 'Google Workspace admin account the service account impersonates when updating Google Groups memberships',
+            'type' => self::TYPE_EMAIL,
+        ],
+
+        'GoogleGroupsServiceAccountJson' => [
+            'description' => 'Google service account JSON key (with domain-wide delegation) used to update Google Groups memberships',
+            'type' => self::TYPE_STRING,
+            'is_credential' => true,
+        ],
+
+        'GoogleGroupsSyncEnabled' => [
+            'description' => 'Enable automatic Google Groups (Allcom, Announce, cadre & delegation lists) membership updates',
+            'type' => self::TYPE_BOOL,
+            'default' => false,
+        ],
+
         'HQWindowInterfaceEnabled' => [
             'description' => 'Enable the HQ Window Interface (normally enabled during the event)',
             'type' => self::TYPE_BOOL,
@@ -175,7 +192,7 @@ class Setting extends ApiModel
         ],
 
         'MailingListUpdateRequestEmail' => [
-            'description' => 'Email address(es) to send a message when an active Ranger requests to update the mailing list subscriptions',
+            'description' => 'Email address(es) to notify when the Clubhouse changes Google Groups (mailing list) memberships',
             'type' => self::TYPE_EMAIL,
         ],
 

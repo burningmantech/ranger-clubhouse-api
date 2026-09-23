@@ -18,6 +18,7 @@
     "ext-pcntl": "*",
     "ext-pdo": "*",
     "ext-pdo_mysql": "*",
+    "ext-simplexml": "*",
     "ext-tokenizer": "*",
     "ext-xml": "*",
     "ext-zip": "*",
@@ -27,6 +28,7 @@
     "donatj/phpuseragentparser": "^1.8",
     "giggsey/libphonenumber-for-php": "^8.13",
     "google-gemini-php/client": "^2.7",
+    "google/apiclient": "^2.18",
     "guzzlehttp/guzzle": "^7.5.0",
     "jcupitt/vips": "^2.4",
     "laravel/framework": "^12.0",
@@ -36,8 +38,7 @@
     "laravel/tinker": "^2.9",
     "league/flysystem-aws-s3-v3": "^3.5.0",
     "league/fractal": "^0.20",
-    "twilio/sdk": "^8.3.9",
-    "ext-simplexml": "*"
+    "twilio/sdk": "^8.3.9"
   },
   "require-dev": {
     "fakerphp/faker": "^1.23",
@@ -72,9 +73,15 @@
       "dont-discover": [
         "laravel/telescope"
       ]
-    }
+    },
+    "google/apiclient-services": [
+      "Directory"
+    ]
   },
   "scripts": {
+    "pre-autoload-dump": [
+      "Google\\Task\\Composer::cleanup"
+    ],
     "post-autoload-dump": [
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
       "@php artisan package:discover --ansi"

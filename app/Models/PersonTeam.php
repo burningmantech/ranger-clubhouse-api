@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Jobs\MailingListSyncJob;
 use App\Lib\AwardManagement;
+use App\Lib\MailingListSync;
 use App\Traits\HasCompositePrimaryKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
@@ -219,6 +221,7 @@ class PersonTeam extends ApiModel
         self::create(['team_id' => $teamId, 'person_id' => $personId]);
         PersonTeamLog::addPerson($teamId, $personId);
         ActionLog::record(Auth::user(), 'person-team-add', $reason, ['team_id' => $teamId], $personId);
+        MailingListSync::teamMembershipChanged($teamId, $personId, MailingListSyncJob::ADD);
     }
 
     /**
@@ -235,9 +238,12 @@ class PersonTeam extends ApiModel
     {
         Role::assertActorMayConfer(self::roleIdsForTeam($teamId));
 
-        self::where(['team_id' => $teamId, 'person_id' => $personId])->delete();
+        $deleted = self::where(['team_id' => $teamId, 'person_id' => $personId])->delete();
         PersonTeamLog::removePerson($teamId, $personId);
         ActionLog::record(Auth::user(), 'person-team-remove', $reason, ['team_id' => $teamId], $personId);
+        if ($deleted) {
+            MailingListSync::teamMembershipChanged($teamId, $personId, MailingListSyncJob::REMOVE);
+        }
     }
 
     /**

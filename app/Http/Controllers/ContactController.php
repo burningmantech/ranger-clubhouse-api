@@ -2,15 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\UnacceptableConditionException;
 use App\Mail\ContactMail;
-use App\Mail\UpdateMailingListSubscriptionsMail;
 use App\Models\Alert;
 use App\Models\AlertPerson;
 use App\Models\ContactLog;
-use App\Models\ErrorLog;
 use App\Models\Person;
-use App\Models\PersonTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 
@@ -74,40 +70,18 @@ class ContactController extends ApiController
     }
 
     /**
-     * Send a message to request the mailing lists be updated.
+     * Formerly sent a message asking a human to update the mailing lists. Google Groups memberships are now
+     * maintained automatically when the email address changes (see MailingListSync). Kept as a no-op until
+     * the frontend stops calling it.
      *
      * @param Person $person
      * @return JsonResponse
-     * @throws AuthorizationException|UnacceptableConditionException
+     * @throws AuthorizationException
      */
+
     public function updateMailingLists(Person $person): JsonResponse
     {
         $this->authorize('updateMailingLists', $person);
-
-        if (!in_array($person->status, Person::ACTIVE_STATUSES)) {
-            throw new UnacceptableConditionException('Person does not have an active/current status');
-        }
-
-        $params = request()->validate([
-            'old_email' => 'required|string',
-            'message' => 'sometimes|string|max:1500'
-        ]);
-
-        $oldEmail = $params['old_email'];
-
-        $email = setting('MailingListUpdateRequestEmail');
-        if (empty($email)) {
-            ErrorLog::record('update-mailing-lists-exception', [
-                'message' => 'MailingListUpdateRequestEmail is not set',
-                'person_id' => $person->id,
-                'old_email' => $oldEmail
-            ]);
-            // Blindly fail.
-            return $this->success();
-        }
-
-        $teams = PersonTeam::findAllTeamsForPerson($person->id);
-        mail_send(new UpdateMailingListSubscriptionsMail($person, $this->user, $oldEmail, $params['message'] ?? '', $teams));
         return $this->success();
     }
 }

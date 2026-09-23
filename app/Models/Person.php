@@ -15,6 +15,7 @@ use App\Attributes\BlankIfEmptyAttribute;
 use App\Attributes\NullIfEmptyAttribute;
 use App\Attributes\PhoneAttribute;
 use App\Jobs\OnlineCourseSyncPersonJob;
+use App\Lib\MailingListSync;
 use App\Mail\NotifyVCEmailChangeMail;
 use App\Validators\StateForCountry;
 use Carbon\Carbon;
@@ -539,6 +540,7 @@ class Person extends ApiModel implements AuthenticatableContract, AuthorizableCo
                 if ($model->status == Person::PROSPECTIVE || $model->status == Person::ALPHA) {
                     mail_send(new NotifyVCEmailChangeMail($model, $email));
                 }
+                MailingListSync::emailChanged($model, $email);
             }
         });
 
