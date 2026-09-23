@@ -159,6 +159,26 @@ class GoogleGroupsTest extends TestCase
     }
 
     /**
+     * A 404 because the group doesn't exist (e.g., a typo in the team's email) is a failure, not "not a member".
+     */
+
+    public function testRemoveFromMissingGroupIsFailure(): void
+    {
+        $groups = $this->groupsWithResponse($this->googleError(404, 'Resource Not Found: groupKey'));
+
+        $this->expectException(GoogleServiceException::class);
+        $groups->removeMember(self::GROUP, self::MEMBER);
+    }
+
+    public function testAddToMissingGroupIsFailure(): void
+    {
+        $groups = $this->groupsWithResponse($this->googleError(404, 'Resource Not Found: groupKey'));
+
+        $this->expectException(GoogleServiceException::class);
+        $groups->addMember(self::GROUP, self::MEMBER);
+    }
+
+    /**
      * Other errors (e.g., domain-wide delegation not granted) are thrown so the job reports a failure.
      */
 

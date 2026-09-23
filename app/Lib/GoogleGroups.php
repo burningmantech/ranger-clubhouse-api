@@ -101,7 +101,9 @@ class GoogleGroups
         try {
             $this->directory()->members->delete($group, $email);
         } catch (GoogleServiceException $e) {
-            if ($e->getCode() == 404) {
+            // Google answers 404 both when the person isn't in the group ("Resource Not Found: memberKey")
+            // and when the group itself doesn't exist ("Resource Not Found: groupKey"). Only the first is fine.
+            if ($e->getCode() == 404 && str_contains($e->getMessage(), 'memberKey')) {
                 return self::NOT_FOUND;
             }
             throw $e;
