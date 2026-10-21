@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use App\Models\Person;
+use App\Models\Position;
 use App\Models\Vehicle;
 
 class VehicleControllerTest extends TestCase
@@ -117,5 +118,40 @@ class VehicleControllerTest extends TestCase
             ]
         ]);
         $this->assertDatabaseMissing('vehicle', $duplicate);
+    }
+
+    /*
+     * The paperwork report lists a person granted an MVR eligible position, signed up or not
+     */
+
+    public function testPaperworkListsGrantedMVRPositions()
+    {
+        $mvrPosition = Position::factory()->create(['mvr_eligible' => true]);
+        $holder = Person::factory()->create();
+        $this->addPosition($mvrPosition->id, $holder);
+
+        $response = $this->json('GET', 'vehicle/paperwork');
+
+        $response->assertStatus(200);
+        $row = collect($response->json('people'))->firstWhere('id', $holder->id);
+        $this->assertNotNull($row);
+        $this->assertEquals([['id' => $mvrPosition->id, 'title' => $mvrPosition->title]], $row['mvr_positions']);
+    }
+
+    /*
+     * Holding a position that is not MVR eligible does not put a person on the paperwork report
+     */
+
+    public function testPaperworkSkipsHoldersOfOtherPositions()
+    {
+        Position::factory()->create(['mvr_eligible' => true]);
+        $otherPosition = Position::factory()->create();
+        $holder = Person::factory()->create();
+        $this->addPosition($otherPosition->id, $holder);
+
+        $response = $this->json('GET', 'vehicle/paperwork');
+
+        $response->assertStatus(200);
+        $this->assertNull(collect($response->json('people'))->firstWhere('id', $holder->id));
     }
 }
