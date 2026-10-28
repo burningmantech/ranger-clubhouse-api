@@ -39,7 +39,7 @@ start_db_container() {
 wait_for_db() {
     started() {
         docker logs "${db_container_name}" 2>&1 \
-            | grep -e 'mysqld (mysqld .*) starting as process 1 ' \
+            | grep -e 'ready for connections' \
             ;
     }
 
@@ -47,7 +47,8 @@ wait_for_db() {
         printf "Waiting on database to start... ";
 
         if [ -n "$(started)" ]; then
-            echo "Database started.";
+            echo "Database started. Waiting to settle";
+            sleep 5;
             break;
         fi;
         sleep 1;

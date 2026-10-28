@@ -62,8 +62,8 @@ return [
             // Turn on persistent connections.
             'options' => [
                 PDO::ATTR_PERSISTENT => true,
-                Pdo\Mysql::ATTR_SSL_CA  => true,
-                Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT => false
+                PDO\Mysql::ATTR_SSL_CA => true,
+                PDO\Mysql::ATTR_SSL_VERIFY_SERVER_CERT => false
             ]
         ],
 
@@ -101,6 +101,11 @@ return [
             'strict' => true,
             'engine' => null,
             'timezone' => '-07:00',
+            'options' => [
+                PDO::ATTR_PERSISTENT => true,
+                PDO\Mysql::ATTR_SSL_CA => true,
+                PDO\Mysql::ATTR_SSL_VERIFY_SERVER_CERT => false
+            ]
         ],
 
         'pgsql' => [
